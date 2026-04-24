@@ -1,0 +1,102 @@
+{% extends "prospects/base_tunnel.html" %}
+
+{% block title %}Demande d’accès — étape 3 - Prenium DTF{% endblock %}
+
+{% block prospect_section_head %}
+<div class="landing-section-head prospect-tunnel__intro">
+  <p class="landing-kicker landing-kicker--pill">Accès atelier Prenium</p>
+  <h2 class="prospect-tunnel__title">Volume &amp; rythme</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Des repères simples pour dimensionner la production et anticiper le bon niveau de service.</p>
+</div>
+{% endblock %}
+
+{% block prospect_inner %}
+<form method="post" class="ui-form-stack prospect-form prospect-form--step3 text-left" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="dui-alert dui-alert-error border border-error/35 bg-error/15 text-error-content text-center justify-center" role="alert">
+    {% for e in form.non_field_errors %}<span class="text-sm">{{ e }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  <fieldset class="prospect-fieldset prospect-fieldset--activity">
+    <legend class="ui-sr-only" id="monthly-volume-legend">{{ form.monthly_volume.label }}</legend>
+    <div class="prospect-form__panel prospect-fieldset__panel">
+      <p class="prospect-fieldset__kicker">Volume mensuel</p>
+      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="monthly-volume-help">Choisissez un ordre de grandeur. Cela sert à préparer la capacité de production adaptée à votre compte.</p>
+      <div class="prospect-choice-grid" role="radiogroup" aria-labelledby="monthly-volume-legend" aria-describedby="monthly-volume-help">
+        {% for val, label in form.monthly_volume.field.choices %}
+        {% if val %}
+        <label class="prospect-choice-card prospect-choice-card--activity{% if form.monthly_volume.value == val %} is-selected{% endif %}">
+          <input type="radio" name="monthly_volume" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.monthly_volume.value == val %}checked{% endif %} required />
+          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
+          <span class="prospect-choice-card__body">
+            <span class="prospect-choice-card__title">{{ label }}</span>
+            <span class="prospect-choice-card__hint">Repère de charge mensuelle pour l'atelier.</span>
+          </span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% if form.monthly_volume.errors %}
+      <p class="text-sm text-error mt-3" role="alert">{{ form.monthly_volume.errors.0 }}</p>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  <fieldset class="prospect-fieldset prospect-fieldset--activity">
+    <legend class="ui-sr-only" id="order-frequency-legend">{{ form.order_frequency.label }}</legend>
+    <div class="prospect-form__panel prospect-fieldset__panel">
+      <p class="prospect-fieldset__kicker">Fréquence</p>
+      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="order-frequency-help">Indiquez le rythme probable de vos commandes pour calibrer la relation dans la durée.</p>
+      <div class="prospect-choice-grid prospect-choice-grid--freq" role="radiogroup" aria-labelledby="order-frequency-legend" aria-describedby="order-frequency-help">
+        {% for val, label in form.order_frequency.field.choices %}
+        {% if val %}
+        <label class="prospect-choice-card prospect-choice-card--activity{% if form.order_frequency.value == val %} is-selected{% endif %}">
+          <input type="radio" name="order_frequency" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.order_frequency.value == val %}checked{% endif %} required />
+          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
+          <span class="prospect-choice-card__body">
+            <span class="prospect-choice-card__title">{{ label }}</span>
+            <span class="prospect-choice-card__hint">Rythme estimé de sollicitation du portail et de l'atelier.</span>
+          </span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% if form.order_frequency.errors %}
+      <p class="text-sm text-error mt-3" role="alert">{{ form.order_frequency.errors.0 }}</p>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  <fieldset class="prospect-fieldset prospect-fieldset--activity">
+    <legend class="ui-sr-only" id="urgency-legend">{{ form.urgency.label }}</legend>
+    <div class="prospect-form__panel prospect-fieldset__panel">
+      <p class="prospect-fieldset__kicker">Urgence</p>
+      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="urgency-help">Précisez votre niveau d'urgence pour aider l'équipe à prioriser la prise de contact initiale.</p>
+      <div class="prospect-choice-grid prospect-choice-grid--urgency" role="radiogroup" aria-labelledby="urgency-legend" aria-describedby="urgency-help">
+        {% for val, label in form.urgency.field.choices %}
+        {% if val %}
+        <label class="prospect-choice-card prospect-choice-card--activity{% if form.urgency.value == val %} is-selected{% endif %}">
+          <input type="radio" name="urgency" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.urgency.value == val %}checked{% endif %} required />
+          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
+          <span class="prospect-choice-card__body">
+            <span class="prospect-choice-card__title">{{ label }}</span>
+            <span class="prospect-choice-card__hint">Niveau de réactivité attendu au démarrage.</span>
+          </span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% if form.urgency.errors %}
+      <p class="text-sm text-error mt-3" role="alert">{{ form.urgency.errors.0 }}</p>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  <div class="prospect-form__footer">
+    <a class="dui-btn dui-btn-ghost prospect-form__btn-secondary border border-white/15 text-[#f0d4c4] hover:border-primary/40" href="{% url 'prospects:step2' %}">Retour</a>
+    <button type="submit" class="dui-btn dui-btn-primary prospect-form__btn-primary min-w-[min(100%,12rem)]">Continuer</button>
+  </div>
+</form>
+{% endblock %}

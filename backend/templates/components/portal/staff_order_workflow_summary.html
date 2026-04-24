@@ -1,0 +1,26 @@
+{% load portal_tags %}
+{# Une seule ligne « prochaine action » — les statuts sont déjà dans la barre de commande. #}
+<div class="workflow-next-action" role="status" aria-label="Prochaine action suggérée">
+  <span class="workflow-next-action__label">Étape suivante</span>
+  <p class="workflow-next-action__text">
+    {% if order.status == "draft" %}
+    Attendre la finalisation des fichiers et la <strong>soumission</strong> par le client.
+    {% elif order.billing_mode == "deferred" and order.pricing_status == "pending" and order.status == "submitted" %}
+    Contrôle fichier (onglets <strong>Contrôle</strong> / <strong>Fichiers</strong>), saisir le <strong>métrage</strong> en <strong>Production</strong> si besoin, puis <strong>Calculer le prix</strong> en haut de page.
+    {% elif order.billing_mode == "deferred" and order.pricing_status == "failed" %}
+    Corriger les prérequis (dimensions / inspection), puis relancer le <strong>calcul du prix</strong>.
+    {% elif production_job and production_job.status == "queued" %}
+    Prendre en charge l’OF en <strong>Production</strong> ou via <strong>Scan atelier</strong>.
+    {% elif production_job and production_job.status == "in_progress" %}
+    Poursuivre l’atelier ; <strong>Scan atelier</strong> pour les changements de statut.
+    {% elif production_job and production_job.status == "ready_to_ship" %}
+    Préparer l’<strong>Expédition</strong> (étiquette / envoi).
+    {% elif production_job and production_job.status == "blocked" %}
+    Lever le blocage depuis <strong>Production</strong> avant la suite du flux.
+    {% elif production_job and production_job.status == "completed" %}
+    OF terminé — vérifier clôture <strong>Facturation</strong> / logistique si besoin.
+    {% else %}
+    Naviguer par zone : <em>Préparation</em> → <em>Atelier</em> → <em>Clôture</em>.
+    {% endif %}
+  </p>
+</div>

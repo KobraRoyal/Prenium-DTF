@@ -1,0 +1,110 @@
+@layer components {
+  .ui-shell-main {
+    padding-left: var(--ui-page-pad-x);
+    padding-right: var(--ui-page-pad-x);
+  }
+
+  .ui-portal-header-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .ui-portal-header-inner {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+  }
+
+  .ui-brand-row {
+    display: flex;
+    width: 100%;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .ui-brand-row {
+      width: auto;
+      display: contents;
+    }
+  }
+
+  .ui-table-shell {
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .ui-table-shell {
+      margin-left: 0;
+      margin-right: 0;
+    }
+  }
+
+  .ui-data-table {
+    min-width: 36rem;
+  }
+
+  .ui-table-shell--comfortable .ui-data-table {
+    min-width: 44rem;
+  }
+
+  .ui-data-table--compact th,
+  .ui-data-table--compact td {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  .ui-data-table--comfortable th,
+  .ui-data-table--comfortable td {
+    padding-top: 0.78rem;
+    padding-bottom: 0.78rem;
+  }
+
+  .ui-table-primary-cell {
+    font-weight: 600;
+  }
+
+  .ui-table-mono {
+    letter-spacing: -0.01em;
+  }
+
+  .ui-table-status-stack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+  }
+
+  .ui-inline-flag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.12rem 0.45rem;
+    font-size: 0.72rem;
+    background: color-mix(in srgb, var(--warning) 10%, white);
+    color: var(--warning);
+  }
+
+  .ui-row-warning {
+    background: color-mix(in srgb, var(--warning) 3%, white);
+  }
+
+  .ui-row-anomaly {
+    background: color-mix(in srgb, var(--danger) 4%, white);
+  }
+
+  .ui-card-warning {
+    border-color: color-mix(in srgb, var(--warning) 25%, white);
+  }
+
+  .ui-card-anomaly {
+    border-color: color-mix(in srgb, var(--danger) 25%, white);
+  }
+}

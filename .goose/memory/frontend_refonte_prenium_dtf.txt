@@ -1,0 +1,3 @@
+# ui ux frontend security style
+Préférence durable: UI premium, minimaliste, très lisible, cohérente, sobre, orientée conversion côté vitrine et efficacité côté portail/backoffice. Ne jamais déplacer permissions, pricing, statuts ou logique métier vers le frontend.
+

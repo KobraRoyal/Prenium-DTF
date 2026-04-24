@@ -1,0 +1,106 @@
+# prenium-dtf.com via IDS supply — Goose hints
+
+Tu travailles sur un portail B2B DTF sous Django, exécuté principalement sous Docker.
+
+## Priorités absolues
+- sécurité
+- séparation client / staff / admin
+- logique métier côté backend
+- DRY / SRP
+- auditabilité
+- non-régression
+- cohérence métier entre commandes, fichiers, production, shipping et billing
+
+## Principes métier structurants
+- Customer est la racine d’isolation métier
+- toutes les permissions restent côté serveur
+- le frontend ne doit jamais devenir source de vérité pour :
+  - les permissions
+  - les statuts métier
+  - le pricing
+  - les montants
+- ne jamais exposer URL brute de fichiers, labels, Drive ou documents protégés
+- les relations métier doivent rester cohérentes :
+  - Customer -> Order -> Upload -> Inspection -> Drive Sync -> Production -> Shipping -> Billing
+
+## Règles de travail
+- toujours proposer un plan avant une tâche complexe
+- pour une tâche simple, rester court, direct et pragmatique
+- ne pas ouvrir un nouveau domaine métier sans le signaler explicitement
+- ne pas faire de refacto large sans nécessité démontrée
+- en cas de doute, préférer des changements petits, testés et documentés
+- ne pas déplacer la logique métier dans les templates, composants UI ou HTMX
+- ne pas élargir une surface client ou staff sans justification explicite
+
+## Ordre de lecture recommandé au démarrage
+Toujours lire d’abord :
+- AGENTS.md
+- docs/tracking/DECISIONS_LOG.md
+- docs/tracking/RISKS_REGISTER.md
+- docs/tracking/PROJECT_STATUS.md
+- le fichier de sprint concerné
+
+Puis seulement :
+- les apps backend réellement concernées
+- les tests du domaine impacté
+- les templates / vues concernées si la tâche touche l’UI
+
+## Règles spécifiques Docker
+- considérer Docker comme environnement principal d’exécution
+- ne pas supposer que les services locaux hors Docker sont disponibles
+- quand une commande de test dépend de PostgreSQL/Redis, préférer la stack Docker ou l’environnement prévu par le projet
+- ne pas modifier la config Docker sans nécessité claire
+- ne pas introduire de dépendance runtime non documentée
+
+## Règles de sécurité
+- refuser par défaut
+- vérifier systématiquement le scope client/staff/admin sur toute nouvelle route, vue ou action
+- ne jamais contourner les permissions existantes
+- ne jamais exposer de secret dans le code, la doc ou les réponses
+- toutes les données sensibles doivent rester protégées par le backend
+- toute route staff doit avoir une permission dédiée ou explicitement justifiée
+- toute route client doit être scoped proprement par Customer
+
+## Règles backend
+- vues fines
+- services métier centralisés
+- permissions centralisées
+- pas de duplication de logique
+- tests ciblés quand un contrat change
+- audit minimal sur les actions sensibles
+- migrations propres et minimales
+
+## Règles frontend / portal
+- aucune logique de permission côté front
+- aucune logique de pricing métier côté front
+- UI moderne, claire, sobre, mais la sécurité reste côté backend
+- éviter les vues monolithiques trop riches
+- privilégier des payloads backend sûrs et limités
+
+## Attendus minimum avant de conclure une tâche
+- fichiers modifiés clairement listés
+- tests ou validations relancés
+- hypothèses ou limites signalées
+- doc du sprint mise à jour si comportement ou décision changent
+- tracking mis à jour si décision/risque/statut changent
+- verdict clair :
+  - prêt
+  - ou non prêt
+
+## Types de travail courants
+- sprint :
+  plan -> implémentation -> tests -> docs -> verdict
+- stabilisation :
+  diagnostic -> correctif minimal -> re-tests -> verdict
+- review sécurité :
+  audit -> risques -> corrections P1 -> verdict
+- UX/UI review :
+  audit -> backlog P1/P2/P3 -> corrections ciblées
+- release prep :
+  checklist -> smoke tests -> recette -> verdict final
+
+## Interdits implicites
+- ne pas réécrire un domaine entier sans le dire
+- ne pas changer un contrat API ou service sans vérifier les tests concernés
+- ne pas conclure “prêt” sans validations minimales
+- ne pas exposer des données cross-tenant, même par erreur d’agrégation ou de template

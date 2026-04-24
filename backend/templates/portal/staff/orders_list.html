@@ -1,0 +1,16 @@
+{% extends "portal/layout.html" %}
+{% load ui_tags %}
+
+{% block title %}Commandes staff - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_orders_list.html" title="Commandes" subtitle="Vue opérationnelle centralisée avec lecture rapide des statuts et prochaines actions." %}
+
+<section class="card">
+  {% if orders %}
+  {% ui_orders_table orders=orders variant="staff" %}
+  {% else %}
+  {% include "components/ui/empty_state.html" with message="Aucune commande a afficher." %}
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,14 @@
+# Exemple compatible CLI providers (dépréciés selon la doc Goose)
+# À n'utiliser que si ACP n'est pas viable dans ton environnement actuel.
+
+GOOSE_PROVIDER: "codex"
+GOOSE_MODEL: "gpt-5.2-codex"
+GOOSE_THINKING_EFFORT: "high"
+CODEX_ENABLE_SKILLS: true
+GOOSE_MODE: "smart-approve"
+
+GOOSE_PLANNER_PROVIDER: "codex"
+GOOSE_PLANNER_MODEL: "gpt-5.2-codex"
+
+SECURITY_PROMPT_ENABLED: true
+SECURITY_PROMPT_THRESHOLD: 0.8

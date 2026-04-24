@@ -1,0 +1,54 @@
+{% load portal_tags %}
+<div class="workflow-panel">
+  <div class="workflow-panel__hero">
+    <div>
+      <h3 class="workflow-panel__title">Contrôle technique</h3>
+      <p class="workflow-panel__meta">
+        Synthèse du contrôle pour <strong>tous les fichiers</strong>. Les alertes (warning / erreur) doivent être traitées avant une tarification fiable.
+      </p>
+    </div>
+  </div>
+
+  {% if uploads %}
+  <div class="ui-table-shell table-wrap inspection-table-wrap ui-table-shell--comfortable">
+    <table class="ui-data-table ui-data-table--comfortable w-full border-collapse text-sm">
+      <thead>
+        <tr>
+          <th>Fichier</th>
+          <th>Statut</th>
+          <th>Détail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for upload in uploads %}
+        <tr class="{% if upload.inspection and upload.inspection.status == 'error' %}ui-row-anomaly{% elif upload.inspection and upload.inspection.status == 'warning' %}ui-row-warning{% endif %}">
+          <td class="max-w-[20rem]">
+            <span class="font-medium break-words text-[color:var(--ink)]">{{ upload.original_filename }}</span>
+          </td>
+          <td>
+            {% if upload.inspection %}
+            <span class="badge {{ upload.inspection.status|badge_tone }}">{{ upload.inspection.status|human_status }}</span>
+            {% else %}
+            <span class="badge is-neutral">Non contrôlé</span>
+            {% endif %}
+          </td>
+          <td class="muted text-sm">
+            {% if upload.inspection and upload.inspection.summary_message %}
+            {{ upload.inspection.summary_message }}
+            {% elif upload.inspection %}
+            —
+            {% else %}
+            Contrôle à lancer (pipeline automatique ou relecture).
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>Aucun fichier sur cette commande.</p>
+  </div>
+  {% endif %}
+</div>

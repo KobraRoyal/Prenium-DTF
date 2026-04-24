@@ -1,0 +1,697 @@
+/* Tunnel demande d’accès — aligné landing-saas (hero, cartes, glass) */
+
+/*
+ * Fond & contraste : ne dépend pas uniquement de `body.landing-saas` (cache CSS,
+ * ancien gabarit). Écrase le dégradé clair global de app.css sur `body`.
+ */
+body.prospect-tunnel-page {
+  font-family: "DM Sans", "Manrope", system-ui, sans-serif;
+  background-color: #0c0a09;
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% -30%, rgba(143, 61, 31, 0.4), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 18%, rgba(212, 165, 116, 0.14), transparent 45%),
+    radial-gradient(ellipse 60% 42% at 0% 58%, rgba(143, 61, 31, 0.2), transparent 50%),
+    linear-gradient(180deg, #12100e 0%, #1a1612 38%, #151210 100%);
+  color: #f4f0e8;
+}
+
+body.prospect-tunnel-page a {
+  color: #f0b090;
+}
+
+body.prospect-tunnel-page a:hover {
+  color: #ffd4bf;
+}
+
+body.prospect-tunnel-page .app-header.landing-saas-header {
+  background: rgba(12, 10, 9, 0.88);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Champs formulaire : texte / bordure / fond lisibles sur fond sombre */
+body.prospect-tunnel-page .prospect-panel .checkout-dui-input,
+body.prospect-tunnel-page .prospect-panel .dui-input.dui-input-bordered,
+body.prospect-tunnel-page .prospect-panel select.dui-select.dui-select-bordered {
+  color: #f4f0e8;
+  background-color: rgba(22, 19, 17, 0.96);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+body.prospect-tunnel-page .prospect-panel .checkout-dui-input::placeholder {
+  color: rgba(244, 240, 232, 0.58);
+}
+
+body.prospect-tunnel-page .prospect-panel .checkout-dui-input:focus,
+body.prospect-tunnel-page .prospect-panel select.dui-select:focus {
+  border-color: rgba(240, 168, 122, 0.7);
+  outline: 2px solid rgba(240, 168, 122, 0.38);
+  outline-offset: 1px;
+}
+
+/* Ancrage sous header sticky (comme landing-section[id]) */
+.prospect-tunnel-page .prospect-tunnel {
+  scroll-margin-top: 5rem;
+}
+
+.prospect-tunnel {
+  max-width: min(36rem, 94vw);
+  margin: 0 auto;
+  padding: 0 0 1rem;
+}
+
+.prospect-tunnel__container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* Titre : centré comme le login portail (lisible sur mobile et desktop) */
+.prospect-tunnel .landing-section-head {
+  text-align: center;
+  margin-bottom: 0;
+  margin-inline: auto;
+  max-width: 36rem;
+}
+
+.prospect-tunnel .landing-section-head h2 {
+  margin-top: 0.5rem;
+}
+
+.prospect-tunnel .landing-auth-lead {
+  margin-inline: auto;
+}
+
+body.prospect-tunnel-page .prospect-panel .landing-auth-lead,
+body.prospect-tunnel-page .prospect-panel .prospect-tunnel__lead {
+  color: rgba(244, 240, 232, 0.88);
+}
+
+/* Intro étape — hiérarchie type hero court */
+.prospect-tunnel__intro .prospect-tunnel__title {
+  font-family: "Outfit", "Space Grotesk", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #faf7f2;
+}
+
+.prospect-tunnel__lead {
+  max-width: 22rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Panneau progression (hero-like) */
+.prospect-tunnel__progress-panel {
+  position: relative;
+  border-radius: 20px;
+  padding: 1rem 1.15rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.prospect-tunnel__step-meta {
+  margin: 0 0 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(240, 168, 122, 0.85);
+}
+
+.prospect-tunnel__step-meta__sep {
+  margin: 0 0.35rem;
+  opacity: 0.45;
+  font-weight: 500;
+}
+
+.prospect-tunnel__step-meta__t {
+  color: rgba(244, 240, 232, 0.78);
+  font-weight: 600;
+}
+
+.prospect-tunnel__track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.prospect-tunnel__track-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f0a87a 0%, #c95a32 45%, #8f3d1f 100%);
+  box-shadow: 0 0 16px rgba(240, 168, 122, 0.35);
+  transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Colonne latérale (tunnel demande d’accès) */
+.prospect-shell__eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(240, 168, 122, 0.88);
+}
+
+.prospect-shell__title {
+  margin: 0 0 0.75rem;
+  font-family: "Outfit", "Space Grotesk", sans-serif;
+  font-size: clamp(1.22rem, 2.4vw, 1.52rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.28;
+  color: #faf7f2;
+}
+
+.prospect-shell__lead {
+  margin: 0 0 1.15rem;
+  font-size: 0.93rem;
+  line-height: 1.65;
+  color: rgba(244, 240, 232, 0.84);
+}
+
+body.prospect-tunnel-page .prospect-tunnel__progress-panel {
+  margin-bottom: 1.05rem;
+}
+
+.prospect-shell__trust {
+  margin: 1.1rem 0 0;
+  padding: 0 0 0 1.05rem;
+  list-style: disc;
+  font-size: 0.81rem;
+  line-height: 1.55;
+  color: rgba(244, 240, 232, 0.74);
+}
+
+.prospect-shell__trust li {
+  margin-bottom: 0.42rem;
+}
+
+.prospect-shell__trust li:last-child {
+  margin-bottom: 0;
+}
+
+/* Stepper */
+.prospect-stepper {
+  margin: 0;
+}
+
+.prospect-stepper__list {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  list-style: none;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  padding-inline-start: 0;
+  justify-content: space-between;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(240, 168, 122, 0.35) transparent;
+}
+
+.prospect-stepper__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1 1 0;
+  min-width: 3.25rem;
+  font-size: 0.7rem;
+  color: rgba(244, 240, 232, 0.6);
+  text-align: center;
+}
+
+.prospect-stepper__item.is-active,
+.prospect-stepper__item.is-current {
+  color: #f0d4c4;
+}
+
+.prospect-stepper__item.is-done,
+.prospect-stepper__item.is-complete {
+  color: rgba(244, 240, 232, 0.68);
+}
+
+.prospect-stepper__index {
+  display: inline-grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.prospect-stepper__item.is-active .prospect-stepper__index,
+.prospect-stepper__item.is-current .prospect-stepper__index {
+  border-color: rgba(240, 168, 122, 0.55);
+  background: linear-gradient(145deg, rgba(201, 90, 50, 0.55), rgba(143, 61, 31, 0.65));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(143, 61, 31, 0.45);
+}
+
+.prospect-stepper__item.is-done .prospect-stepper__index,
+.prospect-stepper__item.is-complete .prospect-stepper__index {
+  border-color: rgba(80, 200, 120, 0.4);
+  background: rgba(31, 122, 64, 0.28);
+  color: #b8f5c8;
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.prospect-stepper__label {
+  line-height: 1.2;
+  max-width: 5.5rem;
+}
+
+.prospect-stepper__help {
+  display: block;
+  margin-top: 0.18rem;
+  font-size: 0.62rem;
+  font-weight: 500;
+  line-height: 1.28;
+  color: rgba(244, 240, 232, 0.68);
+  max-width: 5.85rem;
+}
+
+/* Carte formulaire : alignée largeur login (max-w-lg côté template) */
+body.landing-saas .prospect-tunnel .landing-auth-shell.ui-form-card {
+  max-width: min(32rem, 94vw);
+  border-radius: 22px;
+  padding: 1.5rem 1.35rem 1.65rem;
+}
+
+body.landing-saas.portal-shell .prospect-tunnel .landing-auth-shell.portal-login-card {
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(240, 168, 122, 0.28);
+}
+
+.prospect-tunnel__shell {
+  margin-top: 0;
+}
+
+/* Fieldsets — reset UA (bordure claire par défaut sur certains navigateurs) */
+fieldset.prospect-fieldset {
+  border: 0;
+  margin: 0 0 1.35rem;
+  padding: 0;
+  min-inline-size: 0;
+  box-shadow: none;
+}
+
+.prospect-fieldset__help {
+  margin: 0.25rem 0 0.7rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: rgba(244, 240, 232, 0.74);
+}
+
+/* --- Type d’activité (étape 1) : même « glass » que Identité & contact --- */
+.prospect-fieldset--activity {
+  margin-top: 0.35rem;
+  padding-top: 0;
+  border-top: none;
+  text-align: left;
+}
+
+.prospect-fieldset__panel {
+  margin-top: 0.15rem;
+}
+
+.prospect-fieldset__help--activity {
+  margin: 0 0 1.05rem;
+  max-width: none;
+  text-align: left;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: rgba(244, 240, 232, 0.72);
+}
+
+.prospect-choice-grid--activity {
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .prospect-choice-grid--activity {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Le label global (app-legacy) est en display:grid — forcer la ligne radio + texte */
+label.prospect-choice-card.prospect-choice-card--activity {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 0.85rem;
+}
+
+.prospect-choice-card--activity {
+  position: relative;
+  padding: 1.05rem 1.2rem 1.1rem;
+  min-height: 4.85rem;
+  border-radius: 16px;
+}
+
+.prospect-choice-card--activity.is-selected {
+  border-color: rgba(240, 168, 122, 0.55);
+  background: linear-gradient(145deg, rgba(143, 61, 31, 0.38), rgba(18, 16, 14, 0.45));
+  box-shadow:
+    0 0 0 1px rgba(240, 168, 122, 0.14),
+    0 14px 36px rgba(0, 0, 0, 0.32);
+}
+
+.prospect-choice-card__input--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+}
+
+.prospect-choice-card__radio {
+  display: block;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  flex-shrink: 0;
+  margin-top: 0.32rem;
+  position: relative;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.prospect-choice-card--activity:has(.prospect-choice-card__input:checked) .prospect-choice-card__radio {
+  border-color: rgba(240, 168, 122, 0.95);
+  background: rgba(143, 61, 31, 0.45);
+  box-shadow: 0 0 0 1px rgba(240, 168, 122, 0.2);
+}
+
+.prospect-choice-card--activity:has(.prospect-choice-card__input:checked) .prospect-choice-card__radio::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin: -0.25rem 0 0 -0.25rem;
+  border-radius: 999px;
+  background: #f5d4c0;
+}
+
+.prospect-choice-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.prospect-choice-card__title {
+  font-family: "Outfit", "Space Grotesk", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #faf7f2;
+  line-height: 1.3;
+}
+
+.prospect-choice-card__hint {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: rgba(244, 240, 232, 0.72);
+}
+
+.prospect-choice-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 520px) {
+  .prospect-choice-grid:not(.prospect-choice-grid--activity) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .prospect-choice-grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .prospect-choice-grid--freq,
+  .prospect-choice-grid--urgency {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.prospect-choice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.18s ease;
+}
+
+.prospect-choice-card:hover {
+  border-color: rgba(240, 168, 122, 0.32);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.prospect-choice-card:focus-within {
+  outline: 2px solid rgba(240, 168, 122, 0.45);
+  outline-offset: 2px;
+}
+
+.prospect-choice-card:has(.prospect-choice-card__input:checked) {
+  border-color: rgba(240, 168, 122, 0.55);
+  background: linear-gradient(145deg, rgba(143, 61, 31, 0.35), rgba(18, 16, 14, 0.4));
+  box-shadow:
+    0 0 0 1px rgba(240, 168, 122, 0.12),
+    0 12px 32px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+.prospect-choice-card__input:not(.prospect-choice-card__input--hidden) {
+  margin-top: 0.2rem;
+  accent-color: #f0a87a;
+  flex-shrink: 0;
+}
+
+.prospect-choice-card__label {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: rgba(244, 240, 232, 0.94);
+}
+
+/* Étapes formulaire — sections & panneau « glass » intérieur */
+.prospect-form__section {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.prospect-form__section-title {
+  margin: 0 0 0.65rem;
+  font-family: "Outfit", "Space Grotesk", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(240, 168, 122, 0.88);
+}
+
+.prospect-form__panel {
+  border-radius: 16px;
+  padding: 1.1rem 1rem 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.055) 0%, rgba(12, 10, 9, 0.25) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.prospect-form--step1 .prospect-form__panel .dui-form-control {
+  gap: 0.35rem;
+}
+
+.prospect-form--step1 .checkout-dui-input,
+.prospect-form--step1 .dui-select.checkout-dui-input {
+  min-height: 3rem;
+  border-radius: 12px;
+  font-size: 0.9375rem;
+}
+
+.prospect-form--step1 .dui-select.checkout-dui-input {
+  padding-right: 2.35rem;
+}
+
+.prospect-fieldset__kicker {
+  margin: 0 0 0.5rem;
+  font-family: "Outfit", "Space Grotesk", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(240, 168, 122, 0.88);
+  text-align: left;
+}
+
+.prospect-form__footer {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  padding-top: 1.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media (min-width: 640px) {
+  .prospect-form__footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .prospect-form__btn-primary {
+    min-width: 12rem;
+  }
+}
+
+.prospect-form__btn-primary {
+  box-shadow: 0 8px 28px rgba(143, 61, 31, 0.42);
+}
+
+.prospect-form__btn-secondary {
+  justify-content: center;
+}
+
+.prospect-form__grid {
+  display: grid;
+  gap: 1.125rem;
+}
+
+@media (min-width: 520px) {
+  .prospect-form__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.prospect-textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.prospect-form__actions {
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.prospect-form__actions.ui-form-actions {
+  margin-top: 1.5rem;
+}
+
+/* Récap étape 4 */
+.prospect-summary {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(240, 168, 122, 0.22);
+  background: linear-gradient(165deg, rgba(143, 61, 31, 0.22), rgba(12, 10, 9, 0.5));
+}
+
+.prospect-summary__title {
+  margin: 0 0 0.75rem;
+  font-family: "Outfit", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #f0a87a;
+}
+
+.prospect-summary__dl {
+  margin: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.prospect-summary__dl dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(244, 240, 232, 0.45);
+}
+
+.prospect-summary__dl dd {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #f4f0e8;
+}
+
+/* Confirmation */
+.prospect-confirm__actions {
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.prospect-confirm__actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Champs : landing-auth-shell (app-legacy) */
+body.landing-saas .prospect-tunnel .landing-auth-shell .ui-input--error,
+body.landing-saas .prospect-tunnel .landing-auth-shell select.ui-input--error {
+  border-color: rgba(220, 80, 80, 0.65);
+}
+
+body.landing-saas .prospect-tunnel .landing-auth-shell .alert--danger {
+  border-radius: 12px;
+  border: 1px solid rgba(220, 100, 100, 0.4);
+}
+
+body.landing-saas .prospect-tunnel .ui-field-group .error-text {
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+}

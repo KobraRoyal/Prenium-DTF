@@ -1,0 +1,16 @@
+{% extends "portal/layout.html" %}
+{% load ui_tags %}
+
+{% block title %}Commandes client - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_orders_list.html" title="Mes commandes" subtitle_prefix=customer.name subtitle="suivi de votre avancement upload, production, expédition et facture." %}
+
+<section class="card">
+  {% if orders %}
+  {% ui_orders_table orders=orders variant="client" customer=customer %}
+  {% else %}
+  {% include "components/ui/empty_state.html" with title="Aucune commande" message="Vous n'avez pas encore de commandes dans cet espace client." %}
+  {% endif %}
+</section>
+{% endblock %}

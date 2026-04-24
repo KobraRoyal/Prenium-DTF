@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Prenium DTF — transferts DTF premium pour marques et ateliers{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="Prenium DTF structure le parcours B2B de la demande d'accès jusqu'au suivi de commande avec une expérience premium, lisible et orientée production.">
+{% endblock %}
+
+{% block body_class %}landing-saas ui-marketing-body{% endblock %}
+
+{% block content %}
+{% include "components/nav/landing_header.html" %}
+<main class="landing-main">
+  {% include "shop/partials/landing_hero.html" %}
+  {% include "shop/partials/landing_services.html" %}
+  {% include "shop/partials/landing_why_us.html" %}
+  {% include "shop/partials/landing_quality_proof.html" %}
+  {% include "shop/partials/landing_reassurance.html" %}
+  {% include "shop/partials/landing_how_it_works.html" %}
+  {% include "shop/partials/landing_faq.html" %}
+  {% include "shop/partials/landing_cta_final.html" %}
+</main>
+{% endblock %}

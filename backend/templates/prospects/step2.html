@@ -1,0 +1,91 @@
+{% extends "prospects/base_tunnel.html" %}
+
+{% block title %}Demande d’accès — étape 2 - Prenium DTF{% endblock %}
+
+{% block prospect_section_head %}
+<div class="landing-section-head prospect-tunnel__intro">
+  <p class="landing-kicker landing-kicker--pill">Accès atelier Prenium</p>
+  <h2 class="prospect-tunnel__title">Votre besoin principal</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Quelques repères pour orienter l'atelier vers le bon niveau d'accompagnement et le bon service.</p>
+</div>
+{% endblock %}
+
+{% block prospect_inner %}
+<form method="post" class="ui-form-stack prospect-form prospect-form--step2 text-left" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="dui-alert dui-alert-error border border-error/35 bg-error/15 text-error-content text-center justify-center" role="alert">
+    {% for e in form.non_field_errors %}<span class="text-sm">{{ e }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  <fieldset class="prospect-fieldset prospect-fieldset--activity">
+    <legend class="ui-sr-only" id="service-interest-legend">{{ form.service_interest.label }}</legend>
+    <div class="prospect-form__panel prospect-fieldset__panel">
+      <p class="prospect-fieldset__kicker">Service recherché</p>
+      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="service-interest-help">Choisissez l'orientation la plus proche de votre besoin actuel. Cela nous aide à préparer le bon parcours de commande.</p>
+      <div class="prospect-choice-grid prospect-choice-grid--2" role="radiogroup" aria-labelledby="service-interest-legend" aria-describedby="service-interest-help">
+        {% for val, label in form.service_interest.field.choices %}
+        {% if val %}
+        <label class="prospect-choice-card prospect-choice-card--activity{% if form.service_interest.value == val %} is-selected{% endif %}">
+          <input type="radio" name="service_interest" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.service_interest.value == val %}checked{% endif %} required />
+          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
+          <span class="prospect-choice-card__body">
+            <span class="prospect-choice-card__title">{{ label }}</span>
+            <span class="prospect-choice-card__hint">Service principal à activer dans votre espace.</span>
+          </span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% if form.service_interest.errors %}
+      <p class="text-sm text-error mt-3" role="alert">{{ form.service_interest.errors.0 }}</p>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  {% with f=form.main_goal %}
+  <section class="prospect-form__section" aria-labelledby="prospect-step2-goal-heading">
+    <h3 id="prospect-step2-goal-heading" class="prospect-form__section-title">Contexte</h3>
+    <div class="prospect-form__panel">
+      <div class="ui-field-group">
+        <label class="ui-label" for="id_main_goal">Objectif principal (optionnel)</label>
+        <p class="ui-help">Décrivez en une phrase ce que vous cherchez à lancer, tester ou produire.</p>
+        <textarea class="ui-input{% if f.errors %} ui-input--error{% endif %} prospect-textarea" id="id_main_goal" name="main_goal" rows="3" autocomplete="off" placeholder="Ex. lancer une capsule, tester le DTF, fiabiliser mes réassorts…">{{ f.value|default:'' }}</textarea>
+        {% if f.errors %}<p class="error-text" role="alert">{{ f.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+  </section>
+  {% endwith %}
+
+  <fieldset class="prospect-fieldset prospect-fieldset--activity">
+    <legend class="ui-sr-only" id="project-timing-legend">{{ form.project_timing.label }}</legend>
+    <div class="prospect-form__panel prospect-fieldset__panel">
+      <p class="prospect-fieldset__kicker">Calendrier</p>
+      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="project-timing-help">Indiquez à quel horizon se situe votre besoin. Cela nous aide à prioriser la prise de contact.</p>
+      <div class="prospect-choice-grid" role="radiogroup" aria-labelledby="project-timing-legend" aria-describedby="project-timing-help">
+        {% for val, label in form.project_timing.field.choices %}
+        {% if val %}
+        <label class="prospect-choice-card prospect-choice-card--activity{% if form.project_timing.value == val %} is-selected{% endif %}">
+          <input type="radio" name="project_timing" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.project_timing.value == val %}checked{% endif %} required />
+          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
+          <span class="prospect-choice-card__body">
+            <span class="prospect-choice-card__title">{{ label }}</span>
+            <span class="prospect-choice-card__hint">Repère de mise en route pour l'équipe commerciale et atelier.</span>
+          </span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% if form.project_timing.errors %}
+      <p class="text-sm text-error mt-3" role="alert">{{ form.project_timing.errors.0 }}</p>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  <div class="prospect-form__footer">
+    <a class="dui-btn dui-btn-ghost prospect-form__btn-secondary border border-white/15 text-[#f0d4c4] hover:border-primary/40" href="{% url 'prospects:step1' %}">Retour</a>
+    <button type="submit" class="dui-btn dui-btn-primary prospect-form__btn-primary min-w-[min(100%,12rem)]">Continuer</button>
+  </div>
+</form>
+{% endblock %}

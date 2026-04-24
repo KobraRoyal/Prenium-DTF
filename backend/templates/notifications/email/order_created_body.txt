@@ -1,0 +1,11 @@
+Bonjour,
+
+Nous avons bien enregistré votre commande pour {{ order.customer.name }}.
+
+Référence commande : {{ order.public_id }}
+Montant TTC indiqué : {{ order.total_amount }} {{ order.currency }}
+
+Vous pouvez suivre l'avancement dans votre espace client.
+
+Cordialement,
+L'équipe Prenium DTF

@@ -1,0 +1,41 @@
+{% extends "portal/layout.html" %}
+{% load portal_tags order_tags %}
+
+{% block title %}Détail commande client - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" title="Commande" title_code=order.public_id subtitle="Suivez vos fichiers, la production, l'expédition et la facture depuis un seul espace." %}
+
+<section class="card">
+  <div class="split-row">
+    <div>
+      <p class="muted">Statut</p>
+      <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
+    </div>
+    <div>
+      <p class="muted">Facturation</p>
+      <span class="badge">{{ order.get_billing_mode_display }}</span>
+    </div>
+    <div>
+      <p class="muted">Prix</p>
+      {% if order.pricing_status == "priced" %}
+      <strong>{{ order.total_amount }} {{ order.currency }}</strong>
+      {% else %}
+      <span class="muted">{{ order.get_pricing_status_display }}</span>
+      {% endif %}
+    </div>
+    {% if order.billing_mode == "deferred" and order.credit_hold_status and order.credit_hold_status != "none" %}
+    <div>
+      <p class="muted">Encours</p>
+      <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.get_credit_hold_status_display }}</span>
+    </div>
+    {% endif %}
+    <div>
+      <p class="muted">Créée le</p>
+      <strong>{{ order.created_at|date:"d/m/Y H:i" }}</strong>
+    </div>
+  </div>
+</section>
+
+{% order_htmx_tabs "client" %}
+{% endblock %}

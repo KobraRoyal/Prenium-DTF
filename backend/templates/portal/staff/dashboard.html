@@ -1,0 +1,33 @@
+{% extends "portal/layout.html" %}
+{% load ui_tags %}
+
+{% block title %}Accueil staff - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<section class="dashboard-hero dashboard-hero--staff">
+  {% include "components/portal/page_head.html" with kicker="Backoffice staff" title="Accueil staff" subtitle="Vue opérationnelle rapide des commandes et actions en cours." %}
+  <aside class="portal-signal-card">
+    <p class="portal-signal-card__eyebrow">Lecture ops</p>
+    <strong>{% if can_read_orders %}Accès commandes autorisé{% else %}Accès commandes refusé{% endif %}</strong>
+    <p>Le tableau de bord met d’abord en avant le volume affiché et l’accès réel disponible pour éviter les faux signaux côté staff.</p>
+    <div class="portal-signal-card__foot">
+      <span class="portal-signal-card__metric">{{ recent_orders|length }}</span>
+      <span>commandes visibles</span>
+    </div>
+  </aside>
+</section>
+
+{% ui_kpi_grid items=kpi_rows %}
+
+<section class="card">
+  <div class="section-head">
+    <p class="font-display text-lg text-[color:var(--ink)]">Commandes récentes</p>
+    <p class="muted mt-1 text-sm">Les lignes mettent en avant les anomalies de pricing et les statuts à traiter en priorité.</p>
+  </div>
+  {% if recent_orders %}
+  {% ui_orders_table orders=recent_orders variant="staff" %}
+  {% else %}
+  {% include "components/ui/empty_state.html" with title="Aucune commande" message="Aucune commande disponible pour ce scope." %}
+  {% endif %}
+</section>
+{% endblock %}

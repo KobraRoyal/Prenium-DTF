@@ -1,0 +1,66 @@
+{% extends "prospects/base_tunnel.html" %}
+
+{% block title %}Demande d’accès — finalisation - Prenium DTF{% endblock %}
+
+{% block prospect_section_head %}
+<div class="landing-section-head prospect-tunnel__intro">
+  <p class="landing-kicker landing-kicker--pill">Accès atelier Prenium</p>
+  <h2 class="prospect-tunnel__title">Sécurisez votre espace</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Dernière étape : définissez un mot de passe robuste pour accéder à vos commandes, fichiers et suivis.</p>
+</div>
+{% endblock %}
+
+{% block prospect_inner %}
+{% if draft.step1 %}
+<section class="prospect-summary" aria-label="Récapitulatif">
+  <h3 class="prospect-summary__title">Récapitulatif</h3>
+  <dl class="prospect-summary__dl">
+    <div><dt>Email</dt><dd>{{ draft.step1.email }}</dd></div>
+    <div><dt>Société</dt><dd>{{ draft.step1.company }}</dd></div>
+    <div><dt>Contact</dt><dd>{{ draft.step1.first_name }} {{ draft.step1.last_name }}</dd></div>
+  </dl>
+</section>
+{% endif %}
+
+<form method="post" class="ui-form-stack prospect-form prospect-form--step4 text-left" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="dui-alert dui-alert-error border border-error/35 bg-error/15 text-error-content text-center justify-center" role="alert">
+    {% for e in form.non_field_errors %}<span class="text-sm">{{ e }}</span>{% endfor %}
+  </div>
+  {% endif %}
+  {% if messages %}
+  {% for message in messages %}
+  <div class="dui-alert dui-alert-error border border-error/35 bg-error/15 text-error-content text-center justify-center" role="alert"><span class="text-sm">{{ message }}</span></div>
+  {% endfor %}
+  {% endif %}
+
+  <section class="prospect-form__section" aria-labelledby="prospect-step4-security-heading">
+    <h3 id="prospect-step4-security-heading" class="prospect-form__section-title">Accès sécurisé</h3>
+    <div class="prospect-form__panel">
+      <p class="prospect-fieldset__help prospect-fieldset__help--activity">Choisissez un mot de passe robuste. Il servira pour la connexion à votre espace client et à vos documents.</p>
+      {% with f=form.password %}
+      <div class="ui-field-group">
+        <label class="ui-label" for="id_password">Mot de passe</label>
+        <p class="ui-help">8 caractères minimum recommandés, avec un mélange simple à retenir pour votre équipe.</p>
+        <input class="ui-input{% if f.errors %} ui-input--error{% endif %}" id="id_password" name="password" type="password" required autocomplete="new-password" placeholder="Mot de passe (8 caractères min.)" />
+        {% if f.errors %}<p class="error-text" role="alert">{{ f.errors.0 }}</p>{% endif %}
+      </div>
+      {% endwith %}
+      {% with f=form.password_confirm %}
+      <div class="ui-field-group mt-4">
+        <label class="ui-label" for="id_password_confirm">Confirmation du mot de passe</label>
+        <p class="ui-help">Répétez le mot de passe pour activer l'espace sans erreur.</p>
+        <input class="ui-input{% if f.errors %} ui-input--error{% endif %}" id="id_password_confirm" name="password_confirm" type="password" required autocomplete="new-password" placeholder="Confirmation du mot de passe" />
+        {% if f.errors %}<p class="error-text" role="alert">{{ f.errors.0 }}</p>{% endif %}
+      </div>
+      {% endwith %}
+    </div>
+  </section>
+
+  <div class="prospect-form__footer">
+    <a class="dui-btn dui-btn-ghost prospect-form__btn-secondary border border-white/15 text-[#f0d4c4] hover:border-primary/40" href="{% url 'prospects:step3' %}">Retour</a>
+    <button type="submit" class="dui-btn dui-btn-primary prospect-form__btn-primary min-w-[min(100%,12rem)]">Activer mon espace</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,1 @@
+Commande B2B transmise — {{ order.customer.name }}

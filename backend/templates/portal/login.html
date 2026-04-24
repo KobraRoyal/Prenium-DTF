@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block body_class %}landing-saas portal-shell{% endblock %}
+
+{% block title %}Connexion portail - Prenium DTF{% endblock %}
+
+{% block extra_head %}
+<meta name="color-scheme" content="dark">
+{% endblock %}
+
+{% block content %}
+{% include "components/nav/portal_header.html" with nav_mode="client" %}
+
+<main class="app-main app-content landing-saas-main ui-shell-main">
+  <section class="landing-section landing-auth-page text-center">
+    <div class="landing-section-head mx-auto max-w-lg">
+      <p class="landing-kicker">Espace client</p>
+      <h2>Connexion</h2>
+      <p class="landing-auth-lead mx-auto">Accédez à votre espace client ou staff selon vos droits.</p>
+    </div>
+
+    {# Conteneur « verre » historique (app-legacy) + champs DaisyUI — évite un rendu plat si dui-card seul #}
+    <div class="landing-auth-shell card auth-card ui-form-card portal-login-card mx-auto w-full max-w-md text-center">
+      {% if form.errors %}
+      <div class="dui-alert dui-alert-error mb-4 border border-error/35 bg-error/15 text-error-content justify-center text-center" role="alert">
+        <span class="text-sm leading-snug">Identifiants invalides ou accès non autorisé pour cette surface.</span>
+      </div>
+      {% endif %}
+      <form method="post" class="flex flex-col gap-5 items-stretch">
+        {% csrf_token %}
+        <div class="dui-form-control w-full">
+          <label class="ui-sr-only" for="id_username">Email</label>
+          <input
+            id="id_username"
+            name="username"
+            type="email"
+            autocomplete="email"
+            required
+            autofocus
+            placeholder="Email — vous@entreprise.fr"
+            class="dui-input dui-input-bordered w-full checkout-dui-input"
+          />
+        </div>
+        <div class="dui-form-control w-full">
+          <label class="ui-sr-only" for="id_password">Mot de passe</label>
+          <input
+            id="id_password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            placeholder="Mot de passe"
+            class="dui-input dui-input-bordered w-full checkout-dui-input"
+          />
+        </div>
+        {% if next %}
+        <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+        {% include "components/forms/form_actions.html" with primary_label="Se connecter" primary_class_full="dui-btn dui-btn-primary dui-btn-wide w-full max-w-xs mx-auto min-h-[2.75rem]" form_actions_class="justify-center" %}
+      </form>
+    </div>
+  </section>
+</main>
+{% endblock %}

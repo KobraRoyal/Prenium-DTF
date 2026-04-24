@@ -1,0 +1,8 @@
+Bonjour,
+
+Votre paiement pour la commande {{ order.public_id }} ({{ order.customer.name }}) a bien été enregistré.
+
+Votre facture est disponible dans votre espace client.
+
+Cordialement,
+L'équipe Prenium DTF

@@ -1,0 +1,98 @@
+{% extends "portal/layout.html" %}
+{% load static %}
+
+{% block title %}Commander - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/checkout_client.html" title="Préparer une commande" subtitle="Décrivez votre besoin, joignez vos fichiers de production, puis envoyez votre demande pour contrôle technique." %}
+
+<div class="mb-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-[#f4f0e8]/90 shadow-sm backdrop-blur-sm">
+  <p class="m-0 font-medium text-[#faf7f2]">Parcours guidé</p>
+  <p class="mt-2 mb-0">1. Créez votre demande. 2. Ajoutez vos fichiers de production. 3. Vérifiez le récapitulatif puis envoyez la commande à l'atelier.</p>
+  <p class="mt-2 mb-0 text-xs opacity-75">Aucun paiement n'est demandé à cette étape : l'équipe contrôle d'abord les fichiers et confirme le traitement selon votre compte client.</p>
+</div>
+
+<div class="mb-6 w-full overflow-x-auto pb-1">
+  <ul class="dui-steps dui-steps-horizontal min-w-[min(100%,520px)] w-full max-w-5xl gap-y-2">
+    <li class="dui-step {% if selected_order %}dui-step-primary{% endif %} text-sm">Demande</li>
+    <li class="dui-step {% if selected_order %}dui-step-primary{% endif %} text-sm">Fichiers</li>
+    <li class="dui-step {% if selected_order %}dui-step-primary{% endif %} text-sm">Validation</li>
+  </ul>
+</div>
+
+{% if creation_error %}
+<div class="dui-alert dui-alert-error mb-4 border border-error/40 bg-error/15 text-error-content" role="alert">
+  <span>{{ creation_error }}</span>
+</div>
+{% endif %}
+{% if submit_error == "confirm" %}
+<div class="dui-alert dui-alert-warning mb-4 border border-warning/40 bg-warning/15" role="alert">
+  <span>Cochez la confirmation avant d'envoyer la commande.</span>
+</div>
+{% elif submit_error == "validation" %}
+<div class="dui-alert dui-alert-error mb-4 border border-error/40 bg-error/15 text-error-content" role="alert">
+  <span>Impossible de soumettre la commande. Vérifiez qu'au moins un fichier est joint.</span>
+</div>
+{% endif %}
+
+<section class="checkout-layout">
+  <div class="stack-lg">
+    <section class="dui-card dui-card-bordered border-white/10 bg-white/5 shadow-xl backdrop-blur-sm checkout-dui-surface">
+      <div class="dui-card-body gap-4">
+        <div>
+          <h3 class="dui-card-title font-display text-lg text-[#faf7f2]">Étape 1 — Décrire votre besoin</h3>
+          <p class="text-sm opacity-75">Ajoutez un brief, une référence ou une contrainte utile. Cette première étape ouvre un espace sécurisé pour vos fichiers.</p>
+        </div>
+
+        <form method="post" class="flex flex-col gap-6">
+          {% csrf_token %}
+          <div class="dui-form-control w-full">
+            <label class="ui-sr-only" for="id_customer_note">Note ou consignes (optionnel)</label>
+            <input id="id_customer_note" name="customer_note" type="text" placeholder="Brief, délai souhaité, références, contraintes atelier…" class="dui-input dui-input-bordered w-full checkout-dui-input">
+          </div>
+
+          {% include "components/forms/form_actions.html" with primary_label="Créer la demande" primary_class_full="dui-btn dui-btn-primary dui-btn-wide" %}
+        </form>
+      </div>
+    </section>
+
+    {% if selected_order %}
+      {% include "portal/client/partials/checkout_uploads.html" with order=selected_order uploads=uploads upload_error="" %}
+    {% else %}
+    <section class="dui-card dui-card-bordered border-white/10 bg-white/5 shadow-xl backdrop-blur-sm checkout-dui-surface opacity-90">
+      <div class="dui-card-body items-center text-center py-10">
+        <div class="dui-badge dui-badge-outline dui-badge-lg mb-3 border-white/20 text-[#f0d4c4]">Étape 2</div>
+        <h3 class="font-display text-lg text-[#faf7f2]">Ajout des fichiers</h3>
+        <p class="mt-2 max-w-md text-sm opacity-70">Créez d'abord la demande pour activer l'espace d'envoi sécurisé.</p>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if selected_order %}
+    <div
+      hx-get="{% url 'portal:client-checkout-summary' customer_public_id=customer.public_id %}?order={{ selected_order.public_id }}"
+      hx-trigger="load, checkoutUploadsUpdated from:body"
+      hx-target="this"
+      hx-swap="innerHTML"
+      hx-indicator="#portal-htmx-indicator"
+    >
+      {% include "portal/client/partials/checkout_summary.html" with order=selected_order uploads=uploads %}
+    </div>
+    {% else %}
+    <aside class="dui-card dui-card-bordered summary-sticky border-white/10 bg-white/5 shadow-xl backdrop-blur-sm checkout-dui-surface">
+      <div class="dui-card-body text-center py-8">
+        <h3 class="font-display text-lg text-[#faf7f2]">Résumé</h3>
+        <p class="mt-2 text-sm opacity-70">Le récapitulatif apparaîtra après la création de la commande.</p>
+      </div>
+    </aside>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script defer src="{% static 'js/checkout-dropzone.js' %}"></script>
+{% endblock %}

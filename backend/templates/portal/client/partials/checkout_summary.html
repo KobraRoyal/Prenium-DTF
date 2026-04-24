@@ -1,0 +1,42 @@
+{% load portal_tags %}
+<aside class="dui-card dui-card-bordered summary-sticky border-white/10 bg-white/5 shadow-xl backdrop-blur-sm checkout-dui-surface" id="checkout-summary">
+  <div class="dui-card-body gap-4">
+    <div>
+      <h3 class="dui-card-title font-display text-lg text-[#faf7f2]">Étape 3 — Vérification finale</h3>
+      <p class="mt-2 text-sm text-[#faf7f2]">
+        Commande
+        <code class="rounded bg-black/40 px-2 py-0.5 text-xs text-[#f0d4c4]">{{ order.public_id }}</code>
+      </p>
+      {% if order.customer_note %}
+      <p class="mt-2 text-sm leading-snug text-[#f4f0e8]/85">{{ order.customer_note|truncatechars:240 }}</p>
+      {% endif %}
+      <p class="mt-2 text-sm opacity-70">Vérifiez les éléments ci-dessous avant d'envoyer la demande en traitement. L'atelier contrôlera ensuite les fichiers avant lancement.</p>
+    </div>
+
+    <div class="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/25 p-4 text-sm">
+      <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <span class="text-xs uppercase tracking-wide opacity-50">Statut</span>
+        {% with tone=order.status|badge_tone %}
+        <span class="dui-badge dui-badge-sm {% if tone == 'is-success' %}dui-badge-success{% elif tone == 'is-warning' %}dui-badge-warning{% elif tone == 'is-danger' %}dui-badge-error{% else %}dui-badge-ghost border-white/25{% endif %}">{{ order.status|human_status }}</span>
+        {% endwith %}
+      </div>
+      <div class="dui-divider my-0"></div>
+      <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <span class="text-xs uppercase tracking-wide opacity-50">Fichiers</span>
+        <span class="font-medium text-[#f4f0e8]">{{ uploads|length }}</span>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'portal:client-checkout-submit' customer_public_id=customer.public_id %}" class="flex flex-col gap-5 border-t border-white/10 pt-5">
+      {% csrf_token %}
+      <input type="hidden" name="order_public_id" value="{{ order.public_id }}">
+
+      <label class="dui-label cursor-pointer flex items-start gap-3">
+        <input id="id_confirm_checkout" type="checkbox" name="confirm_checkout" class="dui-checkbox dui-checkbox-primary mt-0.5">
+        <span class="dui-label-text text-left text-sm leading-snug text-[#f4f0e8]">Je confirme l'envoi de la demande à l'atelier pour contrôle technique et traitement.</span>
+      </label>
+
+      {% include "components/forms/form_actions.html" with primary_label="Envoyer à l'atelier" primary_class_full="dui-btn dui-btn-primary dui-btn-wide" %}
+    </form>
+  </div>
+</aside>

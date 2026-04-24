@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Ouverture de compte pro — Prenium DTF{% endblock %}
+
+{% block body_class %}landing-saas prospect-tunnel-page ui-marketing-body{% endblock %}
+
+{% block extra_head %}
+<meta name="color-scheme" content="dark">
+{% endblock %}
+
+{% block content %}
+{% include "components/nav/landing_header.html" %}
+<section class="prospect-shell" aria-labelledby="prospect-shell-heading">
+  <div class="prospect-shell__inner">
+    <aside class="prospect-shell__aside">
+      <div class="prospect-shell__aside-card">
+        <p class="prospect-shell__eyebrow">Demande d’accès atelier</p>
+        <h1 id="prospect-shell-heading" class="prospect-shell__title">Un parcours guidé, pensé pour les pros du textile et de la personnalisation.</h1>
+        <p class="prospect-shell__lead">En quelques minutes, nous collectons l’essentiel pour valider votre compte et préparer un accompagnement adapté — sans engagement.</p>
+        {% if step and total_steps %}
+        <div class="prospect-tunnel__progress-panel">
+          <p class="prospect-tunnel__step-meta">
+            Avancement
+            <span class="prospect-tunnel__step-meta__sep" aria-hidden="true">·</span>
+            <span class="prospect-tunnel__step-meta__t">étape {{ step }} / {{ total_steps }}</span>
+          </p>
+          <div
+            class="prospect-tunnel__track"
+            role="progressbar"
+            aria-valuemin="1"
+            aria-valuemax="{{ total_steps }}"
+            aria-valuenow="{{ step }}"
+            aria-label="Progression du formulaire"
+          >
+            <div class="prospect-tunnel__track-fill" style="width: {% widthratio step total_steps 100 %}%"></div>
+          </div>
+        </div>
+        {% endif %}
+        {% include "prospects/partials/stepper.html" %}
+        <ul class="prospect-shell__trust" aria-label="Engagements">
+          <li>Données utilisées uniquement pour l’ouverture de compte et la relation commerciale.</li>
+          <li>Réponse habituelle sous 1 à 2 jours ouvrés après envoi.</li>
+          <li>Vous pourrez compléter les détails avec l’équipe une fois connecté.</li>
+        </ul>
+      </div>
+    </aside>
+    <main class="prospect-shell__main">
+      <div class="prospect-panel">
+        {% block prospect_section_head %}{% endblock %}
+        {% block prospect_inner %}{% endblock %}
+        {% block tunnel_content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+</section>
+{% endblock %}

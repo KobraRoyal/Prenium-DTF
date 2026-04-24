@@ -1,0 +1,32 @@
+<div class="ui-field-group{% if wrapper_class %} {{ wrapper_class }}{% endif %}">
+  {% if show_label %}
+  <label class="ui-label" for="{{ id }}">{{ label }}{% if required %}<span class="ui-label-required" aria-hidden="true">*</span>{% endif %}</label>
+  {% else %}
+  {# Libellé réservé à l’accessibilité ; indication visible via placeholder (ou valeur du select). #}
+  <label class="ui-sr-only" for="{{ id }}">{{ label }}</label>
+  {% endif %}
+  {% if help_text %}
+  <p class="ui-help" id="{{ id }}-help">{{ help_text }}</p>
+  {% endif %}
+  <input
+    class="ui-input{% if error %} ui-input--error{% endif %}"
+    id="{{ id }}"
+    name="{{ name }}"
+    type="{{ type|default:'text' }}"
+    {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+    {% if required %}required{% endif %}
+    {% if autofocus %}autofocus{% endif %}
+    placeholder="{% if placeholder %}{{ placeholder }}{% else %}{{ label }}{% endif %}"
+    {% if value %}value="{{ value }}"{% endif %}
+    {% if inputmode %}inputmode="{{ inputmode }}"{% endif %}
+    {% if pattern %}pattern="{{ pattern }}"{% endif %}
+    {% if min %}min="{{ min }}"{% endif %}
+    {% if max %}max="{{ max }}"{% endif %}
+    {% if step %}step="{{ step }}"{% endif %}
+    {% if help_text and error %}aria-describedby="{{ id }}-help {{ id }}-error"{% elif help_text %}aria-describedby="{{ id }}-help"{% elif error %}aria-describedby="{{ id }}-error"{% endif %}
+    {% if error %}aria-invalid="true"{% endif %}
+  />
+  {% if error %}
+  <p class="error-text ui-error-text" id="{{ id }}-error" role="alert">{{ error }}</p>
+  {% endif %}
+</div>

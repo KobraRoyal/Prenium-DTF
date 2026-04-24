@@ -1,0 +1,13 @@
+<nav class="prospect-stepper" aria-label="Progression ouverture de compte">
+  <ol class="prospect-stepper__list">
+    {% for item in steps %}
+    <li class="prospect-stepper__item {% if item.is_current %}is-current{% elif item.is_complete %}is-complete{% endif %}"{% if item.is_current %} aria-current="step"{% endif %}>
+      <span class="prospect-stepper__index">{% if item.is_complete %}✓{% else %}{{ forloop.counter }}{% endif %}</span>
+      <div class="prospect-stepper__copy">
+        <span class="prospect-stepper__label">{{ item.label }}</span>
+        {% if item.help %}<span class="prospect-stepper__help">{{ item.help }}</span>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</nav>

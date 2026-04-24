@@ -1,0 +1,13 @@
+<nav class="breadcrumb ui-breadcrumb" aria-label="Fil d’Ariane">
+  <ol class="ui-breadcrumb__list">
+    {% for item in items %}
+      <li class="ui-breadcrumb__item">
+        {% if item.url %}
+          <a href="{{ item.url }}">{{ item.label }}</a>
+        {% else %}
+          <span aria-current="page">{{ item.label }}</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</nav>

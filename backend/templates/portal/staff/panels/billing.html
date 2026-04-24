@@ -1,0 +1,113 @@
+{% load portal_tags %}
+<div class="workflow-panel">
+  <div class="workflow-panel__hero">
+    <div>
+      <h3 class="workflow-panel__title">Facturation</h3>
+      <p class="workflow-panel__meta">
+        Tarif B2B et suivi comptable. Pour la facturation différée, le métrage linéaire global se saisit dans l’onglet <strong>Production</strong>.
+      </p>
+    </div>
+  </div>
+
+  <div class="mb-6 rounded-lg border border-white/10 bg-white/[0.03] p-4 text-sm">
+    <p class="m-0">
+      <span class="muted">Mode de règlement client :</span>
+      {% if order.customer.preferred_settlement_method == "paypal" %}
+      <strong>PayPal</strong>
+      {% else %}
+      <strong>Virement bancaire</strong>
+      {% endif %}
+    </p>
+  </div>
+
+  {% if order.billing_mode != "deferred" %}
+  <p class="muted text-sm mb-6">Le métrage manuel concerne les commandes en <strong>facturation différée</strong> — saisie dans l’onglet <strong>Production</strong>.</p>
+  {% endif %}
+
+  {% if upload_rows %}
+  <h4 class="workflow-panel__subtitle">Fichiers</h4>
+  <ul class="staff-billing-files m-0 mb-6 list-none">
+    {% for row in upload_rows %}
+    <li class="staff-billing-files__row">
+      <span class="staff-billing-files__name">{{ row.upload.original_filename }}</span>
+      <span class="muted text-sm">{{ row.upload.size_bytes|filesizeformat }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty-state mb-6"><p>Aucun fichier — métrage non applicable.</p></div>
+  {% endif %}
+
+  <h4 class="workflow-panel__subtitle">Paiement</h4>
+  {% if payment %}
+  <div class="alert {% if payment.status == 'captured' %}alert--success{% elif payment.status == 'failed' %}alert--danger{% else %}alert--info{% endif %} mb-4">
+    <p>
+      Paiement:
+      <span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>
+      - {{ payment.amount }} {{ payment.currency }}
+    </p>
+    {% if payment.paypal_order_id %}
+    <p class="muted">PayPal order: {{ payment.paypal_order_id }}</p>
+    {% endif %}
+    {% if payment.paypal_capture_id %}
+    <p class="muted">PayPal capture: {{ payment.paypal_capture_id }}</p>
+    {% endif %}
+    {% if payment.last_error_message %}
+    <p>{{ payment.last_error_message }}</p>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="empty-state mb-4">
+    <p>Aucun paiement enregistré pour cette commande.</p>
+  </div>
+  {% endif %}
+
+  <h4 class="workflow-panel__subtitle">Facture</h4>
+  {% if invoice %}
+  <div class="alert alert--success">
+    <p>
+      Facture <strong>{{ invoice.invoice_number }}</strong>
+      -
+      <span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>
+      -
+      {{ invoice.total_amount }} {{ invoice.currency }}
+    </p>
+    <p class="muted">Email facturation: {{ invoice.billing_email|default:"-" }}</p>
+    {% if invoice.paid_at %}
+    <p class="mt-2 m-0 text-sm">
+      <span class="badge is-success">Payée</span>
+      — le {{ invoice.paid_at|date:"d/m/Y H:i" }}
+      {% if invoice.paid_recorded_by %}
+      <span class="muted">({{ invoice.paid_recorded_by.email }})</span>
+      {% endif %}
+    </p>
+    {% elif order.customer.preferred_settlement_method == "wire_transfer" %}
+    <p class="mt-2 m-0 text-sm text-amber-100/90">En attente de réception du virement.</p>
+    {% endif %}
+    {% if can_mark_invoice_paid %}
+    <section class="workflow-form-card mt-4" aria-labelledby="staff-billing-paid-heading">
+      <div class="workflow-form-card__head">
+        <h5 id="staff-billing-paid-heading" class="workflow-panel__subtitle mt-0">Clôture comptable</h5>
+        <p class="muted text-sm m-0">À utiliser uniquement après confirmation de réception du virement.</p>
+      </div>
+      <form
+        method="post"
+        action="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}"
+        class="mt-0"
+        hx-post="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}"
+        hx-target="#staff-order-panel"
+        hx-swap="innerHTML"
+        hx-indicator="#portal-htmx-indicator"
+      >
+        {% csrf_token %}
+        {% include "components/forms/form_actions.html" with primary_label="Marquer la facture comme payée (virement reçu)" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
+      </form>
+    </section>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>Aucune facture générée pour cette commande.</p>
+  </div>
+  {% endif %}
+</div>

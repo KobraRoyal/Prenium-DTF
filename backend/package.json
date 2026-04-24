@@ -1,0 +1,16 @@
+{
+  "name": "prenium-dtf-frontend",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./static_src/css/input.css -o ./static_src/css/app.css --minify",
+    "watch:css": "tailwindcss -i ./static_src/css/input.css -o ./static_src/css/app.css --watch",
+    "collectstatic:docker": "cd .. && docker compose exec -T web sh -c 'cd /app/backend && python manage.py collectstatic --noinput'",
+    "build:css:docker": "npm run build:css && npm run collectstatic:docker"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "daisyui": "^4.12.14",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17"
+  }
+}

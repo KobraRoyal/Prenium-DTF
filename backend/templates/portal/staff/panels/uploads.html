@@ -1,0 +1,104 @@
+{% load portal_tags %}
+<div class="workflow-panel">
+  <div class="workflow-panel__hero">
+    <div>
+      <h3 class="workflow-panel__title">Fichiers</h3>
+      <p class="workflow-panel__meta">
+        Liste des fichiers, états <strong>inspection</strong> et <strong>Drive</strong>. Pour les commandes en facturation différée, le métrage linéaire global se saisit dans l’onglet <strong>Production</strong>.
+      </p>
+    </div>
+  </div>
+
+  {% if upload_rows %}
+  <h4 class="workflow-panel__subtitle">Détail des fichiers</h4>
+  <div class="hidden md:block ui-table-shell table-wrap ui-table-shell--comfortable">
+    <table class="ui-data-table ui-data-table--comfortable w-full border-collapse text-sm">
+      <thead>
+        <tr>
+          <th>Fichier</th>
+          <th>Taille</th>
+          <th>Insp.</th>
+          <th>Drive</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in upload_rows %}
+        <tr class="{% if row.upload.inspection and row.upload.inspection.status == 'error' %}ui-row-anomaly{% elif row.upload.inspection and row.upload.inspection.status == 'warning' %}ui-row-warning{% endif %}">
+          <td class="max-w-[18rem]">
+            <div class="font-medium break-words text-[color:var(--ink)]">
+              {% if row.drive_browser_url %}
+              <a
+                class="staff-upload-filename-link"
+                href="{{ row.drive_browser_url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Ouvrir ce fichier dans Google&nbsp;Drive"
+              >{{ row.upload.original_filename }}</a>
+              {% else %}
+              {{ row.upload.original_filename }}
+              {% endif %}
+            </div>
+            <div class="muted text-xs break-all mt-0.5">{{ row.upload.mime_type }}</div>
+          </td>
+          <td class="whitespace-nowrap">{{ row.upload.size_bytes|filesizeformat }}</td>
+          <td>
+            {% if row.upload.inspection %}
+            <span class="badge {{ row.upload.inspection.status|badge_tone }}">{{ row.upload.inspection.status|human_status }}</span>
+            {% else %}
+            <span class="badge is-neutral">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.upload.drive_sync %}
+            <span class="badge {{ row.upload.drive_sync.status|badge_tone }}">{{ row.upload.drive_sync.status|human_status }}</span>
+            {% else %}
+            <span class="badge is-neutral">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="md:hidden space-y-3" role="feed" aria-label="Fichiers commande (staff)">
+    {% for row in upload_rows %}
+    <article class="rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-sm backdrop-blur-sm">
+      <p class="break-words font-medium text-[color:var(--ink)] m-0">
+        {% if row.drive_browser_url %}
+        <a
+          class="staff-upload-filename-link"
+          href="{{ row.drive_browser_url }}"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Ouvrir ce fichier dans Google&nbsp;Drive"
+        >{{ row.upload.original_filename }}</a>
+        {% else %}
+        {{ row.upload.original_filename }}
+        {% endif %}
+      </p>
+      <p class="muted mt-1 text-xs break-all">{{ row.upload.mime_type }}</p>
+      <p class="mt-2 text-sm">Taille : {{ row.upload.size_bytes|filesizeformat }}</p>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <span class="text-xs text-[color:var(--ink)]/70">Inspection</span>
+        {% if row.upload.inspection %}
+        <span class="badge {{ row.upload.inspection.status|badge_tone }}">{{ row.upload.inspection.status|human_status }}</span>
+        {% else %}
+        <span class="badge is-neutral">—</span>
+        {% endif %}
+      </div>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <span class="text-xs text-[color:var(--ink)]/70">Drive</span>
+        {% if row.upload.drive_sync %}
+        <span class="badge {{ row.upload.drive_sync.status|badge_tone }}">{{ row.upload.drive_sync.status|human_status }}</span>
+        {% else %}
+        <span class="badge is-neutral">—</span>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state"><p>Aucun upload pour cette commande.</p></div>
+  {% endif %}
+</div>

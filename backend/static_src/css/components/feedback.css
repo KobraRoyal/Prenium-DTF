@@ -1,0 +1,129 @@
+@layer components {
+  .ui-skeleton {
+    display: block;
+    border-radius: 0.5rem;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--line) 40%, white) 0%,
+      color-mix(in srgb, var(--brand) 8%, white) 50%,
+      color-mix(in srgb, var(--line) 40%, white) 100%
+    );
+    background-size: 200% 100%;
+    animation: ui-skeleton-shimmer 1.2s ease-in-out infinite;
+  }
+
+  @keyframes ui-skeleton-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .ui-toast-stack {
+    position: fixed;
+    right: 1rem;
+    top: 1rem;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+  }
+
+  .ui-toast-stack > * {
+    pointer-events: auto;
+  }
+
+  .ui-local-feedback {
+    margin: 0 0 1rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .ui-local-feedback p {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  .ui-local-feedback--success,
+  .ui-local-feedback--info {
+    border-color: rgba(105, 190, 140, 0.26);
+    background: rgba(90, 160, 120, 0.12);
+  }
+
+  .ui-local-feedback--error {
+    border-color: rgba(220, 100, 100, 0.35);
+    background: rgba(160, 60, 60, 0.16);
+  }
+
+  .ui-local-feedback.is-fading {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+
+  .workflow-panel-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+    min-height: 2.5rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.9rem;
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .workflow-panel-loading__stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .workflow-panel-loading__text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.88rem;
+  }
+
+  .workflow-panel-loading__text::before {
+    content: "";
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.75;
+    animation: ui-pulse-dot 0.85s ease-in-out infinite alternate;
+  }
+
+  .ui-skeleton--muted {
+    opacity: 0.72;
+  }
+
+  .ui-skeleton--panel {
+    border-radius: 0.85rem;
+  }
+
+  .workflow-panel-target.is-loading {
+    opacity: 0.82;
+    transition: opacity 0.12s ease;
+  }
+
+  @keyframes ui-pulse-dot {
+    from {
+      transform: scale(0.9);
+      opacity: 0.45;
+    }
+    to {
+      transform: scale(1.15);
+      opacity: 0.95;
+    }
+  }
+}

@@ -1,0 +1,61 @@
+<section id="landing-hero" class="landing-section landing-hero landing-hero--saas landing-hero--animate">
+  <div class="landing-shell landing-shell--hero">
+    <div class="landing-hero__glow"></div>
+    <div class="landing-hero__grid">
+      <div class="landing-stack landing-stack--xl">
+        <p class="landing-kicker landing-kicker--pill">DTF premium B2B</p>
+        <div class="landing-copy landing-copy--wide">
+          <h1>Le DTF pensé pour les marques qui veulent <span class="landing-text-gradient">vendre vite, produire juste et inspirer confiance</span>.</h1>
+          <p class="landing-hero__lead">Prenium DTF structure le parcours de A à Z : ouverture de compte, devis opérationnel, upload, validation, suivi atelier et expédition dans une expérience claire, premium et lisible dès la première commande.</p>
+          <p class="landing-hero__target landing-hero__target--inline"><span class="landing-hero__target-label">Ciblage :</span> ateliers, revendeurs, studios créatifs et marques qui veulent un espace client crédible sans friction interne.</p>
+        </div>
+        <div class="landing-dual-cta landing-hero__actions">
+          <a class="btn-saas-primary" href="{% url 'prospects:step1' %}">Ouvrir un compte pro</a>
+          <a class="btn-saas-secondary" href="{% url 'services' %}">Voir les services</a>
+        </div>
+        <p class="landing-hero__cta-note">
+          Besoin d’un accès immédiat à votre espace ?
+          <a href="{% url 'portal:login' %}">Espace client</a>
+          <span class="landing-hero__cta-note__sep">•</span>
+          <a href="{% url 'services' %}">Commander</a>
+        </p>
+        <ul class="landing-hero__badges" aria-label="Points clés">
+          <li><span class="landing-dot"></span> Parcours B2B clair et rassurant</li>
+          <li><span class="landing-dot"></span> Contrôle fichier et suivi de production</li>
+          <li><span class="landing-dot"></span> Portail client + backoffice staff cohérents</li>
+        </ul>
+        <div class="landing-proof-strip" aria-label="Signaux de confiance">
+          <span class="landing-proof-pill">Compte pro dédié</span>
+          <span class="landing-proof-pill">Commande guidée</span>
+          <span class="landing-proof-pill">Suivi atelier visible</span>
+        </div>
+      </div>
+      <aside class="landing-mockup--saas landing-command-board" aria-label="Aperçu du parcours">
+        <div class="landing-command-board__header">
+          <div>
+            <p class="landing-command-board__eyebrow">Pilotage</p>
+            <h2>Un tableau de bord qui rassure avant même le premier échange.</h2>
+          </div>
+          <span class="landing-command-board__status">Live workflow</span>
+        </div>
+        <div class="landing-command-board__stack">
+          <article class="landing-command-board__card">
+            <p class="landing-command-board__label">Onboarding</p>
+            <strong>Ouverture de compte guidée</strong>
+            <span>Informations attendues, étapes lisibles, next step évident.</span>
+          </article>
+          <article class="landing-command-board__card landing-command-board__card--accent">
+            <p class="landing-command-board__label">Commande</p>
+            <strong>Upload, résumé et validation sans friction</strong>
+            <span>Support, quantités, note client et pièces jointes visibles dans le même flux.</span>
+          </article>
+          <article class="landing-command-board__card">
+            <p class="landing-command-board__label">Workflow</p>
+            <strong>Fichiers → contrôle → atelier → expédition</strong>
+            <span>Chaque statut raconte l’étape réelle, pas un jargon interne.</span>
+          </article>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>

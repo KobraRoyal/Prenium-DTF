@@ -1,0 +1,657 @@
+/* Tous les @import doivent précéder @tailwind (sinon shell/forms/prospect-tunnel
+    peuvent être ignorés par le pipeline et ne jamais figurer dans app.css). */
+@import "./tokens.css";
+@import "./legacy/app-legacy.css";
+@import "./components/shell.css";
+@import "./components/feedback.css";
+@import "./components/forms.css";
+@import "./components/prospect-tunnel.css";
+@import "./components/workflow.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html[data-theme="prenium"] {
+    background-color: transparent;
+  }
+
+  body.ui-app-body {
+    min-height: 100vh;
+    font-family: var(--ui-font-body);
+    color: var(--ui-text-strong);
+    background:
+      radial-gradient(circle at top, rgba(143, 61, 31, 0.05), transparent 34%),
+      linear-gradient(180deg, #fffdf9 0%, #f7f2ea 100%);
+  }
+
+  body.ui-app-body h1,
+  body.ui-app-body h2,
+  body.ui-app-body h3,
+  body.ui-app-body h4 {
+    color: var(--ui-text-strong);
+    letter-spacing: -0.025em;
+  }
+
+  body.ui-app-body p,
+  body.ui-app-body li,
+  body.ui-app-body label {
+    color: var(--ui-text-strong);
+  }
+
+  body.ui-app-body .muted {
+    color: var(--ui-text-muted);
+  }
+}
+
+@layer components {
+  body.landing-saas .landing-brand--signature .brand-link {
+    letter-spacing: -0.04em;
+  }
+
+  body.landing-saas .landing-brand--signature .brand-subtitle {
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  body.landing-saas .landing-mini-list {
+    display: grid;
+    gap: 0.45rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.88rem;
+    color: rgba(244, 240, 232, 0.72);
+  }
+
+  body.landing-saas .landing-mini-list li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  body.landing-saas .landing-mini-list li::before {
+    content: "";
+    width: 0.42rem;
+    height: 0.42rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(240, 168, 122, 0.95), rgba(201, 90, 50, 0.8));
+    box-shadow: 0 0 14px rgba(240, 168, 122, 0.35);
+  }
+
+  body.landing-saas .landing-command-board {
+    display: grid;
+    gap: 1rem;
+    align-self: stretch;
+    padding: 1.25rem;
+    background:
+      linear-gradient(180deg, rgba(14, 11, 9, 0.92), rgba(14, 11, 9, 0.76)),
+      radial-gradient(circle at top right, rgba(240, 168, 122, 0.16), transparent 40%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  body.landing-saas .landing-command-board__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  body.landing-saas .landing-command-board__header h2 {
+    margin: 0.35rem 0 0;
+    font-family: "Outfit", "Space Grotesk", sans-serif;
+    font-size: 1.05rem;
+    line-height: 1.3;
+    color: #faf7f2;
+  }
+
+  body.landing-saas .landing-command-board__eyebrow,
+  body.landing-saas .portal-signal-card__eyebrow,
+  body.landing-saas.portal-shell .page-head__eyebrow {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(240, 168, 122, 0.88);
+  }
+
+  body.landing-saas .landing-command-board__status {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    padding: 0.38rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(240, 168, 122, 0.12);
+    border: 1px solid rgba(240, 168, 122, 0.26);
+    font-size: 0.76rem;
+    color: #f8d2bb;
+  }
+
+  body.landing-saas .landing-command-board__stack {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  body.landing-saas .landing-command-board__card {
+    display: grid;
+    gap: 0.32rem;
+    padding: 0.95rem 1rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  body.landing-saas .landing-command-board__card--accent {
+    background: linear-gradient(180deg, rgba(240, 168, 122, 0.14), rgba(255, 255, 255, 0.04));
+    border-color: rgba(240, 168, 122, 0.2);
+  }
+
+  body.landing-saas .landing-command-board__card strong {
+    font-size: 0.98rem;
+    color: #fff;
+  }
+
+  body.landing-saas .landing-command-board__card span {
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: rgba(244, 240, 232, 0.68);
+  }
+
+  body.landing-saas .landing-command-board__label {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(244, 240, 232, 0.48);
+  }
+
+  body.landing-saas.portal-shell .portal-top-meta {
+    margin-left: auto;
+    margin-right: 0.85rem;
+  }
+
+  body.landing-saas.portal-shell .portal-top-meta__pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.42rem 0.78rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(244, 240, 232, 0.86);
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  body.landing-saas.portal-shell .dashboard-hero {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  body.landing-saas.portal-shell .portal-signal-card {
+    display: grid;
+    gap: 0.55rem;
+    padding: 1rem 1.1rem;
+    border-radius: 20px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+      radial-gradient(circle at top right, rgba(240, 168, 122, 0.15), transparent 44%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.24);
+  }
+
+  body.landing-saas.portal-shell .portal-signal-card strong {
+    font-family: "Outfit", "Space Grotesk", sans-serif;
+    font-size: 1.1rem;
+    line-height: 1.2;
+    color: #faf7f2;
+  }
+
+  body.landing-saas.portal-shell .portal-signal-card p {
+    margin: 0;
+    color: rgba(244, 240, 232, 0.7);
+  }
+
+  body.landing-saas.portal-shell .portal-signal-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 0.25rem;
+  }
+
+  body.landing-saas.portal-shell .portal-signal-card__foot {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+    color: rgba(244, 240, 232, 0.64);
+  }
+
+  body.landing-saas.portal-shell .portal-signal-card__metric {
+    font-family: "Outfit", "Space Grotesk", sans-serif;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #fff;
+  }
+
+  body.landing-saas.portal-shell .page-head--premium {
+    margin: 0;
+    padding: 1.15rem 1.2rem;
+    border-radius: 22px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025)),
+      radial-gradient(circle at top left, rgba(240, 168, 122, 0.12), transparent 42%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.24);
+  }
+
+  body.landing-saas.portal-shell .page-head__content {
+    max-width: 46rem;
+  }
+
+  body.landing-saas.portal-shell .ui-kpi-card {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    gap: 0.55rem;
+    padding: 1rem 1.1rem;
+  }
+
+  body.landing-saas.portal-shell .ui-kpi-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(240, 168, 122, 0.5), transparent 55%);
+  }
+
+  body.landing-saas.portal-shell .ui-kpi-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  body.landing-saas.portal-shell .ui-kpi-card__index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.76rem;
+    color: rgba(244, 240, 232, 0.58);
+  }
+
+  body.landing-saas.portal-shell .ui-kpi-card__value {
+    margin: 0;
+    font-family: "Outfit", "Space Grotesk", sans-serif;
+    font-size: clamp(1.3rem, 2vw, 1.8rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: #faf7f2;
+  }
+
+  body.landing-saas.portal-shell .ui-kpi-card__hint {
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgba(244, 240, 232, 0.66);
+  }
+
+  body.landing-saas.portal-shell .ui-order-primary,
+  body.landing-saas.portal-shell .ui-order-secondary {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  body.landing-saas.portal-shell .ui-order-primary__label,
+  body.landing-saas.portal-shell .ui-order-secondary__label {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(244, 240, 232, 0.48);
+  }
+
+  body.landing-saas.portal-shell .ui-order-secondary__value,
+  body.landing-saas.portal-shell .ui-order-secondary time {
+    color: rgba(244, 240, 232, 0.9);
+  }
+
+  body.landing-saas.portal-shell .ui-inline-link--button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 5rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+  }
+
+  body.landing-saas.portal-shell .ui-inline-link--button:hover {
+    border-color: rgba(240, 168, 122, 0.3);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  body.landing-saas.portal-shell .ui-mobile-order-card {
+    padding: 1rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  }
+
+  @media (min-width: 960px) {
+    body.landing-saas.portal-shell .dashboard-hero {
+      grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
+      align-items: stretch;
+    }
+  }
+
+  @media (max-width: 959px) {
+    body.landing-saas .landing-hero__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.landing-saas.portal-shell .portal-top-meta {
+      display: none;
+    }
+  }
+}
+
+@layer components {
+  body.landing-saas:not(.portal-shell) .landing-main {
+    display: grid;
+    gap: clamp(1.4rem, 2.8vw, 2.4rem);
+    padding: clamp(1rem, 2vw, 1.5rem) 0 clamp(3rem, 6vw, 5rem);
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-shell {
+    width: min(1120px, calc(100vw - 2rem));
+    margin: 0 auto;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-section {
+    margin: 0;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-section--muted .landing-shell,
+  body.landing-saas:not(.portal-shell) .landing-section--cta .landing-shell {
+    padding: clamp(1.3rem, 2.2vw, 2rem);
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
+      radial-gradient(circle at top right, rgba(240, 168, 122, 0.08), transparent 40%);
+    box-shadow:
+      0 28px 80px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-copy {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-copy--wide {
+    max-width: 44rem;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-eyebrow {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(240, 168, 122, 0.9);
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-lead {
+    margin: 0;
+    max-width: 46rem;
+    font-size: clamp(0.98rem, 1.25vw, 1.08rem);
+    line-height: 1.7;
+    color: rgba(244, 240, 232, 0.7);
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-dual-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: center;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-main .section-head {
+    display: grid;
+    justify-content: start;
+    gap: 0.8rem;
+    margin-bottom: 1.35rem;
+    max-width: 46rem;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-main .section-head > * {
+    margin: 0;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-main .section-head h2 {
+    max-width: 18ch;
+    font-family: "Outfit", "Space Grotesk", sans-serif;
+    font-size: clamp(1.7rem, 3vw, 2.55rem);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: #faf7f2;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-main .section-head.section-head--center {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    justify-items: center;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-main .section-head.section-head--center h2,
+  body.landing-saas:not(.portal-shell) .landing-main .marketing-grid--proof h2 {
+    max-width: 22ch;
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-grid--proof {
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+    align-items: stretch;
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-card {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+    min-height: 100%;
+    padding: 1.2rem 1.15rem;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025)),
+      radial-gradient(circle at top right, rgba(240, 168, 122, 0.06), transparent 45%);
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-card > * {
+    margin: 0;
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-card__eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(240, 168, 122, 0.8);
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-card h2,
+  body.landing-saas:not(.portal-shell) .marketing-card h3 {
+    font-family: "Outfit", "Space Grotesk", sans-serif;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    color: #faf7f2;
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-card h2 {
+    font-size: clamp(1.4rem, 2.2vw, 2rem);
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-card h3 {
+    font-size: 1.18rem;
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-card p,
+  body.landing-saas:not(.portal-shell) .marketing-card li,
+  body.landing-saas:not(.portal-shell) .stat-pair__label {
+    color: rgba(244, 240, 232, 0.68);
+    line-height: 1.62;
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-card--feature {
+    background:
+      linear-gradient(180deg, rgba(240, 168, 122, 0.12), rgba(255, 255, 255, 0.03)),
+      radial-gradient(circle at top right, rgba(240, 168, 122, 0.12), transparent 48%);
+    border-color: rgba(240, 168, 122, 0.18);
+  }
+
+  body.landing-saas:not(.portal-shell) .marketing-card--stats {
+    gap: 0.9rem;
+  }
+
+  body.landing-saas:not(.portal-shell) .stat-pair {
+    display: grid;
+    gap: 0.18rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  body.landing-saas:not(.portal-shell) .stat-pair:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  body.landing-saas:not(.portal-shell) .stat-pair strong {
+    font-family: "Outfit", "Space Grotesk", sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #faf7f2;
+  }
+
+  body.landing-saas:not(.portal-shell) .cta-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) auto;
+    gap: 1.2rem;
+    align-items: end;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-final-cta__actions {
+    margin-top: 0;
+    justify-content: flex-end;
+  }
+
+  body.landing-saas:not(.portal-shell) .landing-final-cta__footnote {
+    grid-column: 1 / -1;
+    margin-top: 0.15rem;
+    color: rgba(244, 240, 232, 0.52);
+  }
+
+  body.prospect-tunnel-page .prospect-shell {
+    width: min(1120px, calc(100vw - 2rem));
+    margin: 0 auto;
+    padding: clamp(1rem, 2vw, 1.4rem) 0 clamp(2rem, 5vw, 3rem);
+  }
+
+  body.prospect-tunnel-page .prospect-shell__inner {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.92fr) minmax(0, 1.08fr);
+    gap: 1.1rem;
+    align-items: start;
+  }
+
+  body.prospect-tunnel-page .prospect-shell__aside,
+  body.prospect-tunnel-page .prospect-shell__main {
+    min-width: 0;
+  }
+
+  body.prospect-tunnel-page .prospect-shell__aside-card,
+  body.prospect-tunnel-page .prospect-panel {
+    padding: clamp(1.2rem, 2vw, 1.6rem);
+    border-radius: 26px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025)),
+      radial-gradient(circle at top right, rgba(240, 168, 122, 0.08), transparent 42%);
+    box-shadow:
+      0 24px 72px rgba(0, 0, 0, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  body.prospect-tunnel-page .prospect-panel {
+    display: grid;
+    gap: 1.2rem;
+  }
+
+  body.prospect-tunnel-page .prospect-shell__lead,
+  body.prospect-tunnel-page .prospect-tunnel__lead {
+    max-width: 30rem;
+  }
+
+  @media (max-width: 1023px) {
+    body.landing-saas:not(.portal-shell) .marketing-grid--3,
+    body.landing-saas:not(.portal-shell) .marketing-grid--proof,
+    body.landing-saas:not(.portal-shell) .cta-panel,
+    body.prospect-tunnel-page .prospect-shell__inner {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.landing-saas:not(.portal-shell) .landing-main .section-head h2 {
+      max-width: 24ch;
+    }
+
+    body.landing-saas:not(.portal-shell) .landing-final-cta__actions {
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 767px) {
+    body.landing-saas:not(.portal-shell) .landing-shell,
+    body.prospect-tunnel-page .prospect-shell {
+      width: min(100vw - 1rem, 1120px);
+    }
+
+    body.landing-saas:not(.portal-shell) .landing-main {
+      gap: 1rem;
+      padding-top: 0.75rem;
+    }
+
+    body.landing-saas:not(.portal-shell) .landing-section--muted .landing-shell,
+    body.landing-saas:not(.portal-shell) .landing-section--cta .landing-shell,
+    body.prospect-tunnel-page .prospect-shell__aside-card,
+    body.prospect-tunnel-page .prospect-panel {
+      border-radius: 22px;
+      padding: 1rem;
+    }
+  }
+}

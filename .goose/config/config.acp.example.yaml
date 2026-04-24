@@ -1,0 +1,36 @@
+# Exemple Goose config.yaml
+# Adapte les modèles exacts à ceux réellement disponibles dans ton installation Goose.
+
+GOOSE_PROVIDER: "codex-acp"
+GOOSE_MODEL: "gpt-5.2-codex"
+GOOSE_MODE: "smart-approve"
+GOOSE_TEMPERATURE: 0.2
+GOOSE_MAX_TURNS: 120
+GOOSE_AUTO_COMPACT_THRESHOLD: 0.8
+
+# Planning séparé
+GOOSE_PLANNER_PROVIDER: "codex-acp"
+GOOSE_PLANNER_MODEL: "gpt-5.2-codex"
+
+# Recipes
+GOOSE_RECIPE_GITHUB_REPO: "YOUR_ORG/YOUR_GOOSE_RECIPES"
+
+# Security
+SECURITY_PROMPT_ENABLED: true
+SECURITY_PROMPT_THRESHOLD: 0.8
+
+# Extensions - adapte aux extensions installées
+extensions:
+  developer:
+    bundled: true
+    enabled: true
+    name: developer
+    timeout: 300
+    type: builtin
+
+  memory:
+    bundled: true
+    enabled: true
+    name: memory
+    timeout: 300
+    type: builtin

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Services DTF premium — Prenium DTF{% endblock %}
+
+{% block body_class %}landing-saas ui-marketing-body{% endblock %}
+
+{% block content %}
+{% include "components/nav/landing_header.html" %}
+<section class="landing-section landing-section--hero landing-section--compact">
+  <div class="landing-shell">
+    <div class="landing-stack landing-stack--lg">
+      <p class="landing-eyebrow">Services</p>
+      <div class="landing-copy landing-copy--wide">
+        <h1>Sélectionnez votre service DTF premium.</h1>
+        <p class="landing-lead">Commande guidée, contrôle fichier, suivi atelier et expédition : nous simplifions le flux sans déplacer la logique métier hors du backend. Si vous êtes déjà client, connectez-vous à votre espace pour reprendre vos commandes.</p>
+      </div>
+      <div class="landing-dual-cta">
+        <a class="btn ui-btn ui-btn-primary" href="{% url 'prospects:step1' %}">Ouvrir un compte pro</a>
+        <a class="btn ui-btn ui-btn-secondary" href="{% url 'portal:login' %}">Déjà client ? Connexion</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="landing-section">
+  <div class="landing-shell">
+    <div class="section-head">
+      <p class="landing-eyebrow">Bénéfices métier</p>
+      <h2>Un service DTF pensé pour les besoins B2B réels.</h2>
+      <p class="landing-lead">Le parcours de service priorise la clarté commerciale, la fiabilité atelier et la continuité du suivi client.</p>
+    </div>
+    <div class="marketing-grid marketing-grid--services">
+      <article class="marketing-card marketing-card--feature">
+        <p class="marketing-card__eyebrow">Production</p>
+        <h2>Transferts premium, lisibles et réguliers</h2>
+        <p>Préparation de commande cadrée, contrôle fichier et workflow clair pour livrer une production stable sans zones floues.</p>
+      </article>
+      <article class="marketing-card">
+        <h3>Flux B2B encadré</h3>
+        <p>Compte client, tunnel guidé, statuts de suivi, production et billing structurés dans un portail unifié.</p>
+      </article>
+      <article class="marketing-card">
+        <h3>Moins d’aller-retours</h3>
+        <p>Les attentes sont explicites, les fichiers sont centralisés et les équipes gardent un même référentiel de commande.</p>
+      </article>
+      <article class="marketing-card">
+        <h3>Suivi professionnel</h3>
+        <p>Client et staff disposent d’une lecture cohérente des étapes : fichiers, contrôle, atelier, expédition et facturation.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="landing-section landing-section--muted">
+  <div class="landing-shell">
+    <div class="section-head section-head--center">
+      <p class="landing-eyebrow">Cas d’usage</p>
+      <h2>Pour les marques, ateliers et revendeurs qui veulent un flux plus propre.</h2>
+      <p class="landing-lead">Chaque surface a été pensée pour réduire la charge mentale : onboarding, commande, suivi client et backoffice atelier.</p>
+    </div>
+    <div class="marketing-grid marketing-grid--3">
+      <article class="marketing-card">
+        <h3>Marques en croissance</h3>
+        <p>Accès à un tunnel clair, des commandes suivies et un interlocuteur fiable sur la qualité fichier et production.</p>
+      </article>
+      <article class="marketing-card">
+        <h3>Ateliers & revendeurs</h3>
+        <p>Lecture plus rapide des statuts, meilleure coordination et réduction des points de friction opérationnels.</p>
+      </article>
+      <article class="marketing-card">
+        <h3>Structures exigeantes</h3>
+        <p>Une expérience plus premium, plus sobre et plus professionnelle sur tout le cycle commande → livraison.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="landing-section landing-section--cta">
+  <div class="landing-shell">
+    <div class="cta-panel">
+      <div class="landing-copy landing-copy--wide">
+        <p class="landing-eyebrow">Réassurance</p>
+        <h2>Lancer votre relation commerciale avec un parcours plus propre dès aujourd’hui.</h2>
+        <p class="landing-lead">Demandez votre accès, préparez vos fichiers et retrouvez un suivi plus lisible côté client comme côté staff.</p>
+      </div>
+      <div class="landing-dual-cta">
+        <a class="btn ui-btn ui-btn-primary" href="{% url 'prospects:step1' %}">Demander un accès</a>
+        <a class="btn ui-btn ui-btn-secondary" href="{% url 'home' %}">Retour à l’accueil</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

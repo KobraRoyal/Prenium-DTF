@@ -1,0 +1,44 @@
+# Secrets / environnement
+.env
+.env.*
+secrets.yaml
+
+# Python / caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Front / build
+node_modules/
+dist/
+build/
+coverage/
+.playwright/
+htmlcov/
+
+# Django / runtime
+staticfiles/
+media/
+*.log
+db.sqlite3
+
+# Docker / containers / local runtime
+postgres_data/
+redis_data/
+docker-data/
+tmp/
+temp/
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Fichiers temporaires
+*.tmp
+*.bak

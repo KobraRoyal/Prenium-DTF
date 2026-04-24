@@ -1,0 +1,13 @@
+<div class="empty-state text-center">
+  {% if title %}
+  <h3 class="mt-0 font-display text-lg text-[color:var(--ink)]">{{ title }}</h3>
+  {% endif %}
+  {% if message %}
+  <p class="muted mt-2">{{ message }}</p>
+  {% endif %}
+  {% if cta_url and cta_label %}
+  <p class="mt-4">
+    <a class="btn" href="{{ cta_url }}">{{ cta_label }}</a>
+  </p>
+  {% endif %}
+</div>

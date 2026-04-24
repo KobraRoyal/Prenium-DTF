@@ -1,0 +1,92 @@
+{% extends "portal/layout.html" %}
+{% load portal_tags order_tags %}
+
+{% block title %}Fiche commande staff - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_order_detail.html" title="Commande" title_code=order.public_id %}
+
+<section class="staff-order-detail-stack" aria-label="Synthèse commande staff">
+<section class="card order-command-bar" style="margin-bottom: 1rem;">
+  <div class="order-command-bar__main">
+    <div class="order-command-bar__client">
+      <p class="order-command-bar__client-label">Client</p>
+      <p class="order-command-bar__client-name">{{ order.customer.name }}</p>
+    </div>
+    <div class="order-command-bar__cluster">
+      <div class="order-command-bar__badges" aria-label="Statuts">
+        <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
+        <span class="badge">{{ order.billing_mode|human_status }}</span>
+        <span class="badge">{{ order.pricing_status|human_status }}</span>
+        {% if order.pricing_status == "priced" %}
+        <strong class="order-command-bar__amount">{{ order.total_amount }} {{ order.currency }}</strong>
+        {% endif %}
+        {% if order.credit_hold_status and order.credit_hold_status != "none" %}
+        <span class="badge {{ order.credit_hold_status|badge_tone }}">Encours {{ order.credit_hold_status|human_status }}</span>
+        {% endif %}
+      </div>
+      {% if production_job or order_drive_url %}
+      <div class="order-command-bar__refs" aria-label="Raccourcis atelier">
+        {% if production_job %}
+        <div class="order-command-bar__ref order-command-bar__ref--inline">
+          <span class="order-command-bar__ref-label">OF</span>
+          {% if order_drive_url %}
+          <a
+            class="order-command-bar__of-link"
+            href="{{ order_drive_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Ouvrir le dossier Google&nbsp;Drive de la commande"
+            aria-label="Ouvrir le dossier Google Drive — ordre de fabrication {{ production_job.manufacturing_order_number }}"
+          >
+            <code class="order-command-bar__ref-code">{{ production_job.manufacturing_order_number }}</code>
+          </a>
+          {% else %}
+          <code class="order-command-bar__ref-code">{{ production_job.manufacturing_order_number }}</code>
+          {% endif %}
+        </div>
+        {% elif order_drive_url %}
+        <a
+          class="order-command-bar__drive-link ui-link"
+          href="{{ order_drive_url }}"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span aria-hidden="true" class="order-command-bar__drive-icon">▸</span>
+          Dossier Google&nbsp;Drive
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% if can_price_order %}
+  <div class="order-command-bar__action">
+    <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}">
+      {% csrf_token %}
+      <button type="submit" class="btn">Calculer le prix</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+
+{% include "components/portal/staff_customer_snapshot.html" %}
+
+{% include "components/portal/staff_order_workflow_summary.html" %}
+
+<div class="staff-order-detail-stack__status">
+{% if price_error %}
+<div class="alert alert--danger" role="alert">
+  <p>{{ price_error }}</p>
+</div>
+{% endif %}
+{% if priced_ok %}
+<div class="alert alert--success workflow-panel__feedback workflow-panel__feedback--ephemeral" role="status">
+  <p>Tarification enregistrée.</p>
+</div>
+{% endif %}
+</div>
+
+{% order_htmx_tabs "staff" %}
+</section>
+{% endblock %}

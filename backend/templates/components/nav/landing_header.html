@@ -1,0 +1,14 @@
+<header class="app-header landing-saas-header">
+  <div class="app-main app-nav landing-saas-nav ui-shell-main">
+    <div class="landing-brand landing-brand--signature">
+      <a class="brand-link" href="{% url 'home' %}">Prenium DTF</a>
+      <p class="brand-subtitle">via IDS supply</p>
+    </div>
+    <nav class="nav-group landing-saas-nav__links">
+      <a class="nav-link nav-link--ghost" href="#landing-services">Services</a>
+      <a class="nav-link nav-link--ghost" href="{% url 'prospects:step1' %}">Demander un accès</a>
+      <a class="nav-link nav-link--ghost" href="{% url 'portal:login' %}">Espace client</a>
+      <a class="btn btn-nav-cta" href="{% url 'services' %}">Commander</a>
+    </nav>
+  </div>
+</header>

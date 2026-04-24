@@ -1,0 +1,31 @@
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h3 class="font-display text-lg">Contrôle fichiers</h3>
+      <p class="muted">Visualisez rapidement si vos fichiers sont validés, à surveiller ou à corriger avant production.</p>
+    </div>
+  </div>
+  {% if uploads %}
+  <div class="kpi-grid">
+    <article class="card">
+      <p class="muted text-sm">Validés</p>
+      <h4 class="font-display text-xl">{{ inspection_counter.ok|default:0 }}</h4>
+    </article>
+    <article class="card">
+      <p class="muted text-sm">À surveiller</p>
+      <h4 class="font-display text-xl">{{ inspection_counter.warning|default:0 }}</h4>
+    </article>
+    <article class="card">
+      <p class="muted text-sm">À corriger</p>
+      <h4 class="font-display text-xl">{{ inspection_counter.error|default:0 }}</h4>
+    </article>
+  </div>
+  <div class="alert alert--info mt-4">
+    <p class="m-0">Le contrôle technique est mis à jour au fil du traitement. En cas d'alerte, l'équipe revient vers vous avant production.</p>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>Le bloc inspection sera disponible après le premier téléversement.</p>
+  </div>
+  {% endif %}
+</div>

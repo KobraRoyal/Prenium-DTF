@@ -1,0 +1,16 @@
+{# Paramètres usuels : kicker OU breadcrumb_template ; title ; subtitle (optionnel) ; title_code (optionnel, affiché en <code> après title). #}
+<section class="page-head page-head--premium">
+  <div class="page-head__content">
+    {% if breadcrumb_template %}
+      {% include breadcrumb_template %}
+    {% elif kicker %}
+      <p class="breadcrumb page-head__eyebrow">{{ kicker }}</p>
+    {% endif %}
+    <h1 class="font-display text-2xl tracking-tight">
+      {{ title }}{% if title_code %} <code>{{ title_code }}</code>{% endif %}
+    </h1>
+    {% if subtitle %}
+      <p class="page-head-lead">{% if subtitle_prefix %}{{ subtitle_prefix }} — {% endif %}{{ subtitle }}</p>
+    {% endif %}
+  </div>
+</section>

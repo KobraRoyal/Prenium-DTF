@@ -1,0 +1,47 @@
+{% load portal_tags %}
+<div class="workflow-panel">
+  <div class="workflow-panel__hero">
+    <div>
+      <h3 class="workflow-panel__title">Synchronisation Drive</h3>
+      <p class="workflow-panel__meta">
+        Vue <strong>incidents uniquement</strong> : fichiers sans synchro OK ou avec erreur. Le détail par fichier (lien Drive) reste dans l’onglet <strong>Fichiers</strong>.
+      </p>
+    </div>
+  </div>
+
+  {% if drive_sync_problems %}
+  <p class="drive-sync-count muted text-sm mb-3">
+    <strong>{{ drive_sync_problems|length }}</strong> fichier{{ drive_sync_problems|length|pluralize }} à traiter (hors statut synchronisé).
+  </p>
+  <ul class="m-0 list-none space-y-3 p-0">
+    {% for upload in drive_sync_problems %}
+    <li class="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+      <p class="m-0 font-medium break-words text-[color:var(--ink)]">{{ upload.original_filename }}</p>
+      {% if upload.drive_sync %}
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <span class="badge {{ upload.drive_sync.status|badge_tone }}">{{ upload.drive_sync.status|human_status }}</span>
+        {% if upload.drive_sync.google_drive_browser_url %}
+        <a
+          class="ui-link text-sm font-semibold"
+          href="{{ upload.drive_sync.google_drive_browser_url }}"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Ouvrir dans Drive</a>
+        {% endif %}
+      </div>
+      {% if upload.drive_sync.last_error %}
+      <p class="muted m-0 mt-2 text-sm">{{ upload.drive_sync.last_error }}</p>
+      {% endif %}
+      {% else %}
+      <p class="muted m-0 mt-2 text-sm">Pas encore d’enregistrement de synchro pour ce fichier.</p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty-state">
+    <p class="m-0">Aucun incident Drive : tous les fichiers synchronisés ou en attente sans anomalie détectée ici.</p>
+    <p class="muted mt-2 text-sm m-0">Utilisez l’onglet <strong>Fichiers</strong> pour ouvrir chaque document.</p>
+  </div>
+  {% endif %}
+</div>

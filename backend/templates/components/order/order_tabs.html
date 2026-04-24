@@ -1,0 +1,126 @@
+<section class="card workflow-shell ui-workflow-shell">
+  <header class="workflow-shell__head ui-workflow-shell__head">
+    <h3 class="workflow-shell__title ui-workflow-shell__title" id="{{ panel_id }}-tabs-heading">{{ title }}</h3>
+    {% if subtitle %}
+    <p class="workflow-shell__lead ui-workflow-shell__lead">{{ subtitle }}</p>
+    {% endif %}
+  </header>
+  <div
+    class="workflow-tab-rail portal-order-tabs ui-tab-rail"
+    role="tablist"
+    aria-orientation="horizontal"
+    aria-labelledby="{{ panel_id }}-tabs-heading"
+  >
+    <div class="workflow-tab-groups" role="presentation">
+      {% for group in tab_groups %}
+      <div class="workflow-tab-group" role="group" aria-label="{{ group.label }}">
+        <span class="workflow-tab-group__label">{{ group.label }}</span>
+        <div class="workflow-tab-group__chips">
+          {% for tab in group.tabs %}
+          <button
+            type="button"
+            role="tab"
+            aria-selected="{% if tab.active %}true{% else %}false{% endif %}"
+            aria-controls="{{ panel_id }}"
+            tabindex="{% if tab.active %}0{% else %}-1{% endif %}"
+            class="chip ui-tab-chip transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c1815]{% if tab.active %} is-active{% endif %}"
+            hx-get="{{ tab.url }}"
+            hx-target="{{ hx_target }}"
+            hx-swap="innerHTML"
+            hx-indicator="#portal-htmx-indicator"
+          >
+            {% if tab.icon %}{% include "components/workflow/tab_icon.html" with icon=tab.icon only %}{% endif %}
+            <span>{{ tab.label }}</span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="workflow-panel workflow-panel-shell ui-panel-shell">
+    <div
+      id="{{ panel_id }}"
+      class="workflow-panel-target"
+      role="tabpanel"
+      {% if initial_url %}data-panel-url="{{ initial_url }}"{% endif %}
+      {% if initial_url %}hx-get="{{ initial_url }}"{% endif %}
+      {% if initial_url %}hx-trigger="load"{% endif %}
+      {% if initial_url %}hx-swap="innerHTML"{% endif %}
+      {% if initial_url %}hx-indicator="#portal-htmx-indicator"{% endif %}
+    >
+      {% if initial_url %}<div class="loading-state workflow-panel-loading" role="status" aria-live="polite">
+        <div class="workflow-panel-loading__stack" aria-hidden="true">
+          {% include "components/ui/skeleton.html" with height="1rem" width="10rem" tone="muted" %}
+          {% include "components/ui/skeleton.html" with height="0.85rem" width="85%" tone="muted" %}
+          {% include "components/ui/skeleton.html" with height="0.85rem" width="72%" tone="muted" %}
+          {% include "components/ui/skeleton.html" with height="3.5rem" width="100%" tone="panel" %}
+        </div>
+        <span class="workflow-panel-loading__text">Chargement du panneau…</span>
+      </div>{% else %}<div class="empty-state"><h3>Aucun panneau disponible</h3><p>{{ empty_message }}</p></div>{% endif %}
+    </div>
+  </div>
+</section>
+<script>
+(function () {
+  if (window.__preniumOrderTabsBound) {
+    return;
+  }
+  window.__preniumOrderTabsBound = true;
+
+  function syncActiveTab(e) {
+    var target = e.detail.target;
+    if (!target || (target.id !== "client-order-panel" && target.id !== "staff-order-panel")) {
+      return;
+    }
+    var elt = e.detail.elt;
+    if (!elt && e.detail.requestConfig) {
+      elt = e.detail.requestConfig.elt;
+    }
+    if (!elt || !elt.closest || !elt.closest(".portal-order-tabs")) {
+      return;
+    }
+    var row = elt.closest(".portal-order-tabs");
+    row.querySelectorAll('[role="tab"]').forEach(function (btn) {
+      var on = btn === elt;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+      btn.setAttribute("tabindex", on ? "0" : "-1");
+    });
+  }
+
+  function markPanelLoading(e) {
+    var elt = e.detail.elt || (e.detail.requestConfig && e.detail.requestConfig.elt);
+    if (!elt) return;
+    var target = document.querySelector(e.detail.target || '');
+    if (!target && elt.getAttribute) {
+      var panelSelector = elt.getAttribute('hx-target');
+      if (panelSelector) target = document.querySelector(panelSelector);
+    }
+    if (target && (target.id === 'client-order-panel' || target.id === 'staff-order-panel')) {
+      target.classList.add('is-loading');
+    }
+  }
+
+  function clearPanelLoading(e) {
+    var target = e.detail.target;
+    if (target && (target.id === 'client-order-panel' || target.id === 'staff-order-panel')) {
+      target.classList.remove('is-loading');
+    }
+  }
+
+  document.body.addEventListener("htmx:beforeRequest", markPanelLoading);
+  document.body.addEventListener("htmx:afterSwap", syncActiveTab);
+  document.body.addEventListener("htmx:afterSwap", clearPanelLoading);
+  document.body.addEventListener("htmx:responseError", clearPanelLoading);
+  document.body.addEventListener("htmx:responseError", function (e) {
+    var target = e.detail.target;
+    if (!target || (target.id !== "client-order-panel" && target.id !== "staff-order-panel")) {
+      return;
+    }
+    target.innerHTML = "<div class='empty-state'><h3>Accès refusé</h3><p>Ce panneau n’est pas disponible avec vos permissions actuelles.</p></div>";
+    target.removeAttribute("hx-get");
+    target.removeAttribute("hx-trigger");
+  });
+})();
+</script>

@@ -1,0 +1,13 @@
+<div class="ui-form-actions{% if stacked_actions %} ui-form-actions--stacked{% endif %}{% if form_actions_class %} {{ form_actions_class }}{% endif %}">
+  {% if primary_label %}
+  <button
+    class="{% if primary_class_full %}{{ primary_class_full }}{% else %}ui-btn ui-btn-primary{% if primary_class %} {{ primary_class }}{% endif %}{% endif %}"
+    type="{{ submit_type|default:'submit' }}"
+    {% if primary_disabled %}disabled{% endif %}
+    {% if htmx_disable %}hx-disabled-elt="this"{% endif %}
+  >{{ primary_label }}</button>
+  {% endif %}
+  {% if secondary_url and secondary_label %}
+  <a class="ui-btn ui-btn-secondary" href="{{ secondary_url }}">{{ secondary_label }}</a>
+  {% endif %}
+</div>

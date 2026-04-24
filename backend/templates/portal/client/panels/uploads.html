@@ -1,0 +1,124 @@
+{% load portal_tags %}
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h3 class="font-display text-lg">Fichiers</h3>
+      <p class="muted">Retrouvez ici les fichiers transmis, leurs quantités, le support indiqué et l'état du contrôle technique.</p>
+    </div>
+  </div>
+  {% if uploads %}
+  <div class="hidden md:block ui-table-shell table-wrap ui-table-shell--comfortable">
+    <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
+      <thead>
+        <tr>
+          <th>Fichier</th>
+          <th>Qté</th>
+          <th>Couleur</th>
+          <th>Métrage (m²)</th>
+          <th>Ligne (€)</th>
+          <th>Type</th>
+          <th>Taille</th>
+          <th>Inspection</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for upload in uploads %}
+        <tr class="{% if upload.inspection and upload.inspection.status == 'error' %}ui-row-anomaly{% elif upload.inspection and upload.inspection.status == 'warning' %}ui-row-warning{% endif %}">
+          <td>
+            <div class="ui-table-primary-cell">{{ upload.original_filename }}</div>
+          </td>
+          <td>{{ upload.quantity }}</td>
+          <td>
+            {% if upload.support_color_hex %}
+            <span class="inline-flex items-center gap-2">
+              <span class="inline-block h-4 w-4 shrink-0 rounded border border-white/25" style="background: {{ upload.support_color_hex }}" title="{{ upload.support_color_hex }}"></span>
+              <span class="font-mono text-sm">{{ upload.support_color_hex }}</span>
+            </span>
+            {% else %}
+            <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if upload.meterage_sqm is not None %}
+            {{ upload.meterage_sqm }}
+            {% else %}
+            <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if upload.line_total_eur is not None %}
+            {{ upload.line_total_eur }} €
+            {% else %}
+            <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>{{ upload.mime_type }}</td>
+          <td>{{ upload.size_bytes|filesizeformat }}</td>
+          <td>
+            {% if upload.inspection %}
+            <span class="badge {{ upload.inspection.status|badge_tone }}">{{ upload.inspection.status|human_status }}</span>
+            {% else %}
+            <span class="badge is-neutral">En attente</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="md:hidden space-y-3" role="feed" aria-label="Fichiers de la commande">
+    {% for upload in uploads %}
+    <article class="rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-sm backdrop-blur-sm">
+      <p class="font-medium text-[color:var(--ink)] break-words">{{ upload.original_filename }}</p>
+      <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+        <div>
+          <dt class="muted text-xs">Qté</dt>
+          <dd>{{ upload.quantity }}</dd>
+        </div>
+        <div>
+          <dt class="muted text-xs">Taille</dt>
+          <dd>{{ upload.size_bytes|filesizeformat }}</dd>
+        </div>
+        <div class="col-span-2">
+          <dt class="muted text-xs">Couleur</dt>
+          <dd>
+            {% if upload.support_color_hex %}
+            <span class="inline-flex items-center gap-2">
+              <span class="inline-block h-5 w-5 shrink-0 rounded border border-white/25" style="background: {{ upload.support_color_hex }}"></span>
+              <span class="font-mono text-xs">{{ upload.support_color_hex }}</span>
+            </span>
+            {% else %}
+            <span class="muted">—</span>
+            {% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt class="muted text-xs">Métrage (m²)</dt>
+          <dd>{% if upload.meterage_sqm is not None %}{{ upload.meterage_sqm }}{% else %}<span class="muted">—</span>{% endif %}</dd>
+        </div>
+        <div>
+          <dt class="muted text-xs">Ligne (€)</dt>
+          <dd>{% if upload.line_total_eur is not None %}{{ upload.line_total_eur }} €{% else %}<span class="muted">—</span>{% endif %}</dd>
+        </div>
+        <div class="col-span-2">
+          <dt class="muted text-xs">Type</dt>
+          <dd class="break-all text-xs">{{ upload.mime_type }}</dd>
+        </div>
+      </dl>
+      <div class="mt-3">
+        {% if upload.inspection %}
+        <span class="badge {{ upload.inspection.status|badge_tone }}">{{ upload.inspection.status|human_status }}</span>
+        {% else %}
+        <span class="badge is-neutral">En attente</span>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>Aucun fichier téléversé pour cette commande.</p>
+  </div>
+  {% endif %}
+</div>

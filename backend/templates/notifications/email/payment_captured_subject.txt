@@ -1,0 +1,1 @@
+Paiement confirmé — commande {{ order.public_id }}

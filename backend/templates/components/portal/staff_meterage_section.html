@@ -1,0 +1,68 @@
+{# Métrage linéaire commande — facturation différée. Panneau Production (slot #staff-order-meterage-slot-production). #}
+{% if order.billing_mode == "deferred" %}
+<section class="staff-meterage-section" aria-labelledby="staff-meterage-heading">
+  <h4 id="staff-meterage-heading" class="staff-meterage-section__title">Métrage linéaire (commande)</h4>
+  <p class="staff-meterage-section__lead muted">
+    Une saisie pour toute la commande (mètres sur la laize {{ dtf_laize_cm }}&nbsp;cm). Laisser vide pour estimer par fichier après contrôle.
+  </p>
+  {% if form_error %}
+  <div class="alert alert--danger staff-meterage-section__alert" role="alert">
+    <p class="m-0">{{ form_error }}</p>
+  </div>
+  {% endif %}
+  {% if order.pricing_status == "priced" %}
+  <div class="alert alert--info staff-meterage-section__alert text-sm" role="status">
+    <p class="m-0">Un nouveau métrage annule le tarif en cours — relancez <strong>Calculer le prix</strong> en tête de fiche.</p>
+  </div>
+  {% endif %}
+  {% if can_set_meterage_override %}
+  <form
+    class="staff-meterage-section__form ui-form-stack"
+    method="post"
+    action="{% url 'portal:staff-order-panel-billing' order_public_id=order.public_id %}"
+    hx-post="{% url 'portal:staff-order-panel-billing' order_public_id=order.public_id %}"
+    hx-target="{{ meterage_hx_target }}"
+    hx-swap="innerHTML"
+    hx-indicator="#portal-htmx-indicator"
+  >
+    {% csrf_token %}
+    <div class="staff-meterage-section__row">
+      <div class="ui-field-group staff-meterage-field">
+        <label class="ui-label" for="order-meterage-linear">Métrage linéaire (m)</label>
+        <p class="ui-help">Saisissez une valeur globale pour la commande si l'estimation par fichier ne suffit pas.</p>
+        <input
+          id="order-meterage-linear"
+          name="order_meterage_override_linear_m"
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          class="ui-input"
+          placeholder="Ex. 2,5 — vide = auto"
+          value="{% if order.meterage_override_linear_m %}{{ order.meterage_override_linear_m }}{% endif %}"
+        />
+      </div>
+      <div class="ui-form-actions staff-meterage-actions ui-form-actions--stacked">
+        <button type="submit" class="btn">Enregistrer le métrage</button>
+      </div>
+      {% if order_billable_sqm_preview is not None %}
+      <p class="staff-meterage-preview muted">
+        ≈ surface totale : <strong>{{ order_billable_sqm_preview }}</strong> m²
+      </p>
+      {% endif %}
+    </div>
+  </form>
+  {% else %}
+  {% if order.meterage_override_linear_m %}
+  <p class="staff-meterage-section__readonly">
+    Métrage saisi : <strong>{{ order.meterage_override_linear_m }}</strong> m
+    {% if order_billable_sqm_preview is not None %}→ <strong>{{ order_billable_sqm_preview }}</strong> m²{% endif %}
+  </p>
+  {% endif %}
+  {% if not perms.orders.change_order %}
+  <div class="alert alert--warning staff-meterage-section__alert text-sm" role="status">
+    <p class="m-0">Permission « modifier la commande » requise pour saisir le métrage.</p>
+  </div>
+  {% endif %}
+  {% endif %}
+</section>
+{% endif %}

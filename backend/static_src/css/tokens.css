@@ -1,0 +1,15 @@
+/**
+ * Tokens partagés landing + portail (complètent :root dans legacy/app-legacy.css).
+ * Ne pas dupliquer les couleurs déjà définies dans le legacy : utiliser var(--*) quand possible.
+ */
+@layer base {
+  :root {
+    --ui-max-w: 1120px;
+    --ui-page-pad-x: clamp(0.75rem, 3vw, 1.5rem);
+    --ui-section-gap: 1rem;
+    --ui-radius-lg: var(--radius);
+    --ui-font-display: "Space Grotesk", system-ui, sans-serif;
+    --ui-font-body: "Manrope", system-ui, sans-serif;
+    --ui-header-h: 3.5rem;
+  }
+}

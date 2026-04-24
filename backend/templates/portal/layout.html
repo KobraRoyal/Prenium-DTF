@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block body_class %}landing-saas portal-shell{% endblock %}
+
+{% block extra_head %}
+<meta name="color-scheme" content="dark">
+{% endblock %}
+
+{% block content %}
+{% include "components/nav/portal_header.html" %}
+<main class="app-main app-content landing-saas-main ui-shell-main">
+  {% block portal_content %}{% endblock %}
+</main>
+<div id="portal-htmx-indicator" class="htmx-indicator" aria-live="polite">Chargement...</div>
+{% endblock %}

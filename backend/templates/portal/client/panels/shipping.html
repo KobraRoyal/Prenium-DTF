@@ -1,0 +1,30 @@
+{% load portal_tags %}
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h3 class="font-display text-lg">Expédition</h3>
+      <p class="muted">Suivez l'avancement de l'envoi et accédez au tracking lorsque le colis est pris en charge.</p>
+    </div>
+  </div>
+  {% if shipment %}
+  <div class="alert alert--success">
+    <p>
+      <span class="badge {{ shipment.status|badge_tone }}">{{ shipment.status|human_status }}</span>
+      {% if shipment.tracking_number %}
+      - Tracking: <strong>{{ shipment.tracking_number }}</strong>
+      {% endif %}
+    </p>
+    {% if shipment.sendcloud_status_message %}
+    <p class="m-0 mt-2 text-sm">Statut : {{ shipment.sendcloud_status_message }}</p>
+    {% endif %}
+  </div>
+  {% if shipment.tracking_url %}
+  <p><a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a></p>
+  {% endif %}
+  {% else %}
+  <div class="empty-state">
+    <p>Aucune expédition n'est encore disponible pour cette commande.</p>
+    <p class="muted mt-2">Dès que la production est terminée et le colis préparé, le suivi apparaîtra ici.</p>
+  </div>
+  {% endif %}
+</div>

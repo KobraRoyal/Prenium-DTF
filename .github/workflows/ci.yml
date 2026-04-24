@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "codex/**"
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SECRET_KEY: ci-secret-key
+      POSTGRES_PASSWORD: ci-postgres-password
+      PYTHONPATH: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements/dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements/dev.txt
+
+      - name: Run Django checks
+        run: python backend/manage.py check --settings=config.settings.test
+
+      - name: Run Ruff
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Run Pytest
+        run: pytest
+
+  backend-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: prenium_dtf_ci
+          POSTGRES_USER: prenium_dtf_ci
+          POSTGRES_PASSWORD: prenium_dtf_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U prenium_dtf_ci -d prenium_dtf_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DJANGO_SECRET_KEY: ci-secret-key
+      DJANGO_SETTINGS_MODULE: config.settings.ci
+      POSTGRES_DB: prenium_dtf_ci
+      POSTGRES_USER: prenium_dtf_ci
+      POSTGRES_PASSWORD: prenium_dtf_ci_password
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      PYTHONPATH: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements/dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements/dev.txt
+
+      - name: Run Django checks on PostgreSQL
+        run: python backend/manage.py check --settings=config.settings.ci
+
+      - name: Run migrations on PostgreSQL
+        run: python backend/manage.py migrate --settings=config.settings.ci --noinput
+
+      - name: Run Pytest on PostgreSQL
+        run: pytest --ds=config.settings.ci

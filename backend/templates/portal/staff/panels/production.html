@@ -1,0 +1,66 @@
+{% load portal_tags %}
+<div class="workflow-panel">
+  <div class="workflow-panel__hero">
+    <div>
+      <h3 class="workflow-panel__title">Production & OF</h3>
+      <p class="workflow-panel__meta">
+        Pilotez le statut atelier (file, production, expédition). Chaque transition est journalisée.
+        Référence unique : <strong>{{ job.manufacturing_order_number }}</strong>.
+      </p>
+    </div>
+    <div class="workflow-panel__actions">
+      <a
+        class="ui-link"
+        href="{% url 'production:staff-manufacturing-order-pdf' order_public_id=order.public_id %}"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Télécharger l’OF (PDF)</a>
+    </div>
+  </div>
+
+  {% if order.billing_mode == "deferred" %}
+  <div id="staff-order-meterage-slot-production" class="staff-meterage-slot mb-6">
+    {% include "components/portal/staff_meterage_section.html" %}
+  </div>
+  {% endif %}
+
+  <div class="workflow-kpi" style="margin-bottom: 1rem;">
+    <p class="workflow-kpi__label m-0">Statut atelier</p>
+    <span class="badge {{ job.status|badge_tone }}">{{ job.status|human_status }}</span>
+  </div>
+
+  {% if transition_error %}
+  <div class="alert alert--danger workflow-panel__feedback" role="alert">
+    <p class="m-0">{{ transition_error }}</p>
+  </div>
+  {% endif %}
+
+  <section class="workflow-form-card" aria-labelledby="staff-production-transition-heading">
+    <div class="workflow-form-card__head">
+      <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0">Mettre à jour le statut atelier</h4>
+      <p class="muted text-sm m-0">Choisissez la prochaine étape et ajoutez un commentaire si l'équipe a besoin d'un repère.</p>
+    </div>
+
+  <form
+    class="ui-form-stack"
+    hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}"
+    hx-target="#staff-order-panel"
+    hx-swap="innerHTML"
+    hx-indicator="#portal-htmx-indicator"
+  >
+    {% csrf_token %}
+    <div class="ui-field-group">
+      <label class="ui-label" for="to_status">Prochaine étape</label>
+      <p class="ui-help">Seules les transitions autorisées par le workflow central sont proposées ici.</p>
+      <select id="to_status" class="ui-input" name="to_status" required>
+        <option value="" disabled selected hidden>Choisir une transition</option>
+        {% for status in allowed_statuses %}
+        <option value="{{ status }}">{{ status|human_status }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% include "components/forms/field_group.html" with id="reason" name="reason" label="Commentaire (optionnel)" type="text" placeholder="Ex. contrôle qualité, consigne atelier…" help_text="Visible dans le contexte de suivi staff ; utile pour tracer la raison d'une transition." show_label=1 %}
+    {% include "components/forms/form_actions.html" with primary_label="Valider la transition" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
+  </form>
+  </section>
+</div>

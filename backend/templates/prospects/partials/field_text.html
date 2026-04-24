@@ -1,0 +1,6 @@
+<div class="ui-field-group prospect-field{% if field.errors %} prospect-field--error{% endif %}">
+  <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="ui-label-required" aria-hidden="true">*</span>{% endif %}</label>
+  {% if field.help_text %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
+  {{ field }}
+  {% if field.errors %}<p class="ui-error-text" role="alert">{{ field.errors|striptags }}</p>{% endif %}
+</div>

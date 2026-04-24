@@ -1,0 +1,14 @@
+<section class="kpi-grid ui-kpi-grid">
+  {% for item in items %}
+  <article class="card ui-card ui-card--metric ui-kpi-card">
+    <div class="ui-kpi-card__top">
+      <p class="muted text-sm">{{ item.label }}</p>
+      <span class="ui-kpi-card__index">0{{ forloop.counter }}</span>
+    </div>
+    <p class="ui-kpi-card__value">{{ item.value }}</p>
+    {% if item.hint %}
+    <p class="ui-kpi-card__hint">{{ item.hint }}</p>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
