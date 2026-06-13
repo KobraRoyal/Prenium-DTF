@@ -39,6 +39,9 @@ jobs:
           ruff check .
           ruff format --check .
 
+      - name: Run pip-audit
+        run: pip-audit -r backend/requirements/prod.txt
+
       - name: Run Pytest
         run: pytest
 

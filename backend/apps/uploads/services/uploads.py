@@ -80,10 +80,7 @@ class OrderUploadService:
         if order is None:
             raise ValidationError("Order not found.")
 
-        if (
-            order.billing_mode == Order.BillingMode.DEFERRED
-            and order.status != Order.Status.DRAFT
-        ):
+        if order.billing_mode == Order.BillingMode.DEFERRED and order.status != Order.Status.DRAFT:
             raise ValidationError(
                 "Cette commande est verrouillée : les fichiers ne peuvent plus être modifiés.",
             )

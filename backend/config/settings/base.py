@@ -123,10 +123,12 @@ STATICFILES_DIRS = [BASE_DIR / "static_src"]
 MEDIA_URL = "/protected-media/"
 MEDIA_ROOT = Path(env("DJANGO_MEDIA_ROOT", "/tmp/prenium-dtf/media"))
 ORDER_UPLOAD_MAX_BYTES = env_int("ORDER_UPLOAD_MAX_BYTES", 20 * 1024 * 1024)
+ORDER_LIST_PAGE_SIZE = env_int("ORDER_LIST_PAGE_SIZE", 20)
+STAFF_ORDER_LIST_PAGE_SIZE = env_int("STAFF_ORDER_LIST_PAGE_SIZE", 25)
 ORDER_UPLOAD_ALLOWED_MIME_TYPES = tuple(
     env_list(
         "ORDER_UPLOAD_ALLOWED_MIME_TYPES",
-        "application/pdf,image/png,image/jpeg,image/svg+xml,image/tiff,"
+        "application/pdf,image/png,image/jpeg,image/tiff,"
         "application/postscript,image/vnd.adobe.photoshop,application/x-photoshop",
     )
 )
@@ -172,11 +174,24 @@ PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
 PAYPAL_API_BASE_URL = os.environ.get("PAYPAL_API_BASE_URL", "https://api-m.sandbox.paypal.com")
 PAYPAL_TIMEOUT_SECONDS = env_int("PAYPAL_TIMEOUT_SECONDS", 30)
 PAYPAL_INTERNAL_CONFIRM_TOKEN = os.environ.get("PAYPAL_INTERNAL_CONFIRM_TOKEN", "")
+PAYPAL_INTERNAL_CONFIRM_RATE_LIMIT_MAX_ATTEMPTS = env_int(
+    "PAYPAL_INTERNAL_CONFIRM_RATE_LIMIT_MAX_ATTEMPTS",
+    10,
+)
+PAYPAL_INTERNAL_CONFIRM_RATE_LIMIT_WINDOW_SECONDS = env_int(
+    "PAYPAL_INTERNAL_CONFIRM_RATE_LIMIT_WINDOW_SECONDS",
+    300,
+)
+PAYPAL_INTERNAL_CONFIRM_TRUST_X_FORWARDED_FOR = env_bool(
+    "PAYPAL_INTERNAL_CONFIRM_TRUST_X_FORWARDED_FOR",
+    False,
+)
 
 DEFAULT_FROM_EMAIL = os.environ.get("DJANGO_DEFAULT_FROM_EMAIL", "Prenium DTF <noreply@localhost>")
 TRANSACTIONAL_EMAILS_ENABLED = env_bool("TRANSACTIONAL_EMAILS_ENABLED", True)
 LOGIN_RATE_LIMIT_MAX_ATTEMPTS = env_int("LOGIN_RATE_LIMIT_MAX_ATTEMPTS", 20)
 LOGIN_RATE_LIMIT_WINDOW_SECONDS = env_int("LOGIN_RATE_LIMIT_WINDOW_SECONDS", 900)
+LOGIN_RATE_LIMIT_TRUST_X_FORWARDED_FOR = env_bool("LOGIN_RATE_LIMIT_TRUST_X_FORWARDED_FOR", False)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"

@@ -631,3 +631,53 @@ def test_upload_rejects_oversized_file(settings):
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json()["detail"] == ["File exceeds the maximum allowed size."]
+
+
+@pytest.mark.django_db
+def test_upload_rejects_spoofed_pdf_content(settings):
+    settings.ORDER_UPLOAD_ALLOWED_MIME_TYPES = ALLOWED_MIME_TYPES
+    settings.ORDER_UPLOAD_MAX_BYTES = 1024
+
+    user, customer, client = create_customer_scope("spoofed-pdf@example.com", "Acme")
+    order = create_order(customer, user)
+    route = client_order_file_list_route(customer.public_id, order.public_id)
+
+    response = client.post(
+        route,
+        {
+            "file": build_uploaded_file(
+                name="design.pdf",
+                content=b"plain text",
+                content_type="application/pdf",
+            )
+        },
+        format="multipart",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == ["File content does not match the declared file type."]
+
+
+@pytest.mark.django_db
+def test_upload_rejects_svg_file(settings):
+    settings.ORDER_UPLOAD_ALLOWED_MIME_TYPES = ALLOWED_MIME_TYPES
+    settings.ORDER_UPLOAD_MAX_BYTES = 1024
+
+    user, customer, client = create_customer_scope("svg@example.com", "Acme")
+    order = create_order(customer, user)
+    route = client_order_file_list_route(customer.public_id, order.public_id)
+
+    response = client.post(
+        route,
+        {
+            "file": build_uploaded_file(
+                name="design.svg",
+                content=b"<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+                content_type="image/svg+xml",
+            )
+        },
+        format="multipart",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == ["SVG files are not allowed."]

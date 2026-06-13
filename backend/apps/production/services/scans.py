@@ -14,9 +14,9 @@ class ProductionScanService:
 
     def resolve_scan(self, *, scan_identifier: str, actor, source: str):
         normalized_scan_identifier = self.normalize_scan_identifier(scan_identifier)
-        production_job = self._get_job_queryset().filter(
-            scan_identifier=normalized_scan_identifier
-        ).first()
+        production_job = (
+            self._get_job_queryset().filter(scan_identifier=normalized_scan_identifier).first()
+        )
 
         if production_job is None:
             self._record_scan_log(

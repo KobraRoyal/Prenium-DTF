@@ -51,4 +51,3 @@ class CatalogService(BaseModel):
     @property
     def allows_variable_quantity(self) -> bool:
         return self.unit == self.Unit.LINEAR_METER
-

@@ -1,4 +1,5 @@
 import pytest
+from apps.auditlog.models import AuditLogEntry
 from apps.billing import views as billing_views
 from apps.billing.models import Invoice, Payment
 from apps.billing.services.payments import PaymentService
@@ -7,6 +8,7 @@ from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
@@ -323,6 +325,145 @@ def test_paypal_error_is_mapped_to_failed_status(monkeypatch):
 
 @pytest.mark.django_db
 @override_settings(PAYPAL_INTERNAL_CONFIRM_TOKEN="internal-token")
+def test_backend_capture_rejects_missing_internal_token(monkeypatch):
+    cache.clear()
+    user, customer = create_customer_scope(email="client-a@example.com", customer_name="Acme A")
+    order = create_order(customer, user)
+    monkeypatch.setattr(
+        billing_views,
+        "payment_service",
+        PaymentService(gateway=FakePayPalGateway()),
+    )
+    client = APIClient()
+    assert client.login(email=user.email, password="pass") is True
+    initiate_response = client.post(
+        client_initiate_route(customer.public_id, order.public_id),
+        {},
+        format="json",
+    )
+    paypal_order_id = initiate_response.json()["paypal_order_id"]
+
+    backend_client = APIClient()
+    response = backend_client.post(
+        reverse("billing:backend-paypal-capture"),
+        {
+            "order_public_id": str(order.public_id),
+            "paypal_order_id": paypal_order_id,
+        },
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    audit_entry = AuditLogEntry.objects.get(action="security.paypal_internal_capture_denied")
+    assert audit_entry.status == AuditLogEntry.Status.FAILURE
+    assert audit_entry.metadata["reason"] == "missing_provided_token"
+
+
+@pytest.mark.django_db
+@override_settings(PAYPAL_INTERNAL_CONFIRM_TOKEN="internal-token")
+def test_backend_capture_rejects_invalid_internal_token_and_audits(monkeypatch):
+    cache.clear()
+    user, customer = create_customer_scope(email="client-a@example.com", customer_name="Acme A")
+    order = create_order(customer, user)
+    monkeypatch.setattr(
+        billing_views,
+        "payment_service",
+        PaymentService(gateway=FakePayPalGateway()),
+    )
+    client = APIClient()
+    assert client.login(email=user.email, password="pass") is True
+    initiate_response = client.post(
+        client_initiate_route(customer.public_id, order.public_id),
+        {},
+        format="json",
+    )
+    paypal_order_id = initiate_response.json()["paypal_order_id"]
+
+    backend_client = APIClient()
+    response = backend_client.post(
+        reverse("billing:backend-paypal-capture"),
+        {
+            "order_public_id": str(order.public_id),
+            "paypal_order_id": paypal_order_id,
+        },
+        format="json",
+        HTTP_X_INTERNAL_TOKEN="wrong-token",
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    audit_entry = AuditLogEntry.objects.get(action="security.paypal_internal_capture_denied")
+    assert audit_entry.status == AuditLogEntry.Status.FAILURE
+    assert audit_entry.metadata["reason"] == "invalid_token"
+
+
+@pytest.mark.django_db
+@override_settings(
+    PAYPAL_INTERNAL_CONFIRM_TOKEN="internal-token",
+    PAYPAL_INTERNAL_CONFIRM_RATE_LIMIT_MAX_ATTEMPTS=2,
+    PAYPAL_INTERNAL_CONFIRM_RATE_LIMIT_WINDOW_SECONDS=60,
+)
+def test_backend_capture_rate_limits_repeated_invalid_token_attempts(monkeypatch):
+    cache.clear()
+    user, customer = create_customer_scope(email="client-a@example.com", customer_name="Acme A")
+    order = create_order(customer, user)
+    monkeypatch.setattr(
+        billing_views,
+        "payment_service",
+        PaymentService(gateway=FakePayPalGateway()),
+    )
+    client = APIClient()
+    assert client.login(email=user.email, password="pass") is True
+    initiate_response = client.post(
+        client_initiate_route(customer.public_id, order.public_id),
+        {},
+        format="json",
+    )
+    paypal_order_id = initiate_response.json()["paypal_order_id"]
+
+    backend_client = APIClient()
+    route = reverse("billing:backend-paypal-capture")
+    for _ in range(2):
+        response = backend_client.post(
+            route,
+            {
+                "order_public_id": str(order.public_id),
+                "paypal_order_id": paypal_order_id,
+            },
+            format="json",
+            HTTP_X_INTERNAL_TOKEN="wrong-token",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    throttled = backend_client.post(
+        route,
+        {
+            "order_public_id": str(order.public_id),
+            "paypal_order_id": paypal_order_id,
+        },
+        format="json",
+        HTTP_X_INTERNAL_TOKEN="wrong-token",
+    )
+
+    assert throttled.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert throttled.json()["detail"] == ["Too many invalid confirmation attempts."]
+    assert (
+        AuditLogEntry.objects.filter(
+            action="security.paypal_internal_capture_denied",
+            status=AuditLogEntry.Status.FAILURE,
+        ).count()
+        == 3
+    )
+    assert (
+        AuditLogEntry.objects.filter(
+            action="security.paypal_internal_capture_rate_limited",
+            status=AuditLogEntry.Status.FAILURE,
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+@override_settings(PAYPAL_INTERNAL_CONFIRM_TOKEN="internal-token")
 def test_invoice_is_generated_once_with_idempotent_capture(monkeypatch):
     user, customer = create_customer_scope(email="client-a@example.com", customer_name="Acme A")
     order = create_order(customer, user)
@@ -414,4 +555,3 @@ def test_staff_with_permissions_can_read_payment_and_invoice(monkeypatch):
     payload = response.json()
     assert payload["payment"]["status"] == Payment.Status.CAPTURED
     assert payload["invoice"]["status"] == Invoice.Status.ISSUED
-

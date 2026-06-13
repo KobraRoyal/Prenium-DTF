@@ -1,7 +1,7 @@
 /**
  * Révélations au scroll sur la landing (IntersectionObserver).
  * Double requestAnimationFrame avant .is-visible pour forcer les transitions CSS.
- * Chargé en <script defer> depuis home.html (pas via import module, plus fiable derrière nginx).
+ * Chargé depuis app.js pour garder un point d'entrée JS unique.
  */
 function revealElement(el) {
   requestAnimationFrame(() => {
@@ -12,7 +12,7 @@ function revealElement(el) {
 }
 
 function initLandingReveal() {
-  const root = document.querySelector(".landing-saas-main");
+  const root = document.querySelector(".landing-main, .landing-saas-main");
   if (!root) {
     return;
   }
@@ -21,6 +21,8 @@ function initLandingReveal() {
   if (!nodes.length) {
     return;
   }
+
+  document.documentElement.classList.add("js-landing-motion");
 
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduce) {

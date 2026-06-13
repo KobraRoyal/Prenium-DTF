@@ -4,6 +4,7 @@ from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -66,6 +67,51 @@ def test_client_can_create_and_list_scoped_orders():
     assert list_response.status_code == status.HTTP_200_OK
     assert list_response.json()["customer_public_id"] == str(customer.public_id)
     assert len(list_response.json()["orders"]) == 1
+    assert list_response.json()["pagination"]["page"] == 1
+
+
+@pytest.mark.django_db
+@override_settings(ORDER_LIST_PAGE_SIZE=2)
+def test_client_order_list_is_paginated():
+    user = get_user_model().objects.create_user(email="client@example.com", password="pass")
+    customer = Customer.objects.create(name="Acme")
+    CustomerMembership.objects.create(customer=customer, user=user)
+    for index in range(3):
+        Order.objects.create(
+            customer=customer,
+            created_by=user,
+            status=Order.Status.SUBMITTED,
+            currency="EUR",
+            subtotal_amount="10.00",
+            total_amount="10.00",
+            customer_note=f"Commande {index}",
+        )
+
+    client = APIClient()
+    client.login(email=user.email, password="pass")
+    route = reverse(
+        "orders:client-order-list-create",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+
+    first_page = client.get(route)
+    second_page = client.get(route, {"page": 2})
+
+    assert first_page.status_code == status.HTTP_200_OK
+    assert len(first_page.json()["orders"]) == 2
+    assert first_page.json()["pagination"] == {
+        "page": 1,
+        "page_size": 2,
+        "num_pages": 2,
+        "total_items": 3,
+        "has_next": True,
+        "has_previous": False,
+    }
+    assert second_page.status_code == status.HTTP_200_OK
+    assert len(second_page.json()["orders"]) == 1
+    assert second_page.json()["pagination"]["page"] == 2
+    assert second_page.json()["pagination"]["has_previous"] is True
+    assert second_page.json()["pagination"]["has_next"] is False
 
 
 @pytest.mark.django_db
@@ -228,3 +274,41 @@ def test_staff_order_routes_require_order_domain_permission():
     response = client.get(reverse("orders:staff-order-list"))
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+@override_settings(STAFF_ORDER_LIST_PAGE_SIZE=2)
+def test_staff_order_list_is_paginated():
+    staff_user = get_user_model().objects.create_user(
+        email="staff@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    staff_user.user_permissions.add(
+        Permission.objects.get(codename="access_staff_portal"),
+        Permission.objects.get(codename="view_order"),
+    )
+    customer = Customer.objects.create(name="Acme")
+    for _ in range(3):
+        Order.objects.create(
+            customer=customer,
+            created_by=staff_user,
+            status=Order.Status.SUBMITTED,
+            currency="EUR",
+            subtotal_amount="25.00",
+            total_amount="25.00",
+        )
+
+    staff_client = APIClient()
+    staff_client.login(email=staff_user.email, password="pass")
+
+    first_page = staff_client.get(reverse("orders:staff-order-list"))
+    second_page = staff_client.get(reverse("orders:staff-order-list"), {"page": 2})
+
+    assert first_page.status_code == status.HTTP_200_OK
+    assert len(first_page.json()["orders"]) == 2
+    assert first_page.json()["pagination"]["page_size"] == 2
+    assert first_page.json()["pagination"]["total_items"] == 3
+    assert second_page.status_code == status.HTTP_200_OK
+    assert len(second_page.json()["orders"]) == 1
+    assert second_page.json()["pagination"]["page"] == 2

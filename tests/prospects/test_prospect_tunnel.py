@@ -33,36 +33,45 @@ def test_prospect_tunnel_completes_and_creates_account():
     client = Client()
     email = "prospect.success@example.com"
 
-    assert client.post(
-        reverse("prospects:step1"),
-        {
-            "first_name": "Jean",
-            "last_name": "Ok",
-            "email": email,
-            "phone": "+33612345678",
-            "company": "Marque OK",
-            "country": "FR",
-            "activity_type": "brand",
-        },
-    ).status_code == 302
+    assert (
+        client.post(
+            reverse("prospects:step1"),
+            {
+                "first_name": "Jean",
+                "last_name": "Ok",
+                "email": email,
+                "phone": "+33612345678",
+                "company": "Marque OK",
+                "country": "FR",
+                "activity_type": "brand",
+            },
+        ).status_code
+        == 302
+    )
 
-    assert client.post(
-        reverse("prospects:step2"),
-        {
-            "service_interest": "dtf_meter",
-            "main_goal": "Lancer une capsule",
-            "project_timing": "immediate",
-        },
-    ).status_code == 302
+    assert (
+        client.post(
+            reverse("prospects:step2"),
+            {
+                "service_interest": "dtf_meter",
+                "main_goal": "Lancer une capsule",
+                "project_timing": "immediate",
+            },
+        ).status_code
+        == 302
+    )
 
-    assert client.post(
-        reverse("prospects:step3"),
-        {
-            "monthly_volume": "10_50",
-            "order_frequency": "monthly",
-            "urgency": "medium",
-        },
-    ).status_code == 302
+    assert (
+        client.post(
+            reverse("prospects:step3"),
+            {
+                "monthly_volume": "10_50",
+                "order_frequency": "monthly",
+                "urgency": "medium",
+            },
+        ).status_code
+        == 302
+    )
 
     response = client.post(
         reverse("prospects:step4"),

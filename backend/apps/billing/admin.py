@@ -160,4 +160,3 @@ class InvoiceAdmin(admin.ModelAdmin):
                 target=obj,
                 metadata={"source": "django_admin.invoice_paid_at_edit"},
             )
-

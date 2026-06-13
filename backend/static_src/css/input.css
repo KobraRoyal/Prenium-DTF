@@ -368,6 +368,117 @@
   }
 }
 
+/* Final portal contrast guard.
+   These rules intentionally live after Tailwind utilities so legacy light
+   table/workflow components cannot override the premium dark shell. */
+body.landing-saas a.btn,
+body.landing-saas a.ui-btn,
+body.landing-saas a.btn-saas-primary,
+body.landing-saas a.btn-saas-secondary {
+  text-decoration: none;
+  text-decoration-line: none;
+}
+
+body.landing-saas a.btn:hover,
+body.landing-saas a.ui-btn:hover,
+body.landing-saas a.btn-saas-primary:hover,
+body.landing-saas a.btn-saas-secondary:hover {
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+}
+
+body.landing-saas.portal-shell .ui-data-table tbody tr {
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+body.landing-saas.portal-shell .ui-data-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.055) !important;
+}
+
+body.landing-saas.portal-shell .ui-data-table tbody tr.ui-row-warning,
+body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-warning {
+  background:
+    linear-gradient(90deg, rgba(245, 158, 11, 0.18), rgba(255, 255, 255, 0.045) 62%),
+    rgba(36, 24, 14, 0.9) !important;
+}
+
+body.landing-saas.portal-shell .ui-data-table tbody tr.ui-row-anomaly,
+body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-anomaly {
+  background:
+    linear-gradient(90deg, rgba(239, 68, 68, 0.18), rgba(255, 255, 255, 0.045) 62%),
+    rgba(38, 18, 16, 0.9) !important;
+}
+
+body.landing-saas.portal-shell .ui-data-table tbody tr:hover {
+  background: rgba(240, 168, 122, 0.1) !important;
+}
+
+body.landing-saas.portal-shell .ui-table-primary-cell,
+body.landing-saas.portal-shell .ui-data-table td,
+body.landing-saas.portal-shell .ui-data-table th {
+  color: rgba(244, 240, 232, 0.9);
+}
+
+body.landing-saas.portal-shell .ui-table-mono {
+  color: rgba(244, 240, 232, 0.68);
+}
+
+body.landing-saas.portal-shell .ui-inline-flag {
+  border-color: rgba(245, 158, 11, 0.32);
+  background: rgba(245, 158, 11, 0.13);
+  color: #f8d28f;
+}
+
+body.landing-saas.portal-shell .ui-workflow-shell,
+body.landing-saas.portal-shell .order-command-bar,
+body.landing-saas.portal-shell .ui-staff-hero-card,
+body.landing-saas.portal-shell .ui-order-hero,
+body.landing-saas.portal-shell .workflow-summary__item,
+body.landing-saas.portal-shell .workflow-tab-group,
+body.landing-saas.portal-shell .ui-panel-shell,
+body.landing-saas.portal-shell .workflow-panel,
+body.landing-saas.portal-shell .workflow-panel-target {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
+    rgba(12, 10, 9, 0.72) !important;
+  color: #f4f0e8;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+body.landing-saas.portal-shell .workflow-tab-group__label,
+body.landing-saas.portal-shell .ui-panel-shell > h3,
+body.landing-saas.portal-shell .ui-workflow-shell h2,
+body.landing-saas.portal-shell .ui-workflow-shell h3,
+body.landing-saas.portal-shell .ui-order-hero h1,
+body.landing-saas.portal-shell .ui-order-hero h2 {
+  color: #faf7f2;
+}
+
+body.landing-saas.portal-shell .ui-tab-chip {
+  border-color: rgba(255, 255, 255, 0.11) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+  color: rgba(244, 240, 232, 0.82) !important;
+  text-decoration: none;
+}
+
+body.landing-saas.portal-shell .ui-tab-chip:hover,
+body.landing-saas.portal-shell .ui-tab-chip:focus-visible {
+  border-color: rgba(240, 168, 122, 0.34) !important;
+  background: rgba(240, 168, 122, 0.1) !important;
+  color: #faf7f2 !important;
+}
+
+body.landing-saas.portal-shell .ui-tab-chip[aria-selected="true"],
+body.landing-saas.portal-shell .ui-tab-chip.is-active {
+  border-color: rgba(240, 168, 122, 0.5) !important;
+  background:
+    linear-gradient(135deg, rgba(201, 90, 50, 0.92), rgba(143, 61, 31, 0.92)) !important;
+  color: #fff7ed !important;
+}
+
 @layer components {
   body.landing-saas:not(.portal-shell) .landing-main {
     display: grid;

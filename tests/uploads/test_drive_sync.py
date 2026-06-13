@@ -64,7 +64,9 @@ def create_staff_client(*, include_sync_permission: bool):
     )
     staff_user.user_permissions.add(Permission.objects.get(codename="access_staff_portal"))
     if include_sync_permission:
-        staff_user.user_permissions.add(Permission.objects.get(codename="view_orderuploaddrivesync"))
+        staff_user.user_permissions.add(
+            Permission.objects.get(codename="view_orderuploaddrivesync")
+        )
 
     client = APIClient()
     assert client.login(email=staff_user.email, password="pass") is True

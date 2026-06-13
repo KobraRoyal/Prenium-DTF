@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -56,15 +57,34 @@ def raise_api_validation_error(error: DjangoValidationError):
     raise DRFValidationError({"detail": error.messages})
 
 
+def serialize_pagination(page_obj) -> dict[str, object]:
+    return {
+        "page": page_obj.number,
+        "page_size": page_obj.paginator.per_page,
+        "num_pages": page_obj.paginator.num_pages,
+        "total_items": page_obj.paginator.count,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    }
+
+
 class ClientOrderListCreateView(APIView):
     permission_classes = [IsAuthenticated, HasScopedCustomerAccess]
 
     def get(self, request, customer_public_id):
-        orders = order_service.list_customer_orders(self.customer)
+        orders_page = order_service.paginate_orders(
+            order_service.list_customer_orders(self.customer),
+            page_number=request.query_params.get("page"),
+            page_size=settings.ORDER_LIST_PAGE_SIZE,
+        )
         return Response(
             {
                 "customer_public_id": str(self.customer.public_id),
-                "orders": [serialize_order(order, include_customer=False) for order in orders],
+                "orders": [
+                    serialize_order(order, include_customer=False)
+                    for order in orders_page.object_list
+                ],
+                "pagination": serialize_pagination(orders_page),
             }
         )
 
@@ -97,9 +117,19 @@ class StaffOrderListView(APIView):
     permission_classes = [IsAuthenticated, HasStaffOrderReadAccess]
 
     def get(self, request):
-        orders = order_service.list_staff_orders()
+        orders_page = order_service.paginate_orders(
+            order_service.list_staff_orders(),
+            page_number=request.query_params.get("page"),
+            page_size=settings.STAFF_ORDER_LIST_PAGE_SIZE,
+        )
         return Response(
-            {"orders": [serialize_order(order, include_customer=True) for order in orders]}
+            {
+                "orders": [
+                    serialize_order(order, include_customer=True)
+                    for order in orders_page.object_list
+                ],
+                "pagination": serialize_pagination(orders_page),
+            }
         )
 
 

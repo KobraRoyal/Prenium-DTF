@@ -219,15 +219,17 @@ class ProspectConfirmationView(View):
         pid = request.session.pop("prospect_confirmation_public_id", None)
         profile = None
         if pid:
-            profile = ProspectProfile.objects.select_related("customer").filter(
-                public_id=pid,
-                user=request.user,
-            ).first()
-        if profile is None:
             profile = (
                 ProspectProfile.objects.select_related("customer")
-                .filter(user=request.user)
+                .filter(
+                    public_id=pid,
+                    user=request.user,
+                )
                 .first()
+            )
+        if profile is None:
+            profile = (
+                ProspectProfile.objects.select_related("customer").filter(user=request.user).first()
             )
         if profile is None:
             return redirect("portal:client-dashboard")

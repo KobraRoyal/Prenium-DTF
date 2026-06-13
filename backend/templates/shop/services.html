@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Services DTF premium — Prenium DTF{% endblock %}
+{% block title %}Impression DTF premium et préparation fichier — Prenium DTF{% endblock %}
 
 {% block body_class %}landing-saas ui-marketing-body{% endblock %}
 
@@ -11,11 +11,11 @@
     <div class="landing-stack landing-stack--lg">
       <p class="landing-eyebrow">Services</p>
       <div class="landing-copy landing-copy--wide">
-        <h1>Sélectionnez votre service DTF premium.</h1>
-        <p class="landing-lead">Commande guidée, contrôle fichier, suivi atelier et expédition : nous simplifions le flux sans déplacer la logique métier hors du backend. Si vous êtes déjà client, connectez-vous à votre espace pour reprendre vos commandes.</p>
+        <h1>Choisissez votre service DTF : impression premium ou préparation fichier.</h1>
+        <p class="landing-lead">Produisez des transferts DTF prêts à presser ou fiabilisez vos fichiers techniques avant impression : contrôle fichier, base blanche, transparence, résolution et préparation TIFF avec canal alpha lorsque le workflow le permet.</p>
       </div>
       <div class="landing-dual-cta">
-        <a class="btn ui-btn ui-btn-primary" href="{% url 'prospects:step1' %}">Ouvrir un compte pro</a>
+        <a class="btn ui-btn ui-btn-primary" href="{% url 'prospects:step1' %}">Faire optimiser un fichier</a>
         <a class="btn ui-btn ui-btn-secondary" href="{% url 'portal:login' %}">Déjà client ? Connexion</a>
       </div>
     </div>
@@ -26,26 +26,26 @@
   <div class="landing-shell">
     <div class="section-head">
       <p class="landing-eyebrow">Bénéfices métier</p>
-      <h2>Un service DTF pensé pour les besoins B2B réels.</h2>
-      <p class="landing-lead">Le parcours de service priorise la clarté commerciale, la fiabilité atelier et la continuité du suivi client.</p>
+      <h2>Deux réponses concrètes pour les ateliers, marques et imprimeurs DTF.</h2>
+      <p class="landing-lead">L’objectif est simple : réduire les erreurs fichier, gagner du temps en prépresse et livrer une qualité régulière aux clients finaux.</p>
     </div>
     <div class="marketing-grid marketing-grid--services">
       <article class="marketing-card marketing-card--feature">
         <p class="marketing-card__eyebrow">Production</p>
-        <h2>Transferts premium, lisibles et réguliers</h2>
-        <p>Préparation de commande cadrée, contrôle fichier et workflow clair pour livrer une production stable sans zones floues.</p>
+        <h2>Impression DTF premium</h2>
+        <p>Des transferts DTF propres, réguliers et prêts à presser pour vos commandes clients, collections textile, réassorts ou besoins récurrents.</p>
       </article>
       <article class="marketing-card">
-        <h3>Flux B2B encadré</h3>
-        <p>Compte client, tunnel guidé, statuts de suivi, production et billing structurés dans un portail unifié.</p>
+        <h3>Préparation de fichiers DTF</h3>
+        <p>Contrôle, correction et optimisation de fichiers : transparence, contours, résolution, export technique et base blanche mieux maîtrisée.</p>
       </article>
       <article class="marketing-card">
-        <h3>Moins d’aller-retours</h3>
-        <p>Les attentes sont explicites, les fichiers sont centralisés et les équipes gardent un même référentiel de commande.</p>
+        <h3>TIFF avec canal alpha</h3>
+        <p>Pour les workflows compatibles, préparation de fichiers TIFF avec canal alpha afin de faciliter la gestion séparée de la base blanche.</p>
       </article>
       <article class="marketing-card">
-        <h3>Suivi professionnel</h3>
-        <p>Client et staff disposent d’une lecture cohérente des étapes : fichiers, contrôle, atelier, expédition et facturation.</p>
+        <h3>Sous-traitance DTF</h3>
+        <p>Un relais fiable pour les confrères, revendeurs et ateliers en surcharge qui veulent préserver qualité et confidentialité.</p>
       </article>
     </div>
   </div>
@@ -55,21 +55,21 @@
   <div class="landing-shell">
     <div class="section-head section-head--center">
       <p class="landing-eyebrow">Cas d’usage</p>
-      <h2>Pour les marques, ateliers et revendeurs qui veulent un flux plus propre.</h2>
-      <p class="landing-lead">Chaque surface a été pensée pour réduire la charge mentale : onboarding, commande, suivi client et backoffice atelier.</p>
+      <h2>Pour les professionnels qui produisent, vendent ou sous-traitent du DTF.</h2>
+      <p class="landing-lead">Ateliers textile, marques, imprimeurs, revendeurs et studios graphiques peuvent utiliser le service pour produire ou sécuriser leurs fichiers avant impression.</p>
     </div>
     <div class="marketing-grid marketing-grid--3">
       <article class="marketing-card">
-        <h3>Marques en croissance</h3>
-        <p>Accès à un tunnel clair, des commandes suivies et un interlocuteur fiable sur la qualité fichier et production.</p>
+        <h3>Marques textile</h3>
+        <p>Des transferts DTF prêts à presser pour collections, drops, capsules et réassorts sans multiplier les échanges techniques.</p>
       </article>
       <article class="marketing-card">
         <h3>Ateliers & revendeurs</h3>
-        <p>Lecture plus rapide des statuts, meilleure coordination et réduction des points de friction opérationnels.</p>
+        <p>Un partenaire pour absorber les volumes, fiabiliser les fichiers clients et maintenir une qualité de rendu régulière.</p>
       </article>
       <article class="marketing-card">
-        <h3>Structures exigeantes</h3>
-        <p>Une expérience plus premium, plus sobre et plus professionnelle sur tout le cycle commande → livraison.</p>
+        <h3>Studios & confrères imprimeurs</h3>
+        <p>Un service prépresse DTF pour préparer des fichiers plus propres avant passage RIP ou production externalisée.</p>
       </article>
     </div>
   </div>
@@ -79,12 +79,12 @@
   <div class="landing-shell">
     <div class="cta-panel">
       <div class="landing-copy landing-copy--wide">
-        <p class="landing-eyebrow">Réassurance</p>
-        <h2>Lancer votre relation commerciale avec un parcours plus propre dès aujourd’hui.</h2>
-        <p class="landing-lead">Demandez votre accès, préparez vos fichiers et retrouvez un suivi plus lisible côté client comme côté staff.</p>
+        <p class="landing-eyebrow">Démarrer</p>
+        <h2>Envoyez un fichier ou préparez votre prochaine production DTF.</h2>
+        <p class="landing-lead">Nous contrôlons les points techniques avant impression et vous orientons vers le bon livrable : transfert prêt à presser ou fichier prêt production.</p>
       </div>
       <div class="landing-dual-cta">
-        <a class="btn ui-btn ui-btn-primary" href="{% url 'prospects:step1' %}">Demander un accès</a>
+        <a class="btn ui-btn ui-btn-primary" href="{% url 'prospects:step1' %}">Envoyer un fichier à optimiser</a>
         <a class="btn ui-btn ui-btn-secondary" href="{% url 'home' %}">Retour à l’accueil</a>
       </div>
     </div>

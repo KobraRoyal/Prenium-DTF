@@ -107,4 +107,64 @@
   .ui-card-anomaly {
     border-color: color-mix(in srgb, var(--danger) 25%, white);
   }
+
+  body.landing-saas.portal-shell .ui-table-shell {
+    overflow: hidden;
+    border-radius: 18px;
+  }
+
+  body.landing-saas.portal-shell .ui-data-table {
+    color: #f4f0e8;
+    background: transparent;
+  }
+
+  body.landing-saas.portal-shell .ui-data-table thead {
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  body.landing-saas.portal-shell .ui-data-table tbody tr {
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  body.landing-saas.portal-shell .ui-data-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  body.landing-saas.portal-shell .ui-data-table tbody tr.ui-row-warning {
+    background:
+      linear-gradient(90deg, rgba(240, 168, 122, 0.13), rgba(255, 255, 255, 0.025) 42%),
+      rgba(255, 255, 255, 0.02);
+  }
+
+  body.landing-saas.portal-shell .ui-data-table tbody tr.ui-row-anomaly {
+    background:
+      linear-gradient(90deg, rgba(220, 100, 100, 0.16), rgba(255, 255, 255, 0.025) 42%),
+      rgba(255, 255, 255, 0.02);
+  }
+
+  body.landing-saas.portal-shell .ui-data-table tbody tr:hover {
+    background: rgba(240, 168, 122, 0.08);
+  }
+
+  body.landing-saas.portal-shell .ui-inline-flag {
+    background: rgba(240, 168, 122, 0.12);
+    border: 1px solid rgba(240, 168, 122, 0.2);
+    color: #f6c7a8;
+  }
+
+  body.landing-saas.portal-shell .ui-table-primary-cell,
+  body.landing-saas.portal-shell .ui-table-mono {
+    color: #f7efe7;
+    background: rgba(0, 0, 0, 0.22);
+  }
+
+  body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-warning {
+    border-color: rgba(240, 168, 122, 0.24);
+    background: linear-gradient(180deg, rgba(240, 168, 122, 0.08), rgba(255, 255, 255, 0.04));
+  }
+
+  body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-anomaly {
+    border-color: rgba(220, 100, 100, 0.28);
+    background: linear-gradient(180deg, rgba(220, 100, 100, 0.1), rgba(255, 255, 255, 0.04));
+  }
 }

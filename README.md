@@ -1,90 +1,127 @@
 # prenium-dtf.com via IDS supply
 
-Base de travail du projet **SaaS e-commerce premium DTF** développé avec une approche **Codex / vibe coding**.
+Application Django monolithique modulaire pour le SaaS e-commerce premium DTF, exécutée sous Docker Compose.
 
-Ce repo sert à la fois de :
-- socle documentaire,
-- cadre de gouvernance Codex,
-- base d’architecture,
-- suivi d’avancement par sprints,
-- point d’entrée du futur code applicatif.
+Le dépôt contient :
+- l'application backend Django ;
+- le portail client et staff en Django templates / HTMX / Alpine ;
+- l'infrastructure Docker / Nginx / PostgreSQL / Redis / Celery ;
+- la documentation produit, architecture, sécurité et sprints.
 
-## Structure du repo
+## Services Docker
 
-- `AGENTS.md`  
-  Règles globales du projet pour Codex : architecture, sécurité, DRY, SRP, tests, définition de terminé.
+Services actuellement utilisés via `docker-compose.yml` :
 
-- `.agents/skills/`  
-  Skills réutilisables pour Codex : planning de feature, review permissions, accès fichiers sécurisé, Google Drive, Sendcloud, workflow, tests, UI.
+- `db` : PostgreSQL 16
+- `redis` : cache Django et broker / backend Celery
+- `web` : Django + Gunicorn
+- `worker` : Celery worker
+- `nginx` : reverse proxy HTTP et statiques
 
-- `docs/master-plan/`  
-  Plan directeur du projet et roadmap globale.
+Il n'existe pas de service `frontend` dédié. Le CSS est construit dans la chaîne Docker du backend.
 
-- `docs/sprints/`  
-  Découpage par sprints avec objectifs, tâches, tests et critères de validation.
+## Structure du dépôt
 
-- `docs/security/`  
-  Baseline sécurité, stratégie de tests, matrice de tests.
+- `backend/` : application Django, templates, assets Tailwind/DaisyUI, requirements
+- `docs/` : sprints, architecture, sécurité, suivi produit
+- `infra/` : Dockerfiles, entrypoints, notes d'exploitation
+- `tests/` : tests organisés par domaine fonctionnel et UI
+- `docker-compose.yml` : pile locale / dev
+- `docker-compose.prod.yml` : variante runtime prod-like
+- `AGENTS.md` : règles d'exécution projet pour Codex
 
-- `docs/architecture/`  
-  Structure projet, domaines métier, ADR, stratégie subagents, bonnes pratiques Codex.
+## Backend
 
-- `docs/product-design/`  
-  Guides UX/UI front-office et backoffice.
+Le backend est déjà en place, avec apps métier séparées :
 
-- `docs/prompts/`  
-  Templates de prompts pour feature, review sécurité et lancement de sprint.
+- `accounts`
+- `auditlog`
+- `billing`
+- `catalog`
+- `core`
+- `customers`
+- `notifications`
+- `orders`
+- `portal`
+- `production`
+- `prospects`
+- `shipping`
+- `shipping_sendcloud`
+- `uploads`
 
-- `docs/tracking/`  
-  Suivi projet, risques, décisions.
+Configuration Django :
+- `backend/config/settings/`
 
-- `backend/`  
-  Futur backend Django.
+Assets UI :
+- `backend/static_src/`
+- `backend/templates/`
 
-- `frontend/`  
-  Futur front-office / backoffice moderne.
+## Démarrage local
 
-- `infra/`  
-  Docker, reverse proxy, déploiement, configuration infra.
+Démarrer la pile :
 
-- `scripts/`  
-  Scripts utilitaires projet.
+```bash
+docker compose up -d db redis web worker nginx
+```
 
-- `tests/`  
-  Organisation des tests unitaires, intégration, e2e et sécurité.
+Healthcheck :
+
+```bash
+curl --fail --silent --show-error http://localhost:8080/healthz/
+```
+
+Connexion portail :
+
+- [http://localhost:8080/login/](http://localhost:8080/login/)
+
+## Vérifications usuelles
+
+Raccourcis disponibles :
+
+```bash
+make up
+make health
+make check
+make migrations-plan
+make test
+make test-ui
+make test-orders
+make lint
+make format
+make audit
+make shell
+make logs-web
+make logs-worker
+```
+
+Contrôle Django :
+
+```bash
+docker compose exec web sh -lc 'cd /app/backend && python manage.py check'
+docker compose exec web sh -lc 'cd /app/backend && python manage.py makemigrations --check --dry-run'
+```
+
+Tests et qualité :
+
+```bash
+docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest'
+docker compose run --rm --entrypoint sh web -lc 'cd /app && ruff check .'
+docker compose run --rm --entrypoint sh web -lc 'cd /app && ruff format --check .'
+docker compose run --rm --entrypoint sh web -lc 'cd /app/backend && pip-audit -r requirements/prod.txt'
+```
 
 ## Ordre de lecture recommandé
 
 1. `AGENTS.md`
-2. `docs/master-plan/PLAN_DEVELOPPEMENT_SAAS_DTF_V1.md`
-3. `docs/master-plan/ROADMAP_EXECUTION.md`
-4. `docs/sprints/SPRINTS_INDEX.md`
-5. `docs/security/SECURITY_BASELINE.md`
+2. `docs/sprints/SPRINTS_INDEX.md`
+3. `docs/security/SECURITY_BASELINE.md`
+4. `docs/tracking/PROJECT_STATUS.md`
+5. `infra/README.md`
 
-## Mode de travail recommandé
+## Règles de travail
 
-1. Lire les règles dans `AGENTS.md`
-2. Choisir le sprint actif dans `docs/sprints/`
-3. Préparer le plan d’implémentation
-4. Développer lot par lot
-5. Ajouter les tests en même temps
-6. Mettre à jour la documentation du sprint et le tracking projet
-
-## Exigences non négociables
-
-- isolation stricte des données client
-- permissions objet par objet
-- accès fichiers sécurisé
-- logique métier centralisée
-- architecture DRY et SRP
-- tests à chaque niveau
-- documentation maintenue à jour
-
-## Statut
-
-Repo initial de cadrage et de pilotage, prêt à accueillir :
-- le socle Docker,
-- le backend Django,
-- le front moderne,
-- les intégrations Google Drive et Sendcloud,
-- le workflow de production DTF.    
+- privilégier les changements petits et testés ;
+- valider sous Docker ;
+- ne pas mélanger refactoring structurel et changement métier sensible ;
+- mettre à jour la documentation du lot concerné ;
+- conserver l'isolation stricte des données client.

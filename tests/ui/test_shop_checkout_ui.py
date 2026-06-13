@@ -26,30 +26,35 @@ def test_marketing_pages_are_accessible_for_anonymous():
     home_html = home.content.decode()
 
     assert home.status_code == 200
-    assert "Parcours recommandé" in home_html
-    assert "Commander" in home_html
+    assert "DTF premium et fichiers prêts production" in home_html
+    assert "Commander des DTF" in home_html
+    assert "Faire optimiser un fichier" in home_html
     assert 'id="landing-services"' in home_html
     assert "Espace client" in home_html
-    assert "DTF au metre" in home_html
-    assert "id=\"landing-reassurance\"" in home_html
-    assert "id=\"landing-why-us\"" in home_html
-    assert "id=\"landing-services\"" in home_html
-    assert "id=\"landing-how-it-works\"" in home_html
-    assert "id=\"landing-quality\"" in home_html
-    assert "id=\"landing-faq\"" in home_html
-    assert "id=\"landing-cta-final\"" in home_html
-    assert "Compte pro dédié" in home_html
-    assert "Exemples d'usages" in home_html
-    assert "Capsules" in home_html
-    assert "meta name=\"description\"" in home_html
+    assert "Impression DTF premium" in home_html
+    assert "Préparation de fichiers DTF" in home_html
+    assert 'id="landing-reassurance"' in home_html
+    assert 'id="landing-why-us"' in home_html
+    assert 'id="landing-services"' in home_html
+    assert 'id="landing-how-it-works"' in home_html
+    assert 'id="landing-quality"' in home_html
+    assert 'id="landing-faq"' in home_html
+    assert 'id="landing-cta-final"' in home_html
+    assert "TIFF avec canal alpha" in home_html
+    assert "Un mauvais fichier peut ralentir toute une production." in home_html
+    assert "Pour les professionnels qui produisent, vendent ou sous-traitent du DTF." in home_html
+    assert 'meta name="description"' in home_html
     assert services.status_code == 200
     services_html = services.content.decode()
-    assert "Sélectionnez votre service" in services_html
-    assert "demander un accès" in services_html.lower()
-    assert "connectez-vous à votre espace" in services_html.lower()
+    assert "Choisissez votre service DTF" in services_html
+    assert "impression premium ou préparation fichier" in services_html
+    assert "envoyer un fichier à optimiser" in services_html.lower()
+    assert "Déjà client ? Connexion" in services_html
     assert "Bénéfices métier" in services_html
     assert "Cas d’usage" in services_html
-    assert "Réassurance" in services_html
+    assert "Impression DTF premium" in services_html
+    assert "Préparation de fichiers DTF" in services_html
+    assert "TIFF avec canal alpha" in services_html
 
 
 @pytest.mark.django_db
@@ -127,7 +132,7 @@ def test_client_checkout_upload_partial_updates_files_list():
             "order_public_id": str(order.public_id),
             "file": SimpleUploadedFile(
                 "visuel.png",
-                b"fake-image-content",
+                b"\x89PNG\r\n\x1a\n",
                 content_type="image/png",
             ),
         },

@@ -25,7 +25,9 @@ def stepper_items_for_step(current_step: int, total_steps: int = 4) -> list[Pros
     current_step = max(1, min(current_step, total_steps))
     items: list[ProspectStepperItem] = []
     for i in range(1, total_steps + 1):
-        label, help_text = PROSPECT_STEP_META[i - 1] if i <= len(PROSPECT_STEP_META) else (f"Étape {i}", "")
+        label, help_text = (
+            PROSPECT_STEP_META[i - 1] if i <= len(PROSPECT_STEP_META) else (f"Étape {i}", "")
+        )
         items.append(
             {
                 "label": label,

@@ -28,9 +28,7 @@ class BaseStaffDomainAccess(BasePermission):
     def has_permission(self, request, view) -> bool:
         if not self.required_permission:
             return False
-        return access_scope_service.can_access_staff_domain(
-            request.user, self.required_permission
-        )
+        return access_scope_service.can_access_staff_domain(request.user, self.required_permission)
 
 
 class HasStaffCatalogReadAccess(BaseStaffDomainAccess):
@@ -114,9 +112,7 @@ class HasStaffShipmentCreateAccess(BasePermission):
 
     def has_permission(self, request, view) -> bool:
         return bool(
-            access_scope_service.can_access_staff_domain(
-                request.user, "shipping.view_shipment"
-            )
+            access_scope_service.can_access_staff_domain(request.user, "shipping.view_shipment")
             and access_scope_service.can_access_staff_domain(
                 request.user, "shipping.create_shipment"
             )
@@ -128,10 +124,6 @@ class HasStaffBillingReadAccess(BasePermission):
 
     def has_permission(self, request, view) -> bool:
         return bool(
-            access_scope_service.can_access_staff_domain(
-                request.user, "billing.view_payment"
-            )
-            and access_scope_service.can_access_staff_domain(
-                request.user, "billing.view_invoice"
-            )
+            access_scope_service.can_access_staff_domain(request.user, "billing.view_payment")
+            and access_scope_service.can_access_staff_domain(request.user, "billing.view_invoice")
         )

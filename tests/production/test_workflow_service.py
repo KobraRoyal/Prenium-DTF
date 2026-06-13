@@ -115,6 +115,41 @@ def test_invalid_transition_is_refused_and_failure_audited():
 
 
 @pytest.mark.django_db
+def test_transition_existing_job_reloads_state_under_lock_before_validation():
+    service = ProductionWorkflowService()
+    actor, customer, _membership = create_customer_scope("client@example.com", "Acme")
+    staff_user = get_user_model().objects.create_user(
+        email="staff@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    order = create_order(customer, actor)
+    stale_job = service.get_or_create_for_order(order=order)
+
+    _order, updated_job, _transition = service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.IN_PROGRESS,
+        actor=staff_user,
+        source="test",
+        reason="Launch production",
+    )
+
+    assert updated_job.status == ProductionJob.Status.IN_PROGRESS
+    with pytest.raises(ValidationError, match="Transition not allowed from the current status."):
+        service.transition_existing_job(
+            production_job=stale_job,
+            actor=staff_user,
+            source="test",
+            to_status=ProductionJob.Status.IN_PROGRESS,
+            reason="Duplicate launch",
+        )
+
+    updated_job.refresh_from_db()
+    assert updated_job.status == ProductionJob.Status.IN_PROGRESS
+    assert ProductionJobTransition.objects.filter(production_job=updated_job).count() == 1
+
+
+@pytest.mark.django_db
 def test_production_job_scan_matches_manufacturing_order_reference():
     service = ProductionWorkflowService()
     actor, customer, _membership = create_customer_scope("client@example.com", "Acme")

@@ -522,3 +522,83 @@
   }
   .workflow-panel-target { min-height: 12rem; }
 }
+
+/* Dark portal overrides: prevent light workflow components from washing out the premium shell. */
+@layer components {
+  body.landing-saas.portal-shell .ui-workflow-shell,
+  body.landing-saas.portal-shell .order-command-bar,
+  body.landing-saas.portal-shell .ui-staff-hero-card,
+  body.landing-saas.portal-shell .ui-order-hero,
+  body.landing-saas.portal-shell .workflow-summary__item {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025)),
+      radial-gradient(circle at top right, rgba(240, 168, 122, 0.08), transparent 45%);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #f4f0e8;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.26);
+  }
+
+  body.landing-saas.portal-shell .ui-workflow-shell__title,
+  body.landing-saas.portal-shell .workflow-panel__title,
+  body.landing-saas.portal-shell .workflow-panel__subtitle,
+  body.landing-saas.portal-shell .order-command-bar__client-name,
+  body.landing-saas.portal-shell .workflow-summary__value {
+    color: #faf7f2;
+  }
+
+  body.landing-saas.portal-shell .ui-workflow-shell__lead,
+  body.landing-saas.portal-shell .workflow-panel__meta,
+  body.landing-saas.portal-shell .workflow-summary__label,
+  body.landing-saas.portal-shell .order-command-bar__client-label,
+  body.landing-saas.portal-shell .order-command-bar__ref-label {
+    color: rgba(244, 240, 232, 0.62);
+  }
+
+  body.landing-saas.portal-shell .workflow-tab-group {
+    background: rgba(255, 255, 255, 0.045);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  body.landing-saas.portal-shell .workflow-tab-group__label {
+    background: rgba(240, 168, 122, 0.1);
+    border-color: rgba(240, 168, 122, 0.2);
+    color: #f3c3a7;
+  }
+
+  body.landing-saas.portal-shell .ui-tab-chip {
+    background: rgba(255, 255, 255, 0.055);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(244, 240, 232, 0.82);
+    box-shadow: none;
+  }
+
+  body.landing-saas.portal-shell .ui-tab-chip:hover,
+  body.landing-saas.portal-shell .ui-tab-chip:focus-visible {
+    background: rgba(240, 168, 122, 0.12);
+    border-color: rgba(240, 168, 122, 0.28);
+    color: #fff8f2;
+  }
+
+  body.landing-saas.portal-shell .ui-tab-chip.is-active {
+    background: linear-gradient(135deg, rgba(240, 168, 122, 0.78), rgba(143, 61, 31, 0.88));
+    border-color: rgba(240, 168, 122, 0.38);
+    color: #fff;
+    box-shadow: 0 14px 28px rgba(143, 61, 31, 0.28);
+  }
+
+  body.landing-saas.portal-shell .ui-panel-shell {
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  body.landing-saas.portal-shell .workflow-panel,
+  body.landing-saas.portal-shell .workflow-panel-target {
+    color: #f4f0e8;
+  }
+
+  body.landing-saas.portal-shell .order-command-bar__amount {
+    background: rgba(240, 168, 122, 0.12);
+    border-color: rgba(240, 168, 122, 0.22);
+    color: #ffd7bd;
+  }
+}

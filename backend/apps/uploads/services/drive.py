@@ -43,13 +43,9 @@ class GoogleDriveGateway:
 
     def __init__(self):
         if not settings.GOOGLE_DRIVE_SHARED_DRIVE_ID:
-            raise GoogleDriveConfigurationError(
-                "GOOGLE_DRIVE_SHARED_DRIVE_ID must be configured."
-            )
+            raise GoogleDriveConfigurationError("GOOGLE_DRIVE_SHARED_DRIVE_ID must be configured.")
         if not settings.GOOGLE_DRIVE_ROOT_FOLDER_ID:
-            raise GoogleDriveConfigurationError(
-                "GOOGLE_DRIVE_ROOT_FOLDER_ID must be configured."
-            )
+            raise GoogleDriveConfigurationError("GOOGLE_DRIVE_ROOT_FOLDER_ID must be configured.")
         if not settings.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON:
             raise GoogleDriveConfigurationError(
                 "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON must be configured."

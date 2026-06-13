@@ -1,14 +1,32 @@
-<header class="app-header landing-saas-header">
-  <div class="app-main app-nav landing-saas-nav ui-shell-main">
-    <div class="landing-brand landing-brand--signature">
-      <a class="brand-link" href="{% url 'home' %}">Prenium DTF</a>
-      <p class="brand-subtitle">via IDS supply</p>
+<header class="app-header landing-saas-header" x-data="{ mobileNav: false }">
+  <div class="app-main app-nav landing-saas-nav ui-shell-main max-md:flex-col max-md:items-stretch max-md:gap-3">
+    <div class="ui-brand-row">
+      <div class="landing-brand landing-brand--signature">
+        <a class="brand-link" href="{% url 'home' %}">Prenium DTF</a>
+        <p class="brand-subtitle">via IDS supply</p>
+      </div>
+      <div class="flex shrink-0 items-center gap-2 md:!hidden">
+        <a class="btn btn-nav-cta landing-mobile-primary-cta" href="{% url 'prospects:step1' %}">Accès pro</a>
+        <button
+          type="button"
+          class="dui-btn dui-btn-ghost dui-btn-sm shrink-0 border border-white/20 text-[#efe4d8]"
+          @click="mobileNav = !mobileNav"
+          :aria-expanded="mobileNav"
+          aria-controls="landing-primary-nav"
+        >
+          Menu
+        </button>
+      </div>
     </div>
-    <nav class="nav-group landing-saas-nav__links">
+    <nav
+      id="landing-primary-nav"
+      class="nav-group landing-saas-nav__links !hidden w-full flex-col flex-wrap gap-1 md:!flex md:w-auto md:flex-row md:items-center md:gap-2"
+      :class="{ '!flex': mobileNav }"
+    >
       <a class="nav-link nav-link--ghost" href="#landing-services">Services</a>
-      <a class="nav-link nav-link--ghost" href="{% url 'prospects:step1' %}">Demander un accès</a>
+      <a class="nav-link nav-link--ghost" href="#landing-quality">Contrôle fichier</a>
       <a class="nav-link nav-link--ghost" href="{% url 'portal:login' %}">Espace client</a>
-      <a class="btn btn-nav-cta" href="{% url 'services' %}">Commander</a>
+      <a class="btn btn-nav-cta" href="{% url 'services' %}">Commander des DTF</a>
     </nav>
   </div>
 </header>

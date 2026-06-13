@@ -232,11 +232,7 @@ class PaymentService:
         return order, payment, invoice
 
     def get_staff_billing(self, *, order_public_id, actor, source: str):
-        order = (
-            Order.objects.select_related("customer")
-            .filter(public_id=order_public_id)
-            .first()
-        )
+        order = Order.objects.select_related("customer").filter(public_id=order_public_id).first()
         if order is None:
             return None, None, None
         payment = (
@@ -310,4 +306,3 @@ class PaymentService:
             },
         )
         raise ValidationError(payment.last_error_message)
-

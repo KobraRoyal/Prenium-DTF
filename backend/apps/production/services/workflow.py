@@ -262,8 +262,6 @@ class ProductionWorkflowService:
     ):
         normalized_status = str(to_status).strip()
         normalized_reason = str(reason).strip()
-        from_status = production_job.status
-        allowed_targets = self.allowed_transitions.get(from_status, set())
 
         if normalized_status not in ProductionJob.Status.values:
             self._record_rejected_transition(
@@ -275,73 +273,88 @@ class ProductionWorkflowService:
             )
             raise ValidationError("Unknown target status.")
 
-        if normalized_status not in allowed_targets:
+        now = timezone.now()
+        rejection_message = None
+        locked_job = None
+
+        with transaction.atomic():
+            locked_job = (
+                ProductionJob.objects.select_for_update()
+                .select_related("order", "order__customer")
+                .get(pk=production_job.pk)
+            )
+            from_status = locked_job.status
+            allowed_targets = self.allowed_transitions.get(from_status, set())
+
+            if normalized_status not in allowed_targets:
+                rejection_message = (
+                    f"Transition from {from_status} to {normalized_status} is not allowed."
+                )
+            else:
+                locked_job.status = normalized_status
+                locked_job.last_transition_at = now
+                locked_job.last_transition_by = (
+                    actor if getattr(actor, "is_authenticated", False) else None
+                )
+                locked_job.last_transition_note = normalized_reason[:255]
+                if (
+                    normalized_status == ProductionJob.Status.IN_PROGRESS
+                    and locked_job.started_at is None
+                ):
+                    locked_job.started_at = now
+                if normalized_status == ProductionJob.Status.COMPLETED:
+                    locked_job.completed_at = now
+
+                locked_job.save(
+                    update_fields=[
+                        "status",
+                        "started_at",
+                        "completed_at",
+                        "last_transition_at",
+                        "last_transition_by",
+                        "last_transition_note",
+                        "updated_at",
+                    ]
+                )
+
+                transition = ProductionJobTransition.objects.create(
+                    production_job=locked_job,
+                    from_status=from_status,
+                    to_status=normalized_status,
+                    changed_by=actor if getattr(actor, "is_authenticated", False) else None,
+                    reason=normalized_reason[:255],
+                    source=source,
+                )
+
+                record_event(
+                    action="production.status_changed",
+                    actor=actor if getattr(actor, "is_authenticated", False) else None,
+                    target=locked_job,
+                    metadata={
+                        "order_public_id": str(locked_job.order.public_id),
+                        "customer_public_id": str(locked_job.order.customer.public_id),
+                        "production_job_public_id": str(locked_job.public_id),
+                        "manufacturing_order_number": locked_job.manufacturing_order_number,
+                        "production_transition_public_id": str(transition.public_id),
+                        "from_status": from_status,
+                        "to_status": normalized_status,
+                        "reason": normalized_reason[:255],
+                        "source": source,
+                    },
+                )
+
+        if rejection_message is not None:
             self._record_rejected_transition(
-                production_job=production_job,
+                production_job=locked_job,
                 actor=actor,
                 source=source,
-                message=f"Transition from {from_status} to {normalized_status} is not allowed.",
+                message=rejection_message,
                 requested_status=normalized_status,
             )
             raise ValidationError("Transition not allowed from the current status.")
 
-        now = timezone.now()
-
-        with transaction.atomic():
-            production_job.status = normalized_status
-            production_job.last_transition_at = now
-            production_job.last_transition_by = (
-                actor if getattr(actor, "is_authenticated", False) else None
-            )
-            production_job.last_transition_note = normalized_reason[:255]
-            if (
-                normalized_status == ProductionJob.Status.IN_PROGRESS
-                and production_job.started_at is None
-            ):
-                production_job.started_at = now
-            if normalized_status == ProductionJob.Status.COMPLETED:
-                production_job.completed_at = now
-
-            production_job.save(
-                update_fields=[
-                    "status",
-                    "started_at",
-                    "completed_at",
-                    "last_transition_at",
-                    "last_transition_by",
-                    "last_transition_note",
-                    "updated_at",
-                ]
-            )
-
-            transition = ProductionJobTransition.objects.create(
-                production_job=production_job,
-                from_status=from_status,
-                to_status=normalized_status,
-                changed_by=actor if getattr(actor, "is_authenticated", False) else None,
-                reason=normalized_reason[:255],
-                source=source,
-            )
-
-            record_event(
-                action="production.status_changed",
-                actor=actor if getattr(actor, "is_authenticated", False) else None,
-                target=production_job,
-                metadata={
-                    "order_public_id": str(production_job.order.public_id),
-                    "customer_public_id": str(production_job.order.customer.public_id),
-                    "production_job_public_id": str(production_job.public_id),
-                    "manufacturing_order_number": production_job.manufacturing_order_number,
-                    "production_transition_public_id": str(transition.public_id),
-                    "from_status": from_status,
-                    "to_status": normalized_status,
-                    "reason": normalized_reason[:255],
-                    "source": source,
-                },
-            )
-
-        production_job = self._get_job_queryset().filter(pk=production_job.pk).first()
-        return production_job, transition
+        locked_job = self._get_job_queryset().filter(pk=locked_job.pk).first()
+        return locked_job, transition
 
     def _record_rejected_transition(
         self,

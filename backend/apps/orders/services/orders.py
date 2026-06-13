@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db import transaction
 
 from apps.accounts.services.access import AccessScopeService
@@ -29,23 +30,37 @@ class OrderService:
         return (
             Order.objects.for_customer(customer)
             .select_related("customer", "created_by")
-            .prefetch_related("items", "items__service", "uploads", "uploads__inspection")
+            .prefetch_related("items", "items__service")
+            .order_by("-created_at")
         )
 
     def get_customer_order(self, customer, order_public_id):
         return (
-            self.list_customer_orders(customer).filter(public_id=order_public_id).first()
+            Order.objects.for_customer(customer)
+            .select_related("customer", "created_by")
+            .prefetch_related("items", "items__service", "uploads", "uploads__inspection")
+            .filter(public_id=order_public_id)
+            .first()
         )
 
     def list_staff_orders(self):
         return (
             Order.objects.select_related("customer", "created_by")
-            .prefetch_related("items", "items__service", "uploads", "uploads__inspection")
+            .prefetch_related("items", "items__service")
             .order_by("-created_at")
         )
 
     def get_staff_order(self, order_public_id):
-        return self.list_staff_orders().filter(public_id=order_public_id).first()
+        return (
+            Order.objects.select_related("customer", "created_by")
+            .prefetch_related("items", "items__service", "uploads", "uploads__inspection")
+            .filter(public_id=order_public_id)
+            .first()
+        )
+
+    def paginate_orders(self, queryset, *, page_number, page_size):
+        paginator = Paginator(queryset, page_size)
+        return paginator.get_page(page_number)
 
     def create_order(
         self,

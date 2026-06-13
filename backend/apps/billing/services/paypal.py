@@ -167,4 +167,3 @@ class PayPalGateway:
             or f"PayPal request failed with HTTP {exc.code}."
         )
         return str(detail).strip()[:255]
-

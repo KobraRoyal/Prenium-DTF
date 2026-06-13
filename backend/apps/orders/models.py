@@ -20,14 +20,11 @@ class OrderQuerySet(models.QuerySet):
     def for_user(self, user):
         if not getattr(user, "is_authenticated", False) or not getattr(user, "is_active", False):
             return self.none()
-        return (
-            self.filter(
-                customer__memberships__user=user,
-                customer__memberships__is_active=True,
-                customer__is_active=True,
-            )
-            .distinct()
-        )
+        return self.filter(
+            customer__memberships__user=user,
+            customer__memberships__is_active=True,
+            customer__is_active=True,
+        ).distinct()
 
 
 class Order(BaseModel):
@@ -163,4 +160,3 @@ class OrderLine(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.order.public_id} - {self.service_name}"
-

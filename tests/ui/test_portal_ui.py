@@ -3,7 +3,7 @@ from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.test import Client
+from django.test import Client, override_settings
 from django.urls import reverse
 
 
@@ -262,6 +262,116 @@ def test_staff_without_billing_permissions_is_denied_on_staff_billing_panel():
         reverse("portal:staff-order-panel-billing", kwargs={"order_public_id": order.public_id})
     )
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+@override_settings(ORDER_LIST_PAGE_SIZE=2)
+def test_client_order_list_is_paginated_in_portal():
+    user = get_user_model().objects.create_user(email="client-pages@example.com", password="pass")
+    customer = Customer.objects.create(name="Client Pages")
+    CustomerMembership.objects.create(customer=customer, user=user)
+    oldest = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="10.00",
+        total_amount="10.00",
+    )
+    middle = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="20.00",
+        total_amount="20.00",
+    )
+    newest = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="30.00",
+        total_amount="30.00",
+    )
+
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+
+    first_page = client.get(
+        reverse("portal:client-order-list", kwargs={"customer_public_id": customer.public_id})
+    )
+    second_page = client.get(
+        reverse("portal:client-order-list", kwargs={"customer_public_id": customer.public_id}),
+        {"page": 2},
+    )
+
+    first_html = first_page.content.decode()
+    second_html = second_page.content.decode()
+    assert first_page.status_code == 200
+    assert str(newest.public_id) in first_html
+    assert str(middle.public_id) in first_html
+    assert str(oldest.public_id) not in first_html
+    assert "Page 1 / 2" in first_html
+    assert second_page.status_code == 200
+    assert str(oldest.public_id) in second_html
+    assert str(newest.public_id) not in second_html
+    assert "Page 2 / 2" in second_html
+
+
+@pytest.mark.django_db
+@override_settings(STAFF_ORDER_LIST_PAGE_SIZE=2)
+def test_staff_order_list_is_paginated_in_portal():
+    staff_user = get_user_model().objects.create_user(
+        email="staff-pages@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    for codename in ("access_staff_portal", "view_order"):
+        staff_user.user_permissions.add(Permission.objects.get(codename=codename))
+    customer = Customer.objects.create(name="Staff Pages")
+    oldest = Order.objects.create(
+        customer=customer,
+        created_by=staff_user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="10.00",
+        total_amount="10.00",
+    )
+    middle = Order.objects.create(
+        customer=customer,
+        created_by=staff_user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="20.00",
+        total_amount="20.00",
+    )
+    newest = Order.objects.create(
+        customer=customer,
+        created_by=staff_user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="30.00",
+        total_amount="30.00",
+    )
+
+    client = Client()
+    assert client.login(email=staff_user.email, password="pass")
+
+    first_page = client.get(reverse("portal:staff-order-list"))
+    second_page = client.get(reverse("portal:staff-order-list"), {"page": 2})
+
+    first_html = first_page.content.decode()
+    second_html = second_page.content.decode()
+    assert first_page.status_code == 200
+    assert str(newest.public_id) in first_html
+    assert str(middle.public_id) in first_html
+    assert str(oldest.public_id) not in first_html
+    assert "Page 1 / 2" in first_html
+    assert second_page.status_code == 200
+    assert str(oldest.public_id) in second_html
+    assert str(newest.public_id) not in second_html
+    assert "Page 2 / 2" in second_html
 
 
 @pytest.mark.django_db

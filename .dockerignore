@@ -14,3 +14,6 @@ htmlcov
 backend/staticfiles
 backend/var
 
+.env
+.env.*
+!.env.example

@@ -28,6 +28,12 @@
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)
+- [Sprint 2 — Sécurité applicative ciblée](sprint-2-securite-applicative-ciblee.md)
+- [Sprint 3 — Performance et robustesse métier](sprint-3-performance-robustesse-metier.md)
+- [Sprint 4 — Durcissement Docker production](sprint-4-durcissement-docker-production.md)
+- [Sprint 5 — Maintenabilité portail](sprint-5-maintenabilite-portail.md)
+- [Sprint 6 — Garde-fous architecture portail](sprint-6-garde-fous-architecture-portail.md)
+- [Sprint 7 — Documentation et expérience développeur](sprint-7-documentation-dx.md)
 
 ## Références transverses
 - Architecture — Commandes B2B facturation différée (`docs/architecture/B2B_DEFERRED_BILLING.md`)

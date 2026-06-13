@@ -125,4 +125,3 @@ class InvoiceService:
 
     def _build_invoice_number(self, *, order: Order) -> str:
         return f"INV-{order.public_id.hex.upper()}"
-

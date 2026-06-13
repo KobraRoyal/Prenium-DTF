@@ -1,4 +1,9 @@
+import ipaddress
+import logging
+from secrets import compare_digest
+
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import FileResponse, Http404
 from rest_framework.exceptions import PermissionDenied
@@ -8,11 +13,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import HasStaffBillingReadAccess
+from apps.auditlog.models import AuditLogEntry
+from apps.auditlog.services import record_event
 from apps.customers.permissions import HasScopedCustomerAccess
 
 from .services.payments import PaymentService
 
 payment_service = PaymentService()
+logger = logging.getLogger(__name__)
 
 
 def raise_api_validation_error(error: DjangoValidationError):
@@ -61,6 +69,21 @@ def serialize_invoice(invoice) -> dict[str, object]:
         "created_at": invoice.created_at.isoformat(),
         "updated_at": invoice.updated_at.isoformat(),
     }
+
+
+def _audit_ip(raw: str) -> str | None:
+    try:
+        return str(ipaddress.ip_address(raw.strip()))
+    except ValueError:
+        return None
+
+
+def _client_ip(request) -> str:
+    if getattr(settings, "PAYPAL_INTERNAL_CONFIRM_TRUST_X_FORWARDED_FOR", False):
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        if xff:
+            return xff.split(",")[0].strip()
+    return request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR") or "0.0.0.0"
 
 
 class ClientPayPalPaymentInitiateView(APIView):
@@ -116,10 +139,93 @@ class BackendPayPalCaptureView(APIView):
     authentication_classes = []
     permission_classes = []
 
+    def _record_denied_attempt(self, *, request, client_ip: str, reason: str, message: str) -> None:
+        logger.warning(
+            "paypal_internal_capture_denied",
+            extra={"client_ip": client_ip, "reason": reason},
+        )
+        record_event(
+            action="security.paypal_internal_capture_denied",
+            status=AuditLogEntry.Status.FAILURE,
+            message=message,
+            ip_address=_audit_ip(client_ip),
+            metadata={
+                "client_ip": client_ip,
+                "reason": reason,
+                "path": request.path,
+            },
+        )
+
+    def _rate_limit_key(self, client_ip: str) -> str:
+        return f"paypal_internal_capture_rl:{client_ip}"
+
+    def _register_denied_attempt(self, *, request, client_ip: str, reason: str) -> bool:
+        window = getattr(settings, "PAYPAL_INTERNAL_CONFIRM_RATE_LIMIT_WINDOW_SECONDS", 300)
+        max_attempts = getattr(settings, "PAYPAL_INTERNAL_CONFIRM_RATE_LIMIT_MAX_ATTEMPTS", 10)
+        key = self._rate_limit_key(client_ip)
+        try:
+            current = cache.incr(key)
+        except ValueError:
+            cache.add(key, 1, timeout=window)
+            current = 1
+
+        self._record_denied_attempt(
+            request=request,
+            client_ip=client_ip,
+            reason=reason,
+            message="PayPal internal capture request denied.",
+        )
+
+        if current > max_attempts:
+            logger.warning(
+                "paypal_internal_capture_rate_limited",
+                extra={"client_ip": client_ip, "attempts": current},
+            )
+            if current == max_attempts + 1:
+                record_event(
+                    action="security.paypal_internal_capture_rate_limited",
+                    status=AuditLogEntry.Status.FAILURE,
+                    message="PayPal internal capture rate limit reached.",
+                    ip_address=_audit_ip(client_ip),
+                    metadata={
+                        "client_ip": client_ip,
+                        "max_attempts": max_attempts,
+                        "window_seconds": window,
+                        "path": request.path,
+                    },
+                )
+            return True
+        return False
+
     def post(self, request):
+        client_ip = _client_ip(request)
         provided_token = request.headers.get("X-Internal-Token", "")
-        expected_token = settings.PAYPAL_INTERNAL_CONFIRM_TOKEN
-        if not expected_token or provided_token != expected_token:
+        expected_token = settings.PAYPAL_INTERNAL_CONFIRM_TOKEN or ""
+        if not expected_token:
+            self._record_denied_attempt(
+                request=request,
+                client_ip=client_ip,
+                reason="missing_expected_token",
+                message="PayPal internal confirmation token is not configured.",
+            )
+            raise PermissionDenied("Invalid internal confirmation token.")
+
+        if not provided_token:
+            if self._register_denied_attempt(
+                request=request,
+                client_ip=client_ip,
+                reason="missing_provided_token",
+            ):
+                return Response({"detail": ["Too many invalid confirmation attempts."]}, status=429)
+            raise PermissionDenied("Invalid internal confirmation token.")
+
+        if not compare_digest(provided_token, expected_token):
+            if self._register_denied_attempt(
+                request=request,
+                client_ip=client_ip,
+                reason="invalid_token",
+            ):
+                return Response({"detail": ["Too many invalid confirmation attempts."]}, status=429)
             raise PermissionDenied("Invalid internal confirmation token.")
 
         order_public_id = request.data.get("order_public_id")
@@ -174,4 +280,3 @@ class StaffBillingDetailView(APIView):
                 "invoice": serialize_invoice(invoice) if invoice else None,
             }
         )
-

@@ -98,9 +98,7 @@ class FakeSendcloudGateway:
     def create_shipment(self, *, payload):
         self.last_payload = payload
         if self.should_fail:
-            raise SendcloudAPIError(
-                "Remote carrier timeout for order. secret_key=should-not-leak"
-            )
+            raise SendcloudAPIError("Remote carrier timeout for order. secret_key=should-not-leak")
         return SendcloudShipmentResult(
             shipment_id="sc-shipment-123",
             parcel_id="383707309",

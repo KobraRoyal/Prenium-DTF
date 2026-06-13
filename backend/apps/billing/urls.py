@@ -37,4 +37,3 @@ urlpatterns = [
         name="backend-paypal-capture",
     ),
 ]
-

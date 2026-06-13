@@ -22,6 +22,9 @@ MINIMAL_PNG_BYTES = (
     b"\x00\x00\x00\x0bIDAT\x08\xd7c\xf8\xff\xff?\x00\x05\xfe\x02\xfeA\xa6\x1d\xc9"
     b"\x00\x00\x00\x00IEND\xaeB`\x82"
 )
+MINIMAL_JPEG_BYTES = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xd9"
+MINIMAL_TIFF_BYTES = b"II*\x00\x08\x00\x00\x00"
+MINIMAL_PSD_BYTES = b"8BPS\x00\x01\x00\x00\x00\x00\x00\x00"
 
 
 def create_customer_scope(email: str, customer_name: str):
@@ -267,6 +270,81 @@ def test_order_upload_service_accepts_octet_stream_ai_as_postscript():
     ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
     ORDER_UPLOAD_MAX_BYTES=1024,
 )
+def test_order_upload_service_accepts_jpeg_with_matching_signature():
+    user, customer, membership = create_customer_scope("jpeg@example.com", "Acme")
+    order = create_order(customer, user)
+
+    upload = OrderUploadService().create_upload(
+        customer=customer,
+        actor=user,
+        customer_membership=membership,
+        order_public_id=order.public_id,
+        uploaded_file=build_uploaded_file(
+            name="photo.jpg",
+            content=MINIMAL_JPEG_BYTES,
+            content_type="image/jpeg",
+        ),
+        source="client_api",
+    )
+
+    assert upload.mime_type == "image/jpeg"
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
+def test_order_upload_service_accepts_octet_stream_psd_with_matching_signature():
+    user, customer, membership = create_customer_scope("psd@example.com", "Acme")
+    order = create_order(customer, user)
+
+    upload = OrderUploadService().create_upload(
+        customer=customer,
+        actor=user,
+        customer_membership=membership,
+        order_public_id=order.public_id,
+        uploaded_file=SimpleUploadedFile(
+            "design.psd",
+            MINIMAL_PSD_BYTES,
+            content_type="application/octet-stream",
+        ),
+        source="client_api",
+    )
+
+    assert upload.mime_type == "image/vnd.adobe.photoshop"
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
+def test_order_upload_service_accepts_tiff_with_matching_signature():
+    user, customer, membership = create_customer_scope("tiff@example.com", "Acme")
+    order = create_order(customer, user)
+
+    upload = OrderUploadService().create_upload(
+        customer=customer,
+        actor=user,
+        customer_membership=membership,
+        order_public_id=order.public_id,
+        uploaded_file=build_uploaded_file(
+            name="scan.tif",
+            content=MINIMAL_TIFF_BYTES,
+            content_type="image/tiff",
+        ),
+        source="client_api",
+    )
+
+    assert upload.mime_type == "image/tiff"
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
 def test_order_upload_service_rejects_octet_stream_with_disallowed_extension():
     user, customer, membership = create_customer_scope("client@example.com", "Acme")
     order = create_order(customer, user)
@@ -280,6 +358,84 @@ def test_order_upload_service_rejects_octet_stream_with_disallowed_extension():
                 "malware.exe",
                 b"MZ",
                 content_type="application/octet-stream",
+            ),
+            source="client_api",
+        )
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
+def test_order_upload_service_rejects_spoofed_pdf_content():
+    user, customer, membership = create_customer_scope("spoofed-pdf@example.com", "Acme")
+    order = create_order(customer, user)
+
+    with pytest.raises(
+        ValidationError,
+        match="File content does not match the declared file type.",
+    ):
+        OrderUploadService().create_upload(
+            customer=customer,
+            actor=user,
+            customer_membership=membership,
+            order_public_id=order.public_id,
+            uploaded_file=build_uploaded_file(
+                name="design.pdf",
+                content=b"plain text",
+                content_type="application/pdf",
+            ),
+            source="client_api",
+        )
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
+def test_order_upload_service_rejects_spoofed_octet_stream_ai_content():
+    user, customer, membership = create_customer_scope("spoofed-ai@example.com", "Acme")
+    order = create_order(customer, user)
+
+    with pytest.raises(
+        ValidationError,
+        match="File content does not match the declared file type.",
+    ):
+        OrderUploadService().create_upload(
+            customer=customer,
+            actor=user,
+            customer_membership=membership,
+            order_public_id=order.public_id,
+            uploaded_file=SimpleUploadedFile(
+                "logo.ai",
+                b"not-an-illustrator-file",
+                content_type="application/octet-stream",
+            ),
+            source="client_api",
+        )
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
+def test_order_upload_service_rejects_svg_even_if_declared_as_image():
+    user, customer, membership = create_customer_scope("svg@example.com", "Acme")
+    order = create_order(customer, user)
+
+    with pytest.raises(ValidationError, match="SVG files are not allowed."):
+        OrderUploadService().create_upload(
+            customer=customer,
+            actor=user,
+            customer_membership=membership,
+            order_public_id=order.public_id,
+            uploaded_file=build_uploaded_file(
+                name="design.svg",
+                content=b"<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+                content_type="image/svg+xml",
             ),
             source="client_api",
         )

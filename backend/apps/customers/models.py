@@ -128,8 +128,7 @@ class Customer(BaseModel):
         choices=PreferredSettlementMethod.choices,
         default=PreferredSettlementMethod.WIRE_TRANSFER,
         help_text=(
-            "PayPal (paiement en ligne) ou virement — utilisé comme référence "
-            "comptable / UI."
+            "PayPal (paiement en ligne) ou virement — utilisé comme référence comptable / UI."
         ),
     )
 

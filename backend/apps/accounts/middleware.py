@@ -21,10 +21,11 @@ def _audit_ip(raw: str) -> str | None:
 
 
 def _client_ip(request):
-    xff = request.META.get("HTTP_X_FORWARDED_FOR")
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR") or "0.0.0.0"
+    if getattr(settings, "LOGIN_RATE_LIMIT_TRUST_X_FORWARDED_FOR", False):
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        if xff:
+            return xff.split(",")[0].strip()
+    return request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR") or "0.0.0.0"
 
 
 def _is_login_post(request) -> bool:

@@ -18,4 +18,3 @@ class CatalogServiceAdmin(admin.ModelAdmin):
     search_fields = ("name", "code", "description")
     readonly_fields = ("public_id", "created_at", "updated_at")
     ordering = ("display_order", "name")
-

@@ -71,9 +71,7 @@ class SendcloudGateway:
         if not label_document_link:
             raise SendcloudAPIError("Sendcloud response did not include a label document.")
 
-        label_mime_type = str(
-            payload.get("label_details", {}).get("mime_type", "application/pdf")
-        )
+        label_mime_type = str(payload.get("label_details", {}).get("mime_type", "application/pdf"))
         label_content = self._download_binary(label_document_link, accept=label_mime_type)
 
         return SendcloudShipmentResult(
@@ -383,9 +381,7 @@ class ShipmentService:
             return None, None
 
         shipment = (
-            Shipment.objects.select_related("order", "order__customer")
-            .filter(order=order)
-            .first()
+            Shipment.objects.select_related("order", "order__customer").filter(order=order).first()
         )
         if shipment is None:
             raise ValidationError("Aucune expédition pour cette commande.")

@@ -43,4 +43,3 @@ class OrderLineAdmin(admin.ModelAdmin):
     list_display = ("order", "position", "service_name", "quantity", "line_total")
     readonly_fields = ("public_id", "created_at", "updated_at")
     autocomplete_fields = ("order", "service")
-

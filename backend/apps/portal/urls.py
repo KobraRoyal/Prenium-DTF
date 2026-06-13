@@ -1,10 +1,13 @@
 from django.urls import path
 
-from .views import (
+from .views_auth import PortalLoginView, PortalLogoutView
+from .views_checkout import (
     ClientCheckoutSubmitView,
     ClientCheckoutSummaryPartialView,
     ClientCheckoutUploadPartialView,
     ClientCheckoutView,
+)
+from .views_client import (
     ClientDashboardView,
     ClientOrderDetailView,
     ClientOrderListView,
@@ -13,21 +16,20 @@ from .views import (
     ClientOrderPanelProductionView,
     ClientOrderPanelShippingView,
     ClientOrderPanelUploadsView,
-    PortalLoginView,
-    PortalLogoutView,
+)
+from .views_staff import (
     StaffDashboardView,
-    StaffInvoiceMarkPaidView,
     StaffOrderDetailView,
     StaffOrderListView,
-    StaffOrderPanelBillingView,
+    StaffOrderPriceView,
+)
+from .views_staff_billing import StaffInvoiceMarkPaidView, StaffOrderPanelBillingView
+from .views_staff_production import StaffOrderPanelProductionView, StaffOrderPanelScanView
+from .views_staff_shipping import StaffOrderPanelShippingSyncView, StaffOrderPanelShippingView
+from .views_staff_uploads import (
     StaffOrderPanelDriveSyncView,
     StaffOrderPanelInspectionView,
-    StaffOrderPanelProductionView,
-    StaffOrderPanelScanView,
-    StaffOrderPanelShippingSyncView,
-    StaffOrderPanelShippingView,
     StaffOrderPanelUploadsView,
-    StaffOrderPriceView,
 )
 
 app_name = "portal"

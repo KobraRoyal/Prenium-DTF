@@ -74,26 +74,21 @@ class Command(BaseCommand):
         self._seed_shipments(users, orders)
 
         self.stdout.write(
-            self.style.SUCCESS(
-                "Seed recette B2B généré (facturation différée + workflow)."
-            )
+            self.style.SUCCESS("Seed recette B2B généré (facturation différée + workflow).")
         )
         self.stdout.write("")
         self.stdout.write(
-            "Identifiants : voir docs/ACCES_RECETTE_PORTAIL.md "
-            "(mot de passe commun seed)."
+            "Identifiants : voir docs/ACCES_RECETTE_PORTAIL.md (mot de passe commun seed)."
         )
         self.stdout.write("")
         self.stdout.write("Scénarios commandes (customer_note) :")
         self.stdout.write("- SEED09:A_B2B_DRAFT — brouillon + fichier")
         self.stdout.write(
-            "- SEED09:A_B2B_SUBMITTED — soumise, fichiers variés, "
-            "Drive, tarif en attente"
+            "- SEED09:A_B2B_SUBMITTED — soumise, fichiers variés, Drive, tarif en attente"
         )
         self.stdout.write("- SEED09:A_B2B_PRICED — tarifée (métrage commande)")
         self.stdout.write(
-            "- SEED09:A_B2B_IN_PRODUCTION / READY_SHIP / SHIPPED / "
-            "SHIPPING_FAILED — chaîne GPAO"
+            "- SEED09:A_B2B_IN_PRODUCTION / READY_SHIP / SHIPPED / SHIPPING_FAILED — chaîne GPAO"
         )
         self.stdout.write("- SEED09:B_B2B_1 / SEED09:B_B2B_BLOCKED — client B (isolation)")
 
@@ -408,9 +403,7 @@ class Command(BaseCommand):
         )
 
         def _priced(note: str, linear: Decimal) -> Order:
-            o = self._ensure_b2b_order(
-                customer=customer_a, actor=users.client_a_owner, note=note
-            )
+            o = self._ensure_b2b_order(customer=customer_a, actor=users.client_a_owner, note=note)
             self._upsert_upload(
                 order=o,
                 actor=users.client_a_owner,
