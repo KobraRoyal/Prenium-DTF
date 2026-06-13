@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}DTF premium et fichiers prêts production — Prenium DTF{% endblock %}
+{% block title %}Prenium DTF — production DTF créative, prépresse et portail B2B{% endblock %}
 
 {% block extra_head %}
-<meta name="description" content="Impression DTF premium pour professionnels du textile et préparation de fichiers techniques DTF : contrôle fichier, base blanche, TIFF avec canal alpha et transferts prêts à presser.">
+<meta name="description" content="Prenium DTF accompagne les pros du textile avec impression DTF premium, préparation fichier, contrôle prépresse, suivi atelier et portail B2B sécurisé.">
 {% endblock %}
 
 {% block body_class %}landing-saas ui-marketing-body{% endblock %}
@@ -13,11 +13,12 @@
 <main class="landing-main">
   {% include "shop/partials/landing_hero.html" %}
   {% include "shop/partials/landing_services.html" %}
-  {% include "shop/partials/landing_why_us.html" %}
+  {% include "shop/partials/landing_case_studies.html" %}
   {% include "shop/partials/landing_quality_proof.html" %}
-  {% include "shop/partials/landing_reassurance.html" %}
+  {% include "shop/partials/landing_team.html" %}
   {% include "shop/partials/landing_how_it_works.html" %}
   {% include "shop/partials/landing_faq.html" %}
+  {% include "shop/partials/landing_contact.html" %}
   {% include "shop/partials/landing_cta_final.html" %}
 </main>
 {% endblock %}

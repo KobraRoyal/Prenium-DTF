@@ -1,0 +1,74 @@
+<section id="landing-contact" class="landing-section agency-section agency-section--acid landing-reveal">
+  <div class="landing-shell">
+    <div class="landing-contact__layout">
+      <div class="agency-section-head">
+        <p class="agency-kicker">Contact form</p>
+        <h2>Ouvrez le brief, on cadre la production.</h2>
+        <p class="agency-lead">Ce formulaire démarre la demande d’accès pro. Il alimente le tunnel sécurisé existant pour créer votre espace et poursuivre le brief sans multiplier les canaux.</p>
+        <div class="agency-card">
+          <span class="agency-card__meta">Ce qui est transmis</span>
+          <p>Identité, société, contact et profil d’activité. Les détails volume, besoin et urgence sont demandés dans les étapes suivantes.</p>
+        </div>
+      </div>
+      <form class="landing-contact__form" method="post" action="{% url 'prospects:step1' %}" aria-label="Demande d’accès professionnel">
+        {% csrf_token %}
+        <div class="landing-contact__grid">
+          <label class="landing-field" for="landing_first_name">
+            Prénom
+            <input class="landing-input" id="landing_first_name" name="first_name" autocomplete="given-name" required>
+          </label>
+          <label class="landing-field" for="landing_last_name">
+            Nom
+            <input class="landing-input" id="landing_last_name" name="last_name" autocomplete="family-name" required>
+          </label>
+        </div>
+        <label class="landing-field" for="landing_email">
+          Email professionnel
+          <input class="landing-input" id="landing_email" name="email" type="email" autocomplete="email" required>
+        </label>
+        <div class="landing-contact__grid">
+          <label class="landing-field" for="landing_phone">
+            Téléphone
+            <input class="landing-input" id="landing_phone" name="phone" autocomplete="tel" inputmode="tel" required>
+          </label>
+          <label class="landing-field" for="landing_company">
+            Société
+            <input class="landing-input" id="landing_company" name="company" autocomplete="organization" required>
+          </label>
+        </div>
+        <label class="landing-field" for="landing_country">
+          Pays
+          <select class="landing-select" id="landing_country" name="country" autocomplete="country" required>
+            <option value="FR">France</option>
+            <option value="BE">Belgique</option>
+            <option value="CH">Suisse</option>
+            <option value="DE">Allemagne</option>
+            <option value="ES">Espagne</option>
+            <option value="IT">Italie</option>
+            <option value="NL">Pays-Bas</option>
+            <option value="LU">Luxembourg</option>
+            <option value="AT">Autriche</option>
+            <option value="PT">Portugal</option>
+            <option value="GB">Royaume-Uni</option>
+            <option value="OTHER">Autre</option>
+          </select>
+        </label>
+        <fieldset class="landing-field">
+          <legend>Votre profil</legend>
+          <div class="landing-choice-grid">
+            <label class="landing-choice"><input type="radio" name="activity_type" value="brand" required> Marque textile</label>
+            <label class="landing-choice"><input type="radio" name="activity_type" value="printer" required> Imprimeur / revendeur</label>
+            <label class="landing-choice"><input type="radio" name="activity_type" value="workshop" required> Atelier</label>
+            <label class="landing-choice"><input type="radio" name="activity_type" value="creator" required> Créateur / studio</label>
+            <label class="landing-choice"><input type="radio" name="activity_type" value="other" required> Autre</label>
+          </div>
+        </fieldset>
+        <div class="agency-actions">
+          <button class="agency-button agency-button--primary" type="submit">Continuer le brief</button>
+          <a class="agency-button" href="{% url 'portal:login' %}">Déjà client</a>
+        </div>
+        <p class="landing-contact__note">Vos informations servent à ouvrir et qualifier votre accès professionnel. Les fichiers et commandes restent traités dans l’espace sécurisé.</p>
+      </form>
+    </div>
+  </div>
+</section>

@@ -38,3 +38,4 @@
 ## Références transverses
 - Architecture — Commandes B2B facturation différée (`docs/architecture/B2B_DEFERRED_BILLING.md`)
 - Product design — Audit UI/UX portail client 2026 (`docs/product-design/AUDIT_PORTAIL_CLIENT_UI_UX_2026.md`)
+- UI/UX — Frontend premium et refontes landing (`docs/sprints/sprint-uiux-frontend-premium.md`)

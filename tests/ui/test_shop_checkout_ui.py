@@ -24,25 +24,37 @@ def test_marketing_pages_are_accessible_for_anonymous():
     home = client.get(reverse("home"))
     services = client.get(reverse("services"))
     home_html = home.content.decode()
+    services_url = reverse("services")
+    prospect_url = reverse("prospects:step1")
+    login_url = reverse("portal:login")
 
     assert home.status_code == 200
-    assert "DTF premium et fichiers prêts production" in home_html
+    assert "Prenium DTF" in home_html
+    assert "production DTF créative" in home_html
+    assert "dtf-brutalist-workshop.webp" in home_html
     assert "Commander des DTF" in home_html
     assert "Faire optimiser un fichier" in home_html
-    assert 'id="landing-services"' in home_html
     assert "Espace client" in home_html
     assert "Impression DTF premium" in home_html
     assert "Préparation de fichiers DTF" in home_html
-    assert 'id="landing-reassurance"' in home_html
-    assert 'id="landing-why-us"' in home_html
+    assert "Case previews" in home_html
+    assert "Team showcase" in home_html
+    assert "Contact form" in home_html
     assert 'id="landing-services"' in home_html
+    assert 'id="landing-cases"' in home_html
+    assert 'id="landing-team"' in home_html
     assert 'id="landing-how-it-works"' in home_html
     assert 'id="landing-quality"' in home_html
     assert 'id="landing-faq"' in home_html
+    assert 'id="landing-contact"' in home_html
     assert 'id="landing-cta-final"' in home_html
     assert "TIFF avec canal alpha" in home_html
-    assert "Un mauvais fichier peut ralentir toute une production." in home_html
-    assert "Pour les professionnels qui produisent, vendent ou sous-traitent du DTF." in home_html
+    assert f'href="{services_url}"' in home_html
+    assert f'href="{prospect_url}"' in home_html
+    assert f'href="{login_url}"' in home_html
+    assert f'action="{prospect_url}"' in home_html
+    assert 'name="activity_type"' in home_html
+    assert 'name="email"' in home_html
     assert 'meta name="description"' in home_html
     assert services.status_code == 200
     services_html = services.content.decode()

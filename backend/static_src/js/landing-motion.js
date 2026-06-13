@@ -1,7 +1,6 @@
 /**
- * Révélations au scroll sur la landing (IntersectionObserver).
- * Double requestAnimationFrame avant .is-visible pour forcer les transitions CSS.
- * Chargé depuis app.js pour garder un point d'entrée JS unique.
+ * Révélations au scroll sur la landing marketing.
+ * Le contenu reste visible si IntersectionObserver ou les animations ne sont pas disponibles.
  */
 function revealElement(el) {
   requestAnimationFrame(() => {
@@ -12,7 +11,7 @@ function revealElement(el) {
 }
 
 function initLandingReveal() {
-  const root = document.querySelector(".landing-main, .landing-saas-main");
+  const root = document.querySelector(".landing-main");
   if (!root) {
     return;
   }
@@ -22,13 +21,13 @@ function initLandingReveal() {
     return;
   }
 
-  document.documentElement.classList.add("js-landing-motion");
-
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce) {
+  if (reduce || !("IntersectionObserver" in window)) {
     nodes.forEach((el) => el.classList.add("is-visible"));
     return;
   }
+
+  document.documentElement.classList.add("js-landing-motion");
 
   const io = new IntersectionObserver(
     (entries, obs) => {
@@ -46,8 +45,35 @@ function initLandingReveal() {
   nodes.forEach((el) => io.observe(el));
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initLandingReveal);
-} else {
+function initLandingMenuFallback() {
+  document.querySelectorAll("[data-landing-menu-toggle]").forEach((button) => {
+    const targetId = button.getAttribute("data-landing-menu-toggle");
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (!target) {
+      return;
+    }
+
+    button.addEventListener("click", () => {
+      const isOpen = target.classList.toggle("is-open");
+      button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+
+    target.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => {
+        target.classList.remove("is-open");
+        button.setAttribute("aria-expanded", "false");
+      });
+    });
+  });
+}
+
+function initLandingUI() {
   initLandingReveal();
+  initLandingMenuFallback();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initLandingUI);
+} else {
+  initLandingUI();
 }

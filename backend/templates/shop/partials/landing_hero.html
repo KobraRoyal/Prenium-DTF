@@ -1,57 +1,38 @@
-<section id="landing-hero" class="landing-section landing-hero landing-hero--saas landing-hero--animate">
-  <div class="landing-shell landing-shell--hero">
-    <div class="landing-hero__glow"></div>
-    <div class="landing-hero__grid">
-      <div class="landing-stack landing-stack--xl">
-        <p class="landing-kicker landing-kicker--pill">DTF premium B2B</p>
-        <div class="landing-copy landing-copy--wide">
-          <h1>DTF premium et fichiers prêts production <span class="landing-text-gradient">pour les pros du textile</span>.</h1>
-          <p class="landing-hero__lead">Commandez vos transferts DTF prêts à presser ou faites contrôler et optimiser vos fichiers techniques avant impression : base blanche, transparence, résolution, contours et exports adaptés à votre workflow.</p>
-          <p class="landing-hero__target landing-hero__target--inline"><span class="landing-hero__target-label">Pour :</span> ateliers textile, marques, imprimeurs DTF, revendeurs, studios graphiques et confrères qui veulent produire plus proprement avec moins d’erreurs fichier.</p>
-        </div>
-        <div class="landing-dual-cta landing-hero__actions">
-          <a class="btn-saas-primary" href="{% url 'services' %}">Commander des DTF</a>
-          <a class="btn-saas-secondary" href="{% url 'prospects:step1' %}">Faire optimiser un fichier</a>
-        </div>
-        <ul class="landing-hero__badges" aria-label="Points clés">
-          <li><span class="landing-dot"></span> Transferts DTF prêts à presser</li>
-          <li><span class="landing-dot"></span> Contrôle et optimisation fichier</li>
-          <li><span class="landing-dot"></span> Préparation TIFF avec canal alpha possible</li>
-        </ul>
-        <div class="landing-proof-strip" aria-label="Signaux de confiance">
-          <span class="landing-proof-pill">DTF Premium</span>
-          <span class="landing-proof-pill">B2B</span>
-          <span class="landing-proof-pill">Prêt à presser</span>
-          <span class="landing-proof-pill">Contrôle fichier</span>
-          <span class="landing-proof-pill">TIFF + canal alpha</span>
-        </div>
-      </div>
-      <aside class="landing-mockup--saas landing-command-board" aria-label="Aperçu du parcours">
-        <div class="landing-command-board__header">
-          <div>
-            <p class="landing-command-board__eyebrow">Workflow DTF</p>
-            <h2>Du fichier technique au transfert prêt à presser.</h2>
-          </div>
-          <span class="landing-command-board__status">Préproduction</span>
-        </div>
-        <div class="landing-command-board__stack">
-          <article class="landing-command-board__card">
-            <p class="landing-command-board__label">Contrôle fichier</p>
-            <strong>Transparence, résolution, contours</strong>
-            <span>Les points critiques sont vérifiés avant d’engager une production DTF.</span>
-          </article>
-          <article class="landing-command-board__card landing-command-board__card--accent">
-            <p class="landing-command-board__label">Base blanche</p>
-            <strong>Préparation propre et maîtrisée</strong>
-            <span>Optimisation possible pour les workflows compatibles TIFF avec canal alpha.</span>
-          </article>
-          <article class="landing-command-board__card">
-            <p class="landing-command-board__label">Production</p>
-            <strong>Impression DTF premium</strong>
-            <span>Transferts professionnels, réguliers et prêts à presser en atelier textile.</span>
-          </article>
-        </div>
-      </aside>
+{% load static %}
+<section id="landing-hero" class="landing-section agency-hero landing-hero--animate" aria-labelledby="landing-hero-title">
+  <picture class="agency-hero__media" aria-hidden="true">
+    <source srcset="{% static 'img/landing/dtf-brutalist-workshop.webp' %}" type="image/webp">
+    <img
+      src="{% static 'img/landing/dtf-brutalist-workshop.webp' %}"
+      width="1500"
+      height="845"
+      alt=""
+      decoding="async"
+      fetchpriority="high"
+    >
+  </picture>
+  <div class="agency-hero__overlay" aria-hidden="true"></div>
+  <div class="landing-shell agency-hero__content">
+    <p class="agency-kicker">DTF B2B / Préproduction / Portail atelier</p>
+    <h1 id="landing-hero-title">Prenium DTF</h1>
+    <p class="agency-hero__claim">Production DTF sans fichier bancal.</p>
+    <p class="agency-hero__lead">Une solution pour les pros du textile qui veulent commander des transferts DTF premium, faire préparer leurs fichiers, centraliser les visuels et suivre la production dans un workflow clair.</p>
+    <div class="agency-actions landing-hero__actions">
+      <a class="agency-button agency-button--primary" href="{% url 'services' %}">Commander des DTF</a>
+      <a class="agency-button agency-button--pink" href="{% url 'prospects:step1' %}">Faire optimiser un fichier</a>
     </div>
+    <ul class="agency-hero__badges" aria-label="Points clés">
+      <li class="agency-pill">Transferts prêts à presser</li>
+      <li class="agency-pill">Contrôle prépresse</li>
+      <li class="agency-pill">TIFF + canal alpha possible</li>
+      <li class="agency-pill">Suivi B2B sécurisé</li>
+    </ul>
   </div>
 </section>
+
+<div class="agency-marquee" aria-hidden="true">
+  <div class="agency-marquee__track">
+    <span>DTF premium</span><span>/</span><span>Fichiers propres</span><span>/</span><span>Base blanche</span><span>/</span><span>Portail B2B</span><span>/</span>
+    <span>DTF premium</span><span>/</span><span>Fichiers propres</span><span>/</span><span>Base blanche</span><span>/</span><span>Portail B2B</span><span>/</span>
+  </div>
+</div>

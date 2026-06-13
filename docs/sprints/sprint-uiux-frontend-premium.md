@@ -297,3 +297,41 @@ Auditer les vues metier avec le navigateur integre et corriger les incoherences 
 | Ticket | Statut | Fichiers modifies | Resume | Validation | Risques restants |
 |---|---|---|---|---|---|
 | UIUX-3.1 | Termine | `backend/templates/shop/services.html`, `backend/templates/base.html`, `backend/static_src/css/input.css`, `backend/static_src/css/components/shell.css`, `backend/static_src/css/components/workflow.css`, `backend/static_src/css/app.css`, `tests/ui/test_shop_checkout_ui.py`, `docs/sprints/sprint-uiux-frontend-premium.md` | Page services realignee avec l'offre DTF ; surfaces metier portail durcies en theme sombre pour les listes commandes et workflows ; cache CSS incremente pour publier les corrections. | `docker compose exec web sh -lc 'cd /app/backend && python manage.py check'` OK ; `docker compose run --rm --entrypoint sh web -lc 'cd /app/backend && pytest ../tests/ui/test_shop_checkout_ui.py ../tests/ui/test_portal_ui.py'` OK, 18 tests passes ; `docker compose run --rm --entrypoint sh web -lc 'cd /app && ruff check tests/ui/test_shop_checkout_ui.py'` OK ; `docker compose exec web sh -lc 'cd /app/backend && python manage.py collectstatic --noinput'` OK ; `curl --retry 10 --retry-delay 1 --retry-all-errors --fail http://localhost:8080/healthz/` OK apres redemarrage ; Browser Use OK sur services, liste staff et detail staff. | Audit navigateur partiel ; screenshots automatises non industrialises ; dependance npm encore hors image Docker web ; audit mobile complet reporte. |
+
+## 14. Sprint UI/UX 4 - Refonte creative agency brutaliste
+
+### 14.1 Objectif
+
+Refondre la landing publique Prenium DTF avec une direction "bold creative agency portfolio" : hero bitmap full-bleed, brutalist UI, animations respectueuses de `prefers-reduced-motion`, previews de cas, showcase equipe et formulaire contact branche sur le tunnel prospect existant.
+
+### 14.2 Orchestration Codex
+
+- Sauvegarde git pre-refonte : branche `codex/backup-pre-uiux-refonte-20260613-131752`, commit `b02fc69`.
+- Branche de travail : `codex/uiux-refonte-brutalist-agency`.
+- Sous-agents legers `gpt-5.4-mini` :
+  - Cartographie landing/templates/tests : termine, aucune modification.
+  - Audit CSS/JS landing et risques responsive : termine, aucune modification.
+- Decision de securite : pas de nouvel endpoint contact ; le formulaire poste sur `prospects:step1` avec CSRF et les champs deja validates cote serveur.
+
+### 14.3 Perimetre inclus
+
+- Nouveau composant CSS dedie `backend/static_src/css/components/landing.css`.
+- Refonte home et partials landing publiques.
+- Asset hero WebP local optimise : `backend/static_src/img/landing/dtf-brutalist-workshop.webp`.
+- Header marketing avec ancres home stables depuis les pages secondaires.
+- Motion fallback : contenu visible si `IntersectionObserver` indisponible ou motion reduite.
+- Tests UI marketing adaptes a des contrats stables : sections, CTAs, hrefs, formulaire, image hero et SEO.
+
+### 14.4 Hors perimetre
+
+- Changement backend metier.
+- Nouveau modele contact ou stockage de message libre.
+- Refonte complete du portail client/staff.
+- Promesses chiffrees non validees.
+- Industrialisation screenshots multi-device.
+
+### 14.5 Suivi d'execution
+
+| Ticket | Statut | Fichiers modifies | Resume | Validation | Risques restants |
+|---|---|---|---|---|---|
+| UIUX-4.1 | Termine | `backend/templates/base.html`, `backend/templates/shop/home.html`, `backend/templates/components/nav/landing_header.html`, `backend/templates/shop/partials/landing_hero.html`, `backend/templates/shop/partials/landing_services.html`, `backend/templates/shop/partials/landing_case_studies.html`, `backend/templates/shop/partials/landing_quality_proof.html`, `backend/templates/shop/partials/landing_team.html`, `backend/templates/shop/partials/landing_how_it_works.html`, `backend/templates/shop/partials/landing_faq.html`, `backend/templates/shop/partials/landing_contact.html`, `backend/templates/shop/partials/landing_cta_final.html`, `backend/static_src/css/input.css`, `backend/static_src/css/components/landing.css`, `backend/static_src/css/app.css`, `backend/static_src/img/landing/dtf-brutalist-workshop.webp`, `backend/static_src/js/landing-motion.js`, `tests/ui/test_shop_checkout_ui.py`, `docs/sprints/SPRINTS_INDEX.md`, `docs/sprints/sprint-uiux-frontend-premium.md` | Landing refondue en style creative agency brutaliste, avec hero image full-bleed, case previews, team showcase, formulaire prospect reel, styles scopes et motion defensive. Fallback JS local ajoute pour le menu mobile afin de ne pas dependre uniquement d'Alpine/CDN. Cache static CSS/JS incremente. | `npm run build:css` OK ; `DJANGO_SETTINGS_MODULE=config.settings.test DJANGO_SECRET_KEY=test-secret-key POSTGRES_PASSWORD=test-password python3 manage.py check` OK ; `DJANGO_SETTINGS_MODULE=config.settings.test DJANGO_SECRET_KEY=test-secret-key POSTGRES_PASSWORD=test-password pytest ../tests/ui/test_shop_checkout_ui.py` OK, 5 tests passes ; `DJANGO_SETTINGS_MODULE=config.settings.test DJANGO_SECRET_KEY=test-secret-key POSTGRES_PASSWORD=test-password python3 manage.py collectstatic --noinput` OK, 171 fichiers copies ; navigateur integre OK desktop et mobile 375px : pas de scroll horizontal, CTA header contraste noir/acid, menu mobile ouvre/ferme, contact form present et action `/demande-acces/etape-1/`. | Docker daemon indisponible localement ; `ruff` absent du shell local ; audit visuel limite a home desktop/mobile, page `/services/` non refondue dans ce lot ; screenshots multi-device non industrialises. |
