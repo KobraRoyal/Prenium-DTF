@@ -62,7 +62,7 @@
   </div>
   {% if can_price_order %}
   <div class="order-command-bar__action">
-    <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}">
+    <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}" data-submit-loading>
       {% csrf_token %}
       <button type="submit" class="btn">Calculer le prix</button>
     </form>

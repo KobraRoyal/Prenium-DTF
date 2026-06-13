@@ -21,7 +21,9 @@ function pushLocalFeedback(target, message, variant = "info") {
   const box = document.createElement("div");
   box.className = `ui-local-feedback ui-local-feedback--${variant}`;
   box.setAttribute("role", variant === "error" ? "alert" : "status");
-  box.innerHTML = `<p>${message}</p>`;
+  const text = document.createElement("p");
+  text.textContent = message;
+  box.append(text);
   root.prepend(box);
   if (variant !== "error") {
     window.setTimeout(() => {

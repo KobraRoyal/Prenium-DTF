@@ -31,6 +31,34 @@
   <p class="muted">Votre utilisateur n'a pas encore de membership client actif.</p>
 </section>
 {% else %}
+<section class="product-command-grid" aria-label="Actions client prioritaires">
+  <article class="product-command-card">
+    <span class="product-command-card__index">01</span>
+    <h2>Commander sans friction</h2>
+    <p>Créer une demande déclenche un espace sécurisé pour les fichiers et le contrôle atelier.</p>
+    {% if customer %}
+    <div class="product-command-card__action">
+      <a class="btn" href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Démarrer</a>
+    </div>
+    {% endif %}
+  </article>
+  <article class="product-command-card">
+    <span class="product-command-card__index">02</span>
+    <h2>Suivre les statuts</h2>
+    <p>Chaque fiche commande expose uploads, inspection, production, expédition et facturation.</p>
+    {% if customer %}
+    <div class="product-command-card__action">
+      <a class="btn btn-secondary" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Consulter</a>
+    </div>
+    {% endif %}
+  </article>
+  <article class="product-command-card">
+    <span class="product-command-card__index">03</span>
+    <h2>Accès isolé</h2>
+    <p>Votre espace affiche uniquement les données liées à vos memberships actifs.</p>
+  </article>
+</section>
+
 {% ui_kpi_grid items=kpi_rows %}
 
 <section class="card">

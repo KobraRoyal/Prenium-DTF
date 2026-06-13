@@ -1,9 +1,12 @@
-<header class="app-header landing-saas-header" x-data="{ mobileNav: false }">
-  <div class="app-main app-nav landing-saas-nav ui-shell-main max-md:flex-col max-md:items-stretch max-md:gap-3">
+<header class="app-header landing-saas-header product-header" x-data="{ mobileNav: false }">
+  <div class="app-main app-nav landing-saas-nav ui-shell-main product-nav">
     <div class="ui-brand-row">
-      <div class="landing-brand landing-brand--signature">
-        <a class="brand-link" href="{% url 'home' %}">Prenium DTF</a>
-        <p class="brand-subtitle">via IDS supply</p>
+      <div class="landing-brand landing-brand--signature product-brand">
+        <a class="product-brand__mark" href="{% url 'home' %}" aria-label="Retour accueil Prenium DTF">P</a>
+        <div class="product-brand__copy">
+          <a class="brand-link product-brand__name" href="{% url 'home' %}">Prenium DTF</a>
+          <p class="brand-subtitle product-brand__subtitle">via IDS supply</p>
+        </div>
       </div>
       <div class="portal-top-meta hidden md:flex">
         {% if nav_mode == "client" %}
@@ -14,29 +17,31 @@
       </div>
       <button
         type="button"
-        class="dui-btn dui-btn-ghost dui-btn-sm shrink-0 border border-white/20 text-[#efe4d8] md:!hidden"
+        class="dui-btn dui-btn-ghost dui-btn-sm shrink-0 product-menu-button md:!hidden"
         @click="mobileNav = !mobileNav"
         :aria-expanded="mobileNav"
+        aria-expanded="false"
         aria-controls="portal-primary-nav"
+        data-product-menu-toggle
       >
         Menu
       </button>
     </div>
     <nav
       id="portal-primary-nav"
-      class="nav-group landing-saas-nav__links !hidden w-full flex-col flex-wrap gap-1 md:!flex md:w-auto md:flex-row md:items-center md:gap-2"
+      class="nav-group landing-saas-nav__links product-nav__links hidden w-full flex-col flex-wrap gap-1 md:flex md:w-auto md:flex-row md:items-center md:gap-2"
       :class="{ '!flex': mobileNav }"
     >
       {% if nav_mode == "client" %}
-      <a class="nav-link nav-link--ghost {% if nav_key == 'client-dashboard' %}is-active{% endif %}" href="{% url 'portal:client-dashboard' %}">Accueil client</a>
+      <a class="nav-link nav-link--ghost {% if nav_key == 'client-dashboard' %}is-active{% endif %}" {% if nav_key == 'client-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:client-dashboard' %}">Accueil client</a>
       {% if customer %}
-      <a class="nav-link nav-link--ghost {% if nav_key == 'client-orders' %}is-active{% endif %}" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Commandes</a>
-      <a class="nav-link nav-link--ghost {% if nav_key == 'client-checkout' %}is-active{% endif %}" href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Commander</a>
+      <a class="nav-link nav-link--ghost {% if nav_key == 'client-orders' %}is-active{% endif %}" {% if nav_key == 'client-orders' %}aria-current="page"{% endif %} href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Commandes</a>
+      <a class="nav-link nav-link--ghost {% if nav_key == 'client-checkout' %}is-active{% endif %}" {% if nav_key == 'client-checkout' %}aria-current="page"{% endif %} href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Commander</a>
       {% endif %}
       {% endif %}
       {% if nav_mode == "staff" %}
-      <a class="nav-link nav-link--ghost {% if nav_key == 'staff-dashboard' %}is-active{% endif %}" href="{% url 'portal:staff-dashboard' %}">Accueil staff</a>
-      <a class="nav-link nav-link--ghost {% if nav_key == 'staff-orders' %}is-active{% endif %}" href="{% url 'portal:staff-order-list' %}">Commandes staff</a>
+      <a class="nav-link nav-link--ghost {% if nav_key == 'staff-dashboard' %}is-active{% endif %}" {% if nav_key == 'staff-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:staff-dashboard' %}">Accueil staff</a>
+      <a class="nav-link nav-link--ghost {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes staff</a>
       {% endif %}
       {% if request.user.is_authenticated %}
       <form method="post" action="{% url 'portal:logout' %}" class="inline-nav-form m-0">

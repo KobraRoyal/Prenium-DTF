@@ -335,3 +335,36 @@ Refondre la landing publique Prenium DTF avec une direction "bold creative agenc
 | Ticket | Statut | Fichiers modifies | Resume | Validation | Risques restants |
 |---|---|---|---|---|---|
 | UIUX-4.1 | Termine | `backend/templates/base.html`, `backend/templates/shop/home.html`, `backend/templates/components/nav/landing_header.html`, `backend/templates/shop/partials/landing_hero.html`, `backend/templates/shop/partials/landing_services.html`, `backend/templates/shop/partials/landing_case_studies.html`, `backend/templates/shop/partials/landing_quality_proof.html`, `backend/templates/shop/partials/landing_team.html`, `backend/templates/shop/partials/landing_how_it_works.html`, `backend/templates/shop/partials/landing_faq.html`, `backend/templates/shop/partials/landing_contact.html`, `backend/templates/shop/partials/landing_cta_final.html`, `backend/static_src/css/input.css`, `backend/static_src/css/components/landing.css`, `backend/static_src/css/app.css`, `backend/static_src/img/landing/dtf-brutalist-workshop.webp`, `backend/static_src/js/landing-motion.js`, `tests/ui/test_shop_checkout_ui.py`, `docs/sprints/SPRINTS_INDEX.md`, `docs/sprints/sprint-uiux-frontend-premium.md` | Landing refondue en style creative agency brutaliste, avec hero image full-bleed, case previews, team showcase, formulaire prospect reel, styles scopes et motion defensive. Fallback JS local ajoute pour le menu mobile afin de ne pas dependre uniquement d'Alpine/CDN. Cache static CSS/JS incremente. | `npm run build:css` OK ; `DJANGO_SETTINGS_MODULE=config.settings.test DJANGO_SECRET_KEY=test-secret-key POSTGRES_PASSWORD=test-password python3 manage.py check` OK ; `DJANGO_SETTINGS_MODULE=config.settings.test DJANGO_SECRET_KEY=test-secret-key POSTGRES_PASSWORD=test-password pytest ../tests/ui/test_shop_checkout_ui.py` OK, 5 tests passes ; `DJANGO_SETTINGS_MODULE=config.settings.test DJANGO_SECRET_KEY=test-secret-key POSTGRES_PASSWORD=test-password python3 manage.py collectstatic --noinput` OK, 171 fichiers copies ; navigateur integre OK desktop et mobile 375px : pas de scroll horizontal, CTA header contraste noir/acid, menu mobile ouvre/ferme, contact form present et action `/demande-acces/etape-1/`. | Docker daemon indisponible localement ; `ruff` absent du shell local ; audit visuel limite a home desktop/mobile, page `/services/` non refondue dans ce lot ; screenshots multi-device non industrialises. |
+
+## 15. Sprint UI/UX 5 - Coherence produit backend/frontend
+
+### 15.1 Objectif
+
+Etendre la direction premium au produit connecte sans casser les contrats backend : shell portail, login client/staff, dashboards client/staff, checkout, feedback HTMX et tunnel prospect. La landing reste plus expressive ; le produit interne adopte une lecture "premium operations" plus dense, accessible et directement reliee aux routes Django existantes.
+
+### 15.2 Orchestration Codex
+
+- Sauvegarde pre-lot : commit `41f31a6` (`feat: redesign marketing landing experience`) sur `codex/uiux-refonte-brutalist-agency`.
+- Sous-agents legers `gpt-5.4-mini` :
+  - Shell global/templates/static JS : termine, aucune modification.
+  - Portail client et contrats permissions : termine, aucune modification.
+  - Backoffice ops et patterns HTMX : termine, aucune modification.
+  - Auth/prospect/onboarding : termine, aucune modification.
+- Decisions : ne pas modifier les services metier ni les permissions ; commencer par le chrome produit partage ; conserver les routes et retours 403/404 existants.
+
+### 15.3 Perimetre inclus
+
+- Nouveau composant `backend/static_src/css/components/product-shell.css`.
+- Nouveau fallback `backend/static_src/js/product-shell.js` pour menu mobile portail et etat submit.
+- Header portail avec contrat `data-product-menu-toggle` et `aria-current`.
+- Login clarifie comme entree client/staff commune, avec labels visibles et copie sur redirection par droits reels.
+- Dashboards client/staff enrichis par cartes d'actions branchees sur routes existantes.
+- Checkout aligne visuellement sans modifier le workflow.
+- Feedback HTMX durci : message local rendu en `textContent`, pas via `innerHTML`.
+- Tests UI mis a jour sur shell produit, actions dashboard, login et anti-injection feedback.
+
+### 15.4 Suivi d'execution
+
+| Ticket | Statut | Fichiers modifies | Resume | Validation | Risques restants |
+|---|---|---|---|---|---|
+| UIUX-5.1 | Termine | `backend/templates/base.html`, `backend/templates/components/nav/portal_header.html`, `backend/templates/portal/layout.html`, `backend/templates/portal/login.html`, `backend/templates/portal/client/dashboard.html`, `backend/templates/portal/client/checkout.html`, `backend/templates/portal/staff/dashboard.html`, `backend/templates/portal/staff/order_detail.html`, `backend/templates/prospects/base_tunnel.html`, `backend/static_src/css/input.css`, `backend/static_src/css/components/product-shell.css`, `backend/static_src/css/app.css`, `backend/static_src/js/app.js`, `backend/static_src/js/product-shell.js`, `backend/static_src/js/htmx/feedback.js`, `tests/ui/test_portal_ui.py`, `tests/ui/test_prospect_tunnel_ui.py`, `docs/sprints/sprint-uiux-frontend-premium.md` | Shell produit extrait, portail et tunnel prospect alignes sur une experience premium operations, fallback mobile portail ajoute, login client/staff clarifie, dashboards enrichis avec actions reelles, feedback HTMX durci. | `npm run build:css` OK ; `DJANGO_SETTINGS_MODULE=config.settings.test DJANGO_SECRET_KEY=test-secret-key POSTGRES_PASSWORD=test-password python3 manage.py check` OK ; `DJANGO_SETTINGS_MODULE=config.settings.test DJANGO_SECRET_KEY=test-secret-key POSTGRES_PASSWORD=test-password pytest ../tests/ui/test_shop_checkout_ui.py ../tests/ui/test_portal_ui.py ../tests/ui/test_prospect_tunnel_ui.py ../tests/ui/test_portal_architecture.py` OK, 46 tests passes ; `docker compose config --quiet` OK ; `docker compose run --rm --no-deps web sh -lc 'cd /app/backend && python manage.py check'` OK ; `DJANGO_SETTINGS_MODULE=config.settings.test DJANGO_SECRET_KEY=test-secret-key POSTGRES_PASSWORD=test-password python3 manage.py collectstatic --noinput` OK, 6 fichiers copies ; navigateur integre OK login + dashboard client desktop, menu portail mobile 375px, pas d'overflow horizontal. | Order tabs conservent encore un script inline a rationaliser dans un futur ticket ; multi-membership client toujours a traiter cote UX/backend ; verification staff navigateur non rejouee manuellement mais couverte par tests permissions/UI. |

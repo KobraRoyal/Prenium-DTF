@@ -6,7 +6,7 @@
 {% block portal_content %}
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/checkout_client.html" title="Préparer une commande" subtitle="Décrivez votre besoin, joignez vos fichiers de production, puis envoyez votre demande pour contrôle technique." %}
 
-<div class="mb-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-[#f4f0e8]/90 shadow-sm backdrop-blur-sm">
+<div class="product-panel mb-4 p-4 text-sm">
   <p class="m-0 font-medium text-[#faf7f2]">Parcours guidé</p>
   <p class="mt-2 mb-0">1. Créez votre demande. 2. Ajoutez vos fichiers de production. 3. Vérifiez le récapitulatif puis envoyez la commande à l'atelier.</p>
   <p class="mt-2 mb-0 text-xs opacity-75">Aucun paiement n'est demandé à cette étape : l'équipe contrôle d'abord les fichiers et confirme le traitement selon votre compte client.</p>
@@ -44,7 +44,7 @@
           <p class="text-sm opacity-75">Ajoutez un brief, une référence ou une contrainte utile. Cette première étape ouvre un espace sécurisé pour vos fichiers.</p>
         </div>
 
-        <form method="post" class="flex flex-col gap-6">
+        <form method="post" class="flex flex-col gap-6" data-submit-loading>
           {% csrf_token %}
           <div class="dui-form-control w-full">
             <label class="ui-sr-only" for="id_customer_note">Note ou consignes (optionnel)</label>

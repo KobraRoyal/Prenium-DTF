@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Prenium DTF{% endblock %}</title>
     {# Incrémenter ?v= après changement CSS/JS pour contourner le cache navigateur / nginx (expires 1d sur /static/). #}
-    <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260613a">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260613b">
     {% block extra_head %}{% endblock %}
   </head>
   <body class="{% block body_class %}{% endblock %}">
@@ -15,7 +15,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="{% static 'js/alpine/toast-boot.js' %}?v=20260405a"></script>
     <script defer src="https://unpkg.com/alpinejs@3.14.3/dist/cdn.min.js"></script>
-    <script type="module" src="{% static 'js/app.js' %}?v=20260613a"></script>
+    <script type="module" src="{% static 'js/app.js' %}?v=20260613b"></script>
     {% block extra_scripts %}{% endblock %}
   </body>
 </html>

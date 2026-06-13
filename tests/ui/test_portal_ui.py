@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
@@ -66,7 +68,12 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     )
 
     assert dashboard_response.status_code == 200
-    assert "Accueil client" in dashboard_response.content.decode()
+    dashboard_html = dashboard_response.content.decode()
+    assert "Accueil client" in dashboard_html
+    assert "product-shell--portal" in dashboard_html
+    assert "product-command-grid" in dashboard_html
+    assert "Commander sans friction" in dashboard_html
+    assert "Accès isolé" in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
     assert uploads_panel_response.status_code == 200
@@ -199,7 +206,12 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     )
 
     assert dashboard_response.status_code == 200
-    assert "Accueil staff" in dashboard_response.content.decode()
+    dashboard_html = dashboard_response.content.decode()
+    assert "Accueil staff" in dashboard_html
+    assert "product-shell--portal" in dashboard_html
+    assert "product-command-grid" in dashboard_html
+    assert "File commandes" in dashboard_html
+    assert "Contrats permissions" in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
     detail_html = detail_response.content.decode()
@@ -451,8 +463,21 @@ def test_login_page_shares_portal_navigation_shell():
     response = client.get(reverse("portal:login"))
     assert response.status_code == 200
     body = response.content.decode()
+    assert "product-shell--auth" in body
+    assert "data-product-menu-toggle" in body
     assert "portal-primary-nav" in body
     assert "Accueil client" in body
+    assert "Portail sécurisé" in body
+    assert "Email professionnel" in body
+    assert "Une seule porte d’entrée" in body
+
+
+def test_portal_feedback_js_uses_text_nodes_for_local_messages():
+    repo_root = Path(__file__).resolve().parents[2]
+    feedback_js = repo_root / "backend" / "static_src" / "js" / "htmx" / "feedback.js"
+    source = feedback_js.read_text()
+    assert "text.textContent = message" in source
+    assert "box.innerHTML" not in source
 
 
 @pytest.mark.django_db

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block body_class %}landing-saas portal-shell{% endblock %}
+{% block body_class %}landing-saas portal-shell product-shell product-shell--auth{% endblock %}
 
 {% block title %}Connexion portail - Prenium DTF{% endblock %}
 
@@ -11,25 +11,37 @@
 {% block content %}
 {% include "components/nav/portal_header.html" with nav_mode="client" %}
 
-<main class="app-main app-content landing-saas-main ui-shell-main">
-  <section class="landing-section landing-auth-page text-center">
-    <div class="landing-section-head mx-auto max-w-lg">
-      <p class="landing-kicker">Espace client</p>
-      <h2>Connexion</h2>
-      <p class="landing-auth-lead mx-auto">Accédez à votre espace client ou staff selon vos droits.</p>
+<main class="app-main app-content landing-saas-main ui-shell-main product-layout" id="main-content">
+  <section class="landing-section landing-auth-page product-auth-grid">
+    <div class="landing-section-head product-auth-intro">
+      <p class="landing-kicker product-eyebrow">Portail sécurisé</p>
+      <h1>Connexion Prenium DTF</h1>
+      <p class="landing-auth-lead">Une seule porte d’entrée : le backend vous redirige vers l’espace client ou staff selon vos droits réels.</p>
+      <div class="product-command-grid product-auth-proof" aria-label="Contrats d'accès">
+        <article class="product-command-card">
+          <span class="product-command-card__index">Client</span>
+          <h2>Commandes et fichiers</h2>
+          <p>Accès limité aux comptes client rattachés à votre utilisateur.</p>
+        </article>
+        <article class="product-command-card">
+          <span class="product-command-card__index">Staff</span>
+          <h2>Ops et production</h2>
+          <p>Accès conditionné aux permissions staff et domaines métier.</p>
+        </article>
+      </div>
     </div>
 
     {# Conteneur « verre » historique (app-legacy) + champs DaisyUI — évite un rendu plat si dui-card seul #}
-    <div class="landing-auth-shell card auth-card ui-form-card portal-login-card mx-auto w-full max-w-md text-center">
+    <div class="landing-auth-shell card auth-card ui-form-card portal-login-card w-full max-w-md">
       {% if form.errors %}
-      <div class="dui-alert dui-alert-error mb-4 border border-error/35 bg-error/15 text-error-content justify-center text-center" role="alert">
-        <span class="text-sm leading-snug">Identifiants invalides ou accès non autorisé pour cette surface.</span>
+      <div class="dui-alert dui-alert-error mb-4 border border-error/35 bg-error/15 text-error-content" role="alert">
+        <span class="text-sm leading-snug">Identifiants invalides ou accès non autorisé. Vérifiez l’email, le mot de passe et les droits associés.</span>
       </div>
       {% endif %}
-      <form method="post" class="flex flex-col gap-5 items-stretch">
+      <form method="post" class="flex flex-col gap-5 items-stretch" data-submit-loading>
         {% csrf_token %}
         <div class="dui-form-control w-full">
-          <label class="ui-sr-only" for="id_username">Email</label>
+          <label class="product-form-label" for="id_username">Email professionnel</label>
           <input
             id="id_username"
             name="username"
@@ -42,7 +54,7 @@
           />
         </div>
         <div class="dui-form-control w-full">
-          <label class="ui-sr-only" for="id_password">Mot de passe</label>
+          <label class="product-form-label" for="id_password">Mot de passe</label>
           <input
             id="id_password"
             name="password"

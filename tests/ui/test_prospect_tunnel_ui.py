@@ -10,6 +10,9 @@ def test_prospect_steps_share_premium_structure_and_ctas():
 
     step1 = client.get(reverse("prospects:step1"))
     assert step1.status_code == 200
+    step1_html = step1.content.decode()
+    assert "product-shell--prospect" in step1_html
+    assert "prospect-shell__aside-card" in step1_html
 
     session = client.session
     session[SESSION_KEY] = {
