@@ -13,7 +13,7 @@
       <p class="mt-2 text-sm opacity-70">Vérifiez les éléments ci-dessous avant d'envoyer la demande en traitement. L'atelier contrôlera ensuite les fichiers avant lancement.</p>
     </div>
 
-    <div class="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/25 p-4 text-sm">
+    <div class="checkout-summary-box flex flex-col gap-3 p-4 text-sm">
       <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <span class="text-xs uppercase tracking-wide opacity-50">Statut</span>
         {% with tone=order.status|badge_tone %}
@@ -27,7 +27,7 @@
       </div>
     </div>
 
-    <form method="post" action="{% url 'portal:client-checkout-submit' customer_public_id=customer.public_id %}" class="flex flex-col gap-5 border-t border-white/10 pt-5">
+    <form method="post" action="{% url 'portal:client-checkout-submit' customer_public_id=customer.public_id %}" class="flex flex-col gap-5 border-t border-white/10 pt-5" data-submit-loading>
       {% csrf_token %}
       <input type="hidden" name="order_public_id" value="{{ order.public_id }}">
 

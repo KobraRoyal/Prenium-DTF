@@ -59,6 +59,11 @@ def test_marketing_pages_are_accessible_for_anonymous():
     assert services.status_code == 200
     services_html = services.content.decode()
     assert "Choisissez votre service DTF" in services_html
+    assert "agency-services-title" in services_html
+    assert "agency-marquee" in services_html
+    assert "agency-card--acid" in services_html
+    assert "landing-section--compact" not in services_html
+    assert "marketing-grid--services" not in services_html
     assert "impression premium ou préparation fichier" in services_html
     assert "envoyer un fichier à optimiser" in services_html.lower()
     assert "Déjà client ? Connexion" in services_html
@@ -153,7 +158,56 @@ def test_client_checkout_upload_partial_updates_files_list():
 
     assert response.status_code == 200
     assert response.headers.get("HX-Trigger") == "checkoutUploadsUpdated"
-    assert "visuel.png" in response.content.decode()
+    body = response.content.decode()
+    assert "visuel.png" in body
+    assert "data-submit-loading" in body
+    assert "Quantité (exemplaires)" in body
+    assert "Couleur du support (optionnel)" in body
+    assert "ui-table-shell" in body
+
+
+@pytest.mark.django_db
+def test_client_checkout_page_uses_unified_product_shell_partials():
+    user = get_user_model().objects.create_user(
+        email="checkout-ui@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Client Checkout UI")
+    membership = CustomerMembership.objects.create(customer=customer, user=user)
+    service = CatalogService.objects.create(
+        code="dtf-ui",
+        name="DTF au metre",
+        service_type=CatalogService.ServiceType.DTF_TRANSFER,
+        unit=CatalogService.Unit.LINEAR_METER,
+        base_price="9.00",
+        currency="EUR",
+        display_order=1,
+    )
+    order = OrderService().create_order(
+        customer=customer,
+        actor=user,
+        customer_membership=membership,
+        items=[{"service_public_id": str(service.public_id), "quantity": "1"}],
+        source="test_checkout_ui",
+    )
+
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+    checkout_url = reverse(
+        "portal:client-checkout",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+    response = client.get(checkout_url, {"order": str(order.public_id)})
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "product-shell--portal" in body
+    assert "checkout-dui-surface" in body
+    assert "checkout-summary-box" in body
+    assert "checkout-dropzone-dui" in body
+    assert body.count("data-submit-loading") >= 3
+    assert "Quantité (exemplaires)" in body
+    assert "Couleur du support (optionnel)" in body
 
 
 @pytest.mark.django_db

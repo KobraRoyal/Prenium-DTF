@@ -98,6 +98,7 @@
         hx-target="#staff-order-panel"
         hx-swap="innerHTML"
         hx-indicator="#portal-htmx-indicator"
+        data-submit-loading
       >
         {% csrf_token %}
         {% include "components/forms/form_actions.html" with primary_label="Marquer la facture comme payée (virement reçu)" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}

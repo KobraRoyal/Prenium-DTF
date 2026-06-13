@@ -203,6 +203,8 @@
   body.product-shell .portal-signal-card,
   body.product-shell .product-panel,
   body.product-shell .card,
+  body.product-shell .panel,
+  body.product-shell .dui-card,
   body.product-shell .checkout-dui-surface,
   body.product-shell .auth-card,
   body.product-shell .prospect-shell__aside-card,
@@ -268,6 +270,49 @@
   body.product-shell .portal-signal-card p {
     margin: 0;
     color: var(--product-muted);
+  }
+
+  body.product-shell .panel,
+  body.product-shell .card,
+  body.product-shell .dui-card {
+    margin-bottom: 1rem;
+    padding: clamp(1rem, 2vw, 1.25rem);
+  }
+
+  body.product-shell .dui-card-body {
+    padding: 0;
+  }
+
+  body.product-shell .panel-head,
+  body.product-shell .workflow-panel__hero,
+  body.product-shell .workflow-form-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 2px solid var(--product-line);
+    padding-bottom: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  body.product-shell .panel-head h3,
+  body.product-shell .workflow-panel__title,
+  body.product-shell .workflow-panel__subtitle,
+  body.product-shell .dui-card-title {
+    margin: 0;
+    color: var(--product-ink);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .panel-head p,
+  body.product-shell .workflow-panel__meta {
+    margin: 0.35rem 0 0;
+    color: var(--product-muted);
+    line-height: 1.55;
   }
 
   body.product-shell .portal-signal-card__actions {
@@ -619,8 +664,13 @@
   body.product-shell .workflow-tab-group,
   body.product-shell .ui-panel-shell,
   body.product-shell .workflow-panel,
+  body.product-shell .workflow-form-card,
+  body.product-shell .workflow-kpi,
+  body.product-shell .staff-meterage-section,
+  body.product-shell .checkout-summary-box,
   body.product-shell .workflow-panel-target {
     border-color: var(--product-line) !important;
+    border-radius: 0 !important;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.03)),
       rgba(11, 13, 16, 0.72) !important;
@@ -635,8 +685,66 @@
   body.product-shell .ui-workflow-shell h2,
   body.product-shell .ui-workflow-shell h3,
   body.product-shell .ui-order-hero h1,
-  body.product-shell .ui-order-hero h2 {
+  body.product-shell .ui-order-hero h2,
+  body.product-shell .staff-meterage-section__title {
     color: var(--product-ink);
+  }
+
+  body.product-shell .workflow-form-card,
+  body.product-shell .staff-meterage-section,
+  body.product-shell .workflow-kpi,
+  body.product-shell .checkout-summary-box {
+    padding: 1rem;
+  }
+
+  body.product-shell .workflow-kpi {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  body.product-shell .workflow-kpi__label,
+  body.product-shell .staff-meterage-section__lead,
+  body.product-shell .staff-meterage-preview {
+    color: var(--product-muted);
+  }
+
+  body.product-shell .split-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 0.8rem;
+  }
+
+  body.product-shell .split-row > div {
+    min-width: 0;
+    border: 1px solid var(--product-line);
+    padding: 0.85rem;
+    background: rgba(255, 255, 255, 0.045);
+  }
+
+  body.product-shell .split-row .muted {
+    margin: 0 0 0.35rem;
+    color: var(--product-soft);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .staff-billing-files,
+  body.product-shell .staff-meterage-section__row {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  body.product-shell .staff-billing-files__row,
+  body.product-shell .staff-meterage-field,
+  body.product-shell .staff-meterage-actions {
+    border: 1px solid var(--product-line);
+    padding: 0.85rem;
+    background: rgba(255, 255, 255, 0.045);
   }
 
   body.product-shell .ui-tab-chip {
@@ -670,13 +778,83 @@
   }
 
   body.product-shell .dui-alert,
+  body.product-shell .alert,
   body.product-shell .ui-local-feedback {
     border-radius: 0;
     border-width: 2px;
   }
 
+  body.product-shell .alert,
+  body.product-shell .dui-alert {
+    background: rgba(255, 255, 255, 0.055);
+    color: var(--product-ink);
+  }
+
+  body.product-shell .alert--info,
+  body.product-shell .dui-alert-info {
+    border-color: rgba(103, 232, 249, 0.34);
+    background: rgba(103, 232, 249, 0.1);
+  }
+
+  body.product-shell .alert--success,
+  body.product-shell .dui-alert-success {
+    border-color: rgba(134, 239, 172, 0.34);
+    background: rgba(134, 239, 172, 0.1);
+  }
+
+  body.product-shell .alert--warning,
+  body.product-shell .dui-alert-warning {
+    border-color: rgba(251, 191, 36, 0.38);
+    background: rgba(251, 191, 36, 0.12);
+  }
+
+  body.product-shell .alert--danger,
+  body.product-shell .dui-alert-error {
+    border-color: rgba(248, 113, 113, 0.38);
+    background: rgba(248, 113, 113, 0.12);
+  }
+
   body.product-shell .checkout-layout {
     gap: 1rem;
+  }
+
+  body.product-shell .summary-sticky {
+    top: 5.75rem;
+  }
+
+  body.product-shell .checkout-dropzone-dui,
+  body.product-shell .dropzone {
+    border: 2px dashed var(--product-line-strong) !important;
+    border-radius: 0 !important;
+    background: rgba(220, 255, 26, 0.08) !important;
+    color: var(--product-ink);
+  }
+
+  body.product-shell .checkout-dropzone-dui:hover,
+  body.product-shell .dropzone.is-dragover {
+    border-color: var(--product-accent) !important;
+    background: rgba(220, 255, 26, 0.14) !important;
+  }
+
+  body.product-shell .dui-table {
+    color: var(--product-ink);
+    background: transparent;
+  }
+
+  body.product-shell .dui-table th,
+  body.product-shell .dui-table td {
+    border-bottom: 1px solid var(--product-line);
+    color: rgba(248, 250, 252, 0.88);
+  }
+
+  body.product-shell .dui-divider {
+    color: var(--product-soft);
+  }
+
+  body.product-shell input[type="color"] {
+    border: 2px solid var(--product-line-strong) !important;
+    border-radius: 0 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
   }
 
   body.product-shell .product-form-grid {

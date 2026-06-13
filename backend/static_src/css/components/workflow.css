@@ -58,7 +58,7 @@
     margin: 0;
     font-family: var(--ui-font-display);
     font-size: 1.08rem;
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     color: var(--ui-text-strong);
   }
 

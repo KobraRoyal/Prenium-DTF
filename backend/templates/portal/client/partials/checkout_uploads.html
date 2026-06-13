@@ -20,17 +20,18 @@
       hx-swap="outerHTML"
       hx-indicator="#portal-htmx-indicator"
       class="flex flex-col gap-6"
+      data-submit-loading
     >
       {% csrf_token %}
       <input type="hidden" name="order_public_id" value="{{ order.public_id }}">
 
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="dui-form-control w-full">
-          <label class="ui-sr-only" for="id-upload-qty">Quantité (exemplaires)</label>
+          <label class="product-form-label" for="id-upload-qty">Quantité (exemplaires)</label>
           <input id="id-upload-qty" name="quantity" type="number" value="1" min="1" step="1" required placeholder="Quantité (exemplaires) — ex. 12" class="dui-input dui-input-bordered w-full checkout-dui-input">
         </div>
         <div class="dui-form-control w-full">
-          <label class="ui-sr-only" for="id-support-color">Couleur du support (optionnel)</label>
+          <label class="product-form-label" for="id-support-color">Couleur du support (optionnel)</label>
           <div class="flex flex-wrap gap-2 items-center">
             <input id="id-support-color" name="support_color_hex" type="color" value="#ffffff" class="h-10 w-14 cursor-pointer rounded border border-white/20 bg-black/30 p-1">
             <span class="text-xs opacity-60" aria-hidden="true">Indicatif pour l’atelier</span>
@@ -59,7 +60,7 @@
 
     <div class="dui-divider text-xs opacity-50">Fichiers envoyés</div>
 
-    <div class="hidden overflow-x-auto rounded-xl border border-white/10 md:block">
+    <div class="hidden overflow-x-auto ui-table-shell md:block">
       <table class="dui-table dui-table-zebra dui-table-sm">
         <thead>
           <tr class="border-b border-white/10 [&>th]:text-[#f4f0e8]/70">
@@ -106,7 +107,7 @@
 
     <div class="space-y-3 md:hidden" role="feed" aria-label="Fichiers envoyés">
       {% for upload in uploads %}
-      <article class="rounded-xl border border-white/10 bg-black/20 p-4">
+      <article class="ui-mobile-order-card">
         <p class="break-words font-medium text-[#faf7f2]">{{ upload.original_filename }}</p>
         <dl class="mt-3 grid grid-cols-2 gap-2 text-sm">
           <div>

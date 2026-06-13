@@ -76,7 +76,13 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     assert "Accès isolé" in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
+    detail_html = detail_response.content.decode()
+    assert "Suivez vos fichiers, la production, l'expédition et la facture" in detail_html
+    assert "split-row" in detail_html
+    assert 'role="tablist"' in detail_html
+    assert "client-order-panel" in detail_html
     assert uploads_panel_response.status_code == 200
+    assert "panel-head" in uploads_panel_response.content.decode()
     assert inspection_panel_response.status_code == 200
     assert production_panel_response.status_code == 200
     assert shipping_panel_response.status_code == 200
@@ -216,8 +222,11 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert detail_response.status_code == 200
     detail_html = detail_response.content.decode()
     assert "Synthèse commande staff" in detail_html
+    assert "Pilotez le contrôle, la production, la logistique" in detail_html
     assert "Prochaine action suggérée" in detail_html
     assert production_panel_response.status_code == 200
+    production_html = production_panel_response.content.decode()
+    assert "data-submit-loading" in production_html
     assert uploads_panel_response.status_code == 200
     assert inspections_panel_response.status_code == 200
     assert drive_panel_response.status_code == 200
@@ -226,10 +235,14 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert "État actuel" in shipping_html
     assert "Créer un envoi" in shipping_html
     assert "workflow-form-card" in shipping_html
+    assert "data-submit-loading" in shipping_html
     assert scan_panel_response.status_code == 200
     scan_html = scan_panel_response.content.decode()
     assert "Lecture atelier" in scan_html
+    assert "data-submit-loading" in scan_html
     assert billing_panel_response.status_code == 200
+    billing_html = billing_panel_response.content.decode()
+    assert "workflow-panel" in billing_html
 
 
 @pytest.mark.django_db

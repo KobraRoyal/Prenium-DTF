@@ -92,7 +92,7 @@ body.prospect-tunnel-page .prospect-panel .prospect-tunnel__lead {
 .prospect-tunnel__intro .prospect-tunnel__title {
   font-family: "Outfit", "Space Grotesk", sans-serif;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.2;
   color: #faf7f2;
 }
@@ -166,7 +166,7 @@ body.prospect-tunnel-page .prospect-panel .prospect-tunnel__lead {
   font-family: "Outfit", "Space Grotesk", sans-serif;
   font-size: clamp(1.22rem, 2.4vw, 1.52rem);
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   line-height: 1.28;
   color: #faf7f2;
 }
@@ -694,4 +694,86 @@ body.landing-saas .prospect-tunnel .landing-auth-shell .alert--danger {
 body.landing-saas .prospect-tunnel .ui-field-group .error-text {
   margin-top: 0.25rem;
   font-size: 0.82rem;
+}
+
+/* Brutalist product alignment: square, high-contrast, same rhythm as the portal shell. */
+body.prospect-tunnel-page .prospect-tunnel__progress-panel,
+body.prospect-tunnel-page .prospect-shell__aside-card,
+body.prospect-tunnel-page .prospect-panel,
+body.prospect-tunnel-page .prospect-form__panel,
+body.prospect-tunnel-page .prospect-summary,
+body.prospect-tunnel-page .prospect-choice-card {
+  border: 2px solid var(--product-line);
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.068), rgba(255, 255, 255, 0.032)),
+    rgba(11, 13, 16, 0.78);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.58);
+}
+
+body.prospect-tunnel-page .prospect-shell__title,
+body.prospect-tunnel-page .prospect-tunnel__title {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 900;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+
+body.prospect-tunnel-page .prospect-shell__eyebrow,
+body.prospect-tunnel-page .prospect-fieldset__kicker,
+body.prospect-tunnel-page .prospect-form__section-title,
+body.prospect-tunnel-page .prospect-summary__title,
+body.prospect-tunnel-page .prospect-tunnel__step-meta {
+  width: fit-content;
+  border: 1px solid #000;
+  padding: 0.22rem 0.45rem;
+  background: var(--product-accent);
+  color: var(--product-accent-ink);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+body.prospect-tunnel-page .prospect-tunnel__track {
+  height: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0;
+}
+
+body.prospect-tunnel-page .prospect-tunnel__track-fill {
+  border-radius: 0;
+  background: linear-gradient(90deg, var(--product-accent), var(--product-blue), var(--product-pink));
+}
+
+body.prospect-tunnel-page .prospect-stepper__index,
+body.prospect-tunnel-page .prospect-choice-card__radio {
+  border-radius: 0;
+}
+
+body.prospect-tunnel-page .prospect-stepper__item.is-active .prospect-stepper__index,
+body.prospect-tunnel-page .prospect-stepper__item.is-current .prospect-stepper__index,
+body.prospect-tunnel-page .prospect-choice-card:has(.prospect-choice-card__input:checked) {
+  border-color: #000;
+  background: var(--product-accent);
+  color: var(--product-accent-ink);
+  box-shadow: 4px 4px 0 #000;
+}
+
+body.prospect-tunnel-page .prospect-choice-card:has(.prospect-choice-card__input:checked) .prospect-choice-card__title,
+body.prospect-tunnel-page .prospect-choice-card:has(.prospect-choice-card__input:checked) .prospect-choice-card__hint,
+body.prospect-tunnel-page .prospect-choice-card:has(.prospect-choice-card__input:checked) .prospect-choice-card__label {
+  color: var(--product-accent-ink);
+}
+
+body.prospect-tunnel-page .prospect-choice-card--activity:has(.prospect-choice-card__input:checked) .prospect-choice-card__radio {
+  border-color: #000;
+  background: var(--product-pink);
+}
+
+body.prospect-tunnel-page .prospect-choice-card--activity:has(.prospect-choice-card__input:checked) .prospect-choice-card__radio::after {
+  border-radius: 0;
+  background: #000;
+}
+
+body.prospect-tunnel-page .prospect-form__footer {
+  border-top: 2px solid var(--product-line);
 }

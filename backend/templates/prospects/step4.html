@@ -22,7 +22,7 @@
 </section>
 {% endif %}
 
-<form method="post" class="ui-form-stack prospect-form prospect-form--step4 text-left" novalidate>
+<form method="post" class="ui-form-stack prospect-form prospect-form--step4 text-left" novalidate data-submit-loading>
   {% csrf_token %}
   {% if form.non_field_errors %}
   <div class="dui-alert dui-alert-error border border-error/35 bg-error/15 text-error-content text-center justify-center" role="alert">
@@ -59,8 +59,8 @@
   </section>
 
   <div class="prospect-form__footer">
-    <a class="dui-btn dui-btn-ghost prospect-form__btn-secondary border border-white/15 text-[#f0d4c4] hover:border-primary/40" href="{% url 'prospects:step3' %}">Retour</a>
-    <button type="submit" class="dui-btn dui-btn-primary prospect-form__btn-primary min-w-[min(100%,12rem)]">Activer mon espace</button>
+    <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'prospects:step3' %}">Retour</a>
+    <button type="submit" class="ui-btn prospect-form__btn-primary min-w-[min(100%,12rem)]">Activer mon espace</button>
   </div>
 </form>
 {% endblock %}

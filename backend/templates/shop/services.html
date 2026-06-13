@@ -6,44 +6,62 @@
 
 {% block content %}
 {% include "components/nav/landing_header.html" %}
-<section class="landing-section landing-section--hero landing-section--compact">
+<section class="agency-section agency-section--ink landing-reveal">
   <div class="landing-shell">
-    <div class="landing-stack landing-stack--lg">
-      <p class="landing-eyebrow">Services</p>
-      <div class="landing-copy landing-copy--wide">
-        <h1>Choisissez votre service DTF : impression premium ou préparation fichier.</h1>
+    <div class="agency-section-head">
+      <p class="agency-kicker">Services DTF</p>
+      <div>
+        <h1 class="agency-services-title">Choisissez votre service DTF : impression premium ou préparation fichier.</h1>
         <p class="landing-lead">Produisez des transferts DTF prêts à presser ou fiabilisez vos fichiers techniques avant impression : contrôle fichier, base blanche, transparence, résolution et préparation TIFF avec canal alpha lorsque le workflow le permet.</p>
       </div>
-      <div class="landing-dual-cta">
-        <a class="btn ui-btn ui-btn-primary" href="{% url 'prospects:step1' %}">Faire optimiser un fichier</a>
-        <a class="btn ui-btn ui-btn-secondary" href="{% url 'portal:login' %}">Déjà client ? Connexion</a>
+      <div class="agency-actions">
+        <a class="agency-button agency-button--primary" href="{% url 'prospects:step1' %}">Faire optimiser un fichier</a>
+        <a class="agency-button" href="{% url 'portal:login' %}">Déjà client ? Connexion</a>
       </div>
     </div>
   </div>
 </section>
 
-<section class="landing-section">
+<div class="agency-marquee" aria-hidden="true">
+  <div class="agency-marquee__track">
+    <span>Production DTF</span>
+    <span>Pré-presse</span>
+    <span>Canal alpha</span>
+    <span>Contrôle fichier</span>
+    <span>Workflow atelier</span>
+    <span>Production DTF</span>
+    <span>Pré-presse</span>
+    <span>Canal alpha</span>
+    <span>Contrôle fichier</span>
+    <span>Workflow atelier</span>
+  </div>
+</div>
+
+<section class="agency-section agency-section--paper landing-reveal">
   <div class="landing-shell">
-    <div class="section-head">
-      <p class="landing-eyebrow">Bénéfices métier</p>
+    <div class="agency-section-head">
+      <p class="agency-kicker">Bénéfices métier</p>
       <h2>Deux réponses concrètes pour les ateliers, marques et imprimeurs DTF.</h2>
       <p class="landing-lead">L’objectif est simple : réduire les erreurs fichier, gagner du temps en prépresse et livrer une qualité régulière aux clients finaux.</p>
     </div>
-    <div class="marketing-grid marketing-grid--services">
-      <article class="marketing-card marketing-card--feature">
-        <p class="marketing-card__eyebrow">Production</p>
+    <div class="agency-grid agency-grid--2">
+      <article class="agency-card agency-card--acid">
+        <p class="agency-card__meta">Production</p>
         <h2>Impression DTF premium</h2>
         <p>Des transferts DTF propres, réguliers et prêts à presser pour vos commandes clients, collections textile, réassorts ou besoins récurrents.</p>
       </article>
-      <article class="marketing-card">
+      <article class="agency-card">
+        <p class="agency-card__meta">Pré-presse</p>
         <h3>Préparation de fichiers DTF</h3>
         <p>Contrôle, correction et optimisation de fichiers : transparence, contours, résolution, export technique et base blanche mieux maîtrisée.</p>
       </article>
-      <article class="marketing-card">
+      <article class="agency-card agency-card--cyan">
+        <p class="agency-card__meta">Workflow compatible</p>
         <h3>TIFF avec canal alpha</h3>
         <p>Pour les workflows compatibles, préparation de fichiers TIFF avec canal alpha afin de faciliter la gestion séparée de la base blanche.</p>
       </article>
-      <article class="marketing-card">
+      <article class="agency-card agency-card--pink">
+        <p class="agency-card__meta">Renfort atelier</p>
         <h3>Sous-traitance DTF</h3>
         <p>Un relais fiable pour les confrères, revendeurs et ateliers en surcharge qui veulent préserver qualité et confidentialité.</p>
       </article>
@@ -51,23 +69,26 @@
   </div>
 </section>
 
-<section class="landing-section landing-section--muted">
+<section class="agency-section agency-section--acid landing-reveal">
   <div class="landing-shell">
-    <div class="section-head section-head--center">
-      <p class="landing-eyebrow">Cas d’usage</p>
+    <div class="agency-section-head">
+      <p class="agency-kicker">Cas d’usage</p>
       <h2>Pour les professionnels qui produisent, vendent ou sous-traitent du DTF.</h2>
       <p class="landing-lead">Ateliers textile, marques, imprimeurs, revendeurs et studios graphiques peuvent utiliser le service pour produire ou sécuriser leurs fichiers avant impression.</p>
     </div>
-    <div class="marketing-grid marketing-grid--3">
-      <article class="marketing-card">
+    <div class="agency-grid agency-grid--3">
+      <article class="agency-card">
+        <p class="agency-card__meta">01</p>
         <h3>Marques textile</h3>
         <p>Des transferts DTF prêts à presser pour collections, drops, capsules et réassorts sans multiplier les échanges techniques.</p>
       </article>
-      <article class="marketing-card">
+      <article class="agency-card">
+        <p class="agency-card__meta">02</p>
         <h3>Ateliers & revendeurs</h3>
         <p>Un partenaire pour absorber les volumes, fiabiliser les fichiers clients et maintenir une qualité de rendu régulière.</p>
       </article>
-      <article class="marketing-card">
+      <article class="agency-card">
+        <p class="agency-card__meta">03</p>
         <h3>Studios & confrères imprimeurs</h3>
         <p>Un service prépresse DTF pour préparer des fichiers plus propres avant passage RIP ou production externalisée.</p>
       </article>
@@ -75,17 +96,17 @@
   </div>
 </section>
 
-<section class="landing-section landing-section--cta">
+<section class="agency-section agency-section--paper landing-reveal">
   <div class="landing-shell">
-    <div class="cta-panel">
-      <div class="landing-copy landing-copy--wide">
-        <p class="landing-eyebrow">Démarrer</p>
+    <div class="landing-final-cta">
+      <div>
+        <p class="agency-kicker">Démarrer</p>
         <h2>Envoyez un fichier ou préparez votre prochaine production DTF.</h2>
         <p class="landing-lead">Nous contrôlons les points techniques avant impression et vous orientons vers le bon livrable : transfert prêt à presser ou fichier prêt production.</p>
       </div>
-      <div class="landing-dual-cta">
-        <a class="btn ui-btn ui-btn-primary" href="{% url 'prospects:step1' %}">Envoyer un fichier à optimiser</a>
-        <a class="btn ui-btn ui-btn-secondary" href="{% url 'home' %}">Retour à l’accueil</a>
+      <div class="agency-actions">
+        <a class="agency-button agency-button--primary" href="{% url 'prospects:step1' %}">Envoyer un fichier à optimiser</a>
+        <a class="agency-button" href="{% url 'home' %}">Retour à l’accueil</a>
       </div>
     </div>
   </div>

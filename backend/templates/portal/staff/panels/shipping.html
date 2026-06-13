@@ -40,6 +40,7 @@
     hx-target="#staff-order-panel"
     hx-swap="innerHTML"
     hx-indicator="#portal-htmx-indicator"
+    data-submit-loading
   >
     {% csrf_token %}
     <button type="submit" class="ui-btn ui-btn-secondary text-sm">Rafraîchir le suivi Sendcloud</button>
@@ -69,6 +70,7 @@
     hx-target="#staff-order-panel"
     hx-swap="innerHTML"
     hx-indicator="#portal-htmx-indicator"
+    data-submit-loading
   >
     {% csrf_token %}
     {% include "components/forms/field_group.html" with id="id_shipping_option_code" name="shipping_option_code" label="Code option d’envoi" required=1 help_text="Code transporteur/service attendu par Sendcloud pour ce colis." show_label=1 %}

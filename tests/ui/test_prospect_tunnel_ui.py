@@ -13,6 +13,8 @@ def test_prospect_steps_share_premium_structure_and_ctas():
     step1_html = step1.content.decode()
     assert "product-shell--prospect" in step1_html
     assert "prospect-shell__aside-card" in step1_html
+    assert "data-submit-loading" in step1_html
+    assert "ui-btn prospect-form__btn-primary" in step1_html
 
     session = client.session
     session[SESSION_KEY] = {
@@ -54,12 +56,16 @@ def test_prospect_steps_share_premium_structure_and_ctas():
     assert "prospect-form__panel" in step2_html
     assert "Service recherché" in step2_html
     assert "Continuer" in step2_html
+    assert "data-submit-loading" in step2_html
+    assert "ui-btn ui-btn-secondary prospect-form__btn-secondary" in step2_html
 
     assert "prospect-tunnel__title" in step3_html
     assert "Volume mensuel" in step3_html
     assert "Fréquence" in step3_html
     assert "Urgence" in step3_html
+    assert "data-submit-loading" in step3_html
 
     assert "prospect-tunnel__title" in step4_html
     assert "Accès sécurisé" in step4_html
     assert "Activer mon espace" in step4_html
+    assert "data-submit-loading" in step4_html

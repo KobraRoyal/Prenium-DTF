@@ -33,7 +33,7 @@
   body.ui-app-body h3,
   body.ui-app-body h4 {
     color: var(--ui-text-strong);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
   }
 
   body.ui-app-body p,
