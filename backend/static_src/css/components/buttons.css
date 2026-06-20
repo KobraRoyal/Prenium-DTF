@@ -1,0 +1,206 @@
+@layer components {
+  .ui-btn,
+  .btn,
+  .btn-saas-primary,
+  .btn-saas-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: var(--ui-action-min-h);
+    max-width: 100%;
+    border: var(--ui-action-border-width) solid var(--ui-action-border);
+    border-radius: var(--ui-action-radius);
+    padding: 0.68rem 1rem;
+    color: var(--ui-action-primary-text);
+    background: var(--ui-action-primary-bg);
+    box-shadow: var(--ui-action-shadow);
+    font-family: var(--ui-font-display);
+    font-size: 0.88rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0;
+    text-align: center;
+    text-decoration: none;
+    text-transform: uppercase;
+    touch-action: manipulation;
+    cursor: pointer;
+    transition:
+      background-color var(--ui-action-transition),
+      border-color var(--ui-action-transition),
+      color var(--ui-action-transition),
+      transform var(--ui-action-transition),
+      box-shadow var(--ui-action-transition),
+      opacity var(--ui-action-transition);
+  }
+
+  .ui-btn:hover,
+  .btn:hover,
+  .btn-saas-primary:hover,
+  .btn-saas-secondary:hover {
+    color: var(--ui-action-primary-text);
+    background: var(--ui-action-primary-bg-hover);
+    box-shadow: var(--ui-action-shadow-hover);
+    text-decoration: none;
+    transform: translate(-2px, -2px);
+  }
+
+  .ui-btn:focus-visible,
+  .btn:focus-visible,
+  .btn-saas-primary:focus-visible,
+  .btn-saas-secondary:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  .ui-btn:active,
+  .btn:active,
+  .btn-saas-primary:active,
+  .btn-saas-secondary:active {
+    transform: translate(0, 0);
+    box-shadow: 2px 2px 0 rgba(32, 29, 24, 0.95);
+  }
+
+  .ui-btn-primary,
+  .btn-primary,
+  .btn:not(.btn-secondary),
+  .btn-saas-primary {
+    color: var(--ui-action-primary-text);
+    background: var(--ui-action-primary-bg);
+  }
+
+  .ui-btn-secondary,
+  .btn-secondary,
+  .btn.btn-secondary,
+  .btn-saas-secondary {
+    color: var(--ui-action-secondary-text);
+    background: var(--ui-action-secondary-bg);
+  }
+
+  .ui-btn-secondary:hover,
+  .btn-secondary:hover,
+  .btn.btn-secondary:hover,
+  .btn-saas-secondary:hover {
+    color: var(--ui-action-secondary-text);
+    background: var(--ui-action-secondary-bg-hover);
+  }
+
+  .ui-btn-ghost {
+    color: var(--ui-action-secondary-text);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .ui-btn-ghost:hover {
+    color: var(--ui-action-secondary-text);
+    background: color-mix(in srgb, var(--brand) 9%, transparent);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .ui-btn-danger {
+    color: #fff;
+    background: var(--danger);
+  }
+
+  .ui-btn-danger:hover {
+    color: #fff;
+    background: color-mix(in srgb, var(--danger) 82%, #000);
+  }
+
+  .ui-btn-sm {
+    min-height: 2.35rem;
+    padding: 0.5rem 0.72rem;
+    font-size: 0.78rem;
+  }
+
+  .ui-btn-wide {
+    min-width: min(100%, 14rem);
+  }
+
+  .ui-btn-block {
+    width: 100%;
+  }
+
+  .ui-btn[disabled],
+  .ui-btn[aria-disabled="true"],
+  .btn[disabled],
+  .btn[aria-disabled="true"],
+  .btn-saas-primary[disabled],
+  .btn-saas-secondary[disabled] {
+    opacity: 0.56;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .ui-btn.is-loading,
+  .btn.is-loading,
+  .btn-saas-primary.is-loading,
+  .btn-saas-secondary.is-loading {
+    pointer-events: none;
+    opacity: 0.82;
+  }
+
+  .ui-btn.is-loading::after,
+  .btn.is-loading::after,
+  .btn-saas-primary.is-loading::after,
+  .btn-saas-secondary.is-loading::after {
+    content: "";
+    width: 0.78rem;
+    height: 0.78rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 999px;
+    animation: portal-spin 0.72s linear infinite;
+  }
+
+  body.prospect-tunnel-page .ui-btn {
+    border-color: rgba(255, 248, 234, 0.86);
+    box-shadow: 4px 4px 0 rgba(240, 168, 122, 0.38);
+  }
+
+  body.prospect-tunnel-page .ui-btn-primary {
+    color: #1c1815;
+    background: #f0a87a;
+  }
+
+  body.prospect-tunnel-page .ui-btn-primary:hover {
+    color: #1c1815;
+    background: #ffd8b8;
+  }
+
+  body.prospect-tunnel-page .ui-btn-secondary {
+    color: #f8f0e7;
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: none;
+  }
+
+  body.prospect-tunnel-page .ui-btn-secondary:hover {
+    color: #fffaf2;
+    background: rgba(240, 168, 122, 0.14);
+    box-shadow: none;
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ui-btn,
+    .btn,
+    .btn-saas-primary,
+    .btn-saas-secondary {
+      transition: none;
+    }
+
+    .ui-btn:hover,
+    .btn:hover,
+    .btn-saas-primary:hover,
+    .btn-saas-secondary:hover,
+    .ui-btn:active,
+    .btn:active,
+    .btn-saas-primary:active,
+    .btn-saas-secondary:active {
+      transform: none;
+    }
+  }
+}

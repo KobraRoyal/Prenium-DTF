@@ -560,9 +560,12 @@
   }
 
   body.landing-saas.portal-shell .workflow-tab-group__label {
-    background: rgba(240, 168, 122, 0.1);
-    border-color: rgba(240, 168, 122, 0.2);
-    color: #f3c3a7;
+    border-radius: 0;
+    border-width: 2px;
+    background: rgba(220, 255, 26, 0.12);
+    border-color: rgba(220, 255, 26, 0.45);
+    color: #dcff1a;
+    font-weight: 900;
   }
 
   body.landing-saas.portal-shell .ui-tab-chip {

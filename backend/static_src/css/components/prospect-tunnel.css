@@ -723,14 +723,22 @@ body.prospect-tunnel-page .prospect-shell__eyebrow,
 body.prospect-tunnel-page .prospect-fieldset__kicker,
 body.prospect-tunnel-page .prospect-form__section-title,
 body.prospect-tunnel-page .prospect-summary__title,
-body.prospect-tunnel-page .prospect-tunnel__step-meta {
+body.prospect-tunnel-page .prospect-tunnel__step-meta,
+body.prospect-tunnel-page .landing-kicker--pill {
   width: fit-content;
   border: 1px solid #000;
+  border-radius: 0;
   padding: 0.22rem 0.45rem;
   background: var(--product-accent);
   color: var(--product-accent-ink);
   font-weight: 900;
   letter-spacing: 0.08em;
+}
+
+body.prospect-tunnel-page .prospect-tunnel__step-meta__sep,
+body.prospect-tunnel-page .prospect-tunnel__step-meta__t {
+  color: var(--product-accent-ink);
+  opacity: 1;
 }
 
 body.prospect-tunnel-page .prospect-tunnel__track {
@@ -776,4 +784,34 @@ body.prospect-tunnel-page .prospect-choice-card--activity:has(.prospect-choice-c
 
 body.prospect-tunnel-page .prospect-form__footer {
   border-top: 2px solid var(--product-line);
+}
+
+/* Motion d'entrée subtile (brief « motion-driven ») — jouée une fois au
+   chargement de chaque étape du tunnel ; navigations POST classiques (pas de
+   swap HTMX), donc rejouer à chaque étape est volontaire. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes prospect-reveal {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 16px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  body.prospect-tunnel-page .prospect-tunnel__intro,
+  body.prospect-tunnel-page .prospect-tunnel__progress-panel,
+  body.prospect-tunnel-page .prospect-tunnel__shell {
+    animation: prospect-reveal 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  body.prospect-tunnel-page .prospect-tunnel__progress-panel {
+    animation-delay: 80ms;
+  }
+
+  body.prospect-tunnel-page .prospect-tunnel__shell {
+    animation-delay: 150ms;
+  }
 }

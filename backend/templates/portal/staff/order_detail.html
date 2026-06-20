@@ -7,7 +7,7 @@
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_order_detail.html" title="Commande" title_code=order.public_id subtitle="Pilotez le contrôle, la production, la logistique, le scan atelier et la facturation depuis une fiche opérationnelle unique." %}
 
 <section class="staff-order-detail-stack" aria-label="Synthèse commande staff">
-<section class="card order-command-bar" style="margin-bottom: 1rem;">
+<section class="card order-command-bar">
   <div class="order-command-bar__main">
     <div class="order-command-bar__client">
       <p class="order-command-bar__client-label">Client</p>
@@ -22,7 +22,7 @@
         <strong class="order-command-bar__amount">{{ order.total_amount }} {{ order.currency }}</strong>
         {% endif %}
         {% if order.credit_hold_status and order.credit_hold_status != "none" %}
-        <span class="badge {{ order.credit_hold_status|badge_tone }}">Encours {{ order.credit_hold_status|human_status }}</span>
+        <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.credit_hold_status|human_status }}</span>
         {% endif %}
       </div>
       {% if production_job or order_drive_url %}
@@ -64,7 +64,7 @@
   <div class="order-command-bar__action">
     <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}" data-submit-loading>
       {% csrf_token %}
-      <button type="submit" class="btn">Calculer le prix</button>
+      <button type="submit" class="ui-btn ui-btn-primary">Calculer le prix</button>
     </form>
   </div>
   {% endif %}

@@ -186,6 +186,25 @@
     box-shadow: 3px 3px 0 #000;
   }
 
+  body.product-shell .product-nav__links .product-nav__primary {
+    border-color: #000;
+    background: var(--product-blue);
+    color: #061016;
+    box-shadow: 3px 3px 0 #000;
+  }
+
+  body.product-shell .product-nav__links .product-nav__primary:hover,
+  body.product-shell .product-nav__links .product-nav__primary:focus-visible,
+  body.product-shell .product-nav__links .product-nav__primary[aria-current="page"] {
+    border-color: #000;
+    background: var(--product-accent);
+    color: var(--product-accent-ink);
+  }
+
+  body.product-shell .product-nav__links .product-nav__logout {
+    color: var(--product-soft);
+  }
+
   body.product-shell .product-layout {
     display: grid;
     gap: clamp(1rem, 2vw, 1.4rem);
@@ -207,6 +226,7 @@
   body.product-shell .dui-card,
   body.product-shell .checkout-dui-surface,
   body.product-shell .auth-card,
+  body.product-shell .product-auth-card,
   body.product-shell .prospect-shell__aside-card,
   body.product-shell .prospect-panel {
     border: 2px solid var(--product-line);
@@ -225,6 +245,56 @@
 
   body.product-shell .page-head__content {
     max-width: 52rem;
+  }
+
+  body.product-shell .ui-breadcrumb,
+  body.ui-marketing-body .ui-breadcrumb {
+    display: block;
+    margin: 0 0 0.6rem;
+    color: var(--product-muted, rgba(226, 232, 240, 0.72));
+    font-size: 0.78rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .ui-breadcrumb__list,
+  body.ui-marketing-body .ui-breadcrumb__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body.product-shell .ui-breadcrumb__item,
+  body.ui-marketing-body .ui-breadcrumb__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  body.product-shell .ui-breadcrumb__item + .ui-breadcrumb__item::before,
+  body.ui-marketing-body .ui-breadcrumb__item + .ui-breadcrumb__item::before {
+    content: "/";
+    color: var(--product-soft, rgba(226, 232, 240, 0.52));
+  }
+
+  body.product-shell .ui-breadcrumb a,
+  body.ui-marketing-body .ui-breadcrumb a {
+    color: var(--product-accent, #dcff1a);
+    text-decoration: none;
+  }
+
+  body.product-shell .ui-breadcrumb a:hover,
+  body.product-shell .ui-breadcrumb a:focus-visible,
+  body.ui-marketing-body .ui-breadcrumb a:hover,
+  body.ui-marketing-body .ui-breadcrumb a:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
   }
 
   body.product-shell .page-head__eyebrow,
@@ -371,6 +441,13 @@
     margin-bottom: 0;
   }
 
+  body.product-shell .product-auth-card {
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+    padding: clamp(1rem, 2vw, 1.35rem);
+  }
+
   body.product-shell .product-command-card {
     display: grid;
     gap: 0.6rem;
@@ -461,6 +538,7 @@
 
   body.product-shell .btn-secondary,
   body.product-shell .ui-btn-secondary,
+  body.product-shell .ui-btn-ghost,
   body.product-shell .dui-btn-ghost {
     border-color: var(--product-line-strong);
     background: rgba(255, 255, 255, 0.04);
@@ -470,11 +548,23 @@
 
   body.product-shell .btn-secondary:hover,
   body.product-shell .ui-btn-secondary:hover,
+  body.product-shell .ui-btn-ghost:hover,
   body.product-shell .dui-btn-ghost:hover {
     border-color: var(--product-accent);
     background: rgba(220, 255, 26, 0.1);
     color: var(--product-ink);
     box-shadow: none;
+  }
+
+  body.product-shell .ui-btn-danger {
+    background: var(--danger);
+    color: #fff;
+    border-color: #000;
+  }
+
+  body.product-shell .ui-btn-danger:hover {
+    background: color-mix(in srgb, var(--danger) 82%, #000);
+    color: #fff;
   }
 
   body.product-shell button.is-loading,
@@ -656,6 +746,10 @@
     box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.55);
   }
 
+  body.product-shell .product-mobile-file-card {
+    color: var(--product-ink);
+  }
+
   body.product-shell .ui-workflow-shell,
   body.product-shell .order-command-bar,
   body.product-shell .ui-staff-hero-card,
@@ -709,6 +803,11 @@
   body.product-shell .staff-meterage-section__lead,
   body.product-shell .staff-meterage-preview {
     color: var(--product-muted);
+  }
+
+  body.product-shell .workflow-kpi__label--inline {
+    display: inline;
+    margin-right: 0.35rem;
   }
 
   body.product-shell .split-row {
@@ -814,8 +913,181 @@
     background: rgba(248, 113, 113, 0.12);
   }
 
+  /* Badges de statut — alignés brutalisme sombre (carré, 2px, contraste AA). */
+  body.product-shell .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 1.65rem;
+    padding: 0.18rem 0.55rem;
+    border: 2px solid var(--product-line-strong);
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(248, 250, 252, 0.94);
+    font-size: 0.72rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .badge.is-success {
+    border-color: rgba(134, 239, 172, 0.5);
+    background: rgba(134, 239, 172, 0.14);
+    color: #bbf7d0;
+  }
+
+  body.product-shell .badge.is-warning {
+    border-color: rgba(251, 191, 36, 0.5);
+    background: rgba(251, 191, 36, 0.15);
+    color: #fde68a;
+  }
+
+  body.product-shell .badge.is-danger {
+    border-color: rgba(248, 113, 113, 0.52);
+    background: rgba(248, 113, 113, 0.16);
+    color: #fecaca;
+  }
+
+  body.product-shell .badge.is-neutral {
+    border-color: var(--product-line-strong);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(226, 232, 240, 0.82);
+  }
+
+  /* Finitions de cohérence brutaliste (pills meta, prochaine action, code titre). */
+  body.product-shell .portal-top-meta__pill,
+  body.product-shell .product-pill {
+    border-radius: 0;
+  }
+
+  /* « Étape suivante » : carte accent lisible plutôt que texte nu. */
+  body.product-shell .workflow-next-action {
+    display: grid;
+    gap: 0.3rem;
+    margin: 0 0 1.2rem;
+    padding: 0.9rem 1.05rem;
+    border: 2px solid var(--product-line);
+    border-left: 6px solid var(--product-accent);
+    background:
+      linear-gradient(180deg, rgba(220, 255, 26, 0.06), rgba(255, 255, 255, 0.03)),
+      rgba(11, 13, 16, 0.72);
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.55);
+  }
+
+  body.product-shell .workflow-next-action__label {
+    color: var(--product-accent);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .workflow-next-action__text {
+    margin: 0;
+    color: var(--product-ink);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  body.product-shell .workflow-next-action__text strong {
+    color: var(--product-ink);
+  }
+
+  /* UUID / référence en titre : puce mono compacte, coupure propre. */
+  body.product-shell .page-head--premium h1 code {
+    display: inline-block;
+    margin-top: 0.15rem;
+    padding: 0.05em 0.4em;
+    border: 1px solid var(--product-line-strong);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--product-accent);
+    font-size: 0.5em;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.3;
+    text-transform: none;
+    vertical-align: middle;
+    word-break: break-all;
+  }
+
   body.product-shell .checkout-layout {
     gap: 1rem;
+  }
+
+  body.product-shell .product-checkout-card {
+    display: block;
+    padding: 0;
+  }
+
+  body.product-shell .product-checkout-card.is-muted {
+    opacity: 0.9;
+  }
+
+  body.product-shell .product-checkout-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.35rem;
+  }
+
+  body.product-shell .product-checkout-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(9rem, 1fr));
+    gap: 0.75rem;
+    width: min(100%, 64rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body.product-shell .product-checkout-step {
+    display: flex;
+    min-height: 3.25rem;
+    align-items: center;
+    gap: 0.65rem;
+    border: 2px solid var(--product-line);
+    padding: 0.7rem 0.8rem;
+    background: rgba(255, 255, 255, 0.045);
+    color: var(--product-muted);
+    font-size: 0.86rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .product-checkout-step__index {
+    display: inline-grid;
+    width: 1.8rem;
+    height: 1.8rem;
+    place-items: center;
+    border: 2px solid var(--product-line);
+    color: var(--product-ink);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 900;
+  }
+
+  body.product-shell .product-checkout-step.is-complete,
+  body.product-shell .product-checkout-step.is-current,
+  body.product-shell .product-checkout-step.is-ready {
+    border-color: #000;
+    background: var(--product-accent);
+    color: var(--product-accent-ink);
+    box-shadow: 4px 4px 0 #000;
+  }
+
+  body.product-shell .product-checkout-step.is-current {
+    background: var(--product-blue);
+  }
+
+  body.product-shell .product-checkout-step.is-ready {
+    background: var(--product-success);
+  }
+
+  body.product-shell .product-checkout-step.is-complete .product-checkout-step__index,
+  body.product-shell .product-checkout-step.is-current .product-checkout-step__index,
+  body.product-shell .product-checkout-step.is-ready .product-checkout-step__index {
+    border-color: #000;
+    color: #000;
   }
 
   body.product-shell .summary-sticky {
@@ -977,6 +1249,10 @@
       display: flex !important;
     }
 
+    body.ui-marketing-body [data-product-menu].is-open {
+      display: flex !important;
+    }
+
     body.product-shell .product-nav__links .nav-link,
     body.product-shell .product-nav__links .nav-link-button,
     body.product-shell .inline-nav-form {
@@ -1001,6 +1277,50 @@
 @keyframes product-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Motion d'entrée subtile (brief « motion-driven ») — jouée une fois au chargement,
+   sur les grilles de layout uniquement pour ne pas rejouer sur les swaps HTMX. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes product-reveal {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 14px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  body.product-shell .product-layout > *,
+  body.product-shell .product-command-grid > *,
+  body.product-shell .ui-kpi-grid > * {
+    animation: product-reveal 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  body.product-shell .product-command-grid > *:nth-child(2),
+  body.product-shell .ui-kpi-grid > *:nth-child(2) {
+    animation-delay: 60ms;
+  }
+
+  body.product-shell .product-command-grid > *:nth-child(3),
+  body.product-shell .ui-kpi-grid > *:nth-child(3) {
+    animation-delay: 120ms;
+  }
+
+  body.product-shell .product-command-grid > *:nth-child(4),
+  body.product-shell .ui-kpi-grid > *:nth-child(4) {
+    animation-delay: 180ms;
+  }
+
+  body.product-shell .product-layout > *:nth-child(2) {
+    animation-delay: 90ms;
+  }
+
+  body.product-shell .product-layout > *:nth-child(3) {
+    animation-delay: 150ms;
   }
 }
 
