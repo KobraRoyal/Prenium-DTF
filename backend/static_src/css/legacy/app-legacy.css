@@ -1155,11 +1155,11 @@ body.landing-saas {
     radial-gradient(ellipse 70% 50% at 100% 20%, rgba(212, 165, 116, 0.12), transparent 45%),
     radial-gradient(ellipse 60% 40% at 0% 60%, rgba(143, 61, 31, 0.15), transparent 50%),
     linear-gradient(180deg, #12100e 0%, #1a1612 35%, #151210 100%);
-  color: #f4f0e8;
+  color: #0b0b0b;
 }
 
 body.landing-saas .muted {
-  color: rgba(244, 240, 232, 0.62);
+  color: rgba(11, 11, 11, 0.62);
 }
 
 body.landing-saas a {
@@ -1185,14 +1185,15 @@ body.landing-saas .landing-brand .brand-link {
   font-weight: 800;
   font-size: 1.15rem;
   letter-spacing: -0.03em;
-  background: linear-gradient(135deg, #fff 0%, #e8dfd4 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: #0b0b0b;
+  color: #0b0b0b;
 }
 
 body.landing-saas .brand-subtitle {
-  color: rgba(244, 240, 232, 0.45);
+  color: rgba(11, 11, 11, 0.45);
   font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1200,7 +1201,7 @@ body.landing-saas .brand-subtitle {
 
 body.landing-saas .nav-link--ghost {
   border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(244, 240, 232, 0.88);
+  color: rgba(11, 11, 11, 0.88);
   background: transparent;
   transition:
     border-color 0.2s ease,
@@ -1257,7 +1258,7 @@ body.landing-saas .landing-section-head h2 {
   font-family: "Outfit", "Space Grotesk", sans-serif;
   font-weight: 700;
   font-size: clamp(1.35rem, 2.5vw, 1.75rem);
-  color: #faf7f2;
+  color: #0b0b0b;
 }
 
 body.landing-saas .landing-kicker {
@@ -1360,11 +1361,11 @@ body.landing-saas .landing-hero__lead {
   font-size: 1.05rem;
   line-height: 1.65;
   max-width: 38rem;
-  color: rgba(244, 240, 232, 0.72);
+  color: rgba(11, 11, 11, 0.72);
 }
 
 body.landing-saas .landing-hero__target {
-  color: rgba(244, 240, 232, 0.68);
+  color: rgba(11, 11, 11, 0.68);
 }
 
 body.landing-saas .landing-hero__target--inline {
@@ -1384,7 +1385,7 @@ body.landing-saas .landing-hero__actions {
 body.landing-saas .landing-hero__cta-note {
   margin: 0.85rem 0 0;
   font-size: 0.88rem;
-  color: rgba(244, 240, 232, 0.55);
+  color: rgba(11, 11, 11, 0.55);
 }
 
 body.landing-saas .landing-hero__cta-note a {
@@ -1399,7 +1400,7 @@ body.landing-saas .landing-hero__cta-note a:hover {
 
 body.landing-saas .landing-hero__cta-note__sep {
   margin: 0 0.35rem;
-  color: rgba(244, 240, 232, 0.35);
+  color: rgba(11, 11, 11, 0.35);
 }
 
 body.landing-saas .landing-final-cta__lead {
@@ -1407,7 +1408,7 @@ body.landing-saas .landing-final-cta__lead {
   max-width: 38rem;
   font-size: 0.98rem;
   line-height: 1.55;
-  color: rgba(244, 240, 232, 0.72);
+  color: rgba(11, 11, 11, 0.72);
 }
 
 body.landing-saas .landing-service-card--prospect {
@@ -1452,7 +1453,7 @@ body.landing-saas .btn-saas-secondary {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.04);
-  color: #f4f0e8;
+  color: #0b0b0b;
   text-decoration: none;
   transition:
     background 0.2s ease,
@@ -1472,7 +1473,7 @@ body.landing-saas .landing-hero__badges {
   padding: 0;
   list-style: none;
   font-size: 0.82rem;
-  color: rgba(244, 240, 232, 0.55);
+  color: rgba(11, 11, 11, 0.55);
 }
 
 body.landing-saas .landing-hero__badges li {
@@ -1497,7 +1498,7 @@ body.landing-saas .landing-proof-pill {
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
   font-size: 0.78rem;
-  color: rgba(244, 240, 232, 0.9);
+  color: rgba(11, 11, 11, 0.9);
 }
 
 body.landing-saas .landing-dot {
@@ -1566,7 +1567,7 @@ body.landing-saas .landing-mockup--saas .landing-mockup__steps li {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.84rem;
-  color: rgba(244, 240, 232, 0.78);
+  color: rgba(11, 11, 11, 0.78);
 }
 
 body.landing-saas .landing-mockup__check {
@@ -1624,7 +1625,7 @@ body.landing-saas .landing-feature-card h3,
 body.landing-saas .landing-service-card h3 {
   font-family: "Outfit", sans-serif;
   font-weight: 600;
-  color: #faf7f2;
+  color: #0b0b0b;
 }
 
 body.landing-saas .landing-step {
@@ -1654,7 +1655,7 @@ body.landing-saas .landing-proof-card h2 {
 }
 
 body.landing-saas .landing-proof-list li {
-  color: rgba(244, 240, 232, 0.78);
+  color: rgba(11, 11, 11, 0.78);
 }
 
 body.landing-saas .landing-proof-evidence {
@@ -1672,7 +1673,7 @@ body.landing-saas .landing-proof-evidence__item {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 0.78rem;
-  color: rgba(244, 240, 232, 0.86);
+  color: rgba(11, 11, 11, 0.86);
 }
 
 body.landing-saas .landing-proof-mock {
@@ -1687,11 +1688,11 @@ body.landing-saas .landing-proof-mock__title {
 
 body.landing-saas .landing-proof-mock__row {
   border-bottom-color: rgba(255, 255, 255, 0.08);
-  color: rgba(244, 240, 232, 0.72);
+  color: rgba(11, 11, 11, 0.72);
 }
 
 body.landing-saas .landing-proof-mock__row--strong {
-  color: #faf7f2;
+  color: #0b0b0b;
 }
 
 body.landing-saas .landing-proof-mock__pill {
@@ -1704,7 +1705,7 @@ body.landing-saas .landing-proof-mock__ok {
 }
 
 body.landing-saas .landing-proof-mock__hint {
-  color: rgba(244, 240, 232, 0.5);
+  color: rgba(11, 11, 11, 0.5);
 }
 
 body.landing-saas .landing-service-card__benefit {
@@ -1717,7 +1718,7 @@ body.landing-saas .landing-faq__item {
 }
 
 body.landing-saas .landing-faq__item summary {
-  color: #faf7f2;
+  color: #0b0b0b;
 }
 
 body.landing-saas .landing-faq__item summary::after {
@@ -1726,7 +1727,7 @@ body.landing-saas .landing-faq__item summary::after {
 
 body.landing-saas .landing-faq__item p {
   border-top-color: rgba(255, 255, 255, 0.08);
-  color: rgba(244, 240, 232, 0.72);
+  color: rgba(11, 11, 11, 0.72);
 }
 
 body.landing-saas .landing-final-cta {
@@ -1757,7 +1758,7 @@ body.landing-saas .landing-final-cta .btn:not(.btn-secondary) {
 body.landing-saas .landing-final-cta .btn-secondary {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.2);
-  color: #f4f0e8;
+  color: #0b0b0b;
 }
 
 body.landing-saas .landing-service-card .btn-secondary {
@@ -1773,7 +1774,7 @@ body.landing-saas .landing-service-card .btn-secondary:hover {
 }
 
 body.landing-saas .landing-service-card strong {
-  color: #f0d4c4;
+  color: #0b0b0b;
   font-weight: 700;
 }
 
@@ -1784,7 +1785,7 @@ body.landing-saas .landing-service-card .btn-saas-primary {
 body.landing-saas .landing-section-lead {
   margin: 0.45rem 0 1.25rem;
   max-width: 42rem;
-  color: rgba(244, 240, 232, 0.72);
+  color: rgba(11, 11, 11, 0.72);
   font-size: 0.98rem;
   line-height: 1.55;
 }
@@ -1796,35 +1797,33 @@ body.landing-saas .landing-auth-page .landing-section-head {
 body.landing-saas .landing-auth-lead {
   margin: 0.55rem 0 0;
   max-width: 36rem;
-  color: rgba(244, 240, 232, 0.72);
+  color: rgba(11, 11, 11, 0.72);
   font-size: 0.95rem;
   line-height: 1.5;
   font-weight: 400;
 }
 
 body.landing-saas .landing-auth-shell {
-  --ink: #f4f0e8;
-  --muted: rgba(244, 240, 232, 0.65);
-  --line: rgba(255, 255, 255, 0.14);
-  --focus-ring: rgba(240, 168, 122, 0.55);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  --ink: #0b0b0b;
+  --muted: rgba(11, 11, 11, 0.65);
+  --line: var(--product-line, #0b0b0b);
+  --focus-ring: rgba(220, 255, 26, 0.5);
+  border-radius: 0;
+  border: 2px solid var(--product-line, #0b0b0b);
+  background: var(--product-panel, #fffdf8);
+  box-shadow: 8px 8px 0 #0b0b0b;
   padding: 1.35rem 1.25rem;
 }
 
 body.landing-saas .landing-auth-shell.card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  background: var(--product-panel, #fffdf8);
+  border: 2px solid var(--product-line, #0b0b0b);
+  box-shadow: 8px 8px 0 #0b0b0b;
 }
 
-/* Login portail : halo discret + champs Daisy visibles même si bundle Tailwind pas à jour */
+/* Login portail : carte brutaliste claire (champs Daisy visibles). */
 body.landing-saas.portal-shell .portal-login-card {
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(240, 168, 122, 0.28);
+  box-shadow: 8px 8px 0 #0b0b0b;
 }
 
 body.landing-saas.portal-shell .portal-login-card .dui-btn-primary {
@@ -1832,20 +1831,20 @@ body.landing-saas.portal-shell .portal-login-card .dui-btn-primary {
 }
 
 body.landing-saas .landing-auth-shell .ui-input {
-  background: rgba(8, 7, 6, 0.65);
-  color: #f4f0e8;
-  border-color: rgba(255, 255, 255, 0.14);
+  background: #fffdf8;
+  color: #0b0b0b;
+  border-color: var(--product-line, #0b0b0b);
 }
 
 body.landing-saas .landing-auth-shell .ui-input:focus {
-  border-color: rgba(240, 168, 122, 0.55);
-  outline-color: rgba(240, 168, 122, 0.45);
+  border-color: var(--product-line, #0b0b0b);
+  outline-color: rgba(220, 255, 26, 0.5);
 }
 
 body.landing-saas .landing-auth-shell .alert--danger {
-  border-color: rgba(220, 100, 100, 0.45);
-  background: rgba(60, 20, 20, 0.45);
-  color: #fecaca;
+  border-color: var(--product-line, #0b0b0b);
+  background: rgba(255, 84, 112, 0.22);
+  color: #7a0b22;
 }
 
 body.landing-saas .landing-auth-shell .btn.btn-saas-primary {
@@ -1864,21 +1863,21 @@ body.landing-saas.portal-shell .page-head {
 body.landing-saas.portal-shell .page-head h1 {
   font-family: "Outfit", "Space Grotesk", sans-serif;
   font-weight: 700;
-  color: #faf7f2;
+  color: #0b0b0b;
 }
 
 body.landing-saas.portal-shell .page-head h1 + p,
 body.landing-saas.portal-shell .page-head p.muted,
 body.landing-saas.portal-shell .page-head-lead {
   margin: 0.35rem 0 0;
-  color: rgba(244, 240, 232, 0.68);
+  color: rgba(11, 11, 11, 0.68);
   font-size: 0.98rem;
   line-height: 1.5;
 }
 
 body.landing-saas.portal-shell .breadcrumb,
 body.landing-saas.portal-shell .breadcrumb a {
-  color: rgba(244, 240, 232, 0.55);
+  color: rgba(11, 11, 11, 0.55);
 }
 
 body.landing-saas.portal-shell .breadcrumb a:hover {
@@ -1887,14 +1886,14 @@ body.landing-saas.portal-shell .breadcrumb a:hover {
 
 body.landing-saas.portal-shell .card,
 body.landing-saas.portal-shell .empty-state:not(.card) {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #f4f0e8;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+  background: var(--product-panel, #fffdf8);
+  border: 2px solid var(--product-line, #0b0b0b);
+  color: var(--product-ink, #0b0b0b);
+  box-shadow: 8px 8px 0 #0b0b0b;
 }
 
 body.landing-saas.portal-shell .card.empty-state {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--product-panel, #fffdf8);
 }
 
 body.landing-saas.portal-shell .card .empty-state {
@@ -1905,65 +1904,65 @@ body.landing-saas.portal-shell .card .empty-state {
 }
 
 body.landing-saas.portal-shell .kpi-grid .card h2 {
-  color: #faf7f2;
+  color: #0b0b0b;
 }
 
 body.landing-saas.portal-shell .card .muted,
 body.landing-saas.portal-shell .empty-state .muted,
 body.landing-saas.portal-shell .panel-head p {
-  color: rgba(244, 240, 232, 0.62);
+  color: rgba(11, 11, 11, 0.62);
 }
 
 body.landing-saas.portal-shell .empty-state h3 {
-  color: #faf7f2;
+  color: #0b0b0b;
 }
 
 body.landing-saas.portal-shell .section-head h2 {
-  color: #faf7f2;
+  color: #0b0b0b;
 }
 
 body.landing-saas.portal-shell table th {
-  color: rgba(244, 240, 232, 0.55);
-  border-bottom-color: rgba(255, 255, 255, 0.12);
+  color: var(--product-muted, #4c463b);
+  border-bottom-color: var(--product-line, #0b0b0b);
 }
 
 body.landing-saas.portal-shell table td {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-  color: rgba(244, 240, 232, 0.92);
+  border-bottom-color: rgba(11, 11, 11, 0.16);
+  color: var(--product-ink, #0b0b0b);
 }
 
 body.landing-saas.portal-shell tbody tr:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(220, 255, 26, 0.35);
 }
 
 body.landing-saas.portal-shell .chip {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.14);
-  color: rgba(244, 240, 232, 0.85);
+  background: var(--product-panel, #fffdf8);
+  border-color: var(--product-line, #0b0b0b);
+  color: var(--product-ink, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .chip.is-active {
-  color: #f0d4c4;
-  border-color: rgba(240, 168, 122, 0.45);
-  background: rgba(143, 61, 31, 0.28);
+  color: var(--product-accent-ink, #0b0b0b);
+  border-color: var(--product-line, #0b0b0b);
+  background: var(--product-accent, #dcff1a);
 }
 
 body.landing-saas.portal-shell .step-chip {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(244, 240, 232, 0.72);
+  background: var(--product-panel, #fffdf8);
+  border-color: var(--product-line, #0b0b0b);
+  color: var(--product-ink, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .step-chip.is-active {
-  border-color: rgba(240, 168, 122, 0.5);
-  color: #f0d4c4;
-  background: rgba(143, 61, 31, 0.22);
+  border-color: var(--product-line, #0b0b0b);
+  color: var(--product-accent-ink, #0b0b0b);
+  background: var(--product-accent, #dcff1a);
 }
 
 body.landing-saas.portal-shell .service-card {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #f4f0e8;
+  background: var(--product-panel, #fffdf8);
+  border-color: var(--product-line, #0b0b0b);
+  color: var(--product-ink, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .selectable-card:has(input:checked) {
@@ -1972,66 +1971,66 @@ body.landing-saas.portal-shell .selectable-card:has(input:checked) {
 }
 
 body.landing-saas.portal-shell .alert {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--product-line, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .alert--warning {
-  border-color: rgba(212, 165, 80, 0.45);
-  background: rgba(80, 60, 20, 0.35);
-  color: #fde9a8;
+  border-color: var(--product-line, #0b0b0b);
+  background: rgba(251, 176, 46, 0.28);
+  color: #7a3d00;
 }
 
 body.landing-saas.portal-shell .alert--danger {
-  border-color: rgba(220, 100, 100, 0.45);
-  background: rgba(60, 20, 20, 0.4);
-  color: #fecaca;
+  border-color: var(--product-line, #0b0b0b);
+  background: rgba(255, 84, 112, 0.22);
+  color: #7a0b22;
 }
 
 body.landing-saas.portal-shell .panel-head h3 {
-  color: #faf7f2;
+  color: #0b0b0b;
 }
 
 body.landing-saas.portal-shell code {
-  color: #f0d4c4;
-  background: rgba(0, 0, 0, 0.28);
+  color: #0b0b0b;
+  background: rgba(11, 11, 11, 0.06);
   padding: 0.12rem 0.4rem;
-  border-radius: 6px;
+  border-radius: 0;
   font-size: 0.88em;
 }
 
 body.landing-saas.portal-shell .nav-link.nav-link--ghost.is-active {
-  border-color: rgba(240, 168, 122, 0.42);
-  background: rgba(255, 255, 255, 0.08);
-  color: #faf7f2;
+  border-color: var(--product-line, #0b0b0b);
+  background: var(--product-accent, #dcff1a);
+  color: var(--product-accent-ink, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .nav-link.nav-link-button.nav-link--ghost {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 2px solid var(--product-line, #0b0b0b);
   border-radius: 999px;
   background: transparent;
-  color: rgba(244, 240, 232, 0.88);
+  color: var(--product-ink, #0b0b0b);
   padding: 0.35rem 0.85rem;
   cursor: pointer;
 }
 
 body.landing-saas.portal-shell .nav-link.nav-link-button.nav-link--ghost:hover {
-  border-color: rgba(240, 168, 122, 0.4);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--product-line, #0b0b0b);
+  background: rgba(220, 255, 26, 0.35);
 }
 
 body.landing-saas.portal-shell .ui-field-group label.ui-label {
-  color: rgba(244, 240, 232, 0.92);
+  color: var(--product-ink, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .ui-input {
-  background: rgba(8, 7, 6, 0.55);
-  color: #f4f0e8;
-  border-color: rgba(255, 255, 255, 0.14);
+  background: #fffdf8;
+  color: #0b0b0b;
+  border-color: var(--product-line, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .ui-input:focus {
-  border-color: rgba(240, 168, 122, 0.55);
-  outline-color: rgba(240, 168, 122, 0.45);
+  border-color: var(--product-line, #0b0b0b);
+  outline-color: rgba(220, 255, 26, 0.5);
 }
 
 body.landing-saas.portal-shell .ui-field-group .error-text {
@@ -2043,67 +2042,68 @@ body.landing-saas.portal-shell .ui-field-group .error-text {
 body.landing-saas.portal-shell .checkout-dui-input::placeholder,
 body.landing-saas.portal-shell .dui-input::placeholder,
 body.landing-saas.portal-shell textarea.ui-input::placeholder {
-  color: rgba(244, 240, 232, 0.42);
+  color: rgba(11, 11, 11, 0.42);
   opacity: 1;
 }
 
 body.landing-saas .landing-auth-shell .ui-input::placeholder,
 body.landing-saas .landing-auth-shell textarea.ui-input::placeholder {
-  color: rgba(244, 240, 232, 0.42);
+  color: rgba(11, 11, 11, 0.42);
   opacity: 1;
 }
 
 body.landing-saas.portal-shell .loading-state {
-  color: rgba(244, 240, 232, 0.55);
+  color: rgba(11, 11, 11, 0.55);
 }
 
 body.landing-saas.portal-shell .btn:not(.btn-secondary) {
-  border: none;
-  background: linear-gradient(135deg, #f0a87a 0%, #c95a32 45%, #8f3d1f 100%);
-  color: #fff;
-  box-shadow: 0 4px 20px rgba(143, 61, 31, 0.4);
+  border: 2px solid var(--product-line, #0b0b0b);
+  background: var(--product-accent, #dcff1a);
+  color: var(--product-accent-ink, #0b0b0b);
+  box-shadow: 4px 4px 0 #0b0b0b;
 }
 
 body.landing-saas.portal-shell .btn:not(.btn-secondary):hover {
-  filter: brightness(1.05);
+  filter: none;
+  background: #f2ff7a;
 }
 
 body.landing-saas.portal-shell .btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #f0a87a;
+  background: var(--product-panel, #fffdf8);
+  border: 2px solid var(--product-line, #0b0b0b);
+  color: var(--product-ink, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(240, 168, 122, 0.35);
-  color: #f5c4a8;
+  background: rgba(220, 255, 26, 0.35);
+  border-color: var(--product-line, #0b0b0b);
+  color: var(--product-ink, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .checkout-dui-input,
 body.landing-saas.portal-shell .checkout-dui-surface .dui-input-bordered {
-  background: rgba(8, 7, 6, 0.55) !important;
-  border-color: rgba(255, 255, 255, 0.14) !important;
-  color: #f4f0e8 !important;
+  background: #fffdf8 !important;
+  border-color: var(--product-line, #0b0b0b) !important;
+  color: #0b0b0b !important;
 }
 
 body.landing-saas.portal-shell .checkout-dui-input:focus,
 body.landing-saas.portal-shell .checkout-dui-surface .dui-input-bordered:focus {
-  outline: 2px solid rgba(240, 168, 122, 0.45);
-  border-color: rgba(240, 168, 122, 0.55) !important;
+  outline: 3px solid rgba(220, 255, 26, 0.5);
+  border-color: var(--product-line, #0b0b0b) !important;
 }
 
 body.landing-saas.portal-shell .checkout-dropzone-dui.is-dragover {
-  border-color: rgba(240, 168, 122, 0.65) !important;
-  background: rgba(143, 61, 31, 0.22) !important;
+  border-color: var(--product-line, #0b0b0b) !important;
+  background: rgba(220, 255, 26, 0.18) !important;
 }
 
 body.landing-saas.portal-shell .checkout-dui-surface .dui-table :where(th, td) {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(11, 11, 11, 0.16);
 }
 
 body.landing-saas.portal-shell .checkout-dui-surface .dui-table-zebra tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(11, 11, 11, 0.04);
 }
 
 @media (prefers-reduced-motion: reduce) {

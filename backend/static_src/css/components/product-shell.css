@@ -1,29 +1,29 @@
 @layer components {
   body.product-shell {
-    --product-bg: #0b0d10;
-    --product-panel: rgba(255, 255, 255, 0.055);
-    --product-panel-strong: rgba(255, 255, 255, 0.082);
-    --product-line: rgba(255, 255, 255, 0.12);
-    --product-line-strong: rgba(255, 255, 255, 0.2);
-    --product-ink: #f8fafc;
-    --product-muted: rgba(226, 232, 240, 0.72);
-    --product-soft: rgba(226, 232, 240, 0.52);
+    /* Palette claire alignée sur la landing (agency) — très lisible. */
+    --product-bg: #fff8ea;
+    --product-panel: #fffdf8;
+    --product-panel-strong: #f3ead6;
+    --product-line: #0b0b0b;
+    --product-line-strong: #0b0b0b;
+    --product-ink: #0b0b0b;
+    --product-muted: #4c463b;
+    --product-soft: #6f675a;
     --product-accent: #dcff1a;
-    --product-accent-ink: #0b0d10;
-    --product-blue: #67e8f9;
-    --product-pink: #ff4fd8;
-    --product-warning: #fbbf24;
-    --product-danger: #f87171;
-    --product-success: #86efac;
+    --product-accent-ink: #0b0b0b;
+    --product-blue: #00b8ff;
+    --product-pink: #ff3d8b;
+    --product-warning: #ffb02e;
+    --product-danger: #ff5470;
+    --product-success: #4ade80;
     min-height: 100vh;
     color: var(--product-ink);
     background:
-      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-      radial-gradient(circle at 12% -10%, rgba(220, 255, 26, 0.16), transparent 28rem),
-      radial-gradient(circle at 100% 12%, rgba(103, 232, 249, 0.12), transparent 24rem),
-      linear-gradient(180deg, #0b0d10 0%, #111318 46%, #0b0d10 100%);
-    background-size: 36px 36px, 36px 36px, auto, auto, auto;
+      linear-gradient(90deg, rgba(11, 11, 11, 0.04) 1px, transparent 1px),
+      linear-gradient(rgba(11, 11, 11, 0.04) 1px, transparent 1px),
+      var(--product-bg);
+    background-size: 48px 48px, 48px 48px, auto;
+    font-family: "DM Sans", "Manrope", system-ui, sans-serif;
   }
 
   body.product-shell h1,
@@ -49,7 +49,7 @@
     top: 0;
     z-index: 30;
     border-bottom: 2px solid var(--product-line);
-    background: rgba(11, 13, 16, 0.88);
+    background: rgba(255, 248, 234, 0.88);
     backdrop-filter: blur(18px);
   }
 
@@ -138,7 +138,7 @@
     border: 2px solid var(--product-line-strong);
     border-radius: 0;
     color: var(--product-ink);
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(11, 11, 11, 0.04);
   }
 
   body.product-shell .product-menu-button:hover,
@@ -173,7 +173,7 @@
   body.product-shell .product-nav__links .nav-link-button:hover,
   body.product-shell .product-nav__links .nav-link-button:focus-visible {
     border-color: var(--product-line-strong);
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(11, 11, 11, 0.06);
     color: var(--product-ink);
     text-decoration: none;
   }
@@ -231,11 +231,9 @@
   body.product-shell .prospect-panel {
     border: 2px solid var(--product-line);
     border-radius: 0;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.072), rgba(255, 255, 255, 0.035)),
-      rgba(11, 13, 16, 0.78);
+    background: var(--product-panel);
     color: var(--product-ink);
-    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.65);
+    box-shadow: 8px 8px 0 #0b0b0b;
   }
 
   body.product-shell .page-head--premium {
@@ -251,7 +249,7 @@
   body.ui-marketing-body .ui-breadcrumb {
     display: block;
     margin: 0 0 0.6rem;
-    color: var(--product-muted, rgba(226, 232, 240, 0.72));
+    color: var(--product-muted, rgba(76, 70, 59, 0.72));
     font-size: 0.78rem;
     font-weight: 850;
     letter-spacing: 0.08em;
@@ -280,13 +278,16 @@
   body.product-shell .ui-breadcrumb__item + .ui-breadcrumb__item::before,
   body.ui-marketing-body .ui-breadcrumb__item + .ui-breadcrumb__item::before {
     content: "/";
-    color: var(--product-soft, rgba(226, 232, 240, 0.52));
+    color: var(--product-soft, rgba(76, 70, 59, 0.52));
   }
 
   body.product-shell .ui-breadcrumb a,
   body.ui-marketing-body .ui-breadcrumb a {
-    color: var(--product-accent, #dcff1a);
-    text-decoration: none;
+    color: var(--product-ink, #0b0b0b);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.18em;
+    text-decoration-color: var(--product-accent, #dcff1a);
   }
 
   body.product-shell .ui-breadcrumb a:hover,
@@ -300,11 +301,16 @@
   body.product-shell .page-head__eyebrow,
   body.product-shell .portal-signal-card__eyebrow,
   body.product-shell .product-eyebrow {
+    display: inline-block;
+    width: fit-content;
     margin: 0;
-    color: var(--product-accent);
+    padding: 0.2rem 0.5rem;
+    border: 2px solid var(--product-line);
+    background: var(--product-accent);
+    color: var(--product-accent-ink);
     font-size: 0.72rem;
     font-weight: 900;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
   }
 
@@ -456,7 +462,7 @@
     border: 2px solid var(--product-line);
     background: var(--product-panel);
     color: var(--product-ink);
-    box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.55);
+    box-shadow: 5px 5px 0 #0b0b0b;
   }
 
   body.product-shell .product-command-card__index {
@@ -541,7 +547,7 @@
   body.product-shell .ui-btn-ghost,
   body.product-shell .dui-btn-ghost {
     border-color: var(--product-line-strong);
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(11, 11, 11, 0.04);
     color: var(--product-ink);
     box-shadow: none;
   }
@@ -623,7 +629,7 @@
     min-width: 2rem;
     padding: 0.2rem 0.5rem;
     border: 1px solid var(--product-line);
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(11, 11, 11, 0.05);
     color: var(--product-soft);
     font-size: 0.76rem;
   }
@@ -662,14 +668,14 @@
   body.product-shell .ui-order-secondary time,
   body.product-shell .ui-data-table td,
   body.product-shell .ui-data-table th {
-    color: rgba(248, 250, 252, 0.9);
+    color: rgba(11, 11, 11, 0.9);
   }
 
   body.product-shell .ui-table-shell {
     overflow: hidden;
     border: 2px solid var(--product-line);
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.035);
+    background: rgba(11, 11, 11, 0.035);
   }
 
   body.product-shell .ui-data-table {
@@ -678,38 +684,38 @@
   }
 
   body.product-shell .ui-data-table thead {
-    background: rgba(255, 255, 255, 0.055);
+    background: rgba(11, 11, 11, 0.055);
   }
 
   body.product-shell .ui-data-table tbody tr {
-    background: rgba(255, 255, 255, 0.035) !important;
+    background: rgba(11, 11, 11, 0.035) !important;
   }
 
   body.product-shell .ui-data-table tbody tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.055) !important;
+    background: rgba(11, 11, 11, 0.055) !important;
   }
 
   body.product-shell .ui-data-table tbody tr.ui-row-warning,
   body.product-shell .ui-mobile-order-card.ui-card-warning {
     background:
-      linear-gradient(90deg, rgba(251, 191, 36, 0.18), rgba(255, 255, 255, 0.045) 62%),
-      rgba(36, 24, 14, 0.9) !important;
+      linear-gradient(90deg, rgba(251, 176, 46, 0.42), rgba(251, 176, 46, 0.16) 70%),
+      var(--product-panel) !important;
   }
 
   body.product-shell .ui-data-table tbody tr.ui-row-anomaly,
   body.product-shell .ui-mobile-order-card.ui-card-anomaly {
     background:
-      linear-gradient(90deg, rgba(248, 113, 113, 0.18), rgba(255, 255, 255, 0.045) 62%),
-      rgba(38, 18, 16, 0.9) !important;
+      linear-gradient(90deg, rgba(255, 84, 112, 0.38), rgba(255, 84, 112, 0.14) 70%),
+      var(--product-panel) !important;
   }
 
   body.product-shell .ui-data-table tbody tr:hover {
-    background: rgba(220, 255, 26, 0.08) !important;
+    background: rgba(220, 255, 26, 0.35) !important;
   }
 
   body.product-shell .ui-table-primary-cell,
   body.product-shell .ui-table-mono {
-    color: rgba(248, 250, 252, 0.76);
+    color: rgba(11, 11, 11, 0.76);
   }
 
   body.product-shell .ui-inline-link--button {
@@ -721,7 +727,7 @@
     padding: 0.5rem 0.8rem;
     border: 1px solid var(--product-line);
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(11, 11, 11, 0.05);
     color: var(--product-ink);
     text-decoration: none;
   }
@@ -733,17 +739,17 @@
   }
 
   body.product-shell .ui-inline-flag {
-    border: 1px solid rgba(251, 191, 36, 0.32);
-    background: rgba(251, 191, 36, 0.13);
-    color: #fde68a;
+    border: 1px solid var(--product-line);
+    background: rgba(251, 176, 46, 0.32);
+    color: #7a3d00;
   }
 
   body.product-shell .ui-mobile-order-card {
     padding: 1rem;
     border: 2px solid var(--product-line);
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.045);
-    box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.55);
+    background: rgba(11, 11, 11, 0.045);
+    box-shadow: 5px 5px 0 #0b0b0b;
   }
 
   body.product-shell .product-mobile-file-card {
@@ -765,13 +771,9 @@
   body.product-shell .workflow-panel-target {
     border-color: var(--product-line) !important;
     border-radius: 0 !important;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.03)),
-      rgba(11, 13, 16, 0.72) !important;
+    background: var(--product-panel) !important;
     color: var(--product-ink);
-    box-shadow:
-      6px 6px 0 rgba(0, 0, 0, 0.55),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    box-shadow: 6px 6px 0 #0b0b0b;
   }
 
   body.product-shell .workflow-tab-group__label,
@@ -820,7 +822,7 @@
     min-width: 0;
     border: 1px solid var(--product-line);
     padding: 0.85rem;
-    background: rgba(255, 255, 255, 0.045);
+    background: rgba(11, 11, 11, 0.045);
   }
 
   body.product-shell .split-row .muted {
@@ -843,13 +845,13 @@
   body.product-shell .staff-meterage-actions {
     border: 1px solid var(--product-line);
     padding: 0.85rem;
-    background: rgba(255, 255, 255, 0.045);
+    background: rgba(11, 11, 11, 0.045);
   }
 
   body.product-shell .ui-tab-chip {
     border-color: var(--product-line) !important;
     border-radius: 0 !important;
-    background: rgba(255, 255, 255, 0.045) !important;
+    background: rgba(11, 11, 11, 0.045) !important;
     color: var(--product-muted) !important;
     text-decoration: none;
   }
@@ -872,7 +874,7 @@
   body.product-shell .empty-state {
     border: 2px dashed var(--product-line-strong);
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(11, 11, 11, 0.04);
     color: var(--product-ink);
   }
 
@@ -885,7 +887,7 @@
 
   body.product-shell .alert,
   body.product-shell .dui-alert {
-    background: rgba(255, 255, 255, 0.055);
+    background: rgba(11, 11, 11, 0.055);
     color: var(--product-ink);
   }
 
@@ -913,7 +915,7 @@
     background: rgba(248, 113, 113, 0.12);
   }
 
-  /* Badges de statut — alignés brutalisme sombre (carré, 2px, contraste AA). */
+  /* Badges de statut — blocs brutalistes clairs (carré, 2px noir, texte noir, AA). */
   body.product-shell .badge {
     display: inline-flex;
     align-items: center;
@@ -922,8 +924,8 @@
     padding: 0.18rem 0.55rem;
     border: 2px solid var(--product-line-strong);
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(248, 250, 252, 0.94);
+    background: var(--product-panel-strong);
+    color: var(--product-ink);
     font-size: 0.72rem;
     font-weight: 850;
     letter-spacing: 0.06em;
@@ -931,27 +933,27 @@
   }
 
   body.product-shell .badge.is-success {
-    border-color: rgba(134, 239, 172, 0.5);
-    background: rgba(134, 239, 172, 0.14);
-    color: #bbf7d0;
+    border-color: var(--product-line-strong);
+    background: #9ef01a;
+    color: #0b0b0b;
   }
 
   body.product-shell .badge.is-warning {
-    border-color: rgba(251, 191, 36, 0.5);
-    background: rgba(251, 191, 36, 0.15);
-    color: #fde68a;
+    border-color: var(--product-line-strong);
+    background: #ffb02e;
+    color: #0b0b0b;
   }
 
   body.product-shell .badge.is-danger {
-    border-color: rgba(248, 113, 113, 0.52);
-    background: rgba(248, 113, 113, 0.16);
-    color: #fecaca;
+    border-color: var(--product-line-strong);
+    background: #ff5470;
+    color: #0b0b0b;
   }
 
   body.product-shell .badge.is-neutral {
     border-color: var(--product-line-strong);
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(226, 232, 240, 0.82);
+    background: var(--product-panel-strong);
+    color: var(--product-ink);
   }
 
   /* Finitions de cohérence brutaliste (pills meta, prochaine action, code titre). */
@@ -967,15 +969,13 @@
     margin: 0 0 1.2rem;
     padding: 0.9rem 1.05rem;
     border: 2px solid var(--product-line);
-    border-left: 6px solid var(--product-accent);
-    background:
-      linear-gradient(180deg, rgba(220, 255, 26, 0.06), rgba(255, 255, 255, 0.03)),
-      rgba(11, 13, 16, 0.72);
-    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.55);
+    border-left: 8px solid var(--product-accent);
+    background: var(--product-panel);
+    box-shadow: 6px 6px 0 #0b0b0b;
   }
 
   body.product-shell .workflow-next-action__label {
-    color: var(--product-accent);
+    color: var(--product-ink);
     font-family: "Space Grotesk", system-ui, sans-serif;
     font-size: 0.72rem;
     font-weight: 900;
@@ -999,9 +999,9 @@
     display: inline-block;
     margin-top: 0.15rem;
     padding: 0.05em 0.4em;
-    border: 1px solid var(--product-line-strong);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--product-accent);
+    border: 2px solid var(--product-line-strong);
+    background: var(--product-accent);
+    color: var(--product-accent-ink);
     font-size: 0.5em;
     font-weight: 700;
     letter-spacing: 0;
@@ -1048,7 +1048,7 @@
     gap: 0.65rem;
     border: 2px solid var(--product-line);
     padding: 0.7rem 0.8rem;
-    background: rgba(255, 255, 255, 0.045);
+    background: rgba(11, 11, 11, 0.045);
     color: var(--product-muted);
     font-size: 0.86rem;
     font-weight: 850;
@@ -1116,7 +1116,7 @@
   body.product-shell .dui-table th,
   body.product-shell .dui-table td {
     border-bottom: 1px solid var(--product-line);
-    color: rgba(248, 250, 252, 0.88);
+    color: rgba(11, 11, 11, 0.88);
   }
 
   body.product-shell .dui-divider {
@@ -1126,7 +1126,7 @@
   body.product-shell input[type="color"] {
     border: 2px solid var(--product-line-strong) !important;
     border-radius: 0 !important;
-    background: rgba(255, 255, 255, 0.08) !important;
+    background: rgba(11, 11, 11, 0.08) !important;
   }
 
   body.product-shell .product-form-grid {
@@ -1149,13 +1149,13 @@
     min-height: 2.95rem;
     border: 2px solid var(--product-line-strong);
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.075);
+    background: rgba(11, 11, 11, 0.075);
     color: var(--product-ink);
   }
 
   body.product-shell .checkout-dui-input::placeholder,
   body.product-shell .ui-input::placeholder {
-    color: rgba(226, 232, 240, 0.5);
+    color: rgba(76, 70, 59, 0.5);
   }
 
   body.product-shell .checkout-dui-input:focus,

@@ -75,8 +75,25 @@ Parcours testés en session réelle (client `client.a.owner`, staff) :
 
 **Conclusion** : les logiques métier sont exposées de façon guidée et cohérente (steppers, prochaine action contextuelle, statuts lisibles). Aucune incohérence de logique relevée ; les seules frictions étaient visuelles (badges, eyebrows, labels de groupe, bloc « étape suivante ») et sont corrigées.
 
+## Lot 3 — Cohérence couleur 100 % (re-thème clair = landing)
+
+Demande : *« cohérence des couleurs, comme la landing page, très lisible pour toutes les vues, cohérence à 100 % »*. Le portail et le tunnel étaient en **thème sombre** (`#0b0d10` / `#0c0a09`), divergents de la landing « agency » **claire** (papier `#fff8ea`, encre `#0b0b0b`, bordures noires, ombres dures, accents acid/cyan/pink/orange).
+
+### Bascule réalisée
+- **Tokens `--product-*`** redéfinis sur la palette claire de la landing (papier, encre noire, bordures noires, accents acid `#dcff1a` / cyan `#00b8ff` / pink `#ff3d8b`). (`components/product-shell.css`)
+- **Fonds** : grille papier (comme la landing) au lieu des dégradés sombres, sur `body.product-shell` **et** `body.prospect-tunnel-page`.
+- **Surfaces** : conversion systématique des `rgba(255,255,255,…)` (panneaux/bordures pensés pour fond sombre) → teintes sombres sur clair ; cartes en panneaux blancs `#fffdf8` + bordure 2px noire + ombre dure `8px 8px 0 #0b0b0b`.
+- **Texte** : tous les textes clairs (`#faf7f2`, `#f4f0e8`, `rgba(244,240,232,…)`) → encre `#0b0b0b` / muted `#4c463b`.
+- **Acid en texte → pastilles** : l'acid étant illisible en texte sur fond clair, les eyebrows/kickers/labels passent en **pastilles acid à texte noir** (eyebrows portail + tunnel, labels de groupe, UUID).
+- **Badges** : blocs colorés à **texte noir** (success vert, warning ambre, danger rose) lisibles sur clair.
+- **Legacy non-layered** (`legacy/app-legacy.css`) : le gros bloc `body.landing-saas.portal-shell …` (texte clair / fonds sombres, prioritaire car hors `@layer`) ainsi que le dégradé blanc de `.brand-link` et le bloc `landing-auth-shell` (login) ont été convertis en clair (cartes blanches, bordures/boutons acid, inputs clairs).
+- **Tunnel** (`components/prospect-tunnel.css`) : fond papier, champs clairs, cartes de choix blanches + état sélectionné acid (radio activité rose), stepper « done » acid, track multicolore.
+
+### Surfaces vérifiées (navigateur, après rebuild `app.css?v=20260620g`)
+Landing (déjà claire), **login**, dashboard client, fiche commande client, **checkout**, liste commandes staff, **fiche commande staff** (barre de commande + montant), **tunnel prospect** (étapes + cartes de choix + état sélectionné) : toutes en palette claire identique, contraste AA, 100 % cohérentes avec la landing.
+
 ## Validation
 
-- `npm run build:css` puis `collectstatic` (Docker), cache-bust `app.css?v=20260620d`, redémarrage `web`.
+- `npm run build:css` puis `collectstatic` (Docker), cache-bust `app.css?v=20260620g`, redémarrage `web`.
 - Tests de cohérence UI : `apps.portal.tests.test_ui_coherence` → **17/17 OK**.
-- Re-crawl navigateur des surfaces corrigées (badges lisibles, eyebrows + labels de groupe alignés acid, carte « étape suivante », UUID en puce mono, motion reduced-motion safe).
+- Re-crawl navigateur de **toutes** les surfaces (client + staff + tunnel + login) : fond papier, bordures noires, ombres dures, accents acid/cyan/pink, textes encre lisibles, badges lisibles.
