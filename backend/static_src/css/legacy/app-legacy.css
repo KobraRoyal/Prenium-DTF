@@ -1210,7 +1210,7 @@ body.landing-saas .muted {
   color: rgba(11, 11, 11, 0.62);
 }
 
-body.landing-saas a {
+body.landing-saas .landing-main a {
   color: #f0a87a;
 }
 
@@ -1255,6 +1255,18 @@ body.prospect-tunnel-page .agency-brand__link {
 body.landing-saas .product-brand__name {
   -webkit-text-fill-color: #0b0b0b;
   color: #0b0b0b;
+}
+
+/* CTA header : texte encre sur fond acide (évite héritage papier du header sombre). */
+body.ui-marketing-body .agency-header .agency-nav__cta,
+body.ui-marketing-body .agency-header .landing-mobile-primary-cta,
+body.ui-marketing-body .agency-header .agency-nav__cta:hover,
+body.ui-marketing-body .agency-header .landing-mobile-primary-cta:hover,
+body.ui-marketing-body .agency-header .agency-nav__cta:focus-visible,
+body.ui-marketing-body .agency-header .landing-mobile-primary-cta:focus-visible {
+  color: #0b0b0b !important;
+  -webkit-text-fill-color: #0b0b0b !important;
+  background: var(--agency-acid, #dcff1a);
 }
 
 body.landing-saas .brand-subtitle {

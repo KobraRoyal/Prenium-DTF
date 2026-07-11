@@ -35,7 +35,7 @@
     letter-spacing: 0;
   }
 
-  body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) a {
+  body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) a:not(.agency-nav__cta):not(.landing-mobile-primary-cta) {
     color: inherit;
   }
 
@@ -148,11 +148,15 @@
     background: var(--agency-acid);
   }
 
-  body.ui-marketing-body.landing-saas .agency-nav__cta,
-  body.ui-marketing-body.landing-saas .landing-mobile-primary-cta {
+  /* Spécificité renforcée (:not) pour battre la règle générique
+     `...:not(.portal-shell):not(.prospect-tunnel-page) a { color: inherit }`
+     et garantir un texte encre lisible sur le fond acide du CTA. */
+  body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page).landing-saas .agency-nav__cta,
+  body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page).landing-saas .landing-mobile-primary-cta {
     border: 2px solid var(--agency-paper);
     border-radius: 0;
     color: var(--agency-ink);
+    -webkit-text-fill-color: var(--agency-ink);
     background: var(--agency-acid);
     box-shadow: none;
     font-weight: 900;
