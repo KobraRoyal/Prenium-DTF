@@ -6,15 +6,16 @@ Ce dossier regroupe la configuration Docker, Nginx et les scripts runtime.
 
 Le projet distingue maintenant deux usages :
 
-- `docker-compose.yml` : stack locale de développement. `web` et `worker` utilisent la cible d’image `dev` et montent le code source hôte dans `/app`.
-- `docker-compose.prod.yml` : stack autonome orientée production. `web` et `worker` utilisent la cible d’image `prod` et n’embarquent pas le bind mount `.:/app`.
+- `docker-compose.yml` : stack locale de développement. `web`, `worker` et `beat` utilisent la cible d’image `dev` et montent le code source hôte dans `/app`.
+- `docker-compose.prod.yml` : stack autonome orientée production. `web`, `worker` et `beat` utilisent la cible d’image `prod` et n’embarquent pas le bind mount `.:/app`.
+- la stack production force `DJANGO_SETTINGS_MODULE=config.settings.prod`, même si le `.env` local indique les settings de développement.
 
 Exemples :
 
 ```bash
-docker compose up -d db redis web worker nginx
+docker compose up -d db redis web worker beat nginx
 docker compose -f docker-compose.prod.yml config
-docker compose -f docker-compose.prod.yml build web worker
+docker compose -f docker-compose.prod.yml build web worker beat
 ```
 
 ## Image backend Docker
@@ -27,7 +28,7 @@ Le Dockerfile backend expose deux cibles principales :
 Commandes qualité sous Docker Compose local :
 
 ```bash
-docker compose build web worker
+docker compose build web worker beat
 docker compose run --rm --entrypoint sh web -lc 'cd /app && ruff check .'
 docker compose run --rm --entrypoint sh web -lc 'cd /app && ruff format --check .'
 docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest'
@@ -66,6 +67,16 @@ Ce mode reste acceptable pour le local et un environnement simple, mais il impli
 - un plan de rollback explicite si une migration échoue ;
 - l’absence de montée concurrente incontrôlée de plusieurs réplicas `web`.
 
+### Garde-fous production
+
+Les settings `config.settings.prod` refusent de démarrer si :
+
+- `DJANGO_SECRET_KEY` n’est pas suffisamment longue et aléatoire ;
+- SMTP TLS et SSL sont activés simultanément ;
+- les emails transactionnels sont actifs avec un hôte SMTP vide ou `localhost`.
+
+Pour un environnement sans SMTP, définir explicitement `TRANSACTIONAL_EMAILS_ENABLED=False`.
+
 ## Runbook de release Docker
 
 ### Pré-check release
@@ -74,7 +85,7 @@ Avant tout déploiement orienté production :
 
 ```bash
 docker compose -f docker-compose.prod.yml config
-docker compose -f docker-compose.prod.yml build web worker nginx
+docker compose -f docker-compose.prod.yml build web worker beat nginx
 docker compose -f docker-compose.prod.yml run --rm --no-deps --entrypoint sh web -lc 'cd /app/backend && python manage.py check'
 docker compose -f docker-compose.prod.yml run --rm --no-deps --entrypoint sh web -lc 'cd /app/backend && python manage.py migrate --plan'
 ```
@@ -92,7 +103,7 @@ Pour un environnement simple sans orchestration avancée :
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d db redis
-docker compose -f docker-compose.prod.yml up -d web worker nginx
+docker compose -f docker-compose.prod.yml up -d web worker beat nginx
 docker compose -f docker-compose.prod.yml ps
 curl --fail --silent --show-error http://localhost:8080/healthz/
 ```
@@ -110,6 +121,7 @@ Si le déploiement échoue après rebuild :
 ```bash
 docker compose -f docker-compose.prod.yml logs --tail=200 web
 docker compose -f docker-compose.prod.yml logs --tail=200 worker
+docker compose -f docker-compose.prod.yml logs --tail=200 beat
 docker compose -f docker-compose.prod.yml ps
 ```
 

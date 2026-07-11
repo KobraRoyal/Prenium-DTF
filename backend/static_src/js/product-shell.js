@@ -1,35 +1,96 @@
+function productMenuForButton(button) {
+  const targetId = button.getAttribute("aria-controls");
+  return targetId ? document.getElementById(targetId) : null;
+}
+
+function productMenuButtonForMenu(menu) {
+  if (!menu.id) {
+    return null;
+  }
+
+  return document.querySelector(
+    `[data-product-menu-toggle][aria-controls="${menu.id}"]`
+  );
+}
+
+function setProductMenuOpen(button, menu, open) {
+  menu.classList.toggle("is-open", open);
+  button.setAttribute("aria-expanded", open ? "true" : "false");
+
+  const label = open ? button.dataset.menuCloseLabel : button.dataset.menuOpenLabel;
+  if (label) {
+    button.setAttribute("aria-label", label);
+  }
+}
+
+function closeProductMenus(exceptMenu = null) {
+  document.querySelectorAll("[data-product-menu].is-open").forEach((menu) => {
+    if (menu === exceptMenu) {
+      return;
+    }
+
+    const button = productMenuButtonForMenu(menu);
+    if (button) {
+      setProductMenuOpen(button, menu, false);
+      return;
+    }
+
+    menu.classList.remove("is-open");
+  });
+}
+
 function initProductMenuFallback() {
   document.querySelectorAll("[data-product-menu-toggle]").forEach((button) => {
-    const targetId = button.getAttribute("aria-controls");
-    const menu = targetId ? document.getElementById(targetId) : null;
-
-    if (!menu || button.dataset.productMenuReady === "true") {
+    const menu = productMenuForButton(button);
+    if (!menu) {
       return;
     }
 
     button.dataset.productMenuReady = "true";
+    setProductMenuOpen(button, menu, menu.classList.contains("is-open"));
+  });
 
-    const setOpen = (open) => {
-      menu.classList.toggle("is-open", open);
-      button.setAttribute("aria-expanded", open ? "true" : "false");
-    };
+  if (document.documentElement.dataset.productMenuGlobalReady === "true") {
+    return;
+  }
 
-    button.addEventListener("click", () => {
-      setOpen(button.getAttribute("aria-expanded") !== "true");
-    });
+  document.documentElement.dataset.productMenuGlobalReady = "true";
 
-    menu.addEventListener("click", (event) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest("a, button[type='submit']")) {
-        setOpen(false);
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const button = target.closest("[data-product-menu-toggle]");
+    if (button) {
+      const menu = productMenuForButton(button);
+      if (!menu) {
+        return;
       }
-    });
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    });
+      event.preventDefault();
+      event.stopPropagation();
+      const shouldOpen = button.getAttribute("aria-expanded") !== "true";
+      closeProductMenus(menu);
+      setProductMenuOpen(button, menu, shouldOpen);
+      return;
+    }
+
+    if (target.closest("[data-product-menu] a, [data-product-menu] button[type='submit']")) {
+      closeProductMenus();
+      return;
+    }
+
+    if (!target.closest("[data-product-menu].is-open")) {
+      closeProductMenus();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeProductMenus();
+    }
   });
 }
 
@@ -50,12 +111,15 @@ function initSubmitLoadingState() {
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+function initProductShell() {
   initProductMenuFallback();
   initSubmitLoadingState();
-});
+}
 
-document.body.addEventListener("htmx:afterSwap", () => {
-  initProductMenuFallback();
-  initSubmitLoadingState();
-});
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initProductShell);
+} else {
+  initProductShell();
+}
+
+document.body.addEventListener("htmx:afterSwap", initProductShell);

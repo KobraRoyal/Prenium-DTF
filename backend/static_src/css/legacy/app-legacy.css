@@ -1,4 +1,18 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Manrope:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap");
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 1000;
+  src: url("../vendor/fonts/dm-sans-latin-wght-normal.woff2") format("woff2-variations");
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url("../vendor/fonts/space-grotesk-latin-wght-normal.woff2") format("woff2-variations");
+}
 
 :root {
   color-scheme: light;
@@ -68,6 +82,40 @@ a {
   margin: 0.2rem 0 0;
   color: #d2c8bc;
   font-size: 0.8rem;
+}
+
+/* Identité partagée : règles non-layered pour rester prioritaires face au
+   socle historique, quel que soit le shell (landing, auth ou portail). */
+body .ui-brand-lockup__mark,
+body .ui-brand-lockup__mark:hover,
+body .ui-brand-lockup__name,
+body .ui-brand-lockup__name:hover {
+  color: #0b0b0b !important;
+  -webkit-text-fill-color: #0b0b0b;
+}
+
+body .ui-brand-lockup__subtitle {
+  color: #6f675a !important;
+}
+
+body.ui-marketing-body .agency-header .ui-brand-lockup__name,
+body.ui-marketing-body .agency-header .ui-brand-lockup__name:hover {
+  color: #fff8ea !important;
+  -webkit-text-fill-color: #fff8ea;
+}
+
+body.ui-marketing-body .agency-header .ui-brand-lockup__subtitle {
+  color: rgba(255, 248, 234, 0.72) !important;
+}
+
+body.ui-marketing-body.prospect-tunnel-page .agency-header .ui-brand-lockup__name,
+body.ui-marketing-body.prospect-tunnel-page .agency-header .ui-brand-lockup__name:hover {
+  color: #0b0b0b !important;
+  -webkit-text-fill-color: #0b0b0b;
+}
+
+body.ui-marketing-body.prospect-tunnel-page .agency-header .ui-brand-lockup__subtitle {
+  color: rgba(11, 11, 11, 0.64) !important;
 }
 
 .nav-group {
@@ -1188,6 +1236,23 @@ body.landing-saas .landing-brand .brand-link {
   background: none;
   -webkit-background-clip: border-box;
   background-clip: border-box;
+}
+
+/* Couleur de marque dépendante du contexte de header.
+   - Landing marketing (home/services) : header sombre -> marque papier.
+   - Tunnel prospect (base_tunnel) : header clair -> marque encre.
+   - Portail / login : header clair -> marque encre. */
+body.landing-saas .agency-brand__link {
+  -webkit-text-fill-color: var(--agency-paper, #fff8ea);
+  color: var(--agency-paper, #fff8ea);
+}
+
+body.prospect-tunnel-page .agency-brand__link {
+  -webkit-text-fill-color: #0b0b0b;
+  color: #0b0b0b;
+}
+
+body.landing-saas .product-brand__name {
   -webkit-text-fill-color: #0b0b0b;
   color: #0b0b0b;
 }

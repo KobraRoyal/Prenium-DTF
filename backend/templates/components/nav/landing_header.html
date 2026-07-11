@@ -1,21 +1,21 @@
-<header class="app-header landing-saas-header agency-header" x-data="{ mobileNav: false }">
+{% with current_url=request.resolver_match.url_name current_namespace=request.resolver_match.namespace %}
+<header class="app-header landing-saas-header agency-header">
   <div class="app-main app-nav landing-saas-nav agency-nav max-md:flex-col max-md:items-stretch max-md:gap-3">
     <div class="ui-brand-row">
-      <div class="landing-brand landing-brand--signature agency-brand">
-        <a class="brand-link agency-brand__link" href="{% url 'home' %}">Prenium DTF</a>
-        <p class="brand-subtitle agency-brand__subtitle">via IDS supply</p>
-      </div>
+      {% include "components/brand/logo.html" %}
       <div class="flex shrink-0 items-center gap-2 md:!hidden">
-        <a class="btn btn-nav-cta landing-mobile-primary-cta" href="{% url 'prospects:step1' %}">Accès pro</a>
+        {% if current_namespace != "prospects" %}
+        <a class="agency-nav__cta landing-mobile-primary-cta" href="{% url 'prospects:step1' %}">Démarrer</a>
+        {% endif %}
         <button
           type="button"
           class="agency-menu-toggle"
-          data-landing-menu-toggle="landing-primary-nav"
-          @click="mobileNav = !mobileNav"
+          data-product-menu-toggle
           aria-expanded="false"
-          :aria-expanded="mobileNav"
           aria-controls="landing-primary-nav"
           aria-label="Ouvrir le menu"
+          data-menu-open-label="Ouvrir le menu"
+          data-menu-close-label="Fermer le menu"
         >
           <span class="agency-menu-toggle__lines" aria-hidden="true"><span></span><span></span><span></span></span>
           <span class="ui-sr-only">Menu</span>
@@ -25,15 +25,19 @@
     <nav
       id="landing-primary-nav"
       class="nav-group landing-saas-nav__links agency-nav__links !hidden w-full flex-col flex-wrap gap-1 md:!flex md:w-auto md:flex-row md:items-center md:gap-2"
-      data-landing-menu
-      :class="{ '!flex': mobileNav }"
+      data-product-menu
+      aria-label="Navigation principale"
     >
-      <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'home' %}#landing-services">Services</a>
+      <a class="nav-link nav-link--ghost agency-nav__link{% if current_url == 'services' %} is-active{% endif %}" {% if current_url == 'services' %}aria-current="page"{% endif %} href="{% url 'services' %}">Services</a>
+      {% if current_namespace != "prospects" %}
       <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'home' %}#landing-cases">Cas</a>
-      <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'home' %}#landing-team">Équipe</a>
       <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'home' %}#landing-contact">Contact</a>
-      <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'portal:login' %}">Espace client</a>
-      <a class="btn btn-nav-cta agency-nav__cta" href="{% url 'services' %}">Commander</a>
+      {% endif %}
+      <a class="nav-link nav-link--ghost agency-nav__link agency-nav__link--secondary" href="{% url 'portal:login' %}">Connexion</a>
+      {% if current_namespace != "prospects" %}
+      <a class="agency-nav__cta agency-nav__cta--primary" href="{% url 'prospects:step1' %}">Demander un accès</a>
+      {% endif %}
     </nav>
   </div>
 </header>
+{% endwith %}

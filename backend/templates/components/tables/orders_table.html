@@ -70,13 +70,13 @@
   </table>
 </div>
 
-<div class="md:hidden space-y-3" role="feed" aria-label="Liste des commandes">
+<div class="md:hidden space-y-3" aria-label="Liste des commandes">
   {% for order in orders %}
   <article class="ui-mobile-order-card {% if order.credit_hold_status == 'blocked' or order.status == 'cancelled' %}ui-card-anomaly{% elif order.credit_hold_status == 'warning' or order.pricing_status != 'priced' %}ui-card-warning{% endif %}">
     <div class="flex flex-wrap items-start justify-between gap-2">
       <div>
         <p class="muted text-xs">Commande</p>
-        <p class="font-mono text-sm text-[color:var(--ink)] ui-table-mono">{{ order.public_id }}</p>
+        <p class="font-mono text-sm ui-table-mono">{{ order.public_id }}</p>
       </div>
       {% if variant == "staff" %}
       <div class="text-right">
@@ -91,7 +91,7 @@
       <span class="ui-inline-flag">Tarif à confirmer</span>
       {% endif %}
       {% if order.pricing_status != "priced" %}
-      <span class="text-sm text-[color:var(--ink)]/80">Total : <span class="muted">En attente</span></span>
+      <span class="text-sm">Total : <span class="muted">En attente</span></span>
       {% else %}
       <span class="text-sm">Total : <strong>{{ order.total_amount }} {{ order.currency }}</strong></span>
       {% endif %}

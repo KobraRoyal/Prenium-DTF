@@ -6,6 +6,28 @@
 
 ---
 
+## Mise à jour — 13 juin 2026
+
+| Indicateur | Valeur |
+|------------|--------|
+| **Score de cohérence UI/UX ciblée** | **100 / 100** |
+| **Périmètre validé** | Landing, services, tunnel prospect, login, portail client, checkout, fiches commandes client/staff, panneaux HTMX uploads/billing. |
+| **Validation** | `manage.py check`, tests `apps.portal.tests apps.prospects.tests`, audit navigateur desktop/mobile sur landing/prospect/checkout, rendu serveur client/staff des fiches commande. |
+
+Checklist clôturée :
+
+- [x] Breadcrumbs profonds migrés vers `nav.ui-breadcrumb` avec `aria-current`.
+- [x] Login aligné sur les surfaces `product-shell`, sans conteneur glass legacy.
+- [x] Checkout et panels ciblés sans `shadow-xl`, `backdrop-blur-sm`, `bg-white/5` ni `role="feed"`.
+- [x] Stepper checkout clarifié : l’avancement réel n’est plus sur-vendu.
+- [x] Onglets commande renforcés : `tablist`, `tab`, `tabpanel`, `aria-selected`, `aria-busy`, lien panel/tab et navigation clavier.
+- [x] Menu mobile public doté du même hook fallback JS que le portail.
+- [x] Formulaire prospect étape 1 avec labels visibles sur les champs texte/select.
+
+Note : ce score couvre la cohérence UI/UX de la refonte et les écarts listés lors de la revue du 13 juin 2026. Les sujets métier hors UI, sécurité avancée ou intégrations externes restent évalués par leurs checklists dédiées.
+
+---
+
 ## 1. Synthèse exécutive
 
 | Indicateur | Valeur |
@@ -176,3 +198,26 @@ Exemples relevés dans les templates :
 
 - Re-scorer après traitement des **P1** et au moins **2 items P2** (design system + onglets).
 - Cible indicative : **≥ 75/100** pour qualifier l’espace client de « premium » au sens de ce document.
+
+---
+
+## 9. Mise à jour — système de boutons
+
+Lot du 2026-06-14 :
+
+- Ajout d’une couche commune `components/buttons.css` pour unifier les actions SaaS (`ui-btn`, `ui-btn-primary`, `ui-btn-secondary`, `ui-btn-ghost`, `ui-btn-danger`, `ui-btn-sm`, `ui-btn-wide`, `ui-btn-block`).
+- Tokens d’action ajoutés dans `tokens.css` : hauteur minimale, bordure, ombre dure, transition, couleurs primaire/secondaire.
+- Portail client/staff, checkout, login, empty states, tunnel prospect et actions staff migrés vers les classes sémantiques `ui-btn`.
+- Conservation du style landing brutaliste via `agency-button` et du CTA nav marketing, mais avec la même exigence de cible tactile et hiérarchie.
+- Tests de cohérence ajoutés pour empêcher le retour de boutons métier en `.btn` brut ou en `dui-btn` forcé.
+
+## 10. Mise à jour — audit global des vues
+
+Lot du 2026-06-14 :
+
+- Audit global ajouté : `docs/product-design/AUDIT_GLOBAL_UI_UX_VUES_2026-06-14.md`.
+- Orchestration avec 3 sous-agents : surfaces publiques/prospect, portail client/staff, scan statique transverse.
+- P1 onglets HTMX traité par persistance `?panel=...`, `hx-push-url` et chargement initial du panneau actif.
+- Header landing et portail harmonisés : suppression des anciens boutons `.btn` dans les templates de navigation, mode `auth` neutre sur login, libellés staff FR.
+- États vides client/staff rendus actionnables.
+- Panneau shipping staff aligné avec le payload backend déjà accepté.

@@ -16,6 +16,7 @@ Services actuellement utilisés via `docker-compose.yml` :
 - `redis` : cache Django et broker / backend Celery
 - `web` : Django + Gunicorn
 - `worker` : Celery worker
+- `beat` : planificateur Celery (tracking Sendcloud périodique)
 - `nginx` : reverse proxy HTTP et statiques
 
 Il n'existe pas de service `frontend` dédié. Le CSS est construit dans la chaîne Docker du backend.
@@ -46,7 +47,6 @@ Le backend est déjà en place, avec apps métier séparées :
 - `production`
 - `prospects`
 - `shipping`
-- `shipping_sendcloud`
 - `uploads`
 
 Configuration Django :
@@ -61,7 +61,7 @@ Assets UI :
 Démarrer la pile :
 
 ```bash
-docker compose up -d db redis web worker nginx
+docker compose up -d db redis web worker beat nginx
 ```
 
 Healthcheck :

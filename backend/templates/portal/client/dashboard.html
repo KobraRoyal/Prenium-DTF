@@ -13,8 +13,8 @@
     <p>Accès direct à vos dernières commandes et aux actions prioritaires.</p>
     {% if customer %}
     <div class="portal-signal-card__actions">
-      <a class="btn" href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Commander maintenant</a>
-      <a class="btn btn-secondary" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Voir toutes les commandes</a>
+      <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Commander maintenant</a>
+      <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Voir toutes les commandes</a>
     </div>
     {% endif %}
     {% else %}
@@ -38,7 +38,7 @@
     <p>Créer une demande déclenche un espace sécurisé pour les fichiers et le contrôle atelier.</p>
     {% if customer %}
     <div class="product-command-card__action">
-      <a class="btn" href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Démarrer</a>
+      <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Démarrer</a>
     </div>
     {% endif %}
   </article>
@@ -48,7 +48,7 @@
     <p>Chaque fiche commande expose uploads, inspection, production, expédition et facturation.</p>
     {% if customer %}
     <div class="product-command-card__action">
-      <a class="btn btn-secondary" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Consulter</a>
+      <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Consulter</a>
     </div>
     {% endif %}
   </article>
@@ -69,8 +69,8 @@
     </div>
     {% if customer %}
     <div class="flex flex-wrap gap-2">
-      <a class="btn" href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Commander maintenant</a>
-      <a class="btn btn-secondary" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Voir toutes les commandes</a>
+      <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Commander maintenant</a>
+      <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Voir toutes les commandes</a>
     </div>
     {% endif %}
   </div>

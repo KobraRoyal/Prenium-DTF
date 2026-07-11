@@ -17,3 +17,9 @@ def test_ping_task_returns_pong():
     result = ping_task.delay()
 
     assert result.get(timeout=1) == "pong"
+
+
+def test_sendcloud_tracking_schedule_is_enabled(settings):
+    schedule = settings.CELERY_BEAT_SCHEDULE["shipping-sync-stale-tracking"]
+
+    assert schedule["task"] == "shipping.sync_stale_shipments_tracking"

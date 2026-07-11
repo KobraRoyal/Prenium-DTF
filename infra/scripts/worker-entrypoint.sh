@@ -9,4 +9,5 @@ mkdir -p "$MEDIA_ROOT"
 chown -R app:app "$MEDIA_ROOT"
 
 exec gosu app celery -A config worker \
-  --loglevel="${CELERY_LOGLEVEL:-info}"
+  --loglevel="${CELERY_LOGLEVEL:-info}" \
+  --concurrency="${CELERY_WORKER_CONCURRENCY:-2}"

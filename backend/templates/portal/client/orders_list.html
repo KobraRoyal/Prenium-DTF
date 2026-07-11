@@ -23,7 +23,8 @@
   </nav>
   {% endif %}
   {% else %}
-  {% include "components/ui/empty_state.html" with title="Aucune commande" message="Vous n'avez pas encore de commandes dans cet espace client." %}
+  {% url 'portal:client-checkout' customer_public_id=customer.public_id as checkout_url %}
+  {% include "components/ui/empty_state.html" with title="Aucune commande" message="Vous n'avez pas encore de commandes dans cet espace client." cta_url=checkout_url cta_label="Créer une commande" %}
   {% endif %}
 </section>
 {% endblock %}

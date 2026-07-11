@@ -24,6 +24,9 @@
 - [x] Micro-lot 11.6 — Hardening transverse UI (contraste, hiérarchie, cartes, badges, onglets, feedback)
 - [x] Micro-lot 11.7 — Landing + prospect hardening UI (hero, sections marketing, tunnel, stepper, formulaires)
 - [x] Micro-lot 11.8 — Signature UI 2026 (landing éditoriale + dashboards premium hiérarchisés)
+- [x] Micro-lot 11.9 — Cohérence UI/UX 100% ciblée (breadcrumbs, auth, checkout, panels, tabs, menu mobile, labels)
+- [x] Micro-lot 11.10 — Système de boutons SaaS unifié et cohérent
+- [x] Micro-lot 11.11 — Audit global UI/UX par app et vues + corrections de cohérence SaaS
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement
@@ -46,6 +49,9 @@
 - [x] Lot 11.4 — Harmonisation frontend P2 (prospects, formulaires staff, hiérarchie fiche staff, feedback HTMX local, page services enrichie) livrée sans changement métier
 - [x] Lot 11.5 — Optimisation frontend P3 (proof landing, tables, skeletons, iconographie) livrée sans changement métier
 - [x] Lot 11.8 — Refonte visuelle 2026 landing + portail livrée sans impact métier ni permissions
+- [x] Lot 11.9 — Audit cohérence UI/UX ciblé clôturé à 100/100 sans impact métier ni permissions
+- [x] Lot 11.10 — Système de boutons SaaS unifié livré sur portail/prospect/actions staff
+- [x] Lot 11.11 — Audit global UI/UX orchestré par sous-agents, corrections header/tabs/empty states/shipping et documentation livrées
 
 ## Derniers chantiers transverses
 
@@ -147,6 +153,9 @@
 - [x] Micro-lot 11.7: landing/services et tunnel prospect renforcés visuellement sans changement de logique métier
 - [x] Micro-lot 11.8: landing éditoriale renforcée et dashboards client/staff hiérarchisés avec tables plus premium
 - [x] Micro-lot 11.8: shells landing et tunnel prospect restaurés pour contenir les sections, supprimer l'effet bord a bord et garder une cohérence avec le shell global
+- [x] Micro-lot 11.9: breadcrumbs profonds, login, checkout, panels uploads/billing, tabs HTMX, fallback menu mobile et labels prospect alignés sur le product-shell brutaliste
+- [x] Micro-lot 11.10: système de boutons SaaS unifié (`ui-btn`) appliqué aux actions portail/prospect avec hiérarchie primaire/secondaire, états focus/loading et cible tactile 44px
+- [x] Micro-lot 11.11: audit global des vues par app orchestré avec sous-agents ; nav SaaS, tabs `?panel=`, états vides, shipping staff et langage staff harmonisés
 
 ## Vague 2 — Sprints ciblant les fonctionnalités manquantes (vision V1)
 - [x] Sprint 14 — Emails transactionnels (`docs/sprints/sprint-14-emails-transactionnels.md`) — base livrée (`apps.notifications`, hooks commande / paiement / B2B)
@@ -159,4 +168,36 @@
 - Modèle B2B (produit, parcours, grille, laize, encours) : `docs/architecture/B2B_PRODUCT_AND_OPERATIONS.md`
 - Architecture technique commandes B2B facturation différée : `docs/architecture/B2B_DEFERRED_BILLING.md`
 - Audit UI/UX portail client (score, backlog P1–P3) : `docs/product-design/AUDIT_PORTAIL_CLIENT_UI_UX_2026.md`
+- Audit global UI/UX des vues par app : `docs/product-design/AUDIT_GLOBAL_UI_UX_VUES_2026-06-14.md`
 - Index product design : `docs/product-design/README.md`
+
+## Sprint 19 — Operational readiness (2026-07-10)
+
+- [x] Découverte complète des tests et boucle Ruff Python 3.12 rétablies
+- [x] Celery Beat ajouté aux stacks locale et production
+- [x] Polling Sendcloud périodique activé hors settings de développement
+- [x] Emails transactionnels asynchrones avec retries Celery
+- [x] Variables production et HSTS documentés
+- [x] HTMX et Alpine.js auto-hébergés, npm/pip audit sans vulnérabilité connue
+- [x] Suite complète : 261 tests passés sous Python 3.12
+- [x] Builds Docker local/production et smoke des six services validés
+- [ ] Recette avec secrets et APIs réels sur l’environnement cible
+
+## Sprint 20 — Frontend UI/UX haute performance (2026-07-10)
+
+- [x] Hero mobile recentré sur le CTA et les preuves prioritaires
+- [x] Polices auto-hébergées et runtime marketing allégé
+- [x] Compression gzip et cache statique Nginx activés
+- [x] Aucun overflow horizontal à 375 px et console navigateur propre
+- [x] Lighthouse mobile : 98 performance, 100 accessibilité, 100 bonnes pratiques, 100 SEO
+- [x] Suite complète : 265 tests passés
+- [x] Recette globale desktop/mobile : public, tunnel prospect, portail client et backoffice staff
+- [x] Contrastes, boutons, badges, cartes, checkout et steppers harmonisés
+- [x] Menu prospect lisible et erreur JavaScript HTMX des onglets supprimée
+- [x] Lighthouse tunnel/connexion : 99 performance, 100 accessibilité, 100 bonnes pratiques
+- [x] UI/UX Pro Max : design system maître et overrides par famille de vues
+- [x] Navigation clavier : lien d’évitement et repère principal uniques sur toutes les surfaces
+- [x] Lighthouse UI/UX Pro Max : 98–100 performance et 100 accessibilité/bonnes pratiques
+- [x] Suite complète finale : 267 tests passés
+- [x] Correctif final accessibilité : titres séquentiels checkout/client/staff, 268 tests passés
+- [x] Connexion premium sans exposition client/staff et logo unique sur toutes les surfaces, 270 tests passés

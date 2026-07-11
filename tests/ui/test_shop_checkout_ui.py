@@ -32,9 +32,9 @@ def test_marketing_pages_are_accessible_for_anonymous():
     assert "Prenium DTF" in home_html
     assert "production DTF créative" in home_html
     assert "dtf-brutalist-workshop.webp" in home_html
-    assert "Commander des DTF" in home_html
-    assert "Faire optimiser un fichier" in home_html
-    assert "Espace client" in home_html
+    assert "Ouvrir mon accès pro" in home_html
+    assert "Découvrir l’offre" in home_html
+    assert "Connexion" in home_html
     assert "Impression DTF premium" in home_html
     assert "Préparation de fichiers DTF" in home_html
     assert "Case previews" in home_html
@@ -53,6 +53,9 @@ def test_marketing_pages_are_accessible_for_anonymous():
     assert f'href="{prospect_url}"' in home_html
     assert f'href="{login_url}"' in home_html
     assert f'action="{prospect_url}"' in home_html
+    assert "js/marketing.js" in home_html
+    assert "vendor/htmx-1.9.12.min.js" not in home_html
+    assert "vendor/alpinejs-3.14.3.min.js" not in home_html
     assert 'name="activity_type"' in home_html
     assert 'name="email"' in home_html
     assert 'meta name="description"' in home_html
@@ -72,6 +75,8 @@ def test_marketing_pages_are_accessible_for_anonymous():
     assert "Impression DTF premium" in services_html
     assert "Préparation de fichiers DTF" in services_html
     assert "TIFF avec canal alpha" in services_html
+    assert "js/marketing.js" in services_html
+    assert "vendor/htmx-1.9.12.min.js" not in services_html
 
 
 @pytest.mark.django_db

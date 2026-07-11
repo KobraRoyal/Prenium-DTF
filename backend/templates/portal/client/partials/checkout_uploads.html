@@ -1,8 +1,8 @@
 {% load portal_tags %}
-<section class="dui-card dui-card-bordered border-white/10 bg-white/5 shadow-xl backdrop-blur-sm checkout-dui-surface" id="checkout-uploads">
-  <div class="dui-card-body gap-4">
+<section class="checkout-dui-surface product-checkout-card" id="checkout-uploads">
+  <div class="product-checkout-card__body gap-4">
     <div>
-      <h3 class="dui-card-title font-display text-lg text-[#faf7f2]">Étape 2 — Joindre les fichiers</h3>
+      <h3 class="dui-card-title font-display text-lg">Étape 2 — Joindre les fichiers</h3>
       <p class="text-sm opacity-75">Ajoutez un ou plusieurs fichiers de production. Indiquez la quantité et, si besoin, la couleur du support pour guider l'atelier.</p>
     </div>
 
@@ -33,15 +33,15 @@
         <div class="dui-form-control w-full">
           <label class="product-form-label" for="id-support-color">Couleur du support (optionnel)</label>
           <div class="flex flex-wrap gap-2 items-center">
-            <input id="id-support-color" name="support_color_hex" type="color" value="#ffffff" class="h-10 w-14 cursor-pointer rounded border border-white/20 bg-black/30 p-1">
+            <input id="id-support-color" name="support_color_hex" type="color" value="#ffffff" class="h-10 w-14 cursor-pointer p-1">
             <span class="text-xs opacity-60" aria-hidden="true">Indicatif pour l’atelier</span>
           </div>
         </div>
       </div>
 
-      <label for="checkout-file-input" class="dropzone checkout-dropzone-dui group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-primary/35 bg-primary/5 px-4 py-10 text-center transition hover:border-primary/55 hover:bg-primary/10">
-        <span class="dui-badge dui-badge-outline border-white/25 text-[#f0d4c4]">Fichier production</span>
-        <strong class="text-base text-[#faf7f2]">Déposez votre fichier ici</strong>
+      <label for="checkout-file-input" class="dropzone checkout-dropzone-dui group flex cursor-pointer flex-col items-center justify-center gap-3 px-4 py-10 text-center transition">
+        <span class="product-step-badge">Fichier production</span>
+        <strong class="text-base">Déposez votre fichier ici</strong>
         <span class="max-w-sm text-sm opacity-70">PDF, PNG, JPG, SVG, AI, PSD, TIFF — max 100&nbsp;Mo. Le contrôle technique continue ensuite côté atelier.</span>
         <input
           id="checkout-file-input"
@@ -49,11 +49,11 @@
           name="file"
           required
           accept=".pdf,.png,.jpg,.jpeg,.svg,.ai,.psd,.tif,.tiff,application/pdf,image/png,image/jpeg,image/svg+xml,image/tiff,application/postscript,image/vnd.adobe.photoshop"
-          class="dui-file-input dui-file-input-bordered dui-file-input-primary w-full max-w-md bg-black/30 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-content"
+          class="dui-file-input dui-file-input-bordered dui-file-input-primary product-file-input w-full max-w-md text-sm"
         >
       </label>
 
-      {% include "components/forms/form_actions.html" with primary_label="Ajouter le fichier" primary_class_full="dui-btn dui-btn-primary dui-btn-wide" htmx_disable=1 %}
+      {% include "components/forms/form_actions.html" with primary_label="Ajouter le fichier" primary_class_full="ui-btn ui-btn-primary ui-btn-wide" htmx_disable=1 %}
 
       <p class="m-0 text-xs opacity-65">Astuce : ajoutez tous les fichiers utiles avant l'envoi final pour éviter un aller-retour de validation.</p>
     </form>
@@ -63,7 +63,7 @@
     <div class="hidden overflow-x-auto ui-table-shell md:block">
       <table class="dui-table dui-table-zebra dui-table-sm">
         <thead>
-          <tr class="border-b border-white/10 [&>th]:text-[#f4f0e8]/70">
+          <tr>
             <th>Fichier</th>
             <th>Qté</th>
             <th>Couleur</th>
@@ -79,7 +79,7 @@
             <td>
               {% if upload.support_color_hex %}
               <span class="inline-flex items-center gap-1" title="{{ upload.support_color_hex }}">
-                <span class="inline-block h-4 w-4 rounded border border-white/30" style="background-color: {{ upload.support_color_hex }}"></span>
+                <span class="product-color-swatch h-4 w-4" style="background-color: {{ upload.support_color_hex }}"></span>
               </span>
               {% else %}
               <span class="text-xs opacity-50">—</span>
@@ -89,10 +89,10 @@
             <td>
               {% if upload.inspection %}
               {% with tone=upload.inspection.status|badge_tone %}
-              <span class="dui-badge dui-badge-sm {% if tone == 'is-success' %}dui-badge-success{% elif tone == 'is-warning' %}dui-badge-warning{% elif tone == 'is-danger' %}dui-badge-error{% else %}dui-badge-ghost border-white/25{% endif %}">{{ upload.inspection.status|human_status }}</span>
+              <span class="badge {{ tone }}">{{ upload.inspection.status|human_status }}</span>
               {% endwith %}
               {% else %}
-              <span class="dui-badge dui-badge-ghost dui-badge-sm border-white/20">En analyse</span>
+              <span class="badge is-neutral">En analyse</span>
               {% endif %}
             </td>
           </tr>
@@ -105,10 +105,10 @@
       </table>
     </div>
 
-    <div class="space-y-3 md:hidden" role="feed" aria-label="Fichiers envoyés">
+    <div class="space-y-3 md:hidden" aria-label="Fichiers envoyés">
       {% for upload in uploads %}
       <article class="ui-mobile-order-card">
-        <p class="break-words font-medium text-[#faf7f2]">{{ upload.original_filename }}</p>
+        <p class="break-words font-medium">{{ upload.original_filename }}</p>
         <dl class="mt-3 grid grid-cols-2 gap-2 text-sm">
           <div>
             <dt class="text-xs opacity-60">Qté</dt>
@@ -123,7 +123,7 @@
             <dd>
               {% if upload.support_color_hex %}
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block h-5 w-5 rounded border border-white/30" style="background-color: {{ upload.support_color_hex }}"></span>
+                <span class="product-color-swatch h-5 w-5" style="background-color: {{ upload.support_color_hex }}"></span>
                 <span class="font-mono text-xs">{{ upload.support_color_hex }}</span>
               </span>
               {% else %}
@@ -135,10 +135,10 @@
         <div class="mt-3">
           {% if upload.inspection %}
           {% with tone=upload.inspection.status|badge_tone %}
-          <span class="dui-badge dui-badge-sm {% if tone == 'is-success' %}dui-badge-success{% elif tone == 'is-warning' %}dui-badge-warning{% elif tone == 'is-danger' %}dui-badge-error{% else %}dui-badge-ghost border-white/25{% endif %}">{{ upload.inspection.status|human_status }}</span>
+          <span class="badge {{ tone }}">{{ upload.inspection.status|human_status }}</span>
           {% endwith %}
           {% else %}
-          <span class="dui-badge dui-badge-ghost dui-badge-sm border-white/20">En analyse</span>
+          <span class="badge is-neutral">En analyse</span>
           {% endif %}
         </div>
       </article>

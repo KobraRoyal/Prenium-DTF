@@ -46,7 +46,9 @@ function initLandingReveal() {
 }
 
 function initLandingMenuFallback() {
-  document.querySelectorAll("[data-landing-menu-toggle]").forEach((button) => {
+  document
+    .querySelectorAll("[data-landing-menu-toggle]:not([data-product-menu-toggle])")
+    .forEach((button) => {
     const targetId = button.getAttribute("data-landing-menu-toggle");
     const target = targetId ? document.getElementById(targetId) : null;
     if (!target) {

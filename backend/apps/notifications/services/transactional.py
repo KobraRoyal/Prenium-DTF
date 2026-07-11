@@ -45,19 +45,13 @@ def send_order_created_email(*, order: Order) -> None:
     context = {"order": order}
     subject = render_to_string("notifications/email/order_created_subject.txt", context).strip()
     body = render_to_string("notifications/email/order_created_body.txt", context)
-    try:
-        send_mail(
-            subject,
-            body,
-            settings.DEFAULT_FROM_EMAIL,
-            recipients,
-            fail_silently=False,
-        )
-    except Exception:
-        logger.exception(
-            "Transactional email failed (order_created) order_public_id=%s",
-            order.public_id,
-        )
+    send_mail(
+        subject,
+        body,
+        settings.DEFAULT_FROM_EMAIL,
+        recipients,
+        fail_silently=False,
+    )
 
 
 def send_payment_captured_email(*, order: Order) -> None:
@@ -73,19 +67,13 @@ def send_payment_captured_email(*, order: Order) -> None:
     context = {"order": order}
     subject = render_to_string("notifications/email/payment_captured_subject.txt", context).strip()
     body = render_to_string("notifications/email/payment_captured_body.txt", context)
-    try:
-        send_mail(
-            subject,
-            body,
-            settings.DEFAULT_FROM_EMAIL,
-            recipients,
-            fail_silently=False,
-        )
-    except Exception:
-        logger.exception(
-            "Transactional email failed (payment_captured) order_public_id=%s",
-            order.public_id,
-        )
+    send_mail(
+        subject,
+        body,
+        settings.DEFAULT_FROM_EMAIL,
+        recipients,
+        fail_silently=False,
+    )
 
 
 def send_b2b_order_submitted_email(*, order: Order) -> None:
@@ -104,64 +92,37 @@ def send_b2b_order_submitted_email(*, order: Order) -> None:
         context,
     ).strip()
     body = render_to_string("notifications/email/b2b_order_submitted_body.txt", context)
-    try:
-        send_mail(
-            subject,
-            body,
-            settings.DEFAULT_FROM_EMAIL,
-            recipients,
-            fail_silently=False,
-        )
-    except Exception:
-        logger.exception(
-            "Transactional email failed (b2b_order_submitted) order_public_id=%s",
-            order.public_id,
-        )
+    send_mail(
+        subject,
+        body,
+        settings.DEFAULT_FROM_EMAIL,
+        recipients,
+        fail_silently=False,
+    )
 
 
 def schedule_order_created_email(*, order_public_id) -> None:
     from django.db import transaction
 
-    def _send() -> None:
-        order = (
-            Order.objects.filter(public_id=order_public_id)
-            .select_related("customer", "created_by")
-            .first()
-        )
-        if order is not None:
-            send_order_created_email(order=order)
+    from apps.notifications.tasks import send_order_created_email_task
 
-    transaction.on_commit(_send)
+    transaction.on_commit(lambda: send_order_created_email_task.delay(str(order_public_id)))
 
 
 def schedule_payment_captured_email(*, order_public_id) -> None:
     from django.db import transaction
 
-    def _send() -> None:
-        order = (
-            Order.objects.filter(public_id=order_public_id)
-            .select_related("customer", "created_by")
-            .first()
-        )
-        if order is not None:
-            send_payment_captured_email(order=order)
+    from apps.notifications.tasks import send_payment_captured_email_task
 
-    transaction.on_commit(_send)
+    transaction.on_commit(lambda: send_payment_captured_email_task.delay(str(order_public_id)))
 
 
 def schedule_b2b_order_submitted_email(*, order_public_id) -> None:
     from django.db import transaction
 
-    def _send() -> None:
-        order = (
-            Order.objects.filter(public_id=order_public_id)
-            .select_related("customer", "created_by")
-            .first()
-        )
-        if order is not None:
-            send_b2b_order_submitted_email(order=order)
+    from apps.notifications.tasks import send_b2b_order_submitted_email_task
 
-    transaction.on_commit(_send)
+    transaction.on_commit(lambda: send_b2b_order_submitted_email_task.delay(str(order_public_id)))
 
 
 def send_order_priced_email(*, order: Order) -> None:
@@ -176,31 +137,18 @@ def send_order_priced_email(*, order: Order) -> None:
     context = {"order": order}
     subject = render_to_string("notifications/email/order_priced_subject.txt", context).strip()
     body = render_to_string("notifications/email/order_priced_body.txt", context)
-    try:
-        send_mail(
-            subject,
-            body,
-            settings.DEFAULT_FROM_EMAIL,
-            recipients,
-            fail_silently=False,
-        )
-    except Exception:
-        logger.exception(
-            "Transactional email failed (order_priced) order_public_id=%s",
-            order.public_id,
-        )
+    send_mail(
+        subject,
+        body,
+        settings.DEFAULT_FROM_EMAIL,
+        recipients,
+        fail_silently=False,
+    )
 
 
 def schedule_order_priced_email(*, order_public_id) -> None:
     from django.db import transaction
 
-    def _send() -> None:
-        order = (
-            Order.objects.filter(public_id=order_public_id)
-            .select_related("customer", "created_by")
-            .first()
-        )
-        if order is not None:
-            send_order_priced_email(order=order)
+    from apps.notifications.tasks import send_order_priced_email_task
 
-    transaction.on_commit(_send)
+    transaction.on_commit(lambda: send_order_priced_email_task.delay(str(order_public_id)))

@@ -1,7 +1,105 @@
 @layer components {
+  .ui-skip-link {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 100;
+    min-height: 2.75rem;
+    border: 2px solid #0b0b0b;
+    padding: 0.65rem 0.85rem;
+    color: #0b0b0b;
+    background: #dcff1a;
+    box-shadow: 4px 4px 0 #0b0b0b;
+    font-family: var(--ui-font-display);
+    font-weight: 800;
+    text-decoration: none;
+    text-transform: uppercase;
+    transform: translateY(calc(-100% - 1rem));
+    transition: transform 160ms ease-out;
+  }
+
+  .ui-skip-link:focus-visible {
+    outline: 3px solid #00b8ff;
+    outline-offset: 3px;
+    transform: translateY(0);
+  }
+
+  .ui-brand-lockup {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .ui-brand-lockup__mark {
+    display: inline-grid;
+    width: 2.4rem;
+    height: 2.4rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 2px solid #0b0b0b;
+    color: #0b0b0b;
+    background: #dcff1a;
+    box-shadow: 4px 4px 0 #0b0b0b;
+    font-family: var(--ui-font-display);
+    font-weight: 900;
+    line-height: 1;
+    text-decoration: none;
+  }
+
+  .ui-brand-lockup__copy {
+    display: grid;
+    gap: 0.08rem;
+    min-width: 0;
+  }
+
+  .ui-brand-lockup__name,
+  .ui-brand-lockup__name:hover {
+    color: #0b0b0b;
+    font-family: var(--ui-font-display);
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .ui-brand-lockup__subtitle {
+    margin: 0;
+    color: #6f675a;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  body.ui-marketing-body .agency-header .ui-brand-lockup__name,
+  body.ui-marketing-body .agency-header .ui-brand-lockup__name:hover {
+    color: #fff8ea;
+  }
+
+  body.ui-marketing-body .agency-header .ui-brand-lockup__subtitle {
+    color: rgba(255, 248, 234, 0.72);
+  }
+
+  body.ui-marketing-body.prospect-tunnel-page .agency-header .ui-brand-lockup__name,
+  body.ui-marketing-body.prospect-tunnel-page .agency-header .ui-brand-lockup__name:hover {
+    color: #0b0b0b;
+  }
+
+  body.ui-marketing-body.prospect-tunnel-page .agency-header .ui-brand-lockup__subtitle {
+    color: rgba(11, 11, 11, 0.64);
+  }
+
   .ui-shell-main {
     padding-left: var(--ui-page-pad-x);
     padding-right: var(--ui-page-pad-x);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ui-skip-link {
+      transition: none;
+    }
   }
 
   .ui-portal-header-inner {

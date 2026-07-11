@@ -61,9 +61,9 @@
     </table>
   </div>
 
-  <div class="md:hidden space-y-3" role="feed" aria-label="Fichiers commande (staff)">
+  <div class="md:hidden space-y-3" aria-label="Fichiers commande (staff)">
     {% for row in upload_rows %}
-    <article class="rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-sm backdrop-blur-sm">
+    <article class="ui-mobile-order-card product-mobile-file-card">
       <p class="break-words font-medium text-[color:var(--ink)] m-0">
         {% if row.drive_browser_url %}
         <a

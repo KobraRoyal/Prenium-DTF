@@ -1,7 +1,7 @@
-<p class="breadcrumb">
-  <a href="{% url 'portal:staff-dashboard' %}">Accueil staff</a>
-  /
-  <a href="{% url 'portal:staff-order-list' %}">Commandes</a>
-  /
-  Détail
-</p>
+<nav class="ui-breadcrumb" aria-label="Fil d’Ariane">
+  <ol class="ui-breadcrumb__list">
+    <li class="ui-breadcrumb__item"><a href="{% url 'portal:staff-dashboard' %}">Accueil staff</a></li>
+    <li class="ui-breadcrumb__item"><a href="{% url 'portal:staff-order-list' %}">Commandes</a></li>
+    <li class="ui-breadcrumb__item"><span aria-current="page">Détail</span></li>
+  </ol>
+</nav>

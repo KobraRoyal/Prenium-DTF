@@ -27,6 +27,28 @@ body.prospect-tunnel-page .app-header.landing-saas-header {
   border-bottom-color: var(--product-line, #0b0b0b);
 }
 
+body.ui-marketing-body.prospect-tunnel-page .agency-brand__link,
+body.ui-marketing-body.prospect-tunnel-page .agency-menu-toggle,
+body.ui-marketing-body.prospect-tunnel-page .agency-nav__link,
+body.ui-marketing-body.prospect-tunnel-page .agency-nav__link--secondary {
+  border-color: #0b0b0b;
+  color: #0b0b0b;
+}
+
+body.ui-marketing-body.prospect-tunnel-page .agency-brand__subtitle {
+  color: rgba(11, 11, 11, 0.64);
+}
+
+body.ui-marketing-body.prospect-tunnel-page .agency-nav__link:hover,
+body.ui-marketing-body.prospect-tunnel-page .agency-nav__link:focus-visible,
+body.ui-marketing-body.prospect-tunnel-page .agency-menu-toggle:hover,
+body.ui-marketing-body.prospect-tunnel-page .agency-menu-toggle:focus-visible {
+  border-color: #0b0b0b;
+  background: #dcff1a;
+  color: #0b0b0b;
+  box-shadow: 3px 3px 0 #0b0b0b;
+}
+
 /* Champs formulaire : texte / bordure / fond lisibles sur fond clair */
 body.prospect-tunnel-page .prospect-panel .checkout-dui-input,
 body.prospect-tunnel-page .prospect-panel .dui-input.dui-input-bordered,
@@ -778,6 +800,77 @@ body.prospect-tunnel-page .prospect-choice-card--activity:has(.prospect-choice-c
 
 body.prospect-tunnel-page .prospect-form__footer {
   border-top: 2px solid var(--product-line);
+}
+
+@media (max-width: 767px) {
+  body.prospect-tunnel-page .prospect-shell {
+    padding-top: 0.75rem;
+  }
+
+  body.prospect-tunnel-page .prospect-shell__inner {
+    gap: 0.75rem;
+  }
+
+  body.prospect-tunnel-page .prospect-shell__aside-card {
+    padding: 0.8rem;
+    box-shadow: 4px 4px 0 #0b0b0b;
+  }
+
+  body.prospect-tunnel-page .prospect-shell__title,
+  body.prospect-tunnel-page .prospect-shell__lead,
+  body.prospect-tunnel-page .prospect-shell__trust {
+    display: none;
+  }
+
+  body.prospect-tunnel-page .prospect-shell__eyebrow {
+    margin-bottom: 0.65rem;
+  }
+
+  body.prospect-tunnel-page .prospect-tunnel__progress-panel {
+    margin-bottom: 0.7rem;
+    padding: 0.7rem;
+    box-shadow: none;
+  }
+
+  body.prospect-tunnel-page .prospect-tunnel__step-meta {
+    margin-bottom: 0.5rem;
+  }
+
+  body.prospect-tunnel-page .prospect-tunnel__track {
+    margin-bottom: 0;
+  }
+
+  body.prospect-tunnel-page .prospect-stepper__help {
+    display: none;
+  }
+
+  body.prospect-tunnel-page .prospect-stepper__item {
+    min-width: 0;
+    font-size: 0.62rem;
+  }
+
+  body.prospect-tunnel-page .prospect-stepper__index {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+
+  body.prospect-tunnel-page .prospect-panel {
+    gap: 0.9rem;
+    padding: 1rem;
+    box-shadow: 4px 4px 0 #0b0b0b;
+  }
+
+  body.prospect-tunnel-page .prospect-tunnel__intro .landing-auth-lead {
+    margin-bottom: 0;
+  }
+
+  body.prospect-tunnel-page .prospect-form__footer {
+    align-items: stretch;
+  }
+
+  body.prospect-tunnel-page .prospect-form__footer .ui-btn {
+    width: 100%;
+  }
 }
 
 /* Motion d'entrée subtile (brief « motion-driven ») — jouée une fois au

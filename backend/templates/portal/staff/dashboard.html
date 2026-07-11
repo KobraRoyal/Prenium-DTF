@@ -5,7 +5,7 @@
 
 {% block portal_content %}
 <section class="dashboard-hero dashboard-hero--staff">
-  {% include "components/portal/page_head.html" with kicker="Backoffice staff" title="Accueil staff" subtitle="Vue opérationnelle rapide des commandes et actions en cours." %}
+  {% include "components/portal/page_head.html" with kicker="Pilotage staff" title="Accueil staff" subtitle="Vue opérationnelle rapide des commandes et actions en cours." %}
   <aside class="portal-signal-card">
     <p class="portal-signal-card__eyebrow">Lecture ops</p>
     <strong>{% if can_read_orders %}Accès commandes autorisé{% else %}Accès commandes refusé{% endif %}</strong>
@@ -24,7 +24,7 @@
     <p>{% if can_read_orders %}Accédez à la liste staff pour prioriser les commandes visibles.{% else %}Votre profil n’a pas encore la permission commandes requise.{% endif %}</p>
     {% if can_read_orders %}
     <div class="product-command-card__action">
-      <a class="btn" href="{% url 'portal:staff-order-list' %}">Ouvrir la file</a>
+      <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-order-list' %}">Ouvrir la file</a>
     </div>
     {% endif %}
   </article>

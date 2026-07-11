@@ -31,7 +31,7 @@
           <td>
             {% if upload.support_color_hex %}
             <span class="inline-flex items-center gap-2">
-              <span class="inline-block h-4 w-4 shrink-0 rounded border border-white/25" style="background: {{ upload.support_color_hex }}" title="{{ upload.support_color_hex }}"></span>
+              <span class="product-color-swatch h-4 w-4" style="background: {{ upload.support_color_hex }}" title="{{ upload.support_color_hex }}"></span>
               <span class="font-mono text-sm">{{ upload.support_color_hex }}</span>
             </span>
             {% else %}
@@ -67,9 +67,9 @@
     </table>
   </div>
 
-  <div class="md:hidden space-y-3" role="feed" aria-label="Fichiers de la commande">
+  <div class="md:hidden space-y-3" aria-label="Fichiers de la commande">
     {% for upload in uploads %}
-    <article class="rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-sm backdrop-blur-sm">
+    <article class="ui-mobile-order-card product-mobile-file-card">
       <p class="font-medium text-[color:var(--ink)] break-words">{{ upload.original_filename }}</p>
       <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
         <div>
@@ -85,7 +85,7 @@
           <dd>
             {% if upload.support_color_hex %}
             <span class="inline-flex items-center gap-2">
-              <span class="inline-block h-5 w-5 shrink-0 rounded border border-white/25" style="background: {{ upload.support_color_hex }}"></span>
+              <span class="product-color-swatch h-5 w-5" style="background: {{ upload.support_color_hex }}"></span>
               <span class="font-mono text-xs">{{ upload.support_color_hex }}</span>
             </span>
             {% else %}

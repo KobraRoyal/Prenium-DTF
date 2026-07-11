@@ -8,15 +8,15 @@
 <section class="card">
   <ul class="prospect-confirm__actions">
     <li>
-      <a class="btn btn-saas-primary" href="{% url 'portal:client-dashboard' %}">Accéder à mon espace</a>
+      <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-dashboard' %}">Accéder à mon espace</a>
     </li>
     {% if customer_public_id %}
     <li>
-      <a class="btn btn-secondary" href="{% url 'portal:client-checkout' customer_public_id=customer_public_id %}">Lancer ma première commande</a>
+      <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-checkout' customer_public_id=customer_public_id %}">Lancer ma première commande</a>
     </li>
     {% endif %}
     <li>
-      <a class="btn btn-secondary" href="{% url 'services' %}">Voir les offres</a>
+      <a class="ui-btn ui-btn-secondary" href="{% url 'services' %}">Voir les offres</a>
     </li>
   </ul>
 </section>

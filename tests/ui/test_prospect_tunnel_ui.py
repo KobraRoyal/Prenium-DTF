@@ -14,7 +14,7 @@ def test_prospect_steps_share_premium_structure_and_ctas():
     assert "product-shell--prospect" in step1_html
     assert "prospect-shell__aside-card" in step1_html
     assert "data-submit-loading" in step1_html
-    assert "ui-btn prospect-form__btn-primary" in step1_html
+    assert "ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary" in step1_html
 
     session = client.session
     session[SESSION_KEY] = {

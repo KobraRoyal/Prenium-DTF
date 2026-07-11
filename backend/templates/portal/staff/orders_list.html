@@ -23,7 +23,8 @@
   </nav>
   {% endif %}
   {% else %}
-  {% include "components/ui/empty_state.html" with message="Aucune commande a afficher." %}
+  {% url 'portal:staff-dashboard' as staff_dashboard_url %}
+  {% include "components/ui/empty_state.html" with title="File vide" message="Aucune commande à afficher." cta_url=staff_dashboard_url cta_label="Retour au tableau de bord" %}
   {% endif %}
 </section>
 {% endblock %}

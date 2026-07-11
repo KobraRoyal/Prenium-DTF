@@ -25,6 +25,8 @@
 - [Sprint 16 — PDF métiers (facture + OF)](sprint-16-pdf-documents-metier.md)
 - [Sprint 17 — Logistique Sendcloud avancée](sprint-17-logistique-sendcloud-avancee.md)
 - [Sprint 18 — Pricing & B2B avancé](sprint-18-pricing-b2b-avance.md)
+- [Sprint 19 — Operational readiness](sprint-19-operational-readiness.md)
+- [Sprint 20 — Frontend UI/UX haute performance](sprint-20-frontend-performance-ui-ux.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

@@ -39,6 +39,35 @@ def _build_tab_groups(tabs: list[dict], group_labels: tuple[str, ...]) -> list[d
     return out
 
 
+def _panel_url(request, slug: str) -> str | None:
+    if request is None:
+        return None
+    query = request.GET.copy()
+    query["panel"] = slug
+    return f"{request.path}?{query.urlencode()}"
+
+
+def _finalize_tab_state(tab_groups: list[dict], panel_id: str, request) -> list[dict]:
+    flat_tabs = [t for g in tab_groups for t in g["tabs"]]
+    requested_panel = request.GET.get("panel") if request is not None else None
+    active_index = 0
+
+    for index, tab in enumerate(flat_tabs):
+        if tab.get("slug") == requested_panel:
+            active_index = index
+            break
+
+    for group_index, group in enumerate(tab_groups, start=1):
+        for tab_index, tab in enumerate(group["tabs"], start=1):
+            tab["dom_id"] = f"{panel_id}-tab-{group_index}-{tab_index}"
+            tab["push_url"] = _panel_url(request, tab["slug"])
+
+    for index, tab in enumerate(flat_tabs):
+        tab["active"] = index == active_index
+
+    return flat_tabs
+
+
 @register.inclusion_tag("components/order/order_tabs.html", takes_context=True)
 def order_htmx_tabs(context, variant):
     variant = (variant or "staff").lower()
@@ -51,6 +80,7 @@ def order_htmx_tabs(context, variant):
         oid = order.public_id
         tabs = [
             {
+                "slug": "uploads",
                 "label": "Fichiers",
                 "url": reverse(
                     "portal:staff-order-panel-uploads",
@@ -61,6 +91,7 @@ def order_htmx_tabs(context, variant):
                 "permission": "uploads.view_orderupload",
             },
             {
+                "slug": "inspection",
                 "label": "Contrôle",
                 "url": reverse(
                     "portal:staff-order-panel-inspection",
@@ -71,6 +102,7 @@ def order_htmx_tabs(context, variant):
                 "permission": "uploads.view_orderuploadinspection",
             },
             {
+                "slug": "drive",
                 "label": "Drive",
                 "url": reverse(
                     "portal:staff-order-panel-drive-sync",
@@ -81,6 +113,7 @@ def order_htmx_tabs(context, variant):
                 "permission": "uploads.view_orderuploaddrivesync",
             },
             {
+                "slug": "production",
                 "label": "Production",
                 "url": reverse(
                     "portal:staff-order-panel-production",
@@ -91,6 +124,7 @@ def order_htmx_tabs(context, variant):
                 "permission": "production.view_productionjob",
             },
             {
+                "slug": "scan",
                 "label": "Scan atelier",
                 "url": reverse(
                     "portal:staff-order-panel-scan",
@@ -101,6 +135,7 @@ def order_htmx_tabs(context, variant):
                 "permission": "production.scan_productionjob",
             },
             {
+                "slug": "shipping",
                 "label": "Expédition",
                 "url": reverse(
                     "portal:staff-order-panel-shipping",
@@ -111,6 +146,7 @@ def order_htmx_tabs(context, variant):
                 "permission": "shipping.view_shipment",
             },
             {
+                "slug": "billing",
                 "label": "Facturation",
                 "url": reverse(
                     "portal:staff-order-panel-billing",
@@ -125,6 +161,7 @@ def order_htmx_tabs(context, variant):
             tabs = [tab for tab in tabs if request.user.has_perm(tab["permission"])]
         _mark_tab_groups(tabs)
         tab_groups = _build_tab_groups(tabs, _STAFF_GROUP_LABELS)
+        flat_tabs = _finalize_tab_state(tab_groups, panel_id, request)
     elif variant == "client":
         title, subtitle = _CLIENT_COPY
         panel_id = "client-order-panel"
@@ -133,6 +170,7 @@ def order_htmx_tabs(context, variant):
         oid = order.public_id
         tabs = [
             {
+                "slug": "uploads",
                 "label": "Fichiers",
                 "url": reverse(
                     "portal:client-order-panel-uploads",
@@ -145,6 +183,7 @@ def order_htmx_tabs(context, variant):
                 "group": 1,
             },
             {
+                "slug": "inspection",
                 "label": "Contrôle",
                 "url": reverse(
                     "portal:client-order-panel-inspection",
@@ -157,6 +196,7 @@ def order_htmx_tabs(context, variant):
                 "group": 1,
             },
             {
+                "slug": "production",
                 "label": "Production",
                 "url": reverse(
                     "portal:client-order-panel-production",
@@ -169,6 +209,7 @@ def order_htmx_tabs(context, variant):
                 "group": 2,
             },
             {
+                "slug": "shipping",
                 "label": "Expédition",
                 "url": reverse(
                     "portal:client-order-panel-shipping",
@@ -181,6 +222,7 @@ def order_htmx_tabs(context, variant):
                 "group": 3,
             },
             {
+                "slug": "billing",
                 "label": "Facturation",
                 "url": reverse(
                     "portal:client-order-panel-billing",
@@ -195,12 +237,11 @@ def order_htmx_tabs(context, variant):
         ]
         _mark_tab_groups(tabs)
         tab_groups = _build_tab_groups(tabs, _CLIENT_GROUP_LABELS)
+        flat_tabs = _finalize_tab_state(tab_groups, panel_id, request)
     else:
         raise ValueError("variant must be 'staff' or 'client'")
 
-    flat_tabs = [t for g in tab_groups for t in g["tabs"]]
-    for i, tab in enumerate(flat_tabs):
-        tab["active"] = i == 0
+    active_tab = next((tab for tab in flat_tabs if tab["active"]), None)
 
     return {
         "title": title,
@@ -209,7 +250,8 @@ def order_htmx_tabs(context, variant):
         "tab_groups": tab_groups,
         "panel_id": panel_id,
         "hx_target": f"#{panel_id}",
-        "initial_url": flat_tabs[0]["url"] if flat_tabs else None,
+        "initial_url": active_tab["url"] if active_tab else None,
+        "active_tab_id": active_tab["dom_id"] if active_tab else None,
         "empty_message": (
             "Aucun panneau disponible avec vos permissions actuelles." if not flat_tabs else None
         ),

@@ -9,7 +9,7 @@
 
   {% if order.billing_mode == "deferred" %}
   <div
-    class="dui-alert dui-alert-info mb-4 border border-sky-400/25 bg-sky-500/10 text-[#f4f0e8] shadow-sm backdrop-blur-sm [&>p]:leading-relaxed"
+    class="dui-alert dui-alert-info product-alert mb-4 [&>p]:leading-relaxed"
     role="status"
   >
     <p>
@@ -30,7 +30,7 @@
   {% endif %}
 
   {% if payment %}
-  <div class="dui-alert mb-4 border shadow-sm backdrop-blur-sm {% if payment.status == 'captured' %}dui-alert-success border-emerald-400/25 bg-emerald-500/10{% elif payment.status == 'failed' %}dui-alert-error border-error/30 bg-error/15{% else %}dui-alert-info border-sky-400/25 bg-sky-500/10{% endif %}">
+  <div class="dui-alert product-alert mb-4 {% if payment.status == 'captured' %}dui-alert-success{% elif payment.status == 'failed' %}dui-alert-error{% else %}dui-alert-info{% endif %}">
     <p>
       Paiement :
       <span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>
@@ -41,13 +41,13 @@
     {% endif %}
   </div>
   {% elif order.billing_mode != "deferred" %}
-  <div class="empty-state rounded-xl border border-white/10 bg-white/[0.03] p-4">
+  <div class="empty-state p-4">
     <p>Aucun paiement enregistré pour cette commande.</p>
   </div>
   {% endif %}
 
   {% if invoice %}
-  <div class="dui-alert dui-alert-success mb-4 border border-emerald-400/25 bg-emerald-500/10 text-[#f4f0e8]">
+  <div class="dui-alert dui-alert-success product-alert mb-4">
     <p>
       Facture <strong>{{ invoice.invoice_number }}</strong>
       —
@@ -62,16 +62,16 @@
     {% endif %}
   </div>
   <p>
-    <a class="text-[#f0d4c4] underline-offset-2 hover:underline" href="{% url 'billing:client-invoice-download' customer_public_id=order.customer.public_id order_public_id=order.public_id %}">
+    <a class="ui-link font-semibold underline-offset-2 hover:underline" href="{% url 'billing:client-invoice-download' customer_public_id=order.customer.public_id order_public_id=order.public_id %}">
       Télécharger la facture
     </a>
   </p>
   {% elif order.billing_mode == "deferred" %}
-  <div class="empty-state rounded-xl border border-white/10 bg-white/[0.03] p-4">
+  <div class="empty-state p-4">
     <p>La facture sera émise sur la période de facturation ouverte pour votre compte.</p>
   </div>
   {% else %}
-  <div class="empty-state rounded-xl border border-white/10 bg-white/[0.03] p-4">
+  <div class="empty-state p-4">
     <p>La facture sera disponible après confirmation du paiement.</p>
   </div>
   {% endif %}

@@ -130,9 +130,16 @@
   }
 
   body.ui-marketing-body .agency-nav__link:hover,
-  body.ui-marketing-body .agency-nav__link:focus-visible {
+  body.ui-marketing-body .agency-nav__link:focus-visible,
+  body.ui-marketing-body .agency-nav__link.is-active,
+  body.ui-marketing-body .agency-nav__link[aria-current="page"] {
     color: var(--agency-ink);
     background: var(--agency-paper);
+  }
+
+  body.ui-marketing-body .agency-nav__link--secondary {
+    color: rgba(255, 248, 234, 0.72);
+    border-color: rgba(255, 248, 234, 0.44);
   }
 
   body.ui-marketing-body .agency-nav__cta,
@@ -141,14 +148,19 @@
     background: var(--agency-acid);
   }
 
-  body.ui-marketing-body.landing-saas .agency-nav__cta.btn-nav-cta,
-  body.ui-marketing-body.landing-saas .landing-mobile-primary-cta.btn-nav-cta {
+  body.ui-marketing-body.landing-saas .agency-nav__cta,
+  body.ui-marketing-body.landing-saas .landing-mobile-primary-cta {
     border: 2px solid var(--agency-paper);
     border-radius: 0;
     color: var(--agency-ink);
     background: var(--agency-acid);
     box-shadow: none;
     font-weight: 900;
+  }
+
+  body.ui-marketing-body.landing-saas .agency-nav__cta--primary {
+    min-width: 10.8rem;
+    background: var(--agency-acid);
   }
 
   body.ui-marketing-body .agency-menu-toggle {
@@ -170,7 +182,10 @@
 
   body.ui-marketing-body .agency-nav__cta:hover,
   body.ui-marketing-body .landing-mobile-primary-cta:hover,
-  body.ui-marketing-body .agency-menu-toggle:hover {
+  body.ui-marketing-body .agency-menu-toggle:hover,
+  body.ui-marketing-body .agency-nav__cta:focus-visible,
+  body.ui-marketing-body .landing-mobile-primary-cta:focus-visible,
+  body.ui-marketing-body .agency-menu-toggle:focus-visible {
     transform: translate(-2px, -2px);
     box-shadow: 4px 4px 0 var(--agency-paper);
   }
@@ -193,6 +208,8 @@
   body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-section {
     padding: clamp(3rem, 7vw, 6.25rem) 0;
     border-top: 2px solid var(--agency-line);
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 900px;
   }
 
   body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-section--ink {
@@ -421,6 +438,10 @@
     line-height: 1.65;
   }
 
+  body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .landing-mobile-primary-cta {
+    color: var(--agency-ink);
+  }
+
   body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-hero__badges,
   body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .landing-proof-strip {
     display: flex;
@@ -546,6 +567,15 @@
 
   body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-card--orange {
     background: var(--agency-orange);
+  }
+
+  body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) :is(
+    .agency-card--acid,
+    .agency-card--pink,
+    .agency-card--cyan,
+    .agency-card--orange
+  ) :is(p, li) {
+    color: var(--agency-ink);
   }
 
   body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-card__meta,
@@ -851,12 +881,18 @@
       width: 100%;
       flex-direction: column;
       align-items: stretch;
+      padding-top: 0.2rem;
     }
 
     body.ui-marketing-body .agency-nav__link,
     body.ui-marketing-body .agency-nav__cta {
       justify-content: flex-start;
       width: 100%;
+    }
+
+    body.ui-marketing-body .agency-nav__cta--primary {
+      justify-content: center;
+      min-width: 0;
     }
 
     body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .landing-shell {
@@ -868,11 +904,44 @@
     }
 
     body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-hero__content {
-      min-height: calc(100dvh - 7.5rem);
+      min-height: calc(100dvh - 5.5rem);
+      gap: 0.8rem;
+      padding: 1rem 0 1.5rem;
+      align-content: center;
+    }
+
+    body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-hero h1 {
+      font-size: clamp(2.85rem, 14vw, 3.45rem);
+      line-height: 0.86;
     }
 
     body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-hero__claim {
-      max-width: 10ch;
+      max-width: 14ch;
+      font-size: clamp(1.65rem, 9vw, 2rem);
+      line-height: 0.9;
+      text-shadow: 3px 3px 0 var(--agency-ink);
+    }
+
+    body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-hero__lead {
+      max-width: 35ch;
+      font-size: 0.96rem;
+      line-height: 1.5;
+    }
+
+    body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .landing-hero__actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.55rem;
+    }
+
+    body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .landing-hero__actions .agency-button {
+      min-width: 0;
+      padding: 0.65rem 0.45rem;
+      font-size: 0.72rem;
+    }
+
+    body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .agency-hero__badges .agency-pill:nth-child(n + 3) {
+      display: none;
     }
 
     body.ui-marketing-body:not(.portal-shell):not(.prospect-tunnel-page) .landing-contact__grid,

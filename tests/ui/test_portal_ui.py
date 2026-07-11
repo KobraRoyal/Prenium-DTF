@@ -471,18 +471,22 @@ def test_portal_login_redirects_to_role_appropriate_dashboard():
 
 
 @pytest.mark.django_db
-def test_login_page_shares_portal_navigation_shell():
+def test_login_page_uses_minimal_brand_shell_without_internal_roles():
     client = Client()
     response = client.get(reverse("portal:login"))
     assert response.status_code == 200
     body = response.content.decode()
     assert "product-shell--auth" in body
-    assert "data-product-menu-toggle" in body
-    assert "portal-primary-nav" in body
-    assert "Accueil client" in body
-    assert "Portail sécurisé" in body
+    assert "ui-brand-lockup__mark" in body
+    assert "Retour au site" in body
     assert "Email professionnel" in body
-    assert "Une seule porte d’entrée" in body
+    assert "Retrouvez vos commandes, vos fichiers et vos documents" in body
+    assert "Demander un accès professionnel" in body
+    assert "data-product-menu-toggle" not in body
+    assert "portal-primary-nav" not in body
+    assert "Commandes et fichiers" not in body
+    assert "Ops et production" not in body
+    assert "Une seule porte d’entrée" not in body
 
 
 def test_portal_feedback_js_uses_text_nodes_for_local_messages():

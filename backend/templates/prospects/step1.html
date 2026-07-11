@@ -25,7 +25,7 @@
       <div class="prospect-form__grid">
     {% with f=form.first_name %}
     <div class="dui-form-control w-full">
-      <label class="ui-sr-only" for="id_first_name">{{ f.label }}</label>
+      <label class="product-form-label" for="id_first_name">{{ f.label }}</label>
       <input
         class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
         id="id_first_name"
@@ -40,7 +40,7 @@
     {% endwith %}
     {% with f=form.last_name %}
     <div class="dui-form-control w-full">
-      <label class="ui-sr-only" for="id_last_name">{{ f.label }}</label>
+      <label class="product-form-label" for="id_last_name">{{ f.label }}</label>
       <input
         class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
         id="id_last_name"
@@ -57,7 +57,7 @@
 
       {% with f=form.email %}
   <div class="dui-form-control w-full">
-    <label class="ui-sr-only" for="id_email">{{ f.label }}</label>
+    <label class="product-form-label" for="id_email">{{ f.label }}</label>
     <input
       class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
       id="id_email"
@@ -75,7 +75,7 @@
       <div class="prospect-form__grid">
     {% with f=form.phone %}
     <div class="dui-form-control w-full">
-      <label class="ui-sr-only" for="id_phone">{{ f.label }}</label>
+      <label class="product-form-label" for="id_phone">{{ f.label }}</label>
       <input
         class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
         id="id_phone"
@@ -91,7 +91,7 @@
     {% endwith %}
     {% with f=form.company %}
     <div class="dui-form-control w-full">
-      <label class="ui-sr-only" for="id_company">{{ f.label }}</label>
+      <label class="product-form-label" for="id_company">{{ f.label }}</label>
       <input
         class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
         id="id_company"
@@ -108,9 +108,9 @@
 
       {% with f=form.country %}
   <div class="dui-form-control w-full">
-    <label class="ui-sr-only" for="id_country">{{ f.label }}</label>
+    <label class="product-form-label" for="id_country">{{ f.label }}</label>
     <select
-      class="dui-select dui-select-bordered w-full checkout-dui-input min-h-12 text-[#f4f0e8]{% if f.errors %} border-error/60{% endif %}"
+      class="dui-select dui-select-bordered w-full checkout-dui-input min-h-12{% if f.errors %} border-error/60{% endif %}"
       id="id_country"
       name="country"
       required
@@ -177,7 +177,7 @@
 
   <div class="prospect-form__footer">
     <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'home' %}">Annuler</a>
-    <button type="submit" class="ui-btn prospect-form__btn-primary min-w-[min(100%,12rem)]">Continuer</button>
+    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Continuer</button>
   </div>
 </form>
 {% endblock %}

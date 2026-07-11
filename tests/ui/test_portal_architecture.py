@@ -23,7 +23,7 @@ def _portal_imports(module_name: str) -> set[str]:
                 imports.add(alias.name)
         elif isinstance(node, ast.ImportFrom) and node.module:
             if node.level:
-                parts = module_name.split(".")[:-node.level]
+                parts = module_name.split(".")[: -node.level]
                 module = ".".join(parts + [node.module]) if parts else node.module
                 imports.add(module)
             else:

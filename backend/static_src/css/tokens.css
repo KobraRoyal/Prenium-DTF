@@ -9,7 +9,20 @@
     --ui-section-gap: 1rem;
     --ui-radius-lg: var(--radius);
     --ui-font-display: "Space Grotesk", system-ui, sans-serif;
-    --ui-font-body: "Manrope", system-ui, sans-serif;
+    --ui-font-body: "DM Sans", system-ui, sans-serif;
     --ui-header-h: 3.5rem;
+    --ui-action-min-h: 2.75rem;
+    --ui-action-radius: 0;
+    --ui-action-border-width: 2px;
+    --ui-action-border: #201d18;
+    --ui-action-primary-bg: var(--brand);
+    --ui-action-primary-bg-hover: var(--brand-strong);
+    --ui-action-primary-text: #fffaf2;
+    --ui-action-secondary-bg: #fffdf8;
+    --ui-action-secondary-bg-hover: #f4eadb;
+    --ui-action-secondary-text: var(--brand-strong);
+    --ui-action-shadow: 4px 4px 0 rgba(32, 29, 24, 0.95);
+    --ui-action-shadow-hover: 6px 6px 0 rgba(32, 29, 24, 0.95);
+    --ui-action-transition: 160ms ease;
   }
 }

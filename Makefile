@@ -18,7 +18,7 @@ help:
 		'  make logs-worker     Tail worker container logs'
 
 up:
-	docker compose up -d db redis web worker nginx
+	docker compose up -d db redis web worker beat nginx
 
 health:
 	curl --fail --silent --show-error http://localhost:8080/healthz/

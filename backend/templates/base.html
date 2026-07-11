@@ -5,17 +5,23 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Prenium DTF{% endblock %}</title>
+    <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
     {# Incrémenter ?v= après changement CSS/JS pour contourner le cache navigateur / nginx (expires 1d sur /static/). #}
-    <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260620g">
+    <link rel="preload" href="{% static 'vendor/fonts/space-grotesk-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{% static 'vendor/fonts/dm-sans-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260711c">
     {% block extra_head %}{% endblock %}
   </head>
   <body class="{% block body_class %}{% endblock %}">
+    <a class="ui-skip-link" href="#main-content">Aller au contenu principal</a>
     {% include "components/ui/toast_stack.html" %}
     {% block content %}{% endblock %}
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <script src="{% static 'js/alpine/toast-boot.js' %}?v=20260405a"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.14.3/dist/cdn.min.js"></script>
-    <script type="module" src="{% static 'js/app.js' %}?v=20260613e"></script>
+    {% block runtime_scripts %}
+      <script src="{% static 'vendor/htmx-1.9.12.min.js' %}"></script>
+      <script src="{% static 'js/alpine/toast-boot.js' %}?v=20260405a"></script>
+      <script defer src="{% static 'vendor/alpinejs-3.14.3.min.js' %}"></script>
+      <script type="module" src="{% static 'js/app.js' %}?v=20260710b"></script>
+    {% endblock %}
     {% block extra_scripts %}{% endblock %}
   </body>
 </html>

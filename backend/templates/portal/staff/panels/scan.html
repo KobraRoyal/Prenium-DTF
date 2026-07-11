@@ -18,7 +18,7 @@
   {% if scan_result %}
   <div class="alert alert--success workflow-panel__feedback workflow-panel__feedback--ephemeral" role="status">
     <p class="m-0">
-      <span class="workflow-kpi__label" style="display: inline; margin-right: 0.35rem;">{{ scan_result.mode|human_status }}</span>
+      <span class="workflow-kpi__label workflow-kpi__label--inline">{{ scan_result.mode|human_status }}</span>
       <code>{{ scan_result.job.manufacturing_order_number }}</code>
       —
       <span class="badge {{ scan_result.job.status|badge_tone }}">{{ scan_result.job.status|human_status }}</span>
