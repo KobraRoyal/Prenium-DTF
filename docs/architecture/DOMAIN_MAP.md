@@ -7,6 +7,7 @@
 - Orders  
   - Modèle B2B (produit, parcours, grille, laize) : [B2B_PRODUCT_AND_OPERATIONS.md](./B2B_PRODUCT_AND_OPERATIONS.md)  
   - Détail technique facturation différée, métrage, encours : [B2B_DEFERRED_BILLING.md](./B2B_DEFERRED_BILLING.md)
+- B2B Order Projects — phase avant commande : [B2B_ORDER_PROJECTS.md](./B2B_ORDER_PROJECTS.md)
 - Uploads
 - Documents
 - Production

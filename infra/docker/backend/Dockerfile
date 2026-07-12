@@ -19,7 +19,7 @@ WORKDIR /app
 RUN groupadd --system --gid 10001 app && \
     useradd --system --uid 10001 --gid app --home-dir /app --create-home app
 
-RUN apt-get update && apt-get install -y --no-install-recommends gosu && \
+RUN apt-get update && apt-get install -y --no-install-recommends ghostscript gosu && \
     rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements /tmp/requirements

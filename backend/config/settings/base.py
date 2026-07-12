@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.catalog",
     "apps.billing",
+    "apps.b2b_order_projects",
     "apps.orders",
     "apps.production",
     "apps.portal",
@@ -84,6 +85,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.b2b_order_projects.context_processors.b2b_order_project_flags",
             ],
         },
     },
@@ -125,6 +127,9 @@ MEDIA_ROOT = Path(env("DJANGO_MEDIA_ROOT", "/tmp/prenium-dtf/media"))
 ORDER_UPLOAD_MAX_BYTES = env_int("ORDER_UPLOAD_MAX_BYTES", 20 * 1024 * 1024)
 ORDER_LIST_PAGE_SIZE = env_int("ORDER_LIST_PAGE_SIZE", 20)
 STAFF_ORDER_LIST_PAGE_SIZE = env_int("STAFF_ORDER_LIST_PAGE_SIZE", 25)
+B2B_DTF_ORDER_PROJECT_ENABLED = env_bool("B2B_DTF_ORDER_PROJECT_ENABLED", False)
+B2B_ORDER_PROJECT_LIST_PAGE_SIZE = env_int("B2B_ORDER_PROJECT_LIST_PAGE_SIZE", 20)
+STAFF_B2B_ORDER_PROJECT_LIST_PAGE_SIZE = env_int("STAFF_B2B_ORDER_PROJECT_LIST_PAGE_SIZE", 25)
 ORDER_UPLOAD_ALLOWED_MIME_TYPES = tuple(
     env_list(
         "ORDER_UPLOAD_ALLOWED_MIME_TYPES",
@@ -133,6 +138,8 @@ ORDER_UPLOAD_ALLOWED_MIME_TYPES = tuple(
     )
 )
 DTF_PRINT_DPI = env_int("DTF_PRINT_DPI", 300)
+B2B_RECOMMENDED_DPI = env_int("B2B_RECOMMENDED_DPI", DTF_PRINT_DPI)
+B2B_MIN_ACCEPTABLE_DPI = env_int("B2B_MIN_ACCEPTABLE_DPI", 200)
 # Largeur utile film / laize (cm) :
 # le prix au m² s’applique à une conso. type « bande » sur cette largeur.
 DTF_LAIZE_CM = env_int("DTF_LAIZE_CM", 55)

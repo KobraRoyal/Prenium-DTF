@@ -1,15 +1,17 @@
-.PHONY: help up health check migrations-plan test test-ui test-orders lint format audit shell logs-web logs-worker
+.PHONY: help up health check migrations-plan test test-ui test-orders test-b2b lint format audit shell logs-web logs-worker sync-frontend
 
 help:
 	@printf '%s\n' \
 		'Available targets:' \
 		'  make up              Start local Docker services' \
+		'  make sync-frontend   Build CSS, collectstatic, restart web' \
 		'  make health          Check HTTP health endpoint' \
 		'  make check           Run Django system checks in Docker' \
 		'  make migrations-plan Check pending Django migrations' \
 		'  make test            Run pytest in Docker' \
 		'  make test-ui         Run UI test subset in Docker' \
 		'  make test-orders     Run orders and uploads tests in Docker' \
+		'  make test-b2b        Run B2B order project tests in Docker' \
 		'  make lint            Run ruff check in Docker' \
 		'  make format          Run ruff format --check in Docker' \
 		'  make audit           Run pip-audit in Docker' \
@@ -38,6 +40,9 @@ test-ui:
 test-orders:
 	docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/orders tests/uploads'
 
+test-b2b:
+	docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/b2b_order_projects backend/apps/portal/tests/test_ui_coherence.py'
+
 lint:
 	docker compose run --rm --entrypoint sh web -lc 'cd /app && ruff check .'
 
@@ -55,3 +60,8 @@ logs-web:
 
 logs-worker:
 	docker compose logs --tail=200 worker
+
+sync-frontend:
+	cd backend && npm run build:css
+	docker compose exec -T web sh -lc 'cd /app/backend && python manage.py collectstatic --noinput'
+	docker compose restart web

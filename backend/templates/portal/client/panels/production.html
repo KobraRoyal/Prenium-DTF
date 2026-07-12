@@ -1,13 +1,29 @@
+{% load portal_tags %}
+{% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="production" %}
 <div class="panel">
-  <div class="panel-head">
-    <div>
-      <h3 class="font-display text-lg">Production</h3>
-      <p class="muted">Suivi clair de l'avancement, sans exposer les détails internes de l'atelier.</p>
-    </div>
+  <div class="panel-head panel-head--compact">
+    <h3 class="font-display text-lg">Historique des statuts</h3>
   </div>
-  <div class="alert alert--info">
-    <p class="m-0"><strong>{{ stage }}</strong></p>
-    <p class="muted mt-2 mb-0">{{ detail }}</p>
-    <p class="muted mt-2 mb-0 text-sm">La prochaine mise à jour apparaîtra automatiquement ici dès qu'une étape atelier ou logistique est franchie.</p>
+  {% if status_history %}
+  <ol class="client-status-timeline" aria-label="Historique des statuts de la commande">
+    {% for event in status_history %}
+    <li class="client-status-timeline__item">
+      <div class="client-status-timeline__marker" aria-hidden="true"></div>
+      <div class="client-status-timeline__content">
+        <div class="client-status-timeline__head">
+          <span class="badge {{ event.status_key|badge_tone }}">{{ event.label }}</span>
+          <time datetime="{{ event.occurred_at|date:'c' }}">{{ event.occurred_at|date:"d/m/Y H:i" }}</time>
+        </div>
+        {% if event.detail %}
+        <p class="muted text-sm mb-0">{{ event.detail }}</p>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <div class="empty-state">
+    <p>Aucun événement d'avancement pour le moment.</p>
   </div>
+  {% endif %}
 </div>

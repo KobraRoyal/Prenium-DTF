@@ -19,6 +19,7 @@ class CustomerAdmin(AdminAuditMixin, admin.ModelAdmin):
         "name",
         "billing_email",
         "is_active",
+        "b2b_order_projects_enabled",
         "default_shipping_mode",
         "preferred_settlement_method",
         "negotiated_file_preparation_fee_eur",
@@ -31,12 +32,24 @@ class CustomerAdmin(AdminAuditMixin, admin.ModelAdmin):
         "default_shipping_mode",
         "preferred_settlement_method",
         "is_active",
+        "b2b_order_projects_enabled",
     )
     readonly_fields = ("public_id", "created_at", "updated_at")
     search_fields = ("name", "billing_email", "billing_city", "shipping_city")
     inlines = (CustomerBillingProfileInline,)
     fieldsets = (
-        (None, {"fields": ("name", "billing_email", "is_active", "notes")}),
+        (
+            None,
+            {
+                "fields": (
+                    "name",
+                    "billing_email",
+                    "is_active",
+                    "b2b_order_projects_enabled",
+                    "notes",
+                )
+            },
+        ),
         (
             "Adresse de facturation",
             {

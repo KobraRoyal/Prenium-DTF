@@ -201,3 +201,35 @@
 - [x] Suite complète finale : 267 tests passés
 - [x] Correctif final accessibilité : titres séquentiels checkout/client/staff, 268 tests passés
 - [x] Connexion premium sans exposition client/staff et logo unique sur toutes les surfaces, 270 tests passés
+
+## Sprint 21 — Fondation projets de commande B2B (2026-07-11)
+
+- [x] Projets et lignes B2B isolés par `Customer`, UUID publics et index métier
+- [x] Numérotation annuelle transactionnelle et state machine centralisée
+- [x] Feature flag global ; ancien flag client conservé au schéma puis déprécié au profit d'un parcours `Nouvelle commande` unique
+- [x] API client complète et file OPS read-only avec permissions dédiées
+- [x] Portail client : liste, création, autosave, édition des lignes et soumission
+- [x] Audit des actions et transitions rejetées
+- [x] Aucun `Order` ou `ProductionJob` créé avant conversion
+- [x] Tests modèle, service, API, permissions, portail et multi-tenant
+- [x] Suite complète : 286 tests passés ; recette navigateur client/OPS validée
+- [x] ADR Asset et migration additive approuvés avant Sprint 22
+
+## Sprint 22 — Assets B2B et analyse technique (2026-07-11)
+
+- [x] ADR Asset partagé accepté et implémenté dans `uploads`
+- [x] Versioning immuable, hash, analyse asynchrone et téléchargement médié
+- [x] Backfill additif des uploads de commande sans déplacement physique
+- [x] Ajout/remplacement HTMX et API strictement tenant-scoped
+- [x] Transmission bloquée jusqu'à analyse de toutes les lignes
+- [x] Workflow de production existant inchangé
+- [x] Suite complète : 296 tests passés ; cible PostgreSQL/Python 3.12 : rendus B2B multi-formats inclus
+- [x] Correctif UI client : header cohérent et menu tablette jusqu'à 959 px, listes commandes/projets en cartes responsive, en-tête de tableau réaligné
+- [x] Portail client simplifié autour du configurateur DTF, de la commande directe et des suivis récents ; configurateur activé par défaut en Compose local
+- [x] Configurateur visuel DTF opérationnel : upload + ligne unifiés, aperçu protégé, taille automatique, contrôle multi-fonds et préservation des corrections manuelles
+- [x] UX configurateur simplifiée : doublons projet/références supprimés, action de transmission unique, réglages avancés repliés et rendu responsive corrigé
+- [x] Configurateur affiché en modale pour ajouter/modifier ; vue principale convertie en liste compacte des visuels
+- [x] Aperçus professionnels ajoutés pour PDF, PSD, TIFF, EPS et AI (PDF/PostScript), servis uniquement via la route tenant-scoped
+- [x] Entrée client unifiée `Nouvelle commande` : elle utilise le chargement HTMX et l'analyse Celery des visuels, sans bouton `Configurateur DTF` séparé
+- [x] UX `Nouvelle commande` allégée : mode masqué, aperçu PDF local transparent et non rogné via PDF.js, actualisation HTMX ciblée des miniatures sans rechargement de page
+- [x] Validation technique client : dimensions et DPI asynchrones, diagnostic résolution 300/200 DPI, alertes visibles et confirmation versionnée obligatoire avant transmission

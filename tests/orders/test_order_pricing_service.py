@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from apps.catalog.models import CatalogService
@@ -370,12 +371,13 @@ def test_compute_and_persist_sets_lines_and_sends_priced_email():
     from django.core import mail
 
     mail.outbox.clear()
-    with TestCase.captureOnCommitCallbacks(execute=True):
-        OrderPricingService().compute_and_persist_order_pricing(
-            order=order,
-            actor=user,
-            source="test",
-        )
+    with patch("apps.notifications.tasks.send_order_priced_email_task.delay") as task_delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            OrderPricingService().compute_and_persist_order_pricing(
+                order=order,
+                actor=user,
+                source="test",
+            )
 
     order.refresh_from_db()
     assert order.pricing_status == Order.PricingStatus.PRICED
@@ -386,6 +388,11 @@ def test_compute_and_persist_sets_lines_and_sends_priced_email():
     assert lines[1].line_total == Decimal("10.00")
     assert order.total_amount == lines[0].line_total + lines[1].line_total
     assert order.total_amount > Decimal("0")
+    task_delay.assert_called_once_with(str(order.public_id))
+
+    from apps.notifications.tasks import send_order_priced_email_task
+
+    send_order_priced_email_task.run(str(order.public_id))
     assert len(mail.outbox) == 1
     assert "tarif" in mail.outbox[0].subject.lower() or "Tarif" in mail.outbox[0].subject
 

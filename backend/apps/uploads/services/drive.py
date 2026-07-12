@@ -5,12 +5,13 @@ import json
 from dataclasses import dataclass
 
 from django.conf import settings
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 from django.utils.text import get_valid_filename
 
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
+from apps.core.public_refs import short_public_ref
 from apps.uploads.models import OrderDriveFolder, OrderUpload, OrderUploadDriveSync
 
 ORDER_DRIVE_ROOT_FOLDER_NAME = "Commandes"
@@ -188,9 +189,10 @@ class OrderDriveFolderService:
             parent_id=year_folder_id,
             name=order.created_at.strftime("%m"),
         )
+        order_folder_name = short_public_ref(order.public_id)
         order_folder_id = gateway.ensure_folder(
             parent_id=month_folder_id,
-            name=str(order.public_id),
+            name=order_folder_name,
         )
 
         folder_ids = {}
@@ -204,7 +206,7 @@ class OrderDriveFolderService:
             f"{ORDER_DRIVE_ROOT_FOLDER_NAME}/"
             f"{order.created_at.strftime('%Y')}/"
             f"{order.created_at.strftime('%m')}/"
-            f"{order.public_id}"
+            f"{order_folder_name}"
         )
         drive_folder, created = OrderDriveFolder.objects.update_or_create(
             order=order,
@@ -381,7 +383,34 @@ class OrderUploadDriveSyncService:
 
     def build_drive_filename(self, order_upload: OrderUpload) -> str:
         cleaned_name = get_valid_filename(order_upload.original_filename) or "upload"
-        return f"{order_upload.public_id}-{cleaned_name}"
+        order_ref = short_public_ref(order_upload.order.public_id)
+        filename = cleaned_name
+
+        if order_upload.order_id and order_upload.pk:
+            has_earlier_duplicate = (
+                OrderUpload.objects.filter(
+                    order_id=order_upload.order_id,
+                    original_filename=order_upload.original_filename,
+                )
+                .exclude(pk=order_upload.pk)
+                .filter(
+                    models.Q(created_at__lt=order_upload.created_at)
+                    | models.Q(
+                        created_at=order_upload.created_at,
+                        pk__lt=order_upload.pk,
+                    )
+                )
+                .exists()
+            )
+            if has_earlier_duplicate:
+                upload_ref = short_public_ref(order_upload.public_id)
+                if "." in cleaned_name:
+                    stem, suffix = cleaned_name.rsplit(".", 1)
+                    filename = f"{stem}-{upload_ref}.{suffix}"
+                else:
+                    filename = f"{cleaned_name}-{upload_ref}"
+
+        return f"{order_ref}-{filename}"
 
     def _mark_failed(self, *, sync, order_upload, actor, source: str, error: Exception):
         sync.status = OrderUploadDriveSync.Status.FAILED

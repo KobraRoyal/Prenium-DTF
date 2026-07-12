@@ -1,0 +1,42 @@
+{% if project.can_delete %}
+<button
+  type="button"
+  class="{{ button_class|default:'ui-btn ui-btn-danger ui-btn-sm' }}"
+  data-dialog-open="delete-project-dialog-{{ project.public_id }}"
+  aria-haspopup="dialog"
+>
+  {{ label|default:"Supprimer" }}
+</button>
+<dialog
+  class="b2b-confirm-dialog"
+  id="delete-project-dialog-{{ project.public_id }}"
+  aria-labelledby="delete-project-title-{{ project.public_id }}"
+  aria-describedby="delete-project-desc-{{ project.public_id }}"
+>
+  <div class="b2b-confirm-dialog__shell">
+    <div class="b2b-confirm-dialog__content">
+      <h2 id="delete-project-title-{{ project.public_id }}">Supprimer cette commande ?</h2>
+      <p id="delete-project-desc-{{ project.public_id }}" class="b2b-confirm-dialog__lead">
+        {% if project.name %}
+          <strong>{{ project.name }}</strong>
+          <span class="b2b-confirm-dialog__ref">{{ project.project_number }}</span>
+        {% else %}
+          <strong>{{ project.project_number }}</strong>
+        {% endif %}
+        sera supprimée définitivement avec tous ses visuels.
+      </p>
+      <p class="b2b-confirm-dialog__hint">Cette action est irréversible.</p>
+    </div>
+    <div class="b2b-confirm-dialog__actions">
+      <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+      <form
+        method="post"
+        action="{% url 'portal:client-order-project-cancel' customer_public_id=customer.public_id project_public_id=project.public_id %}"
+      >
+        {% csrf_token %}
+        <button class="ui-btn ui-btn-danger" type="submit">Supprimer définitivement</button>
+      </form>
+    </div>
+  </div>
+</dialog>
+{% endif %}

@@ -1,0 +1,21 @@
+<div class="b2b-preview-stage is-checker" data-configurator-stage>
+  {% if version %}
+  <div class="b2b-preview-bounds" data-configurator-bounds data-configurator-bounds-visible>
+    <img
+      class="b2b-preview-image"
+      src="{% url 'portal:client-order-project-item-asset-preview' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}"
+      alt="Aperçu de {{ item.name }}"
+      data-configurator-preview
+    >
+  </div>
+  <div class="b2b-preview-placeholder" data-configurator-placeholder hidden></div>
+  {% else %}
+  <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Analyse en cours</strong><span>{{ item.name }}</span></div>
+  {% endif %}
+</div>
+<div class="b2b-background-tools" aria-label="Fond de l’aperçu">
+  <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-configurator-bg="checker" aria-label="Damier" aria-pressed="true" title="Damier"></button>
+  <button type="button" class="b2b-swatch-btn b2b-swatch-btn--white b2b-bg-button is-white" data-configurator-bg="#ffffff" aria-label="Blanc" aria-pressed="false" title="Blanc"></button>
+  <button type="button" class="b2b-swatch-btn b2b-swatch-btn--black b2b-bg-button is-black" data-configurator-bg="#111111" aria-label="Noir" aria-pressed="false" title="Noir"></button>
+  {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="preview-hex-"|add:item.public_id preview_mode=True initial_color="#ffffff" %}
+</div>

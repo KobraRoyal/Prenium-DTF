@@ -1,0 +1,29 @@
+<details class="card b2b-project-options" id="order-project-fields">
+  <summary><span>Date et commentaire</span><small>{% if project.requested_date or project.customer_comment %}Modifier{% else %}Facultatif{% endif %}</small></summary>
+  <div class="b2b-project-options__body">
+  {% if project.requested_date or project.customer_comment %}
+  <dl class="b2b-project-recap">
+    {% if project.requested_date %}<div><dt class="muted">Date souhaitée</dt><dd>{{ project.requested_date|date:"d/m/Y" }}</dd></div>{% endif %}
+    {% if project.customer_comment %}<div class="b2b-project-recap__comment"><dt class="muted">Commentaire</dt><dd>{{ project.customer_comment|linebreaksbr }}</dd></div>{% endif %}
+  </dl>
+  {% endif %}
+  {% if form_error %}<div class="dui-alert dui-alert-error mb-4" role="alert">{{ form_error }}</div>{% endif %}
+  {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
+  <form
+    method="post"
+    hx-post="{% url 'portal:client-order-project-autosave' customer_public_id=customer.public_id project_public_id=project.public_id %}"
+    hx-trigger="change delay:600ms"
+    hx-target="#order-project-fields"
+    hx-swap="none"
+    hx-indicator="#portal-htmx-indicator"
+    class="grid gap-4"
+  >
+    {% csrf_token %}
+    <div class="dui-form-control"><label class="product-form-label" for="id-date">Date souhaitée</label>{% include "components/forms/product_date_field.html" with id="id-date" name="requested_date" value=project.requested_date|date:'Y-m-d' label="Date souhaitée" %}</div>
+    <div class="dui-form-control"><label class="product-form-label" for="id-project-comment">Commentaire</label><textarea class="dui-textarea dui-textarea-bordered" id="id-project-comment" name="customer_comment" rows="3">{{ project.customer_comment }}</textarea></div>
+  </form>
+  {% elif project.requested_date %}
+  <dl><div><dt class="muted">Date souhaitée</dt><dd>{{ project.requested_date|date:"d/m/Y" }}</dd></div></dl>
+  {% endif %}
+  </div>
+</details>

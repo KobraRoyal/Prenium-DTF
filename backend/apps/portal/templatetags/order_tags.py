@@ -9,13 +9,7 @@ _STAFF_COPY = (
     "et facturation. Chaque zone regroupe les écrans utiles à l’étape.",
 )
 
-_CLIENT_COPY = (
-    "Tunnel de commande",
-    "Naviguez entre les étapes et suivez le statut en temps réel.",
-)
-
 _STAFF_GROUP_LABELS = ("Préparation", "Atelier", "Clôture")
-_CLIENT_GROUP_LABELS = ("Préparation", "Atelier", "Clôture")
 
 
 def _mark_tab_groups(tabs: list[dict]) -> None:
@@ -162,16 +156,19 @@ def order_htmx_tabs(context, variant):
         _mark_tab_groups(tabs)
         tab_groups = _build_tab_groups(tabs, _STAFF_GROUP_LABELS)
         flat_tabs = _finalize_tab_state(tab_groups, panel_id, request)
+        active_tab = next((tab for tab in flat_tabs if tab["active"]), None)
     elif variant == "client":
-        title, subtitle = _CLIENT_COPY
+        title, subtitle = "", ""
         panel_id = "client-order-panel"
         customer = context["customer"]
         cid = customer.public_id
         oid = order.public_id
+        membership = context.get("customer_membership")
+        is_owner = membership is not None and membership.is_owner
         tabs = [
             {
                 "slug": "uploads",
-                "label": "Fichiers",
+                "label": "Visuels",
                 "url": reverse(
                     "portal:client-order-panel-uploads",
                     kwargs={
@@ -179,25 +176,11 @@ def order_htmx_tabs(context, variant):
                         "order_public_id": oid,
                     },
                 ),
-                "icon": "uploads",
-                "group": 1,
-            },
-            {
-                "slug": "inspection",
-                "label": "Contrôle",
-                "url": reverse(
-                    "portal:client-order-panel-inspection",
-                    kwargs={
-                        "customer_public_id": cid,
-                        "order_public_id": oid,
-                    },
-                ),
-                "icon": "inspection",
                 "group": 1,
             },
             {
                 "slug": "production",
-                "label": "Production",
+                "label": "Avancement",
                 "url": reverse(
                     "portal:client-order-panel-production",
                     kwargs={
@@ -205,47 +188,63 @@ def order_htmx_tabs(context, variant):
                         "order_public_id": oid,
                     },
                 ),
-                "icon": "production",
-                "group": 2,
-            },
-            {
-                "slug": "shipping",
-                "label": "Expédition",
-                "url": reverse(
-                    "portal:client-order-panel-shipping",
-                    kwargs={
-                        "customer_public_id": cid,
-                        "order_public_id": oid,
-                    },
-                ),
-                "icon": "shipping",
-                "group": 3,
-            },
-            {
-                "slug": "billing",
-                "label": "Facturation",
-                "url": reverse(
-                    "portal:client-order-panel-billing",
-                    kwargs={
-                        "customer_public_id": cid,
-                        "order_public_id": oid,
-                    },
-                ),
-                "icon": "billing",
-                "group": 3,
+                "group": 1,
             },
         ]
+        if is_owner:
+            tabs.extend(
+                [
+                    {
+                        "slug": "shipping",
+                        "label": "Expédition",
+                        "url": reverse(
+                            "portal:client-order-panel-shipping",
+                            kwargs={
+                                "customer_public_id": cid,
+                                "order_public_id": oid,
+                            },
+                        ),
+                        "group": 1,
+                    },
+                    {
+                        "slug": "billing",
+                        "label": "Facture",
+                        "url": reverse(
+                            "portal:client-order-panel-billing",
+                            kwargs={
+                                "customer_public_id": cid,
+                                "order_public_id": oid,
+                            },
+                        ),
+                        "group": 1,
+                    },
+                ]
+            )
         _mark_tab_groups(tabs)
-        tab_groups = _build_tab_groups(tabs, _CLIENT_GROUP_LABELS)
+        tab_groups = [{"label": "", "tabs": tabs}]
         flat_tabs = _finalize_tab_state(tab_groups, panel_id, request)
+        if (
+            not is_owner
+            and request is not None
+            and request.GET.get("panel") in {"shipping", "billing"}
+        ):
+            for tab in flat_tabs:
+                tab["active"] = tab.get("slug") == "uploads"
+            if flat_tabs:
+                active_tab = next((tab for tab in flat_tabs if tab["active"]), flat_tabs[0])
+            else:
+                active_tab = None
+        else:
+            active_tab = next((tab for tab in flat_tabs if tab["active"]), None)
     else:
         raise ValueError("variant must be 'staff' or 'client'")
 
-    active_tab = next((tab for tab in flat_tabs if tab["active"]), None)
+    compact = variant == "client"
 
     return {
-        "title": title,
-        "subtitle": subtitle,
+        "title": title if not compact else "",
+        "subtitle": subtitle if not compact else "",
+        "compact": compact,
         "tabs": flat_tabs,
         "tab_groups": tab_groups,
         "panel_id": panel_id,

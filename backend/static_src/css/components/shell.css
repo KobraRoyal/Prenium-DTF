@@ -229,9 +229,8 @@
   }
 
   body.landing-saas.portal-shell .ui-data-table tbody tr.ui-row-warning {
-    background:
-      linear-gradient(90deg, rgba(251, 176, 46, 0.42), rgba(251, 176, 46, 0.16) 70%),
-      var(--product-panel, #fffdf8);
+    background: rgba(220, 255, 26, 0.2);
+    box-shadow: inset 4px 0 0 var(--product-accent, #dcff1a);
   }
 
   body.landing-saas.portal-shell .ui-data-table tbody tr.ui-row-anomaly {
@@ -245,9 +244,12 @@
   }
 
   body.landing-saas.portal-shell .ui-inline-flag {
-    background: rgba(251, 176, 46, 0.32);
-    border: 1px solid var(--product-line, #0b0b0b);
-    color: #7a3d00;
+    border: 2px solid var(--product-line, #0b0b0b);
+    border-radius: 0;
+    background: rgba(220, 255, 26, 0.42);
+    color: var(--product-ink, #0b0b0b);
+    font-weight: 850;
+    text-transform: uppercase;
   }
 
   body.landing-saas.portal-shell .ui-table-primary-cell,
@@ -258,7 +260,9 @@
 
   body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-warning {
     border-color: var(--product-line, #0b0b0b);
-    background: linear-gradient(180deg, rgba(251, 176, 46, 0.32), rgba(251, 176, 46, 0.12));
+    border-left-width: 6px;
+    border-left-color: var(--product-accent, #dcff1a);
+    background: rgba(220, 255, 26, 0.12);
   }
 
   body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-anomaly {

@@ -1,12 +1,12 @@
 {% extends "portal/layout.html" %}
-{% load ui_tags %}
+{% load ui_tags portal_tags %}
 
 {% block title %}Commandes client - Prenium DTF{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_orders_list.html" title="Mes commandes" subtitle_prefix=customer.name subtitle="suivi de votre avancement upload, production, expédition et facture." %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_orders_list.html" title="Mes commandes" subtitle_prefix=customer.name subtitle="N° IDS et votre référence pour chaque commande transmise." %}
 
-<section class="card">
+<section class="card client-dashboard-section">
   {% if orders %}
   {% ui_orders_table orders=orders variant="client" customer=customer %}
   {% if page_obj and page_obj.paginator.num_pages > 1 %}
@@ -14,10 +14,10 @@
     <span class="muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
     <div class="flex items-center gap-2">
       {% if page_obj.has_previous %}
-      <a class="ui-inline-link ui-inline-link--button" href="?page={{ page_obj.previous_page_number }}">Précédente</a>
+      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="?page={{ page_obj.previous_page_number }}">Précédente</a>
       {% endif %}
       {% if page_obj.has_next %}
-      <a class="ui-inline-link ui-inline-link--button" href="?page={{ page_obj.next_page_number }}">Suivante</a>
+      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="?page={{ page_obj.next_page_number }}">Suivante</a>
       {% endif %}
     </div>
   </nav>

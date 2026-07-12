@@ -1,0 +1,55 @@
+{% with resolved_id=swatch_id|default:"hex-color-popover" %}
+<div
+  class="b2b-hex-color-control{% if preview_mode %} b2b-hex-color-control--preview{% endif %}"
+  data-hex-color-control
+  {% if preview_mode %}data-configurator-custom-bg-control{% endif %}
+  style="--swatch-color: {{ initial_color|default:'#ffffff' }};"
+>
+  <button
+    type="button"
+    class="b2b-swatch-btn b2b-swatch-btn--custom{% if preview_mode %} b2b-swatch-btn--rainbow-ring{% endif %} b2b-hex-color-control__trigger"
+    data-hex-color-trigger
+    style="--swatch-color: {{ initial_color|default:'#ffffff' }};"
+    aria-controls="{{ resolved_id }}"
+    aria-expanded="false"
+    aria-haspopup="dialog"
+    aria-label="{% if preview_mode %}Couleur de fond personnalisée{% else %}Couleur personnalisée (HEX){% endif %}"
+    title="{% if preview_mode %}Couleur de fond{% else %}Couleur personnalisée{% endif %}"
+    {% if disabled %}disabled{% endif %}
+  ></button>
+  <div
+    id="{{ resolved_id }}"
+    class="b2b-hex-color-popover"
+    data-hex-color-popover
+    role="dialog"
+    aria-label="Saisie couleur HEX"
+    hidden
+  >
+    <div class="b2b-hex-color-popover__panel">
+      <label class="b2b-hex-color-popover__native">
+        <span class="product-form-label">Nuancier</span>
+        <input
+          type="color"
+          class="b2b-hex-color-popover__picker"
+          data-hex-color-native
+          value="{{ initial_color|default:'#ffffff' }}"
+        >
+      </label>
+      <label class="b2b-hex-color-popover__field">
+        <span class="product-form-label">Code HEX</span>
+        <input
+          type="text"
+          class="dui-input dui-input-bordered font-mono uppercase b2b-hex-color-popover__input"
+          data-hex-color-popover-input
+          maxlength="7"
+          placeholder="#FFFFFF"
+          inputmode="text"
+          autocapitalize="characters"
+          spellcheck="false"
+          value="{{ initial_color|default:'#FFFFFF'|upper }}"
+        >
+      </label>
+    </div>
+  </div>
+</div>
+{% endwith %}

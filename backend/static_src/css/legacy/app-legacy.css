@@ -2052,9 +2052,11 @@ body.landing-saas.portal-shell .alert {
 }
 
 body.landing-saas.portal-shell .alert--warning {
-  border-color: var(--product-line, #0b0b0b);
-  background: rgba(251, 176, 46, 0.28);
-  color: #7a3d00;
+  border: 2px solid var(--product-line, #0b0b0b);
+  border-left-width: 6px;
+  border-left-color: var(--product-accent, #dcff1a);
+  background: rgba(220, 255, 26, 0.1);
+  color: var(--product-ink, #0b0b0b);
 }
 
 body.landing-saas.portal-shell .alert--danger {

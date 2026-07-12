@@ -1,0 +1,99 @@
+<section
+  class="card b2b-configurator"
+  id="order-project-items"
+>
+  <div class="section-head b2b-visual-list-head">
+    <div>
+      <h2 class="font-display text-xl">Visuels</h2>
+    </div>
+    <span class="b2b-analysis-live htmx-indicator" id="order-project-analysis-indicator" role="status"><i aria-hidden="true"></i>Analyse…</span>
+    {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
+    <button class="ui-btn ui-btn-primary" type="button" data-dialog-open="add-visual-dialog">Ajouter un visuel</button>
+    {% endif %}
+  </div>
+
+  {% if form_error %}<div class="dui-alert dui-alert-error mb-4" role="alert">{{ form_error }}</div>{% endif %}
+
+  {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
+  <dialog class="b2b-configurator-dialog" id="add-visual-dialog" aria-labelledby="add-visual-dialog-title" {% if form_error or active_validation_item %}data-dialog-auto-open{% endif %} data-add-visual-dialog>
+    <div class="b2b-dialog-shell">
+      <header class="b2b-dialog-head">
+        <div><h2 id="add-visual-dialog-title">{% if active_validation_item %}Valider le visuel{% else %}Ajouter un visuel{% endif %}</h2></div>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+      </header>
+      <div class="b2b-dialog-body" id="add-visual-dialog-body">
+        {% if active_validation_item %}
+        {% include "portal/client/partials/order_project_add_visual_validation_panel.html" with item=active_validation_item %}
+        {% else %}
+        {% include "portal/client/partials/order_project_add_visual_form.html" %}
+        {% endif %}
+      </div>
+    </div>
+  </dialog>
+  {% endif %}
+
+  <div
+    id="order-project-visuals-state"
+    {% if analysis_pending %}
+    hx-get="{% url 'portal:client-order-project-item-create' customer_public_id=customer.public_id project_public_id=project.public_id %}"
+    hx-trigger="load delay:1400ms"
+    hx-target="this"
+    hx-swap="outerHTML"
+    hx-select="#order-project-visuals-state"
+    hx-select-oob="#order-project-summary,#order-project-item-dialogs"
+    hx-indicator="#order-project-analysis-indicator"
+    {% endif %}
+  >
+  {% if project.items.all %}
+  <div class="b2b-visual-list">
+    {% for item in project.items.all %}
+    <article class="b2b-visual-list-item"{% if item.asset and item.asset.current_version %}{% if item.asset.current_version.analysis_status == "pending" or item.asset.current_version.analysis_status == "processing" %} data-analysis-pending{% endif %}{% endif %}>
+      <div class="b2b-visual-list-item__thumb is-checker">
+        {% if item.asset and item.asset.current_version %}
+        <img src="{% url 'portal:client-order-project-item-asset-preview' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}" alt="Aperçu de {{ item.name }}">
+        {% elif item.asset %}
+        <span class="b2b-preview-loading"><i aria-hidden="true"></i><span class="ui-sr-only">Aperçu en préparation</span>…</span>
+        {% else %}
+        <span>Fichier manquant</span>
+        {% endif %}
+      </div>
+      <div class="b2b-visual-list-item__content">
+        <div><h3>{{ item.name }}</h3></div>
+        <div class="b2b-visual-facts" aria-label="Caractéristiques de {{ item.name }}"><span>{{ item.quantity }} ex.</span><span>{{ item.width_mm }} × {{ item.height_mm }} mm</span>{% if item.support_color_label %}<span class="b2b-support-color-badge{% if item.support_color_is_multicolor %} is-rainbow{% endif %}"{% if not item.support_color_is_multicolor %} style="--swatch: {{ item.support_color_hex }}"{% endif %}>{{ item.support_color_label }}</span>{% endif %}</div>
+        {% with review=item.technical_review %}
+        {% include "portal/client/partials/order_project_quality_review.html" with compact=1 %}
+        {% if review.can_confirm and not review.confirmed and project.status != "submitted" and project.status != "converted" and project.status != "cancelled" %}
+        <p class="b2b-quality-hint muted text-sm">À valider</p>
+        {% endif %}
+        {% endwith %}
+      </div>
+      <span class="badge">{% if item.asset and item.asset.current_version %}{{ item.asset.current_version.get_analysis_status_display }}{% else %}Fichier requis{% endif %}</span>
+      <div class="ui-table-actions b2b-visual-list-item__actions">
+        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-dialog-open="visual-dialog-{{ item.public_id }}">Ouvrir</button>
+        {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
+        <button class="ui-btn ui-btn-danger ui-btn-sm" type="button" hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='delete' %}" hx-target="#order-project-items" hx-swap="outerHTML">Supprimer</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state b2b-visual-empty"><h3>Aucun visuel</h3><p>Ajoutez votre premier fichier pour commencer.</p><button class="ui-btn ui-btn-primary" type="button" data-dialog-open="add-visual-dialog">Ajouter un visuel</button></div>
+  {% endif %}
+  </div>
+
+  {% if project.items.all %}
+  <div id="order-project-item-dialogs" class="b2b-visual-dialogs">
+    {% for item in project.items.all %}
+    <dialog class="b2b-configurator-dialog" id="visual-dialog-{{ item.public_id }}" aria-labelledby="visual-dialog-title-{{ item.public_id }}">
+      <div class="b2b-dialog-shell">
+        <header class="b2b-dialog-head"><div><h2 id="visual-dialog-title-{{ item.public_id }}">{{ item.name }}</h2></div><button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button></header>
+        <div class="b2b-dialog-body">{% include "portal/client/partials/order_project_visual_editor.html" with item=item %}</div>
+      </div>
+    </dialog>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div id="order-project-item-dialogs" class="b2b-visual-dialogs" hidden></div>
+  {% endif %}
+</section>

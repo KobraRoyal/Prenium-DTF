@@ -4,7 +4,7 @@ from apps.customers.models import Customer, CustomerMembership
 from apps.orders.services.orders import OrderService
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client
+from django.test import Client, override_settings
 from django.urls import reverse
 
 
@@ -80,6 +80,7 @@ def test_marketing_pages_are_accessible_for_anonymous():
 
 
 @pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=False)
 def test_client_checkout_creates_order_in_scope():
     user = get_user_model().objects.create_user(email="checkout@example.com", password="pass")
     customer = Customer.objects.create(name="Client Checkout")
@@ -118,6 +119,7 @@ def test_client_checkout_creates_order_in_scope():
 
 
 @pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=False)
 def test_client_checkout_upload_partial_updates_files_list():
     user = get_user_model().objects.create_user(
         email="checkout-upload@example.com",
@@ -172,6 +174,7 @@ def test_client_checkout_upload_partial_updates_files_list():
 
 
 @pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=False)
 def test_client_checkout_page_uses_unified_product_shell_partials():
     user = get_user_model().objects.create_user(
         email="checkout-ui@example.com",
@@ -251,6 +254,7 @@ def test_client_checkout_rejects_cross_tenant_order_summary():
 
 
 @pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=False)
 def test_client_checkout_b2b_submit_flow_goes_to_order_detail():
     """Parcours complet B2B : création draft → upload → soumission → fiche commande."""
     user = get_user_model().objects.create_user(email="b2b-flow@example.com", password="pass")
@@ -318,4 +322,4 @@ def test_client_checkout_b2b_submit_flow_goes_to_order_detail():
     assert detail_resp.status_code == 200
     body = detail_resp.content.decode()
     assert "Commande" in body
-    assert "Suivez vos fichiers, la production, l'expédition et la facture" in body
+    assert "client-order-summary" in body

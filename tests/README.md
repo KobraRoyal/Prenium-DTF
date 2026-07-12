@@ -6,6 +6,7 @@ Les tests sont organisés principalement par domaine métier, avec un sous-ensem
 
 - `tests/accounts/`
 - `tests/billing/`
+- `tests/b2b_order_projects/`
 - `tests/catalog/`
 - `tests/core/`
 - `tests/customers/`
@@ -39,6 +40,7 @@ Suites ciblées :
 ```bash
 docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/ui'
 docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/orders tests/uploads'
+docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/b2b_order_projects'
 docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/production tests/shipping'
 make test-ui
 make test-orders

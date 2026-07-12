@@ -18,6 +18,7 @@
 </section>
 
 <section class="product-command-grid" aria-label="Actions staff prioritaires">
+  {% if can_read_projects %}<article class="product-command-card"><span class="product-command-card__index">00</span><h2>Projets B2B</h2><p>Consultez les projets transmis avant leur conversion en commande.</p><div class="product-command-card__action"><a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-order-project-list' %}">Ouvrir la file projets</a></div></article>{% endif %}
   <article class="product-command-card">
     <span class="product-command-card__index">01</span>
     <h2>File commandes</h2>

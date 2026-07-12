@@ -1,0 +1,81 @@
+{% load l10n %}
+<div class="b2b-dialog-editor" data-b2b-configurator>
+  <div class="b2b-configurator__preview">
+    {% if item.asset and item.asset.current_version %}
+    {% with version=item.asset.current_version %}
+    {% include "portal/client/partials/order_project_preview_stage.html" %}
+    {% endwith %}
+    {% else %}
+    <div class="b2b-preview-stage is-checker" data-configurator-stage>
+      <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Fichier manquant</strong><span>Ajoutez un fichier pour ce visuel.</span></div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="b2b-visual-card__details">
+    {% if item.asset and item.asset.current_version %}
+    {% with version=item.asset.current_version review=item.technical_review %}
+    {% include "portal/client/partials/order_project_quality_review.html" %}
+    {% if version.analysis_error %}<p class="b2b-analysis-error">{{ version.analysis_error }}</p>{% endif %}
+
+    {% if review.can_confirm and project.status != "submitted" and project.status != "converted" and project.status != "cancelled" %}
+    <form
+      class="b2b-visual-validation"
+      method="post"
+      hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='confirm-analysis' %}"
+      hx-target="#order-project-items"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      data-submit-loading
+    >
+      {% csrf_token %}
+      <input type="hidden" name="name" value="{{ item.name }}">
+      <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}">
+      <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}">
+      {% include "portal/client/partials/order_project_rotation_hidden.html" %}
+      <div class="b2b-configurator__dimensions">
+        {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity %}
+      </div>
+      {% include "portal/client/partials/order_project_support_color_field.html" with item=item %}
+      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié les dimensions, la résolution et la couleur support.</span></label>
+      <div class="b2b-dialog-actions">
+        <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer{% else %}Valider ce visuel{% endif %}</button>
+        <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-project-item-asset-download' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>
+        <button class="ui-btn ui-btn-danger ui-btn-sm" type="button" hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='delete' %}" hx-target="#order-project-items" hx-swap="outerHTML">Supprimer</button>
+      </div>
+    </form>
+    {% else %}
+    <form class="b2b-visual-edit" method="post" hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='update' %}" hx-target="#order-project-items" hx-swap="outerHTML">
+      {% csrf_token %}
+      <input type="hidden" name="name" value="{{ item.name }}">
+      <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}">
+      <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}">
+      {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity %}
+      <div class="b2b-dialog-actions"><button class="ui-btn ui-btn-primary" type="submit">Enregistrer</button></div>
+    </form>
+    {% endif %}
+
+    <details class="b2b-visual-advanced">
+      <summary>Remplacer le fichier</summary>
+      <form class="b2b-replace-form" method="post" enctype="multipart/form-data" hx-encoding="multipart/form-data" hx-post="{% url 'portal:client-order-project-item-asset' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='replace' %}" hx-target="#order-project-items" hx-swap="outerHTML">
+        {% csrf_token %}
+        <label class="dui-form-control"><span class="product-form-label">Nouveau fichier</span><input class="dui-file-input dui-file-input-bordered w-full" type="file" name="file" data-configurator-file accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf" required></label>
+        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Remplacer</button>
+      </form>
+    </details>
+    {% endwith %}
+    {% else %}
+    <form class="b2b-configurator__controls" method="post" enctype="multipart/form-data" hx-encoding="multipart/form-data" hx-post="{% url 'portal:client-order-project-item-asset' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='attach' %}" hx-target="#order-project-items" hx-swap="outerHTML">
+      {% csrf_token %}
+      <label class="dui-form-control"><span class="product-form-label">Fichier</span><input class="dui-file-input dui-file-input-bordered w-full" type="file" name="file" data-configurator-file required></label>
+      <input type="hidden" name="name" value="{{ item.name }}" data-configurator-name>
+      <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}" data-configurator-width>
+      <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}" data-configurator-height>
+      {% include "portal/client/partials/order_project_rotation_hidden.html" %}
+      <div class="b2b-configurator__dimensions">{% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity %}</div>
+      <p class="b2b-configurator__file-meta"><span data-configurator-pixels>—</span></p>
+      <button class="ui-btn ui-btn-primary" type="submit">Ajouter le fichier</button>
+    </form>
+    {% endif %}
+  </div>
+</div>

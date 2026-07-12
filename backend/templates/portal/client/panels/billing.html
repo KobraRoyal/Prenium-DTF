@@ -1,54 +1,42 @@
 {% load portal_tags %}
+{% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="billing" %}
 <div class="panel">
-  <div class="panel-head">
-    <div>
-      <h3 class="font-display text-lg">Facturation</h3>
-      <p class="muted">Consultez ici le statut de paiement et la facture associée, selon le mode de règlement prévu pour votre compte.</p>
-    </div>
+  <div class="panel-head panel-head--compact">
+    <h3 class="font-display text-lg">Facture</h3>
   </div>
 
   {% if order.billing_mode == "deferred" %}
-  <div
-    class="dui-alert dui-alert-info product-alert mb-4 [&>p]:leading-relaxed"
-    role="status"
-  >
-    <p>
-      <strong>Facturation différée</strong> — aucun paiement n’est demandé sur cette commande.
-      {% if order.pricing_status == "pending" %}
-      Le montant apparaîtra après contrôle technique et calcul du métrage (comme indiqué à la validation du panier).
-      {% elif order.pricing_status == "priced" %}
-      Montant estimé : <strong>{{ order.total_amount }} {{ order.currency }}</strong>
-      (facture groupée selon votre échéance).
+  <div class="dui-alert dui-alert-info product-alert mb-4" role="status">
+    <p class="m-0">
+      Facturation différée — aucun paiement immédiat.
+      {% if order.pricing_status == "priced" %}
+      Montant estimé : <strong>{{ order.total_amount }} {{ order.currency }}</strong>.
+      {% else %}
+      Montant communiqué après contrôle technique.
       {% endif %}
     </p>
-    {% if order.credit_hold_status == "warning" %}
-    <p class="mt-2 text-sm opacity-90">Alerte encours : contactez votre interlocuteur commercial.</p>
-    {% elif order.credit_hold_status == "blocked" %}
-    <p class="mt-2 text-sm opacity-90">Commande signalée pour dépassement d’encours.</p>
+    {% if order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
+    <p class="mt-2 mb-0 text-sm opacity-90">{{ order.get_credit_hold_status_display }} — contactez votre interlocuteur.</p>
     {% endif %}
   </div>
   {% endif %}
 
   {% if payment %}
   <div class="dui-alert product-alert mb-4 {% if payment.status == 'captured' %}dui-alert-success{% elif payment.status == 'failed' %}dui-alert-error{% else %}dui-alert-info{% endif %}">
-    <p>
+    <p class="m-0">
       Paiement :
       <span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>
       — {{ payment.amount }} {{ payment.currency }}
     </p>
     {% if payment.last_error_message %}
-    <p class="mt-2 text-sm">{{ payment.last_error_message }}</p>
+    <p class="mt-2 mb-0 text-sm">{{ payment.last_error_message }}</p>
     {% endif %}
-  </div>
-  {% elif order.billing_mode != "deferred" %}
-  <div class="empty-state p-4">
-    <p>Aucun paiement enregistré pour cette commande.</p>
   </div>
   {% endif %}
 
   {% if invoice %}
   <div class="dui-alert dui-alert-success product-alert mb-4">
-    <p>
+    <p class="m-0">
       Facture <strong>{{ invoice.invoice_number }}</strong>
       —
       <span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>
@@ -56,23 +44,21 @@
       {{ invoice.total_amount }} {{ invoice.currency }}
     </p>
     {% if invoice.paid_at %}
-    <p class="mt-2 text-sm opacity-95">Facture réglée le {{ invoice.paid_at|date:"d/m/Y" }}.</p>
-    {% elif order.customer.preferred_settlement_method == "wire_transfer" %}
-    <p class="mt-2 text-sm opacity-95">Paiement par virement — traitement comptable à réception.</p>
+    <p class="mt-2 mb-0 text-sm opacity-95">Réglée le {{ invoice.paid_at|date:"d/m/Y" }}.</p>
     {% endif %}
   </div>
-  <p>
+  <p class="mb-0">
     <a class="ui-link font-semibold underline-offset-2 hover:underline" href="{% url 'billing:client-invoice-download' customer_public_id=order.customer.public_id order_public_id=order.public_id %}">
       Télécharger la facture
     </a>
   </p>
+  {% elif order.billing_mode != "deferred" and not payment %}
+  <div class="empty-state p-4">
+    <p>Facture disponible après confirmation du paiement.</p>
+  </div>
   {% elif order.billing_mode == "deferred" %}
   <div class="empty-state p-4">
-    <p>La facture sera émise sur la période de facturation ouverte pour votre compte.</p>
-  </div>
-  {% else %}
-  <div class="empty-state p-4">
-    <p>La facture sera disponible après confirmation du paiement.</p>
+    <p>Facture émise sur votre prochaine période de facturation.</p>
   </div>
   {% endif %}
 </div>

@@ -1,0 +1,92 @@
+{% load portal_tags %}
+{# Même structure que orders_table — desktop + cartes mobile #}
+<div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap">
+  <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
+    <caption class="sr-only">Commandes à finaliser</caption>
+    <thead>
+      <tr>
+        <th>N° IDS</th>
+        <th>Votre réf.</th>
+        <th>Statut</th>
+        <th>Visuels</th>
+        <th>Créée le</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for project in projects %}
+      <tr>
+        <td>
+          <div class="ui-order-primary">
+            <span class="ui-order-primary__label">N° IDS</span>
+            <code class="ui-table-mono ui-table-primary-cell">{{ project.project_number }}</code>
+          </div>
+        </td>
+        <td>
+          <div class="ui-order-secondary">
+            <span class="ui-order-secondary__label">Votre réf.</span>
+            {% if project|project_client_ref %}
+            <span class="ui-order-secondary__value">{{ project|project_client_ref }}</span>
+            {% else %}
+            <span class="muted">—</span>
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          <div class="ui-table-status-stack">
+            <span class="badge {{ project.status|badge_tone }}">{{ project.get_status_display }}</span>
+          </div>
+        </td>
+        <td>
+          <div class="ui-order-secondary">
+            <span class="ui-order-secondary__label">Visuels</span>
+            <span class="ui-order-secondary__value">{{ project.items.count }}</span>
+          </div>
+        </td>
+        <td>
+          <div class="ui-order-secondary">
+            <span class="ui-order-secondary__label">Créée le</span>
+            <time datetime="{{ project.created_at|date:'c' }}">{{ project.created_at|date:"d/m/Y H:i" }}</time>
+          </div>
+        </td>
+        <td>
+          <div class="ui-table-actions">
+            <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=project.public_id %}">Ouvrir</a>
+            {% if show_delete %}
+            {% include "portal/client/partials/order_project_delete_button.html" %}
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="ui-orders-list-mobile space-y-3" aria-label="Commandes à finaliser">
+  {% for project in projects %}
+  <article class="ui-mobile-order-card">
+    <div class="flex flex-wrap items-start justify-between gap-2">
+      <div>
+        <p class="muted text-xs">N° IDS</p>
+        <p class="font-mono text-sm ui-table-mono">{{ project.project_number }}</p>
+      </div>
+      <div class="text-right max-w-[55%]">
+        <p class="muted text-xs">Votre réf.</p>
+        <p class="text-sm break-words">{% if project|project_client_ref %}{{ project|project_client_ref }}{% else %}<span class="muted">—</span>{% endif %}</p>
+      </div>
+    </div>
+    <div class="mt-3 flex flex-wrap items-center gap-2">
+      <span class="badge {{ project.status|badge_tone }}">{{ project.get_status_display }}</span>
+      <span class="text-sm">{{ project.items.count }} visuel{{ project.items.count|pluralize }}</span>
+    </div>
+    <p class="muted mt-2 text-xs">Créée le {{ project.created_at|date:"d/m/Y H:i" }}</p>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=project.public_id %}">Ouvrir</a>
+      {% if show_delete %}
+      {% include "portal/client/partials/order_project_delete_button.html" %}
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>

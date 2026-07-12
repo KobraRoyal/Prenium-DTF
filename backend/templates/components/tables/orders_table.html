@@ -1,13 +1,16 @@
 {% load portal_tags %}
 {# Tableau desktop + cartes empilées sur petit écran (P3 accessibilité mobile) #}
-<div class="hidden md:block ui-table-shell ui-table-shell--comfortable table-wrap">
+<div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap">
   <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
     <caption class="sr-only">Liste des commandes</caption>
     <thead>
       <tr>
-        <th>Commande</th>
         {% if variant == "staff" %}
         <th>Client</th>
+        {% endif %}
+        <th>N° IDS</th>
+        {% if variant == "client" %}
+        <th>Votre réf.</th>
         {% endif %}
         <th>Statut</th>
         <th>Total</th>
@@ -18,17 +21,29 @@
     <tbody>
       {% for order in orders %}
       <tr class="{% if order.credit_hold_status == 'blocked' or order.status == 'cancelled' %}ui-row-anomaly{% elif order.credit_hold_status == 'warning' or order.pricing_status != 'priced' %}ui-row-warning{% endif %}">
-        <td>
-          <div class="ui-order-primary">
-            <span class="ui-order-primary__label">Commande</span>
-            <code class="ui-table-mono ui-table-primary-cell">{{ order.public_id }}</code>
-          </div>
-        </td>
         {% if variant == "staff" %}
         <td>
           <div class="ui-order-secondary">
             <span class="ui-order-secondary__label">Client</span>
             <span class="ui-order-secondary__value">{{ order.customer.name }}</span>
+          </div>
+        </td>
+        {% endif %}
+        <td>
+          <div class="ui-order-primary">
+            <span class="ui-order-primary__label">N° IDS</span>
+            <code class="ui-table-mono ui-table-primary-cell">{{ order.public_id|short_ref }}</code>
+          </div>
+        </td>
+        {% if variant == "client" %}
+        <td>
+          <div class="ui-order-secondary">
+            <span class="ui-order-secondary__label">Votre réf.</span>
+            {% if order|order_client_ref %}
+            <span class="ui-order-secondary__value">{{ order|order_client_ref }}</span>
+            {% else %}
+            <span class="muted">—</span>
+            {% endif %}
           </div>
         </td>
         {% endif %}
@@ -58,11 +73,13 @@
           </div>
         </td>
         <td>
-          {% if variant == "staff" %}
-          <a class="ui-inline-link ui-inline-link--button" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
-          {% else %}
-          <a class="ui-inline-link ui-inline-link--button" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
-          {% endif %}
+          <div class="ui-table-actions">
+            {% if variant == "staff" %}
+            <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
+            {% else %}
+            <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% endfor %}
@@ -70,15 +87,20 @@
   </table>
 </div>
 
-<div class="md:hidden space-y-3" aria-label="Liste des commandes">
+<div class="ui-orders-list-mobile space-y-3" aria-label="Liste des commandes">
   {% for order in orders %}
   <article class="ui-mobile-order-card {% if order.credit_hold_status == 'blocked' or order.status == 'cancelled' %}ui-card-anomaly{% elif order.credit_hold_status == 'warning' or order.pricing_status != 'priced' %}ui-card-warning{% endif %}">
     <div class="flex flex-wrap items-start justify-between gap-2">
       <div>
-        <p class="muted text-xs">Commande</p>
-        <p class="font-mono text-sm ui-table-mono">{{ order.public_id }}</p>
+        <p class="muted text-xs">N° IDS</p>
+        <p class="font-mono text-sm ui-table-mono">{{ order.public_id|short_ref }}</p>
       </div>
-      {% if variant == "staff" %}
+      {% if variant == "client" %}
+      <div class="text-right max-w-[55%]">
+        <p class="muted text-xs">Votre réf.</p>
+        <p class="text-sm break-words">{% if order|order_client_ref %}{{ order|order_client_ref }}{% else %}<span class="muted">—</span>{% endif %}</p>
+      </div>
+      {% elif variant == "staff" %}
       <div class="text-right">
         <p class="muted text-xs">Client</p>
         <p class="text-sm">{{ order.customer.name }}</p>
@@ -97,7 +119,7 @@
       {% endif %}
     </div>
     <p class="muted mt-2 text-xs">Créée le {{ order.created_at|date:"d/m/Y H:i" }}</p>
-    <div class="mt-4">
+    <div class="mt-4 flex flex-wrap gap-2">
       {% if variant == "staff" %}
       <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
       {% else %}

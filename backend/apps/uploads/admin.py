@@ -1,6 +1,71 @@
 from django.contrib import admin
 
-from .models import OrderDriveFolder, OrderUpload, OrderUploadDriveSync, OrderUploadInspection
+from .models import (
+    Asset,
+    AssetAnalysis,
+    AssetVersion,
+    OrderDriveFolder,
+    OrderUpload,
+    OrderUploadDriveSync,
+    OrderUploadInspection,
+)
+
+
+@admin.register(Asset)
+class AssetAdmin(admin.ModelAdmin):
+    list_display = ("public_id", "customer", "name", "current_version", "is_archived", "updated_at")
+    list_filter = ("is_archived", "updated_at")
+    search_fields = ("name", "customer__name", "public_id")
+    readonly_fields = (
+        "public_id",
+        "customer",
+        "created_by",
+        "current_version",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AssetVersion)
+class AssetVersionAdmin(admin.ModelAdmin):
+    list_display = (
+        "public_id",
+        "asset",
+        "version_number",
+        "analysis_status",
+        "mime_type",
+        "size_bytes",
+        "created_at",
+    )
+    list_filter = ("analysis_status", "mime_type", "created_at")
+    search_fields = ("original_filename", "asset__name", "customer__name", "sha256")
+    readonly_fields = tuple(field.name for field in AssetVersion._meta.fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AssetAnalysis)
+class AssetAnalysisAdmin(admin.ModelAdmin):
+    list_display = ("public_id", "version", "image_width", "image_height", "analyzed_at")
+    list_filter = ("analyzed_at",)
+    search_fields = ("version__original_filename", "customer__name")
+    readonly_fields = tuple(field.name for field in AssetAnalysis._meta.fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(OrderUpload)

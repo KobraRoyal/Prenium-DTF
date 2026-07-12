@@ -51,6 +51,11 @@ class Customer(BaseModel):
     name = models.CharField(max_length=255)
     billing_email = models.EmailField(blank=True)
     is_active = models.BooleanField(default=True)
+    b2b_order_projects_enabled = models.BooleanField(
+        "Projets de commande B2B activés",
+        default=False,
+        help_text="Activation IDS explicite du parcours projet avant commande.",
+    )
     notes = models.TextField(blank=True)
 
     billing_address_line1 = models.CharField(

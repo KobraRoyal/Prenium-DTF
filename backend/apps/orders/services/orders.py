@@ -29,7 +29,7 @@ class OrderService:
     def list_customer_orders(self, customer):
         return (
             Order.objects.for_customer(customer)
-            .select_related("customer", "created_by")
+            .select_related("customer", "created_by", "source_b2b_order_project")
             .prefetch_related("items", "items__service")
             .order_by("-created_at")
         )
@@ -37,7 +37,7 @@ class OrderService:
     def get_customer_order(self, customer, order_public_id):
         return (
             Order.objects.for_customer(customer)
-            .select_related("customer", "created_by")
+            .select_related("customer", "created_by", "source_b2b_order_project")
             .prefetch_related("items", "items__service", "uploads", "uploads__inspection")
             .filter(public_id=order_public_id)
             .first()

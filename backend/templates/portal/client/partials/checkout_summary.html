@@ -3,13 +3,12 @@
   <div class="product-checkout-card__body gap-4">
     <div>
       <h3 class="dui-card-title font-display text-lg">Étape 3 — Vérification finale</h3>
-      <p class="mt-2 text-sm">
-        Commande
-        <code class="product-reference-code">{{ order.public_id }}</code>
-      </p>
-      {% if order.customer_note %}
+      {% client_order_refs order %}
+      {% with client_ref=order|order_client_ref %}
+      {% if order.customer_note and order.customer_note.strip != client_ref %}
       <p class="product-text-muted mt-2 text-sm leading-snug">{{ order.customer_note|truncatechars:240 }}</p>
       {% endif %}
+      {% endwith %}
       <p class="mt-2 text-sm opacity-70">Vérifiez les éléments ci-dessous avant d'envoyer la demande en traitement. L'atelier contrôlera ensuite les fichiers avant lancement.</p>
     </div>
 

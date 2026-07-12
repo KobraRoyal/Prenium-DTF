@@ -6,6 +6,7 @@ from django.db import models
 
 from apps.catalog.models import CatalogService
 from apps.core.models import BaseModel
+from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer
 
 ZERO_AMOUNT = Decimal("0.00")
@@ -118,6 +119,10 @@ class Order(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.customer.name} - {self.public_id}"
+
+    @property
+    def short_ref(self) -> str:
+        return short_public_ref(self.public_id)
 
 
 class OrderLine(BaseModel):

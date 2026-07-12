@@ -1,0 +1,38 @@
+<div
+  class="product-date-picker{% if wrapper_class %} {{ wrapper_class }}{% endif %}"
+  data-product-date-picker
+  data-placeholder="{{ placeholder|default:'Choisir une date' }}"
+>
+  <input type="hidden" name="{{ name }}" id="{{ id }}" value="{{ value|default:'' }}">
+  <button
+    type="button"
+    class="product-date-picker__trigger {{ input_class|default:'dui-input dui-input-bordered w-full' }}"
+    data-date-trigger
+    aria-haspopup="dialog"
+    aria-expanded="false"
+    aria-controls="{{ id }}-popover"
+  >
+    <span data-date-display class="is-placeholder">{{ placeholder|default:"Choisir une date" }}</span>
+  </button>
+  <div
+    class="product-date-picker__popover"
+    id="{{ id }}-popover"
+    data-date-popover
+    hidden
+    role="dialog"
+    aria-label="{{ label|default:'Calendrier' }}"
+  >
+    <div class="product-date-picker__head">
+      <button type="button" class="product-date-picker__nav" data-date-prev aria-label="Mois précédent">‹</button>
+      <p class="product-date-picker__month" data-date-month></p>
+      <button type="button" class="product-date-picker__nav" data-date-next aria-label="Mois suivant">›</button>
+    </div>
+    <div class="product-date-picker__weekdays" aria-hidden="true">
+      <span>Lu</span><span>Ma</span><span>Me</span><span>Je</span><span>Ve</span><span>Sa</span><span>Di</span>
+    </div>
+    <div class="product-date-picker__grid" data-date-grid role="grid"></div>
+    <div class="product-date-picker__footer">
+      <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-date-clear>Effacer</button>
+    </div>
+  </div>
+</div>

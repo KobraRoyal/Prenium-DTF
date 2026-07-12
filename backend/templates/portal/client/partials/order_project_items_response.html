@@ -1,0 +1,13 @@
+{% include "portal/client/partials/order_project_items.html" %}
+{% include "portal/client/partials/order_project_summary.html" with oob=1 %}
+{% if active_validation_item %}
+<div id="add-visual-dialog-body" hx-swap-oob="innerHTML">
+  {% include "portal/client/partials/order_project_add_visual_validation_panel.html" with item=active_validation_item %}
+</div>
+<div id="add-visual-dialog-title" hx-swap-oob="innerHTML">Validation</div>
+{% elif reset_add_visual_dialog %}
+<div id="add-visual-dialog-body" hx-swap-oob="innerHTML">
+  {% include "portal/client/partials/order_project_add_visual_form.html" %}
+</div>
+<div id="add-visual-dialog-title" hx-swap-oob="innerHTML">Ajouter un visuel</div>
+{% endif %}

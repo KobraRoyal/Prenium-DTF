@@ -7,6 +7,13 @@ urlpatterns = [
     path("", include("apps.core.urls")),
     path("", include(("apps.accounts.urls", "accounts"), namespace="accounts")),
     path("", include(("apps.billing.urls", "billing"), namespace="billing")),
+    path(
+        "",
+        include(
+            ("apps.b2b_order_projects.urls", "b2b_order_projects"),
+            namespace="b2b_order_projects",
+        ),
+    ),
     path("", include(("apps.catalog.urls", "catalog"), namespace="catalog")),
     path("", include(("apps.orders.urls", "orders"), namespace="orders")),
     path("", include(("apps.portal.urls", "portal"), namespace="portal")),

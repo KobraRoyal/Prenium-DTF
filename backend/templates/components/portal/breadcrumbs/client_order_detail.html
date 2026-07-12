@@ -1,7 +1,20 @@
-<nav class="ui-breadcrumb" aria-label="Fil d’Ariane">
+{% load portal_tags %}
+<nav
+  class="ui-breadcrumb"
+  id="client-order-breadcrumb"
+  aria-label="Fil d’Ariane"
+  {% if breadcrumb_oob %}hx-swap-oob="outerHTML:#client-order-breadcrumb"{% endif %}
+>
   <ol class="ui-breadcrumb__list">
     <li class="ui-breadcrumb__item"><a href="{% url 'portal:client-dashboard' %}">Accueil client</a></li>
     <li class="ui-breadcrumb__item"><a href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Commandes</a></li>
-    <li class="ui-breadcrumb__item"><span aria-current="page">Détail</span></li>
+    {% if active_panel %}
+    <li class="ui-breadcrumb__item">
+      <a href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">{{ order_short_ref }}</a>
+    </li>
+    <li class="ui-breadcrumb__item"><span aria-current="page">{{ active_panel|client_order_panel_label }}</span></li>
+    {% else %}
+    <li class="ui-breadcrumb__item"><span aria-current="page">{{ order_short_ref }}</span></li>
+    {% endif %}
   </ol>
 </nav>

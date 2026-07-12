@@ -1,16 +1,42 @@
-<section class="card workflow-shell ui-workflow-shell">
+<section class="card workflow-shell ui-workflow-shell{% if compact %} workflow-shell--compact{% endif %}">
+  {% if title %}
   <header class="workflow-shell__head ui-workflow-shell__head">
     <h2 class="workflow-shell__title ui-workflow-shell__title" id="{{ panel_id }}-tabs-heading">{{ title }}</h2>
     {% if subtitle %}
     <p class="workflow-shell__lead ui-workflow-shell__lead">{{ subtitle }}</p>
     {% endif %}
   </header>
+  {% endif %}
   <div
-    class="workflow-tab-rail portal-order-tabs ui-tab-rail"
+    class="workflow-tab-rail portal-order-tabs ui-tab-rail{% if compact %} workflow-tab-rail--compact{% endif %}"
     role="tablist"
     aria-orientation="horizontal"
-    aria-labelledby="{{ panel_id }}-tabs-heading"
+    {% if title %}aria-labelledby="{{ panel_id }}-tabs-heading"{% else %}aria-label="Suivi commande"{% endif %}
   >
+    {% if compact %}
+    <div class="workflow-tab-group__chips workflow-tab-group__chips--flat" role="presentation">
+      {% for tab in tabs %}
+      <button
+        type="button"
+        id="{{ tab.dom_id }}"
+        role="tab"
+        aria-selected="{% if tab.active %}true{% else %}false{% endif %}"
+        aria-controls="{{ panel_id }}"
+        tabindex="{% if tab.active %}0{% else %}-1{% endif %}"
+        class="chip ui-tab-chip transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c1815]{% if tab.active %} is-active{% endif %}"
+        data-panel-slug="{{ tab.slug }}"
+        hx-get="{{ tab.url }}"
+        hx-target="{{ hx_target }}"
+        hx-swap="innerHTML"
+        {% if tab.push_url %}hx-push-url="{{ tab.push_url }}"{% endif %}
+        hx-indicator="#portal-htmx-indicator"
+      >
+        {% if tab.icon and not compact %}{% include "components/workflow/tab_icon.html" with icon=tab.icon only %}{% endif %}
+        <span>{{ tab.label }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% else %}
     <div class="workflow-tab-groups" role="presentation">
       {% for group in tab_groups %}
       <div class="workflow-tab-group" role="group" aria-label="{{ group.label }}">
@@ -40,6 +66,7 @@
       </div>
       {% endfor %}
     </div>
+    {% endif %}
   </div>
   <div class="workflow-panel workflow-panel-shell ui-panel-shell">
     <div

@@ -1,0 +1,21 @@
+{% extends "portal/layout.html" %}
+{% load ui_tags portal_tags %}
+
+{% block title %}Commandes à finaliser - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+{% include "components/portal/page_head.html" with title="Commandes à finaliser" subtitle="N° IDS et votre référence pour chaque commande non encore transmise." %}
+
+<div class="client-dashboard-toolbar">
+  <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-order-project-create' customer_public_id=customer.public_id %}">Nouvelle commande</a>
+</div>
+
+<section class="card client-dashboard-section">
+  {% if projects %}
+  {% ui_order_projects_table projects=projects customer=customer show_delete=True %}
+  {% else %}
+  {% url 'portal:client-order-project-create' customer_public_id=customer.public_id as create_url %}
+  {% include "components/ui/empty_state.html" with title="Aucune commande à finaliser" message="Créez une commande, ajoutez vos visuels puis transmettez-la à l'atelier." cta_url=create_url cta_label="Nouvelle commande" %}
+  {% endif %}
+</section>
+{% endblock %}

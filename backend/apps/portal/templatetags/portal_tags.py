@@ -1,5 +1,8 @@
 from django import template
 
+from apps.core.public_refs import short_public_ref
+from apps.orders.references import order_client_reference, project_client_reference
+
 register = template.Library()
 
 STATUS_LABELS = {
@@ -44,8 +47,22 @@ def badge_tone(status):
         "submitted",
         "priced",
         "clear",
+        "ready_to_submit",
+        "confirmed",
+        "converted",
     }
-    warning = {"warning", "pending", "queued", "in_progress"}
+    warning = {
+        "warning",
+        "pending",
+        "queued",
+        "in_progress",
+        "incomplete",
+        "analyzing",
+        "action_required",
+        "changes_requested",
+        "price_confirmation_required",
+        "under_review",
+    }
     negative = {"error", "failed", "blocked", "draft"}
     if status in positive:
         return "is-success"
@@ -60,3 +77,53 @@ def badge_tone(status):
 def human_status(status):
     value = str(status)
     return STATUS_LABELS.get(value, value.replace("_", " ").capitalize())
+
+
+@register.filter
+def short_ref(value):
+    return short_public_ref(value)
+
+
+@register.filter
+def order_client_ref(order):
+    return order_client_reference(order)
+
+
+@register.filter
+def project_client_ref(project):
+    return project_client_reference(project)
+
+
+CLIENT_ORDER_PANEL_LABELS = {
+    "uploads": "Visuels",
+    "production": "Avancement",
+    "shipping": "Expédition",
+    "billing": "Facture",
+}
+
+
+@register.filter
+def client_order_panel_label(panel_slug):
+    return CLIENT_ORDER_PANEL_LABELS.get(str(panel_slug or "").strip(), "Détail")
+
+
+@register.inclusion_tag("components/portal/client_refs.html")
+def client_order_refs(order, variant="row"):
+    return {
+        "ids_value": short_public_ref(order.public_id),
+        "client_value": order_client_reference(order),
+        "variant": variant,
+        "mono_ids": True,
+    }
+
+
+@register.inclusion_tag("components/portal/client_refs.html")
+def client_project_refs(project, variant="row"):
+    return {
+        "ids_value": project.project_number,
+        "client_value": project_client_reference(project),
+        "variant": variant,
+        "mono_ids": False,
+    }
+
+

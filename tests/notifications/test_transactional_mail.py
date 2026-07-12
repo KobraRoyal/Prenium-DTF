@@ -5,7 +5,10 @@ from apps.billing.services.payments import PaymentService
 from apps.catalog.models import CatalogService
 from apps.customers.models import Customer, CustomerMembership
 from apps.notifications.services.transactional import schedule_order_created_email
-from apps.notifications.tasks import send_order_created_email_task
+from apps.notifications.tasks import (
+    send_order_created_email_task,
+    send_payment_captured_email_task,
+)
 from apps.orders.services.orders import OrderService
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -29,13 +32,16 @@ def test_order_created_sends_transactional_email():
     )
 
     mail.outbox.clear()
-    with TestCase.captureOnCommitCallbacks(execute=True):
-        OrderService().create_order(
-            customer=customer,
-            actor=user,
-            items=[{"service_public_id": str(dtf_service.public_id), "quantity": "1.00"}],
-        )
+    with patch("apps.notifications.tasks.send_order_created_email_task.delay") as task_delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            order = OrderService().create_order(
+                customer=customer,
+                actor=user,
+                items=[{"service_public_id": str(dtf_service.public_id), "quantity": "1.00"}],
+            )
 
+    task_delay.assert_called_once_with(str(order.public_id))
+    send_order_created_email_task.run(str(order.public_id))
     assert len(mail.outbox) == 1
     msg = mail.outbox[0]
     assert user.email in msg.to or "billing@example.com" in msg.to
@@ -57,15 +63,18 @@ def test_payment_captured_sends_transactional_email():
     assert payment is not None
 
     mail.outbox.clear()
-    with TestCase.captureOnCommitCallbacks(execute=True):
-        svc.confirm_capture(
-            order_public_id=order.public_id,
-            paypal_order_id=payment.paypal_order_id,
-            payment_public_id=payment.public_id,
-            actor=user,
-            source="test",
-        )
+    with patch("apps.notifications.tasks.send_payment_captured_email_task.delay") as task_delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            svc.confirm_capture(
+                order_public_id=order.public_id,
+                paypal_order_id=payment.paypal_order_id,
+                payment_public_id=payment.public_id,
+                actor=user,
+                source="test",
+            )
 
+    task_delay.assert_called_once_with(str(order.public_id))
+    send_payment_captured_email_task.run(str(order.public_id))
     assert len(mail.outbox) == 1
     assert "Paiement confirmé" in mail.outbox[0].subject
 

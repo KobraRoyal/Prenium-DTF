@@ -14,10 +14,10 @@
     <span class="muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
     <div class="flex items-center gap-2">
       {% if page_obj.has_previous %}
-      <a class="ui-inline-link ui-inline-link--button" href="?page={{ page_obj.previous_page_number }}">Précédente</a>
+      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="?page={{ page_obj.previous_page_number }}">Précédente</a>
       {% endif %}
       {% if page_obj.has_next %}
-      <a class="ui-inline-link ui-inline-link--button" href="?page={{ page_obj.next_page_number }}">Suivante</a>
+      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="?page={{ page_obj.next_page_number }}">Suivante</a>
       {% endif %}
     </div>
   </nav>

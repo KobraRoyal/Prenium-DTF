@@ -146,6 +146,83 @@ class OrderUploadService:
 
         return self.get_order_upload(order=order, upload_public_id=order_upload.public_id)
 
+    def create_upload_from_asset_version(
+        self,
+        *,
+        customer,
+        actor,
+        order,
+        asset_version,
+        quantity: int | None = None,
+        support_color_hex: str = "",
+        customer_membership=None,
+        source: str,
+    ) -> OrderUpload:
+        if order.customer_id != customer.id:
+            raise ValidationError("Commande introuvable.")
+        if asset_version.customer_id != customer.id:
+            raise ValidationError("Fichier introuvable.")
+        if OrderUpload.objects.filter(asset_version=asset_version).exists():
+            raise ValidationError("Ce fichier est déjà rattaché à une commande.")
+
+        validated_membership = self._validate_customer_actor_scope(
+            customer=customer,
+            actor=actor,
+            customer_membership=customer_membership,
+        )
+        resolved_qty = self._normalize_quantity(quantity)
+        color = self._normalize_support_color(support_color_hex)
+
+        with transaction.atomic():
+            next_order = (
+                OrderUpload.objects.filter(order=order).aggregate(m=Max("sort_order"))["m"] or 0
+            ) + 1
+
+            order_upload = OrderUpload(
+                order=order,
+                uploaded_by=actor if getattr(actor, "is_authenticated", False) else None,
+                asset_version=asset_version,
+                original_filename=asset_version.original_filename,
+                mime_type=asset_version.mime_type,
+                size_bytes=asset_version.size_bytes,
+                sort_order=next_order,
+                quantity=resolved_qty,
+                support_color_hex=color,
+            )
+            order_upload.file.name = asset_version.file.name
+            order_upload.save()
+
+            record_event(
+                action="order_upload.created",
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=order_upload,
+                metadata={
+                    "order_public_id": str(order.public_id),
+                    "customer_public_id": str(order.customer.public_id),
+                    "order_upload_public_id": str(order_upload.public_id),
+                    "asset_version_public_id": str(asset_version.public_id),
+                    "customer_membership_public_id": str(validated_membership.public_id),
+                    "mime_type": order_upload.mime_type,
+                    "size_bytes": order_upload.size_bytes,
+                    "source": source,
+                },
+            )
+            self.inspection_service.inspect_upload(
+                order_upload=order_upload,
+                actor=actor,
+                source=source,
+            )
+            self.drive_sync_service.ensure_sync_record(order_upload=order_upload)
+            transaction.on_commit(
+                lambda: self.drive_sync_service.schedule_upload_sync(
+                    order_upload=order_upload,
+                    actor=actor,
+                    source=source,
+                )
+            )
+
+        return self.get_order_upload(order=order, upload_public_id=order_upload.public_id)
+
     def _normalize_quantity(self, quantity: int | None) -> int:
         if quantity is None:
             return 1
@@ -496,6 +573,8 @@ class OrderUploadService:
             "uploaded_by",
             "inspection",
             "drive_sync",
+            "asset_version",
+            "asset_version__analysis",
         )
 
     def _validate_customer_actor_scope(

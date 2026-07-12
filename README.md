@@ -38,6 +38,7 @@ Le backend est déjà en place, avec apps métier séparées :
 - `accounts`
 - `auditlog`
 - `billing`
+- `b2b_order_projects`
 - `catalog`
 - `core`
 - `customers`
@@ -86,6 +87,7 @@ make migrations-plan
 make test
 make test-ui
 make test-orders
+make test-b2b
 make lint
 make format
 make audit
@@ -125,3 +127,18 @@ docker compose run --rm --entrypoint sh web -lc 'cd /app/backend && pip-audit -r
 - ne pas mélanger refactoring structurel et changement métier sensible ;
 - mettre à jour la documentation du lot concerné ;
 - conserver l'isolation stricte des données client.
+
+## Projets de commande B2B
+
+Le parcours de préparation avant commande est activé pour tous les clients actifs avec
+`B2B_DTF_ORDER_PROJECT_ENABLED=True`. Le champ historique
+`Customer.b2b_order_projects_enabled` n'est plus utilisé pour masquer le parcours. Voir
+`docs/architecture/B2B_ORDER_PROJECTS.md` et
+`docs/architecture/ADR_B2B_SHARED_ASSET.md`. Le Sprint 22 ajoute les fichiers versionnés, leur
+analyse asynchrone et le téléchargement médié sans modifier le workflow de production existant.
+Voir aussi `docs/sprints/sprint-21-b2b-order-projects-foundation.md` et
+`docs/sprints/sprint-22-b2b-assets-analysis.md`.
+
+Le Compose local active le configurateur par défaut pour la recette. Utiliser
+`B2B_DTF_ORDER_PROJECT_ENABLED=False` dans `.env` pour le masquer. La production reste pilotée
+explicitement par son environnement.

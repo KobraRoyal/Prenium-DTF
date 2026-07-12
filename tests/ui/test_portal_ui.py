@@ -13,7 +13,9 @@ from django.urls import reverse
 def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     user = get_user_model().objects.create_user(email="client-portal@example.com", password="pass")
     customer = Customer.objects.create(name="Client Portal")
-    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerMembership.objects.create(
+        customer=customer, user=user, role=CustomerMembership.Role.OWNER
+    )
     order = Order.objects.create(
         customer=customer,
         created_by=user,
@@ -69,20 +71,23 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
 
     assert dashboard_response.status_code == 200
     dashboard_html = dashboard_response.content.decode()
-    assert "Accueil client" in dashboard_html
+    assert "Commandes à finaliser et commandes transmises" in dashboard_html
     assert "product-shell--portal" in dashboard_html
-    assert "product-command-grid" in dashboard_html
-    assert "Commander sans friction" in dashboard_html
-    assert "Accès isolé" in dashboard_html
+    assert "client-dashboard" in dashboard_html
+    assert "Commandes transmises" in dashboard_html
+    assert "Accès isolé" not in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
     detail_html = detail_response.content.decode()
-    assert "Suivez vos fichiers, la production, l'expédition et la facture" in detail_html
-    assert "split-row" in detail_html
+    assert "client-order-summary" in detail_html
     assert 'role="tablist"' in detail_html
     assert "client-order-panel" in detail_html
+    assert "N° IDS" in detail_html
+    assert "Votre réf." in detail_html
+    assert "Visuels" in detail_html
+    assert "Contrôle" not in detail_html
     assert uploads_panel_response.status_code == 200
-    assert "panel-head" in uploads_panel_response.content.decode()
+    assert "Visuels transmis" in uploads_panel_response.content.decode()
     assert inspection_panel_response.status_code == 200
     assert production_panel_response.status_code == 200
     assert shipping_panel_response.status_code == 200

@@ -1,0 +1,18 @@
+<div class="b2b-quality-review is-{{ review.level }}{% if compact %} b2b-quality-review--compact{% endif %}" aria-live="polite">
+  <div class="b2b-quality-review__head">
+    <strong>{{ review.label }}</strong>
+    {% if review.confirmed %}<span class="badge is-success">Validé</span>{% endif %}
+  </div>
+  {% if not compact %}
+    {% if review.level == "good" %}
+    <p class="b2b-quality-review__summary">{{ item.width_mm }} × {{ item.height_mm }} mm · {{ review.resolution_display }}</p>
+    {% elif review.message %}
+    <p class="b2b-quality-review__summary">{{ review.message }}</p>
+    {% endif %}
+    {% if review.issues %}
+    <ul class="b2b-quality-issues-list">{% for issue in review.issues %}<li>{{ issue }}</li>{% endfor %}</ul>
+    {% endif %}
+  {% elif review.issues %}
+    <ul class="b2b-quality-issues-list">{% for issue in review.issues %}<li>{{ issue }}</li>{% endfor %}</ul>
+  {% endif %}
+</div>

@@ -35,6 +35,8 @@ services:
     environment:
       DJANGO_STATIC_ROOT: ${DJANGO_STATIC_ROOT:-/var/app/static}
       DJANGO_MEDIA_ROOT: ${DJANGO_MEDIA_ROOT:-/var/app/media}
+      B2B_DTF_ORDER_PROJECT_ENABLED: ${B2B_DTF_ORDER_PROJECT_ENABLED:-True}
+      GUNICORN_RELOAD: ${GUNICORN_RELOAD:-1}
     command: ["sh", "infra/scripts/web-entrypoint.sh"]
     volumes:
       - .:/app

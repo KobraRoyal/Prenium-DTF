@@ -1,0 +1,52 @@
+<form
+  method="post"
+  enctype="multipart/form-data"
+  hx-encoding="multipart/form-data"
+  hx-post="{% url 'portal:client-order-project-item-create' customer_public_id=customer.public_id project_public_id=project.public_id %}"
+  hx-target="#order-project-items"
+  hx-swap="outerHTML"
+  hx-indicator="#portal-htmx-indicator"
+  class="b2b-configurator__new"
+  data-submit-loading
+  data-add-visual-form
+>
+  {% csrf_token %}
+  <div class="b2b-configurator__workspace" data-b2b-configurator>
+    <div class="b2b-configurator__preview">
+      <div class="b2b-preview-stage is-checker" data-configurator-stage>
+        <div class="b2b-preview-bounds" data-configurator-bounds hidden>
+          <img class="b2b-preview-image" alt="Aperçu du fichier sélectionné" data-configurator-preview hidden>
+        </div>
+        <div class="b2b-preview-bounds" data-configurator-bounds hidden>
+          <canvas class="b2b-preview-document" role="img" aria-label="Aperçu du PDF sélectionné" data-configurator-document-preview hidden></canvas>
+        </div>
+        <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Choisissez un fichier</strong><span>PNG, JPG, PDF, PSD, TIFF, EPS, AI</span></div>
+      </div>
+      <div class="b2b-background-tools" aria-label="Fond de l’aperçu">
+        <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-configurator-bg="checker" aria-label="Damier" aria-pressed="true" title="Damier"></button>
+        <button type="button" class="b2b-swatch-btn b2b-swatch-btn--white b2b-bg-button is-white" data-configurator-bg="#ffffff" aria-label="Blanc" aria-pressed="false" title="Blanc"></button>
+        <button type="button" class="b2b-swatch-btn b2b-swatch-btn--black b2b-bg-button is-black" data-configurator-bg="#111111" aria-label="Noir" aria-pressed="false" title="Noir"></button>
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="preview-hex-add" preview_mode=True initial_color="#ffffff" %}
+      </div>
+    </div>
+    <div class="b2b-configurator__controls">
+      <label class="dui-form-control"><span class="product-form-label">Fichier</span><input class="dui-file-input dui-file-input-bordered w-full" type="file" name="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf" data-configurator-file required></label>
+      <div class="b2b-configurator-params" data-configurator-params hidden>
+        <label class="dui-form-control"><span class="product-form-label">Nom</span><input class="dui-input dui-input-bordered" name="name" type="text" data-configurator-name required></label>
+        <input type="hidden" name="width_mm" data-configurator-width value="">
+        <input type="hidden" name="height_mm" data-configurator-height value="">
+        {% include "portal/client/partials/order_project_rotation_hidden.html" %}
+        <div class="b2b-configurator__dimensions">
+          {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=1 %}
+        </div>
+        <p class="b2b-configurator__file-meta" aria-live="polite"><span data-configurator-pixels>—</span></p>
+        {% include "portal/client/partials/order_project_support_color_field.html" %}
+        <div class="b2b-dialog-actions">
+          <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Annuler</button>
+          <button class="ui-btn ui-btn-primary" type="submit">Envoyer pour analyse</button>
+        </div>
+      </div>
+      <p class="muted text-sm" data-configurator-hint>Sélectionnez un fichier pour continuer.</p>
+    </div>
+  </div>
+</form>

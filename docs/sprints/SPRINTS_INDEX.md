@@ -27,6 +27,8 @@
 - [Sprint 18 — Pricing & B2B avancé](sprint-18-pricing-b2b-avance.md)
 - [Sprint 19 — Operational readiness](sprint-19-operational-readiness.md)
 - [Sprint 20 — Frontend UI/UX haute performance](sprint-20-frontend-performance-ui-ux.md)
+- [Sprint 21 — Fondation projets de commande B2B](sprint-21-b2b-order-projects-foundation.md)
+- [Sprint 22 — Assets B2B versionnés et analyse](sprint-22-b2b-assets-analysis.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

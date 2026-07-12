@@ -8,6 +8,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
+from apps.b2b_order_projects.permissions import b2b_order_projects_enabled_for_customer
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
     ScopedCustomerMixin,
@@ -22,6 +23,8 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
     template_name = "portal/client/checkout.html"
 
     def get(self, request, customer_public_id):
+        if b2b_order_projects_enabled_for_customer(self.customer):
+            return HttpResponseRedirect(self._asynchronous_order_url())
         return render(
             request,
             self.template_name,
@@ -29,6 +32,8 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
         )
 
     def post(self, request, customer_public_id):
+        if b2b_order_projects_enabled_for_customer(self.customer):
+            return HttpResponseRedirect(self._asynchronous_order_url())
         customer_note = request.POST.get("customer_note", "").strip()
 
         try:
@@ -51,6 +56,12 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
             kwargs={"customer_public_id": self.customer.public_id},
         )
         return HttpResponseRedirect(f"{checkout_url}?order={order.public_id}")
+
+    def _asynchronous_order_url(self):
+        return reverse(
+            "portal:client-order-project-create",
+            kwargs={"customer_public_id": self.customer.public_id},
+        )
 
     def _resolve_order(self, request):
         raw_order_public_id = str(request.GET.get("order", "")).strip()
@@ -91,6 +102,7 @@ class ClientCheckoutUploadPartialView(ScopedCustomerMixin, View):
     template_name = "portal/client/partials/checkout_uploads.html"
 
     def post(self, request, customer_public_id):
+        self._reject_replaced_checkout()
         order_public_id = request.POST.get("order_public_id", "").strip()
         try:
             order_public_id = UUID(order_public_id)
@@ -151,11 +163,17 @@ class ClientCheckoutUploadPartialView(ScopedCustomerMixin, View):
             with_toast(response, "Fichier ajoute.", "success")
         return response
 
+    def _reject_replaced_checkout(self):
+        if b2b_order_projects_enabled_for_customer(self.customer):
+            raise Http404
+
 
 class ClientCheckoutSummaryPartialView(ScopedCustomerMixin, View):
     template_name = "portal/client/partials/checkout_summary.html"
 
     def get(self, request, customer_public_id):
+        if b2b_order_projects_enabled_for_customer(self.customer):
+            raise Http404
         raw_order_public_id = str(request.GET.get("order", "")).strip()
         try:
             order_public_id = UUID(raw_order_public_id)
@@ -186,6 +204,8 @@ class ClientCheckoutSummaryPartialView(ScopedCustomerMixin, View):
 
 class ClientCheckoutSubmitView(ScopedCustomerMixin, View):
     def post(self, request, customer_public_id):
+        if b2b_order_projects_enabled_for_customer(self.customer):
+            raise Http404
         raw_order_public_id = str(request.POST.get("order_public_id", "")).strip()
         try:
             order_public_id = UUID(raw_order_public_id)

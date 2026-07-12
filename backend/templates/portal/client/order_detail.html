@@ -4,37 +4,29 @@
 {% block title %}Détail commande client - Prenium DTF{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" title="Commande" title_code=order.public_id subtitle="Suivez vos fichiers, la production, l'expédition et la facture depuis un seul espace." %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" title="Commande" title_code=order_short_ref subtitle=order_client_label %}
 
-<section class="card">
-  <div class="split-row">
-    <div>
-      <p class="muted">Statut</p>
-      <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-    </div>
-    <div>
-      <p class="muted">Facturation</p>
-      <span class="badge">{{ order.get_billing_mode_display }}</span>
-    </div>
-    <div>
-      <p class="muted">Prix</p>
-      {% if order.pricing_status == "priced" %}
-      <strong>{{ order.total_amount }} {{ order.currency }}</strong>
-      {% else %}
-      <span class="muted">{{ order.get_pricing_status_display }}</span>
-      {% endif %}
-    </div>
-    {% if order.billing_mode == "deferred" and order.credit_hold_status and order.credit_hold_status != "none" %}
-    <div>
-      <p class="muted">Encours</p>
-      <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.get_credit_hold_status_display }}</span>
-    </div>
+{% if request.GET.checkout == "success" %}
+<div class="dui-alert dui-alert-success mb-4" role="status">Commande transmise. Vos visuels sont en file de traitement.</div>
+{% endif %}
+
+<section class="card client-order-summary" aria-label="Résumé de la commande">
+  {% client_order_refs order %}
+  <div class="client-order-summary__row">
+    <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
+    <time class="client-order-summary__date" datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y" }}</time>
+    {% if order.pricing_status == "priced" %}
+    <strong class="client-order-summary__amount">{{ order.total_amount }} {{ order.currency }}</strong>
+    {% elif order.billing_mode == "deferred" %}
+    <span class="muted client-order-summary__amount">Tarif après contrôle</span>
     {% endif %}
-    <div>
-      <p class="muted">Créée le</p>
-      <strong>{{ order.created_at|date:"d/m/Y H:i" }}</strong>
-    </div>
+    {% if order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
+    <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.get_credit_hold_status_display }}</span>
+    {% endif %}
   </div>
+  {% if order.customer_note %}
+  <p class="client-order-summary__note muted">{{ order.customer_note }}</p>
+  {% endif %}
 </section>
 
 {% order_htmx_tabs "client" %}

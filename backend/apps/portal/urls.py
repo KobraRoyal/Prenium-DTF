@@ -1,6 +1,22 @@
 from django.urls import path
 
 from .views_auth import PortalLoginView, PortalLogoutView
+from .views_b2b_order_projects import (
+    ClientOrderProjectAutosaveView,
+    ClientOrderProjectCancelView,
+    ClientOrderProjectCreateView,
+    ClientOrderProjectDetailView,
+    ClientOrderProjectItemActionView,
+    ClientOrderProjectItemAssetDownloadView,
+    ClientOrderProjectItemAssetPreviewView,
+    ClientOrderProjectItemAssetView,
+    ClientOrderProjectItemCreateView,
+    ClientOrderProjectListView,
+    ClientOrderProjectSubmitView,
+    StaffOrderProjectDetailView,
+    StaffOrderProjectItemAssetDownloadView,
+    StaffOrderProjectListView,
+)
 from .views_checkout import (
     ClientCheckoutSubmitView,
     ClientCheckoutSummaryPartialView,
@@ -16,6 +32,9 @@ from .views_client import (
     ClientOrderPanelProductionView,
     ClientOrderPanelShippingView,
     ClientOrderPanelUploadsView,
+    ClientOrderReorderView,
+    ClientOrderUploadDownloadView,
+    ClientOrderUploadPreviewView,
 )
 from .views_staff import (
     StaffDashboardView,
@@ -38,6 +57,61 @@ urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
     path("logout/", PortalLogoutView.as_view(), name="logout"),
     path("client/", ClientDashboardView.as_view(), name="client-dashboard"),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/",
+        ClientOrderProjectListView.as_view(),
+        name="client-order-project-list",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/new/",
+        ClientOrderProjectCreateView.as_view(),
+        name="client-order-project-create",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/",
+        ClientOrderProjectDetailView.as_view(),
+        name="client-order-project-detail",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/autosave/",
+        ClientOrderProjectAutosaveView.as_view(),
+        name="client-order-project-autosave",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/",
+        ClientOrderProjectItemCreateView.as_view(),
+        name="client-order-project-item-create",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/<str:action>/",
+        ClientOrderProjectItemActionView.as_view(),
+        name="client-order-project-item-action",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/asset/download/",
+        ClientOrderProjectItemAssetDownloadView.as_view(),
+        name="client-order-project-item-asset-download",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/asset/preview/",
+        ClientOrderProjectItemAssetPreviewView.as_view(),
+        name="client-order-project-item-asset-preview",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/asset/<str:action>/",
+        ClientOrderProjectItemAssetView.as_view(),
+        name="client-order-project-item-asset",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/submit/",
+        ClientOrderProjectSubmitView.as_view(),
+        name="client-order-project-submit",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/cancel/",
+        ClientOrderProjectCancelView.as_view(),
+        name="client-order-project-cancel",
+    ),
     path(
         "client/customers/<uuid:customer_public_id>/orders/",
         ClientOrderListView.as_view(),
@@ -74,6 +148,21 @@ urlpatterns = [
         name="client-order-panel-billing",
     ),
     path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/preview/",
+        ClientOrderUploadPreviewView.as_view(),
+        name="client-order-upload-preview",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/download/",
+        ClientOrderUploadDownloadView.as_view(),
+        name="client-order-upload-download",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/reorder/",
+        ClientOrderReorderView.as_view(),
+        name="client-order-reorder",
+    ),
+    path(
         "client/customers/<uuid:customer_public_id>/checkout/",
         ClientCheckoutView.as_view(),
         name="client-checkout",
@@ -94,6 +183,21 @@ urlpatterns = [
         name="client-checkout-submit",
     ),
     path("staff/", StaffDashboardView.as_view(), name="staff-dashboard"),
+    path(
+        "staff/order-projects/",
+        StaffOrderProjectListView.as_view(),
+        name="staff-order-project-list",
+    ),
+    path(
+        "staff/order-projects/<uuid:project_public_id>/",
+        StaffOrderProjectDetailView.as_view(),
+        name="staff-order-project-detail",
+    ),
+    path(
+        "staff/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/asset/download/",
+        StaffOrderProjectItemAssetDownloadView.as_view(),
+        name="staff-order-project-item-asset-download",
+    ),
     path("staff/orders/", StaffOrderListView.as_view(), name="staff-order-list"),
     path(
         "staff/orders/<uuid:order_public_id>/",

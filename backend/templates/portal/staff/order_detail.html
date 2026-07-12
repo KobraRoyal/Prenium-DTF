@@ -4,7 +4,7 @@
 {% block title %}Fiche commande staff - Prenium DTF{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_order_detail.html" title="Commande" title_code=order.public_id subtitle="Pilotez le contrôle, la production, la logistique, le scan atelier et la facturation depuis une fiche opérationnelle unique." %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_order_detail.html" title="Commande" title_code=order.public_id|short_ref subtitle="Pilotez le contrôle, la production, la logistique, le scan atelier et la facturation depuis une fiche opérationnelle unique." %}
 
 <section class="staff-order-detail-stack" aria-label="Synthèse commande staff">
 <section class="card order-command-bar">

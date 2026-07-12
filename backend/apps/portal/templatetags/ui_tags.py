@@ -15,3 +15,12 @@ def ui_orders_table(orders, variant, customer=None):
         "variant": variant,
         "customer": customer,
     }
+
+
+@register.inclusion_tag("components/tables/order_projects_table.html")
+def ui_order_projects_table(projects, customer, show_delete=True):
+    return {
+        "projects": projects,
+        "customer": customer,
+        "show_delete": show_delete,
+    }

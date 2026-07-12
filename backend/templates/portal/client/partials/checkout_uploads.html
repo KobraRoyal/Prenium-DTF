@@ -3,7 +3,8 @@
   <div class="product-checkout-card__body gap-4">
     <div>
       <h3 class="dui-card-title font-display text-lg">Étape 2 — Joindre les fichiers</h3>
-      <p class="text-sm opacity-75">Ajoutez un ou plusieurs fichiers de production. Indiquez la quantité et, si besoin, la couleur du support pour guider l'atelier.</p>
+      {% client_order_refs order variant="stack" %}
+      <p class="text-sm opacity-75 mt-2">Ajoutez un ou plusieurs fichiers de production. Indiquez la quantité et, si besoin, la couleur du support pour guider l'atelier.</p>
     </div>
 
     {% if upload_error %}

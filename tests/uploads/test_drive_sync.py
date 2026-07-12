@@ -136,11 +136,14 @@ def test_drive_sync_service_creates_order_folder_and_syncs_upload():
     assert sync.drive_file_id == sync_again.drive_file_id
     assert sync.drive_folder is not None
     assert sync.drive_folder.shared_drive_id == "shared-drive-id"
-    assert sync.drive_folder.relative_path.endswith(str(order.public_id))
+    assert sync.drive_folder.relative_path.endswith(order.short_ref)
     assert sync.drive_folder.folder_ids["00_source_client"] == sync.remote_folder_id
     assert OrderDriveFolder.objects.filter(order=order).exists()
     assert sync_again.drive_file_id == sync.drive_file_id
     assert len(gateway.uploads) == 1
+    assert gateway.uploads[0]["name"] == sync.drive_filename
+    assert gateway.uploads[0]["name"].startswith(f"{order.short_ref}-")
+    assert str(upload.public_id) not in gateway.uploads[0]["name"].split("-", 1)[0]
     assert AuditLogEntry.objects.filter(
         action="order_upload.drive_synced",
         target_public_id=upload.public_id,
@@ -167,6 +170,27 @@ def test_drive_sync_service_marks_failed_when_drive_api_errors():
         action="order_upload.drive_sync_failed",
         target_public_id=upload.public_id,
     ).exists()
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
+def test_build_drive_filename_uses_order_short_ref_and_disambiguates_duplicates():
+    user, customer, _membership = create_customer_scope("client@example.com", "Acme")
+    order = create_order(customer, user)
+    first = create_stored_order_upload(order=order, actor=user, name="logo.png")
+    second = create_stored_order_upload(order=order, actor=user, name="logo.png")
+    service = OrderUploadDriveSyncService(gateway=FakeDriveGateway())
+
+    first_name = service.build_drive_filename(first)
+    second_name = service.build_drive_filename(second)
+
+    assert first_name == f"{order.short_ref}-logo.png"
+    assert second_name.startswith(f"{order.short_ref}-logo-")
+    assert second_name.endswith(".png")
+    assert first_name != second_name
 
 
 @pytest.mark.django_db

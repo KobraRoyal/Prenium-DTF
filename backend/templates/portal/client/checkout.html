@@ -1,10 +1,10 @@
 {% extends "portal/layout.html" %}
-{% load static %}
+{% load static portal_tags %}
 
 {% block title %}Commander - Prenium DTF{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/checkout_client.html" title="Préparer une commande" subtitle="Décrivez votre besoin, joignez vos fichiers de production, puis envoyez votre demande pour contrôle technique." %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/checkout_client.html" title="Préparer une commande" subtitle="Parcours classique : chaque demande reçoit un N° IDS dès sa création." %}
 
 <div class="product-panel mb-4 p-4 text-sm">
   <p class="product-section-kicker">Parcours guidé</p>

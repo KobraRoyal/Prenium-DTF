@@ -11,9 +11,10 @@ from django.utils.text import get_valid_filename
 logger = logging.getLogger(__name__)
 
 # Navigateurs envoient souvent application/octet-stream pour .ai / .psd / .tif.
-_OCTET_STREAM_ALLOWED_EXT = frozenset({".ai", ".psd", ".tif", ".tiff"})
+_OCTET_STREAM_ALLOWED_EXT = frozenset({".ai", ".eps", ".psd", ".tif", ".tiff"})
 _OCTET_STREAM_CANONICAL_MIME = {
     ".ai": "application/postscript",
+    ".eps": "application/postscript",
     ".psd": "image/vnd.adobe.photoshop",
     ".tif": "image/tiff",
     ".tiff": "image/tiff",

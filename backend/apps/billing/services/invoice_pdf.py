@@ -10,6 +10,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from apps.billing.models import Invoice, Payment
+from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
 
 
@@ -51,7 +52,7 @@ def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment
     story.append(Spacer(1, 0.4 * cm))
 
     rows = [
-        ["Commande", escape(str(order.public_id))],
+        ["Commande", escape(short_public_ref(order.public_id))],
         ["Client", escape(order.customer.name)],
         [
             "Email facturation",

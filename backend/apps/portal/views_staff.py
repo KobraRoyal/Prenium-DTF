@@ -7,6 +7,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
+from apps.b2b_order_projects.services import B2BOrderProjectService
 from apps.orders.models import Order
 from apps.portal.views_common import (
     StaffDomainPermissionMixin,
@@ -18,6 +19,8 @@ from apps.portal.views_common import (
 )
 from apps.production.models import ProductionJob
 from apps.uploads.models import OrderDriveFolder
+
+project_service = B2BOrderProjectService()
 
 
 class StaffOrderPriceView(StaffPortalMixin, View):
@@ -52,7 +55,12 @@ class StaffDashboardView(StaffPortalMixin, View):
 
     def get(self, request):
         can_read_orders = request.user.has_perm("orders.view_order")
+        can_read_projects = bool(
+            getattr(settings, "B2B_DTF_ORDER_PROJECT_ENABLED", False)
+            and request.user.has_perm("b2b_order_projects.view_b2borderproject")
+        )
         recent_orders = order_service.list_staff_orders()[:8] if can_read_orders else []
+        recent_projects = project_service.list_staff_projects()[:8] if can_read_projects else []
         access_label = "Autorise" if can_read_orders else "Refuse"
         kpi_rows = [
             {"label": "Acces commandes", "value": access_label, "hint": None},
@@ -62,12 +70,22 @@ class StaffDashboardView(StaffPortalMixin, View):
                 "hint": None,
             },
         ]
+        if can_read_projects:
+            kpi_rows.append(
+                {
+                    "label": "Projets B2B",
+                    "value": str(len(recent_projects)),
+                    "hint": "Projets récents visibles",
+                }
+            )
         return render(
             request,
             self.template_name,
             {
                 "recent_orders": recent_orders,
                 "can_read_orders": can_read_orders,
+                "can_read_projects": can_read_projects,
+                "recent_projects": recent_projects,
                 "kpi_rows": kpi_rows,
                 "nav_mode": "staff",
                 "nav_key": "staff-dashboard",
