@@ -48,6 +48,13 @@ def asset_thumbnail_path(instance, filename: str) -> str:
     )
 
 
+def asset_thin_zone_overlay_path(instance, filename: str) -> str:
+    return (
+        f"assets/{instance.customer.public_id}/{instance.version.asset.public_id}/"
+        f"v{instance.version.version_number}/analysis/{instance.public_id}-thin-zones.webp"
+    )
+
+
 class OrderUploadQuerySet(models.QuerySet):
     def for_order(self, order):
         return self.filter(order=order)
@@ -238,6 +245,11 @@ class AssetAnalysis(BaseModel):
     has_alpha = models.BooleanField(null=True, blank=True)
     probable_white_background = models.BooleanField(null=True, blank=True)
     thumbnail = models.FileField(upload_to=asset_thumbnail_path, max_length=500, blank=True)
+    thin_zone_overlay = models.FileField(
+        upload_to=asset_thin_zone_overlay_path,
+        max_length=500,
+        blank=True,
+    )
     warnings = models.JSONField(default=list, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     analyzed_at = models.DateTimeField(null=True, blank=True)

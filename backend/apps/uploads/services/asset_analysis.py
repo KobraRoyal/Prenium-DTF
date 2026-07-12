@@ -12,11 +12,13 @@ from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.uploads.models import AssetAnalysis, AssetVersion
 from apps.uploads.services.asset_preview import AssetPreviewRenderer
+from apps.uploads.services.asset_thin_zones import AssetThinZoneAnalyzer
 
 
 class AssetAnalysisService:
     def __init__(self):
         self.preview_renderer = AssetPreviewRenderer()
+        self.thin_zone_analyzer = AssetThinZoneAnalyzer()
 
     def analyze(self, *, version_public_id, source: str = "celery") -> AssetVersion | None:
         version = (
@@ -72,10 +74,18 @@ class AssetAnalysisService:
                     ContentFile(result["thumbnail"]),
                     save=False,
                 )
-                analysis.save(update_fields=["thumbnail", "updated_at"])
+            if analysis.thin_zone_overlay:
+                analysis.thin_zone_overlay.delete(save=False)
+            if result["thin_zone_overlay"] is not None:
+                analysis.thin_zone_overlay.save(
+                    f"{version.public_id}-thin-zones.webp",
+                    ContentFile(result["thin_zone_overlay"]),
+                    save=False,
+                )
+            analysis.save(update_fields=["thumbnail", "thin_zone_overlay", "updated_at"])
             status = (
                 AssetVersion.AnalysisStatus.WARNING
-                if result["warnings"]
+                if result["warnings"] or result["thin_zone"]["detected"]
                 else AssetVersion.AnalysisStatus.READY
             )
             version.analysis_status = status
@@ -96,6 +106,7 @@ class AssetAnalysisService:
                 **self._metadata(version, source),
                 "analysis_status": version.analysis_status,
                 "warnings": result["warnings"],
+                "thin_zone": result["thin_zone"],
                 "auto_size_mm": auto_size,
             },
         )
@@ -119,6 +130,13 @@ class AssetAnalysisService:
             dpi_y = rendered.dpi_y
             has_alpha = image.mode in {"RGBA", "LA"} or "transparency" in image.info
             white_background = self._probable_white_background(image)
+            thin_zone_result = self.thin_zone_analyzer.analyze(
+                image=image,
+                dpi_x=dpi_x,
+                dpi_y=dpi_y,
+                metadata=rendered.metadata,
+                probable_white_background=white_background,
+            )
             warnings = list(rendered.warnings)
             if not has_alpha:
                 warnings.append("Aucune transparence détectée.")
@@ -145,8 +163,11 @@ class AssetAnalysisService:
                     "mode": image.mode,
                     "format": rendered.format_name,
                     "mime_type": version.mime_type,
+                    "thin_zone": thin_zone_result.metadata,
                 },
                 "thumbnail": thumbnail,
+                "thin_zone": thin_zone_result.metadata,
+                "thin_zone_overlay": thin_zone_result.overlay,
             }
         finally:
             image.close()
@@ -165,12 +186,12 @@ class AssetAnalysisService:
         elif result.get("dpi_x") and result.get("image_width") and result.get("image_height"):
             dpi_x = Decimal(str(result["dpi_x"]))
             dpi_y = Decimal(str(result["dpi_y"] or result["dpi_x"]))
-            width_mm = (
-                Decimal(result["image_width"]) * millimeters_per_inch / dpi_x
-            ).quantize(Decimal("0.01"))
-            height_mm = (
-                Decimal(result["image_height"]) * millimeters_per_inch / dpi_y
-            ).quantize(Decimal("0.01"))
+            width_mm = (Decimal(result["image_width"]) * millimeters_per_inch / dpi_x).quantize(
+                Decimal("0.01")
+            )
+            height_mm = (Decimal(result["image_height"]) * millimeters_per_inch / dpi_y).quantize(
+                Decimal("0.01")
+            )
         elif page_width_in and page_height_in:
             width_mm = (Decimal(str(page_width_in)) * millimeters_per_inch).quantize(
                 Decimal("0.01")
@@ -181,12 +202,12 @@ class AssetAnalysisService:
         elif result.get("image_width") and result.get("image_height"):
             dpi_x = Decimal("300")
             dpi_y = Decimal("300")
-            width_mm = (
-                Decimal(result["image_width"]) * millimeters_per_inch / dpi_x
-            ).quantize(Decimal("0.01"))
-            height_mm = (
-                Decimal(result["image_height"]) * millimeters_per_inch / dpi_y
-            ).quantize(Decimal("0.01"))
+            width_mm = (Decimal(result["image_width"]) * millimeters_per_inch / dpi_x).quantize(
+                Decimal("0.01")
+            )
+            height_mm = (Decimal(result["image_height"]) * millimeters_per_inch / dpi_y).quantize(
+                Decimal("0.01")
+            )
         else:
             return None
         version.asset.b2b_order_project_items.filter(

@@ -11,6 +11,7 @@ from .views_b2b_order_projects import (
     ClientOrderProjectItemAssetPreviewView,
     ClientOrderProjectItemAssetView,
     ClientOrderProjectItemCreateView,
+    ClientOrderProjectItemThinZoneOverlayView,
     ClientOrderProjectListView,
     ClientOrderProjectSubmitView,
     StaffOrderProjectDetailView,
@@ -96,6 +97,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/asset/preview/",
         ClientOrderProjectItemAssetPreviewView.as_view(),
         name="client-order-project-item-asset-preview",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/asset/thin-zones/",
+        ClientOrderProjectItemThinZoneOverlayView.as_view(),
+        name="client-order-project-item-thin-zone-overlay",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/asset/<str:action>/",

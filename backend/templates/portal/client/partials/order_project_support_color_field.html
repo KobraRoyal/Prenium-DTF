@@ -1,17 +1,35 @@
 {% load l10n %}
-<fieldset class="b2b-support-color" data-support-color-field>
-  <legend class="product-form-label">Couleur du support</legend>
+<fieldset class="b2b-support-color{% if required %} is-required{% endif %}" data-support-color-field{% if required %} data-support-color-required{% endif %}>
+  <legend class="product-form-label">
+    Couleur du support{% if required %} <span class="b2b-support-color__badge">Obligatoire</span>{% endif %}
+  </legend>
+  {% if required %}
+  <p class="b2b-support-color__alert">
+    <strong>Détails sous 0,5 mm détectés.</strong>
+    Indiquez la couleur unie exacte du textile : l’atelier ajoutera un contour assorti pour préserver ces zones rouges.
+  </p>
+  <p class="b2b-support-color__required-hint">Le contour peut être légèrement visible si la couleur du textile n’est pas correctement sélectionnée.</p>
+  {% endif %}
   <div class="b2b-support-color__choices">
     <button
       type="button"
-      class="b2b-swatch-btn b2b-swatch-btn--rainbow b2b-support-color-rainbow{% if item and item.support_color_is_multicolor %} is-active{% endif %}"
+      class="b2b-swatch-btn b2b-swatch-btn--rainbow b2b-support-color-rainbow{% if item and item.support_color_is_multicolor and not required %} is-active{% endif %}"
       data-support-color-multicolor
-      aria-pressed="{% if item and item.support_color_is_multicolor %}true{% else %}false{% endif %}"
+      aria-pressed="{% if item and item.support_color_is_multicolor and not required %}true{% else %}false{% endif %}"
       aria-label="Support multicolore"
       title="Multicolore"
+      {% if required %}disabled{% endif %}
     ></button>
     {% if item %}
-    {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color=item.support_color_hex|default:"#ffffff" disabled=item.support_color_is_multicolor %}
+      {% if item.support_color_is_multicolor %}
+        {% if required %}
+          {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color="#ffffff" %}
+        {% else %}
+          {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color="#ffffff" disabled=1 %}
+        {% endif %}
+      {% else %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color=item.support_color_hex|default:"#ffffff" %}
+      {% endif %}
     {% else %}
     {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-new" initial_color="#ffffff" %}
     {% endif %}
@@ -27,15 +45,16 @@
         spellcheck="false"
         maxlength="7"
         placeholder="#FFFFFF"
-        value="{% if item and item.support_color_hex and not item.support_color_is_multicolor %}{{ item.support_color_hex|upper }}{% else %}#FFFFFF{% endif %}"
-        {% if item and item.support_color_is_multicolor %}readonly{% endif %}
+        value="{% if item and item.support_color_hex and not item.support_color_is_multicolor %}{{ item.support_color_hex|upper }}{% endif %}"
+        {% if required %}required aria-required="true"{% endif %}
+        {% if item and item.support_color_is_multicolor and not required %}readonly{% endif %}
       >
     </label>
   </div>
   <input
     type="hidden"
     name="support_color_multicolor"
-    value="{% if item and item.support_color_is_multicolor %}on{% endif %}"
+    value="{% if item and item.support_color_is_multicolor and not required %}on{% endif %}"
     data-support-color-multicolor-input
   >
 </fieldset>

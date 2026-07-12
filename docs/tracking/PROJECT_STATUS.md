@@ -233,3 +233,5 @@
 - [x] Entrée client unifiée `Nouvelle commande` : elle utilise le chargement HTMX et l'analyse Celery des visuels, sans bouton `Configurateur DTF` séparé
 - [x] UX `Nouvelle commande` allégée : mode masqué, aperçu PDF local transparent et non rogné via PDF.js, actualisation HTMX ciblée des miniatures sans rechargement de page
 - [x] Validation technique client : dimensions et DPI asynchrones, diagnostic résolution 300/200 DPI, alertes visibles et confirmation versionnée obligatoire avant transmission
+- [x] Contrôle DTF des détails fins : zones imprimées sous 0,5 mm détectées en tâche asynchrone, surlignées en rouge dans la modale et servies par overlay privé tenant-scoped
+- [x] Contrôle des détails fins renforcé : zoom 100–400 % dans l'aperçu et couleur unie exacte du support obligatoire avant validation afin de préparer le contour atelier

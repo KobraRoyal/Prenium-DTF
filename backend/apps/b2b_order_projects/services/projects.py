@@ -10,9 +10,9 @@ from django.utils import timezone
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.b2b_order_projects.models import (
+    SUPPORT_COLOR_MULTICOLOR,
     B2BOrderProject,
     B2BOrderProjectItem,
-    SUPPORT_COLOR_MULTICOLOR,
 )
 from apps.b2b_order_projects.services.numbering import B2BOrderProjectNumberService
 from apps.b2b_order_projects.services.transitions import B2BOrderProjectTransitionPolicy
@@ -239,6 +239,14 @@ class B2BOrderProjectService:
                     setattr(item, field, value)
                     changed.append(field)
 
+        if self._has_thin_details(version) and (
+            not item.support_color_hex or item.support_color_is_multicolor
+        ):
+            raise ProjectDomainError(
+                "SUPPORT_COLOR_REQUIRED_FOR_THIN_DETAILS",
+                "Indiquez la couleur unie exacte du support pour préserver les détails fins.",
+            )
+
         item.client_confirmed_asset_version = version
         item.client_confirmed_at = timezone.now()
         item.client_confirmed_by = actor
@@ -263,6 +271,12 @@ class B2BOrderProjectService:
         )
         self._refresh_completeness(locked)
         return item
+
+    @staticmethod
+    def _has_thin_details(version) -> bool:
+        analysis = getattr(version, "analysis", None)
+        metadata = (analysis.metadata or {}) if analysis is not None else {}
+        return bool((metadata.get("thin_zone") or {}).get("detected"))
 
     @transaction.atomic
     def delete_item(self, *, project, item_public_id, actor, source: str) -> None:

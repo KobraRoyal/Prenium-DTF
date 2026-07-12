@@ -37,11 +37,9 @@
         <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}">
         <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}">
         {% include "portal/client/partials/order_project_rotation_hidden.html" %}
-        <div class="b2b-configurator__dimensions">
-          {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity %}
-        </div>
-        {% include "portal/client/partials/order_project_support_color_field.html" with item=item %}
-        <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required> <span>J’ai vérifié les dimensions, la résolution et la couleur support.</span></label>
+        {% include "portal/client/partials/order_project_validation_dimensions_row.html" with quantity=item.quantity width_mm=item.width_mm height_mm=item.height_mm %}
+        {% include "portal/client/partials/order_project_support_color_field.html" with item=item required=review.thin_zone.detected %}
+        <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required> <span>J’ai vérifié les dimensions, la résolution, les détails fins et la couleur support.</span></label>
         <div class="b2b-dialog-actions">
           <button class="ui-btn ui-btn-primary" type="submit">Valider ce visuel</button>
           <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Plus tard</button>

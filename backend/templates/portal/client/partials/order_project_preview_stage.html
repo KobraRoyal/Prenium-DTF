@@ -7,12 +7,37 @@
       alt="Aperçu de {{ item.name }}"
       data-configurator-preview
     >
+    {% if item.technical_review.thin_zone.detected %}
+    <img
+      class="b2b-thin-zone-overlay"
+      src="{% url 'portal:client-order-project-item-thin-zone-overlay' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}"
+      alt=""
+      aria-hidden="true"
+      data-thin-zone-overlay
+    >
+    {% endif %}
   </div>
   <div class="b2b-preview-placeholder" data-configurator-placeholder hidden></div>
   {% else %}
   <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Analyse en cours</strong><span>{{ item.name }}</span></div>
   {% endif %}
 </div>
+{% if item.technical_review.thin_zone.detected %}
+<div class="b2b-thin-zone-tools" role="group" aria-label="Contrôle des détails fins">
+  <div class="b2b-thin-zone-tools__actions">
+    <button class="ui-btn ui-btn-secondary ui-btn-sm is-active" type="button" aria-pressed="true" data-thin-zone-toggle>
+      <span class="b2b-thin-zone-swatch" aria-hidden="true"></span>
+      <span data-thin-zone-toggle-label>Zones sous 0,5 mm affichées</span>
+    </button>
+    <div class="b2b-preview-zoom" role="group" aria-label="Zoom sur les zones fines">
+      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Dézoomer" data-preview-zoom-out disabled>−</button>
+      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Réinitialiser le zoom" data-preview-zoom-reset><span data-preview-zoom-label>100 %</span></button>
+      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Zoomer" data-preview-zoom-in>+</button>
+    </div>
+  </div>
+  <p><strong>Couleur du support obligatoire.</strong></p>
+</div>
+{% endif %}
 <div class="b2b-background-tools" aria-label="Fond de l’aperçu">
   <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-configurator-bg="checker" aria-label="Damier" aria-pressed="true" title="Damier"></button>
   <button type="button" class="b2b-swatch-btn b2b-swatch-btn--white b2b-bg-button is-white" data-configurator-bg="#ffffff" aria-label="Blanc" aria-pressed="false" title="Blanc"></button>

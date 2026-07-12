@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer, CustomerMembership
@@ -7,7 +9,7 @@ from django.contrib.auth.models import Permission
 from django.test import Client, override_settings
 from django.urls import reverse
 
-from .helpers import pdf_upload, png_upload
+from .helpers import pdf_upload, png_upload, thin_detail_upload
 
 
 def portal_scope(*, owner=True):
@@ -196,6 +198,136 @@ def test_client_portal_project_flow_is_functional():
     )
     assert orders_list.status_code == 200
     assert str(order.public_id) in orders_list.content.decode()
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_thin_zone_overlay_is_visible_and_tenant_scoped_in_validation_modal():
+    from apps.b2b_order_projects.services import B2BOrderProjectService
+    from apps.uploads.services.assets import AssetService
+
+    user, customer, client = portal_scope()
+    project = B2BOrderProjectService().create_project(
+        customer=customer,
+        actor=user,
+        data={"name": "Contrôle détails fins"},
+        source="test",
+    )
+    item = B2BOrderProjectService().add_item(
+        project=project,
+        actor=user,
+        data={"name": "Trait fin", "width_mm": 13.55, "height_mm": 8.47, "quantity": 1},
+        source="test",
+    )
+    version = AssetService().attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=thin_detail_upload(),
+        source="test",
+    )
+    AssetAnalysisService().analyze(version_public_id=version.public_id, source="test")
+    version.refresh_from_db()
+
+    assert version.analysis.metadata["thin_zone"]["detected"] is True
+    assert version.analysis.thin_zone_overlay
+
+    overlay_url = reverse(
+        "portal:client-order-project-item-thin-zone-overlay",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+            "item_public_id": item.public_id,
+        },
+    )
+    overlay = client.get(overlay_url)
+    assert overlay.status_code == 200
+    assert overlay["Content-Type"] == "image/webp"
+    assert overlay["Cache-Control"] == "private, max-age=300"
+
+    validation_panel = client.get(
+        reverse(
+            "portal:client-order-project-item-create",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        ),
+        {"item": str(item.public_id)},
+        HTTP_HX_REQUEST="true",
+    )
+    content = validation_panel.content.decode()
+    assert validation_panel.status_code == 200
+    assert "Zones sous 0,5 mm affichées" in content
+    assert "data-thin-zone-overlay" in content
+    assert "Couleur du support obligatoire" in content
+    assert "légèrement visible si la couleur du textile" in content
+    assert "Sans cette couleur" not in content
+    assert "data-preview-zoom-in" in content
+    assert "data-preview-zoom-out" in content
+    assert "data-preview-zoom-reset" in content
+    assert "data-support-color-required" in content
+    assert 'name="support_color_hex"' in content
+    assert 'required aria-required="true"' in content
+    assert overlay_url in content
+
+    confirm_url = reverse(
+        "portal:client-order-project-item-action",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+            "item_public_id": item.public_id,
+            "action": "confirm-analysis",
+        },
+    )
+    missing_color = client.post(
+        confirm_url,
+        {
+            "confirm_analysis": "on",
+            "name": item.name,
+            "width_mm": str(item.width_mm),
+            "height_mm": str(item.height_mm),
+            "quantity": str(item.quantity),
+            "support_color_hex": "",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert missing_color.status_code == 400
+    toast = json.loads(missing_color.headers["X-Prenium-Toast"])
+    assert toast == {
+        "message": "Indiquez la couleur unie exacte du support pour préserver les détails fins.",
+        "variant": "error",
+    }
+
+    confirmed = client.post(
+        confirm_url,
+        {
+            "confirm_analysis": "on",
+            "name": item.name,
+            "width_mm": str(item.width_mm),
+            "height_mm": str(item.height_mm),
+            "quantity": str(item.quantity),
+            "support_color_hex": "#A1B2C3",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert confirmed.status_code == 200
+    item.refresh_from_db()
+    assert item.support_color_hex == "#a1b2c3"
+
+    other = Customer.objects.create(name="Autre client", b2b_order_projects_enabled=True)
+    CustomerMembership.objects.create(customer=other, user=user)
+    hidden_overlay = client.get(
+        reverse(
+            "portal:client-order-project-item-thin-zone-overlay",
+            kwargs={
+                "customer_public_id": other.public_id,
+                "project_public_id": project.public_id,
+                "item_public_id": item.public_id,
+            },
+        )
+    )
+    assert hidden_overlay.status_code == 404
 
 
 @pytest.mark.django_db

@@ -15,8 +15,8 @@ from apps.b2b_order_projects.services import (
     B2BOrderProjectService,
     ProjectDomainError,
 )
-from apps.portal.htmx import with_toast
 from apps.orders.references import project_client_reference
+from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
     StaffDomainPermissionMixin,
     access_scope_service,
@@ -407,6 +407,22 @@ class ClientOrderProjectItemAssetPreviewView(ClientProjectFeatureMixin, View):
         return response
 
 
+class ClientOrderProjectItemThinZoneOverlayView(ClientProjectFeatureMixin, View):
+    def get(self, request, customer_public_id, project_public_id, item_public_id):
+        overlay = asset_service.prepare_project_thin_zone_overlay(
+            project=self.get_project_or_404(project_public_id),
+            item_public_id=item_public_id,
+        )
+        if overlay is None:
+            raise Http404
+        overlay_file, content_type = overlay
+        overlay_file.open("rb")
+        response = FileResponse(overlay_file, content_type=content_type)
+        response["Content-Disposition"] = "inline"
+        response["Cache-Control"] = "private, max-age=300"
+        return response
+
+
 class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
     def post(self, request, customer_public_id, project_public_id):
         project = self.get_project_or_404(project_public_id)
@@ -462,7 +478,9 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
             messages = "; ".join(getattr(error, "messages", []) or [str(error)])
             from urllib.parse import quote
 
-            return HttpResponseRedirect(f"{detail}?submit_error=validation&submit_message={quote(messages)}")
+            return HttpResponseRedirect(
+                f"{detail}?submit_error=validation&submit_message={quote(messages)}"
+            )
         return HttpResponseRedirect(
             reverse(
                 "portal:client-order-detail",

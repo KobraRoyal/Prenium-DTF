@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -7,6 +8,7 @@ from apps.auditlog.services import record_event
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.b2b_order_projects.services.projects import B2BOrderProjectService, ProjectDomainError
 from apps.orders.services.orders import OrderService
+from apps.uploads.services.drive import OrderDriveFolderService
 from apps.uploads.services.uploads import OrderUploadService
 
 
@@ -110,6 +112,13 @@ class B2BOrderProjectCheckoutService:
                 asset_version=version,
                 quantity=item.quantity,
                 support_color_hex=self._order_upload_support_color(item),
+                source=source,
+            )
+
+        if settings.GOOGLE_DRIVE_SYNC_ENABLED:
+            OrderDriveFolderService().ensure_order_folder(
+                order=order,
+                actor=actor,
                 source=source,
             )
 

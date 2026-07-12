@@ -3,7 +3,7 @@ from io import BytesIO
 from apps.customers.models import Customer, CustomerMembership
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
+from PIL import Image, ImageDraw
 from reportlab.pdfgen.canvas import Canvas
 from rest_framework.test import APIClient
 
@@ -20,6 +20,15 @@ def create_scope(email, name="Client", role=CustomerMembership.Role.MEMBER, enab
 def png_upload(name="logo.png", *, color=(255, 0, 0, 180)):
     output = BytesIO()
     Image.new("RGBA", (120, 80), color).save(output, format="PNG", dpi=(300, 300))
+    return SimpleUploadedFile(name, output.getvalue(), content_type="image/png")
+
+
+def thin_detail_upload(name="details-fins.png"):
+    output = BytesIO()
+    image = Image.new("RGBA", (160, 100), (0, 0, 0, 0))
+    ImageDraw.Draw(image).rectangle((15, 45, 145, 48), fill=(10, 10, 10, 255))
+    image.save(output, format="PNG", dpi=(300, 300))
+    image.close()
     return SimpleUploadedFile(name, output.getvalue(), content_type="image/png")
 
 

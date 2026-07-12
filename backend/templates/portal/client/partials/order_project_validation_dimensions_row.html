@@ -1,0 +1,11 @@
+<div class="b2b-configurator__dimensions">
+  {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=quantity %}
+  <div class="b2b-configurator__dimensions-info" aria-label="Dimensions du fichier">
+    <p class="b2b-configurator__dimensions-values">
+      <span class="b2b-configurator__dimensions-label">Taille</span>
+      <strong>{{ width_mm }} × {{ height_mm }} mm</strong>
+      <span class="b2b-configurator__dimensions-sublabel">(limites du fichier)</span>
+    </p>
+    <p class="b2b-configurator__dimensions-hint">Le contour bleu en pointillés correspond à ces limites. Si le visuel n’est pas rogné au plus près, l’espace vide autour fera partie de l’impression.</p>
+  </div>
+</div>
