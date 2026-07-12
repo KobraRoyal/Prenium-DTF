@@ -1,5 +1,6 @@
-<div class="b2b-preview-stage is-checker" data-configurator-stage>
-  {% if version %}
+{% with analysis_status=version.analysis_status|default:"pending" %}
+<div class="b2b-preview-stage is-checker{% if analysis_status == 'pending' or analysis_status == 'processing' %} is-analyzing{% endif %}" data-configurator-stage>
+  {% if version and analysis_status != "pending" and analysis_status != "processing" %}
   <div class="b2b-preview-bounds" data-configurator-bounds data-configurator-bounds-visible>
     <img
       class="b2b-preview-image"
@@ -16,26 +17,48 @@
       data-thin-zone-overlay
     >
     {% endif %}
+    {% if item.technical_review.semi_transparency.detected %}
+    <img
+      class="b2b-semi-transparency-overlay"
+      src="{% url 'portal:client-order-project-item-semi-transparency-overlay' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}"
+      alt=""
+      aria-hidden="true"
+      data-semi-transparency-overlay
+    >
+    {% endif %}
   </div>
   <div class="b2b-preview-placeholder" data-configurator-placeholder hidden></div>
   {% else %}
-  <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Analyse en cours</strong><span>{{ item.name }}</span></div>
+  <div class="b2b-preview-placeholder" data-configurator-placeholder>
+    {% include "portal/client/partials/order_project_analysis_loader.html" with subtitle=item.name %}
+  </div>
   {% endif %}
 </div>
-{% if item.technical_review.thin_zone.detected %}
-<div class="b2b-thin-zone-tools" role="group" aria-label="Contrôle des détails fins">
-  <div class="b2b-thin-zone-tools__actions">
+{% if version and analysis_status != "pending" and analysis_status != "processing" %}
+{% if item.technical_review.thin_zone.detected or item.technical_review.semi_transparency.detected %}
+<div class="b2b-quality-overlays" role="group" aria-label="Contrôles de l’aperçu qualité">
+  <div class="b2b-quality-overlays__actions">
+    {% if item.technical_review.thin_zone.detected %}
     <button class="ui-btn ui-btn-secondary ui-btn-sm is-active" type="button" aria-pressed="true" data-thin-zone-toggle>
       <span class="b2b-thin-zone-swatch" aria-hidden="true"></span>
       <span data-thin-zone-toggle-label>Zones sous 0,5 mm affichées</span>
     </button>
-    <div class="b2b-preview-zoom" role="group" aria-label="Zoom sur les zones fines">
+    {% endif %}
+    {% if item.technical_review.semi_transparency.detected %}
+    <button class="ui-btn ui-btn-secondary ui-btn-sm is-active" type="button" aria-pressed="true" data-semi-transparency-toggle>
+      <span class="b2b-semi-transparency-swatch" aria-hidden="true"></span>
+      <span data-semi-transparency-toggle-label>Semi-transparences affichées</span>
+    </button>
+    {% endif %}
+    <div class="b2b-preview-zoom" role="group" aria-label="Zoom sur l’aperçu">
       <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Dézoomer" data-preview-zoom-out disabled>−</button>
       <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Réinitialiser le zoom" data-preview-zoom-reset><span data-preview-zoom-label>100 %</span></button>
       <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Zoomer" data-preview-zoom-in>+</button>
     </div>
   </div>
+  {% if item.technical_review.thin_zone.detected %}
   <p><strong>Couleur du support obligatoire.</strong></p>
+  {% endif %}
 </div>
 {% endif %}
 <div class="b2b-background-tools" aria-label="Fond de l’aperçu">
@@ -44,3 +67,5 @@
   <button type="button" class="b2b-swatch-btn b2b-swatch-btn--black b2b-bg-button is-black" data-configurator-bg="#111111" aria-label="Noir" aria-pressed="false" title="Noir"></button>
   {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="preview-hex-"|add:item.public_id preview_mode=True initial_color="#ffffff" %}
 </div>
+{% endif %}
+{% endwith %}

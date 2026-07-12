@@ -7,15 +7,16 @@
   hx-trigger="load delay:1400ms"
   hx-target="#add-visual-validation-panel"
   hx-swap="outerHTML"
-  hx-indicator="#order-project-analysis-indicator"
+  hx-indicator="#add-visual-validation-panel"
   {% endif %}
 >
-  <div class="b2b-configurator__workspace" data-b2b-configurator>
+  <div class="b2b-configurator__workspace{% if item.asset.current_version.analysis_status == 'pending' or item.asset.current_version.analysis_status == 'processing' %} is-analysis-pending{% endif %}" data-b2b-configurator>
     <div class="b2b-configurator__preview">
       {% with version=item.asset.current_version %}
       {% include "portal/client/partials/order_project_preview_stage.html" %}
       {% endwith %}
     </div>
+    {% if item.asset.current_version.analysis_status != "pending" and item.asset.current_version.analysis_status != "processing" %}
     <div class="b2b-visual-card__details">
       {% with version=item.asset.current_version review=item.technical_review %}
       {% include "portal/client/partials/order_project_quality_review.html" %}
@@ -39,7 +40,7 @@
         {% include "portal/client/partials/order_project_rotation_hidden.html" %}
         {% include "portal/client/partials/order_project_validation_dimensions_row.html" with quantity=item.quantity width_mm=item.width_mm height_mm=item.height_mm %}
         {% include "portal/client/partials/order_project_support_color_field.html" with item=item required=review.thin_zone.detected %}
-        <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required> <span>J’ai vérifié les dimensions, la résolution, les détails fins et la couleur support.</span></label>
+        <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required> <span>J’ai vérifié les dimensions, la résolution, les détails fins, les semi-transparences et la couleur support.</span></label>
         <div class="b2b-dialog-actions">
           <button class="ui-btn ui-btn-primary" type="submit">Valider ce visuel</button>
           <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Plus tard</button>
@@ -47,10 +48,9 @@
       </form>
       {% elif review.confirmed %}
       <div class="b2b-dialog-actions"><button class="ui-btn ui-btn-primary" type="button" data-add-visual-reset data-dialog-close>Fermer</button></div>
-      {% else %}
-      <p class="muted text-sm">Analyse en cours…</p>
       {% endif %}
       {% endwith %}
     </div>
+    {% endif %}
   </div>
 </div>

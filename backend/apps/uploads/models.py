@@ -55,6 +55,13 @@ def asset_thin_zone_overlay_path(instance, filename: str) -> str:
     )
 
 
+def asset_semi_transparency_overlay_path(instance, filename: str) -> str:
+    return (
+        f"assets/{instance.customer.public_id}/{instance.version.asset.public_id}/"
+        f"v{instance.version.version_number}/analysis/{instance.public_id}-semi-transparency.webp"
+    )
+
+
 class OrderUploadQuerySet(models.QuerySet):
     def for_order(self, order):
         return self.filter(order=order)
@@ -247,6 +254,11 @@ class AssetAnalysis(BaseModel):
     thumbnail = models.FileField(upload_to=asset_thumbnail_path, max_length=500, blank=True)
     thin_zone_overlay = models.FileField(
         upload_to=asset_thin_zone_overlay_path,
+        max_length=500,
+        blank=True,
+    )
+    semi_transparency_overlay = models.FileField(
+        upload_to=asset_semi_transparency_overlay_path,
         max_length=500,
         blank=True,
     )

@@ -9,7 +9,7 @@ from django.contrib.auth.models import Permission
 from django.test import Client, override_settings
 from django.urls import reverse
 
-from .helpers import pdf_upload, png_upload, thin_detail_upload
+from .helpers import pdf_upload, png_upload, semi_transparent_upload, thin_detail_upload
 
 
 def portal_scope(*, owner=True):
@@ -320,6 +320,108 @@ def test_thin_zone_overlay_is_visible_and_tenant_scoped_in_validation_modal():
     hidden_overlay = client.get(
         reverse(
             "portal:client-order-project-item-thin-zone-overlay",
+            kwargs={
+                "customer_public_id": other.public_id,
+                "project_public_id": project.public_id,
+                "item_public_id": item.public_id,
+            },
+        )
+    )
+    assert hidden_overlay.status_code == 404
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_semi_transparency_overlay_is_visible_and_tenant_scoped_in_validation_modal():
+    from apps.b2b_order_projects.services import B2BOrderProjectService
+    from apps.uploads.services.assets import AssetService
+
+    user, customer, client = portal_scope()
+    project = B2BOrderProjectService().create_project(
+        customer=customer,
+        actor=user,
+        data={"name": "Contrôle semi-transparences"},
+        source="test",
+    )
+    item = B2BOrderProjectService().add_item(
+        project=project,
+        actor=user,
+        data={"name": "Logo dégradé", "width_mm": 31.75, "height_mm": 21.17, "quantity": 1},
+        source="test",
+    )
+    version = AssetService().attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=semi_transparent_upload(),
+        source="test",
+    )
+    AssetAnalysisService().analyze(version_public_id=version.public_id, source="test")
+    version.refresh_from_db()
+
+    assert version.analysis.metadata["semi_transparency"]["detected"] is True
+    assert version.analysis.semi_transparency_overlay
+
+    overlay_url = reverse(
+        "portal:client-order-project-item-semi-transparency-overlay",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+            "item_public_id": item.public_id,
+        },
+    )
+    overlay = client.get(overlay_url)
+    assert overlay.status_code == 200
+    assert overlay["Content-Type"] == "image/webp"
+    assert overlay["Cache-Control"] == "private, max-age=300"
+
+    validation_panel = client.get(
+        reverse(
+            "portal:client-order-project-item-create",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        ),
+        {"item": str(item.public_id)},
+        HTTP_HX_REQUEST="true",
+    )
+    content = validation_panel.content.decode()
+    assert validation_panel.status_code == 200
+    assert "Semi-transparences affichées" in content
+    assert "data-semi-transparency-overlay" in content
+    assert "semi-transparentes ont été détectées" in content
+    assert "les semi-transparences et la couleur support" in content
+    assert overlay_url in content
+    assert "Couleur du support obligatoire" not in content
+
+    confirm_url = reverse(
+        "portal:client-order-project-item-action",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+            "item_public_id": item.public_id,
+            "action": "confirm-analysis",
+        },
+    )
+    confirmed = client.post(
+        confirm_url,
+        {
+            "confirm_analysis": "on",
+            "name": item.name,
+            "width_mm": str(item.width_mm),
+            "height_mm": str(item.height_mm),
+            "quantity": str(item.quantity),
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert confirmed.status_code == 200
+
+    other = Customer.objects.create(name="Autre client", b2b_order_projects_enabled=True)
+    CustomerMembership.objects.create(customer=other, user=user)
+    hidden_overlay = client.get(
+        reverse(
+            "portal:client-order-project-item-semi-transparency-overlay",
             kwargs={
                 "customer_public_id": other.public_id,
                 "project_public_id": project.public_id,

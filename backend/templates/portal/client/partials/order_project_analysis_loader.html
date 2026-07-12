@@ -1,0 +1,7 @@
+<div class="b2b-analysis-loader{% if compact %} b2b-analysis-loader--compact{% endif %}{% if overlay %} b2b-analysis-loader--overlay{% endif %}" role="status" aria-live="polite">
+  <span class="b2b-analysis-loader__spinner" aria-hidden="true"></span>
+  <div class="b2b-analysis-loader__copy">
+    <strong>{{ title|default:"Analyse en cours" }}</strong>
+    {% if subtitle %}<span>{{ subtitle }}</span>{% endif %}
+  </div>
+</div>

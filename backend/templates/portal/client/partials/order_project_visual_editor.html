@@ -1,5 +1,5 @@
 {% load l10n %}
-<div class="b2b-dialog-editor" data-b2b-configurator>
+<div class="b2b-dialog-editor{% if item.asset and item.asset.current_version %}{% if item.asset.current_version.analysis_status == 'pending' or item.asset.current_version.analysis_status == 'processing' %} is-analysis-pending{% endif %}{% endif %}" data-b2b-configurator>
   <div class="b2b-configurator__preview">
     {% if item.asset and item.asset.current_version %}
     {% with version=item.asset.current_version %}
@@ -15,6 +15,7 @@
   <div class="b2b-visual-card__details">
     {% if item.asset and item.asset.current_version %}
     {% with version=item.asset.current_version review=item.technical_review %}
+    {% if version.analysis_status != "pending" and version.analysis_status != "processing" %}
     {% include "portal/client/partials/order_project_quality_review.html" %}
     {% if version.analysis_error %}<p class="b2b-analysis-error">{{ version.analysis_error }}</p>{% endif %}
 
@@ -35,7 +36,7 @@
       {% include "portal/client/partials/order_project_rotation_hidden.html" %}
       {% include "portal/client/partials/order_project_validation_dimensions_row.html" with quantity=item.quantity width_mm=item.width_mm height_mm=item.height_mm %}
       {% include "portal/client/partials/order_project_support_color_field.html" with item=item required=review.thin_zone.detected %}
-      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié les dimensions, la résolution, les détails fins et la couleur support.</span></label>
+      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié les dimensions, la résolution, les détails fins, les semi-transparences et la couleur support.</span></label>
       <div class="b2b-dialog-actions">
         <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer{% else %}Valider ce visuel{% endif %}</button>
         <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-project-item-asset-download' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>
@@ -61,6 +62,7 @@
         <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Remplacer</button>
       </form>
     </details>
+    {% endif %}
     {% endwith %}
     {% else %}
     <form class="b2b-configurator__controls" method="post" enctype="multipart/form-data" hx-encoding="multipart/form-data" hx-post="{% url 'portal:client-order-project-item-asset' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='attach' %}" hx-target="#order-project-items" hx-swap="outerHTML">

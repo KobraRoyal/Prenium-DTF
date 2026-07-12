@@ -48,9 +48,14 @@
   <div class="b2b-visual-list">
     {% for item in project.items.all %}
     <article class="b2b-visual-list-item"{% if item.asset and item.asset.current_version %}{% if item.asset.current_version.analysis_status == "pending" or item.asset.current_version.analysis_status == "processing" %} data-analysis-pending{% endif %}{% endif %}>
-      <div class="b2b-visual-list-item__thumb is-checker">
+      <div class="b2b-visual-list-item__thumb is-checker{% if item.asset.current_version.analysis_status == 'pending' or item.asset.current_version.analysis_status == 'processing' %} is-analyzing{% endif %}">
         {% if item.asset and item.asset.current_version %}
+        {% if item.asset.current_version.analysis_status == "pending" or item.asset.current_version.analysis_status == "processing" %}
+        <img src="{% url 'portal:client-order-project-item-asset-preview' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}" alt="" aria-hidden="true">
+        {% include "portal/client/partials/order_project_analysis_loader.html" with compact=1 overlay=1 %}
+        {% else %}
         <img src="{% url 'portal:client-order-project-item-asset-preview' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}" alt="Aperçu de {{ item.name }}">
+        {% endif %}
         {% elif item.asset %}
         <span class="b2b-preview-loading"><i aria-hidden="true"></i><span class="ui-sr-only">Aperçu en préparation</span>…</span>
         {% else %}

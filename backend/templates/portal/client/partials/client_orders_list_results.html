@@ -1,0 +1,39 @@
+{% load ui_tags %}
+{% if orders %}
+{% ui_orders_table orders=orders variant="client" customer=customer %}
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="mt-4 flex items-center justify-between gap-3 text-sm" aria-label="Pagination commandes client">
+  <span class="muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+  <div class="flex items-center gap-2">
+    {% if page_obj.has_previous %}
+    <a
+      class="ui-btn ui-btn-secondary ui-btn-sm"
+      href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
+      hx-get="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
+      hx-target="#client-orders-list-results"
+      hx-swap="innerHTML"
+      hx-indicator="#portal-htmx-indicator"
+    >Précédente</a>
+    {% endif %}
+    {% if page_obj.has_next %}
+    <a
+      class="ui-btn ui-btn-secondary ui-btn-sm"
+      href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
+      hx-get="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
+      hx-target="#client-orders-list-results"
+      hx-swap="innerHTML"
+      hx-indicator="#portal-htmx-indicator"
+    >Suivante</a>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+{% elif search_query %}
+<div class="empty-state">
+  <h3>Aucun résultat</h3>
+  <p class="muted">Aucune commande ne correspond à « {{ search_query }} ».</p>
+</div>
+{% else %}
+{% url 'portal:client-checkout' customer_public_id=customer.public_id as checkout_url %}
+{% include "components/ui/empty_state.html" with title="Aucune commande" message="Vous n'avez pas encore de commandes dans cet espace client." cta_url=checkout_url cta_label="Créer une commande" %}
+{% endif %}

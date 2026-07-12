@@ -126,26 +126,34 @@ class ClientDashboardView(LoginRequiredMixin, View):
 
 class ClientOrderListView(ScopedCustomerMixin, View):
     template_name = "portal/client/orders_list.html"
+    results_partial = "portal/client/partials/client_orders_list_results.html"
 
     def get(self, request, customer_public_id):
+        context = self._build_context(request)
+        if request.headers.get("HX-Request"):
+            return render(request, self.results_partial, context)
+        return render(request, self.template_name, context)
+
+    def _build_context(self, request):
+        search_query = request.GET.get("q", "").strip()
+        orders_qs = order_service.list_customer_orders(self.customer)
+        if search_query:
+            orders_qs = order_service.filter_customer_orders(orders_qs, query=search_query)
         page_obj = order_service.paginate_orders(
-            order_service.list_customer_orders(self.customer),
+            orders_qs,
             page_number=request.GET.get("page"),
             page_size=settings.ORDER_LIST_PAGE_SIZE,
         )
-        return render(
-            request,
-            self.template_name,
-            {
-                "customer": self.customer,
-                "orders": page_obj.object_list,
-                "page_obj": page_obj,
-                "nav_mode": "client",
-                "nav_key": "client-orders",
-                "badge_tone_for_status": badge_tone_for_status,
-                "status_label": status_label,
-            },
-        )
+        return {
+            "customer": self.customer,
+            "orders": page_obj.object_list,
+            "page_obj": page_obj,
+            "search_query": search_query,
+            "nav_mode": "client",
+            "nav_key": "client-orders",
+            "badge_tone_for_status": badge_tone_for_status,
+            "status_label": status_label,
+        }
 
 
 class ClientOrderContextMixin(ScopedCustomerMixin):

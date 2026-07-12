@@ -247,6 +247,21 @@ class AssetService:
             return None
         return analysis.thin_zone_overlay, "image/webp"
 
+    def prepare_project_semi_transparency_overlay(self, *, project, item_public_id):
+        item, version = self.get_project_item_version(
+            project=project,
+            item_public_id=item_public_id,
+        )
+        if item is None or version is None:
+            return None
+        analysis = getattr(version, "analysis", None)
+        if analysis is None or not analysis.semi_transparency_overlay:
+            return None
+        semi_transparency = (analysis.metadata or {}).get("semi_transparency") or {}
+        if not semi_transparency.get("detected"):
+            return None
+        return analysis.semi_transparency_overlay, "image/webp"
+
     def prepare_order_upload_preview(self, *, order_upload):
         version = getattr(order_upload, "asset_version", None)
         if version is not None:
@@ -388,6 +403,7 @@ class AssetService:
         is_vector = self._is_vector_document(analysis)
         metadata = (analysis.metadata or {}) if analysis else {}
         thin_zone = dict(metadata.get("thin_zone") or {})
+        semi_transparency = dict(metadata.get("semi_transparency") or {})
 
         if version is None or version.analysis_status in {"pending", "processing"}:
             level = "pending"
@@ -494,6 +510,12 @@ class AssetService:
                 "Des détails imprimés inférieurs à 0,5 mm ont été détectés et sont "
                 "surlignés en rouge dans l’aperçu."
             )
+        if semi_transparency.get("detected"):
+            issues.append(
+                "Des zones semi-transparentes ont été détectées (anti-alias, ombres, "
+                "dégradés) et sont surlignées en orange dans l’aperçu. En DTF, ces "
+                "pixels peuvent produire un rendu irrégulier ou un halo après pressage."
+            )
 
         return {
             "level": level,
@@ -509,6 +531,11 @@ class AssetService:
                 "detected": bool(thin_zone.get("detected")),
                 "threshold_mm": thin_zone.get("threshold_mm", 0.5),
                 "coverage_percent": thin_zone.get("coverage_percent", 0.0),
+            },
+            "semi_transparency": {
+                "detected": bool(semi_transparency.get("detected")),
+                "coverage_percent": semi_transparency.get("coverage_percent", 0.0),
+                "pixel_count": semi_transparency.get("pixel_count", 0),
             },
             "confirmed": confirmed,
             "can_confirm": bool(

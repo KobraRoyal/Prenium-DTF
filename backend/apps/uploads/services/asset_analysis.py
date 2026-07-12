@@ -4,7 +4,7 @@ from decimal import Decimal
 from io import BytesIO
 
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from PIL import ImageStat, UnidentifiedImageError
 
@@ -12,6 +12,7 @@ from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.uploads.models import AssetAnalysis, AssetVersion
 from apps.uploads.services.asset_preview import AssetPreviewRenderer
+from apps.uploads.services.asset_semi_transparency import AssetSemiTransparencyAnalyzer
 from apps.uploads.services.asset_thin_zones import AssetThinZoneAnalyzer
 
 
@@ -19,6 +20,7 @@ class AssetAnalysisService:
     def __init__(self):
         self.preview_renderer = AssetPreviewRenderer()
         self.thin_zone_analyzer = AssetThinZoneAnalyzer()
+        self.semi_transparency_analyzer = AssetSemiTransparencyAnalyzer()
 
     def analyze(self, *, version_public_id, source: str = "celery") -> AssetVersion | None:
         version = (
@@ -49,56 +51,92 @@ class AssetAnalysisService:
             self._refresh_projects(version.asset)
             return AssetVersion.objects.get(pk=version.pk)
 
-        with transaction.atomic():
-            auto_size = self._apply_auto_size(version=version, result=result)
-            analysis, _created = AssetAnalysis.objects.update_or_create(
-                version=version,
-                defaults={
-                    "customer": version.customer,
-                    "image_width": result["image_width"],
-                    "image_height": result["image_height"],
-                    "dpi_x": result["dpi_x"],
-                    "dpi_y": result["dpi_y"],
-                    "has_alpha": result["has_alpha"],
-                    "probable_white_background": result["probable_white_background"],
-                    "warnings": result["warnings"],
-                    "metadata": result["metadata"],
-                    "analyzed_at": timezone.now(),
-                },
-            )
-            if result["thumbnail"] is not None:
-                if analysis.thumbnail:
-                    analysis.thumbnail.delete(save=False)
-                analysis.thumbnail.save(
-                    f"{version.public_id}.webp",
-                    ContentFile(result["thumbnail"]),
-                    save=False,
+        try:
+            with transaction.atomic():
+                auto_size = self._apply_auto_size(version=version, result=result)
+                analysis, _created = AssetAnalysis.objects.update_or_create(
+                    version=version,
+                    defaults={
+                        "customer": version.customer,
+                        "image_width": result["image_width"],
+                        "image_height": result["image_height"],
+                        "dpi_x": result["dpi_x"],
+                        "dpi_y": result["dpi_y"],
+                        "has_alpha": result["has_alpha"],
+                        "probable_white_background": result["probable_white_background"],
+                        "warnings": result["warnings"],
+                        "metadata": result["metadata"],
+                        "analyzed_at": timezone.now(),
+                    },
                 )
-            if analysis.thin_zone_overlay:
-                analysis.thin_zone_overlay.delete(save=False)
-            if result["thin_zone_overlay"] is not None:
-                analysis.thin_zone_overlay.save(
-                    f"{version.public_id}-thin-zones.webp",
-                    ContentFile(result["thin_zone_overlay"]),
-                    save=False,
+                update_fields = ["updated_at"]
+                if result["thumbnail"] is not None:
+                    if analysis.thumbnail:
+                        analysis.thumbnail.delete(save=False)
+                    analysis.thumbnail.save(
+                        f"{version.public_id}.webp",
+                        ContentFile(result["thumbnail"]),
+                        save=False,
+                    )
+                    update_fields.append("thumbnail")
+                if analysis.thin_zone_overlay:
+                    analysis.thin_zone_overlay.delete(save=False)
+                if result["thin_zone_overlay"] is not None:
+                    analysis.thin_zone_overlay.save(
+                        f"{version.public_id}-thin-zones.webp",
+                        ContentFile(result["thin_zone_overlay"]),
+                        save=False,
+                    )
+                    update_fields.append("thin_zone_overlay")
+                elif not analysis.thin_zone_overlay:
+                    analysis.thin_zone_overlay = ""
+                    update_fields.append("thin_zone_overlay")
+                if analysis.semi_transparency_overlay:
+                    analysis.semi_transparency_overlay.delete(save=False)
+                if result["semi_transparency_overlay"] is not None:
+                    analysis.semi_transparency_overlay.save(
+                        f"{version.public_id}-semi-transparency.webp",
+                        ContentFile(result["semi_transparency_overlay"]),
+                        save=False,
+                    )
+                    update_fields.append("semi_transparency_overlay")
+                elif not analysis.semi_transparency_overlay:
+                    analysis.semi_transparency_overlay = ""
+                    update_fields.append("semi_transparency_overlay")
+                if len(update_fields) > 1:
+                    analysis.save(update_fields=update_fields)
+                status = (
+                    AssetVersion.AnalysisStatus.WARNING
+                    if result["warnings"]
+                    or result["thin_zone"]["detected"]
+                    or result["semi_transparency"]["detected"]
+                    else AssetVersion.AnalysisStatus.READY
                 )
-            analysis.save(update_fields=["thumbnail", "thin_zone_overlay", "updated_at"])
-            status = (
-                AssetVersion.AnalysisStatus.WARNING
-                if result["warnings"] or result["thin_zone"]["detected"]
-                else AssetVersion.AnalysisStatus.READY
+                version.analysis_status = status
+                version.analysis_error = ""
+                version.auto_size_requested = False
+                version.save(
+                    update_fields=[
+                        "analysis_status",
+                        "analysis_error",
+                        "auto_size_requested",
+                        "updated_at",
+                    ]
+                )
+        except IntegrityError as error:
+            AssetVersion.objects.filter(pk=version.pk).update(
+                analysis_status=AssetVersion.AnalysisStatus.FAILED,
+                analysis_error="Erreur lors de l'enregistrement de l'analyse.",
             )
-            version.analysis_status = status
-            version.analysis_error = ""
-            version.auto_size_requested = False
-            version.save(
-                update_fields=[
-                    "analysis_status",
-                    "analysis_error",
-                    "auto_size_requested",
-                    "updated_at",
-                ]
+            record_event(
+                action="asset.analysis_failed",
+                target=version.asset,
+                status=AuditLogEntry.Status.FAILURE,
+                message=str(error)[:255],
+                metadata=self._metadata(version, source),
             )
+            self._refresh_projects(version.asset)
+            return AssetVersion.objects.get(pk=version.pk)
         record_event(
             action="asset.analyzed",
             target=version.asset,
@@ -107,6 +145,7 @@ class AssetAnalysisService:
                 "analysis_status": version.analysis_status,
                 "warnings": result["warnings"],
                 "thin_zone": result["thin_zone"],
+                "semi_transparency": result["semi_transparency"],
                 "auto_size_mm": auto_size,
             },
         )
@@ -137,6 +176,7 @@ class AssetAnalysisService:
                 metadata=rendered.metadata,
                 probable_white_background=white_background,
             )
+            semi_transparency_result = self.semi_transparency_analyzer.analyze(image=image)
             warnings = list(rendered.warnings)
             if not has_alpha:
                 warnings.append("Aucune transparence détectée.")
@@ -164,10 +204,13 @@ class AssetAnalysisService:
                     "format": rendered.format_name,
                     "mime_type": version.mime_type,
                     "thin_zone": thin_zone_result.metadata,
+                    "semi_transparency": semi_transparency_result.metadata,
                 },
                 "thumbnail": thumbnail,
                 "thin_zone": thin_zone_result.metadata,
                 "thin_zone_overlay": thin_zone_result.overlay,
+                "semi_transparency": semi_transparency_result.metadata,
+                "semi_transparency_overlay": semi_transparency_result.overlay,
             }
         finally:
             image.close()

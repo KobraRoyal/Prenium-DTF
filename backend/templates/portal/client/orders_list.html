@@ -7,24 +7,29 @@
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_orders_list.html" title="Mes commandes" subtitle_prefix=customer.name subtitle="N° IDS et votre référence pour chaque commande transmise." %}
 
 <section class="card client-dashboard-section">
-  {% if orders %}
-  {% ui_orders_table orders=orders variant="client" customer=customer %}
-  {% if page_obj and page_obj.paginator.num_pages > 1 %}
-  <nav class="mt-4 flex items-center justify-between gap-3 text-sm" aria-label="Pagination commandes client">
-    <span class="muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    <div class="flex items-center gap-2">
-      {% if page_obj.has_previous %}
-      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="?page={{ page_obj.previous_page_number }}">Précédente</a>
-      {% endif %}
-      {% if page_obj.has_next %}
-      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="?page={{ page_obj.next_page_number }}">Suivante</a>
-      {% endif %}
-    </div>
-  </nav>
-  {% endif %}
-  {% else %}
-  {% url 'portal:client-checkout' customer_public_id=customer.public_id as checkout_url %}
-  {% include "components/ui/empty_state.html" with title="Aucune commande" message="Vous n'avez pas encore de commandes dans cet espace client." cta_url=checkout_url cta_label="Créer une commande" %}
-  {% endif %}
+  <div class="client-dashboard-toolbar">
+    <label class="dui-form-control client-orders-search">
+      <span class="product-form-label" for="client-orders-search-input">Rechercher</span>
+      <input
+        id="client-orders-search-input"
+        class="dui-input dui-input-bordered w-full"
+        type="search"
+        name="q"
+        value="{{ search_query }}"
+        placeholder="N° IDS, votre référence, note…"
+        autocomplete="off"
+        spellcheck="false"
+        hx-get="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}"
+        hx-trigger="input changed delay:300ms, search"
+        hx-target="#client-orders-list-results"
+        hx-swap="innerHTML"
+        hx-indicator="#portal-htmx-indicator"
+        aria-controls="client-orders-list-results"
+      >
+    </label>
+  </div>
+  <div id="client-orders-list-results" aria-live="polite">
+    {% include "portal/client/partials/client_orders_list_results.html" %}
+  </div>
 </section>
 {% endblock %}

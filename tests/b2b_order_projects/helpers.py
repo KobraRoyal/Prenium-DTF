@@ -17,7 +17,13 @@ def create_scope(email, name="Client", role=CustomerMembership.Role.MEMBER, enab
     return user, customer, client
 
 
-def png_upload(name="logo.png", *, color=(255, 0, 0, 180)):
+def png_upload(name="logo.png", *, color=(255, 0, 0, 255)):
+    output = BytesIO()
+    Image.new("RGBA", (120, 80), color).save(output, format="PNG", dpi=(300, 300))
+    return SimpleUploadedFile(name, output.getvalue(), content_type="image/png")
+
+
+def semi_transparent_upload(name="semi-transparent.png", *, color=(255, 0, 0, 180)):
     output = BytesIO()
     Image.new("RGBA", (120, 80), color).save(output, format="PNG", dpi=(300, 300))
     return SimpleUploadedFile(name, output.getvalue(), content_type="image/png")

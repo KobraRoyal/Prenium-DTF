@@ -6,6 +6,8 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import CharField, Q
+from django.db.models.functions import Cast
 
 from apps.accounts.services.access import AccessScopeService
 from apps.auditlog.services import record_event
@@ -61,6 +63,38 @@ class OrderService:
     def paginate_orders(self, queryset, *, page_number, page_size):
         paginator = Paginator(queryset, page_size)
         return paginator.get_page(page_number)
+
+    def filter_customer_orders(self, queryset, *, query: str):
+        cleaned = str(query or "").strip()
+        if not cleaned:
+            return queryset
+
+        filters = (
+            Q(customer_note__icontains=cleaned)
+            | Q(source_b2b_order_project__name__icontains=cleaned)
+            | Q(source_b2b_order_project__customer_reference__icontains=cleaned)
+            | Q(source_b2b_order_project__project_number__icontains=cleaned)
+        )
+
+        normalized = cleaned.replace("-", "").replace(" ", "").lower()
+        if normalized:
+            filters |= Q(
+                public_id_text__icontains=normalized,
+            )
+
+        lowered = cleaned.lower()
+        status_aliases = {
+            "soumise": Order.Status.SUBMITTED,
+            "submitted": Order.Status.SUBMITTED,
+            "brouillon": Order.Status.DRAFT,
+            "draft": Order.Status.DRAFT,
+        }
+        if lowered in status_aliases:
+            filters |= Q(status=status_aliases[lowered])
+
+        return queryset.annotate(
+            public_id_text=Cast("public_id", CharField(max_length=36)),
+        ).filter(filters)
 
     def create_order(
         self,

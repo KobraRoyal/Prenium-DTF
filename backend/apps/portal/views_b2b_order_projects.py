@@ -423,6 +423,22 @@ class ClientOrderProjectItemThinZoneOverlayView(ClientProjectFeatureMixin, View)
         return response
 
 
+class ClientOrderProjectItemSemiTransparencyOverlayView(ClientProjectFeatureMixin, View):
+    def get(self, request, customer_public_id, project_public_id, item_public_id):
+        overlay = asset_service.prepare_project_semi_transparency_overlay(
+            project=self.get_project_or_404(project_public_id),
+            item_public_id=item_public_id,
+        )
+        if overlay is None:
+            raise Http404
+        overlay_file, content_type = overlay
+        overlay_file.open("rb")
+        response = FileResponse(overlay_file, content_type=content_type)
+        response["Content-Disposition"] = "inline"
+        response["Cache-Control"] = "private, max-age=300"
+        return response
+
+
 class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
     def post(self, request, customer_public_id, project_public_id):
         project = self.get_project_or_404(project_public_id)
