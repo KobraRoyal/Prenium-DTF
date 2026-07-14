@@ -5,33 +5,36 @@
 
 {% block portal_content %}
 <div class="b2b-project-page">
-{% include "components/portal/page_head.html" with title="Finaliser la commande" title_code=project.project_number subtitle=project_client_label %}
+  <header class="b2b-project-header">
+    <div class="b2b-project-header__intro">
+      {% include "components/portal/page_head.html" with kicker="Commande visuelle" title="Finaliser la commande" title_code=project.project_number subtitle=project_client_label %}
+    </div>
+    {% include "portal/client/partials/order_project_summary.html" %}
+  </header>
 
-{% if request.GET.submit_error %}
-<div class="dui-alert dui-alert-error mb-4" role="alert">
-  {% if request.GET.submit_error == "action_required" %}
-    Validez les dimensions et le contrôle technique de chaque visuel avant transmission.
-  {% elif request.GET.submit_error == "incomplete" %}
-    Ajoutez au moins un visuel complet et attendez la fin de l’analyse technique.
-  {% elif request.GET.submit_error == "analyzing" %}
-    L’analyse technique est encore en cours. Patientez quelques instants puis réessayez.
-  {% elif request.GET.submit_error == "project_item_not_confirmed" %}
-    Un ou plusieurs visuels ne sont pas validés. Ouvrez chaque visuel et cochez la confirmation.
-  {% elif request.GET.submit_error == "validation" %}
-    {{ request.GET.submit_message|default:"Impossible de finaliser la commande. Réessayez ou contactez le support." }}
-  {% elif request.GET.submit_error == "submitted" %}
-    Cette commande est déjà enregistrée. Cliquez sur « Finaliser ma commande » pour la transmettre à l'atelier.
-  {% else %}
-    Le projet n’est pas prêt pour transmission. Complétez et validez tous les visuels.
+  {% if request.GET.submit_error %}
+  <div class="dui-alert dui-alert-error mb-4" role="alert">
+    {% if request.GET.submit_error == "action_required" %}
+      Validez les dimensions et le contrôle technique de chaque visuel avant transmission.
+    {% elif request.GET.submit_error == "incomplete" %}
+      Ajoutez au moins un visuel complet et attendez la fin de l’analyse technique.
+    {% elif request.GET.submit_error == "analyzing" %}
+      L’analyse technique est encore en cours. Patientez quelques instants puis réessayez.
+    {% elif request.GET.submit_error == "project_item_not_confirmed" %}
+      Un ou plusieurs visuels ne sont pas validés. Ouvrez chaque visuel et cochez la confirmation.
+    {% elif request.GET.submit_error == "validation" %}
+      {{ request.GET.submit_message|default:"Impossible de finaliser la commande. Réessayez ou contactez le support." }}
+    {% elif request.GET.submit_error == "submitted" %}
+      Cette commande est déjà enregistrée. Cliquez sur « Finaliser ma commande » pour la transmettre à l'atelier.
+    {% else %}
+      Le projet n’est pas prêt pour transmission. Complétez et validez tous les visuels.
+    {% endif %}
+  </div>
   {% endif %}
-</div>
-{% endif %}
 
-{% include "portal/client/partials/order_project_summary.html" %}
-
-<div class="stack-lg mt-6">
-  {% include "portal/client/partials/order_project_items.html" with form_error="" %}
-  {% include "portal/client/partials/order_project_fields.html" %}
-</div>
+  <div class="stack-lg mt-6">
+    {% include "portal/client/partials/order_project_items.html" with form_error="" %}
+    {% include "portal/client/partials/order_project_fields.html" %}
+  </div>
 </div>
 {% endblock %}

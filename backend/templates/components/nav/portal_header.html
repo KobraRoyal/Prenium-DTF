@@ -1,14 +1,17 @@
 <header class="app-header landing-saas-header product-header">
   <div class="app-main app-nav landing-saas-nav ui-shell-main product-nav">
-    <div class="ui-brand-row">
+    <div class="product-nav__brand">
+      {% if nav_mode == "client" %}
+      {% include "components/brand/logo.html" with brand_home_href="portal:client-dashboard" brand_home_label="Retour à l'accueil client" %}
+      <span class="portal-top-meta__pill">Portail client</span>
+      {% elif nav_mode == "staff" %}
+      {% include "components/brand/logo.html" with brand_home_href="portal:staff-dashboard" brand_home_label="Retour au tableau de bord atelier" %}
+      <span class="portal-top-meta__pill">Pilotage atelier</span>
+      {% else %}
       {% include "components/brand/logo.html" %}
-      <div class="portal-top-meta">
-        {% if nav_mode == "client" %}
-        <span class="portal-top-meta__pill">Portail client</span>
-        {% elif nav_mode == "staff" %}
-        <span class="portal-top-meta__pill">Pilotage atelier</span>
-        {% endif %}
-      </div>
+      {% endif %}
+    </div>
+    <div class="product-nav__controls">
       <button
         type="button"
         class="ui-btn ui-btn-ghost ui-btn-sm shrink-0 product-menu-button"
@@ -21,33 +24,37 @@
       >
         Menu
       </button>
+      <nav
+        id="portal-primary-nav"
+        class="nav-group landing-saas-nav__links product-nav__links"
+        data-product-menu
+        aria-label="Navigation portail"
+      >
+        <div class="product-nav__primary">
+          {% if nav_mode == "client" %}
+          <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-dashboard' %}is-active{% endif %}" {% if nav_key == 'client-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:client-dashboard' %}">Accueil</a>
+          {% if customer %}
+          <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-orders' %}is-active{% endif %}" {% if nav_key == 'client-orders' %}aria-current="page"{% endif %} href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Commandes</a>
+          <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta {% if nav_key == 'client-checkout' %}is-active{% endif %}" {% if nav_key == 'client-checkout' %}aria-current="page"{% endif %} href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Nouvelle commande</a>
+          {% endif %}
+          {% endif %}
+          {% if nav_mode == "staff" %}
+          <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-dashboard' %}is-active{% endif %}" {% if nav_key == 'staff-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:staff-dashboard' %}">Tableau de bord</a>
+          <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes</a>
+          {% if b2b_order_projects_globally_enabled and perms.b2b_order_projects.view_b2borderproject %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-order-projects' %}is-active{% endif %}" {% if nav_key == 'staff-order-projects' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-project-list' %}">Projets B2B</a>{% endif %}
+          {% endif %}
+        </div>
+        <div class="product-nav__account">
+          {% if request.user.is_authenticated %}
+          <form method="post" action="{% url 'portal:logout' %}" class="inline-nav-form m-0">
+            {% csrf_token %}
+            <button class="ui-btn ui-btn-ghost ui-btn-sm product-nav__logout" type="submit">Déconnexion</button>
+          </form>
+          {% else %}
+          <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__login" href="{% url 'portal:login' %}">Connexion</a>
+          {% endif %}
+        </div>
+      </nav>
     </div>
-    <nav
-      id="portal-primary-nav"
-      class="nav-group landing-saas-nav__links product-nav__links"
-      data-product-menu
-      aria-label="Navigation portail"
-    >
-      {% if nav_mode == "client" %}
-      <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-dashboard' %}is-active{% endif %}" {% if nav_key == 'client-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:client-dashboard' %}">Accueil</a>
-      {% if customer %}
-      <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-orders' %}is-active{% endif %}" {% if nav_key == 'client-orders' %}aria-current="page"{% endif %} href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Commandes</a>
-      <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta {% if nav_key == 'client-checkout' %}is-active{% endif %}" {% if nav_key == 'client-checkout' %}aria-current="page"{% endif %} href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Nouvelle commande</a>
-      {% endif %}
-      {% endif %}
-      {% if nav_mode == "staff" %}
-      <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-dashboard' %}is-active{% endif %}" {% if nav_key == 'staff-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:staff-dashboard' %}">Tableau de bord</a>
-      <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes</a>
-      {% if b2b_order_projects_globally_enabled and perms.b2b_order_projects.view_b2borderproject %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-order-projects' %}is-active{% endif %}" {% if nav_key == 'staff-order-projects' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-project-list' %}">Projets B2B</a>{% endif %}
-      {% endif %}
-      {% if request.user.is_authenticated %}
-      <form method="post" action="{% url 'portal:logout' %}" class="inline-nav-form m-0">
-        {% csrf_token %}
-        <button class="ui-btn ui-btn-ghost ui-btn-sm product-nav__logout" type="submit">Déconnexion</button>
-      </form>
-      {% else %}
-      <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__login" href="{% url 'portal:login' %}">Connexion</a>
-      {% endif %}
-    </nav>
   </div>
 </header>

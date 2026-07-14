@@ -1,9 +1,12 @@
 from django import template
+from django.urls import reverse
 
+from apps.accounts.services.access import AccessScopeService
 from apps.core.public_refs import short_public_ref
 from apps.orders.references import order_client_reference, project_client_reference
 
 register = template.Library()
+access_scope_service = AccessScopeService()
 
 STATUS_LABELS = {
     "draft": "Brouillon",
@@ -33,6 +36,13 @@ STATUS_LABELS = {
     "error": "Erreur",
     "synced": "Synchronise",
 }
+
+
+@register.simple_tag(takes_context=True)
+def brand_home_url(context) -> str:
+    user = context["request"].user
+    url_name = access_scope_service.resolve_brand_home_url_name(user)
+    return reverse(url_name)
 
 
 @register.filter

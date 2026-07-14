@@ -17,10 +17,6 @@
   <p class="muted">Votre utilisateur n'a pas encore de membership client actif.</p>
 </section>
 {% else %}
-<div class="client-dashboard-toolbar">
-  <a class="ui-btn ui-btn-primary" href="{{ new_order_url }}">Nouvelle commande</a>
-</div>
-
 {% if project_feature_enabled and recent_projects %}
 <section class="card client-dashboard-section" aria-labelledby="client-dashboard-preparations">
   <div class="client-dashboard-section__head">

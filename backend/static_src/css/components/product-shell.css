@@ -46,22 +46,51 @@
     max-width: min(1180px, calc(100vw - 1rem));
   }
 
+  body.product-shell.portal-shell.landing-saas .app-header.landing-saas-header.product-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    border-bottom: none !important;
+    background: var(--product-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    color: var(--product-ink);
+    box-shadow:
+      inset 0 -3px 0 0 var(--product-line),
+      inset 0 -6px 0 0 var(--product-accent);
+    padding-bottom: 6px;
+  }
+
   body.product-shell .product-header {
     position: sticky;
     top: 0;
     z-index: 30;
-    border-bottom: 2px solid var(--product-line);
-    background: rgba(255, 248, 234, 0.88);
-    backdrop-filter: blur(18px);
   }
 
   body.product-shell .product-nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: clamp(0.75rem, 2vw, 1.5rem);
     padding-top: 0.72rem;
     padding-bottom: 0.72rem;
+  }
+
+  body.product-shell .product-nav__brand {
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  body.product-shell .product-nav__controls {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    min-width: 0;
   }
 
   body.product-shell .product-brand {
@@ -112,11 +141,6 @@
     text-transform: uppercase;
   }
 
-  body.product-shell .portal-top-meta {
-    margin-left: auto;
-    margin-right: 0.5rem;
-  }
-
   body.product-shell .portal-top-meta__pill,
   body.product-shell .product-pill {
     display: inline-flex;
@@ -145,9 +169,26 @@
     display: flex;
     align-items: center;
     flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0.45rem;
+  }
+
+  body.product-shell .product-nav__primary {
+    display: flex;
+    align-items: center;
     flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 0.55rem;
+    gap: 0.45rem;
+  }
+
+  body.product-shell .product-nav__account {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding-left: 0.55rem;
+    margin-left: 0.15rem;
+    border-left: 2px solid color-mix(in srgb, var(--product-line) 18%, transparent);
   }
 
   body.product-shell .product-nav__links .ui-btn {
@@ -187,6 +228,27 @@
 
   body.product-shell .product-nav__links .product-nav__logout {
     color: var(--product-soft);
+    border-color: color-mix(in srgb, var(--product-line) 35%, transparent);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body.product-shell .product-nav__links .product-nav__logout:hover,
+  body.product-shell .product-nav__links .product-nav__logout:focus-visible {
+    color: var(--product-ink);
+    border-color: var(--product-line);
+    background: rgba(11, 11, 11, 0.04);
+    box-shadow: 2px 2px 0 #0b0b0b;
+  }
+
+  body.product-shell .product-nav__links .product-nav__cta {
+    box-shadow: 3px 3px 0 #0b0b0b;
+  }
+
+  body.product-shell .product-nav__links .product-nav__cta:hover,
+  body.product-shell .product-nav__links .product-nav__cta:focus-visible {
+    box-shadow: 4px 4px 0 #0b0b0b;
+    transform: translate(-1px, -1px);
   }
 
   body.product-shell .product-nav__links .inline-nav-form {
@@ -1821,42 +1883,108 @@
     font-size: clamp(1.8rem, 4vw, 2.7rem);
   }
 
-  body.product-shell .b2b-project-toolbar {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    gap: 1rem;
-    align-items: center;
+  body.product-shell .b2b-project-header {
+    overflow: hidden;
+    margin-bottom: clamp(1rem, 2vw, 1.35rem);
     border: 2px solid var(--product-line);
-    padding: 0.75rem 0.9rem;
     background: var(--product-panel);
-    box-shadow: 4px 4px 0 #0b0b0b;
+    box-shadow: 5px 5px 0 #0b0b0b;
   }
 
-  body.product-shell .b2b-project-toolbar__back {
-    color: var(--product-ink);
-    font-size: 0.85rem;
-    font-weight: 850;
-    text-decoration: none;
+  body.product-shell .b2b-project-header__intro .page-head--premium {
+    margin: 0;
+    border: 0;
+    box-shadow: none;
+    padding: clamp(1rem, 2vw, 1.35rem);
+    padding-bottom: clamp(0.85rem, 1.6vw, 1.1rem);
   }
 
-  body.product-shell .b2b-project-toolbar__back:hover {
-    text-decoration: underline;
+  body.product-shell .b2b-project-header__intro .page-head--premium h1 {
+    font-size: clamp(1.8rem, 4vw, 2.7rem);
   }
 
-  body.product-shell .b2b-project-toolbar__state,
-  body.product-shell .b2b-project-toolbar__actions {
-    display: flex;
+  body.product-shell .b2b-project-header .b2b-project-toolbar {
+    display: grid;
+    grid-template-areas:
+      "nav nav"
+      "meta actions";
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem 1rem;
     align-items: center;
-    gap: 0.65rem;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--product-line);
+    border-radius: 0;
+    padding: 0.85rem clamp(1rem, 2vw, 1.35rem);
+    background: color-mix(in srgb, var(--product-accent) 7%, var(--product-panel));
+    box-shadow: none;
   }
 
-  body.product-shell .b2b-project-toolbar__state {
+  body.product-shell .b2b-project-toolbar__nav {
+    grid-area: nav;
+    margin: 0;
+  }
+
+  body.product-shell .b2b-project-toolbar__nav .ui-breadcrumb__list {
+    font-size: 0.72rem;
+  }
+
+  body.product-shell .b2b-project-toolbar__nav [aria-current="page"] {
+    color: var(--product-ink);
+    font-weight: 850;
+  }
+
+  body.product-shell .b2b-project-toolbar__meta {
+    grid-area: meta;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  body.product-shell .b2b-project-toolbar__chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.65rem;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--product-line);
+    background: var(--product-panel);
     color: var(--product-muted);
-    font-size: 0.82rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   body.product-shell .b2b-project-toolbar__actions {
+    grid-area: actions;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
+    gap: 0.55rem;
+  }
+
+  body.product-shell .b2b-project-toolbar__hint,
+  body.product-shell .b2b-project-toolbar__footnote {
+    margin: 0;
+    max-width: 28rem;
+    line-height: 1.45;
+  }
+
+  body.product-shell .b2b-project-toolbar__footnote {
+    grid-column: 1 / -1;
+    padding-top: 0.15rem;
+    border-top: 1px dashed color-mix(in srgb, var(--product-line) 82%, transparent);
+  }
+
+  @media (min-width: 960px) {
+    body.product-shell .b2b-project-header .b2b-project-toolbar {
+      grid-template-areas: "nav meta actions";
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+    }
   }
 
   body.product-shell .b2b-visual-list-head {
@@ -3484,20 +3612,22 @@
 
   @media (max-width: 959px) {
     body.product-shell .product-nav {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.75rem;
-    }
-
-    body.product-shell .ui-brand-row {
-      display: flex;
-      width: 100%;
+      flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
+      gap: 0.65rem;
     }
 
-    body.product-shell .portal-top-meta {
+    body.product-shell .product-nav__brand {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    body.product-shell .product-nav__brand .portal-top-meta__pill {
       display: none;
+    }
+
+    body.product-shell .product-nav__controls {
+      flex: 0 0 auto;
     }
 
     body.product-shell .product-menu-button {
@@ -3506,11 +3636,29 @@
 
     body.product-shell .product-nav__links {
       display: none;
-      width: 100%;
+      flex: 1 1 100%;
       flex-direction: column;
       align-items: stretch;
       gap: 0.45rem;
-      padding-top: 0.25rem;
+      margin-top: 0.15rem;
+      padding-top: 0.75rem;
+      border-top: 2px solid var(--product-line);
+    }
+
+    body.product-shell .product-nav__primary,
+    body.product-shell .product-nav__account {
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+      padding-left: 0;
+      margin-left: 0;
+      border-left: 0;
+      gap: 0.45rem;
+    }
+
+    body.product-shell .product-nav__account {
+      padding-top: 0.55rem;
+      border-top: 2px solid color-mix(in srgb, var(--product-line) 12%, transparent);
     }
 
     body.product-shell .product-nav__links.is-open,
@@ -3615,17 +3763,16 @@
       min-height: 16rem;
     }
 
-    body.product-shell .b2b-project-toolbar {
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.65rem;
+    body.product-shell .b2b-project-header .b2b-project-toolbar {
+      grid-template-areas:
+        "nav"
+        "meta"
+        "actions";
+      grid-template-columns: minmax(0, 1fr);
     }
 
-    body.product-shell .b2b-project-toolbar__state {
-      justify-content: flex-end;
-    }
-
+    body.product-shell .b2b-project-toolbar__meta,
     body.product-shell .b2b-project-toolbar__actions {
-      grid-column: 1 / -1;
       justify-content: stretch;
     }
 
