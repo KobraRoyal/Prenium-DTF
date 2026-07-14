@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 
-from .helpers import png_upload
+from .helpers import png_upload, thin_detail_upload
 
 
 def customer_scope(email="owner@example.com", role=CustomerMembership.Role.OWNER):
@@ -169,6 +169,58 @@ def test_support_color_multicolor_is_normalized_on_item_update():
     )
     assert item.support_color_hex == "#multicolor"
     assert item.support_color_label == "Multicolore"
+
+
+@pytest.mark.django_db
+def test_thin_details_require_an_exact_solid_support_color_before_confirmation():
+    user, customer, _membership = customer_scope("thin-color@example.com")
+    service = B2BOrderProjectService()
+    project = service.create_project(
+        customer=customer, actor=user, data={"name": "Détails fins"}, source="test"
+    )
+    item = service.add_item(
+        project=project,
+        actor=user,
+        data={"name": "Trait fin", "width_mm": 13.55, "height_mm": 8.47, "quantity": 1},
+        source="test",
+    )
+    version = AssetService().attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=thin_detail_upload(),
+        source="test",
+    )
+    AssetAnalysisService().analyze(version_public_id=version.public_id, source="test")
+
+    with pytest.raises(ProjectDomainError) as missing:
+        service.confirm_item_analysis(
+            project=project,
+            item_public_id=item.public_id,
+            actor=user,
+            source="test",
+        )
+    assert missing.value.code == "SUPPORT_COLOR_REQUIRED_FOR_THIN_DETAILS"
+
+    with pytest.raises(ProjectDomainError) as multicolor:
+        service.confirm_item_analysis(
+            project=project,
+            item_public_id=item.public_id,
+            actor=user,
+            data={"support_color_multicolor": "on"},
+            source="test",
+        )
+    assert multicolor.value.code == "SUPPORT_COLOR_REQUIRED_FOR_THIN_DETAILS"
+
+    confirmed = service.confirm_item_analysis(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        data={"support_color_hex": "#123ABC"},
+        source="test",
+    )
+    assert confirmed.support_color_hex == "#123abc"
+    assert confirmed.client_confirmed_asset_version == version
 
 
 @pytest.mark.django_db

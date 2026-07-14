@@ -102,3 +102,10 @@ class AccessScopeService:
 
     def can_access_staff_domain(self, user, permission: str) -> bool:
         return bool(self.can_access_staff_portal(user) and user.has_perm(permission))
+
+    def resolve_brand_home_url_name(self, user) -> str:
+        if self.can_access_staff_portal(user):
+            return "portal:staff-dashboard"
+        if getattr(user, "is_authenticated", False) and getattr(user, "is_active", False):
+            return "portal:client-dashboard"
+        return "home"

@@ -161,3 +161,43 @@ def test_order_service_refuses_non_persisted_customer_membership_scope():
             customer_membership=forged_membership,
             items=[{"service_public_id": str(dtf_service.public_id), "quantity": "1.00"}],
         )
+
+
+@pytest.mark.django_db
+def test_filter_customer_orders_matches_reference_note_and_short_ref():
+    user = get_user_model().objects.create_user(email="search@example.com", password="pass")
+    customer = Customer.objects.create(name="Search Co")
+    CustomerMembership.objects.create(customer=customer, user=user)
+    service = OrderService()
+
+    summer = service.create_b2b_deferred_order(
+        customer=customer,
+        actor=user,
+        customer_note="Collection été\nLivraison rapide",
+        source="test",
+    )
+    winter = service.create_b2b_deferred_order(
+        customer=customer,
+        actor=user,
+        customer_note="Collection hiver",
+        source="test",
+    )
+
+    by_note = service.filter_customer_orders(
+        service.list_customer_orders(customer),
+        query="été",
+    )
+    assert list(by_note.values_list("pk", flat=True)) == [summer.pk]
+
+    by_short_ref = service.filter_customer_orders(
+        service.list_customer_orders(customer),
+        query=str(summer.public_id).split("-")[-1][:8],
+    )
+    assert winter.pk not in by_short_ref.values_list("pk", flat=True)
+    assert summer.pk in by_short_ref.values_list("pk", flat=True)
+
+    empty = service.filter_customer_orders(
+        service.list_customer_orders(customer),
+        query="   ",
+    )
+    assert empty.count() == 2

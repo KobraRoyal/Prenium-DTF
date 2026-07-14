@@ -155,6 +155,37 @@ def test_drive_sync_service_creates_order_folder_and_syncs_upload():
     ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
     ORDER_UPLOAD_MAX_BYTES=1024,
 )
+def test_drive_sync_service_uses_single_order_folder_for_multiple_uploads():
+    user, customer, _membership = create_customer_scope("multi@example.com", "Acme")
+    order = create_order(customer, user)
+    first = create_stored_order_upload(order=order, actor=user, name="logo-a.pdf")
+    second = create_stored_order_upload(order=order, actor=user, name="logo-b.pdf")
+    third = create_stored_order_upload(order=order, actor=user, name="logo-c.pdf")
+    gateway = FakeDriveGateway()
+    sync_service = OrderUploadDriveSyncService(gateway=gateway)
+
+    syncs = [
+        sync_service.sync_upload(order_upload=upload, actor=user, source="test")
+        for upload in (first, second, third)
+    ]
+
+    assert OrderDriveFolder.objects.filter(order=order).count() == 1
+    source_folder_id = syncs[0].drive_folder.folder_ids["00_source_client"]
+    assert all(sync.remote_folder_id == source_folder_id for sync in syncs)
+    assert all(sync.drive_folder_id == syncs[0].drive_folder_id for sync in syncs)
+    assert len(gateway.uploads) == 3
+    assert {upload["parent_id"] for upload in gateway.uploads} == {source_folder_id}
+    order_folder_names = {
+        name for (_parent, name) in gateway.folders if name == order.short_ref
+    }
+    assert len(order_folder_names) == 1
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
 def test_drive_sync_service_marks_failed_when_drive_api_errors():
     user, customer, _membership = create_customer_scope("client@example.com", "Acme")
     order = create_order(customer, user)

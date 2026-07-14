@@ -232,6 +232,36 @@ class AssetService:
             return None
         return self.prepare_version_preview(version=version)
 
+    def prepare_project_thin_zone_overlay(self, *, project, item_public_id):
+        item, version = self.get_project_item_version(
+            project=project,
+            item_public_id=item_public_id,
+        )
+        if item is None or version is None:
+            return None
+        analysis = getattr(version, "analysis", None)
+        if analysis is None or not analysis.thin_zone_overlay:
+            return None
+        thin_zone = (analysis.metadata or {}).get("thin_zone") or {}
+        if not thin_zone.get("detected"):
+            return None
+        return analysis.thin_zone_overlay, "image/webp"
+
+    def prepare_project_semi_transparency_overlay(self, *, project, item_public_id):
+        item, version = self.get_project_item_version(
+            project=project,
+            item_public_id=item_public_id,
+        )
+        if item is None or version is None:
+            return None
+        analysis = getattr(version, "analysis", None)
+        if analysis is None or not analysis.semi_transparency_overlay:
+            return None
+        semi_transparency = (analysis.metadata or {}).get("semi_transparency") or {}
+        if not semi_transparency.get("detected"):
+            return None
+        return analysis.semi_transparency_overlay, "image/webp"
+
     def prepare_order_upload_preview(self, *, order_upload):
         version = getattr(order_upload, "asset_version", None)
         if version is not None:
@@ -372,6 +402,8 @@ class AssetService:
         )
         is_vector = self._is_vector_document(analysis)
         metadata = (analysis.metadata or {}) if analysis else {}
+        thin_zone = dict(metadata.get("thin_zone") or {})
+        semi_transparency = dict(metadata.get("semi_transparency") or {})
 
         if version is None or version.analysis_status in {"pending", "processing"}:
             level = "pending"
@@ -400,8 +432,7 @@ class AssetService:
                 level = "good"
                 label = "Résolution OK"
                 message = (
-                    f"Document mixte · {item.width_mm} × {item.height_mm} mm · "
-                    f"vectoriel net · photo raster {raster_dpi:.0f} DPI."
+                    f"Document mixte · vectoriel net · photo raster {raster_dpi:.0f} DPI."
                 )
             elif raster_dpi >= minimum_dpi:
                 level = "warning"
@@ -425,7 +456,7 @@ class AssetService:
                 label = "Résolution optimale" if level == "good" else "Résolution acceptable"
                 message = (
                     f"{source_dpi:.0f} DPI source · {effective_dpi:.0f} DPI effectifs "
-                    f"à l’échelle du document ({item.width_mm} × {item.height_mm} mm)."
+                    f"à l’échelle du document."
                 )
             else:
                 level = "error"
@@ -474,6 +505,17 @@ class AssetService:
                 f"({source_dpi:.0f} DPI) est supérieure à la résolution à la taille posée "
                 f"({float(placement_dpi):.0f} DPI)."
             )
+        if thin_zone.get("detected"):
+            issues.append(
+                "Des détails imprimés inférieurs à 0,5 mm ont été détectés et sont "
+                "surlignés en rouge dans l’aperçu."
+            )
+        if semi_transparency.get("detected"):
+            issues.append(
+                "Des zones semi-transparentes ont été détectées (anti-alias, ombres, "
+                "dégradés) et sont surlignées en orange dans l’aperçu. En DTF, ces "
+                "pixels peuvent produire un rendu irrégulier ou un halo après pressage."
+            )
 
         return {
             "level": level,
@@ -485,6 +527,16 @@ class AssetService:
             "recommended_dpi": recommended_dpi,
             "minimum_dpi": minimum_dpi,
             "issues": issues,
+            "thin_zone": {
+                "detected": bool(thin_zone.get("detected")),
+                "threshold_mm": thin_zone.get("threshold_mm", 0.5),
+                "coverage_percent": thin_zone.get("coverage_percent", 0.0),
+            },
+            "semi_transparency": {
+                "detected": bool(semi_transparency.get("detected")),
+                "coverage_percent": semi_transparency.get("coverage_percent", 0.0),
+                "pixel_count": semi_transparency.get("pixel_count", 0),
+            },
             "confirmed": confirmed,
             "can_confirm": bool(
                 version and version.analysis_status in {"ready", "warning"} and analysis

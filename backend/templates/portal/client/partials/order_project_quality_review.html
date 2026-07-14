@@ -5,7 +5,7 @@
   </div>
   {% if not compact %}
     {% if review.level == "good" %}
-    <p class="b2b-quality-review__summary">{{ item.width_mm }} × {{ item.height_mm }} mm · {{ review.resolution_display }}</p>
+    <p class="b2b-quality-review__summary">{% if review.message %}{{ review.message }}{% else %}{{ review.resolution_display }}{% endif %}</p>
     {% elif review.message %}
     <p class="b2b-quality-review__summary">{{ review.message }}</p>
     {% endif %}

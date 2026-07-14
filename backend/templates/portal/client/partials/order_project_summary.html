@@ -1,21 +1,28 @@
 {% load portal_tags %}
 <section class="b2b-project-toolbar" id="order-project-summary" aria-label="Actions de la commande"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
-  <a class="b2b-project-toolbar__back" href="{% url 'portal:client-order-project-list' customer_public_id=customer.public_id %}">← Commandes à finaliser</a>
-  <div class="b2b-project-toolbar__state">
-    <span class="badge">{{ project.get_status_display }}</span>
-    <span>{{ project.items.count }} visuel{{ project.items.count|pluralize }}</span>
+  <nav class="b2b-project-toolbar__nav ui-breadcrumb" aria-label="Fil d'Ariane">
+    <ol class="ui-breadcrumb__list">
+      <li class="ui-breadcrumb__item"><a href="{% url 'portal:client-order-project-list' customer_public_id=customer.public_id %}">Commandes à finaliser</a></li>
+      <li class="ui-breadcrumb__item"><span aria-current="page">{{ project.project_number }}</span></li>
+    </ol>
+  </nav>
+  <div class="b2b-project-toolbar__meta">
+    <span class="badge{% if project.status == 'ready_to_submit' or project.status == 'converted' or project.status == 'confirmed' %} is-success{% elif project.status == 'action_required' or project.status == 'changes_requested' or project.status == 'blocked' %} is-danger{% elif project.status == 'analyzing' or project.status == 'incomplete' or project.status == 'draft' %} is-warning{% else %} is-neutral{% endif %}">{{ project.get_status_display }}</span>
+    <span class="b2b-project-toolbar__chip">{{ project.items.count }} visuel{{ project.items.count|pluralize }}</span>
   </div>
   <div class="b2b-project-toolbar__actions">
-  {% if project.status == "ready_to_submit" or project.status == "submitted" and not project.converted_order %}
-    <form method="post" action="{% url 'portal:client-order-project-submit' customer_public_id=customer.public_id project_public_id=project.public_id %}" data-submit-loading>{% csrf_token %}<button class="ui-btn ui-btn-primary" type="submit">{% if project.status == "submitted" %}Finaliser ma commande{% else %}Confirmer et transmettre{% endif %}</button></form>
-    {% if project.status == "submitted" %}<p class="muted text-sm b2b-summary-hint">Commande enregistrée. Cliquez sur « Finaliser ma commande » pour la transmettre à l'atelier.</p>{% endif %}
-  {% elif project.status == "converted" and project.converted_order %}
-    <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=project.converted_order.public_id %}">Voir ma commande</a>
-  {% elif project.status == "action_required" %}
-    <span class="b2b-summary-alert">Validez chaque visuel avant transmission.</span>
-  {% elif project.status == "draft" or project.status == "incomplete" %}
-    <span class="muted text-sm">Ajoutez un visuel complet pour transmettre.</span>
-  {% endif %}
-  {% include "portal/client/partials/order_project_delete_button.html" %}
+    {% if project.status == "ready_to_submit" or project.status == "submitted" and not project.converted_order %}
+      <form method="post" action="{% url 'portal:client-order-project-submit' customer_public_id=customer.public_id project_public_id=project.public_id %}" data-submit-loading>{% csrf_token %}<button class="ui-btn ui-btn-primary" type="submit">{% if project.status == "submitted" %}Finaliser ma commande{% else %}Confirmer et transmettre{% endif %}</button></form>
+    {% elif project.status == "converted" and project.converted_order %}
+      <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=project.converted_order.public_id %}">Voir ma commande</a>
+    {% elif project.status == "action_required" %}
+      <p class="b2b-project-toolbar__hint b2b-summary-alert">Validez chaque visuel avant transmission.</p>
+    {% elif project.status == "draft" or project.status == "incomplete" %}
+      <p class="b2b-project-toolbar__hint muted text-sm">Ajoutez un visuel complet pour transmettre.</p>
+    {% endif %}
+    {% include "portal/client/partials/order_project_delete_button.html" %}
   </div>
+  {% if project.status == "submitted" and not project.converted_order %}
+  <p class="b2b-project-toolbar__footnote muted text-sm">Commande enregistrée. Cliquez sur « Finaliser ma commande » pour la transmettre à l'atelier.</p>
+  {% endif %}
 </section>

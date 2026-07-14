@@ -1,6 +1,9 @@
 const previewObjectUrls = new WeakMap();
 const previewRenderTokens = new WeakMap();
 const previewFitObservers = new WeakMap();
+const previewZoomMin = 1;
+const previewZoomMax = 4;
+const previewZoomStep = 0.5;
 const browserPreviewMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const pdfJsModuleUrl = "/static/vendor/pdfjs/pdf.js";
 const pdfJsWorkerUrl = "/static/vendor/pdfjs/pdf.worker.js";
@@ -87,7 +90,7 @@ function setPreviewMediaVisible(media, visible) {
   if (visible) {
     const root = findConfiguratorRoot(media);
     if (root) {
-      fitPreviewMedia(root);
+      scheduleFitPreviewMedia(root);
     }
   }
 }
@@ -116,30 +119,149 @@ function getPreviewMediaNaturalSize(media) {
   return { width: 0, height: 0 };
 }
 
+function findActivePreviewMedia(root) {
+  if (!(root instanceof HTMLElement)) {
+    return null;
+  }
+  const media = root.querySelector(
+    "[data-configurator-preview]:not([hidden]), [data-configurator-document-preview]:not([hidden])"
+  );
+  return media instanceof HTMLElement ? media : null;
+}
+
+function findActivePreviewBounds(root) {
+  const media = findActivePreviewMedia(root);
+  return media instanceof HTMLElement ? findPreviewBounds(media) : null;
+}
+
 function fitPreviewMedia(root) {
   if (!(root instanceof HTMLElement)) {
     return;
   }
   const stage = root.querySelector("[data-configurator-stage]");
-  const media = root.querySelector(
-    "[data-configurator-preview]:not([hidden]), [data-configurator-document-preview]:not([hidden])"
-  );
+  const media = findActivePreviewMedia(root);
   const bounds = media instanceof HTMLElement ? findPreviewBounds(media) : null;
   if (!(stage instanceof HTMLElement) || !(bounds instanceof HTMLElement) || !(media instanceof HTMLElement)) {
     return;
   }
   const { width: availableW, height: availableH } = getStageInnerSize(stage);
   const { width: naturalW, height: naturalH } = getPreviewMediaNaturalSize(media);
-  if (!naturalW || !naturalH) {
+  if (!naturalW || !naturalH || !availableW || !availableH) {
     return;
   }
   const scale = Math.min(availableW / naturalW, availableH / naturalH, 1);
   const displayW = Math.max(1, Math.round(naturalW * scale));
   const displayH = Math.max(1, Math.round(naturalH * scale));
-  media.style.width = `${displayW}px`;
-  media.style.height = `${displayH}px`;
-  bounds.style.width = `${displayW}px`;
-  bounds.style.height = `${displayH}px`;
+  bounds.dataset.previewBaseWidth = String(displayW);
+  bounds.dataset.previewBaseHeight = String(displayH);
+  media.classList.add("is-preview-fitted");
+  applyPreviewZoom(root, readPreviewZoom(root), { preserveCenter: false });
+}
+
+function scheduleFitPreviewMedia(root) {
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fitPreviewMedia(root);
+    });
+  });
+}
+
+function resetPreviewMediaSizing(root) {
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+  root.querySelectorAll("[data-configurator-bounds]").forEach((bounds) => {
+    if (!(bounds instanceof HTMLElement)) {
+      return;
+    }
+    bounds.style.width = "";
+    bounds.style.height = "";
+    delete bounds.dataset.previewBaseWidth;
+    delete bounds.dataset.previewBaseHeight;
+  });
+  root.querySelectorAll("[data-configurator-preview], [data-configurator-document-preview]").forEach((media) => {
+    if (!(media instanceof HTMLElement)) {
+      return;
+    }
+    media.style.width = "";
+    media.style.height = "";
+    media.classList.remove("is-preview-fitted");
+  });
+  delete root.dataset.previewZoom;
+}
+
+function readPreviewZoom(root) {
+  const value = Number.parseFloat(root?.dataset.previewZoom || "1");
+  return Number.isFinite(value)
+    ? Math.min(previewZoomMax, Math.max(previewZoomMin, value))
+    : previewZoomMin;
+}
+
+function applyPreviewZoom(root, requestedScale, { preserveCenter = true } = {}) {
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+  const stage = root.querySelector("[data-configurator-stage]");
+  const media = findActivePreviewMedia(root);
+  const bounds = media instanceof HTMLElement ? findPreviewBounds(media) : null;
+  if (
+    !(stage instanceof HTMLElement)
+    || !(bounds instanceof HTMLElement)
+    || !(media instanceof HTMLElement)
+  ) {
+    return;
+  }
+  const baseWidth = Number.parseFloat(bounds.dataset.previewBaseWidth || "");
+  const baseHeight = Number.parseFloat(bounds.dataset.previewBaseHeight || "");
+  if (!baseWidth || !baseHeight) {
+    return;
+  }
+
+  const scale = Math.min(previewZoomMax, Math.max(previewZoomMin, requestedScale));
+  const previousScrollWidth = Math.max(stage.scrollWidth, 1);
+  const previousScrollHeight = Math.max(stage.scrollHeight, 1);
+  const centerRatioX = preserveCenter
+    ? (stage.scrollLeft + stage.clientWidth / 2) / previousScrollWidth
+    : 0.5;
+  const centerRatioY = preserveCenter
+    ? (stage.scrollTop + stage.clientHeight / 2) / previousScrollHeight
+    : 0.5;
+  const displayWidth = Math.round(baseWidth * scale);
+  const displayHeight = Math.round(baseHeight * scale);
+
+  root.dataset.previewZoom = String(scale);
+  media.style.width = `${displayWidth}px`;
+  media.style.height = `${displayHeight}px`;
+  bounds.style.width = `${displayWidth}px`;
+  bounds.style.height = `${displayHeight}px`;
+  stage.classList.toggle("is-zoomed", scale > previewZoomMin);
+
+  const label = root.querySelector("[data-preview-zoom-label]");
+  if (label instanceof HTMLElement) {
+    label.textContent = `${Math.round(scale * 100)} %`;
+  }
+  const zoomOut = root.querySelector("[data-preview-zoom-out]");
+  const zoomIn = root.querySelector("[data-preview-zoom-in]");
+  if (zoomOut instanceof HTMLButtonElement) {
+    zoomOut.disabled = scale <= previewZoomMin;
+  }
+  if (zoomIn instanceof HTMLButtonElement) {
+    zoomIn.disabled = scale >= previewZoomMax;
+  }
+
+  requestAnimationFrame(() => {
+    if (scale <= previewZoomMin) {
+      stage.scrollTo({ left: 0, top: 0 });
+      return;
+    }
+    stage.scrollTo({
+      left: Math.max(0, centerRatioX * stage.scrollWidth - stage.clientWidth / 2),
+      top: Math.max(0, centerRatioY * stage.scrollHeight - stage.clientHeight / 2),
+    });
+  });
 }
 
 function bindPreviewFitObserver(root) {
@@ -155,7 +277,7 @@ function bindPreviewFitObserver(root) {
     existing.disconnect();
   }
   const observer = new ResizeObserver(() => {
-    fitPreviewMedia(root);
+    scheduleFitPreviewMedia(root);
   });
   observer.observe(stage);
   previewFitObservers.set(root, observer);
@@ -365,7 +487,7 @@ async function renderPdfPreview(root, file, canvas, placeholder, renderToken) {
       `${Math.round(baseViewport.width)} × ${Math.round(baseViewport.height)} pt · ${((baseViewport.width / 72) * 25.4).toFixed(2)} × ${((baseViewport.height / 72) * 25.4).toFixed(2)} mm artboard · analyse complète à l’envoi`
     );
     revealConfiguratorParams(root);
-    fitPreviewMedia(root);
+    scheduleFitPreviewMedia(root);
   } catch (_error) {
     if (previewRenderTokens.get(root) !== renderToken) {
       return;
@@ -384,6 +506,7 @@ async function renderPdfPreview(root, file, canvas, placeholder, renderToken) {
 }
 
 function previewSelectedFile(root, file) {
+  root.dataset.previewZoom = String(previewZoomMin);
   const preview = root.querySelector("[data-configurator-preview]");
   const documentPreview = root.querySelector("[data-configurator-document-preview]");
   const placeholder = root.querySelector("[data-configurator-placeholder]");
@@ -399,6 +522,7 @@ function previewSelectedFile(root, file) {
     preview.removeAttribute("src");
     preview.style.removeProperty("width");
     preview.style.removeProperty("height");
+    preview.classList.remove("is-preview-fitted");
     setPreviewMediaVisible(preview, false);
   }
   if (documentPreview instanceof HTMLCanvasElement) {
@@ -468,7 +592,7 @@ function previewSelectedFile(root, file) {
       }
     );
     revealConfiguratorParams(root);
-    fitPreviewMedia(root);
+    scheduleFitPreviewMedia(root);
   };
   preview.onerror = () => {
     if (previewRenderTokens.get(root) !== renderToken) {
@@ -503,7 +627,7 @@ function initExistingPreview(root) {
     if (placeholder instanceof HTMLElement) {
       placeholder.hidden = true;
     }
-    fitPreviewMedia(root);
+    scheduleFitPreviewMedia(root);
     return;
   }
   preview.addEventListener(
@@ -514,7 +638,7 @@ function initExistingPreview(root) {
       if (placeholder instanceof HTMLElement) {
         placeholder.hidden = true;
       }
-      fitPreviewMedia(root);
+      scheduleFitPreviewMedia(root);
     },
     { once: true }
   );
@@ -655,10 +779,6 @@ function initSupportColorField(fieldset) {
   if (hidden instanceof HTMLInputElement && hidden.value === "on") {
     setMulticolorMode(fieldset, true);
   } else {
-    const hexInput = fieldset.querySelector("[data-support-color-hex]");
-    if (hexInput instanceof HTMLInputElement && !hexInput.value.trim()) {
-      hexInput.value = "#FFFFFF";
-    }
     syncSupportColorFromHex(fieldset);
   }
 }
@@ -960,6 +1080,7 @@ function initConfigurator(root, { force = false } = {}) {
   }
   if (force) {
     delete root.dataset.configuratorReady;
+    resetPreviewMediaSizing(root);
   }
   if (root.dataset.configuratorReady === "true") {
     return;
@@ -969,7 +1090,7 @@ function initConfigurator(root, { force = false } = {}) {
   initExistingPreview(root);
   syncPreviewBounds(root);
   bindPreviewFitObserver(root);
-  fitPreviewMedia(root);
+  scheduleFitPreviewMedia(root);
   initSupportColorFields(root, { force });
   initHexColorControls(root, { force });
   setPreviewBackground(root, "checker", root.querySelector('[data-configurator-bg="checker"]'));
@@ -1014,11 +1135,65 @@ function bindConfiguratorEvents() {
     if (!(target instanceof Element)) {
       return;
     }
+    const zoomControl = target.closest(
+      "[data-preview-zoom-in], [data-preview-zoom-out], [data-preview-zoom-reset]"
+    );
+    if (zoomControl instanceof HTMLButtonElement) {
+      const root = findConfiguratorRoot(zoomControl);
+      if (root) {
+        const current = readPreviewZoom(root);
+        const next = zoomControl.hasAttribute("data-preview-zoom-in")
+          ? current + previewZoomStep
+          : zoomControl.hasAttribute("data-preview-zoom-out")
+            ? current - previewZoomStep
+            : previewZoomMin;
+        applyPreviewZoom(root, next, {
+          preserveCenter: !zoomControl.hasAttribute("data-preview-zoom-reset"),
+        });
+      }
+      return;
+    }
     const bgButton = target.closest("[data-configurator-bg]");
     if (bgButton instanceof HTMLElement) {
       const root = findConfiguratorRoot(bgButton);
       if (root) {
         setPreviewBackground(root, bgButton.dataset.configuratorBg || "checker", bgButton);
+      }
+      return;
+    }
+    const thinZoneToggle = target.closest("[data-thin-zone-toggle]");
+    if (thinZoneToggle instanceof HTMLButtonElement) {
+      const root = findConfiguratorRoot(thinZoneToggle);
+      const overlay = root?.querySelector("[data-thin-zone-overlay]");
+      if (overlay instanceof HTMLImageElement) {
+        const willShow = overlay.hidden;
+        overlay.hidden = !willShow;
+        thinZoneToggle.setAttribute("aria-pressed", String(willShow));
+        thinZoneToggle.classList.toggle("is-active", willShow);
+        const label = thinZoneToggle.querySelector("[data-thin-zone-toggle-label]");
+        if (label) {
+          label.textContent = willShow
+            ? "Zones sous 0,5 mm affichées"
+            : "Zones sous 0,5 mm masquées";
+        }
+      }
+      return;
+    }
+    const semiTransparencyToggle = target.closest("[data-semi-transparency-toggle]");
+    if (semiTransparencyToggle instanceof HTMLButtonElement) {
+      const root = findConfiguratorRoot(semiTransparencyToggle);
+      const overlay = root?.querySelector("[data-semi-transparency-overlay]");
+      if (overlay instanceof HTMLImageElement) {
+        const willShow = overlay.hidden;
+        overlay.hidden = !willShow;
+        semiTransparencyToggle.setAttribute("aria-pressed", String(willShow));
+        semiTransparencyToggle.classList.toggle("is-active", willShow);
+        const label = semiTransparencyToggle.querySelector("[data-semi-transparency-toggle-label]");
+        if (label) {
+          label.textContent = willShow
+            ? "Semi-transparences affichées"
+            : "Semi-transparences masquées";
+        }
       }
       return;
     }

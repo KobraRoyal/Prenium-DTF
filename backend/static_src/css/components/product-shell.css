@@ -46,22 +46,51 @@
     max-width: min(1180px, calc(100vw - 1rem));
   }
 
+  body.product-shell.portal-shell.landing-saas .app-header.landing-saas-header.product-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    border-bottom: none !important;
+    background: var(--product-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    color: var(--product-ink);
+    box-shadow:
+      inset 0 -3px 0 0 var(--product-line),
+      inset 0 -6px 0 0 var(--product-accent);
+    padding-bottom: 6px;
+  }
+
   body.product-shell .product-header {
     position: sticky;
     top: 0;
     z-index: 30;
-    border-bottom: 2px solid var(--product-line);
-    background: rgba(255, 248, 234, 0.88);
-    backdrop-filter: blur(18px);
   }
 
   body.product-shell .product-nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: clamp(0.75rem, 2vw, 1.5rem);
     padding-top: 0.72rem;
     padding-bottom: 0.72rem;
+  }
+
+  body.product-shell .product-nav__brand {
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  body.product-shell .product-nav__controls {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    min-width: 0;
   }
 
   body.product-shell .product-brand {
@@ -112,11 +141,6 @@
     text-transform: uppercase;
   }
 
-  body.product-shell .portal-top-meta {
-    margin-left: auto;
-    margin-right: 0.5rem;
-  }
-
   body.product-shell .portal-top-meta__pill,
   body.product-shell .product-pill {
     display: inline-flex;
@@ -145,9 +169,26 @@
     display: flex;
     align-items: center;
     flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0.45rem;
+  }
+
+  body.product-shell .product-nav__primary {
+    display: flex;
+    align-items: center;
     flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 0.55rem;
+    gap: 0.45rem;
+  }
+
+  body.product-shell .product-nav__account {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding-left: 0.55rem;
+    margin-left: 0.15rem;
+    border-left: 2px solid color-mix(in srgb, var(--product-line) 18%, transparent);
   }
 
   body.product-shell .product-nav__links .ui-btn {
@@ -187,6 +228,27 @@
 
   body.product-shell .product-nav__links .product-nav__logout {
     color: var(--product-soft);
+    border-color: color-mix(in srgb, var(--product-line) 35%, transparent);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body.product-shell .product-nav__links .product-nav__logout:hover,
+  body.product-shell .product-nav__links .product-nav__logout:focus-visible {
+    color: var(--product-ink);
+    border-color: var(--product-line);
+    background: rgba(11, 11, 11, 0.04);
+    box-shadow: 2px 2px 0 #0b0b0b;
+  }
+
+  body.product-shell .product-nav__links .product-nav__cta {
+    box-shadow: 3px 3px 0 #0b0b0b;
+  }
+
+  body.product-shell .product-nav__links .product-nav__cta:hover,
+  body.product-shell .product-nav__links .product-nav__cta:focus-visible {
+    box-shadow: 4px 4px 0 #0b0b0b;
+    transform: translate(-1px, -1px);
   }
 
   body.product-shell .product-nav__links .inline-nav-form {
@@ -492,7 +554,17 @@
   }
 
   body.product-shell .client-dashboard-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-end;
     margin-bottom: 1rem;
+  }
+
+  body.product-shell .client-orders-search {
+    flex: 1 1 18rem;
+    max-width: 28rem;
+    min-width: min(100%, 14rem);
   }
 
   body.product-shell .client-dashboard-list {
@@ -1811,42 +1883,108 @@
     font-size: clamp(1.8rem, 4vw, 2.7rem);
   }
 
-  body.product-shell .b2b-project-toolbar {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    gap: 1rem;
-    align-items: center;
+  body.product-shell .b2b-project-header {
+    overflow: hidden;
+    margin-bottom: clamp(1rem, 2vw, 1.35rem);
     border: 2px solid var(--product-line);
-    padding: 0.75rem 0.9rem;
     background: var(--product-panel);
-    box-shadow: 4px 4px 0 #0b0b0b;
+    box-shadow: 5px 5px 0 #0b0b0b;
   }
 
-  body.product-shell .b2b-project-toolbar__back {
-    color: var(--product-ink);
-    font-size: 0.85rem;
-    font-weight: 850;
-    text-decoration: none;
+  body.product-shell .b2b-project-header__intro .page-head--premium {
+    margin: 0;
+    border: 0;
+    box-shadow: none;
+    padding: clamp(1rem, 2vw, 1.35rem);
+    padding-bottom: clamp(0.85rem, 1.6vw, 1.1rem);
   }
 
-  body.product-shell .b2b-project-toolbar__back:hover {
-    text-decoration: underline;
+  body.product-shell .b2b-project-header__intro .page-head--premium h1 {
+    font-size: clamp(1.8rem, 4vw, 2.7rem);
   }
 
-  body.product-shell .b2b-project-toolbar__state,
-  body.product-shell .b2b-project-toolbar__actions {
-    display: flex;
+  body.product-shell .b2b-project-header .b2b-project-toolbar {
+    display: grid;
+    grid-template-areas:
+      "nav nav"
+      "meta actions";
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem 1rem;
     align-items: center;
-    gap: 0.65rem;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--product-line);
+    border-radius: 0;
+    padding: 0.85rem clamp(1rem, 2vw, 1.35rem);
+    background: color-mix(in srgb, var(--product-accent) 7%, var(--product-panel));
+    box-shadow: none;
   }
 
-  body.product-shell .b2b-project-toolbar__state {
+  body.product-shell .b2b-project-toolbar__nav {
+    grid-area: nav;
+    margin: 0;
+  }
+
+  body.product-shell .b2b-project-toolbar__nav .ui-breadcrumb__list {
+    font-size: 0.72rem;
+  }
+
+  body.product-shell .b2b-project-toolbar__nav [aria-current="page"] {
+    color: var(--product-ink);
+    font-weight: 850;
+  }
+
+  body.product-shell .b2b-project-toolbar__meta {
+    grid-area: meta;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  body.product-shell .b2b-project-toolbar__chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.65rem;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--product-line);
+    background: var(--product-panel);
     color: var(--product-muted);
-    font-size: 0.82rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   body.product-shell .b2b-project-toolbar__actions {
+    grid-area: actions;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
+    gap: 0.55rem;
+  }
+
+  body.product-shell .b2b-project-toolbar__hint,
+  body.product-shell .b2b-project-toolbar__footnote {
+    margin: 0;
+    max-width: 28rem;
+    line-height: 1.45;
+  }
+
+  body.product-shell .b2b-project-toolbar__footnote {
+    grid-column: 1 / -1;
+    padding-top: 0.15rem;
+    border-top: 1px dashed color-mix(in srgb, var(--product-line) 82%, transparent);
+  }
+
+  @media (min-width: 960px) {
+    body.product-shell .b2b-project-header .b2b-project-toolbar {
+      grid-template-areas: "nav meta actions";
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+    }
   }
 
   body.product-shell .b2b-visual-list-head {
@@ -1863,7 +2001,8 @@
   }
 
   body.product-shell .b2b-analysis-live i,
-  body.product-shell .b2b-preview-loading i {
+  body.product-shell .b2b-preview-loading i,
+  body.product-shell .b2b-analysis-loader__spinner {
     width: 0.85rem;
     height: 0.85rem;
     flex: 0 0 auto;
@@ -1871,6 +2010,110 @@
     border-right-color: transparent;
     border-radius: 999px;
     animation: b2b-analysis-spin 0.75s linear infinite;
+  }
+
+  body.product-shell .b2b-analysis-live-wrap {
+    margin: 0 0 0.75rem;
+  }
+
+  body.product-shell .b2b-analysis-loader {
+    display: grid;
+    justify-items: center;
+    gap: 0.85rem;
+    color: var(--product-muted);
+    text-align: center;
+  }
+
+  body.product-shell .b2b-preview-placeholder .b2b-analysis-loader {
+    padding: 1rem 0.5rem;
+  }
+
+  body.product-shell .b2b-analysis-loader__copy {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  body.product-shell .b2b-analysis-loader__copy strong {
+    color: var(--product-ink);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .b2b-analysis-loader__copy span {
+    max-width: 22rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  body.product-shell .b2b-analysis-loader--compact {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--product-blue) 35%, var(--product-line));
+    border-radius: var(--product-radius-sm);
+    background: color-mix(in srgb, var(--product-blue) 7%, var(--product-panel));
+    text-align: left;
+  }
+
+  body.product-shell .b2b-analysis-loader--compact .b2b-analysis-loader__copy strong {
+    font-size: 0.88rem;
+    text-transform: none;
+  }
+
+  body.product-shell .b2b-analysis-loader--compact .b2b-analysis-loader__copy span {
+    font-size: 0.76rem;
+  }
+
+  body.product-shell .b2b-analysis-loader--overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: color-mix(in srgb, var(--product-panel) 78%, transparent);
+  }
+
+  body.product-shell .b2b-analysis-loader--overlay .b2b-analysis-loader__copy {
+    display: none;
+  }
+
+  body.product-shell .b2b-analysis-loader--overlay .b2b-analysis-loader__spinner {
+    width: 1.1rem;
+    height: 1.1rem;
+    color: var(--product-blue);
+  }
+
+  body.product-shell .b2b-preview-stage.is-analyzing {
+    animation: b2b-analysis-stage-pulse 1.8s ease-in-out infinite;
+  }
+
+  body.product-shell .b2b-preview-stage.is-analyzing .b2b-preview-placeholder {
+    display: grid;
+    place-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+  }
+
+  body.product-shell #add-visual-validation-panel.htmx-request .b2b-analysis-loader__spinner {
+    animation-duration: 0.55s;
+  }
+
+  body.product-shell .b2b-visual-list-item__thumb.is-analyzing {
+    position: relative;
+    overflow: hidden;
+  }
+
+  body.product-shell .b2b-visual-list-item__thumb.is-analyzing > img {
+    opacity: 0.32;
+    filter: saturate(0.7);
   }
 
   body.product-shell .b2b-visual-list {
@@ -2122,6 +2365,20 @@
     align-items: start;
   }
 
+  body.product-shell .b2b-configurator__workspace.is-analysis-pending,
+  body.product-shell .b2b-dialog-editor.is-analysis-pending {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.product-shell .b2b-dialog-editor.is-analysis-pending .b2b-visual-card__details {
+    display: none;
+  }
+
+  body.product-shell .b2b-configurator__workspace.is-analysis-pending .b2b-configurator__preview,
+  body.product-shell .b2b-dialog-editor.is-analysis-pending .b2b-configurator__preview {
+    width: 100%;
+  }
+
   body.product-shell .b2b-preview-stage {
     position: relative;
     display: flex;
@@ -2148,7 +2405,23 @@
     background-size: 24px 24px;
   }
 
+  body.product-shell .b2b-preview-stage.is-zoomed {
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: var(--product-blue) rgba(11, 11, 11, 0.14);
+  }
+
+  body.product-shell .b2b-preview-stage.is-zoomed .b2b-preview-bounds {
+    flex: 0 0 auto;
+    max-width: none;
+    max-height: none;
+    margin: auto;
+  }
+
   body.product-shell .b2b-preview-bounds {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2156,6 +2429,10 @@
     line-height: 0;
     max-width: 100%;
     max-height: 100%;
+    overflow: visible;
+  }
+
+  body.product-shell .b2b-preview-stage:not(.is-zoomed) .b2b-preview-bounds {
     overflow: hidden;
   }
 
@@ -2169,10 +2446,136 @@
     display: block;
     width: auto;
     height: auto;
-    max-width: none;
-    max-height: none;
+    max-width: 100%;
+    max-height: 100%;
     margin: 0;
     object-fit: contain;
+  }
+
+  body.product-shell .b2b-preview-image.is-preview-fitted {
+    max-width: none;
+    max-height: none;
+  }
+
+  body.product-shell .b2b-thin-zone-overlay {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    object-fit: fill;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
+  }
+
+  body.product-shell .b2b-semi-transparency-overlay {
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    object-fit: fill;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
+  }
+
+  body.product-shell .b2b-thin-zone-overlay[hidden],
+  body.product-shell .b2b-semi-transparency-overlay[hidden] {
+    display: none;
+  }
+
+  body.product-shell .b2b-quality-overlays,
+  body.product-shell .b2b-thin-zone-tools {
+    display: grid;
+    gap: 0.4rem;
+    margin-top: 0.65rem;
+    padding: 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--product-danger) 55%, var(--product-line));
+    background: color-mix(in srgb, var(--product-danger) 8%, var(--product-panel));
+  }
+
+  body.product-shell .b2b-quality-overlays .ui-btn,
+  body.product-shell .b2b-thin-zone-tools .ui-btn {
+    justify-self: start;
+  }
+
+  body.product-shell .b2b-quality-overlays__actions,
+  body.product-shell .b2b-thin-zone-tools__actions,
+  body.product-shell .b2b-preview-zoom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  body.product-shell .b2b-quality-overlays__actions {
+    justify-content: space-between;
+  }
+
+  body.product-shell .b2b-thin-zone-tools__actions {
+    justify-content: space-between;
+  }
+
+  body.product-shell .b2b-preview-zoom {
+    flex-wrap: nowrap;
+  }
+
+  body.product-shell .b2b-preview-zoom .ui-btn {
+    min-width: 2.35rem;
+    justify-content: center;
+  }
+
+  body.product-shell .b2b-preview-zoom [data-preview-zoom-reset] {
+    min-width: 4.75rem;
+  }
+
+  body.product-shell .b2b-quality-overlays .ui-btn.is-active,
+  body.product-shell .b2b-thin-zone-tools .ui-btn.is-active {
+    border-color: var(--product-danger);
+    color: var(--product-danger);
+  }
+
+  body.product-shell .b2b-quality-overlays [data-semi-transparency-toggle].is-active {
+    border-color: #d97706;
+    color: #b45309;
+  }
+
+  body.product-shell .b2b-quality-overlays p,
+  body.product-shell .b2b-thin-zone-tools p {
+    margin: 0;
+    color: var(--product-muted);
+    font-size: 0.76rem;
+    line-height: 1.4;
+  }
+
+  body.product-shell .b2b-quality-overlays p strong,
+  body.product-shell .b2b-thin-zone-tools p strong {
+    color: var(--product-danger);
+  }
+
+  body.product-shell .b2b-quality-overlays .b2b-thin-zone-tools__hint,
+  body.product-shell .b2b-thin-zone-tools .b2b-thin-zone-tools__hint {
+    font-size: 0.72rem;
+  }
+
+  body.product-shell .b2b-semi-transparency-swatch {
+    width: 0.72rem;
+    height: 0.72rem;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: #ff9800;
+    box-shadow: 0 0 0 1px #ff9800;
+  }
+
+  body.product-shell .b2b-thin-zone-swatch {
+    width: 0.72rem;
+    height: 0.72rem;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: #ef2c48;
+    box-shadow: 0 0 0 1px #ef2c48;
   }
 
   body.product-shell .b2b-preview-document {
@@ -2196,6 +2599,17 @@
   @keyframes b2b-analysis-spin {
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  @keyframes b2b-analysis-stage-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.92;
     }
   }
 
@@ -2454,6 +2868,69 @@
     border: 0;
   }
 
+  body.product-shell .b2b-support-color.is-required {
+    gap: 0.65rem;
+    border: 2px solid color-mix(in srgb, var(--product-danger) 55%, var(--product-line));
+    border-left-width: 0.45rem;
+    padding: 0.75rem;
+    background: color-mix(in srgb, var(--product-danger) 9%, var(--product-panel));
+  }
+
+  body.product-shell .b2b-support-color.is-required .product-form-label {
+    color: var(--product-danger);
+  }
+
+  body.product-shell .b2b-support-color__badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.15rem;
+    padding: 0.12rem 0.45rem;
+    border: 1px solid var(--product-danger);
+    background: color-mix(in srgb, var(--product-danger) 14%, white);
+    color: var(--product-danger);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+
+  body.product-shell .b2b-support-color__alert {
+    margin: 0;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid color-mix(in srgb, var(--product-danger) 35%, var(--product-line));
+    background: color-mix(in srgb, var(--product-danger) 12%, white);
+    color: var(--product-ink);
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  body.product-shell .b2b-support-color__alert strong {
+    display: block;
+    margin-bottom: 0.15rem;
+    color: var(--product-danger);
+  }
+
+  body.product-shell .b2b-support-color__required-hint {
+    margin: -0.15rem 0 0;
+    color: var(--product-danger);
+    font-size: 0.74rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  body.product-shell .b2b-support-color.is-required .b2b-support-color__choices {
+    padding: 0.6rem;
+    border: 1px dashed color-mix(in srgb, var(--product-danger) 42%, var(--product-line));
+    background: color-mix(in srgb, white 72%, var(--product-panel));
+  }
+
+  body.product-shell .b2b-support-color.is-required [data-support-color-hex]:invalid,
+  body.product-shell .b2b-support-color.is-required [data-support-color-hex]:placeholder-shown {
+    border-color: color-mix(in srgb, var(--product-danger) 70%, var(--product-line));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--product-danger) 18%, transparent);
+  }
+
   body.product-shell .b2b-support-color__choices {
     display: flex;
     flex-wrap: wrap;
@@ -2528,11 +3005,57 @@
     min-width: 0;
   }
 
-  body.product-shell .b2b-configurator__dimensions,
+  body.product-shell .b2b-configurator__dimensions {
+    display: grid;
+    grid-template-columns: minmax(0, 7rem) minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: start;
+  }
+
   body.product-shell .b2b-analysis-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.65rem;
+  }
+
+  body.product-shell .b2b-configurator__dimensions-info {
+    display: grid;
+    gap: 0.25rem;
+    border-left: 4px solid var(--product-blue);
+    padding: 0.55rem 0.75rem;
+    background: rgba(0, 184, 255, 0.08);
+  }
+
+  body.product-shell .b2b-configurator__dimensions-values {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.5rem;
+    margin: 0;
+    color: var(--product-ink);
+    font-size: 0.88rem;
+    line-height: 1.3;
+  }
+
+  body.product-shell .b2b-configurator__dimensions-label {
+    color: var(--product-muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .b2b-configurator__dimensions-sublabel {
+    color: var(--product-muted);
+    font-size: 0.76rem;
+    font-weight: 500;
+  }
+
+  body.product-shell .b2b-configurator__dimensions-hint {
+    margin: 0;
+    color: var(--product-muted);
+    font-size: 0.76rem;
+    line-height: 1.4;
   }
 
   body.product-shell .b2b-configurator__file-meta {
@@ -3089,20 +3612,22 @@
 
   @media (max-width: 959px) {
     body.product-shell .product-nav {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.75rem;
-    }
-
-    body.product-shell .ui-brand-row {
-      display: flex;
-      width: 100%;
+      flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
+      gap: 0.65rem;
     }
 
-    body.product-shell .portal-top-meta {
+    body.product-shell .product-nav__brand {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    body.product-shell .product-nav__brand .portal-top-meta__pill {
       display: none;
+    }
+
+    body.product-shell .product-nav__controls {
+      flex: 0 0 auto;
     }
 
     body.product-shell .product-menu-button {
@@ -3111,11 +3636,29 @@
 
     body.product-shell .product-nav__links {
       display: none;
-      width: 100%;
+      flex: 1 1 100%;
       flex-direction: column;
       align-items: stretch;
       gap: 0.45rem;
-      padding-top: 0.25rem;
+      margin-top: 0.15rem;
+      padding-top: 0.75rem;
+      border-top: 2px solid var(--product-line);
+    }
+
+    body.product-shell .product-nav__primary,
+    body.product-shell .product-nav__account {
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+      padding-left: 0;
+      margin-left: 0;
+      border-left: 0;
+      gap: 0.45rem;
+    }
+
+    body.product-shell .product-nav__account {
+      padding-top: 0.55rem;
+      border-top: 2px solid color-mix(in srgb, var(--product-line) 12%, transparent);
     }
 
     body.product-shell .product-nav__links.is-open,
@@ -3220,17 +3763,16 @@
       min-height: 16rem;
     }
 
-    body.product-shell .b2b-project-toolbar {
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.65rem;
+    body.product-shell .b2b-project-header .b2b-project-toolbar {
+      grid-template-areas:
+        "nav"
+        "meta"
+        "actions";
+      grid-template-columns: minmax(0, 1fr);
     }
 
-    body.product-shell .b2b-project-toolbar__state {
-      justify-content: flex-end;
-    }
-
+    body.product-shell .b2b-project-toolbar__meta,
     body.product-shell .b2b-project-toolbar__actions {
-      grid-column: 1 / -1;
       justify-content: stretch;
     }
 
@@ -3309,8 +3851,24 @@
       max-height: 20rem;
     }
 
+    body.product-shell .b2b-quality-overlays__actions,
+    body.product-shell .b2b-thin-zone-tools__actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    body.product-shell .b2b-quality-overlays__actions > .ui-btn,
+    body.product-shell .b2b-thin-zone-tools__actions > .ui-btn,
+    body.product-shell .b2b-preview-zoom {
+      width: 100%;
+    }
+
+    body.product-shell .b2b-preview-zoom .ui-btn {
+      flex: 1 1 0;
+    }
+
     body.product-shell .b2b-configurator-dialog .b2b-configurator__dimensions {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 6rem) minmax(0, 1fr);
       gap: 0.4rem;
     }
 

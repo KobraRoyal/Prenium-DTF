@@ -3,7 +3,7 @@ import "./htmx/feedback.js?v=20260710b";
 import "./landing-motion.js?v=20260710b";
 import "./product-shell.js?v=20260710b";
 import "./product-date-picker.js?v=20260712a";
-import "./b2b-configurator.js?v=20260712u";
+import "./b2b-configurator.js?v=20260712w";
 
 window.preniumToast = function (message, variant = "info") {
   window.dispatchEvent(

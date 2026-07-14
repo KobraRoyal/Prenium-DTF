@@ -12,6 +12,7 @@ from django.utils.text import get_valid_filename
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.core.public_refs import short_public_ref
+from apps.orders.models import Order
 from apps.uploads.models import OrderDriveFolder, OrderUpload, OrderUploadDriveSync
 
 ORDER_DRIVE_ROOT_FOLDER_NAME = "Commandes"
@@ -93,6 +94,13 @@ class GoogleDriveGateway:
                 .execute()
             )
         except Exception as error:  # pragma: no cover
+            retry = self._find_item(
+                parent_id=parent_id,
+                name=name,
+                mime_type=self.folder_mime_type,
+            )
+            if retry is not None:
+                return retry.file_id
             raise GoogleDriveSyncError(f"Unable to create Drive folder '{name}'.") from error
         return created["id"]
 
@@ -172,51 +180,54 @@ class OrderDriveFolderService:
         self.gateway = gateway
 
     def ensure_order_folder(self, *, order, actor=None, source: str = "system") -> OrderDriveFolder:
-        existing = getattr(order, "drive_folder", None)
-        if existing is not None and existing.order_folder_id and existing.folder_ids:
-            return existing
+        with transaction.atomic():
+            locked_order = Order.objects.select_for_update().get(pk=order.pk)
+            existing = OrderDriveFolder.objects.filter(order_id=locked_order.pk).first()
+            if existing is not None and existing.order_folder_id and existing.folder_ids:
+                if set(ORDER_DRIVE_SUBFOLDERS).issubset(existing.folder_ids.keys()):
+                    return existing
 
-        gateway = self._get_gateway()
-        commands_folder_id = gateway.ensure_folder(
-            parent_id=gateway.root_folder_id,
-            name=ORDER_DRIVE_ROOT_FOLDER_NAME,
-        )
-        year_folder_id = gateway.ensure_folder(
-            parent_id=commands_folder_id,
-            name=order.created_at.strftime("%Y"),
-        )
-        month_folder_id = gateway.ensure_folder(
-            parent_id=year_folder_id,
-            name=order.created_at.strftime("%m"),
-        )
-        order_folder_name = short_public_ref(order.public_id)
-        order_folder_id = gateway.ensure_folder(
-            parent_id=month_folder_id,
-            name=order_folder_name,
-        )
-
-        folder_ids = {}
-        for folder_name in ORDER_DRIVE_SUBFOLDERS:
-            folder_ids[folder_name] = gateway.ensure_folder(
-                parent_id=order_folder_id,
-                name=folder_name,
+            gateway = self._get_gateway()
+            commands_folder_id = gateway.ensure_folder(
+                parent_id=gateway.root_folder_id,
+                name=ORDER_DRIVE_ROOT_FOLDER_NAME,
+            )
+            year_folder_id = gateway.ensure_folder(
+                parent_id=commands_folder_id,
+                name=locked_order.created_at.strftime("%Y"),
+            )
+            month_folder_id = gateway.ensure_folder(
+                parent_id=year_folder_id,
+                name=locked_order.created_at.strftime("%m"),
+            )
+            order_folder_name = short_public_ref(locked_order.public_id)
+            order_folder_id = gateway.ensure_folder(
+                parent_id=month_folder_id,
+                name=order_folder_name,
             )
 
-        relative_path = (
-            f"{ORDER_DRIVE_ROOT_FOLDER_NAME}/"
-            f"{order.created_at.strftime('%Y')}/"
-            f"{order.created_at.strftime('%m')}/"
-            f"{order_folder_name}"
-        )
-        drive_folder, created = OrderDriveFolder.objects.update_or_create(
-            order=order,
-            defaults={
-                "shared_drive_id": gateway.shared_drive_id,
-                "relative_path": relative_path,
-                "order_folder_id": order_folder_id,
-                "folder_ids": folder_ids,
-            },
-        )
+            folder_ids = dict(getattr(existing, "folder_ids", None) or {})
+            for folder_name in ORDER_DRIVE_SUBFOLDERS:
+                folder_ids[folder_name] = gateway.ensure_folder(
+                    parent_id=order_folder_id,
+                    name=folder_name,
+                )
+
+            relative_path = (
+                f"{ORDER_DRIVE_ROOT_FOLDER_NAME}/"
+                f"{locked_order.created_at.strftime('%Y')}/"
+                f"{locked_order.created_at.strftime('%m')}/"
+                f"{order_folder_name}"
+            )
+            drive_folder, created = OrderDriveFolder.objects.update_or_create(
+                order=locked_order,
+                defaults={
+                    "shared_drive_id": gateway.shared_drive_id,
+                    "relative_path": relative_path,
+                    "order_folder_id": order_folder_id,
+                    "folder_ids": folder_ids,
+                },
+            )
 
         if created:
             record_event(
@@ -224,8 +235,8 @@ class OrderDriveFolderService:
                 actor=actor if getattr(actor, "is_authenticated", False) else None,
                 target=drive_folder,
                 metadata={
-                    "order_public_id": str(order.public_id),
-                    "customer_public_id": str(order.customer.public_id),
+                    "order_public_id": str(locked_order.public_id),
+                    "customer_public_id": str(locked_order.customer.public_id),
                     "relative_path": relative_path,
                     "source": source,
                 },
@@ -480,6 +491,7 @@ def sync_order_upload_to_drive(*, order_upload_public_id: str, actor=None, sourc
             "uploaded_by",
             "drive_sync",
         ).get(pk=order_upload.pk)
+        Order.objects.select_for_update().get(pk=locked_upload.order_id)
         return OrderUploadDriveSyncService().sync_upload(
             order_upload=locked_upload,
             actor=actor,

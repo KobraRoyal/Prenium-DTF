@@ -350,6 +350,47 @@ def test_client_order_list_is_paginated_in_portal():
 
 
 @pytest.mark.django_db
+def test_client_order_list_supports_htmx_search():
+    user = get_user_model().objects.create_user(email="client-search@example.com", password="pass")
+    customer = Customer.objects.create(name="Client Search")
+    CustomerMembership.objects.create(customer=customer, user=user)
+    alpha = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="10.00",
+        total_amount="10.00",
+        customer_note="Collection Alpha",
+    )
+    Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="20.00",
+        total_amount="20.00",
+        customer_note="Collection Beta",
+    )
+
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+    list_url = reverse("portal:client-order-list", kwargs={"customer_public_id": customer.public_id})
+
+    page = client.get(list_url)
+    assert page.status_code == 200
+    assert 'id="client-orders-search-input"' in page.content.decode()
+
+    partial = client.get(list_url, {"q": "Alpha"}, HTTP_HX_REQUEST="true")
+    html = partial.content.decode()
+    assert partial.status_code == 200
+    assert str(alpha.public_id) in html
+    assert "Collection Beta" not in html
+    assert "ui-orders-table-desktop" in html
+    assert "<html" not in html.lower()
+
+
+@pytest.mark.django_db
 @override_settings(STAFF_ORDER_LIST_PAGE_SIZE=2)
 def test_staff_order_list_is_paginated_in_portal():
     staff_user = get_user_model().objects.create_user(
