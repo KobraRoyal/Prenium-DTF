@@ -2,8 +2,7 @@ import pytest
 from apps.accounts.services.access import AccessScopeService
 from apps.customers.models import Customer, CustomerMembership
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import AnonymousUser, Permission
 
 
 @pytest.mark.django_db

@@ -1,67 +1,100 @@
 {% load portal_tags %}
-<div class="workflow-panel">
-  <div class="workflow-panel__hero">
+<div class="workflow-panel workflow-panel--operator">
+  <header class="workflow-panel__hero operator-panel-hero">
     <div>
-      <h3 class="workflow-panel__title">Production & OF</h3>
-      <p class="workflow-panel__meta">
-        Pilotez le statut atelier (file, production, expédition). Chaque transition est journalisée.
-        Référence unique : <strong>{{ job.manufacturing_order_number }}</strong>.
-      </p>
+      <p class="operator-panel-hero__eyebrow">Pilotage de fabrication</p>
+      <h3 class="workflow-panel__title">Production</h3>
+      <p class="workflow-panel__meta">Une vue unique pour préparer l’OF, avancer la fabrication et conserver la trace des décisions Atelier.</p>
     </div>
-    <div class="workflow-panel__actions">
-      <a
-        class="ui-link"
-        href="{% url 'production:staff-manufacturing-order-pdf' order_public_id=order.public_id %}"
-        target="_blank"
-        rel="noopener noreferrer"
-      >Télécharger l’OF (PDF)</a>
+    <div class="operator-panel-hero__actions">
+      <span class="badge {{ job.status|badge_tone }}">{{ job.status|human_status }}</span>
+      <a class="ui-btn ui-btn-secondary" href="{% url 'production:staff-manufacturing-order-pdf' order_public_id=order.public_id %}" target="_blank" rel="noopener noreferrer">Ouvrir l’OF PDF</a>
     </div>
-  </div>
+  </header>
+
+  <section class="operator-reference-bar" aria-label="Référence de production">
+    <div>
+      <span>Ordre de fabrication</span>
+      <code>{{ job.manufacturing_order_number }}</code>
+    </div>
+    <div>
+      <span>Dernière activité</span>
+      <strong>{% if job.last_transition_at %}{{ job.last_transition_at|date:"d/m/Y · H:i" }}{% else %}À l’ouverture de l’OF{% endif %}</strong>
+    </div>
+    <div>
+      <span>Opérateur</span>
+      <strong>{% if job.last_transition_by %}{{ job.last_transition_by.email }}{% else %}Non attribué{% endif %}</strong>
+    </div>
+  </section>
+
+  <section class="production-track" aria-labelledby="production-track-title">
+    <div class="operator-section-head">
+      <div>
+        <p class="operator-section-head__eyebrow">Flux Atelier</p>
+        <h4 id="production-track-title">Avancement de l’OF</h4>
+      </div>
+      {% if job.status == "blocked" %}<span class="operator-state-note operator-state-note--danger">Intervention requise · OF bloqué</span>{% endif %}
+    </div>
+    <ol class="production-track__steps">
+      <li class="{% if job.status == 'queued' %}is-current{% elif job.status != 'blocked' %}is-complete{% endif %}"><span>01</span><div><strong>File Atelier</strong><small>OF prêt à être pris en charge</small></div></li>
+      <li class="{% if job.status == 'in_progress' %}is-current{% elif job.status == 'ready_to_ship' or job.status == 'completed' %}is-complete{% endif %}"><span>02</span><div><strong>En production</strong><small>Fabrication en cours</small></div></li>
+      <li class="{% if job.status == 'ready_to_ship' %}is-current{% elif job.status == 'completed' %}is-complete{% endif %}"><span>03</span><div><strong>Prêt à expédier</strong><small>Contrôle final terminé</small></div></li>
+      <li class="{% if job.status == 'completed' %}is-current is-complete{% endif %}"><span>04</span><div><strong>Terminé</strong><small>Flux Atelier clôturé</small></div></li>
+    </ol>
+  </section>
 
   {% if order.billing_mode == "deferred" %}
-  <div id="staff-order-meterage-slot-production" class="staff-meterage-slot mb-6">
+  <section id="staff-order-meterage-slot-production" class="staff-meterage-slot operator-subpanel" aria-label="Métrage de production">
     {% include "components/portal/staff_meterage_section.html" %}
-  </div>
+  </section>
   {% endif %}
-
-  <div class="workflow-kpi mb-4">
-    <p class="workflow-kpi__label m-0">Statut atelier</p>
-    <span class="badge {{ job.status|badge_tone }}">{{ job.status|human_status }}</span>
-  </div>
 
   {% if transition_error %}
-  <div class="alert alert--danger workflow-panel__feedback" role="alert">
-    <p class="m-0">{{ transition_error }}</p>
-  </div>
+  <div class="alert alert--danger workflow-panel__feedback" role="alert"><p class="m-0">{{ transition_error }}</p></div>
   {% endif %}
 
-  <section class="workflow-form-card" aria-labelledby="staff-production-transition-heading">
-    <div class="workflow-form-card__head">
-      <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0">Mettre à jour le statut atelier</h4>
-      <p class="muted text-sm m-0">Choisissez la prochaine étape et ajoutez un commentaire si l'équipe a besoin d'un repère.</p>
-    </div>
+  <div class="operator-two-column">
+    <section class="workflow-form-card operator-action-card" aria-labelledby="staff-production-transition-heading">
+      <div class="workflow-form-card__head">
+        <p class="operator-section-head__eyebrow">Action principale</p>
+        <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0">Faire avancer la production</h4>
+        <p class="muted text-sm m-0">Seules les transitions réellement autorisées depuis <strong>{{ job.status|human_status }}</strong> sont proposées.</p>
+      </div>
 
-  <form
-    class="ui-form-stack"
-    hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}"
-    hx-target="#staff-order-panel"
-    hx-swap="innerHTML"
-    hx-indicator="#portal-htmx-indicator"
-    data-submit-loading
-  >
-    {% csrf_token %}
-    <div class="ui-field-group">
-      <label class="ui-label" for="to_status">Prochaine étape</label>
-      <p class="ui-help">Seules les transitions autorisées par le workflow central sont proposées ici.</p>
-      <select id="to_status" class="ui-input" name="to_status" required>
-        <option value="" disabled selected hidden>Choisir une transition</option>
-        {% for status in allowed_statuses %}
-        <option value="{{ status }}">{{ status|human_status }}</option>
+      {% if can_transition and allowed_statuses %}
+      <form class="ui-form-stack" hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+        {% csrf_token %}
+        <div class="ui-field-group">
+          <label class="ui-label" for="to_status">Prochaine étape</label>
+          <select id="to_status" class="ui-input" name="to_status" required>
+            <option value="" disabled selected hidden>Choisir la prochaine étape</option>
+            {% for status in allowed_statuses %}<option value="{{ status }}">{{ status|human_status }}</option>{% endfor %}
+          </select>
+        </div>
+        {% include "components/forms/field_group.html" with id="reason" name="reason" label="Commentaire de traçabilité (optionnel)" type="text" placeholder="Ex. contrôle qualité validé, matière indisponible…" help_text="Ce commentaire reste visible dans l’historique Atelier." show_label=1 %}
+        {% include "components/forms/form_actions.html" with primary_label="Confirmer la transition" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
+      </form>
+      {% elif not can_transition %}
+      <div class="operator-empty-inline"><strong>Consultation seule</strong><p>Votre rôle permet de suivre l’OF, mais pas de modifier son statut.</p></div>
+      {% else %}
+      <div class="operator-empty-inline"><strong>Workflow terminé</strong><p>Aucune transition supplémentaire n’est disponible pour cet OF.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="operator-history" aria-labelledby="production-history-title">
+      <div class="operator-section-head">
+        <div><p class="operator-section-head__eyebrow">Traçabilité</p><h4 id="production-history-title">Dernières transitions</h4></div>
+      </div>
+      <ol class="operator-history__list">
+        {% for transition in job.transitions.all|slice:":5" %}
+        <li>
+          <span class="operator-history__marker" aria-hidden="true"></span>
+          <div><strong>{{ transition.from_status|human_status }} → {{ transition.to_status|human_status }}</strong><time datetime="{{ transition.created_at|date:'c' }}">{{ transition.created_at|date:"d/m/Y · H:i" }}</time>{% if transition.reason %}<p>{{ transition.reason }}</p>{% endif %}</div>
+        </li>
+        {% empty %}
+        <li class="operator-history__empty"><span class="operator-history__marker" aria-hidden="true"></span><div><strong>OF créé</strong><p>La première transition apparaîtra ici.</p></div></li>
         {% endfor %}
-      </select>
-    </div>
-    {% include "components/forms/field_group.html" with id="reason" name="reason" label="Commentaire (optionnel)" type="text" placeholder="Ex. contrôle qualité, consigne atelier…" help_text="Visible dans le contexte de suivi staff ; utile pour tracer la raison d'une transition." show_label=1 %}
-    {% include "components/forms/form_actions.html" with primary_label="Valider la transition" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
-  </form>
-  </section>
+      </ol>
+    </section>
+  </div>
 </div>

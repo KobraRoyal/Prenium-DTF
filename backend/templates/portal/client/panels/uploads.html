@@ -41,7 +41,9 @@
           </td>
           <td>{{ upload.quantity }}</td>
           <td>
-            {% if upload.support_color_hex %}
+            {% if upload.support_color_is_multicolor %}
+            <span class="b2b-support-color-badge is-rainbow">Multicolore</span>
+            {% elif upload.support_color_hex %}
             <span class="inline-flex items-center gap-2">
               <span class="product-color-swatch h-4 w-4" style="background: {{ upload.support_color_hex }}" title="{{ upload.support_color_hex }}"></span>
             </span>
@@ -94,7 +96,12 @@
             {% endif %}
           </dd>
         </div>
-        {% if upload.support_color_hex %}
+        {% if upload.support_color_is_multicolor %}
+        <div class="col-span-2">
+          <dt class="muted text-xs">Couleur</dt>
+          <dd><span class="b2b-support-color-badge is-rainbow">Multicolore</span></dd>
+        </div>
+        {% elif upload.support_color_hex %}
         <div class="col-span-2">
           <dt class="muted text-xs">Couleur</dt>
           <dd>

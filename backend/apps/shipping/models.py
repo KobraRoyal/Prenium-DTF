@@ -69,6 +69,7 @@ class Shipment(BaseModel):
     label_filename = models.CharField(max_length=255, blank=True)
     label_mime_type = models.CharField(max_length=128, blank=True)
     label_retrieved_at = models.DateTimeField(null=True, blank=True)
+    shipped_at = models.DateTimeField(null=True, blank=True)
     last_api_sync_at = models.DateTimeField(null=True, blank=True)
     last_error_message = models.CharField(max_length=255, blank=True)
     source = models.CharField(max_length=32, default="staff_api")

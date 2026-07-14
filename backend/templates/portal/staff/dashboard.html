@@ -1,57 +1,166 @@
 {% extends "portal/layout.html" %}
 {% load ui_tags %}
 
-{% block title %}Accueil staff - Prenium DTF{% endblock %}
+{% block title %}File Atelier - Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<section class="dashboard-hero dashboard-hero--staff">
-  {% include "components/portal/page_head.html" with kicker="Pilotage staff" title="Accueil staff" subtitle="Vue opérationnelle rapide des commandes et actions en cours." %}
-  <aside class="portal-signal-card">
-    <p class="portal-signal-card__eyebrow">Lecture ops</p>
-    <strong>{% if can_read_orders %}Accès commandes autorisé{% else %}Accès commandes refusé{% endif %}</strong>
-    <p>Le tableau de bord met d’abord en avant le volume affiché et l’accès réel disponible pour éviter les faux signaux côté staff.</p>
-    <div class="portal-signal-card__foot">
-      <span class="portal-signal-card__metric">{{ recent_orders|length }}</span>
-      <span>commandes visibles</span>
-    </div>
-  </aside>
-</section>
-
-<section class="product-command-grid" aria-label="Actions staff prioritaires">
-  {% if can_read_projects %}<article class="product-command-card"><span class="product-command-card__index">00</span><h2>Projets B2B</h2><p>Consultez les projets transmis avant leur conversion en commande.</p><div class="product-command-card__action"><a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-order-project-list' %}">Ouvrir la file projets</a></div></article>{% endif %}
-  <article class="product-command-card">
-    <span class="product-command-card__index">01</span>
-    <h2>File commandes</h2>
-    <p>{% if can_read_orders %}Accédez à la liste staff pour prioriser les commandes visibles.{% else %}Votre profil n’a pas encore la permission commandes requise.{% endif %}</p>
-    {% if can_read_orders %}
-    <div class="product-command-card__action">
-      <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-order-list' %}">Ouvrir la file</a>
-    </div>
+<section class="atelier-dashboard-head">
+  {% include "components/portal/page_head.html" with kicker="Pilotage Atelier" title="File Atelier" subtitle="Contrôlez les derniers fichiers reçus, puis imprimez uniquement les OF prêts pour la production." %}
+  <nav class="atelier-dashboard-head__actions" aria-label="Accès rapides Atelier">
+    {% if can_read_projects %}
+    <a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-order-project-list' %}">Projets B2B</a>
     {% endif %}
-  </article>
-  <article class="product-command-card">
-    <span class="product-command-card__index">02</span>
-    <h2>Contrats permissions</h2>
-    <p>Les panneaux uploads, production, shipping et billing restent filtrés par permissions domaine.</p>
-  </article>
-  <article class="product-command-card">
-    <span class="product-command-card__index">03</span>
-    <h2>Signal atelier</h2>
-    <p>Les anomalies pricing, crédit et production gardent un signal visuel sans remplacer les règles backend.</p>
-  </article>
+    {% if can_read_orders %}
+    <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-list' %}">Toutes les commandes</a>
+    {% endif %}
+  </nav>
 </section>
 
+{% if batch_error %}
+<div class="alert alert--danger" role="alert">
+  <p><strong>Impression impossible.</strong> {{ batch_error }}</p>
+</div>
+{% endif %}
+
+{% if can_read_worklist %}
+<div class="atelier-dashboard-metrics">
 {% ui_kpi_grid items=kpi_rows %}
+</div>
 
-<section class="card">
-  <div class="section-head">
-    <p class="font-display text-lg text-[color:var(--ink)]">Commandes récentes</p>
-    <p class="muted mt-1 text-sm">Les lignes mettent en avant les anomalies de pricing et les statuts à traiter en priorité.</p>
+<form
+  class="atelier-worklist"
+  method="post"
+  action="{% url 'portal:staff-manufacturing-order-batch-pdf' %}"
+  x-data="{ selected: [] }"
+>
+  {% csrf_token %}
+  <header class="atelier-worklist__toolbar">
+    <div>
+      <p class="atelier-worklist__eyebrow">12 dernières commandes soumises</p>
+      <h2>Commandes Atelier</h2>
+      <p>Filtrez la file, contrôlez les visuels puis imprimez les OF validés.</p>
+    </div>
+    <div class="atelier-worklist__batch-actions">
+      <button
+        class="ui-btn ui-btn-ghost ui-btn-sm"
+        type="button"
+        {% if not printable_count %}disabled{% endif %}
+        @click="selected = Array.from($el.closest('form').querySelectorAll('input[name=order_public_ids]:not(:disabled)')).map((input) => input.value)"
+      >Tout sélectionner</button>
+      <button
+        class="ui-btn ui-btn-secondary ui-btn-sm"
+        type="submit"
+        name="batch_mode"
+        value="latest_ready"
+        {% if not ready_to_print_count %}disabled{% endif %}
+      >Imprimer les 5 derniers OF prêts</button>
+      <button
+        class="ui-btn ui-btn-primary ui-btn-sm"
+        type="submit"
+        name="batch_mode"
+        value="selected"
+        x-bind:disabled="selected.length === 0"
+      >
+        <span x-show="selected.length === 0">Imprimer la sélection</span>
+        <span x-show="selected.length > 0" x-text="`Imprimer ${selected.length} OF`"></span>
+      </button>
+    </div>
+  </header>
+
+  <nav class="atelier-worklist__tabs" aria-label="Filtrer la file Atelier" role="tablist">
+    {% for tab in worklist_tabs %}
+    <a
+      class="atelier-worklist__tab{% if tab.is_active %} is-active{% endif %}"
+      href="{% url 'portal:staff-dashboard' %}?queue={{ tab.key }}"
+      role="tab"
+      aria-selected="{% if tab.is_active %}true{% else %}false{% endif %}"
+      {% if tab.is_active %}aria-current="page"{% endif %}
+    >
+      <span>{{ tab.label }}</span>
+      <strong>{{ tab.count }}</strong>
+    </a>
+    {% endfor %}
+  </nav>
+
+  {% if worklist_rows %}
+  <div class="atelier-worklist__legend" aria-hidden="true">
+    <span></span>
+    <span>Réception / références</span>
+    <span>Client</span>
+    <span>Validation fichiers</span>
+    <span>Production</span>
+    <span>Action</span>
   </div>
-  {% if recent_orders %}
-  {% ui_orders_table orders=recent_orders variant="staff" %}
+  <ol class="atelier-order-list" aria-label="Commandes de la file sélectionnée">
+    {% for row in worklist_rows %}
+    <li class="atelier-order-row {% if row.ready_to_print %}is-ready{% elif row.review_status == 'changes_requested' or row.review_status == 'missing_files' %}has-issue{% endif %}">
+      <div class="atelier-order-row__select">
+        <label title="{% if row.print_eligible %}Ajouter cet OF au lot d’impression{% else %}Tous les fichiers doivent être approuvés avant impression{% endif %}">
+          <span class="sr-only">Sélectionner l’OF {{ row.of_number }}</span>
+          <input
+            type="checkbox"
+            name="order_public_ids"
+            value="{{ row.order.public_id }}"
+            x-model="selected"
+            {% if not row.print_eligible %}disabled{% endif %}
+          >
+        </label>
+      </div>
+
+      <div class="atelier-order-row__identity">
+        <p class="atelier-order-row__mobile-label">Réception / références</p>
+        <time datetime="{{ row.order.created_at|date:'c' }}" title="{{ row.order.created_at|date:'d/m/Y H:i' }}">
+          Il y a {{ row.order.created_at|timesince }}
+        </time>
+        <strong>Commande #{{ row.order_reference }}</strong>
+        <code>{{ row.of_number }}</code>
+      </div>
+
+      <div class="atelier-order-row__customer">
+        <p class="atelier-order-row__mobile-label">Client</p>
+        <strong>{{ row.order.customer.name }}</strong>
+      </div>
+
+      <div class="atelier-order-row__review">
+        <p class="atelier-order-row__mobile-label">Validation fichiers</p>
+        <span class="badge {{ row.review_tone }}">{{ row.review_label }}</span>
+        {% if row.approved_count and row.approved_count < row.upload_count %}
+        <small>{{ row.approved_count }}/{{ row.upload_count }} fichier(s) approuvé(s)</small>
+        {% endif %}
+      </div>
+
+      <div class="atelier-order-row__production">
+        <p class="atelier-order-row__mobile-label">Production</p>
+        <strong>{{ row.production_label }}</strong>
+        {% if row.ready_to_print %}<small class="atelier-ready-signal">OF prêt à imprimer</small>{% endif %}
+      </div>
+
+      <div class="atelier-order-row__action">
+        <a
+          class="ui-btn ui-btn-secondary ui-btn-sm"
+          href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel={{ row.next_panel }}"
+        >{{ row.next_action }}</a>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
   {% else %}
-  {% include "components/ui/empty_state.html" with title="Aucune commande" message="Aucune commande disponible pour ce scope." %}
+  <div class="atelier-worklist__empty">
+    {% if active_worklist_tab == "to_review" %}
+      {% include "components/ui/empty_state.html" with title="Aucun contrôle en attente" message="Tous les visuels reçus ont été traités." %}
+    {% elif active_worklist_tab == "ready" %}
+      {% include "components/ui/empty_state.html" with title="Aucun OF prêt" message="Les OF apparaîtront ici après validation de tous leurs visuels." %}
+    {% elif active_worklist_tab == "production" %}
+      {% include "components/ui/empty_state.html" with title="Aucune production en cours" message="Lancez un OF validé pour le retrouver dans cette file." %}
+    {% else %}
+      {% include "components/ui/empty_state.html" with title="Aucune commande reçue" message="Les nouvelles commandes soumises apparaîtront ici automatiquement." %}
+    {% endif %}
+  </div>
   {% endif %}
+</form>
+{% else %}
+<section class="card">
+  {% include "components/ui/empty_state.html" with title="File Atelier indisponible" message="Les permissions Commandes et Production sont nécessaires pour afficher cette file." %}
 </section>
+{% endif %}
 {% endblock %}

@@ -1,78 +1,62 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags order_tags %}
 
-{% block title %}Fiche commande staff - Prenium DTF{% endblock %}
+{% block title %}Fiche commande Atelier - Prenium DTF{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_order_detail.html" title="Commande" title_code=order.public_id|short_ref subtitle="Pilotez le contrôle, la production, la logistique, le scan atelier et la facturation depuis une fiche opérationnelle unique." %}
+{% include "components/portal/breadcrumbs/staff_order_detail.html" %}
 
-<section class="staff-order-detail-stack" aria-label="Synthèse commande staff">
-<section class="card order-command-bar">
-  <div class="order-command-bar__main">
-    <div class="order-command-bar__client">
-      <p class="order-command-bar__client-label">Client</p>
-      <p class="order-command-bar__client-name">{{ order.customer.name }}</p>
+<section class="staff-order-detail-stack" aria-label="Synthèse commande Atelier">
+<section class="card staff-order-focus" aria-labelledby="staff-order-title">
+  <div class="staff-order-focus__identity">
+    <p class="staff-order-focus__eyebrow">Commande {{ staff_order_focus.order_reference }}</p>
+    <h1 id="staff-order-title">{{ order.customer.name }}</h1>
+    <div class="staff-order-focus__statuses" aria-label="État de la commande">
+      <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
+      <span class="badge {{ staff_order_focus.review_tone }}">{{ staff_order_focus.review_label }}</span>
+      <span class="badge {{ staff_order_focus.production_status|badge_tone }}">{{ staff_order_focus.production_label }}</span>
     </div>
-    <div class="order-command-bar__cluster">
-      <div class="order-command-bar__badges" aria-label="Statuts">
-        <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-        <span class="badge">{{ order.billing_mode|human_status }}</span>
-        <span class="badge">{{ order.pricing_status|human_status }}</span>
-        {% if order.pricing_status == "priced" %}
-        <strong class="order-command-bar__amount">{{ order.total_amount }} {{ order.currency }}</strong>
-        {% endif %}
-        {% if order.credit_hold_status and order.credit_hold_status != "none" %}
-        <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.credit_hold_status|human_status }}</span>
-        {% endif %}
-      </div>
-      {% if production_job or order_drive_url %}
-      <div class="order-command-bar__refs" aria-label="Raccourcis atelier">
-        {% if production_job %}
-        <div class="order-command-bar__ref order-command-bar__ref--inline">
-          <span class="order-command-bar__ref-label">OF</span>
-          {% if order_drive_url %}
-          <a
-            class="order-command-bar__of-link"
-            href="{{ order_drive_url }}"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Ouvrir le dossier Google&nbsp;Drive de la commande"
-            aria-label="Ouvrir le dossier Google Drive — ordre de fabrication {{ production_job.manufacturing_order_number }}"
-          >
-            <code class="order-command-bar__ref-code">{{ production_job.manufacturing_order_number }}</code>
-          </a>
-          {% else %}
-          <code class="order-command-bar__ref-code">{{ production_job.manufacturing_order_number }}</code>
-          {% endif %}
-        </div>
-        {% elif order_drive_url %}
-        <a
-          class="order-command-bar__drive-link ui-link"
-          href="{{ order_drive_url }}"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <span aria-hidden="true" class="order-command-bar__drive-icon">▸</span>
-          Dossier Google&nbsp;Drive
-        </a>
-        {% endif %}
-      </div>
+  </div>
+
+  <dl class="staff-order-focus__facts">
+    <div>
+      <dt>Ordre de fabrication</dt>
+      <dd>{% if production_job %}<code>{{ production_job.manufacturing_order_number }}</code>{% else %}À générer{% endif %}</dd>
+    </div>
+    <div>
+      <dt>Tarification</dt>
+      <dd>{% if order.pricing_status == "priced" %}{{ order.total_amount }} {{ order.currency }}{% else %}{{ order.pricing_status|human_status }}{% endif %}</dd>
+    </div>
+    <div>
+      <dt>Mode de facturation</dt>
+      <dd>{{ order.billing_mode|human_status }}</dd>
+    </div>
+    <div>
+      <dt>Créée le</dt>
+      <dd><time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y · H:i" }}</time></dd>
+    </div>
+  </dl>
+
+  <div class="staff-order-focus__next">
+    <div>
+      <p class="staff-order-focus__next-label">Prochaine action</p>
+      <p class="staff-order-focus__next-message">{{ staff_order_focus.action_message }}</p>
+    </div>
+    <div class="staff-order-focus__actions">
+      <a class="ui-btn ui-btn-primary" href="{{ request.path }}?panel={{ staff_order_focus.next_panel }}">{{ staff_order_focus.action_label }}</a>
+      {% if can_price_order and order.pricing_status != "priced" %}
+      <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}" data-submit-loading>
+        {% csrf_token %}
+        <button type="submit" class="ui-btn ui-btn-secondary">Calculer le prix</button>
+      </form>
       {% endif %}
+      {% if order_drive_url %}
+      <a class="ui-btn ui-btn-secondary" href="{{ order_drive_url }}" target="_blank" rel="noopener noreferrer">Ouvrir le dossier Drive</a>
+      {% endif %}
+      <a class="ui-link staff-order-focus__back" href="{% url 'portal:staff-order-list' %}">Retour à la file</a>
     </div>
   </div>
-  {% if can_price_order %}
-  <div class="order-command-bar__action">
-    <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}" data-submit-loading>
-      {% csrf_token %}
-      <button type="submit" class="ui-btn ui-btn-primary">Calculer le prix</button>
-    </form>
-  </div>
-  {% endif %}
 </section>
-
-{% include "components/portal/staff_customer_snapshot.html" %}
-
-{% include "components/portal/staff_order_workflow_summary.html" %}
 
 <div class="staff-order-detail-stack__status">
 {% if price_error %}

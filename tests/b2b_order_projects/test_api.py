@@ -1,6 +1,6 @@
 import pytest
 from apps.b2b_order_projects.models import B2BOrderProject
-from apps.customers.models import Customer, CustomerMembership
+from apps.customers.models import CustomerMembership
 from apps.uploads.services.asset_analysis import AssetAnalysisService
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission

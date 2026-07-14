@@ -111,6 +111,8 @@ class B2BOrderProjectCheckoutService:
                 order=order,
                 asset_version=version,
                 quantity=item.quantity,
+                width_mm=item.width_mm,
+                height_mm=item.height_mm,
                 support_color_hex=self._order_upload_support_color(item),
                 source=source,
             )
@@ -177,6 +179,4 @@ class B2BOrderProjectCheckoutService:
         return "\n".join(part for part in parts if part)
 
     def _order_upload_support_color(self, item) -> str:
-        if item.support_color_is_multicolor:
-            return ""
         return item.support_color_hex or ""

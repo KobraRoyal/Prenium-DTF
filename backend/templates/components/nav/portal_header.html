@@ -42,6 +42,7 @@
           <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-dashboard' %}is-active{% endif %}" {% if nav_key == 'staff-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:staff-dashboard' %}">Tableau de bord</a>
           <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes</a>
           {% if b2b_order_projects_globally_enabled and perms.b2b_order_projects.view_b2borderproject %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-order-projects' %}is-active{% endif %}" {% if nav_key == 'staff-order-projects' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-project-list' %}">Projets B2B</a>{% endif %}
+          {% if perms.notifications.view_emailtemplate %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-email-templates' %}is-active{% endif %}" {% if nav_key == 'staff-email-templates' %}aria-current="page"{% endif %} href="{% url 'portal:staff-email-template-list' %}">E-mails</a>{% endif %}
           {% endif %}
         </div>
         <div class="product-nav__account">

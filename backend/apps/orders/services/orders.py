@@ -55,7 +55,14 @@ class OrderService:
     def get_staff_order(self, order_public_id):
         return (
             Order.objects.select_related("customer", "created_by")
-            .prefetch_related("items", "items__service", "uploads", "uploads__inspection")
+            .prefetch_related(
+                "items",
+                "items__service",
+                "uploads",
+                "uploads__inspection",
+                "uploads__atelier_review",
+                "uploads__drive_sync",
+            )
             .filter(public_id=order_public_id)
             .first()
         )
@@ -277,9 +284,9 @@ class OrderService:
                 },
             )
 
-            from apps.notifications.services.transactional import schedule_b2b_order_submitted_email
+            from apps.notifications.services.transactional import schedule_order_created_email
 
-            schedule_b2b_order_submitted_email(order_public_id=order_locked.public_id)
+            schedule_order_created_email(order_public_id=order_locked.public_id)
 
         return self.get_customer_order(customer, order_locked.public_id)
 

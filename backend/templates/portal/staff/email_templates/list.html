@@ -1,0 +1,42 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}E-mails Atelier - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_email_templates_list.html" kicker="Communication" title="Modèles d’e-mails" subtitle="Personnalisez les messages transactionnels envoyés aux clients et à l’équipe interne avec des tags contrôlés." %}
+
+<div class="alert alert--info mt-6" role="status">
+  <p class="m-0"><strong>Sécurité :</strong> seuls les tags proposés dans l’éditeur sont interprétés. Aucun code Django ni HTML actif n’est exécuté.</p>
+</div>
+
+<section class="mt-8" aria-labelledby="client-email-templates-heading">
+  <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--muted)]">Audience externe</p>
+      <h2 id="client-email-templates-heading" class="mt-1 font-display text-2xl">Messages clients</h2>
+    </div>
+    <span class="badge is-neutral">{{ client_templates|length }} modèles</span>
+  </div>
+  <div class="grid gap-4 lg:grid-cols-2">
+    {% for template in client_templates %}
+      {% include "components/notifications/email_template_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mt-10" aria-labelledby="internal-email-templates-heading">
+  <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--muted)]">Audience interne</p>
+      <h2 id="internal-email-templates-heading" class="mt-1 font-display text-2xl">Messages équipe</h2>
+      <p class="muted mt-1 text-sm">{{ internal_recipient_count }} destinataire{{ internal_recipient_count|pluralize }} interne{{ internal_recipient_count|pluralize }} configuré{{ internal_recipient_count|pluralize }} côté serveur.</p>
+    </div>
+    <span class="badge {% if internal_recipient_count %}is-success{% else %}is-warning{% endif %}">{% if internal_recipient_count %}Envoi configuré{% else %}Destinataires à configurer{% endif %}</span>
+  </div>
+  <div class="grid gap-4 lg:grid-cols-2">
+    {% for template in internal_templates %}
+      {% include "components/notifications/email_template_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer, CustomerMembership
@@ -173,16 +175,26 @@ def test_sync_shipment_tracking_updates_carrier_fields():
         payload=build_shipment_payload(),
     )
 
-    _order, shipment = service.sync_shipment_tracking_from_sendcloud(
-        order_public_id=order.public_id,
-        actor=staff_user,
-        source="test",
-    )
+    with patch(
+        "apps.notifications.services.transactional.schedule_order_shipped_email"
+    ) as shipped_schedule:
+        _order, shipment = service.sync_shipment_tracking_from_sendcloud(
+            order_public_id=order.public_id,
+            actor=staff_user,
+            source="test",
+        )
+        service.sync_shipment_tracking_from_sendcloud(
+            order_public_id=order.public_id,
+            actor=staff_user,
+            source="test-repeat",
+        )
 
     assert shipment is not None
     assert shipment.sendcloud_status_code == "DELIVERED"
     assert shipment.sendcloud_status_message == "Livré"
     assert shipment.tracking_number == "TRK-UPDATED"
+    assert shipment.shipped_at is not None
+    shipped_schedule.assert_called_once_with(order_public_id=order.public_id)
     assert AuditLogEntry.objects.filter(
         action="shipping.shipment_tracking_synced",
         target_public_id=shipment.public_id,

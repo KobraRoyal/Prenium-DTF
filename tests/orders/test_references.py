@@ -1,4 +1,3 @@
-import uuid
 
 import pytest
 from apps.b2b_order_projects.models import B2BOrderProject

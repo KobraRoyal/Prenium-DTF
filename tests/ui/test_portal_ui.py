@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
+from apps.production.models import ProductionJob
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.test import Client, override_settings
@@ -218,36 +219,121 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
 
     assert dashboard_response.status_code == 200
     dashboard_html = dashboard_response.content.decode()
-    assert "Accueil staff" in dashboard_html
+    assert "File Atelier" in dashboard_html
     assert "product-shell--portal" in dashboard_html
-    assert "product-command-grid" in dashboard_html
-    assert "File commandes" in dashboard_html
-    assert "Contrats permissions" in dashboard_html
+    assert "Commandes Atelier" in dashboard_html
+    assert 'role="tablist"' in dashboard_html
+    assert "Prêts à imprimer" in dashboard_html
+    assert "Imprimer les 5 derniers OF prêts" in dashboard_html
+    assert "Contrats permissions" not in dashboard_html
+    assert "Accès commandes autorisé" not in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
     detail_html = detail_response.content.decode()
-    assert "Synthèse commande staff" in detail_html
-    assert "Pilotez le contrôle, la production, la logistique" in detail_html
-    assert "Prochaine action suggérée" in detail_html
+    assert "staff-order-focus" in detail_html
+    assert "Prochaine action" in detail_html
+    assert "Aucun visuel reçu" in detail_html
+    assert "Client &amp; références" not in detail_html
+    assert "Workflow commande" not in detail_html
+    assert ">Fichiers<" not in detail_html
+    assert "Incident Drive" not in detail_html
+    assert "tab_icon" not in detail_html
+    assert "/panels/inspection/" in detail_html
+    assert "Valider les fichiers" in detail_html
+    assert "Tracer l&#x27;avancement" in detail_html
+    assert "Retour à la file" in detail_html
     assert production_panel_response.status_code == 200
     production_html = production_panel_response.content.decode()
     assert "data-submit-loading" in production_html
+    assert "Avancement de l’OF" in production_html
+    assert '<option value="in_progress">' in production_html
+    assert '<option value="blocked">' in production_html
+    assert '<option value="ready_to_ship">' not in production_html
     assert uploads_panel_response.status_code == 200
     assert inspections_panel_response.status_code == 200
     assert drive_panel_response.status_code == 200
     assert shipping_panel_response.status_code == 200
     shipping_html = shipping_panel_response.content.decode()
-    assert "État actuel" in shipping_html
-    assert "Créer un envoi" in shipping_html
-    assert "workflow-form-card" in shipping_html
-    assert "data-submit-loading" in shipping_html
+    assert "Terminez la production avant de créer l’envoi" in shipping_html
+    assert "Consultation seule" in shipping_html
+    assert "Générer l’étiquette" not in shipping_html
     assert scan_panel_response.status_code == 200
     scan_html = scan_panel_response.content.decode()
-    assert "Lecture atelier" in scan_html
+    assert "Lecture immédiate" in scan_html
+    assert "Utiliser l’OF de cette commande" in scan_html
+    assert "$refs.scanInput.focus({ preventScroll: true })" in scan_html
     assert "data-submit-loading" in scan_html
     assert billing_panel_response.status_code == 200
     billing_html = billing_panel_response.content.decode()
     assert "workflow-panel" in billing_html
+    assert "Synthèse de facturation" in billing_html
+    assert "Pièces de la commande" in billing_html
+
+
+@pytest.mark.django_db
+def test_shipping_panel_is_prefilled_only_when_workflow_and_permission_allow_creation():
+    staff_user = get_user_model().objects.create_user(
+        email="shipping-operator@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    customer = Customer.objects.create(
+        name="Atelier Client",
+        billing_email="logistique@example.com",
+        shipping_address_line1="Rue des Imprimeurs",
+        shipping_address_line2="Bâtiment B",
+        shipping_postal_code="59000",
+        shipping_city="Lille",
+        shipping_country="FR",
+    )
+    order = Order.objects.create(customer=customer, created_by=staff_user)
+    ProductionJob.objects.create(
+        order=order,
+        manufacturing_order_number="OF-TEST-SHIPPING",
+        scan_identifier="OF-TEST-SHIPPING",
+        status=ProductionJob.Status.READY_TO_SHIP,
+    )
+    for codename in ("access_staff_portal", "view_order", "view_shipment", "create_shipment"):
+        staff_user.user_permissions.add(Permission.objects.get(codename=codename))
+
+    client = Client()
+    assert client.login(email=staff_user.email, password="pass")
+    panel_url = reverse(
+        "portal:staff-order-panel-shipping", kwargs={"order_public_id": order.public_id}
+    )
+    response = client.get(panel_url)
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "La production est prête à expédier" in html
+    assert 'value="Atelier Client"' in html
+    assert 'value="logistique@example.com"' in html
+    assert 'value="Rue des Imprimeurs"' in html
+    assert 'value="59000"' in html
+    assert "Générer l’étiquette" in html
+
+    invalid_response = client.post(
+        panel_url,
+        {
+            "shipping_option_code": "",
+            "recipient_name": "Valeur conservée",
+            "recipient_email": "retained@example.com",
+            "recipient_country_code": "FR",
+            "recipient_city": "Lille",
+            "recipient_postal_code": "59000",
+            "recipient_address_line_1": "Rue des Imprimeurs",
+            "recipient_house_number": "12",
+            "parcel_weight_value": "1.25",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert invalid_response.status_code == 200
+    invalid_html = invalid_response.content.decode()
+    assert 'value="Valeur conservée"' in invalid_html
+    assert 'value="retained@example.com"' in invalid_html
+    assert 'value="1.25"' in invalid_html
+    assert "alert--danger" in invalid_html
 
 
 @pytest.mark.django_db
@@ -375,7 +461,10 @@ def test_client_order_list_supports_htmx_search():
 
     client = Client()
     assert client.login(email=user.email, password="pass")
-    list_url = reverse("portal:client-order-list", kwargs={"customer_public_id": customer.public_id})
+    list_url = reverse(
+        "portal:client-order-list",
+        kwargs={"customer_public_id": customer.public_id},
+    )
 
     page = client.get(list_url)
     assert page.status_code == 200

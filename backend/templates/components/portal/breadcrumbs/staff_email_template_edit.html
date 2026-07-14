@@ -1,0 +1,7 @@
+<nav class="ui-breadcrumb" aria-label="Fil d’Ariane">
+  <ol class="ui-breadcrumb__list">
+    <li class="ui-breadcrumb__item"><a href="{% url 'portal:staff-dashboard' %}">Accueil Atelier</a></li>
+    <li class="ui-breadcrumb__item"><a href="{% url 'portal:staff-email-template-list' %}">E-mails</a></li>
+    <li class="ui-breadcrumb__item" aria-current="page">{{ definition.event_label }}</li>
+  </ol>
+</nav>

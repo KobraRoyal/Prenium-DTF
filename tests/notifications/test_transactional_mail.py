@@ -10,8 +10,10 @@ from apps.notifications.tasks import (
     send_payment_captured_email_task,
 )
 from apps.orders.services.orders import OrderService
+from apps.uploads.models import OrderUpload
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from tests.billing.test_billing_api import FakePayPalGateway, create_customer_scope, create_order
@@ -77,6 +79,40 @@ def test_payment_captured_sends_transactional_email():
     send_payment_captured_email_task.run(str(order.public_id))
     assert len(mail.outbox) == 1
     assert "Paiement confirmé" in mail.outbox[0].subject
+
+
+@pytest.mark.django_db
+def test_b2b_submission_uses_order_created_event_without_a_second_b2b_email():
+    user = get_user_model().objects.create_user(email="b2b@example.com", password="pass")
+    customer = Customer.objects.create(name="B2B", billing_email="billing-b2b@example.com")
+    membership = CustomerMembership.objects.create(customer=customer, user=user)
+    service = OrderService()
+    order = service.create_b2b_deferred_order(
+        customer=customer,
+        actor=user,
+        customer_membership=membership,
+        source="test",
+    )
+    OrderUpload.objects.create(
+        order=order,
+        uploaded_by=user,
+        file=SimpleUploadedFile("logo.png", b"fake", content_type="image/png"),
+        original_filename="logo.png",
+        mime_type="image/png",
+        size_bytes=4,
+    )
+
+    with patch("apps.notifications.tasks.send_order_created_email_task.delay") as task_delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            service.submit_b2b_deferred_order(
+                customer=customer,
+                actor=user,
+                customer_membership=membership,
+                order_public_id=order.public_id,
+                source="test",
+            )
+
+    task_delay.assert_called_once_with(str(order.public_id))
 
 
 @pytest.mark.django_db

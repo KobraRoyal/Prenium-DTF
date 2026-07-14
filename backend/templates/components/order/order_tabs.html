@@ -1,20 +1,11 @@
 <section class="card workflow-shell ui-workflow-shell{% if compact %} workflow-shell--compact{% endif %}">
-  {% if title %}
-  <header class="workflow-shell__head ui-workflow-shell__head">
-    <h2 class="workflow-shell__title ui-workflow-shell__title" id="{{ panel_id }}-tabs-heading">{{ title }}</h2>
-    {% if subtitle %}
-    <p class="workflow-shell__lead ui-workflow-shell__lead">{{ subtitle }}</p>
-    {% endif %}
-  </header>
-  {% endif %}
   <div
     class="workflow-tab-rail portal-order-tabs ui-tab-rail{% if compact %} workflow-tab-rail--compact{% endif %}"
     role="tablist"
     aria-orientation="horizontal"
-    {% if title %}aria-labelledby="{{ panel_id }}-tabs-heading"{% else %}aria-label="Suivi commande"{% endif %}
+    aria-label="{{ tablist_label }}"
   >
-    {% if compact %}
-    <div class="workflow-tab-group__chips workflow-tab-group__chips--flat" role="presentation">
+    <div class="workflow-tab-group__chips workflow-tab-group__chips--flat{% if not compact %} workflow-progress{% endif %}" role="presentation">
       {% for tab in tabs %}
       <button
         type="button"
@@ -31,49 +22,25 @@
         {% if tab.push_url %}hx-push-url="{{ tab.push_url }}"{% endif %}
         hx-indicator="#portal-htmx-indicator"
       >
-        {% if tab.icon and not compact %}{% include "components/workflow/tab_icon.html" with icon=tab.icon only %}{% endif %}
+        {% if not compact %}
+        <span class="workflow-progress__number" aria-hidden="true">{{ tab.step_number|stringformat:"02d" }}</span>
+        <span class="workflow-progress__copy">
+          <strong>{{ tab.label }}</strong>
+          <small>{{ tab.caption }}</small>
+        </span>
+        {% else %}
         <span>{{ tab.label }}</span>
+        {% endif %}
       </button>
       {% endfor %}
     </div>
-    {% else %}
-    <div class="workflow-tab-groups" role="presentation">
-      {% for group in tab_groups %}
-      <div class="workflow-tab-group" role="group" aria-label="{{ group.label }}">
-        <span class="workflow-tab-group__label">{{ group.label }}</span>
-        <div class="workflow-tab-group__chips">
-          {% for tab in group.tabs %}
-          <button
-            type="button"
-            id="{{ tab.dom_id }}"
-            role="tab"
-            aria-selected="{% if tab.active %}true{% else %}false{% endif %}"
-            aria-controls="{{ panel_id }}"
-            tabindex="{% if tab.active %}0{% else %}-1{% endif %}"
-            class="chip ui-tab-chip transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c1815]{% if tab.active %} is-active{% endif %}"
-            data-panel-slug="{{ tab.slug }}"
-            hx-get="{{ tab.url }}"
-            hx-target="{{ hx_target }}"
-            hx-swap="innerHTML"
-            {% if tab.push_url %}hx-push-url="{{ tab.push_url }}"{% endif %}
-            hx-indicator="#portal-htmx-indicator"
-          >
-            {% if tab.icon %}{% include "components/workflow/tab_icon.html" with icon=tab.icon only %}{% endif %}
-            <span>{{ tab.label }}</span>
-          </button>
-          {% endfor %}
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
   </div>
   <div class="workflow-panel workflow-panel-shell ui-panel-shell">
     <div
       id="{{ panel_id }}"
       class="workflow-panel-target"
       role="tabpanel"
-      aria-labelledby="{% if active_tab_id %}{{ active_tab_id }}{% else %}{{ panel_id }}-tabs-heading{% endif %}"
+      {% if active_tab_id %}aria-labelledby="{{ active_tab_id }}"{% else %}aria-label="Contenu de la commande"{% endif %}
       aria-live="polite"
       aria-busy="{% if initial_url %}true{% else %}false{% endif %}"
       {% if initial_url %}data-panel-url="{{ initial_url }}"{% endif %}

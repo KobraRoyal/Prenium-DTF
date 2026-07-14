@@ -11,7 +11,11 @@ from django.urls import reverse
 from django.views import View
 
 from apps.b2b_order_projects.permissions import b2b_order_projects_enabled_for_customer
-from apps.b2b_order_projects.services import B2BOrderProjectService, B2BOrderReorderService, ProjectDomainError
+from apps.b2b_order_projects.services import (
+    B2BOrderProjectService,
+    B2BOrderReorderService,
+    ProjectDomainError,
+)
 from apps.core.public_refs import short_public_ref
 from apps.orders.references import order_client_reference
 from apps.orders.services.client_timeline import build_client_order_status_history
@@ -360,7 +364,9 @@ class ClientOrderReorderView(ClientOrderContextMixin, View):
                     "order_public_id": order.public_id,
                 },
             )
-            return HttpResponseRedirect(f"{detail_url}?panel=uploads&reorder_error={error.code.lower()}")
+            return HttpResponseRedirect(
+                f"{detail_url}?panel=uploads&reorder_error={error.code.lower()}"
+            )
         return HttpResponseRedirect(
             reverse(
                 "portal:client-order-project-detail",

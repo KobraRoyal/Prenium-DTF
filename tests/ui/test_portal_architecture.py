@@ -50,11 +50,21 @@ def test_portal_legacy_views_facade_is_removed():
             {"customer_public_id": "00000000-0000-0000-0000-000000000001"},
             "apps.portal.views_checkout",
         ),
-        ("portal:staff-dashboard", {}, "apps.portal.views_staff"),
+        ("portal:staff-dashboard", {}, "apps.portal.views_staff_dashboard"),
+        (
+            "portal:staff-manufacturing-order-batch-pdf",
+            {},
+            "apps.portal.views_staff_documents",
+        ),
         (
             "portal:staff-order-panel-uploads",
             {"order_public_id": "00000000-0000-0000-0000-000000000001"},
             "apps.portal.views_staff_uploads",
+        ),
+        (
+            "portal:staff-order-panel-inspection",
+            {"order_public_id": "00000000-0000-0000-0000-000000000001"},
+            "apps.portal.views_staff_reviews",
         ),
         (
             "portal:staff-order-panel-production",
@@ -85,9 +95,15 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
         ("views_client", {"apps.portal.views_common"}),
         ("views_checkout", {"apps.portal.htmx", "apps.portal.views_common"}),
         ("views_staff", {"apps.portal.views_common"}),
+        ("views_staff_dashboard", {"apps.portal.views_common"}),
+        ("views_staff_documents", {"apps.portal.views_common"}),
         (
             "views_staff_uploads",
             {"apps.portal.views_common", "apps.portal.views_staff"},
+        ),
+        (
+            "views_staff_reviews",
+            {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff"},
         ),
         (
             "views_staff_production",
@@ -118,10 +134,13 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
     [
         ("views_auth", 60),
         ("views_staff_uploads", 130),
+        ("views_staff_reviews", 170),
         ("views_staff", 180),
+        ("views_staff_dashboard", 90),
+        ("views_staff_documents", 70),
         ("views_staff_billing", 170),
         ("views_staff_production", 180),
-        ("views_staff_shipping", 180),
+        ("views_staff_shipping", 190),
         ("views_common", 220),
         ("views_checkout", 260),
         ("views_client", 400),

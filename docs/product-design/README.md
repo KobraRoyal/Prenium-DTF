@@ -10,5 +10,6 @@
 | [AUDIT_FRONTEND_PERFORMANCE_UI_UX_2026-07-10.md](./AUDIT_FRONTEND_PERFORMANCE_UI_UX_2026-07-10.md) | Audit landing, performance Lighthouse, accessibilité et backlog de polish. |
 | [AUDIT_COHERENCE_FRONTEND_GLOBAL_2026-07-10.md](./AUDIT_COHERENCE_FRONTEND_GLOBAL_2026-07-10.md) | Recette desktop/mobile des vues publiques, prospect, client et staff ; corrections de lisibilité et composants partagés. |
 | [UI_UX_PRO_MAX_SYSTEM_2026-07-11.md](./UI_UX_PRO_MAX_SYSTEM_2026-07-11.md) | Design system persistant UI/UX Pro Max, adaptations à la marque et validation transversale des 68 templates. |
+| [AUDIT_ATELIER_ADMIN_EMAILS_2026-07-14.md](./AUDIT_ATELIER_ADMIN_EMAILS_2026-07-14.md) | Audit Atelier/Admin desktop-mobile, cohérence éditoriale et validation de l’éditeur sécurisé d’e-mails. |
 
 Les audits et guides complètent la vision métier (`docs/architecture/`, `docs/master-plan/`).

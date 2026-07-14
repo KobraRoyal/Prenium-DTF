@@ -1,0 +1,20 @@
+<article class="dui-card border border-[color:var(--line)] bg-[color:var(--card)] shadow-sm">
+  <div class="dui-card-body gap-3">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p class="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--muted)]">{{ template.definition.audience_label }}</p>
+        <h3 class="mt-1 font-display text-lg">{{ template.definition.event_label }}</h3>
+      </div>
+      <span class="badge {% if template.is_active %}is-success{% else %}is-neutral{% endif %}">{% if template.is_active %}Actif{% else %}Désactivé{% endif %}</span>
+    </div>
+    <p class="muted m-0 text-sm">{{ template.definition.description }}</p>
+    <div class="rounded-lg border border-[color:var(--line)] bg-[color:var(--bg)] p-3">
+      <p class="m-0 text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Objet</p>
+      <p class="mt-1 break-words text-sm font-medium">{{ template.subject_template }}</p>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-[color:var(--muted)]">
+      <span>{% if template.is_customized %}Personnalisé · version {{ template.version }}{% else %}Modèle par défaut{% endif %}</span>
+      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-email-template-edit' event=template.event audience=template.audience %}">{% if can_edit_email_templates %}Modifier{% else %}Consulter{% endif %}</a>
+    </div>
+  </div>
+</article>

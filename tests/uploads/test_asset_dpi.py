@@ -102,7 +102,14 @@ def test_extract_pdf_source_metrics_uses_artboard_for_vector_mixed_documents():
         stream=image_buffer.getvalue(),
     )
     shape = page.new_shape()
-    shape.draw_rect(pymupdf.Rect(369.1451110839844, 1222.22216796875, 385.80712890625, 1231.7591552734375))
+    shape.draw_rect(
+        pymupdf.Rect(
+            369.1451110839844,
+            1222.22216796875,
+            385.80712890625,
+            1231.7591552734375,
+        )
+    )
     shape.finish(color=(0, 0, 0), fill=(0, 0, 0))
     shape.commit()
     metrics = extract_pdf_source_metrics(document, page)

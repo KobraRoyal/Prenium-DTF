@@ -20,6 +20,18 @@ def app_source(relative_path: str) -> str:
 
 
 class PortalUiCoherenceTests(SimpleTestCase):
+    def test_staff_inspection_separates_automatic_analysis_from_atelier_decision(self):
+        source = template_source("portal/staff/panels/inspection.html")
+
+        self.assertIn("Analyse automatique", source)
+        self.assertIn("Décision Atelier", source)
+        self.assertIn("Analyse réussie", source)
+        self.assertIn("Approuver pour production", source)
+        self.assertIn("Demander une correction au client", source)
+        self.assertIn('hx-target="#staff-order-inspection-panel"', source)
+        self.assertNotIn("warning / erreur", source)
+        self.assertNotIn("|human_status", source)
+
     def test_frontend_runtime_dependencies_are_self_hosted(self) -> None:
         source = template_source("base.html")
         legacy_css = static_source("css/legacy/app-legacy.css")
@@ -170,20 +182,33 @@ class PortalUiCoherenceTests(SimpleTestCase):
         source = template_source("components/order/order_tabs.html")
         runtime = static_source("js/htmx/swap-state.js")
 
-        self.assertIn('<h2 class="workflow-shell__title', source)
-        self.assertNotIn('<h3 class="workflow-shell__title', source)
+        self.assertNotIn("workflow-shell__head", source)
         self.assertIn('role="tablist"', source)
         self.assertIn('role="tab"', source)
         self.assertIn('role="tabpanel"', source)
         self.assertIn('aria-controls="{{ panel_id }}"', source)
-        self.assertIn('aria-labelledby="{% if active_tab_id %}{{ active_tab_id }}', source)
+        self.assertIn('{% if active_tab_id %}aria-labelledby="{{ active_tab_id }}"', source)
         self.assertIn('aria-live="polite"', source)
         self.assertIn("aria-busy=", source)
         self.assertIn('data-panel-slug="{{ tab.slug }}"', source)
         self.assertIn('hx-push-url="{{ tab.push_url }}"', source)
+        self.assertNotIn("tab_icon.html", source)
+        self.assertNotIn("<svg", source)
         self.assertNotIn("<script>", source)
         self.assertIn("event.detail?.target", runtime)
         self.assertIn("target instanceof HTMLElement", runtime)
+
+    def test_staff_order_detail_keeps_only_actionable_summary(self) -> None:
+        source = template_source("portal/staff/order_detail.html")
+
+        self.assertIn('class="card staff-order-focus"', source)
+        self.assertIn("Prochaine action", source)
+        self.assertIn("Ordre de fabrication", source)
+        self.assertNotIn("staff_customer_snapshot.html", source)
+        self.assertNotIn("staff_order_workflow_summary.html", source)
+        self.assertNotIn("order-command-bar", source)
+        self.assertNotIn("▸", source)
+        self.assertNotIn("<svg", source)
 
     def test_deep_product_views_keep_sequential_heading_levels(self) -> None:
         checkout = template_source("portal/client/checkout.html")
@@ -305,8 +330,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("via IDS supply", logo)
         self.assertIn("brand_home_url as resolved_brand_home_url", logo)
         self.assertIn("brand_home_href", template_source("components/nav/portal_header.html"))
-        self.assertIn("portal:client-dashboard", template_source("components/nav/portal_header.html"))
-        self.assertIn("portal:staff-dashboard", template_source("components/nav/portal_header.html"))
+        portal_header = template_source("components/nav/portal_header.html")
+        self.assertIn("portal:client-dashboard", portal_header)
+        self.assertIn("portal:staff-dashboard", portal_header)
         self.assertNotIn("{% url 'home' %}", logo)
         self.assertIn("body .ui-brand-lockup__name", legacy_css)
         self.assertIn("body .ui-brand-lockup__subtitle", legacy_css)
@@ -325,7 +351,18 @@ class PortalUiCoherenceTests(SimpleTestCase):
     def test_staff_dashboard_uses_french_premium_copy(self) -> None:
         source = template_source("portal/staff/dashboard.html")
 
-        self.assertIn('kicker="Pilotage staff"', source)
+        self.assertIn('kicker="Pilotage Atelier"', source)
+        self.assertIn('title="File Atelier"', source)
+        self.assertIn("Commandes Atelier", source)
+        self.assertIn('role="tablist"', source)
+        self.assertIn("{{ tab.label }}", source)
+        self.assertNotIn("<svg", source)
+        dashboard_css = static_source("css/components/product-shell.css")
+        self.assertNotIn("--product-paper", dashboard_css)
+        self.assertIn("Imprimer les 5 derniers OF prêts", source)
+        self.assertNotIn("Contrats permissions", source)
+        self.assertNotIn("Accès commandes autorisé", source)
+        self.assertNotIn("Accueil staff", source)
         self.assertNotIn("Backoffice staff", source)
 
     def test_saas_button_system_is_imported_with_interaction_tokens(self) -> None:
@@ -410,8 +447,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn('class="card order-command-bar" style=', staff_detail)
         self.assertNotIn('class="card staff-customer-snapshot" style=', staff_customer)
         self.assertNotIn('class="workflow-kpi" style=', production)
-        self.assertIn('class="workflow-kpi mb-4"', production)
-        self.assertIn("workflow-kpi__label--inline", scan)
+        self.assertIn('class="production-track"', production)
+        self.assertIn('class="scan-result"', scan)
         self.assertNotIn("display: inline; margin-right", scan)
 
     def test_prospect_primary_actions_declare_button_hierarchy(self) -> None:
@@ -508,7 +545,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Aperçu en préparation", items)
         self.assertIn("is-analyzing", items)
         self.assertIn("order_project_analysis_loader.html", items)
-        analysis_loader = template_source("portal/client/partials/order_project_analysis_loader.html")
+        analysis_loader = template_source(
+            "portal/client/partials/order_project_analysis_loader.html"
+        )
         self.assertIn("b2b-analysis-loader--overlay", analysis_loader)
         self.assertIn("resolution_display", quality_review)
         preview_stage = template_source("portal/client/partials/order_project_preview_stage.html")

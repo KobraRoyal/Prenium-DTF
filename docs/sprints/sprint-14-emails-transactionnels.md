@@ -1,21 +1,28 @@
 # Sprint 14 — Emails transactionnels
 
 ## Objectif
-Notifier par email les jalons métier sans bloquer les transactions : commande créée, paiement capturé, soumission commande B2B différée.
+Notifier par email les jalons métier sans bloquer les transactions : commande créée, paiement capturé, prise en charge Atelier, commande traitée, expédition et événements nécessitant une action client.
 
 ## Périmètre
 - Service centralisé `apps.notifications` (pas de logique dans les templates de vue).
 - Envoi après `transaction.on_commit` (pas d’email si rollback).
-- Templates texte Django ; expéditeur configurable (`DJANGO_DEFAULT_FROM_EMAIL`).
+- Modèles texte sécurisés ; expéditeur configurable (`DJANGO_DEFAULT_FROM_EMAIL`).
 - Désactivation possible : `TRANSACTIONAL_EMAILS_ENABLED=false`.
 - Destinataires : `created_by`, puis `customer.billing_email`, puis premier membership actif.
+- Envoi asynchrone Celery avec retry ; déclenchement exclusivement après commit.
+- Une soumission B2B est une création de commande, pas un second événement de notification.
 
 ## Hors périmètre
 - Fournisseur tiers type SendGrid API dédiée (reste `django.core.mail`).
 - Pièces jointes PDF.
-- Files d’attente Celery pour l’email (possible sprint ultérieur si volume).
 
 ## Définition de done
-- [x] Hooks sur création commande, capture paiement, soumission B2B.
+- [x] Hook unique de création pour commande immédiate ou soumission B2B.
+- [x] Hooks sur capture paiement, première mise en production, fin de traitement et premier scan transporteur.
+- [x] Création d’étiquette Sendcloud exclue du jalon « expédiée » tant que le transporteur n’a pas pris le colis en charge.
 - [x] Tests avec `TestCase.captureOnCommitCallbacks` + outbox.
 - [x] Journalisation des échecs d’envoi sans casser le flux métier (`logger.exception`).
+
+## Extension Sprint 23
+
+Les anciens fichiers de templates Django ont été remplacés par des modèles par défaut dans le service `apps.notifications`, surchargeables depuis le portail Atelier. Le moteur accepte uniquement une liste blanche de tags et n’exécute jamais les instructions Django enregistrées. Voir `sprint-23-email-templates-admin.md`.

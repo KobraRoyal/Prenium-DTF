@@ -8,6 +8,7 @@ from django.views import View
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import badge_tone_for_status, shipment_service, status_label
 from apps.portal.views_staff import StaffOrderContextMixin
+from apps.production.models import ProductionJob
 
 
 class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
@@ -18,6 +19,63 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
+    def _form_data(self, request):
+        customer = self.order.customer
+        if request.method == "POST":
+            return {
+                key: request.POST.get(key, "")
+                for key in (
+                    "shipping_option_code",
+                    "contract_id",
+                    "recipient_name",
+                    "recipient_company_name",
+                    "recipient_email",
+                    "recipient_phone_number",
+                    "recipient_country_code",
+                    "recipient_city",
+                    "recipient_postal_code",
+                    "recipient_address_line_1",
+                    "recipient_address_line_2",
+                    "recipient_house_number",
+                    "parcel_weight_value",
+                )
+            }
+        return {
+            "shipping_option_code": "",
+            "contract_id": "",
+            "recipient_name": customer.name,
+            "recipient_company_name": customer.name,
+            "recipient_email": customer.billing_email,
+            "recipient_phone_number": "",
+            "recipient_country_code": customer.shipping_country or "FR",
+            "recipient_city": customer.shipping_city,
+            "recipient_postal_code": customer.shipping_postal_code,
+            "recipient_address_line_1": customer.shipping_address_line1,
+            "recipient_address_line_2": customer.shipping_address_line2,
+            "recipient_house_number": "",
+            "parcel_weight_value": "1.0",
+        }
+
+    def _panel_context(self, request, *, shipment, form_error: str = ""):
+        try:
+            production_job = self.order.production_job
+        except ProductionJob.DoesNotExist:
+            production_job = None
+        return {
+            "order": self.order,
+            "shipment": shipment,
+            "production_job": production_job,
+            "shipping_ready": bool(
+                production_job
+                and production_job.status == ProductionJob.Status.READY_TO_SHIP
+            ),
+            "can_create_shipment": request.user.has_perm("shipping.create_shipment"),
+            "form_data": self._form_data(request),
+            "form_error": form_error,
+            "badge_tone_for_status": badge_tone_for_status,
+            "status_label": status_label,
+        }
+
     def get(self, request, order_public_id):
         _order, shipment = shipment_service.get_staff_shipment(
             order_public_id=self.order.public_id,
@@ -27,13 +85,7 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
         return render(
             request,
             self.template_name,
-            {
-                "order": self.order,
-                "shipment": shipment,
-                "form_error": "",
-                "badge_tone_for_status": badge_tone_for_status,
-                "status_label": status_label,
-            },
+            self._panel_context(request, shipment=shipment),
         )
 
     def post(self, request, order_public_id):
@@ -82,13 +134,7 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
         response = render(
             request,
             self.template_name,
-            {
-                "order": self.order,
-                "shipment": shipment,
-                "form_error": form_error,
-                "badge_tone_for_status": badge_tone_for_status,
-                "status_label": status_label,
-            },
+            self._panel_context(request, shipment=shipment, form_error=form_error),
         )
         if form_error:
             return with_toast(response, form_error, "error")
@@ -104,6 +150,8 @@ class StaffOrderPanelShippingSyncView(StaffOrderContextMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, order_public_id):
+        panel = StaffOrderPanelShippingView()
+        panel.order = self.order
         try:
             _order, shipment = shipment_service.sync_shipment_tracking_from_sendcloud(
                 order_public_id=self.order.public_id,
@@ -120,13 +168,7 @@ class StaffOrderPanelShippingSyncView(StaffOrderContextMixin, View):
             response = render(
                 request,
                 self.template_name,
-                {
-                    "order": self.order,
-                    "shipment": shipment,
-                    "form_error": form_error,
-                    "badge_tone_for_status": badge_tone_for_status,
-                    "status_label": status_label,
-                },
+                panel._panel_context(request, shipment=shipment, form_error=form_error),
             )
             return with_toast(response, form_error, "error")
 
@@ -136,12 +178,6 @@ class StaffOrderPanelShippingSyncView(StaffOrderContextMixin, View):
         response = render(
             request,
             self.template_name,
-            {
-                "order": self.order,
-                "shipment": shipment,
-                "form_error": "",
-                "badge_tone_for_status": badge_tone_for_status,
-                "status_label": status_label,
-            },
+            panel._panel_context(request, shipment=shipment),
         )
         return with_toast(response, "Suivi Sendcloud actualise.", "success")

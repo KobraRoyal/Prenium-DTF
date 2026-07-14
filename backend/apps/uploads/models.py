@@ -14,8 +14,10 @@ from apps.orders.models import Order
 
 ZERO_AMOUNT = Decimal("0.00")
 MIN_QTY = 1
+MIN_DIMENSION_MM = Decimal("0.01")
 MIN_METERAGE_OVERRIDE_SQMS = Decimal("0.0001")
 MIN_METERAGE_OVERRIDE_LINEAR_M = Decimal("0.0001")
+SUPPORT_COLOR_MULTICOLOR = "#multicolor"
 
 
 def normalize_original_filename(filename: str) -> str:
@@ -71,6 +73,14 @@ class OrderUploadQuerySet(models.QuerySet):
 
 
 class OrderUploadInspectionQuerySet(models.QuerySet):
+    def for_order(self, order):
+        return self.filter(order_upload__order=order)
+
+    def for_customer(self, customer):
+        return self.filter(order_upload__order__customer=customer)
+
+
+class OrderUploadReviewQuerySet(models.QuerySet):
     def for_order(self, order):
         return self.filter(order_upload__order=order)
 
@@ -303,13 +313,27 @@ class OrderUpload(BaseModel):
     size_bytes = models.PositiveBigIntegerField()
     sort_order = models.PositiveIntegerField(default=0)
     quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(MIN_QTY)])
+    width_mm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(MIN_DIMENSION_MM)],
+    )
+    height_mm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(MIN_DIMENSION_MM)],
+    )
     support_color_hex = models.CharField(
-        max_length=7,
+        max_length=16,
         blank=True,
         validators=[
             RegexValidator(
-                regex=r"^$|^#[0-9A-Fa-f]{6}$",
-                message="Couleur attendue au format #RRVVBB.",
+                regex=r"^$|^#[0-9A-Fa-f]{6}$|^#multicolor$",
+                message="Couleur attendue au format #RRVVBB ou #multicolor.",
             )
         ],
     )
@@ -365,9 +389,38 @@ class OrderUpload(BaseModel):
             models.Index(fields=("order", "created_at")),
             models.Index(fields=("order", "sort_order")),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(width_mm__isnull=True, height_mm__isnull=True)
+                    | models.Q(width_mm__isnull=False, height_mm__isnull=False)
+                ),
+                name="uploads_orderupload_dimensions_pair",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(width_mm__isnull=True) | models.Q(width_mm__gt=0),
+                name="uploads_orderupload_width_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(height_mm__isnull=True) | models.Q(height_mm__gt=0),
+                name="uploads_orderupload_height_positive",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.order.public_id} - {self.original_filename}"
+
+    @property
+    def support_color_is_multicolor(self) -> bool:
+        return self.support_color_hex == SUPPORT_COLOR_MULTICOLOR
+
+    @property
+    def support_color_label(self) -> str:
+        if not self.support_color_hex:
+            return ""
+        if self.support_color_is_multicolor:
+            return "Multicolore"
+        return self.support_color_hex.upper()
 
 
 class OrderUploadInspection(BaseModel):
@@ -398,6 +451,58 @@ class OrderUploadInspection(BaseModel):
             models.Index(fields=("status", "checked_at")),
             models.Index(fields=("order_upload", "status")),
         ]
+
+    def __str__(self) -> str:
+        return f"{self.order_upload.public_id} - {self.status}"
+
+
+class OrderUploadReview(BaseModel):
+    """Décision humaine Atelier, distincte du diagnostic technique automatique."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "À contrôler"
+        APPROVED = "approved", "Approuvé pour production"
+        CHANGES_REQUESTED = "changes_requested", "Correction demandée"
+
+    class Reason(models.TextChoices):
+        LOW_RESOLUTION = "low_resolution", "Résolution insuffisante"
+        WRONG_DIMENSIONS = "wrong_dimensions", "Dimensions incorrectes"
+        BACKGROUND = "background", "Fond ou transparence à corriger"
+        CORRUPTED = "corrupted", "Fichier illisible ou corrompu"
+        INCOMPLETE = "incomplete", "Contenu incomplet"
+        OTHER = "other", "Autre motif"
+
+    order_upload = models.OneToOneField(
+        OrderUpload,
+        on_delete=models.CASCADE,
+        related_name="atelier_review",
+    )
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    reason_code = models.CharField(max_length=32, choices=Reason.choices, blank=True)
+    comment = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reviewed_order_uploads",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    client_notified_at = models.DateTimeField(null=True, blank=True)
+
+    objects = OrderUploadReviewQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("-reviewed_at", "-updated_at")
+        indexes = [
+            models.Index(fields=("status", "reviewed_at")),
+            models.Index(fields=("order_upload", "status")),
+        ]
+        permissions = [("review_orderupload", "Can review order uploads for production")]
 
     def __str__(self) -> str:
         return f"{self.order_upload.public_id} - {self.status}"

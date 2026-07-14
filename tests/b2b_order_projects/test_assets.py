@@ -261,7 +261,14 @@ def test_pdf_auto_size_uses_artboard_for_illustrator_mixed_documents():
         stream=image_buffer.getvalue(),
     )
     shape = page.new_shape()
-    shape.draw_rect(pymupdf.Rect(369.1451110839844, 1222.22216796875, 385.80712890625, 1231.7591552734375))
+    shape.draw_rect(
+        pymupdf.Rect(
+            369.1451110839844,
+            1222.22216796875,
+            385.80712890625,
+            1231.7591552734375,
+        )
+    )
     shape.finish(color=(0, 0, 0), fill=(0, 0, 0))
     shape.commit()
     pdf_bytes = document.tobytes()

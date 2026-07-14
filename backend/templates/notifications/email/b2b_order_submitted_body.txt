@@ -1,8 +1,0 @@
-Bonjour,
-
-Votre commande en facturation différée pour {{ order.customer.name }} a été transmise à l'équipe production.
-
-Référence : {{ order.public_id }}
-
-Cordialement,
-L'équipe Prenium DTF

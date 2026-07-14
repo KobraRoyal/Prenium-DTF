@@ -1,14 +1,24 @@
+from io import BytesIO
+
+import pymupdf
 import pytest
 from apps.auditlog.models import AuditLogEntry
+from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.production.models import ProductionJob, ProductionJobScanLog, ProductionJobTransition
 from apps.production.services.workflow import ProductionWorkflowService
-from apps.uploads.models import OrderUpload, OrderUploadDriveSync, OrderUploadInspection
+from apps.uploads.models import (
+    OrderUpload,
+    OrderUploadDriveSync,
+    OrderUploadInspection,
+    OrderUploadReview,
+)
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.files.base import ContentFile
 from django.urls import reverse
+from PIL import Image
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -39,13 +49,26 @@ def create_order(customer, actor):
     )
 
 
-def create_stored_order_upload(*, order, actor, name="design.pdf", content=b"%PDF-1.4 sample"):
+def create_stored_order_upload(
+    *,
+    order,
+    actor,
+    name="design.pdf",
+    content=b"%PDF-1.4 sample",
+    mime_type="application/pdf",
+    width_mm=None,
+    height_mm=None,
+    support_color_hex="",
+):
     upload = OrderUpload(
         order=order,
         uploaded_by=actor,
         original_filename=name,
-        mime_type="application/pdf",
+        mime_type=mime_type,
         size_bytes=len(content),
+        width_mm=width_mm,
+        height_mm=height_mm,
+        support_color_hex=support_color_hex,
     )
     upload.file.save(name, ContentFile(content), save=False)
     upload.save()
@@ -102,7 +125,13 @@ def production_scan_transition_route():
 def test_staff_with_permission_can_view_workflow_snapshot():
     actor, customer, _membership = create_customer_scope("client@example.com", "Acme")
     order = create_order(customer, actor)
-    upload = create_stored_order_upload(order=order, actor=actor)
+    upload = create_stored_order_upload(
+        order=order,
+        actor=actor,
+        width_mm="120.00",
+        height_mm="80.00",
+        support_color_hex="#112233",
+    )
     OrderUploadInspection.objects.create(
         order_upload=upload,
         status=OrderUploadInspection.Status.OK,
@@ -114,6 +143,10 @@ def test_staff_with_permission_can_view_workflow_snapshot():
         order_upload=upload,
         status=OrderUploadDriveSync.Status.SYNCED,
         drive_filename="masked.pdf",
+    )
+    OrderUploadReview.objects.create(
+        order_upload=upload,
+        status=OrderUploadReview.Status.APPROVED,
     )
     _staff_user, client = create_staff_client(permission_codenames=["view_productionjob"])
 
@@ -135,6 +168,19 @@ def test_staff_with_permission_can_view_workflow_snapshot():
         payload["manufacturing_order"]["uploads"][0]["drive_sync_status"]
         == OrderUploadDriveSync.Status.SYNCED
     )
+    assert (
+        payload["manufacturing_order"]["uploads"][0]["atelier_review_status"]
+        == OrderUploadReview.Status.APPROVED
+    )
+    assert payload["manufacturing_order"]["uploads"][0]["dimensions_label"] == "120 × 80 mm"
+    assert payload["manufacturing_order"]["uploads"][0]["support_color_label"] == "#112233"
+    assert payload["manufacturing_order"]["file_review_summary"] == {
+        "total": 1,
+        "approved": 1,
+        "pending": 0,
+        "changes_requested": 0,
+        "ready_for_production": True,
+    }
     assert "drive_file_id" not in str(payload)
     assert "remote_folder_id" not in str(payload)
 
@@ -143,7 +189,21 @@ def test_staff_with_permission_can_view_workflow_snapshot():
 def test_staff_can_download_manufacturing_order_pdf():
     actor, customer, _membership = create_customer_scope("pdf@example.com", "Acme PDF")
     order = create_order(customer, actor)
-    ProductionWorkflowService().get_or_create_for_order(order=order)
+    upload = create_stored_order_upload(
+        order=order,
+        actor=actor,
+        width_mm="120.00",
+        height_mm="80.00",
+        support_color_hex="#112233",
+    )
+    OrderUploadInspection.objects.create(
+        order_upload=upload,
+        status=OrderUploadInspection.Status.OK,
+        summary_message="Diagnostic technique conforme.",
+        file_kind="pdf",
+        file_extension="pdf",
+    )
+    job = ProductionWorkflowService().get_or_create_for_order(order=order)
     _staff_user, client = create_staff_client(permission_codenames=["view_productionjob"])
 
     response = client.get(production_manufacturing_order_pdf_route(order.public_id))
@@ -151,6 +211,60 @@ def test_staff_can_download_manufacturing_order_pdf():
     assert response.status_code == status.HTTP_200_OK
     assert response["Content-Type"] == "application/pdf"
     assert response.content[:4] == b"%PDF"
+    with pymupdf.open(stream=response.content, filetype="pdf") as document:
+        text = "\n".join(page.get_text() for page in document)
+
+    assert "ORDRE DE FABRICATION" in text
+    assert job.manufacturing_order_number in text
+    assert f"#{short_public_ref(order.public_id).upper()}" in text
+    assert text.count("design.pdf") == 1
+    assert "À contrôler" in text
+    assert "TAILLE DEMANDÉE" in text
+    assert "120 × 80 mm" in text
+    assert "COULEUR DU SUPPORT" in text
+    assert "#112233" in text
+    assert "Total TTC" not in text
+    assert "Sync Drive" not in text
+    assert "Aperçu\nindisponible" in text
+
+
+@pytest.mark.django_db
+def test_manufacturing_order_pdf_embeds_visual_preview():
+    actor, customer, _membership = create_customer_scope("preview@example.com", "Acme Preview")
+    order = create_order(customer, actor)
+    image_buffer = BytesIO()
+    Image.new("RGBA", (640, 320), (249, 115, 22, 210)).save(image_buffer, format="PNG")
+    upload = create_stored_order_upload(
+        order=order,
+        actor=actor,
+        name="logo-client.png",
+        content=image_buffer.getvalue(),
+        mime_type="image/png",
+    )
+    OrderUploadInspection.objects.create(
+        order_upload=upload,
+        status=OrderUploadInspection.Status.OK,
+        summary_message="Visuel conforme.",
+        file_kind="image",
+        file_extension="png",
+    )
+    OrderUploadReview.objects.create(
+        order_upload=upload,
+        status=OrderUploadReview.Status.APPROVED,
+        reviewed_by=actor,
+    )
+    ProductionWorkflowService().get_or_create_for_order(order=order)
+    _staff_user, client = create_staff_client(permission_codenames=["view_productionjob"])
+
+    response = client.get(production_manufacturing_order_pdf_route(order.public_id))
+
+    assert response.status_code == status.HTTP_200_OK
+    with pymupdf.open(stream=response.content, filetype="pdf") as document:
+        text = "\n".join(page.get_text() for page in document)
+        embedded_images = sum(len(page.get_images(full=True)) for page in document)
+    assert embedded_images >= 1
+    assert "logo-client.png" in text
+    assert "Aperçu\nindisponible" not in text
 
 
 @pytest.mark.django_db
@@ -353,8 +467,10 @@ def test_staff_without_dedicated_read_permission_is_refused():
     _staff_user, client = create_staff_client(permission_codenames=[])
 
     response = client.get(production_detail_route(order.public_id))
+    pdf_response = client.get(production_manufacturing_order_pdf_route(order.public_id))
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert pdf_response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

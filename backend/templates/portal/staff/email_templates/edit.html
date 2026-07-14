@@ -1,0 +1,81 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}{{ definition.event_label }} · {{ definition.audience_label }} - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_email_template_edit.html" kicker=definition.audience_label title=definition.event_label subtitle=definition.description %}
+
+{% if saved %}<div class="alert alert--success mt-6" role="status"><p class="m-0">Le modèle a été enregistré et sera utilisé lors des prochains envois.</p></div>{% endif %}
+{% if form.non_field_errors %}<div class="alert alert--danger mt-6" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+{% if not can_edit_email_templates %}<div class="alert alert--warning mt-6" role="status"><p class="m-0">Votre rôle permet la consultation, mais pas la modification de ce modèle.</p></div>{% endif %}
+
+<div class="mt-8 grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]" data-email-template-editor-scope>
+  <form method="post" class="dui-card min-w-0 border border-[color:var(--line)] bg-[color:var(--card)] shadow-sm" data-email-template-editor data-submit-loading>
+    {% csrf_token %}
+    <div class="dui-card-body gap-6">
+      <div class="ui-field-group">
+        <label class="ui-label" for="id_subject_template">Objet de l’e-mail</label>
+        <p class="ui-help" id="id_subject_template-help">Une seule ligne, 255 caractères maximum.</p>
+        <input class="ui-input{% if form.subject_template.errors %} ui-input--error{% endif %}" id="id_subject_template" name="subject_template" type="text" maxlength="255" value="{{ form.subject_template.value|default:'' }}" aria-describedby="id_subject_template-help{% if form.subject_template.errors %} id_subject_template-error{% endif %}" {% if form.subject_template.errors %}aria-invalid="true"{% endif %} {% if not can_edit_email_templates %}readonly{% endif %} required>
+        {% if form.subject_template.errors %}<p class="error-text ui-error-text" id="id_subject_template-error" role="alert">{{ form.subject_template.errors|join:" " }}</p>{% endif %}
+      </div>
+
+      <div class="ui-field-group">
+        <label class="ui-label" for="id_body_template">Message</label>
+        <p class="ui-help" id="id_body_template-help">E-mail texte : utilisez les retours à la ligne et insérez les tags ci-contre.</p>
+        <textarea class="dui-textarea dui-textarea-bordered min-h-80 w-full font-mono text-sm{% if form.body_template.errors %} ui-input--error{% endif %}" id="id_body_template" name="body_template" rows="18" aria-describedby="id_body_template-help{% if form.body_template.errors %} id_body_template-error{% endif %}" {% if form.body_template.errors %}aria-invalid="true"{% endif %} {% if not can_edit_email_templates %}readonly{% endif %} required>{{ form.body_template.value|default:'' }}</textarea>
+        {% if form.body_template.errors %}<p class="error-text ui-error-text" id="id_body_template-error" role="alert">{{ form.body_template.errors|join:" " }}</p>{% endif %}
+      </div>
+
+      <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-[color:var(--line)] p-3">
+        <input class="dui-checkbox dui-checkbox-primary" name="is_active" type="checkbox" {% if form.is_active.value %}checked{% endif %} {% if not can_edit_email_templates %}disabled{% endif %}>
+        <span><strong>Modèle actif</strong><span class="muted block text-sm">Décochez pour suspendre cet e-mail pour l’audience {{ definition.audience_label|lower }}.</span></span>
+      </label>
+
+      {% if can_edit_email_templates %}
+      <div class="ui-form-actions flex-wrap">
+        <button class="ui-btn ui-btn-primary" type="submit" name="action" value="save">Enregistrer</button>
+        <button class="ui-btn ui-btn-secondary" type="submit" name="action" value="preview">Actualiser l’aperçu</button>
+        <a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-email-template-list' %}">Retour à la liste</a>
+      </div>
+      {% else %}
+      <div class="ui-form-actions"><a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-email-template-list' %}">Retour à la liste</a></div>
+      {% endif %}
+    </div>
+  </form>
+
+  <aside class="min-w-0 space-y-6 xl:sticky xl:top-6">
+    <section class="dui-card min-w-0 border border-[color:var(--line)] bg-[color:var(--card)] shadow-sm" aria-labelledby="email-tags-heading">
+      <div class="dui-card-body">
+        <h2 id="email-tags-heading" class="font-display text-xl">Tags disponibles</h2>
+        <p class="muted text-sm">Placez le curseur dans l’objet ou le message, puis cliquez sur un tag pour l’insérer.</p>
+        <div class="mt-2 grid gap-2">
+          {% for tag in email_tags %}
+          <button class="min-h-11 min-w-0 whitespace-normal rounded-lg border border-[color:var(--line)] bg-[color:var(--bg)] px-3 py-2 text-left transition hover:border-[color:var(--brand)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" type="button" data-email-template-token="{{ tag.token }}" {% if not can_edit_email_templates %}disabled{% endif %}>
+            <code class="block break-all text-sm font-semibold text-[color:var(--brand-strong)]">{{ tag.token }}</code>
+            <span class="muted mt-1 block text-xs">{{ tag.label }} · ex. {{ tag.example }}</span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="dui-card min-w-0 border border-[color:var(--line)] bg-[color:var(--card)] shadow-sm" aria-labelledby="email-preview-heading">
+      <div class="dui-card-body gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="email-preview-heading" class="font-display text-xl">Aperçu</h2>
+          <span class="badge is-neutral">Données d’exemple</span>
+        </div>
+        <div>
+          <p class="m-0 text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Objet</p>
+          <p class="mt-1 break-words font-medium">{{ preview_subject|default:"—" }}</p>
+        </div>
+        <div>
+          <p class="m-0 text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Message</p>
+          <pre class="mt-2 max-h-[30rem] overflow-auto whitespace-pre-wrap break-words rounded-lg border border-[color:var(--line)] bg-[color:var(--bg)] p-3 font-sans text-sm">{{ preview_body|default:"—" }}</pre>
+        </div>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

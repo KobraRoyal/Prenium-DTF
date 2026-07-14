@@ -4,6 +4,7 @@ import "./landing-motion.js?v=20260710b";
 import "./product-shell.js?v=20260710b";
 import "./product-date-picker.js?v=20260712a";
 import "./b2b-configurator.js?v=20260712w";
+import "./email-template-editor.js?v=20260714c";
 
 window.preniumToast = function (message, variant = "info") {
   window.dispatchEvent(

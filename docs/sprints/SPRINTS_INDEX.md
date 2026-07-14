@@ -29,6 +29,14 @@
 - [Sprint 20 — Frontend UI/UX haute performance](sprint-20-frontend-performance-ui-ux.md)
 - [Sprint 21 — Fondation projets de commande B2B](sprint-21-b2b-order-projects-foundation.md)
 - [Sprint 22 — Assets B2B versionnés et analyse](sprint-22-b2b-assets-analysis.md)
+- [Sprint 23 — Personnalisation des e-mails transactionnels](sprint-23-email-templates-admin.md)
+- [Sprint 24 — Validation des fichiers Atelier](sprint-24-validation-fichiers-atelier.md)
+- [Sprint 25 — PDF OF Atelier sans redondance](sprint-25-pdf-of-atelier.md)
+- [Sprint 26 — Dashboard Atelier et impression des OF en lot](sprint-26-dashboard-atelier-impression-of-lot.md)
+- [Sprint 27 — Aperçus visuels dans les OF et onglets Atelier](sprint-27-apercus-of-tabs-dashboard-atelier.md)
+- [Sprint 28 — Fiche commande Atelier orientée action](sprint-28-fiche-commande-atelier-focus.md)
+- [Sprint 29 — Consignes support et dimensions dans le contrôle et l’OF](sprint-29-consignes-support-dimensions-of.md)
+- [Sprint 30 — Console Atelier UI/UX](sprint-30-console-atelier-ui-ux.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

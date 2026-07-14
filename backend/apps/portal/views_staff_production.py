@@ -14,7 +14,6 @@ from apps.portal.views_common import (
     status_label,
 )
 from apps.portal.views_staff import StaffOrderContextMixin
-from apps.production.models import ProductionJob
 
 
 class StaffOrderPanelProductionView(StaffOrderContextMixin, View):
@@ -30,9 +29,10 @@ class StaffOrderPanelProductionView(StaffOrderContextMixin, View):
         return {
             "order": self.order,
             "job": job,
-            "allowed_statuses": [
-                status for status in ProductionJob.Status.values if status != job.status
-            ],
+            "allowed_statuses": production_workflow_service.allowed_target_statuses(
+                current_status=job.status
+            ),
+            "can_transition": request.user.has_perm("production.transition_productionjob"),
             "transition_error": transition_error,
             "meterage_hx_target": "#staff-order-meterage-slot-production",
             **meterage,
@@ -90,13 +90,18 @@ class StaffOrderPanelScanView(StaffOrderContextMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, order_public_id):
+        job = production_workflow_service.get_or_create_for_order(order=self.order)
         return render(
             request,
             self.template_name,
             {
                 "order": self.order,
+                "job": job,
                 "scan_result": None,
                 "scan_error": "",
+                "can_scan_transition": request.user.has_perm(
+                    "production.scan_transition_productionjob"
+                ),
                 "badge_tone_for_status": badge_tone_for_status,
                 "status_label": status_label,
             },
@@ -136,8 +141,12 @@ class StaffOrderPanelScanView(StaffOrderContextMixin, View):
             self.template_name,
             {
                 "order": self.order,
+                "job": production_workflow_service.get_or_create_for_order(order=self.order),
                 "scan_result": scan_result,
                 "scan_error": scan_error,
+                "can_scan_transition": request.user.has_perm(
+                    "production.scan_transition_productionjob"
+                ),
                 "badge_tone_for_status": badge_tone_for_status,
                 "status_label": status_label,
             },

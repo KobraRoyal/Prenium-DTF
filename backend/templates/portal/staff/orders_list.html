@@ -1,7 +1,7 @@
 {% extends "portal/layout.html" %}
 {% load ui_tags %}
 
-{% block title %}Commandes staff - Prenium DTF{% endblock %}
+{% block title %}Commandes Atelier - Prenium DTF{% endblock %}
 
 {% block portal_content %}
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_orders_list.html" title="Commandes" subtitle="Vue opérationnelle centralisée avec lecture rapide des statuts et prochaines actions." %}
@@ -10,7 +10,7 @@
   {% if orders %}
   {% ui_orders_table orders=orders variant="staff" %}
   {% if page_obj and page_obj.paginator.num_pages > 1 %}
-  <nav class="mt-4 flex items-center justify-between gap-3 text-sm" aria-label="Pagination commandes staff">
+  <nav class="mt-4 flex items-center justify-between gap-3 text-sm" aria-label="Pagination commandes Atelier">
     <span class="muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
     <div class="flex items-center gap-2">
       {% if page_obj.has_previous %}

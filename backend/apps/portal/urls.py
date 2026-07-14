@@ -38,18 +38,23 @@ from .views_client import (
     ClientOrderUploadDownloadView,
     ClientOrderUploadPreviewView,
 )
-from .views_staff import (
-    StaffDashboardView,
-    StaffOrderDetailView,
-    StaffOrderListView,
-    StaffOrderPriceView,
-)
+from .views_staff import StaffOrderDetailView, StaffOrderListView, StaffOrderPriceView
 from .views_staff_billing import StaffInvoiceMarkPaidView, StaffOrderPanelBillingView
+from .views_staff_dashboard import StaffDashboardView
+from .views_staff_documents import StaffManufacturingOrderBatchPdfView
+from .views_staff_notifications import (
+    StaffEmailTemplateEditView,
+    StaffEmailTemplateListView,
+)
 from .views_staff_production import StaffOrderPanelProductionView, StaffOrderPanelScanView
+from .views_staff_reviews import (
+    StaffOrderPanelInspectionView,
+    StaffOrderUploadPreviewView,
+    StaffOrderUploadReviewView,
+)
 from .views_staff_shipping import StaffOrderPanelShippingSyncView, StaffOrderPanelShippingView
 from .views_staff_uploads import (
     StaffOrderPanelDriveSyncView,
-    StaffOrderPanelInspectionView,
     StaffOrderPanelUploadsView,
 )
 
@@ -196,6 +201,16 @@ urlpatterns = [
     ),
     path("staff/", StaffDashboardView.as_view(), name="staff-dashboard"),
     path(
+        "staff/settings/email-templates/",
+        StaffEmailTemplateListView.as_view(),
+        name="staff-email-template-list",
+    ),
+    path(
+        "staff/settings/email-templates/<str:event>/<str:audience>/",
+        StaffEmailTemplateEditView.as_view(),
+        name="staff-email-template-edit",
+    ),
+    path(
         "staff/order-projects/",
         StaffOrderProjectListView.as_view(),
         name="staff-order-project-list",
@@ -211,6 +226,11 @@ urlpatterns = [
         name="staff-order-project-item-asset-download",
     ),
     path("staff/orders/", StaffOrderListView.as_view(), name="staff-order-list"),
+    path(
+        "staff/orders/manufacturing-orders/batch.pdf",
+        StaffManufacturingOrderBatchPdfView.as_view(),
+        name="staff-manufacturing-order-batch-pdf",
+    ),
     path(
         "staff/orders/<uuid:order_public_id>/",
         StaffOrderDetailView.as_view(),
@@ -230,6 +250,16 @@ urlpatterns = [
         "staff/orders/<uuid:order_public_id>/panels/inspection/",
         StaffOrderPanelInspectionView.as_view(),
         name="staff-order-panel-inspection",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/review/",
+        StaffOrderUploadReviewView.as_view(),
+        name="staff-order-upload-review",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/preview/",
+        StaffOrderUploadPreviewView.as_view(),
+        name="staff-order-upload-preview",
     ),
     path(
         "staff/orders/<uuid:order_public_id>/panels/drive-sync/",

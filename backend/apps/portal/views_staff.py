@@ -7,7 +7,6 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
-from apps.b2b_order_projects.services import B2BOrderProjectService
 from apps.orders.models import Order
 from apps.portal.views_common import (
     StaffDomainPermissionMixin,
@@ -18,9 +17,10 @@ from apps.portal.views_common import (
     status_label,
 )
 from apps.production.models import ProductionJob
+from apps.production.services.dashboard import AtelierDashboardService
 from apps.uploads.models import OrderDriveFolder
 
-project_service = B2BOrderProjectService()
+atelier_dashboard_service = AtelierDashboardService()
 
 
 class StaffOrderPriceView(StaffPortalMixin, View):
@@ -48,51 +48,6 @@ class StaffOrderPriceView(StaffPortalMixin, View):
             kwargs={"order_public_id": order_public_id},
         )
         return HttpResponseRedirect(f"{detail_url}?priced=1")
-
-
-class StaffDashboardView(StaffPortalMixin, View):
-    template_name = "portal/staff/dashboard.html"
-
-    def get(self, request):
-        can_read_orders = request.user.has_perm("orders.view_order")
-        can_read_projects = bool(
-            getattr(settings, "B2B_DTF_ORDER_PROJECT_ENABLED", False)
-            and request.user.has_perm("b2b_order_projects.view_b2borderproject")
-        )
-        recent_orders = order_service.list_staff_orders()[:8] if can_read_orders else []
-        recent_projects = project_service.list_staff_projects()[:8] if can_read_projects else []
-        access_label = "Autorise" if can_read_orders else "Refuse"
-        kpi_rows = [
-            {"label": "Acces commandes", "value": access_label, "hint": None},
-            {
-                "label": "Commandes affichees",
-                "value": str(len(recent_orders)),
-                "hint": None,
-            },
-        ]
-        if can_read_projects:
-            kpi_rows.append(
-                {
-                    "label": "Projets B2B",
-                    "value": str(len(recent_projects)),
-                    "hint": "Projets récents visibles",
-                }
-            )
-        return render(
-            request,
-            self.template_name,
-            {
-                "recent_orders": recent_orders,
-                "can_read_orders": can_read_orders,
-                "can_read_projects": can_read_projects,
-                "recent_projects": recent_projects,
-                "kpi_rows": kpi_rows,
-                "nav_mode": "staff",
-                "nav_key": "staff-dashboard",
-                "badge_tone_for_status": badge_tone_for_status,
-                "status_label": status_label,
-            },
-        )
 
 
 class StaffOrderListView(StaffDomainPermissionMixin, View):
@@ -147,6 +102,7 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
         order_drive_url = (
             drive_folder.google_drive_folder_url() if drive_folder is not None else None
         )
+        staff_order_focus = atelier_dashboard_service.build_order_focus(order=self.order)
         return render(
             request,
             self.template_name,
@@ -154,6 +110,7 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
                 "order": self.order,
                 "production_job": production_job,
                 "order_drive_url": order_drive_url,
+                "staff_order_focus": staff_order_focus,
                 "can_price_order": can_price and deferred,
                 "price_error": request.GET.get("price_error", ""),
                 "priced_ok": request.GET.get("priced") == "1",

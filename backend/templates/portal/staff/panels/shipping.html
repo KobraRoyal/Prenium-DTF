@@ -1,93 +1,93 @@
 {% load portal_tags %}
-<div class="workflow-panel">
-  <div class="workflow-panel__hero">
+<div class="workflow-panel workflow-panel--operator shipping-station">
+  <header class="workflow-panel__hero operator-panel-hero">
     <div>
+      <p class="operator-panel-hero__eyebrow">Logistique Sendcloud</p>
       <h3 class="workflow-panel__title">Expédition</h3>
-      <p class="workflow-panel__meta">
-        Créez l'étiquette Sendcloud lorsque la production est prête, puis suivez la progression transporteur depuis ce panneau.
-      </p>
+      <p class="workflow-panel__meta">Préparez l’étiquette au bon moment, puis gardez le suivi transporteur à portée de main.</p>
     </div>
-  </div>
+    {% if shipment %}<span class="badge {{ shipment.status|badge_tone }}">{{ shipment.status|human_status }}</span>{% elif shipping_ready %}<span class="badge is-success">Prêt à créer</span>{% else %}<span class="badge is-warning">En attente production</span>{% endif %}
+  </header>
 
-  <h4 class="workflow-panel__subtitle">État actuel</h4>
+  <section class="shipping-readiness{% if shipping_ready %} is-ready{% endif %}" aria-labelledby="shipping-readiness-title">
+    <span class="shipping-readiness__index" aria-hidden="true">01</span>
+    <div>
+      <p class="operator-section-head__eyebrow">Pré-requis</p>
+      <h4 id="shipping-readiness-title">{% if shipping_ready %}La production est prête à expédier{% else %}Terminez la production avant de créer l’envoi{% endif %}</h4>
+      <p>Statut Atelier : <strong>{% if production_job %}{{ production_job.status|human_status }}{% else %}OF non initialisé{% endif %}</strong>. Sendcloud n’accepte la création qu’à l’étape « Prêt à expédier ».</p>
+    </div>
+    {% if not shipping_ready and not shipment %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Ouvrir Production</a>{% endif %}
+  </section>
+
+  {% if form_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p class="m-0">{{ form_error }}</p></div>{% endif %}
+
   {% if shipment %}
-  <div class="alert alert--success">
-    <p class="m-0 workflow-kpi">
+  <section class="shipment-status-card" aria-labelledby="shipment-status-title">
+    <div class="shipment-status-card__head">
+      <div><p class="operator-section-head__eyebrow">Envoi actif</p><h4 id="shipment-status-title">{{ shipment.status|human_status }}</h4></div>
       <span class="badge {{ shipment.status|badge_tone }}">{{ shipment.status|human_status }}</span>
-      {% if shipment.tracking_number %}
-      <span>— Suivi <strong>{{ shipment.tracking_number }}</strong></span>
+    </div>
+    <dl class="shipment-status-card__facts">
+      <div><dt>Numéro de suivi</dt><dd>{{ shipment.tracking_number|default:"En attente du transporteur" }}</dd></div>
+      <div><dt>Service</dt><dd>{{ shipment.shipping_option_code }}</dd></div>
+      <div><dt>Dernière synchronisation</dt><dd>{% if shipment.last_api_sync_at %}{{ shipment.last_api_sync_at|date:"d/m/Y · H:i" }}{% else %}Pas encore synchronisé{% endif %}</dd></div>
+      <div><dt>Statut transporteur</dt><dd>{{ shipment.sendcloud_status_message|default:"En attente de mise à jour" }}</dd></div>
+    </dl>
+    <div class="shipment-status-card__actions">
+      {% if shipment.tracking_url %}<a class="ui-btn ui-btn-primary" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a>{% endif %}
+      {% if shipment.sendcloud_parcel_id and shipment.status == "created" %}
+      <form hx-post="{% url 'portal:staff-order-panel-shipping-sync' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>{% csrf_token %}<button type="submit" class="ui-btn ui-btn-secondary" hx-disabled-elt="this">Actualiser le suivi</button></form>
       {% endif %}
-    </p>
-    {% if shipment.sendcloud_status_message %}
-    <p class="m-0 mt-2 text-sm opacity-90">Transporteur : {{ shipment.sendcloud_status_message }}</p>
-    {% endif %}
-  </div>
-  {% if shipment.tracking_url %}
-  <p class="workflow-panel__actions"><a class="ui-link font-medium" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Ouvrir le suivi transporteur</a></p>
-  {% endif %}
+    </div>
+  </section>
+  {% elif not can_create_shipment %}
+  <div class="operator-empty-inline operator-empty-inline--large"><strong>Consultation seule</strong><p>Votre rôle permet de consulter la logistique, mais pas de créer une expédition.</p></div>
+  {% elif not shipping_ready %}
+  <div class="operator-empty-inline operator-empty-inline--large"><strong>Aucun envoi à préparer pour le moment</strong><p>Revenez ici dès que l’OF passe à « Prêt à expédier ». Le formulaire sera alors activé.</p></div>
   {% else %}
-  <div class="empty-state">
-    <p>Aucune expédition créée pour cette commande.</p>
-    <p class="muted mt-2">Lorsque la production est prête, vous pouvez créer l'envoi ci-dessous.</p>
-  </div>
-  {% endif %}
+  <section class="shipping-form-shell" aria-labelledby="staff-shipping-form-heading">
+    <div class="operator-section-head">
+      <div><p class="operator-section-head__eyebrow">Étape 02</p><h4 id="staff-shipping-form-heading">Créer l’étiquette d’expédition</h4><p>Les coordonnées connues du client sont préremplies. Vérifiez-les avant l’envoi.</p></div>
+    </div>
 
-  {% if shipment and shipment.sendcloud_parcel_id and shipment.status == "created" %}
-  <h4 class="workflow-panel__subtitle">Actualiser le suivi</h4>
-  <form
-    class="mt-2"
-    hx-post="{% url 'portal:staff-order-panel-shipping-sync' order_public_id=order.public_id %}"
-    hx-target="#staff-order-panel"
-    hx-swap="innerHTML"
-    hx-indicator="#portal-htmx-indicator"
-    data-submit-loading
-  >
-    {% csrf_token %}
-    <button type="submit" class="ui-btn ui-btn-secondary text-sm">Rafraîchir le suivi Sendcloud</button>
-  </form>
-  {% endif %}
+    <form class="shipping-guided-form" hx-post="{% url 'portal:staff-order-panel-shipping' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+      {% csrf_token %}
+      <fieldset class="shipping-form-section">
+        <legend><span>1</span>Destinataire</legend>
+        <div class="shipping-form-grid">
+          {% include "components/forms/field_group.html" with id="id_recipient_name" name="recipient_name" label="Nom du contact" value=form_data.recipient_name autocomplete="shipping name" required=1 show_label=1 %}
+          {% include "components/forms/field_group.html" with id="id_recipient_company_name" name="recipient_company_name" label="Société" value=form_data.recipient_company_name autocomplete="shipping organization" show_label=1 %}
+          {% include "components/forms/field_group.html" with id="id_recipient_email" name="recipient_email" label="Email de suivi" type="email" value=form_data.recipient_email autocomplete="shipping email" required=1 show_label=1 %}
+          {% include "components/forms/field_group.html" with id="id_recipient_phone_number" name="recipient_phone_number" label="Téléphone" type="tel" value=form_data.recipient_phone_number autocomplete="shipping tel" show_label=1 %}
+        </div>
+      </fieldset>
 
-  {% if form_error %}
-  <div class="alert alert--danger workflow-panel__feedback mt-4" role="alert">
-    <p class="m-0">{{ form_error }}</p>
-  </div>
-  {% endif %}
+      <fieldset class="shipping-form-section">
+        <legend><span>2</span>Adresse de livraison</legend>
+        <div class="shipping-form-grid shipping-form-grid--address">
+          {% include "components/forms/field_group.html" with id="id_recipient_house_number" name="recipient_house_number" label="N°" value=form_data.recipient_house_number autocomplete="shipping address-line1" required=1 show_label=1 wrapper_class="shipping-field--number" %}
+          {% include "components/forms/field_group.html" with id="id_recipient_address_line_1" name="recipient_address_line_1" label="Voie" value=form_data.recipient_address_line_1 autocomplete="shipping address-line1" required=1 show_label=1 wrapper_class="shipping-field--street" %}
+          {% include "components/forms/field_group.html" with id="id_recipient_address_line_2" name="recipient_address_line_2" label="Complément" value=form_data.recipient_address_line_2 autocomplete="shipping address-line2" show_label=1 wrapper_class="shipping-field--wide" %}
+          {% include "components/forms/field_group.html" with id="id_recipient_postal_code" name="recipient_postal_code" label="Code postal" value=form_data.recipient_postal_code autocomplete="shipping postal-code" required=1 show_label=1 %}
+          {% include "components/forms/field_group.html" with id="id_recipient_city" name="recipient_city" label="Ville" value=form_data.recipient_city autocomplete="shipping address-level2" required=1 show_label=1 %}
+          {% include "components/forms/field_group.html" with id="id_recipient_country_code" name="recipient_country_code" label="Pays (ISO)" value=form_data.recipient_country_code autocomplete="shipping country" required=1 help_text="Code à 2 lettres, ex. FR ou BE." show_label=1 %}
+        </div>
+      </fieldset>
 
-  <h4 class="workflow-panel__subtitle">Créer un envoi</h4>
-  {% if shipment and shipment.status == "created" %}
-  <div class="alert alert--warning">
-    <p class="m-0">Une expédition existe déjà pour cette commande. Utilisez le suivi ci-dessus plutôt que de recréer un colis.</p>
-  </div>
-  {% else %}
-  <section class="workflow-form-card" aria-labelledby="staff-shipping-form-heading">
-  <div class="workflow-form-card__head">
-    <h5 id="staff-shipping-form-heading" class="workflow-panel__subtitle mt-0">Coordonnées d'expédition</h5>
-    <p class="muted text-sm m-0">Renseignez le destinataire, l'adresse et le poids du colis pour générer l'étiquette Sendcloud.</p>
-  </div>
-  <form
-    class="grid grid-cols-1 gap-5 sm:grid-cols-2"
-    hx-post="{% url 'portal:staff-order-panel-shipping' order_public_id=order.public_id %}"
-    hx-target="#staff-order-panel"
-    hx-swap="innerHTML"
-    hx-indicator="#portal-htmx-indicator"
-    data-submit-loading
-  >
-    {% csrf_token %}
-    {% include "components/forms/field_group.html" with id="id_shipping_option_code" name="shipping_option_code" label="Code option d’envoi" required=1 help_text="Code transporteur/service attendu par Sendcloud pour ce colis." show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_contract_id" name="contract_id" label="Contract id (optionnel)" type="text" help_text="À renseigner uniquement si un contrat transporteur spécifique est utilisé." show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_name" name="recipient_name" label="Nom destinataire" required=1 help_text="Nom de contact ou raison sociale à afficher sur l'étiquette." show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_company_name" name="recipient_company_name" label="Société (optionnel)" type="text" help_text="Raison sociale si l'envoi part vers une entreprise." show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_email" name="recipient_email" label="Email destinataire" type="email" autocomplete="email" required=1 help_text="Utilisé pour le suivi transporteur si le transporteur le permet." show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_phone_number" name="recipient_phone_number" label="Téléphone (optionnel)" type="tel" autocomplete="tel" help_text="Utile pour la livraison transporteur et les consignes de dépôt." show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_country_code" name="recipient_country_code" label="Pays (code)" value="FR" required=1 help_text="Code ISO à 2 lettres, par exemple FR ou BE." show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_city" name="recipient_city" label="Ville" required=1 show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_postal_code" name="recipient_postal_code" label="Code postal" required=1 show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_address_line_1" name="recipient_address_line_1" label="Adresse" required=1 wrapper_class="sm:col-span-2" help_text="Adresse principale de livraison visible sur l'étiquette." show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_address_line_2" name="recipient_address_line_2" label="Complément d'adresse (optionnel)" wrapper_class="sm:col-span-2" help_text="Bâtiment, étage, zone industrielle ou consigne locale." show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_recipient_house_number" name="recipient_house_number" label="Numéro" required=1 show_label=1 %}
-    {% include "components/forms/field_group.html" with id="id_parcel_weight_value" name="parcel_weight_value" label="Poids (kg)" type="text" value="1.0" required=1 help_text="Poids estimé du colis, utilisé pour la génération d'étiquette." show_label=1 %}
-    {% include "components/forms/form_actions.html" with primary_label="Créer l’expédition" htmx_disable=1 form_actions_class="sm:col-span-2 workflow-form-card__actions" %}
-  </form>
+      <fieldset class="shipping-form-section">
+        <legend><span>3</span>Colis et service</legend>
+        <div class="shipping-form-grid">
+          {% include "components/forms/field_group.html" with id="id_shipping_option_code" name="shipping_option_code" label="Code service Sendcloud" value=form_data.shipping_option_code required=1 help_text="Code du transporteur/service configuré dans Sendcloud." show_label=1 %}
+          {% include "components/forms/field_group.html" with id="id_parcel_weight_value" name="parcel_weight_value" label="Poids du colis (kg)" type="number" value=form_data.parcel_weight_value inputmode="decimal" min="0.01" step="0.01" required=1 show_label=1 %}
+        </div>
+        <details class="shipping-advanced">
+          <summary>Paramètres transporteur avancés</summary>
+          {% include "components/forms/field_group.html" with id="id_contract_id" name="contract_id" label="Identifiant de contrat" type="number" value=form_data.contract_id inputmode="numeric" min="1" help_text="À renseigner uniquement pour un contrat transporteur spécifique." show_label=1 %}
+        </details>
+      </fieldset>
+
+      <div class="shipping-submit-bar"><div><strong>Vérification finale</strong><p>L’étiquette sera créée immédiatement dans Sendcloud.</p></div><button type="submit" class="ui-btn ui-btn-primary" hx-disabled-elt="this">Générer l’étiquette</button></div>
+    </form>
   </section>
   {% endif %}
 </div>

@@ -1,1 +1,0 @@
-Commande reçue — {{ order.customer.name }}

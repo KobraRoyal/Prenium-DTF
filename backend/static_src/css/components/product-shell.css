@@ -1282,6 +1282,7 @@
   }
 
   body.product-shell .ui-workflow-shell,
+  body.product-shell .staff-order-focus,
   body.product-shell .order-command-bar,
   body.product-shell .ui-staff-hero-card,
   body.product-shell .ui-order-hero,
@@ -1299,6 +1300,16 @@
     background: var(--product-panel) !important;
     color: var(--product-ink);
     box-shadow: 6px 6px 0 #0b0b0b;
+  }
+
+  body.product-shell .staff-order-focus__next {
+    border-color: var(--product-line);
+    background: color-mix(in srgb, var(--product-accent) 24%, var(--product-panel));
+  }
+
+  body.product-shell .staff-order-focus__facts,
+  body.product-shell .staff-order-focus__facts > div + div {
+    border-color: var(--product-line);
   }
 
   body.product-shell .workflow-tab-group__label,
@@ -4011,5 +4022,337 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dashboard Atelier - file de production et impression OF en lot. */
+body.product-shell .atelier-dashboard-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 2px solid var(--product-line);
+  padding-bottom: 1.15rem;
+}
+
+body.product-shell .atelier-dashboard-head .page-head {
+  margin: 0;
+  max-width: 48rem;
+}
+
+body.product-shell .atelier-dashboard-head__actions,
+body.product-shell .atelier-worklist__batch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+body.product-shell .atelier-worklist__batch-actions .ui-btn:disabled {
+  border-color: rgba(11, 11, 11, 0.32);
+  background: #ece8df;
+  box-shadow: none;
+  color: var(--product-soft);
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+body.product-shell .atelier-worklist {
+  margin-top: 1.25rem;
+  border: 2px solid var(--product-line);
+  background: var(--product-panel);
+  box-shadow: 7px 7px 0 var(--product-line);
+}
+
+body.product-shell .atelier-worklist__toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.25rem;
+  align-items: end;
+  padding: 1.15rem 1.2rem;
+  border-bottom: 2px solid var(--product-line);
+}
+
+body.product-shell .atelier-worklist__toolbar h2 {
+  margin: 0;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+body.product-shell .atelier-worklist__toolbar p {
+  max-width: 46rem;
+  margin: 0.35rem 0 0;
+  color: var(--product-muted);
+  line-height: 1.5;
+}
+
+body.product-shell .atelier-worklist__toolbar .atelier-worklist__eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--product-ink);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+body.product-shell .atelier-worklist__tabs {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  border-bottom: 2px solid var(--product-line);
+  background: rgba(11, 11, 11, 0.04);
+  scrollbar-width: thin;
+}
+
+body.product-shell .atelier-worklist__tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 3.15rem;
+  padding: 0.75rem 1rem;
+  border-right: 1px solid rgba(11, 11, 11, 0.2);
+  color: var(--product-muted);
+  font-size: 0.8rem;
+  font-weight: 850;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+body.product-shell .atelier-worklist__tab strong {
+  display: inline-grid;
+  min-width: 1.6rem;
+  min-height: 1.6rem;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.7rem;
+}
+
+body.product-shell .atelier-worklist__tab:hover {
+  background: var(--product-panel);
+  color: var(--product-ink);
+}
+
+body.product-shell .atelier-worklist__tab:focus-visible {
+  outline: 3px solid var(--product-accent);
+  outline-offset: -3px;
+}
+
+body.product-shell .atelier-worklist__tab.is-active {
+  background: var(--product-line);
+  color: var(--product-panel);
+}
+
+body.product-shell .atelier-worklist__empty {
+  padding: 1rem;
+}
+
+body.product-shell .atelier-worklist__legend,
+body.product-shell .atelier-order-row {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(13rem, 1.35fr) minmax(8rem, 0.8fr) minmax(10rem, 1fr) minmax(9rem, 0.8fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+}
+
+body.product-shell .atelier-worklist__legend {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--product-line);
+  background: rgba(11, 11, 11, 0.07);
+  color: var(--product-soft);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.product-shell .atelier-order-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.product-shell .atelier-order-row {
+  position: relative;
+  min-height: 6.25rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(11, 11, 11, 0.18);
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+body.product-shell .atelier-order-row:last-child {
+  border-bottom: 0;
+}
+
+body.product-shell .atelier-order-row:hover {
+  background: rgba(11, 11, 11, 0.035);
+}
+
+body.product-shell .atelier-order-row.is-ready {
+  box-shadow: inset 5px 0 0 var(--product-accent);
+}
+
+body.product-shell .atelier-order-row.has-issue {
+  box-shadow: inset 5px 0 0 var(--product-pink);
+}
+
+body.product-shell .atelier-order-row__select {
+  display: grid;
+  place-items: center;
+}
+
+body.product-shell .atelier-order-row__select label {
+  display: grid;
+  place-items: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  cursor: pointer;
+}
+
+body.product-shell .atelier-order-row__select input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  accent-color: var(--product-accent);
+}
+
+body.product-shell .atelier-order-row__select input:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+body.product-shell .atelier-order-row__identity,
+body.product-shell .atelier-order-row__review,
+body.product-shell .atelier-order-row__production {
+  display: grid;
+  gap: 0.22rem;
+  align-content: center;
+}
+
+body.product-shell .atelier-order-row__identity time,
+body.product-shell .atelier-order-row__review small,
+body.product-shell .atelier-order-row__production small {
+  color: var(--product-muted);
+  font-size: 0.74rem;
+}
+
+body.product-shell .atelier-order-row__identity strong,
+body.product-shell .atelier-order-row__customer strong,
+body.product-shell .atelier-order-row__production strong {
+  color: var(--product-ink);
+  font-size: 0.88rem;
+}
+
+body.product-shell .atelier-order-row__identity code {
+  color: var(--product-soft);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+body.product-shell .atelier-order-row__review .badge {
+  width: fit-content;
+}
+
+body.product-shell .atelier-ready-signal {
+  color: var(--product-success) !important;
+  font-weight: 800;
+}
+
+body.product-shell .atelier-order-row__mobile-label {
+  display: none;
+  margin: 0;
+  color: var(--product-soft);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.product-shell .atelier-order-row__action {
+  justify-self: end;
+}
+
+@media (max-width: 1023px) {
+  body.product-shell .atelier-dashboard-head,
+  body.product-shell .atelier-worklist__toolbar {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.product-shell .atelier-dashboard-head {
+    display: grid;
+  }
+
+  body.product-shell .atelier-dashboard-head__actions,
+  body.product-shell .atelier-worklist__batch-actions {
+    justify-content: flex-start;
+  }
+
+  body.product-shell .atelier-worklist__legend {
+    display: none;
+  }
+
+  body.product-shell .atelier-order-row {
+    grid-template-columns: 2.5rem repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
+    padding: 1rem;
+  }
+
+  body.product-shell .atelier-order-row__select {
+    grid-row: span 2;
+  }
+
+  body.product-shell .atelier-order-row__mobile-label {
+    display: block;
+  }
+
+  body.product-shell .atelier-order-row__action {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 639px) {
+  body.product-shell .atelier-dashboard-metrics .ui-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  body.product-shell .atelier-dashboard-metrics .ui-kpi-card {
+    min-height: 8.5rem;
+    padding: 0.85rem;
+  }
+
+  body.product-shell .atelier-dashboard-metrics .ui-kpi-card__hint {
+    font-size: 0.78rem;
+  }
+
+  body.product-shell .atelier-dashboard-head__actions,
+  body.product-shell .atelier-worklist__batch-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.product-shell .atelier-dashboard-head__actions .ui-btn,
+  body.product-shell .atelier-worklist__batch-actions .ui-btn {
+    width: 100%;
+  }
+
+  body.product-shell .atelier-worklist {
+    box-shadow: 4px 4px 0 var(--product-line);
+  }
+
+  body.product-shell .atelier-order-row {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+  }
+
+  body.product-shell .atelier-order-row__select {
+    grid-row: span 5;
   }
 }

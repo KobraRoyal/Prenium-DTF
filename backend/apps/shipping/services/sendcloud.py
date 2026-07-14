@@ -20,6 +20,41 @@ from apps.production.models import ProductionJob
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.shipping.models import Shipment
 
+CARRIER_HANDOFF_STATUS_CODES = frozenset(
+    {
+        "AT_CUSTOMS",
+        "AT_SORTING_CENTER",
+        "AT_SORTING_CENTRE",
+        "ACCEPTED",
+        "AWAITING_CUSTOMER_PICKUP",
+        "BEING_SORTED",
+        "COLLECTED",
+        "COLLECTED_BY_CARRIER",
+        "DELIVERED",
+        "DELIVERY_ATTEMPT_FAILED",
+        "DELIVERY_DELAYED",
+        "DRIVER_EN_ROUTE",
+        "EN_ROUTE_TO_SORTING_CENTER",
+        "EN_ROUTE_TO_SORTING_CENTRE",
+        "EN_ROUTE_TO_SORTING",
+        "IN_TRANSIT",
+        "NOT_SORTED",
+        "PARCEL_EN_ROUTE",
+        "PICKED_UP_BY_DRIVER",
+        "REFUSED_BY_RECIPIENT",
+        "RETURNED_TO_SENDER",
+        "SHIPMENT_COLLECTED_BY_CUSTOMER",
+        "SHIPMENT_PICKED_UP_BY_DRIVER",
+        "SORTED",
+        "UNABLE_TO_DELIVER",
+    }
+)
+
+
+def is_carrier_handoff_status(status_code: str) -> bool:
+    normalized = re.sub(r"[^A-Z0-9]+", "_", str(status_code).strip().upper()).strip("_")
+    return normalized in CARRIER_HANDOFF_STATUS_CODES
+
 
 class SendcloudConfigurationError(Exception):
     pass
@@ -400,6 +435,7 @@ class ShipmentService:
 
         fields = self._extract_tracking_fields_from_parcel(parcel_payload)
         now = timezone.now()
+        became_shipped = False
         with transaction.atomic():
             shipment = Shipment.objects.select_for_update().get(pk=shipment.pk)
             shipment.sendcloud_status_code = fields["sendcloud_status_code"]
@@ -408,6 +444,11 @@ class ShipmentService:
                 shipment.tracking_number = fields["tracking_number"]
             if fields["tracking_url"]:
                 shipment.tracking_url = fields["tracking_url"]
+            if shipment.shipped_at is None and is_carrier_handoff_status(
+                fields["sendcloud_status_code"]
+            ):
+                shipment.shipped_at = now
+                became_shipped = True
             shipment.last_api_sync_at = now
             shipment.updated_by = actor if getattr(actor, "is_authenticated", False) else None
             shipment.save(
@@ -416,6 +457,7 @@ class ShipmentService:
                     "sendcloud_status_message",
                     "tracking_number",
                     "tracking_url",
+                    "shipped_at",
                     "last_api_sync_at",
                     "updated_by",
                     "updated_at",
@@ -434,6 +476,10 @@ class ShipmentService:
                 "source": source,
             },
         )
+        if became_shipped:
+            from apps.notifications.services.transactional import schedule_order_shipped_email
+
+            schedule_order_shipped_email(order_public_id=order.public_id)
         return order, shipment
 
     def get_customer_shipment_snapshot(self, *, customer, order_public_id):

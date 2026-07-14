@@ -27,6 +27,11 @@
 - [x] Micro-lot 11.9 — Cohérence UI/UX 100% ciblée (breadcrumbs, auth, checkout, panels, tabs, menu mobile, labels)
 - [x] Micro-lot 11.10 — Système de boutons SaaS unifié et cohérent
 - [x] Micro-lot 11.11 — Audit global UI/UX par app et vues + corrections de cohérence SaaS
+- [x] Sprint 25 — PDF OF Atelier sans redondance et distinction OF / commande
+- [x] Sprint 26 — Dashboard Atelier opérationnel et impression sécurisée des OF en lot
+- [x] Sprint 27 — Aperçus visuels dans les OF et onglets Atelier sans icônes
+- [x] Sprint 28 — Fiche commande Atelier orientée action, sans redondance ni icônes
+- [x] Sprint 29 — Couleur support et dimensions client visibles dans Contrôle et l’OF
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement
@@ -235,3 +240,29 @@
 - [x] Validation technique client : dimensions et DPI asynchrones, diagnostic résolution 300/200 DPI, alertes visibles et confirmation versionnée obligatoire avant transmission
 - [x] Contrôle DTF des détails fins : zones imprimées sous 0,5 mm détectées en tâche asynchrone, surlignées en rouge dans la modale et servies par overlay privé tenant-scoped
 - [x] Contrôle des détails fins renforcé : zoom 100–400 % dans l'aperçu et couleur unie exacte du support obligatoire avant validation afin de préparer le contour atelier
+
+## Sprint 23 — Personnalisation des e-mails transactionnels (2026-07-14)
+
+- [x] Audit Atelier/Admin desktop et mobile, sans overflow à 375 px
+- [x] Vocabulaire portail harmonisé autour d’« Atelier »
+- [x] Modèles client et équipe interne éditables dans le portail Atelier
+- [x] Tags à liste blanche, aperçu et insertion au curseur
+- [x] Permissions lecture/modification et routes sans ID incrémental
+- [x] Version et audit de chaque modification, sans contenu du message dans les logs
+- [x] Destinataires internes configurables par environnement
+- [x] Tests service, sécurité, permissions et intégration e-mail
+- [x] Événement redondant « Commande B2B transmise » fusionné dans « Commande créée » avec migration des personnalisations existantes
+- [x] Cycle transactionnel aligné sur les vrais jalons : en traitement, traitée/prête à expédier, expédiée au premier scan transporteur
+- [x] Notification d’expédition rendue idempotente par `Shipment.shipped_at`
+- [x] Documentation Sprint 14/23 et audit frontend mis à jour
+
+## Sprint 24 — Validation des fichiers Atelier (2026-07-14)
+
+- [x] Analyse automatique et décision humaine séparées dans le modèle et l’interface
+- [x] Revue Atelier scellée par UUID public, permission dédiée et scope commande
+- [x] Aperçus PNG/PDF protégés directement dans le panneau Contrôle
+- [x] Approbation production et demande de correction disponibles en HTMX
+- [x] Notification client/interne reliée aux modèles d’e-mails personnalisables
+- [x] Audit des décisions sans copie du commentaire client
+- [x] Tests service, isolation, permissions, e-mail et UI ajoutés
+- [x] Recette desktop/mobile et feedback toast accentué validés

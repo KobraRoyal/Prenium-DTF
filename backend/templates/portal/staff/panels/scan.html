@@ -1,73 +1,68 @@
 {% load portal_tags %}
-<div class="workflow-panel">
-  <div class="workflow-panel__hero">
+<div class="workflow-panel workflow-panel--operator scan-station">
+  <header class="workflow-panel__hero operator-panel-hero">
     <div>
-      <h3 class="workflow-panel__title">Scan atelier</h3>
-      <p class="workflow-panel__meta">
-        Saisissez ou scannez la <strong>référence OF</strong> (identique au code-barres du PDF).
-        Optionnellement, enchaînez avec une transition de statut.
-      </p>
+      <p class="operator-panel-hero__eyebrow">Poste code-barres</p>
+      <h3 class="workflow-panel__title">Scan Atelier</h3>
+      <p class="workflow-panel__meta">Contrôlez un OF ou enregistrez son changement d’état sans quitter le poste de production.</p>
     </div>
-  </div>
+    <div class="operator-panel-hero__signal"><span aria-hidden="true"></span>Lecteur prêt</div>
+  </header>
 
   {% if scan_error %}
-  <div class="alert alert--danger workflow-panel__feedback" role="alert">
-    <p class="m-0">{{ scan_error }}</p>
-  </div>
+  <div class="alert alert--danger workflow-panel__feedback" role="alert"><p class="m-0">{{ scan_error }}</p></div>
   {% endif %}
   {% if scan_result %}
-  <div class="alert alert--success workflow-panel__feedback workflow-panel__feedback--ephemeral" role="status">
-    <p class="m-0">
-      <span class="workflow-kpi__label workflow-kpi__label--inline">{{ scan_result.mode|human_status }}</span>
-      <code>{{ scan_result.job.manufacturing_order_number }}</code>
-      —
-      <span class="badge {{ scan_result.job.status|badge_tone }}">{{ scan_result.job.status|human_status }}</span>
-    </p>
-  </div>
+  <section class="scan-result" role="status" aria-live="polite">
+    <div class="scan-result__status" aria-hidden="true">OK</div>
+    <div>
+      <p class="scan-result__eyebrow">{% if scan_result.mode == "transition" %}Transition enregistrée{% else %}OF reconnu{% endif %}</p>
+      <h4>{{ scan_result.job.manufacturing_order_number }}</h4>
+      <p>Commande {{ scan_result.job.order.short_ref|upper }} · <span class="badge {{ scan_result.job.status|badge_tone }}">{{ scan_result.job.status|human_status }}</span></p>
+    </div>
+    <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=scan_result.job.order.public_id %}">Ouvrir la commande</a>
+  </section>
   {% endif %}
 
-  <section class="workflow-form-card" aria-labelledby="staff-scan-form-heading">
-    <div class="workflow-form-card__head">
-      <h4 id="staff-scan-form-heading" class="workflow-panel__subtitle mt-0">Lecture atelier</h4>
-      <p class="muted text-sm m-0">Scannez ou saisissez la référence OF, puis choisissez éventuellement une transition immédiate.</p>
+  <section class="scan-console" aria-labelledby="staff-scan-form-heading" x-data="{ scanIdentifier: '' }" x-init="$nextTick(() => $refs.scanInput.focus({ preventScroll: true }))">
+    <div class="scan-console__intro">
+      <p class="operator-section-head__eyebrow">Lecture immédiate</p>
+      <h4 id="staff-scan-form-heading">Scannez la référence OF</h4>
+      <p>Le curseur reste dans le champ principal pour enchaîner les lectures avec une douchette USB.</p>
     </div>
 
-  <form
-    class="ui-form-stack"
-    hx-post="{% url 'portal:staff-order-panel-scan' order_public_id=order.public_id %}"
-    hx-target="#staff-order-panel"
-    hx-swap="innerHTML"
-    hx-indicator="#portal-htmx-indicator"
-    data-submit-loading
-  >
-    {% csrf_token %}
-    <div class="ui-field-group">
-      <label class="ui-label" for="id_scan_identifier">Référence OF (scan ou saisie)</label>
-      <p class="ui-help">Utilisez la référence imprimée sur l'ordre de fabrication ou issue du lecteur code-barres.</p>
-      <input
-        class="ui-input"
-        id="id_scan_identifier"
-        name="scan_identifier"
-        type="text"
-        required
-        autocomplete="off"
-        placeholder="Ex. OF-20260404-…"
-      />
-    </div>
-    <div class="ui-field-group">
-      <label class="ui-label" for="id_to_status">Transition après lecture (optionnel)</label>
-      <p class="ui-help">Laissez en lecture seule si vous souhaitez seulement vérifier la correspondance de l'OF.</p>
-      <select id="id_to_status" class="ui-input" name="to_status">
-        <option value="">Lecture seule</option>
-        <option value="queued">En file atelier</option>
-        <option value="in_progress">En production</option>
-        <option value="ready_to_ship">Prête à expédier</option>
-        <option value="blocked">Bloquée</option>
-        <option value="completed">Terminée</option>
-      </select>
-    </div>
-    {% include "components/forms/field_group.html" with id="id_scan_reason" name="reason" label="Commentaire (optionnel)" type="text" help_text="Ajoutez un repère utile pour l'équipe si vous enchaînez sur une transition." show_label=1 %}
-    {% include "components/forms/form_actions.html" with primary_label="Exécuter" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
-  </form>
+    <form class="scan-console__form" hx-post="{% url 'portal:staff-order-panel-scan' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+      {% csrf_token %}
+      <div class="scan-primary-field">
+        <label for="id_scan_identifier">Référence OF</label>
+        <input class="ui-input" id="id_scan_identifier" name="scan_identifier" type="text" required autocomplete="off" spellcheck="false" placeholder="OF-AAAAMMJJ-XXXXXXXX" x-ref="scanInput" x-model="scanIdentifier" />
+        <button class="scan-current-order" type="button" @click="scanIdentifier = '{{ job.scan_identifier|escapejs }}'; $nextTick(() => $refs.scanInput.focus())">
+          Utiliser l’OF de cette commande <code>{{ job.manufacturing_order_number }}</code>
+        </button>
+      </div>
+
+      <div class="scan-action-grid">
+        <div class="ui-field-group">
+          <label class="ui-label" for="id_to_status">Action après lecture</label>
+          <p class="ui-help">La lecture seule vérifie l’OF sans modifier le workflow.</p>
+          <select id="id_to_status" class="ui-input" name="to_status"{% if not can_scan_transition %} disabled{% endif %}>
+            <option value="">Lecture seule — aucune modification</option>
+            {% if can_scan_transition %}
+            <option value="queued">Placer en file Atelier</option>
+            <option value="in_progress">Démarrer la production</option>
+            <option value="ready_to_ship">Déclarer prêt à expédier</option>
+            <option value="blocked">Bloquer l’OF</option>
+            <option value="completed">Terminer l’OF</option>
+            {% endif %}
+          </select>
+        </div>
+        {% include "components/forms/field_group.html" with id="id_scan_reason" name="reason" label="Commentaire (optionnel)" type="text" placeholder="Ex. contrôle final conforme" help_text="Utile uniquement si la lecture déclenche une transition." show_label=1 %}
+      </div>
+
+      <div class="scan-console__submit">
+        <button class="ui-btn ui-btn-primary scan-submit" type="submit" hx-disabled-elt="this">Valider la lecture</button>
+        <p><kbd>Entrée</kbd> pour confirmer · le statut est toujours validé côté serveur.</p>
+      </div>
+    </form>
   </section>
 </div>

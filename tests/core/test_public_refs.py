@@ -1,7 +1,6 @@
 import uuid
 
 import pytest
-
 from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer
 from apps.orders.models import Order

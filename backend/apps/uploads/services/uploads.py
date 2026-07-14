@@ -154,6 +154,8 @@ class OrderUploadService:
         order,
         asset_version,
         quantity: int | None = None,
+        width_mm=None,
+        height_mm=None,
         support_color_hex: str = "",
         customer_membership=None,
         source: str,
@@ -187,6 +189,8 @@ class OrderUploadService:
                 size_bytes=asset_version.size_bytes,
                 sort_order=next_order,
                 quantity=resolved_qty,
+                width_mm=width_mm,
+                height_mm=height_mm,
                 support_color_hex=color,
             )
             order_upload.file.name = asset_version.file.name
@@ -240,8 +244,10 @@ class OrderUploadService:
             return ""
         if not cleaned.startswith("#"):
             cleaned = f"#{cleaned}"
+        if cleaned.lower() == "#multicolor":
+            return "#multicolor"
         if len(cleaned) != 7:
-            raise ValidationError("Couleur support : format #RRVVBB attendu.")
+            raise ValidationError("Couleur support : format #RRVVBB ou multicolore attendu.")
         return cleaned.lower()
 
     def download_customer_order_upload(
@@ -572,6 +578,8 @@ class OrderUploadService:
             "order__customer",
             "uploaded_by",
             "inspection",
+            "atelier_review",
+            "atelier_review__reviewed_by",
             "drive_sync",
             "asset_version",
             "asset_version__analysis",

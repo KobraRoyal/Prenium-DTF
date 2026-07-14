@@ -1,5 +1,8 @@
+from unittest.mock import patch
+
 import pytest
 from apps.auditlog.models import AuditLogEntry
+from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.production.models import ProductionJob, ProductionJobScanLog, ProductionJobTransition
@@ -65,6 +68,54 @@ def test_transition_job_updates_status_creates_history_and_audit():
         action="production.status_changed",
         target_public_id=updated_job.public_id,
     ).exists()
+
+
+@pytest.mark.django_db
+def test_lifecycle_emails_are_scheduled_once_at_real_production_milestones():
+    service = ProductionWorkflowService()
+    actor, customer, _membership = create_customer_scope("notify@example.com", "Acme")
+    staff_user = get_user_model().objects.create_user(
+        email="staff-notify@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    order = create_order(customer, actor)
+
+    with (
+        patch(
+            "apps.notifications.services.transactional.schedule_order_processing_email"
+        ) as processing_schedule,
+        patch(
+            "apps.notifications.services.transactional.schedule_order_ready_to_ship_email"
+        ) as ready_schedule,
+    ):
+        service.transition_job(
+            order_public_id=order.public_id,
+            to_status=ProductionJob.Status.IN_PROGRESS,
+            actor=staff_user,
+            source="test",
+        )
+        service.transition_job(
+            order_public_id=order.public_id,
+            to_status=ProductionJob.Status.BLOCKED,
+            actor=staff_user,
+            source="test",
+        )
+        service.transition_job(
+            order_public_id=order.public_id,
+            to_status=ProductionJob.Status.IN_PROGRESS,
+            actor=staff_user,
+            source="test",
+        )
+        service.transition_job(
+            order_public_id=order.public_id,
+            to_status=ProductionJob.Status.READY_TO_SHIP,
+            actor=staff_user,
+            source="test",
+        )
+
+    processing_schedule.assert_called_once_with(order_public_id=order.public_id)
+    ready_schedule.assert_called_once_with(order_public_id=order.public_id)
 
 
 @pytest.mark.django_db
@@ -149,6 +200,20 @@ def test_transition_existing_job_reloads_state_under_lock_before_validation():
     assert ProductionJobTransition.objects.filter(production_job=updated_job).count() == 1
 
 
+def test_allowed_target_statuses_match_central_workflow_order():
+    service = ProductionWorkflowService()
+
+    assert service.allowed_target_statuses(
+        current_status=ProductionJob.Status.QUEUED
+    ) == [ProductionJob.Status.IN_PROGRESS, ProductionJob.Status.BLOCKED]
+    assert service.allowed_target_statuses(
+        current_status=ProductionJob.Status.READY_TO_SHIP
+    ) == [ProductionJob.Status.COMPLETED]
+    assert service.allowed_target_statuses(
+        current_status=ProductionJob.Status.COMPLETED
+    ) == []
+
+
 @pytest.mark.django_db
 def test_production_job_scan_matches_manufacturing_order_reference():
     service = ProductionWorkflowService()
@@ -156,10 +221,14 @@ def test_production_job_scan_matches_manufacturing_order_reference():
     order = create_order(customer, actor)
 
     job = service.get_or_create_for_order(order=order)
+    order.refresh_from_db()
+    document = service.build_manufacturing_order(order=order, production_job=job)
 
     assert job.scan_identifier == job.manufacturing_order_number
     assert job.scan_identifier.startswith("OF-")
     assert ProductionJob.objects.filter(scan_identifier=job.scan_identifier).count() == 1
+    assert document["order_summary"]["reference"] == short_public_ref(order.public_id).upper()
+    assert document["order_summary"]["reference"] != job.manufacturing_order_number
 
 
 @pytest.mark.django_db

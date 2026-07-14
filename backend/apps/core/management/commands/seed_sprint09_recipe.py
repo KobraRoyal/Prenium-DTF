@@ -213,11 +213,14 @@ class Command(BaseCommand):
         """
         return [
             "accounts.access_staff_portal",
+            "notifications.view_emailtemplate",
+            "notifications.change_emailtemplate",
             "catalog.view_catalogservice",
             "orders.view_order",
             "orders.change_order",
             "uploads.view_orderupload",
             "uploads.view_orderuploadinspection",
+            "uploads.review_orderupload",
             "uploads.view_orderuploaddrivesync",
             "production.view_productionjob",
             "production.transition_productionjob",

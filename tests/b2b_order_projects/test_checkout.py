@@ -20,7 +20,8 @@ def create_scope(email="checkout@example.com"):
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
-def test_checkout_project_creates_submitted_order_with_uploads():
+@pytest.mark.parametrize("support_color", ["#112233", "#multicolor"])
+def test_checkout_project_creates_submitted_order_with_uploads(support_color):
     user, customer, membership = create_scope()
     project_service = B2BOrderProjectService()
     project = project_service.create_project(
@@ -50,7 +51,7 @@ def test_checkout_project_creates_submitted_order_with_uploads():
         actor=user,
         data={
             "quantity": item.quantity,
-            "support_color_hex": "#112233",
+            "support_color_hex": support_color,
         },
         source="test",
     )
@@ -73,7 +74,9 @@ def test_checkout_project_creates_submitted_order_with_uploads():
     assert order.uploads.count() == 1
     upload = order.uploads.get()
     assert upload.quantity == 3
-    assert upload.support_color_hex == "#112233"
+    assert upload.width_mm == item.width_mm
+    assert upload.height_mm == item.height_mm
+    assert upload.support_color_hex == support_color
     assert upload.asset_version_id == version.id
     assert "Collection été" in order.customer_note
 

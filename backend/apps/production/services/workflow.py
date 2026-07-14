@@ -3,14 +3,29 @@ from __future__ import annotations
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.utils import timezone
+from django.utils.formats import date_format
 
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
+from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
 from apps.production.models import ProductionJob, ProductionJobTransition
+from apps.uploads.services.production_specs import OrderUploadProductionSpecService
+
+production_spec_service = OrderUploadProductionSpecService()
 
 
 class ProductionWorkflowService:
+    document_status_labels = {
+        Order.Status.DRAFT: "Brouillon",
+        Order.Status.SUBMITTED: "Soumise",
+        ProductionJob.Status.QUEUED: "En attente Atelier",
+        ProductionJob.Status.IN_PROGRESS: "En production",
+        ProductionJob.Status.BLOCKED: "Bloqué",
+        ProductionJob.Status.READY_TO_SHIP: "Prêt à expédier",
+        ProductionJob.Status.COMPLETED: "Terminé",
+    }
+
     allowed_transitions = {
         ProductionJob.Status.QUEUED: {
             ProductionJob.Status.IN_PROGRESS,
@@ -29,6 +44,11 @@ class ProductionWorkflowService:
         },
         ProductionJob.Status.COMPLETED: set(),
     }
+
+    def allowed_target_statuses(self, *, current_status: str) -> list[str]:
+        """Retourne les cibles autorisées dans l'ordre métier affiché par l'UI."""
+        allowed = self.allowed_transitions.get(current_status, set())
+        return [status for status in ProductionJob.Status.values if status in allowed]
 
     def get_or_create_for_order(self, *, order: Order) -> ProductionJob:
         mo_number = self.build_manufacturing_order_number(order=order)
@@ -110,35 +130,95 @@ class ProductionWorkflowService:
             reason=reason,
         )
 
-    def _serialize_order_items_for_document(self, *, order: Order) -> list[dict[str, object]]:
+    def _serialize_order_items_for_document(
+        self,
+        *,
+        order: Order,
+    ) -> tuple[list[dict[str, object]], str]:
         lines = list(order.items.all().order_by("position"))
         if lines:
-            return [
+            return (
+                [
+                    {
+                        "public_id": str(item.public_id),
+                        "service_code": item.service_code,
+                        "service_name": item.service_name,
+                        "service_type": item.service_type,
+                        "unit": item.unit,
+                        "quantity": f"{item.quantity:.2f}",
+                        "unit_price": f"{item.unit_price:.2f}",
+                        "line_total": f"{item.line_total:.2f}",
+                    }
+                    for item in lines
+                ],
+                "order_lines",
+            )
+        return (
+            [
                 {
-                    "public_id": str(item.public_id),
-                    "service_code": item.service_code,
-                    "service_name": item.service_name,
-                    "service_type": item.service_type,
-                    "unit": item.unit,
-                    "quantity": f"{item.quantity:.2f}",
-                    "unit_price": f"{item.unit_price:.2f}",
-                    "line_total": f"{item.line_total:.2f}",
+                    "public_id": str(upload.public_id),
+                    "service_code": "fichier_client",
+                    "service_name": upload.original_filename,
+                    "service_type": "upload",
+                    "unit": "piece",
+                    "quantity": f"{upload.quantity}",
+                    "unit_price": "-",
+                    "line_total": "-",
                 }
-                for item in lines
-            ]
-        return [
-            {
-                "public_id": str(upload.public_id),
-                "service_code": "fichier_client",
-                "service_name": upload.original_filename,
-                "service_type": "upload",
-                "unit": "piece",
-                "quantity": f"{upload.quantity}",
-                "unit_price": "-",
-                "line_total": "-",
-            }
-            for upload in order.uploads.all().order_by("sort_order", "created_at")
-        ]
+                for upload in order.uploads.all().order_by("sort_order", "created_at")
+            ],
+            "upload_fallback",
+        )
+
+    def _serialize_upload_for_document(self, *, order_upload) -> dict[str, object]:
+        inspection = self._safe_related_object(order_upload, relation_name="inspection")
+        review = self._safe_related_object(order_upload, relation_name="atelier_review")
+        drive_sync = self._safe_related_object(order_upload, relation_name="drive_sync")
+        production_specs = production_spec_service.serialize(order_upload=order_upload)
+
+        return {
+            "public_id": str(order_upload.public_id),
+            "original_filename": order_upload.original_filename,
+            "quantity": order_upload.quantity,
+            "mime_type": order_upload.mime_type,
+            "size_bytes": order_upload.size_bytes,
+            **production_specs,
+            "inspection_status": inspection.status if inspection is not None else None,
+            "inspection_status_label": (
+                inspection.get_status_display() if inspection is not None else "Non analysé"
+            ),
+            "inspection_summary": (inspection.summary_message if inspection is not None else ""),
+            "atelier_review_status": review.status if review is not None else "pending",
+            "atelier_review_status_label": (
+                review.get_status_display() if review is not None else "À contrôler"
+            ),
+            "atelier_review_reason": review.reason_code if review is not None else "",
+            "atelier_review_reason_label": (
+                review.get_reason_code_display()
+                if review is not None and review.reason_code
+                else ""
+            ),
+            "atelier_review_comment": review.comment if review is not None else "",
+            "drive_sync_status": drive_sync.status if drive_sync is not None else None,
+        }
+
+    def _build_file_review_summary(
+        self,
+        *,
+        uploads: list[dict[str, object]],
+    ) -> dict[str, object]:
+        approved = sum(upload["atelier_review_status"] == "approved" for upload in uploads)
+        changes_requested = sum(
+            upload["atelier_review_status"] == "changes_requested" for upload in uploads
+        )
+        pending = len(uploads) - approved - changes_requested
+        return {
+            "total": len(uploads),
+            "approved": approved,
+            "pending": pending,
+            "changes_requested": changes_requested,
+            "ready_for_production": bool(uploads) and approved == len(uploads),
+        }
 
     def build_manufacturing_order(
         self,
@@ -146,6 +226,13 @@ class ProductionWorkflowService:
         order: Order,
         production_job: ProductionJob,
     ) -> dict[str, object]:
+        items, items_source = self._serialize_order_items_for_document(order=order)
+        uploads = [
+            self._serialize_upload_for_document(order_upload=order_upload)
+            for order_upload in order.uploads.all().order_by("sort_order", "created_at")
+        ]
+        order_created_at = timezone.localtime(order.created_at)
+
         return {
             "document_type": "manufacturing_order_v1",
             "number": production_job.manufacturing_order_number,
@@ -157,15 +244,22 @@ class ProductionWorkflowService:
                 "name": order.customer.name,
             },
             "order_summary": {
+                "reference": short_public_ref(order.public_id).upper(),
                 "status": order.status,
+                "status_label": self.document_status_labels.get(order.status, order.status),
                 "currency": order.currency,
                 "subtotal_amount": f"{order.subtotal_amount:.2f}",
                 "total_amount": f"{order.total_amount:.2f}",
                 "customer_note": order.customer_note,
                 "created_at": order.created_at.isoformat(),
+                "created_at_label": date_format(order_created_at, "d/m/Y H:i"),
             },
             "production_summary": {
                 "status": production_job.status,
+                "status_label": self.document_status_labels.get(
+                    production_job.status,
+                    production_job.status,
+                ),
                 "started_at": production_job.started_at.isoformat()
                 if production_job.started_at
                 else None,
@@ -176,32 +270,10 @@ class ProductionWorkflowService:
                 if production_job.last_transition_at
                 else None,
             },
-            "items": self._serialize_order_items_for_document(order=order),
-            "uploads": [
-                {
-                    "public_id": str(order_upload.public_id),
-                    "original_filename": order_upload.original_filename,
-                    "mime_type": order_upload.mime_type,
-                    "size_bytes": order_upload.size_bytes,
-                    "inspection_status": self._safe_related_attr(
-                        order_upload,
-                        relation_name="inspection",
-                        attribute="status",
-                    ),
-                    "inspection_summary": self._safe_related_attr(
-                        order_upload,
-                        relation_name="inspection",
-                        attribute="summary_message",
-                        default="",
-                    ),
-                    "drive_sync_status": self._safe_related_attr(
-                        order_upload,
-                        relation_name="drive_sync",
-                        attribute="status",
-                    ),
-                }
-                for order_upload in order.uploads.all()
-            ],
+            "items": items,
+            "items_source": items_source,
+            "uploads": uploads,
+            "file_review_summary": self._build_file_review_summary(uploads=uploads),
             "transitions": [
                 self.serialize_transition(transition)
                 for transition in production_job.transitions.all()
@@ -276,6 +348,7 @@ class ProductionWorkflowService:
         now = timezone.now()
         rejection_message = None
         locked_job = None
+        notification_event = None
 
         with transaction.atomic():
             locked_job = (
@@ -291,6 +364,10 @@ class ProductionWorkflowService:
                     f"Transition from {from_status} to {normalized_status} is not allowed."
                 )
             else:
+                is_first_processing = (
+                    normalized_status == ProductionJob.Status.IN_PROGRESS
+                    and locked_job.started_at is None
+                )
                 locked_job.status = normalized_status
                 locked_job.last_transition_at = now
                 locked_job.last_transition_by = (
@@ -343,6 +420,11 @@ class ProductionWorkflowService:
                     },
                 )
 
+                if is_first_processing:
+                    notification_event = "processing"
+                elif normalized_status == ProductionJob.Status.READY_TO_SHIP:
+                    notification_event = "ready_to_ship"
+
         if rejection_message is not None:
             self._record_rejected_transition(
                 production_job=locked_job,
@@ -352,6 +434,19 @@ class ProductionWorkflowService:
                 requested_status=normalized_status,
             )
             raise ValidationError("Transition not allowed from the current status.")
+
+        if notification_event == "processing":
+            from apps.notifications.services.transactional import (
+                schedule_order_processing_email,
+            )
+
+            schedule_order_processing_email(order_public_id=locked_job.order.public_id)
+        elif notification_event == "ready_to_ship":
+            from apps.notifications.services.transactional import (
+                schedule_order_ready_to_ship_email,
+            )
+
+            schedule_order_ready_to_ship_email(order_public_id=locked_job.order.public_id)
 
         locked_job = self._get_job_queryset().filter(pk=locked_job.pk).first()
         return locked_job, transition
@@ -389,6 +484,7 @@ class ProductionWorkflowService:
                 "items",
                 "uploads",
                 "uploads__inspection",
+                "uploads__atelier_review",
                 "uploads__drive_sync",
             )
             .filter(public_id=order_public_id)
@@ -409,14 +505,12 @@ class ProductionWorkflowService:
             "order__items",
             "order__uploads",
             "order__uploads__inspection",
+            "order__uploads__atelier_review",
             "order__uploads__drive_sync",
         )
 
-    def _safe_related_attr(self, instance, *, relation_name: str, attribute: str, default=None):
+    def _safe_related_object(self, instance, *, relation_name: str):
         try:
-            relation = getattr(instance, relation_name)
+            return getattr(instance, relation_name)
         except ObjectDoesNotExist:
-            return default
-        if relation is None:
-            return default
-        return getattr(relation, attribute, default)
+            return None

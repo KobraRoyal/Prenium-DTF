@@ -1,114 +1,64 @@
 {% load portal_tags %}
-<div class="workflow-panel">
-  <div class="workflow-panel__hero">
+<div class="workflow-panel workflow-panel--operator billing-station">
+  <header class="workflow-panel__hero operator-panel-hero">
     <div>
+      <p class="operator-panel-hero__eyebrow">Clôture comptable</p>
       <h3 class="workflow-panel__title">Facturation</h3>
-      <p class="workflow-panel__meta">
-        Tarif B2B et suivi comptable. Pour la facturation différée, le métrage linéaire global se saisit dans l’onglet <strong>Production</strong>.
-      </p>
+      <p class="workflow-panel__meta">Vérifiez le montant, le règlement et la facture sans perdre le contexte de la commande.</p>
     </div>
-  </div>
+    {% if invoice and invoice.paid_at %}<span class="badge is-success">Facture payée</span>{% elif invoice %}<span class="badge is-warning">Règlement attendu</span>{% else %}<span class="badge">Facture à générer</span>{% endif %}
+  </header>
 
-  <div class="workflow-kpi mb-6 text-sm">
-    <p class="m-0">
-      <span class="muted">Mode de règlement client :</span>
-      {% if order.customer.preferred_settlement_method == "paypal" %}
-      <strong>PayPal</strong>
+  <section class="billing-overview" aria-label="Synthèse de facturation">
+    <article><span>Montant commande</span><strong>{{ order.total_amount }} {{ order.currency }}</strong><small>{{ order.pricing_status|human_status }}</small></article>
+    <article><span>Mode</span><strong>{{ order.billing_mode|human_status }}</strong><small>{% if order.customer.preferred_settlement_method == "paypal" %}Règlement PayPal{% else %}Virement bancaire{% endif %}</small></article>
+    <article><span>Paiement</span><strong>{% if payment %}{{ payment.status|human_status }}{% else %}Non enregistré{% endif %}</strong><small>{% if payment %}{{ payment.amount }} {{ payment.currency }}{% else %}Aucune transaction liée{% endif %}</small></article>
+    <article><span>Facture</span><strong>{% if invoice %}{{ invoice.invoice_number }}{% else %}Non générée{% endif %}</strong><small>{% if invoice and invoice.paid_at %}Payée le {{ invoice.paid_at|date:"d/m/Y" }}{% elif invoice %}{{ invoice.status|human_status }}{% else %}En attente du flux comptable{% endif %}</small></article>
+  </section>
+
+  <div class="billing-grid">
+    <section class="billing-card" aria-labelledby="billing-payment-title">
+      <div class="billing-card__head"><div><p class="operator-section-head__eyebrow">01 · Règlement</p><h4 id="billing-payment-title">État du paiement</h4></div>{% if payment %}<span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>{% endif %}</div>
+      {% if payment %}
+      <dl class="billing-detail-list">
+        <div><dt>Montant</dt><dd>{{ payment.amount }} {{ payment.currency }}</dd></div>
+        <div><dt>Fournisseur</dt><dd>{{ payment.provider|human_status }}</dd></div>
+        {% if payment.paypal_order_id %}<div><dt>Référence PayPal</dt><dd><code>{{ payment.paypal_order_id }}</code></dd></div>{% endif %}
+        {% if payment.captured_at %}<div><dt>Capturé le</dt><dd>{{ payment.captured_at|date:"d/m/Y · H:i" }}</dd></div>{% endif %}
+      </dl>
+      {% if payment.last_error_message %}<div class="alert alert--danger" role="alert"><p>{{ payment.last_error_message }}</p></div>{% endif %}
       {% else %}
-      <strong>Virement bancaire</strong>
+      <div class="operator-empty-inline"><strong>Aucun paiement lié</strong><p>{% if order.customer.preferred_settlement_method == "wire_transfer" %}Situation normale tant que le virement n’a pas été rapproché.{% else %}La transaction PayPal apparaîtra après création du paiement.{% endif %}</p></div>
       {% endif %}
-    </p>
-  </div>
-
-  {% if order.billing_mode != "deferred" %}
-  <p class="muted text-sm mb-6">Le métrage manuel concerne les commandes en <strong>facturation différée</strong> — saisie dans l’onglet <strong>Production</strong>.</p>
-  {% endif %}
-
-  {% if upload_rows %}
-  <h4 class="workflow-panel__subtitle">Fichiers</h4>
-  <ul class="staff-billing-files m-0 mb-6 list-none">
-    {% for row in upload_rows %}
-    <li class="staff-billing-files__row">
-      <span class="staff-billing-files__name">{{ row.upload.original_filename }}</span>
-      <span class="muted text-sm">{{ row.upload.size_bytes|filesizeformat }}</span>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <div class="empty-state mb-6"><p>Aucun fichier — métrage non applicable.</p></div>
-  {% endif %}
-
-  <h4 class="workflow-panel__subtitle">Paiement</h4>
-  {% if payment %}
-  <div class="alert {% if payment.status == 'captured' %}alert--success{% elif payment.status == 'failed' %}alert--danger{% else %}alert--info{% endif %} mb-4">
-    <p>
-      Paiement:
-      <span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>
-      - {{ payment.amount }} {{ payment.currency }}
-    </p>
-    {% if payment.paypal_order_id %}
-    <p class="muted">PayPal order: {{ payment.paypal_order_id }}</p>
-    {% endif %}
-    {% if payment.paypal_capture_id %}
-    <p class="muted">PayPal capture: {{ payment.paypal_capture_id }}</p>
-    {% endif %}
-    {% if payment.last_error_message %}
-    <p>{{ payment.last_error_message }}</p>
-    {% endif %}
-  </div>
-  {% else %}
-  <div class="empty-state mb-4">
-    <p>Aucun paiement enregistré pour cette commande.</p>
-  </div>
-  {% endif %}
-
-  <h4 class="workflow-panel__subtitle">Facture</h4>
-  {% if invoice %}
-  <div class="alert alert--success">
-    <p>
-      Facture <strong>{{ invoice.invoice_number }}</strong>
-      -
-      <span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>
-      -
-      {{ invoice.total_amount }} {{ invoice.currency }}
-    </p>
-    <p class="muted">Email facturation: {{ invoice.billing_email|default:"-" }}</p>
-    {% if invoice.paid_at %}
-    <p class="mt-2 m-0 text-sm">
-      <span class="badge is-success">Payée</span>
-      — le {{ invoice.paid_at|date:"d/m/Y H:i" }}
-      {% if invoice.paid_recorded_by %}
-      <span class="muted">({{ invoice.paid_recorded_by.email }})</span>
-      {% endif %}
-    </p>
-    {% elif order.customer.preferred_settlement_method == "wire_transfer" %}
-    <p class="mt-2 m-0 text-sm text-amber-100/90">En attente de réception du virement.</p>
-    {% endif %}
-    {% if can_mark_invoice_paid %}
-    <section class="workflow-form-card mt-4" aria-labelledby="staff-billing-paid-heading">
-      <div class="workflow-form-card__head">
-        <h5 id="staff-billing-paid-heading" class="workflow-panel__subtitle mt-0">Clôture comptable</h5>
-        <p class="muted text-sm m-0">À utiliser uniquement après confirmation de réception du virement.</p>
-      </div>
-      <form
-        method="post"
-        action="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}"
-        class="mt-0"
-        hx-post="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}"
-        hx-target="#staff-order-panel"
-        hx-swap="innerHTML"
-        hx-indicator="#portal-htmx-indicator"
-        data-submit-loading
-      >
-        {% csrf_token %}
-        {% include "components/forms/form_actions.html" with primary_label="Marquer la facture comme payée (virement reçu)" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
-      </form>
     </section>
-    {% endif %}
+
+    <section class="billing-card" aria-labelledby="billing-invoice-title">
+      <div class="billing-card__head"><div><p class="operator-section-head__eyebrow">02 · Facture</p><h4 id="billing-invoice-title">Document comptable</h4></div>{% if invoice %}<span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>{% endif %}</div>
+      {% if invoice %}
+      <dl class="billing-detail-list">
+        <div><dt>Numéro</dt><dd><code>{{ invoice.invoice_number }}</code></dd></div>
+        <div><dt>Total</dt><dd>{{ invoice.total_amount }} {{ invoice.currency }}</dd></div>
+        <div><dt>Email</dt><dd>{{ invoice.billing_email|default:"Non renseigné" }}</dd></div>
+        <div><dt>Règlement</dt><dd>{% if invoice.paid_at %}<span class="billing-paid-signal">Payée · {{ invoice.paid_at|date:"d/m/Y · H:i" }}</span>{% else %}En attente{% endif %}</dd></div>
+      </dl>
+      {% if can_mark_invoice_paid %}
+      <form class="billing-confirm-payment" method="post" action="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}" hx-post="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+        {% csrf_token %}
+        <div><strong>Virement reçu ?</strong><p>Confirmez seulement après vérification sur le compte bancaire.</p></div>
+        <button class="ui-btn ui-btn-primary" type="submit" hx-disabled-elt="this">Marquer comme payée</button>
+      </form>
+      {% endif %}
+      {% else %}
+      <div class="operator-empty-inline"><strong>Aucune facture générée</strong><p>{% if order.pricing_status != "priced" %}Le prix doit être calculé avant l’émission de la facture.{% elif order.billing_mode == "deferred" %}La facture sera rattachée au cycle de facturation différée du client.{% else %}La facture sera créée par le flux de paiement.{% endif %}</p></div>
+      {% if order.pricing_status != "priced" %}<a class="ui-btn ui-btn-secondary billing-card__action" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Vérifier le métrage</a>{% endif %}
+      {% endif %}
+    </section>
   </div>
-  {% else %}
-  <div class="empty-state">
-    <p>Aucune facture générée pour cette commande.</p>
-  </div>
-  {% endif %}
+
+  <details class="billing-files"{% if not invoice %} open{% endif %}>
+    <summary><span>Pièces de la commande</span><strong>{{ upload_rows|length }} fichier{{ upload_rows|length|pluralize }}</strong></summary>
+    {% if upload_rows %}
+    <ul>{% for row in upload_rows %}<li><span>{{ row.upload.original_filename }}</span><small>{{ row.upload.size_bytes|filesizeformat }}</small></li>{% endfor %}</ul>
+    {% else %}<div class="operator-empty-inline"><strong>Aucun fichier</strong><p>Le métrage et la facturation fichier ne sont pas applicables.</p></div>{% endif %}
+  </details>
 </div>

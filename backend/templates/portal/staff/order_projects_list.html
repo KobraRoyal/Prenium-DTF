@@ -1,7 +1,7 @@
 {% extends "portal/layout.html" %}
 {% block title %}Projets B2B OPS - Prenium DTF{% endblock %}
 {% block portal_content %}
-{% include "components/portal/page_head.html" with kicker="Pilotage staff" title="Projets B2B transmis" subtitle="File de contrôle en lecture seule pour le Sprint 1." %}
+{% include "components/portal/page_head.html" with kicker="Pilotage Atelier" title="Projets B2B transmis" subtitle="File de contrôle des projets transmis par les clients." %}
 <section class="card">
 {% if projects %}<div class="overflow-x-auto ui-table-shell"><table class="dui-table dui-table-zebra"><thead><tr><th>Projet</th><th>Client</th><th>Statut</th><th>Lignes</th><th></th></tr></thead><tbody>{% for project in projects %}<tr><td>{{ project.project_number }}</td><td>{{ project.customer.name }}</td><td>{{ project.get_status_display }}</td><td>{{ project.items.count }}</td><td><a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-project-detail' project_public_id=project.public_id %}">Contrôler</a></td></tr>{% endfor %}</tbody></table></div>{% else %}{% include "components/ui/empty_state.html" with title="Aucun projet transmis" message="Les projets client transmis apparaîtront ici." %}{% endif %}
 </section>
