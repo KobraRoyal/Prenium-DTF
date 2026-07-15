@@ -4,7 +4,10 @@ import pytest
 from apps.billing.services.payments import PaymentService
 from apps.catalog.models import CatalogService
 from apps.customers.models import Customer, CustomerMembership
-from apps.notifications.services.transactional import schedule_order_created_email
+from apps.notifications.services.transactional import (
+    schedule_order_created_email,
+    send_order_created_email,
+)
 from apps.notifications.tasks import (
     send_order_created_email_task,
     send_payment_captured_email_task,
@@ -14,7 +17,7 @@ from apps.uploads.models import OrderUpload
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from tests.billing.test_billing_api import FakePayPalGateway, create_customer_scope, create_order
 
@@ -48,6 +51,50 @@ def test_order_created_sends_transactional_email():
     msg = mail.outbox[0]
     assert user.email in msg.to or "billing@example.com" in msg.to
     assert "Commande reçue" in msg.subject
+
+
+@pytest.mark.django_db
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+    INTERNAL_NOTIFICATION_EMAILS=[],
+    TRANSACTIONAL_EMAILS_ENABLED=True,
+)
+def test_external_email_backend_blocks_reserved_qa_recipients():
+    user = get_user_model().objects.create_user(
+        email="qa-support@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="QA Support",
+        billing_email="billing@example.test",
+    )
+    order = create_order(customer, user)
+
+    with patch("apps.notifications.services.transactional.send_mail") as mocked_send_mail:
+        send_order_created_email(order=order)
+
+    mocked_send_mail.assert_not_called()
+
+
+@pytest.mark.django_db
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+    INTERNAL_NOTIFICATION_EMAILS=[],
+    TRANSACTIONAL_EMAILS_ENABLED=True,
+)
+def test_external_email_backend_keeps_real_customer_recipients():
+    user = get_user_model().objects.create_user(
+        email="customer@ids.supply",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Client réel")
+    order = create_order(customer, user)
+
+    with patch("apps.notifications.services.transactional.send_mail") as mocked_send_mail:
+        send_order_created_email(order=order)
+
+    mocked_send_mail.assert_called_once()
+    assert mocked_send_mail.call_args.args[3] == ["customer@ids.supply"]
 
 
 @pytest.mark.django_db

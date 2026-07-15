@@ -22,7 +22,15 @@ class AssetSemiTransparencyAnalyzer:
     max_overlay_side = 480
     overlay_rgb = (255, 152, 0)
 
-    def analyze(self, *, image: Image.Image) -> SemiTransparencyAnalysisResult:
+    def analyze(
+        self,
+        *,
+        image: Image.Image,
+        source_is_pure_vector: bool = False,
+    ) -> SemiTransparencyAnalysisResult:
+        if source_is_pure_vector:
+            return self._empty_result(skip_reason="pure_vector_source")
+
         rgba = image.convert("RGBA")
         try:
             alpha = rgba.getchannel("A")
@@ -56,6 +64,8 @@ class AssetSemiTransparencyAnalyzer:
                 "max_alpha": self.max_alpha,
                 "pixel_count": semi_pixels,
                 "coverage_percent": coverage_percent,
+                "skipped": False,
+                "skip_reason": None,
             },
         )
 
@@ -85,7 +95,7 @@ class AssetSemiTransparencyAnalyzer:
         finally:
             visible_mask.close()
 
-    def _empty_result(self) -> SemiTransparencyAnalysisResult:
+    def _empty_result(self, *, skip_reason: str | None = None) -> SemiTransparencyAnalysisResult:
         return SemiTransparencyAnalysisResult(
             detected=False,
             overlay=None,
@@ -95,6 +105,8 @@ class AssetSemiTransparencyAnalyzer:
                 "max_alpha": self.max_alpha,
                 "pixel_count": 0,
                 "coverage_percent": 0.0,
+                "skipped": skip_reason is not None,
+                "skip_reason": skip_reason,
             },
         )
 

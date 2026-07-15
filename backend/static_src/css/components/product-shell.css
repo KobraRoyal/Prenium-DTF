@@ -2381,7 +2381,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  body.product-shell .b2b-dialog-editor.is-analysis-pending .b2b-visual-card__details {
+  body.product-shell
+    .b2b-dialog-editor.is-analysis-pending:not(.has-replace-before-analysis)
+    .b2b-visual-card__details {
     display: none;
   }
 
@@ -2776,6 +2778,14 @@
     min-height: 100%;
   }
 
+  body.product-shell .b2b-hex-color-control.is-empty .b2b-swatch-btn {
+    background-color: #fff;
+    background-image:
+      linear-gradient(45deg, transparent 46%, var(--product-danger) 47% 53%, transparent 54%),
+      conic-gradient(#e3e3e3 25%, #fff 0 50%, #e3e3e3 0 75%, #fff 0);
+    background-size: 100% 100%, 10px 10px;
+  }
+
   body.product-shell .b2b-hex-color-control__trigger:disabled {
     opacity: 0.45;
     cursor: not-allowed;
@@ -2879,7 +2889,7 @@
     border: 0;
   }
 
-  body.product-shell .b2b-support-color.is-required {
+  body.product-shell .b2b-support-color.is-exact-required {
     gap: 0.65rem;
     border: 2px solid color-mix(in srgb, var(--product-danger) 55%, var(--product-line));
     border-left-width: 0.45rem;
@@ -2887,7 +2897,7 @@
     background: color-mix(in srgb, var(--product-danger) 9%, var(--product-panel));
   }
 
-  body.product-shell .b2b-support-color.is-required .product-form-label {
+  body.product-shell .b2b-support-color.is-exact-required .product-form-label {
     color: var(--product-danger);
   }
 
@@ -2922,6 +2932,18 @@
     color: var(--product-danger);
   }
 
+  body.product-shell .b2b-support-color__intro,
+  body.product-shell .b2b-support-color__status {
+    margin: 0;
+    color: var(--product-muted);
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  body.product-shell .b2b-support-color__status {
+    font-weight: 800;
+  }
+
   body.product-shell .b2b-support-color__required-hint {
     margin: -0.15rem 0 0;
     color: var(--product-danger);
@@ -2930,14 +2952,14 @@
     line-height: 1.4;
   }
 
-  body.product-shell .b2b-support-color.is-required .b2b-support-color__choices {
+  body.product-shell .b2b-support-color.is-exact-required .b2b-support-color__choices {
     padding: 0.6rem;
     border: 1px dashed color-mix(in srgb, var(--product-danger) 42%, var(--product-line));
     background: color-mix(in srgb, white 72%, var(--product-panel));
   }
 
-  body.product-shell .b2b-support-color.is-required [data-support-color-hex]:invalid,
-  body.product-shell .b2b-support-color.is-required [data-support-color-hex]:placeholder-shown {
+  body.product-shell .b2b-support-color.is-exact-required [data-support-color-hex]:invalid,
+  body.product-shell .b2b-support-color.is-exact-required [data-support-color-hex]:placeholder-shown {
     border-color: color-mix(in srgb, var(--product-danger) 70%, var(--product-line));
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--product-danger) 18%, transparent);
   }

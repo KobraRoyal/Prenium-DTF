@@ -58,6 +58,7 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
         for item in project.items.all():
             item.effective_dpi = asset_service.effective_dpi_for_item(item=item)
             item.technical_review = asset_service.technical_review_for_item(item=item)
+            item.can_replace_asset = asset_service.can_replace_project_item_file(item=item)
         project.can_delete = project_service.can_client_delete(project)
         return project
 

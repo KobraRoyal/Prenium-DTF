@@ -1,0 +1,9 @@
+<details class="b2b-visual-advanced" data-asset-replace-before-analysis>
+  <summary>Remplacer le fichier avant analyse</summary>
+  <p class="b2b-configurator__file-meta">Disponible uniquement avant le démarrage de l’analyse.</p>
+  <form class="b2b-replace-form" method="post" enctype="multipart/form-data" hx-encoding="multipart/form-data" hx-post="{% url 'portal:client-order-project-item-asset' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='replace' %}" hx-target="#order-project-items" hx-swap="outerHTML">
+    {% csrf_token %}
+    <label class="dui-form-control"><span class="product-form-label">Nouveau fichier</span><input class="dui-file-input dui-file-input-bordered w-full" type="file" name="file" data-configurator-file accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf" required></label>
+    <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Remplacer</button>
+  </form>
+</details>

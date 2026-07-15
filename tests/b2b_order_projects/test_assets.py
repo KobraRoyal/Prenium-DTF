@@ -1,4 +1,5 @@
 from io import BytesIO
+from unittest.mock import patch
 
 import pymupdf
 import pytest
@@ -88,6 +89,7 @@ def test_asset_versions_are_immutable_analyzed_and_audited():
         project=project,
         item_public_id=item.public_id,
         actor=user,
+        data={"support_color_hex": "#112233"},
         source="test.confirmation",
     )
     project.refresh_from_db()
@@ -95,6 +97,33 @@ def test_asset_versions_are_immutable_analyzed_and_audited():
     AssetAnalysisService().analyze(version_public_id=first.public_id, source="test.retry")
     assert AssetAnalysis.objects.filter(version=first).count() == 1
 
+    with pytest.raises(AssetDomainError) as replacement_closed:
+        service.replace_project_item_file(
+            project=project,
+            item_public_id=item.public_id,
+            actor=user,
+            uploaded_file=png_upload("logo-v2.png", color=(0, 0, 255, 180)),
+            source="test",
+        )
+    assert replacement_closed.value.code == "ASSET_REPLACEMENT_CLOSED"
+    assert AssetVersion.objects.filter(asset=first.asset).count() == 1
+
+
+@pytest.mark.django_db
+def test_pending_asset_can_be_replaced_before_analysis_starts_and_is_audited():
+    user, _customer, project, item = project_scope("replace-pending@example.com")
+    service = AssetService()
+    first = service.attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=png_upload(),
+        source="test",
+    )
+
+    assert first.analysis_status == AssetVersion.AnalysisStatus.PENDING
+    item.refresh_from_db()
+    assert service.can_replace_project_item_file(item=item) is True
     second = service.replace_project_item_file(
         project=project,
         item_public_id=item.public_id,
@@ -102,16 +131,30 @@ def test_asset_versions_are_immutable_analyzed_and_audited():
         uploaded_file=png_upload("logo-v2.png", color=(0, 0, 255, 180)),
         source="test",
     )
+
     assert second.version_number == 2
     assert second.replaced_version == first
     assert AssetVersion.objects.filter(asset=first.asset).count() == 2
-    project.refresh_from_db()
-    assert project.status == B2BOrderProject.Status.INCOMPLETE
-    item.refresh_from_db()
-    assert item.client_confirmed_asset_version is None
     assert AuditLogEntry.objects.filter(
         action="asset.version_replaced", target_public_id=first.asset.public_id
     ).exists()
+
+
+@pytest.mark.django_db
+def test_file_analysis_never_schedules_an_order_created_email():
+    user, _customer, project, item = project_scope("analysis-email@example.com")
+    version = AssetService().attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=png_upload(),
+        source="test",
+    )
+
+    with patch("apps.notifications.tasks.send_order_created_email_task.delay") as task_delay:
+        AssetAnalysisService().analyze(version_public_id=version.public_id, source="test")
+
+    task_delay.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -212,6 +255,46 @@ def test_pdf_auto_size_uses_page_dimensions_not_preview_dpi():
 
 
 @pytest.mark.django_db
+def test_pure_vector_pdf_edges_are_not_reported_as_semi_transparency():
+    user, _customer, project, item = project_scope("pdf-vector-alpha@example.com")
+    output = BytesIO()
+    document = Canvas(output, pagesize=(200, 100))
+    document.setFillColorRGB(0.1, 0.4, 0.8)
+    document.circle(100, 50, 35, stroke=0, fill=1)
+    document.showPage()
+    document.save()
+
+    version = AssetService().attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=SimpleUploadedFile(
+            "vector-circle.pdf",
+            output.getvalue(),
+            content_type="application/pdf",
+        ),
+        source="test",
+    )
+
+    analyzed = AssetAnalysisService().analyze(version_public_id=version.public_id, source="test")
+    review = AssetService().technical_review_for_item(item=item)
+
+    assert analyzed.analysis.metadata["is_pure_vector"] is True
+    assert analyzed.analysis.metadata["semi_transparency"] == {
+        "detected": False,
+        "min_alpha": 33,
+        "max_alpha": 250,
+        "pixel_count": 0,
+        "coverage_percent": 0.0,
+        "skipped": True,
+        "skip_reason": "pure_vector_source",
+    }
+    assert not analyzed.analysis.semi_transparency_overlay
+    assert review["semi_transparency"]["detected"] is False
+    assert all("semi-transparentes" not in issue for issue in review["issues"])
+
+
+@pytest.mark.django_db
 @override_settings(B2B_RECOMMENDED_DPI=300, B2B_MIN_ACCEPTABLE_DPI=200)
 def test_pdf_auto_size_uses_embedded_display_size_for_mixed_documents():
     user, _customer, project, item = project_scope("pdf-mixed@example.com")
@@ -295,6 +378,8 @@ def test_pdf_auto_size_uses_artboard_for_illustrator_mixed_documents():
     assert str(item.width_mm) == "360.42"
     assert str(item.height_mm) == "478.14"
     assert analyzed.analysis.dpi_x == pytest.approx(300.0, rel=0.02)
+    assert analyzed.analysis.metadata["is_pure_vector"] is False
+    assert analyzed.analysis.metadata["semi_transparency"]["skipped"] is False
     review = AssetService().technical_review_for_item(item=item)
     assert review["level"] == "good"
     assert review["resolution_display"] == "300 DPI"
@@ -356,6 +441,9 @@ def test_asset_analysis_generates_protected_preview_for_professional_formats(
     assert version.analysis.image_width > 0
     assert version.analysis.image_height > 0
     assert version.analysis.metadata["format"] == expected_format
+    if format_name in {"pdf", "ai_pdf", "eps"}:
+        assert version.analysis.metadata["is_pure_vector"] is True
+        assert version.analysis.metadata["semi_transparency"]["skipped"] is True
     assert item.width_mm > 0
     assert item.height_mm > 0
 

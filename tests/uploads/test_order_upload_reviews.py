@@ -27,7 +27,7 @@ def _staff(*codenames: str):
     return user
 
 
-def _order_with_upload(*, customer_name: str = "Client A"):
+def _order_with_upload(*, customer_name: str = "Client A", support_color="#112233"):
     customer = Customer.objects.create(name=customer_name, billing_email="client@example.com")
     order = Order.objects.create(customer=customer, status=Order.Status.SUBMITTED)
     upload = OrderUpload.objects.create(
@@ -38,7 +38,7 @@ def _order_with_upload(*, customer_name: str = "Client A"):
         size_bytes=8,
         width_mm="120.00",
         height_mm="80.00",
-        support_color_hex="#112233",
+        support_color_hex=support_color,
     )
     OrderUploadInspection.objects.create(
         order_upload=upload,
@@ -144,9 +144,29 @@ def test_staff_inspection_panel_uses_clear_machine_and_human_labels(client):
 
 
 @pytest.mark.django_db
-def test_staff_can_approve_and_request_correction_via_scoped_htmx_action(
-    client, monkeypatch
-):
+def test_staff_inspection_panel_receives_multicolor_support_choice(client):
+    actor = _staff(
+        "view_order",
+        "view_orderupload",
+        "view_orderuploadinspection",
+        "review_orderupload",
+    )
+    order, _upload = _order_with_upload(support_color="#multicolor")
+    client.force_login(actor)
+
+    response = client.get(
+        reverse("portal:staff-order-panel-inspection", kwargs={"order_public_id": order.public_id})
+    )
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Couleur du support" in html
+    assert "b2b-support-color-badge is-rainbow" in html
+    assert "Multicolore" in html
+
+
+@pytest.mark.django_db
+def test_staff_can_approve_and_request_correction_via_scoped_htmx_action(client, monkeypatch):
     actor = _staff(
         "view_order",
         "view_orderupload",
@@ -162,10 +182,7 @@ def test_staff_can_approve_and_request_correction_via_scoped_htmx_action(
 
     approved = client.post(url, {"status": "approved"}, HTTP_HX_REQUEST="true")
     assert approved.status_code == 200
-    assert (
-        json.loads(approved["X-Prenium-Toast"])["message"]
-        == "Fichier approuvé pour production."
-    )
+    assert json.loads(approved["X-Prenium-Toast"])["message"] == "Fichier approuvé pour production."
     assert OrderUploadReview.objects.get(order_upload=upload).status == "approved"
 
     scheduled = []
@@ -184,9 +201,7 @@ def test_staff_can_approve_and_request_correction_via_scoped_htmx_action(
     )
     review = OrderUploadReview.objects.get(order_upload=upload)
     assert correction.status_code == 200
-    assert json.loads(correction["X-Prenium-Toast"])["message"].startswith(
-        "Correction enregistrée"
-    )
+    assert json.loads(correction["X-Prenium-Toast"])["message"].startswith("Correction enregistrée")
     assert "=?utf-8?" not in correction["X-Prenium-Toast"]
     assert review.status == "changes_requested"
     assert review.reason_code == "low_resolution"

@@ -241,6 +241,12 @@
 - [x] Validation technique client : dimensions et DPI asynchrones, diagnostic résolution 300/200 DPI, alertes visibles et confirmation versionnée obligatoire avant transmission
 - [x] Contrôle DTF des détails fins : zones imprimées sous 0,5 mm détectées en tâche asynchrone, surlignées en rouge dans la modale et servies par overlay privé tenant-scoped
 - [x] Contrôle des détails fins renforcé : zoom 100–400 % dans l'aperçu et couleur unie exacte du support obligatoire avant validation afin de préparer le contour atelier
+- [x] Faux positifs de semi-transparence supprimés sur les fichiers 100 % vectoriels : l'anticrénelage du rendu d'aperçu n'est plus confondu avec une transparence source, tandis que les documents mixtes restent contrôlés
+- [x] Validation du correctif vectoriel : 123 tests `uploads` + projets B2B passés, lint/formatage OK, check Django OK et aucune migration requise
+- [x] Couleur support à la validation : état `None` par défaut, choix obligatoire Multicouleur/HEX, retour à vide sans faux blanc et consigne transmise au contrôle Atelier
+- [x] Validation globale du correctif couleur support et analyse vectorielle : 417 tests passés, Ruff/Django/migrations/JavaScript conformes et recette navigateur desktop/mobile sans erreur console
+- [x] Remplacement fichier sécurisé : disponible uniquement avant analyse (`pending`), masqué après démarrage et refusé côté service/API/portail ; modale avant analyse stabilisée pendant le polling HTMX
+- [x] Validation du remplacement avant analyse : 421 tests passés, Ruff/Django/migrations/JavaScript conformes et recette navigateur sans erreur console sur le projet signalé
 
 ## Sprint 23 — Personnalisation des e-mails transactionnels (2026-07-14)
 
@@ -255,6 +261,7 @@
 - [x] Événement redondant « Commande B2B transmise » fusionné dans « Commande créée » avec migration des personnalisations existantes
 - [x] Cycle transactionnel aligné sur les vrais jalons : en traitement, traitée/prête à expédier, expédiée au premier scan transporteur
 - [x] Notification d’expédition rendue idempotente par `Shipment.shipped_at`
+- [x] Garde-fou QA des e-mails : analyse fichier sans notification, domaines réservés bloqués avant tout transport SMTP externe et suite globale à 420 tests
 - [x] Documentation Sprint 14/23 et audit frontend mis à jour
 
 ## Sprint 24 — Validation des fichiers Atelier (2026-07-14)

@@ -46,3 +46,22 @@ def test_requires_minimum_pixel_count_before_flagging():
     assert result.detected is False
     assert result.metadata["pixel_count"] == 1
     assert result.overlay is None
+
+
+def test_ignores_rasterization_alpha_when_source_is_pure_vector():
+    image = Image.new("RGBA", (120, 80), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((18, 8, 102, 72), fill=(10, 10, 10, 255))
+    draw.ellipse((17, 7, 103, 73), outline=(10, 10, 10, 120), width=2)
+
+    result = AssetSemiTransparencyAnalyzer().analyze(
+        image=image,
+        source_is_pure_vector=True,
+    )
+    image.close()
+
+    assert result.detected is False
+    assert result.overlay is None
+    assert result.metadata["pixel_count"] == 0
+    assert result.metadata["skipped"] is True
+    assert result.metadata["skip_reason"] == "pure_vector_source"

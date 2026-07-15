@@ -113,6 +113,7 @@ def test_submit_locks_project_and_rejects_further_changes():
         project=project,
         item_public_id=item.public_id,
         actor=user,
+        data={"support_color_hex": "#112233"},
         source="test",
     )
     project.refresh_from_db()
@@ -169,6 +170,49 @@ def test_support_color_multicolor_is_normalized_on_item_update():
     )
     assert item.support_color_hex == "#multicolor"
     assert item.support_color_label == "Multicolore"
+
+
+@pytest.mark.django_db
+def test_analysis_confirmation_requires_an_explicit_support_color_choice():
+    user, customer, _membership = customer_scope("support-color-required@example.com")
+    service = B2BOrderProjectService()
+    project = service.create_project(
+        customer=customer, actor=user, data={"name": "Choix support"}, source="test"
+    )
+    item = service.add_item(
+        project=project,
+        actor=user,
+        data={"name": "Logo", "width_mm": 100, "height_mm": 50, "quantity": 1},
+        source="test",
+    )
+    version = AssetService().attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=png_upload(),
+        source="test",
+    )
+    AssetAnalysisService().analyze(version_public_id=version.public_id, source="test")
+
+    assert item.support_color_hex == ""
+    with pytest.raises(ProjectDomainError) as missing:
+        service.confirm_item_analysis(
+            project=project,
+            item_public_id=item.public_id,
+            actor=user,
+            source="test",
+        )
+    assert missing.value.code == "SUPPORT_COLOR_REQUIRED"
+
+    confirmed = service.confirm_item_analysis(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        data={"support_color_multicolor": "on"},
+        source="test",
+    )
+    assert confirmed.support_color_hex == "#multicolor"
+    assert confirmed.client_confirmed_asset_version == version
 
 
 @pytest.mark.django_db
@@ -248,6 +292,7 @@ def test_dimension_change_invalidates_client_analysis_confirmation():
         project=project,
         item_public_id=item.public_id,
         actor=user,
+        data={"support_color_multicolor": "on"},
         source="test",
     )
 

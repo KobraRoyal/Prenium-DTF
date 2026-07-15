@@ -111,7 +111,21 @@ class AssetService:
             pk=item.asset_id,
             customer=locked_project.customer,
         )
-        previous = asset.current_version
+        previous = (
+            AssetVersion.objects.select_for_update()
+            .filter(
+                pk=asset.current_version_id,
+                customer=locked_project.customer,
+            )
+            .first()
+        )
+        if previous is None:
+            raise AssetDomainError("ASSET_NOT_FOUND", "Aucun fichier à remplacer pour cette ligne.")
+        if previous.analysis_status != AssetVersion.AnalysisStatus.PENDING:
+            raise AssetDomainError(
+                "ASSET_REPLACEMENT_CLOSED",
+                "Le fichier ne peut plus être remplacé dès que son analyse a commencé.",
+            )
         version = self._create_version(
             asset=asset,
             actor=actor,
@@ -146,6 +160,12 @@ class AssetService:
         )
         transaction.on_commit(lambda: self.schedule_analysis(version=version))
         return version
+
+    @staticmethod
+    def can_replace_project_item_file(*, item) -> bool:
+        asset = getattr(item, "asset", None)
+        version = getattr(asset, "current_version", None) if asset else None
+        return bool(version and version.analysis_status == AssetVersion.AnalysisStatus.PENDING)
 
     def get_project_item_version(self, *, project, item_public_id):
         item = (
@@ -431,9 +451,7 @@ class AssetService:
             if raster_dpi >= recommended_dpi:
                 level = "good"
                 label = "Résolution OK"
-                message = (
-                    f"Document mixte · vectoriel net · photo raster {raster_dpi:.0f} DPI."
-                )
+                message = f"Document mixte · vectoriel net · photo raster {raster_dpi:.0f} DPI."
             elif raster_dpi >= minimum_dpi:
                 level = "warning"
                 label = "Résolution acceptable"

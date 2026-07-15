@@ -154,6 +154,8 @@ class AssetPreviewRenderer:
                 )
                 image = Image.frombytes("RGBA", (pixmap.width, pixmap.height), pixmap.samples)
                 label = "AI compatible PDF" if extension == ".ai" else "PDF"
+                has_vector_artwork = pdf_page_has_vector_artwork(page)
+                has_raster_artwork = bool(page.get_image_info(xrefs=True))
                 warnings = [f"Aperçu généré depuis la première page du {label}."]
                 if source_metrics.dpi_x is None or source_metrics.dpi_y is None:
                     warnings.append(
@@ -182,7 +184,9 @@ class AssetPreviewRenderer:
                         "artboard_width_mm": source_metrics.artboard_width_mm,
                         "artboard_height_mm": source_metrics.artboard_height_mm,
                         "uses_artboard_dimensions": source_metrics.uses_artboard_dimensions,
-                        "has_vector_artwork": pdf_page_has_vector_artwork(page),
+                        "has_vector_artwork": has_vector_artwork,
+                        "has_raster_artwork": has_raster_artwork,
+                        "is_pure_vector": has_vector_artwork and not has_raster_artwork,
                         "dpi_source": source_metrics.dpi_source,
                         "render_dpi": render_dpi,
                         "dimension_basis": source_metrics.dimension_basis,
@@ -197,6 +201,7 @@ class AssetPreviewRenderer:
 
     def _render_postscript(self, *, content: bytes, extension: str) -> RenderedAssetPreview:
         page_size = parse_eps_page_size_inches(content)
+        has_raster_artwork = self._postscript_has_raster_artwork(content)
         with tempfile.TemporaryDirectory(prefix="prenium-preview-") as directory:
             directory_path = Path(directory)
             source_path = directory_path / f"source{extension or '.eps'}"
@@ -257,11 +262,26 @@ class AssetPreviewRenderer:
             metadata={
                 "renderer": "ghostscript",
                 "render_dpi": self.vector_dpi,
+                "has_vector_artwork": True,
+                "has_raster_artwork": has_raster_artwork,
+                "is_pure_vector": not has_raster_artwork,
                 "page_width_in": page_width_in,
                 "page_height_in": page_height_in,
                 "dimension_basis": "page" if page_size is not None else "preview",
             },
         )
+
+    @staticmethod
+    def _postscript_has_raster_artwork(content: bytes) -> bool:
+        sample = content.lower()
+        raster_markers = (
+            b"/imagetype",
+            b" colorimage",
+            b" imagemask",
+            b"%ai5_beginraster",
+            b"%ai7_beginraster",
+        )
+        return any(marker in sample for marker in raster_markers)
 
     @staticmethod
     def _ghostscript_limits() -> None:

@@ -16,6 +16,11 @@
       {% include "portal/client/partials/order_project_preview_stage.html" %}
       {% endwith %}
     </div>
+    {% if item.can_replace_asset %}
+    <div class="b2b-visual-card__details">
+      {% include "portal/client/partials/order_project_replace_asset_form.html" %}
+    </div>
+    {% endif %}
     {% if item.asset.current_version.analysis_status != "pending" and item.asset.current_version.analysis_status != "processing" %}
     <div class="b2b-visual-card__details">
       {% with version=item.asset.current_version review=item.technical_review %}
@@ -39,7 +44,7 @@
         <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}">
         {% include "portal/client/partials/order_project_rotation_hidden.html" %}
         {% include "portal/client/partials/order_project_validation_dimensions_row.html" with quantity=item.quantity width_mm=item.width_mm height_mm=item.height_mm %}
-        {% include "portal/client/partials/order_project_support_color_field.html" with item=item required=review.thin_zone.detected %}
+        {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
         <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required> <span>J’ai vérifié les dimensions, la résolution, les détails fins, les semi-transparences et la couleur support.</span></label>
         <div class="b2b-dialog-actions">
           <button class="ui-btn ui-btn-primary" type="submit">Valider ce visuel</button>

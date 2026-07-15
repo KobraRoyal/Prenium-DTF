@@ -16,6 +16,7 @@ Garantir que les informations confirmées par le client dans le configurateur DT
 
 - chaque `OrderUpload` conserve un instantané nullable `width_mm` / `height_mm` ;
 - la couleur support accepte une valeur HEX ou `Multicolore` ;
+- la validation d'un visuel démarre sur `Aucune sélection` et bloque tant que le client n'a pas choisi `Multicouleur` ou une couleur HEX ;
 - la conversion d’une préparation B2B copie dimensions, quantité et couleur ;
 - une migration rétroactive récupère ces données pour les commandes déjà converties ;
 - le panneau `Contrôle` affiche `Taille demandée` et `Couleur du support` pour chaque visuel ;
@@ -54,11 +55,13 @@ Garantir que les informations confirmées par le client dans le configurateur DT
 - [x] migration et backfill des commandes converties ;
 - [x] copie des dimensions et couleurs lors des nouvelles conversions ;
 - [x] couleur multicolore préservée ;
+- [x] état initial sans couleur et sélection explicite contrôlés côté UI et service métier ;
+- [x] color picker, retour à `None` et transmission de l'échantillon HEX vérifiés en navigateur réel ;
 - [x] contrat de présentation partagé entre Contrôle et OF ;
 - [x] affichage desktop et mobile validé ;
 - [x] rendu PDF A4 contrôlé visuellement ;
 - [x] permissions et isolation existantes conservées ;
-- [x] Ruff, Django, migrations et suite globale validés (`391 passed`).
+- [x] Ruff, Django, migrations et suite globale validés (`417 passed`).
 
 ## Hors périmètre
 

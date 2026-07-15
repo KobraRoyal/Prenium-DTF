@@ -111,7 +111,7 @@ def test_checkout_recovers_legacy_submitted_project_without_order():
         project=project,
         item_public_id=item.public_id,
         actor=user,
-        data={"quantity": 2},
+        data={"quantity": 2, "support_color_hex": "#112233"},
         source="test",
     )
     project = project_service.submit(project=project, actor=user, source="test")
@@ -160,7 +160,7 @@ def test_checkout_project_is_idempotent_when_already_converted():
         project=project,
         item_public_id=item.public_id,
         actor=user,
-        data={"quantity": 1},
+        data={"quantity": 1, "support_color_multicolor": "on"},
         source="test",
     )
     first_order = checkout_service.checkout_project(

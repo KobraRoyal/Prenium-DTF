@@ -246,6 +246,11 @@ class B2BOrderProjectService:
                 "SUPPORT_COLOR_REQUIRED_FOR_THIN_DETAILS",
                 "Indiquez la couleur unie exacte du support pour préserver les détails fins.",
             )
+        if not item.support_color_hex:
+            raise ProjectDomainError(
+                "SUPPORT_COLOR_REQUIRED",
+                "Sélectionnez Multicouleur ou choisissez la couleur du support.",
+            )
 
         item.client_confirmed_asset_version = version
         item.client_confirmed_at = timezone.now()

@@ -69,6 +69,12 @@ perdre l'historique et d'obtenir une analyse technique avant transmission à IDS
   cadre et remise à zéro accessible sur desktop comme sur mobile ;
 - [x] couleur unie exacte du support obligatoire côté service lorsqu'un détail sous 0,5 mm est
   détecté ; le choix multicolore est refusé et la règle est expliquée avant confirmation.
+- [x] remplacement du fichier limité à l'état `pending` : l'action reste disponible avant le
+  démarrage de l'analyse, puis disparaît dès que l'analyse commence et le service refuse toute
+  tentative directe ultérieure ; la modale ouverte est conservée pendant le polling HTMX.
+- [x] validation du garde-fou de remplacement : tests service/API/portail/UI, suite globale de
+  421 tests, Ruff, formatage, JavaScript, Django et migrations conformes, recette navigateur sur
+  le projet signalé et sur un projet temporaire avant analyse.
 
 ## Compatibilité
 
@@ -82,7 +88,7 @@ perdre l'historique et d'obtenir une analyse technique avant transmission à IDS
 Sous `/api/client/customers/<customer_uuid>/order-projects/<project_uuid>/items/<item_uuid>/` :
 
 - `GET|POST asset/` : consulter ou joindre le fichier initial ;
-- `POST asset/replace/` : créer une nouvelle version ;
+- `POST asset/replace/` : créer une nouvelle version uniquement avant le démarrage de l'analyse ;
 - `GET asset/download/` : téléchargement médié.
 - `POST confirm-analysis/` avec `{"confirmed": true}` : confirmer dimensions, résolution et
   alertes de la version courante.
@@ -103,6 +109,10 @@ que le dimensionnement automatique.
 Lorsqu'une zone fine est détectée, l'atelier doit pouvoir ajouter un contour assorti au support
 pour préserver le détail au pressage. La confirmation exige donc une couleur unie explicite au
 format HEX ; une valeur absente, multicolore ou invalide est refusée côté serveur.
+
+Pour tous les autres visuels, la couleur support démarre sans sélection. La confirmation exige
+ensuite un choix explicite entre `Multicouleur` et une couleur unie saisie au color picker. Revenir
+sur un choix actif restaure l'état vide sans injecter artificiellement `#FFFFFF`.
 
 ## Déploiement et rollback
 
@@ -136,3 +146,4 @@ make test
 
 - [x] Contrôle 0,5 mm couvert par tests algorithme, persistance, modale et isolation tenant.
 - [x] Zoom et couleur support obligatoire couverts par tests service, HTMX et recette responsive.
+- [x] État initial `None`, choix explicite Multicouleur/HEX et transmission Atelier couverts de bout en bout.

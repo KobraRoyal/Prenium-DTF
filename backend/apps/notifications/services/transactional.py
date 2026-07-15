@@ -13,6 +13,45 @@ from apps.orders.models import Order
 logger = logging.getLogger(__name__)
 email_template_service = EmailTemplateService()
 
+_NON_EXTERNAL_EMAIL_BACKENDS = {
+    "django.core.mail.backends.console.EmailBackend",
+    "django.core.mail.backends.dummy.EmailBackend",
+    "django.core.mail.backends.filebased.EmailBackend",
+    "django.core.mail.backends.locmem.EmailBackend",
+}
+_RESERVED_EMAIL_DOMAINS = {"example.com", "example.net", "example.org", "localhost"}
+_RESERVED_EMAIL_SUFFIXES = (".invalid", ".localhost", ".test")
+
+
+def _external_safe_recipients(
+    recipients: list[str],
+    *,
+    event: str,
+    audience: str,
+) -> list[str]:
+    """Block reserved QA addresses before an external email transport is used."""
+    email_backend = str(getattr(settings, "EMAIL_BACKEND", ""))
+    if email_backend in _NON_EXTERNAL_EMAIL_BACKENDS:
+        return recipients
+
+    safe_recipients: list[str] = []
+    blocked_domains: set[str] = set()
+    for recipient in recipients:
+        domain = recipient.strip().lower().rpartition("@")[2]
+        if domain in _RESERVED_EMAIL_DOMAINS or domain.endswith(_RESERVED_EMAIL_SUFFIXES):
+            blocked_domains.add(domain or "missing-domain")
+            continue
+        safe_recipients.append(recipient)
+
+    if blocked_domains:
+        logger.warning(
+            "Blocked reserved QA recipient domain(s) for %s/%s: %s",
+            event,
+            audience,
+            ", ".join(sorted(blocked_domains)),
+        )
+    return safe_recipients
+
 
 def _recipient_emails_for_order(order: Order) -> list[str]:
     emails: list[str] = []
@@ -63,6 +102,11 @@ def _send_event_email(
         (EmailTemplate.Audience.INTERNAL, _internal_recipient_emails()),
     )
     for audience, recipients in audiences:
+        recipients = _external_safe_recipients(
+            recipients,
+            event=event,
+            audience=audience,
+        )
         if not recipients:
             logger.info(
                 "Skipping %s/%s email: no recipient for order %s",
@@ -123,7 +167,14 @@ def _send_context_email(
     recipients: list[str],
     context: dict[str, str],
 ) -> bool:
-    if not getattr(settings, "TRANSACTIONAL_EMAILS_ENABLED", True) or not recipients:
+    if not getattr(settings, "TRANSACTIONAL_EMAILS_ENABLED", True):
+        return False
+    recipients = _external_safe_recipients(
+        recipients,
+        event=event,
+        audience=audience,
+    )
+    if not recipients:
         return False
     rendered = email_template_service.render_for_context(
         event=event,

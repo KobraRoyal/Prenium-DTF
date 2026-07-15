@@ -33,6 +33,7 @@ def serialize_asset(item) -> dict[str, object] | None:
         "size_bytes": version.size_bytes,
         "analysis_status": version.analysis_status,
         "analysis_error": version.analysis_error,
+        "replace_allowed": asset_service.can_replace_project_item_file(item=item),
         "effective_dpi": asset_service.effective_dpi_for_item(item=item),
         "technical_review": asset_service.technical_review_for_item(item=item),
         "analysis": (

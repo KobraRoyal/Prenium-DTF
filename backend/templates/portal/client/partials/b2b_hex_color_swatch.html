@@ -1,6 +1,6 @@
 {% with resolved_id=swatch_id|default:"hex-color-popover" %}
 <div
-  class="b2b-hex-color-control{% if preview_mode %} b2b-hex-color-control--preview{% endif %}"
+  class="b2b-hex-color-control{% if preview_mode %} b2b-hex-color-control--preview{% endif %}{% if selected %} is-active{% elif not preview_mode %} is-empty{% endif %}"
   data-hex-color-control
   {% if preview_mode %}data-configurator-custom-bg-control{% endif %}
   style="--swatch-color: {{ initial_color|default:'#ffffff' }};"

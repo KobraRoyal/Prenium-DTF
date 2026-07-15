@@ -9,6 +9,7 @@ const pdfJsModuleUrl = "/static/vendor/pdfjs/pdf.js";
 const pdfJsWorkerUrl = "/static/vendor/pdfjs/pdf.worker.js";
 let pdfJsPromise = null;
 let configuratorEventsBound = false;
+let projectDialogToRestore = "";
 
 function loadPdfJs() {
   if (pdfJsPromise === null) {
@@ -723,6 +724,7 @@ function setMulticolorMode(fieldset, enabled) {
     hidden.value = enabled ? "on" : "";
   }
   if (hexControl instanceof HTMLElement) {
+    hexControl.classList.toggle("is-active", false);
     const trigger = hexControl.querySelector("[data-hex-color-trigger]");
     if (trigger instanceof HTMLButtonElement) {
       trigger.disabled = enabled;
@@ -732,9 +734,29 @@ function setMulticolorMode(fieldset, enabled) {
     hexInput.readOnly = enabled;
     if (enabled) {
       hexInput.value = "";
-    } else if (!hexInput.value.trim()) {
-      hexInput.value = "#FFFFFF";
     }
+  }
+  updateSupportColorStatus(fieldset);
+}
+
+function updateSupportColorStatus(fieldset) {
+  const hidden = fieldset.querySelector("[data-support-color-multicolor-input]");
+  const hexControl = fieldset.querySelector("[data-hex-color-control]");
+  const hexInput = fieldset.querySelector("[data-support-color-hex]");
+  const status = fieldset.querySelector("[data-support-color-status]");
+  const isMulticolor = hidden instanceof HTMLInputElement && hidden.value === "on";
+  const normalized =
+    hexInput instanceof HTMLInputElement ? normalizeHexColor(hexInput.value) : null;
+  if (hexControl instanceof HTMLElement) {
+    hexControl.classList.toggle("is-active", !isMulticolor && Boolean(normalized));
+    hexControl.classList.toggle("is-empty", !normalized);
+  }
+  if (status instanceof HTMLElement) {
+    status.textContent = isMulticolor
+      ? "Multicouleur sélectionné"
+      : normalized
+        ? `Couleur ${normalized.toUpperCase()} sélectionnée`
+        : "Aucune sélection";
   }
 }
 
@@ -752,6 +774,7 @@ function applySupportColorPickerValue(fieldset, rawValue) {
     hexInput.value = normalized.toUpperCase();
   }
   setMulticolorMode(fieldset, false);
+  updateSupportColorStatus(fieldset);
 }
 
 function syncSupportColorFromHex(fieldset) {
@@ -767,6 +790,13 @@ function syncSupportColorFromHex(fieldset) {
   const normalized = normalizeHexColor(display);
   if (normalized) {
     applySupportColorPickerValue(fieldset, normalized);
+  } else {
+    const hidden = fieldset.querySelector("[data-support-color-multicolor-input]");
+    if (hidden instanceof HTMLInputElement) {
+      hidden.value = "";
+    }
+    hexInput.readOnly = false;
+    updateSupportColorStatus(fieldset);
   }
 }
 
@@ -1039,7 +1069,6 @@ function bindSupportColorEvents() {
       const isActive = rainbowButton.classList.contains("is-active");
       if (isActive) {
         setMulticolorMode(fieldset, false);
-        applySupportColorPickerValue(fieldset, "#ffffff");
       } else {
         setMulticolorMode(fieldset, true);
       }
@@ -1252,6 +1281,18 @@ document.body.addEventListener("htmx:afterSwap", (event) => {
   initB2BConfigurators(document, { force: true });
 });
 
+document.body.addEventListener("htmx:afterSettle", () => {
+  if (!projectDialogToRestore) {
+    return;
+  }
+  const dialog = document.getElementById(projectDialogToRestore);
+  projectDialogToRestore = "";
+  if (dialog instanceof HTMLDialogElement && !dialog.open) {
+    dialog.showModal();
+    initB2BConfigurators(dialog, { force: true });
+  }
+});
+
 document.body.addEventListener("htmx:afterOnLoad", (event) => {
   const elt = event.detail?.elt;
   if (
@@ -1272,6 +1313,14 @@ document.body.addEventListener("htmx:beforeCleanupElement", (event) => {
   const cleanupRoot = event.detail?.elt;
   if (!(cleanupRoot instanceof HTMLElement)) {
     return;
+  }
+  const openProjectDialog = cleanupRoot.matches(
+    "dialog[open][id^='visual-dialog-']"
+  )
+    ? cleanupRoot
+    : cleanupRoot.querySelector("dialog[open][id^='visual-dialog-']");
+  if (openProjectDialog instanceof HTMLDialogElement) {
+    projectDialogToRestore = openProjectDialog.id;
   }
   closeAllHexColorPopovers();
   cleanupRoot.querySelectorAll("[data-hex-color-control]").forEach((control) => {

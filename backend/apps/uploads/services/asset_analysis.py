@@ -176,7 +176,10 @@ class AssetAnalysisService:
                 metadata=rendered.metadata,
                 probable_white_background=white_background,
             )
-            semi_transparency_result = self.semi_transparency_analyzer.analyze(image=image)
+            semi_transparency_result = self.semi_transparency_analyzer.analyze(
+                image=image,
+                source_is_pure_vector=bool(rendered.metadata.get("is_pure_vector")),
+            )
             warnings = list(rendered.warnings)
             if not has_alpha:
                 warnings.append("Aucune transparence détectée.")

@@ -50,8 +50,24 @@ def test_client_crud_submit_and_server_fields_are_protected():
     )
     asset_response = client.post(asset_url, {"file": png_upload()}, format="multipart")
     assert asset_response.status_code == 201
+    assert asset_response.json()["asset"]["replace_allowed"] is True
     version_id = asset_response.json()["asset"]["version_public_id"]
     AssetAnalysisService().analyze(version_public_id=version_id, source="test")
+
+    replace_response = client.post(
+        reverse(
+            "b2b_order_projects:client-item-asset-replace",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project_id,
+                "item_public_id": item_id,
+            },
+        ),
+        {"file": png_upload("replacement.png")},
+        format="multipart",
+    )
+    assert replace_response.status_code == 400
+    assert replace_response.json()["code"] == "ASSET_REPLACEMENT_CLOSED"
 
     confirm_url = reverse(
         "b2b_order_projects:client-item-confirm-analysis",
@@ -63,8 +79,13 @@ def test_client_crud_submit_and_server_fields_are_protected():
     )
     confirmation_required = client.post(confirm_url, {"confirmed": False}, format="json")
     assert confirmation_required.status_code == 400
-    confirmed = client.post(confirm_url, {"confirmed": True}, format="json")
+    confirmed = client.post(
+        confirm_url,
+        {"confirmed": True, "support_color_hex": "#112233"},
+        format="json",
+    )
     assert confirmed.status_code == 200
+    assert confirmed.json()["asset"]["replace_allowed"] is False
     assert confirmed.json()["asset"]["technical_review"]["confirmed"] is True
 
     submit_url = reverse(

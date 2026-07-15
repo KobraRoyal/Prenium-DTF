@@ -1,5 +1,5 @@
 {% load l10n %}
-<div class="b2b-dialog-editor{% if item.asset and item.asset.current_version %}{% if item.asset.current_version.analysis_status == 'pending' or item.asset.current_version.analysis_status == 'processing' %} is-analysis-pending{% endif %}{% endif %}" data-b2b-configurator>
+<div class="b2b-dialog-editor{% if item.asset and item.asset.current_version %}{% if item.asset.current_version.analysis_status == 'pending' or item.asset.current_version.analysis_status == 'processing' %} is-analysis-pending{% endif %}{% endif %}{% if item.can_replace_asset %} has-replace-before-analysis{% endif %}" data-b2b-configurator>
   <div class="b2b-configurator__preview">
     {% if item.asset and item.asset.current_version %}
     {% with version=item.asset.current_version %}
@@ -35,7 +35,7 @@
       <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}">
       {% include "portal/client/partials/order_project_rotation_hidden.html" %}
       {% include "portal/client/partials/order_project_validation_dimensions_row.html" with quantity=item.quantity width_mm=item.width_mm height_mm=item.height_mm %}
-      {% include "portal/client/partials/order_project_support_color_field.html" with item=item required=review.thin_zone.detected %}
+      {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
       <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié les dimensions, la résolution, les détails fins, les semi-transparences et la couleur support.</span></label>
       <div class="b2b-dialog-actions">
         <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer{% else %}Valider ce visuel{% endif %}</button>
@@ -54,14 +54,9 @@
     </form>
     {% endif %}
 
-    <details class="b2b-visual-advanced">
-      <summary>Remplacer le fichier</summary>
-      <form class="b2b-replace-form" method="post" enctype="multipart/form-data" hx-encoding="multipart/form-data" hx-post="{% url 'portal:client-order-project-item-asset' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='replace' %}" hx-target="#order-project-items" hx-swap="outerHTML">
-        {% csrf_token %}
-        <label class="dui-form-control"><span class="product-form-label">Nouveau fichier</span><input class="dui-file-input dui-file-input-bordered w-full" type="file" name="file" data-configurator-file accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf" required></label>
-        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Remplacer</button>
-      </form>
-    </details>
+    {% endif %}
+    {% if item.can_replace_asset %}
+    {% include "portal/client/partials/order_project_replace_asset_form.html" %}
     {% endif %}
     {% endwith %}
     {% else %}

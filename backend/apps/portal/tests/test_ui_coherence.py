@@ -518,6 +518,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         fields = template_source("portal/client/partials/order_project_fields.html")
         items = template_source("portal/client/partials/order_project_items.html")
         editor = template_source("portal/client/partials/order_project_visual_editor.html")
+        replace_form = template_source(
+            "portal/client/partials/order_project_replace_asset_form.html"
+        )
+        configurator_script = static_source("js/b2b-configurator.js")
         add_form = template_source("portal/client/partials/order_project_add_visual_form.html")
         validation_panel = template_source(
             "portal/client/partials/order_project_add_visual_validation_panel.html"
@@ -525,6 +529,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         support_color = template_source(
             "portal/client/partials/order_project_support_color_field.html"
         )
+        product_shell = static_source("css/components/product-shell.css")
         header = template_source("components/nav/portal_header.html")
 
         summary = template_source("portal/client/partials/order_project_summary.html")
@@ -547,6 +552,15 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('id="order-project-item-dialogs"', items)
         self.assertIn('hx-select-oob="#order-project-summary,#order-project-item-dialogs"', items)
         self.assertIn("client-order-project-item-action", editor)
+        self.assertIn("{% if item.can_replace_asset %}", editor)
+        self.assertNotIn("<summary>Remplacer le fichier", editor)
+        self.assertIn("data-asset-replace-before-analysis", replace_form)
+        self.assertIn("Disponible uniquement avant le démarrage", replace_form)
+        self.assertIn("has-replace-before-analysis", editor)
+        self.assertIn(":not(.has-replace-before-analysis)", product_shell)
+        self.assertIn("projectDialogToRestore", configurator_script)
+        self.assertIn('document.body.addEventListener("htmx:afterSettle"', configurator_script)
+        self.assertIn("dialog[open][id^='visual-dialog-']", configurator_script)
         self.assertNotIn("Largeur (mm)", editor)
         self.assertIn('type="hidden" name="width_mm"', editor)
         self.assertIn("ui-btn ui-btn-danger", editor)
@@ -602,7 +616,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("data-support-color-hex", support_color)
         self.assertIn("data-support-color-multicolor", support_color)
         self.assertIn("data-support-color-required", support_color)
+        self.assertIn("data-support-color-exact-required", support_color)
         self.assertIn("b2b-support-color__badge", support_color)
+        self.assertIn("Aucune couleur n’est présélectionnée", support_color)
+        self.assertIn("Aucune sélection", support_color)
         self.assertIn("Détails sous 0,5 mm détectés", support_color)
         self.assertIn("légèrement visible si la couleur du textile", support_color)
         self.assertNotIn("Sans cette couleur", support_color)
@@ -628,6 +645,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("data-semi-transparency-toggle", configurator_runtime)
         self.assertIn("scheduleFitPreviewMedia", configurator_runtime)
         self.assertIn("is-preview-fitted", configurator_runtime)
+        self.assertIn("updateSupportColorStatus", configurator_runtime)
+        self.assertNotIn('applySupportColorPickerValue(fieldset, "#ffffff")', configurator_runtime)
         self.assertIn("applyPreviewZoom", configurator_runtime)
         self.assertIn("data-preview-zoom-in", configurator_runtime)
         self.assertIn("dialog.showModal()", configurator_runtime)

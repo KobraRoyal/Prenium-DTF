@@ -70,6 +70,7 @@ def test_client_portal_project_flow_is_functional():
     assert "HX-Refresh" not in item_response
     assert 'hx-trigger="load delay:1400ms"' in item_response.content.decode()
     assert 'hx-swap-oob="outerHTML"' in item_response.content.decode()
+    assert "data-asset-replace-before-analysis" in item_response.content.decode()
 
     items_refresh = client.get(
         reverse(
@@ -107,6 +108,36 @@ def test_client_portal_project_flow_is_functional():
     )
     assert preview.status_code == 200
     assert preview["Content-Type"] == "image/webp"
+
+    analyzed_items = client.get(
+        reverse(
+            "portal:client-order-project-item-create",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        ),
+        HTTP_HX_REQUEST="true",
+    )
+    assert "data-asset-replace-before-analysis" not in analyzed_items.content.decode()
+    replace_after_analysis = client.post(
+        reverse(
+            "portal:client-order-project-item-asset",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+                "item_public_id": item.public_id,
+                "action": "replace",
+            },
+        ),
+        {"file": png_upload("replacement.png")},
+        HTTP_HX_REQUEST="true",
+    )
+    assert replace_after_analysis.status_code == 400
+    assert json.loads(replace_after_analysis.headers["X-Prenium-Toast"]) == {
+        "message": "Le fichier ne peut plus être remplacé dès que son analyse a commencé.",
+        "variant": "error",
+    }
 
     pdf_response = client.post(
         reverse(
@@ -202,6 +233,89 @@ def test_client_portal_project_flow_is_functional():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_visual_validation_starts_without_support_color_and_requires_a_choice():
+    from apps.b2b_order_projects.services import B2BOrderProjectService
+    from apps.uploads.services.assets import AssetService
+
+    user, customer, client = portal_scope()
+    service = B2BOrderProjectService()
+    project = service.create_project(
+        customer=customer,
+        actor=user,
+        data={"name": "Choix couleur support"},
+        source="test",
+    )
+    item = service.add_item(
+        project=project,
+        actor=user,
+        data={"name": "Logo", "width_mm": 30, "height_mm": 20, "quantity": 1},
+        source="test",
+    )
+    version = AssetService().attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=png_upload(),
+        source="test",
+    )
+    AssetAnalysisService().analyze(version_public_id=version.public_id, source="test")
+
+    panel = client.get(
+        reverse(
+            "portal:client-order-project-item-create",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        ),
+        {"item": str(item.public_id)},
+        HTTP_HX_REQUEST="true",
+    )
+    content = panel.content.decode()
+    assert panel.status_code == 200
+    assert "Aucune couleur n’est présélectionnée" in content
+    assert "Aucune sélection" in content
+    assert "data-support-color-required" in content
+    assert "data-support-color-exact-required" not in content
+    assert 'name="support_color_hex"' in content
+    assert 'required aria-required="true"' in content
+
+    confirm_url = reverse(
+        "portal:client-order-project-item-action",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+            "item_public_id": item.public_id,
+            "action": "confirm-analysis",
+        },
+    )
+    payload = {
+        "confirm_analysis": "on",
+        "name": item.name,
+        "width_mm": str(item.width_mm),
+        "height_mm": str(item.height_mm),
+        "quantity": str(item.quantity),
+        "support_color_hex": "",
+    }
+    missing = client.post(confirm_url, payload, HTTP_HX_REQUEST="true")
+    assert missing.status_code == 400
+    assert json.loads(missing.headers["X-Prenium-Toast"]) == {
+        "message": "Sélectionnez Multicouleur ou choisissez la couleur du support.",
+        "variant": "error",
+    }
+
+    selected = client.post(
+        confirm_url,
+        {**payload, "support_color_multicolor": "on"},
+        HTTP_HX_REQUEST="true",
+    )
+    assert selected.status_code == 200
+    item.refresh_from_db()
+    assert item.support_color_hex == "#multicolor"
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
 def test_thin_zone_overlay_is_visible_and_tenant_scoped_in_validation_modal():
     from apps.b2b_order_projects.services import B2BOrderProjectService
     from apps.uploads.services.assets import AssetService
@@ -267,6 +381,7 @@ def test_thin_zone_overlay_is_visible_and_tenant_scoped_in_validation_modal():
     assert "data-preview-zoom-out" in content
     assert "data-preview-zoom-reset" in content
     assert "data-support-color-required" in content
+    assert "data-support-color-exact-required" in content
     assert 'name="support_color_hex"' in content
     assert 'required aria-required="true"' in content
     assert overlay_url in content
@@ -412,6 +527,7 @@ def test_semi_transparency_overlay_is_visible_and_tenant_scoped_in_validation_mo
             "width_mm": str(item.width_mm),
             "height_mm": str(item.height_mm),
             "quantity": str(item.quantity),
+            "support_color_multicolor": "on",
         },
         HTTP_HX_REQUEST="true",
     )

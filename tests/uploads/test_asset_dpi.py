@@ -139,3 +139,29 @@ def test_pdf_preview_does_not_report_render_dpi_as_source_dpi():
     assert rendered.dpi_y is None
     assert rendered.metadata["render_dpi"] == 144.0
     assert rendered.metadata["dimension_basis"] == "page"
+    assert rendered.metadata["has_vector_artwork"] is True
+    assert rendered.metadata["has_raster_artwork"] is False
+    assert rendered.metadata["is_pure_vector"] is True
+
+
+def test_pdf_preview_marks_document_with_embedded_image_as_not_pure_vector():
+    image_buffer = BytesIO()
+    Image.new("RGB", (600, 300), (255, 0, 0)).save(image_buffer, format="JPEG")
+    document = pymupdf.open()
+    page = document.new_page(width=200, height=100)
+    page.insert_image(page.rect, stream=image_buffer.getvalue())
+    shape = page.new_shape()
+    shape.draw_rect(pymupdf.Rect(10, 10, 40, 40))
+    shape.finish(fill=(0, 0, 0))
+    shape.commit()
+    pdf_bytes = document.tobytes()
+    document.close()
+
+    rendered = AssetPreviewRenderer().render(
+        version=make_version("mixed.pdf", "application/pdf", pdf_bytes)
+    )
+
+    assert rendered.metadata["has_vector_artwork"] is True
+    assert rendered.metadata["has_raster_artwork"] is True
+    assert rendered.metadata["is_pure_vector"] is False
+    rendered.image.close()
