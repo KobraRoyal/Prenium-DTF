@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Prenium DTF — production DTF créative, prépresse et portail B2B{% endblock %}
+{% block title %}Prenium DTF — production DTF B2B, fichier contrôlé et suivi atelier{% endblock %}
 
 {% block extra_head %}
-<meta name="description" content="Prenium DTF : service B2B réservé aux pros du textile. Transferts DTF premium, contrôle prépresse de chaque fichier avant la presse et suivi de chaque commande dans un portail sécurisé.">
+<meta name="description" content="Production DTF réservée aux professionnels : contrôle prépresse, suivi atelier et expédition dans un portail B2B sécurisé. Demandez votre accès Prenium DTF.">
 {% endblock %}
 
-{% block body_class %}landing-saas ui-marketing-body{% endblock %}
+{% block body_class %}landing-saas ui-marketing-body landing-conversion-page{% endblock %}
 
 {% block content %}
 {% include "components/nav/landing_header.html" %}
@@ -17,9 +17,7 @@
   {% include "shop/partials/landing_how_it_works.html" %}
   {% include "shop/partials/landing_quality_proof.html" %}
   {% include "shop/partials/landing_case_studies.html" %}
-  {% include "shop/partials/landing_team.html" %}
   {% include "shop/partials/landing_faq.html" %}
-  {% include "shop/partials/landing_contact.html" %}
   {% include "shop/partials/landing_cta_final.html" %}
 </main>
 {% endblock %}

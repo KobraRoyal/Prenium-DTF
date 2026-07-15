@@ -1,15 +1,9 @@
-<section id="landing-cta-final" class="landing-section agency-section agency-section--ink landing-reveal">
-  <div class="landing-shell">
-    <div class="cta-panel landing-final-cta">
-      <div>
-        <p class="agency-kicker">Ready</p>
-        <h2>Votre prochain fichier mérite mieux qu’un aller-retour flou.</h2>
-        <p class="landing-final-cta__footnote">Lancez une commande DTF, demandez une préparation fichier ou connectez-vous à votre espace client si votre compte est déjà actif.</p>
-      </div>
-      <div class="landing-final-cta__actions">
-        <a class="agency-button agency-button--primary" href="{% url 'services' %}">Commander</a>
-        <a class="agency-button agency-button--pink" href="{% url 'prospects:step1' %}">Accès pro</a>
-      </div>
-    </div>
+<section id="landing-cta-final" class="landing-section conversion-final landing-reveal" aria-labelledby="landing-final-title">
+  <div class="landing-shell conversion-final__panel">
+    <p class="conversion-kicker">Votre prochain dossier</p>
+    <h2 id="landing-final-title">Moins d’allers-retours.<br><em>Plus de maîtrise.</em></h2>
+    <p>Présentez-nous votre activité et votre besoin. Nous validons personnellement chaque ouverture de compte professionnel.</p>
+    <a class="conversion-button conversion-button--primary" href="{% url 'prospects:step1' %}">Ouvrir mon accès pro <span aria-hidden="true">↗</span></a>
+    <small>3 étapes · 1 à 2 jours ouvrés · Sans engagement</small>
   </div>
 </section>

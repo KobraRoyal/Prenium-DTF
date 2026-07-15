@@ -24,40 +24,35 @@ def test_marketing_pages_are_accessible_for_anonymous():
     home = client.get(reverse("home"))
     services = client.get(reverse("services"))
     home_html = home.content.decode()
-    services_url = reverse("services")
     prospect_url = reverse("prospects:step1")
     login_url = reverse("portal:login")
 
     assert home.status_code == 200
     assert "Prenium DTF" in home_html
-    assert "production DTF créative" in home_html
-    assert "dtf-brutalist-workshop.webp" in home_html
+    assert "production DTF B2B" in home_html
+    assert "Du fichier au transfert" in home_html
+    assert "dtf-brutalist-workshop.webp" not in home_html
     assert "Ouvrir mon accès pro" in home_html
-    assert "Découvrir l’offre" in home_html
+    assert "Voir le process" in home_html
     assert "Connexion" in home_html
-    assert "Impression DTF premium" in home_html
-    assert "Préparation de fichiers DTF" in home_html
-    assert "Case previews" in home_html
-    assert "Team showcase" in home_html
-    assert "Contact form" in home_html
+    assert "Transferts DTF prêts atelier" in home_html
+    assert "Fichiers fiabilisés avant impression" in home_html
+    assert "Pensé pour les pros" in home_html
     assert 'id="landing-services"' in home_html
     assert 'id="landing-cases"' in home_html
-    assert 'id="landing-team"' in home_html
     assert 'id="landing-how-it-works"' in home_html
     assert 'id="landing-quality"' in home_html
     assert 'id="landing-faq"' in home_html
-    assert 'id="landing-contact"' in home_html
     assert 'id="landing-cta-final"' in home_html
-    assert "TIFF avec canal alpha" in home_html
-    assert f'href="{services_url}"' in home_html
+    assert "numéro de TVA intracommunautaire" in home_html
     assert f'href="{prospect_url}"' in home_html
     assert f'href="{login_url}"' in home_html
-    assert f'action="{prospect_url}"' in home_html
     assert "js/marketing.js" in home_html
     assert "vendor/htmx-1.9.12.min.js" not in home_html
     assert "vendor/alpinejs-3.14.3.min.js" not in home_html
-    assert 'name="activity_type"' in home_html
-    assert 'name="email"' in home_html
+    assert "<form" not in home_html
+    assert 'id="landing-team"' not in home_html
+    assert 'id="landing-contact"' not in home_html
     assert 'meta name="description"' in home_html
     assert services.status_code == 200
     services_html = services.content.decode()

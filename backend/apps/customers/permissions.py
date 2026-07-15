@@ -33,3 +33,10 @@ class HasScopedCustomerAccess(BaseCustomerMembershipPermission):
 
 class HasCustomerOwnerAccess(BaseCustomerMembershipPermission):
     required_role = CustomerMembership.Role.OWNER
+
+
+class HasCustomerTeamManagerAccess(BaseCustomerMembershipPermission):
+    def has_permission(self, request, view) -> bool:
+        if not super().has_permission(request, view):
+            return False
+        return view.customer_membership.can_manage_team

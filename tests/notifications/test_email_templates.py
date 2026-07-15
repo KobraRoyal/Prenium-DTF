@@ -1,6 +1,8 @@
+from datetime import timedelta
+
 import pytest
 from apps.auditlog.models import AuditLogEntry
-from apps.customers.models import Customer
+from apps.customers.models import Customer, CustomerInvitation, CustomerMembership
 from apps.notifications.models import EmailTemplate
 from apps.notifications.services.email_templates import (
     EMAIL_TEMPLATE_DEFINITIONS,
@@ -9,6 +11,11 @@ from apps.notifications.services.email_templates import (
     validate_template_pair,
 )
 from apps.notifications.services.transactional import (
+    send_access_request_approved_email,
+    send_access_request_submitted_internal_email,
+    send_access_request_verification_email,
+    send_account_activated_email,
+    send_customer_invitation_email,
     send_file_correction_requested_email,
     send_order_created_email,
     send_order_processing_email,
@@ -16,6 +23,7 @@ from apps.notifications.services.transactional import (
     send_order_shipped_email,
 )
 from apps.orders.models import Order
+from apps.prospects.models import ProspectProfile
 from apps.shipping.models import Shipment
 from apps.uploads.models import OrderUpload, OrderUploadReview
 from django.contrib.auth import get_user_model
@@ -25,6 +33,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 
 def create_order(*, email: str = "owner@example.com") -> tuple[object, Order]:
@@ -75,6 +84,124 @@ def test_renderer_replaces_only_allowlisted_tags():
     )
 
     assert rendered == "Bonjour Atelier Démo, commande abc123."
+
+
+@pytest.mark.django_db
+@override_settings(PUBLIC_BASE_URL="https://portal.example.test")
+def test_access_verification_email_contains_signed_public_link_and_no_fake_legal_id():
+    profile = ProspectProfile.objects.create(
+        first_name="Camille",
+        last_name="Martin",
+        email="camille@example.com",
+        normalized_email="camille@example.com",
+        phone="+3212345678",
+        company="Atelier Belgique",
+        country="BE",
+        siren="",
+        vat_number="BE0123456789",
+        activity_type=ProspectProfile.ActivityType.WORKSHOP,
+        service_interest=ProspectProfile.ServiceInterest.DTF_METER,
+        project_timing=ProspectProfile.ProjectTiming.ONGOING,
+        monthly_volume=ProspectProfile.MonthlyVolume.M10_50,
+        order_frequency=ProspectProfile.OrderFrequency.MONTHLY,
+        urgency=ProspectProfile.Urgency.MEDIUM,
+        status=ProspectProfile.Status.PENDING_EMAIL_VERIFICATION,
+        is_open=True,
+    )
+
+    mail.outbox.clear()
+    send_access_request_verification_email(profile=profile)
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == [profile.email]
+    assert "https://portal.example.test/demande-acces/verifier/" in mail.outbox[0].body
+    assert "123456789" not in mail.outbox[0].body
+
+
+@pytest.mark.django_db
+@override_settings(
+    PUBLIC_BASE_URL="https://portal.example.test",
+    INTERNAL_NOTIFICATION_EMAILS=["access@example.com"],
+)
+def test_verified_access_request_is_sent_only_to_internal_recipients():
+    profile = ProspectProfile.objects.create(
+        first_name="Jean",
+        last_name="Martin",
+        email="jean@example.com",
+        normalized_email="jean@example.com",
+        phone="+33612345678",
+        company="Atelier Martin",
+        country="FR",
+        siren="123456789",
+        activity_type=ProspectProfile.ActivityType.BRAND,
+        service_interest=ProspectProfile.ServiceInterest.DTF_METER,
+        project_timing=ProspectProfile.ProjectTiming.IMMEDIATE,
+        monthly_volume=ProspectProfile.MonthlyVolume.M10_50,
+        order_frequency=ProspectProfile.OrderFrequency.MONTHLY,
+        urgency=ProspectProfile.Urgency.MEDIUM,
+        status=ProspectProfile.Status.PENDING_REVIEW,
+        is_open=True,
+    )
+
+    mail.outbox.clear()
+    send_access_request_submitted_internal_email(profile=profile)
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == ["access@example.com"]
+    assert profile.email in mail.outbox[0].body
+    assert str(profile.public_id) in mail.outbox[0].body
+
+
+@pytest.mark.django_db
+@override_settings(PUBLIC_BASE_URL="https://portal.example.test")
+def test_activation_and_collaborator_emails_use_versioned_invitation_link():
+    actor = get_user_model().objects.create_user(email="admin@example.com", password="pass")
+    customer = Customer.objects.create(name="Atelier Démo")
+    profile = ProspectProfile.objects.create(
+        first_name="Camille",
+        last_name="Martin",
+        email="camille@example.com",
+        normalized_email="camille@example.com",
+        phone="+33612345678",
+        company=customer.name,
+        country="FR",
+        siren="123456789",
+        activity_type=ProspectProfile.ActivityType.BRAND,
+        service_interest=ProspectProfile.ServiceInterest.DTF_METER,
+        project_timing=ProspectProfile.ProjectTiming.IMMEDIATE,
+        monthly_volume=ProspectProfile.MonthlyVolume.M10_50,
+        order_frequency=ProspectProfile.OrderFrequency.MONTHLY,
+        urgency=ProspectProfile.Urgency.MEDIUM,
+        customer=customer,
+        status=ProspectProfile.Status.APPROVED_PENDING_ACTIVATION,
+        is_open=True,
+    )
+    owner_invitation = CustomerInvitation.objects.create(
+        customer=customer,
+        email=profile.email,
+        role=CustomerMembership.Role.OWNER,
+        kind=CustomerInvitation.Kind.OWNER_ACTIVATION,
+        invited_by=actor,
+        expires_at=timezone.now() + timedelta(hours=72),
+    )
+    collaborator = CustomerInvitation.objects.create(
+        customer=customer,
+        email="member@example.com",
+        role=CustomerMembership.Role.MEMBER,
+        invited_by=actor,
+        expires_at=timezone.now() + timedelta(hours=72),
+    )
+
+    mail.outbox.clear()
+    send_access_request_approved_email(invitation=owner_invitation)
+    send_customer_invitation_email(invitation=collaborator)
+    send_account_activated_email(invitation=collaborator)
+
+    assert len(mail.outbox) == 3
+    assert all("https://portal.example.test" in message.body for message in mail.outbox)
+    assert "/acces/invitation/" in mail.outbox[0].body
+    assert "/acces/invitation/" in mail.outbox[1].body
+    assert "/login/" in mail.outbox[2].body
 
 
 def test_template_catalog_uses_order_lifecycle_without_redundant_b2b_event():
@@ -133,9 +260,9 @@ def test_save_override_versions_and_audits_without_copying_message_content():
     assert first.public_id == second.public_id
     assert second.version == 2
     assert second.is_active is False
-    audit = AuditLogEntry.objects.filter(
-        action="notifications.email_template.updated"
-    ).latest("created_at")
+    audit = AuditLogEntry.objects.filter(action="notifications.email_template.updated").latest(
+        "created_at"
+    )
     assert audit.target_public_id == second.public_id
     assert audit.metadata == {
         "event": "order_created",

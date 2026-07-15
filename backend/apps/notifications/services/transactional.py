@@ -4,6 +4,7 @@ import logging
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.urls import reverse
 
 from apps.notifications.models import EmailTemplate
 from apps.notifications.services.email_templates import EmailTemplateService
@@ -96,6 +97,204 @@ def _send_event_email(
     return sent_audiences
 
 
+def _absolute_url(path: str) -> str:
+    base_url = str(getattr(settings, "PUBLIC_BASE_URL", "http://localhost:8080")).rstrip("/")
+    return f"{base_url}{path}"
+
+
+def _prospect_context(profile) -> dict[str, str]:
+    return {
+        "site.name": "Prenium DTF",
+        "prospect.first_name": profile.first_name,
+        "prospect.last_name": profile.last_name,
+        "prospect.company": profile.company,
+        "prospect.email": profile.email,
+        "prospect.country": profile.country,
+        "prospect.siren": profile.siren,
+        "prospect.vat_number": profile.vat_number,
+        "customer.name": getattr(profile.customer, "name", "") if profile.customer_id else "",
+    }
+
+
+def _send_context_email(
+    *,
+    event: str,
+    audience: str,
+    recipients: list[str],
+    context: dict[str, str],
+) -> bool:
+    if not getattr(settings, "TRANSACTIONAL_EMAILS_ENABLED", True) or not recipients:
+        return False
+    rendered = email_template_service.render_for_context(
+        event=event,
+        audience=audience,
+        context=context,
+    )
+    if rendered is None:
+        return False
+    subject, body = rendered
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipients, fail_silently=False)
+    return True
+
+
+def send_access_request_verification_email(*, profile) -> None:
+    from apps.prospects.services.onboarding import make_email_verification_token
+
+    context = _prospect_context(profile)
+    token = make_email_verification_token(profile)
+    context["action.url"] = _absolute_url(
+        reverse("prospects:verify-email", kwargs={"token": token})
+    )
+    _send_context_email(
+        event=EmailTemplate.Event.ACCESS_REQUEST_EMAIL_VERIFICATION,
+        audience=EmailTemplate.Audience.CLIENT,
+        recipients=[profile.email],
+        context=context,
+    )
+
+
+def send_access_request_submitted_internal_email(*, profile) -> None:
+    context = _prospect_context(profile)
+    context["action.url"] = _absolute_url(
+        reverse(
+            "portal:staff-access-request-detail",
+            kwargs={"profile_public_id": profile.public_id},
+        )
+    )
+    _send_context_email(
+        event=EmailTemplate.Event.ACCESS_REQUEST_SUBMITTED_INTERNAL,
+        audience=EmailTemplate.Audience.INTERNAL,
+        recipients=_internal_recipient_emails(),
+        context=context,
+    )
+
+
+def send_access_request_approved_email(*, invitation) -> None:
+    from apps.customers.services.invitations import make_invitation_token
+
+    profile = invitation.customer.prospect_profiles.select_related("customer").get()
+    context = _prospect_context(profile)
+    context["action.url"] = _absolute_url(
+        reverse(
+            "portal:customer-invitation-accept",
+            kwargs={"token": make_invitation_token(invitation)},
+        )
+    )
+    _send_context_email(
+        event=EmailTemplate.Event.ACCESS_REQUEST_APPROVED,
+        audience=EmailTemplate.Audience.CLIENT,
+        recipients=[invitation.email],
+        context=context,
+    )
+
+
+def send_access_request_rejected_email(*, profile) -> None:
+    context = _prospect_context(profile)
+    context["review.reason"] = profile.rejection_reason
+    _send_context_email(
+        event=EmailTemplate.Event.ACCESS_REQUEST_REJECTED,
+        audience=EmailTemplate.Audience.CLIENT,
+        recipients=[profile.email],
+        context=context,
+    )
+
+
+def _invitation_context(invitation) -> dict[str, str]:
+    from apps.customers.services.invitations import make_invitation_token
+
+    return {
+        "site.name": "Prenium DTF",
+        "customer.name": invitation.customer.name,
+        "invitation.role": invitation.get_role_display(),
+        "action.url": _absolute_url(
+            reverse(
+                "portal:customer-invitation-accept",
+                kwargs={"token": make_invitation_token(invitation)},
+            )
+        ),
+    }
+
+
+def send_customer_invitation_email(*, invitation) -> None:
+    _send_context_email(
+        event=EmailTemplate.Event.CUSTOMER_MEMBER_INVITED,
+        audience=EmailTemplate.Audience.CLIENT,
+        recipients=[invitation.email],
+        context=_invitation_context(invitation),
+    )
+
+
+def send_account_activated_email(*, invitation) -> None:
+    context = _invitation_context(invitation)
+    context["action.url"] = _absolute_url(reverse("portal:login"))
+    _send_context_email(
+        event=EmailTemplate.Event.ACCOUNT_ACTIVATED,
+        audience=EmailTemplate.Audience.CLIENT,
+        recipients=[invitation.email],
+        context=context,
+    )
+
+
+def schedule_access_request_verification_email(*, profile_public_id) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_access_request_verification_email_task
+
+    transaction.on_commit(
+        lambda: send_access_request_verification_email_task.delay(str(profile_public_id))
+    )
+
+
+def schedule_access_request_submitted_internal_email(*, profile_public_id) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_access_request_submitted_internal_email_task
+
+    transaction.on_commit(
+        lambda: send_access_request_submitted_internal_email_task.delay(str(profile_public_id))
+    )
+
+
+def schedule_access_request_approved_email(*, invitation_public_id) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_access_request_approved_email_task
+
+    transaction.on_commit(
+        lambda: send_access_request_approved_email_task.delay(str(invitation_public_id))
+    )
+
+
+def schedule_access_request_rejected_email(*, profile_public_id) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_access_request_rejected_email_task
+
+    transaction.on_commit(
+        lambda: send_access_request_rejected_email_task.delay(str(profile_public_id))
+    )
+
+
+def schedule_customer_invitation_email(*, invitation_public_id) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_customer_invitation_email_task
+
+    transaction.on_commit(
+        lambda: send_customer_invitation_email_task.delay(str(invitation_public_id))
+    )
+
+
+def schedule_account_activated_email(*, invitation_public_id) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_account_activated_email_task
+
+    transaction.on_commit(
+        lambda: send_account_activated_email_task.delay(str(invitation_public_id))
+    )
+
+
 def send_order_created_email(*, order: Order) -> None:
     if not getattr(settings, "TRANSACTIONAL_EMAILS_ENABLED", True):
         return
@@ -167,9 +366,7 @@ def schedule_order_ready_to_ship_email(*, order_public_id) -> None:
 
     from apps.notifications.tasks import send_order_ready_to_ship_email_task
 
-    transaction.on_commit(
-        lambda: send_order_ready_to_ship_email_task.delay(str(order_public_id))
-    )
+    transaction.on_commit(lambda: send_order_ready_to_ship_email_task.delay(str(order_public_id)))
 
 
 def schedule_order_shipped_email(*, order_public_id) -> None:

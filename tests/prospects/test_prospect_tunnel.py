@@ -1,170 +1,254 @@
+from unittest.mock import patch
+
 import pytest
+from apps.customers.models import Customer, CustomerInvitation, CustomerMembership
+from apps.customers.services.invitations import make_invitation_token
 from apps.prospects.models import ProspectProfile
+from apps.prospects.services.onboarding import (
+    ProspectReviewService,
+    make_email_verification_token,
+)
 from django.contrib.auth import get_user_model
-from django.test import Client
+from django.contrib.auth.models import Permission
+from django.core.cache import cache
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 User = get_user_model()
 
 
+@pytest.fixture(autouse=True)
+def clear_prospect_rate_limit_cache():
+    cache.clear()
+
+
+def step1_payload(**overrides):
+    payload = {
+        "first_name": "Jean",
+        "last_name": "Martin",
+        "email": "prospect@example.com",
+        "phone": "+33612345678",
+        "company": "Atelier Martin",
+        "country": "FR",
+        "siren": "123 456 789",
+        "vat_number": "",
+        "activity_type": "brand",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def step2_payload(**overrides):
+    payload = {
+        "service_interest": "dtf_meter",
+        "main_goal": "Lancer une capsule",
+        "project_timing": "immediate",
+        "monthly_volume": "10_50",
+        "order_frequency": "monthly",
+        "urgency": "medium",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def submit_request(client: Client, *, email="prospect@example.com") -> ProspectProfile:
+    assert client.post(reverse("prospects:step1"), step1_payload(email=email)).status_code == 302
+    assert client.post(reverse("prospects:step2"), step2_payload()).status_code == 302
+    with patch(
+        "apps.notifications.tasks.send_access_request_verification_email_task.delay"
+    ) as delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            response = client.post(reverse("prospects:step3"), {"terms_accepted": "on"})
+    assert response.status_code == 302
+    profile = ProspectProfile.objects.get(normalized_email=email)
+    delay.assert_called_once_with(str(profile.public_id))
+    return profile
+
+
 @pytest.mark.django_db
-def test_prospect_step1_requires_valid_email():
-    client = Client()
-    url = reverse("prospects:step1")
+def test_france_requires_nine_digit_siren_and_foreign_country_requires_tax_id(client):
+    response = client.post(reverse("prospects:step1"), step1_payload(siren="123"))
+    assert response.status_code == 200
+    assert "9 chiffres" in response.content.decode()
+
     response = client.post(
-        url,
-        {
-            "first_name": "Jean",
-            "last_name": "Test",
-            "email": "pas-un-email",
-            "phone": "0612345678",
-            "company": "Studio T",
-            "country": "FR",
-            "activity_type": "creator",
-        },
+        reverse("prospects:step1"),
+        step1_payload(country="BE", siren="", vat_number=""),
     )
     assert response.status_code == 200
-    content = response.content.decode().lower()
-    assert "email" in content and ("valide" in content or "valid" in content)
+    assert "identifiant fiscal valide" in response.content.decode()
+
+    response = client.post(
+        reverse("prospects:step1"),
+        step1_payload(country="BE", siren="", vat_number="BE 0123.456.789"),
+    )
+    assert response.status_code == 302
 
 
 @pytest.mark.django_db
-def test_prospect_tunnel_completes_and_creates_account():
-    client = Client()
-    email = "prospect.success@example.com"
+def test_submission_creates_only_pending_request_not_user_or_customer(client):
+    profile = submit_request(client)
 
-    assert (
-        client.post(
-            reverse("prospects:step1"),
-            {
-                "first_name": "Jean",
-                "last_name": "Ok",
-                "email": email,
-                "phone": "+33612345678",
-                "company": "Marque OK",
-                "country": "FR",
-                "activity_type": "brand",
-            },
-        ).status_code
-        == 302
-    )
+    assert profile.status == ProspectProfile.Status.PENDING_EMAIL_VERIFICATION
+    assert profile.siren == "123456789"
+    assert profile.is_open is True
+    assert profile.user is None
+    assert profile.customer is None
+    assert not User.objects.filter(email=profile.email).exists()
+    assert Customer.objects.count() == 0
 
-    assert (
-        client.post(
-            reverse("prospects:step2"),
-            {
-                "service_interest": "dtf_meter",
-                "main_goal": "Lancer une capsule",
-                "project_timing": "immediate",
-            },
-        ).status_code
-        == 302
-    )
 
-    assert (
-        client.post(
-            reverse("prospects:step3"),
-            {
-                "monthly_volume": "10_50",
-                "order_frequency": "monthly",
-                "urgency": "medium",
-            },
-        ).status_code
-        == 302
-    )
+@pytest.mark.django_db
+def test_resubmission_rotates_verification_token_and_resends_email(client):
+    profile = submit_request(client)
+    initial_version = profile.verification_version
 
-    response = client.post(
-        reverse("prospects:step4"),
-        {
-            "password": "ComplexPass-2026!",
-            "password_confirm": "ComplexPass-2026!",
-        },
-    )
+    assert client.post(reverse("prospects:step1"), step1_payload()).status_code == 302
+    assert client.post(reverse("prospects:step2"), step2_payload()).status_code == 302
+    with patch(
+        "apps.notifications.tasks.send_access_request_verification_email_task.delay"
+    ) as delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            response = client.post(reverse("prospects:step3"), {"terms_accepted": "on"})
+
     assert response.status_code == 302
-    assert response.url == reverse("prospects:confirmation")
+    profile.refresh_from_db()
+    assert profile.verification_version == initial_version + 1
+    delay.assert_called_once_with(str(profile.public_id))
 
-    assert User.objects.filter(email__iexact=email).exists()
-    user = User.objects.get(email__iexact=email)
-    profile = ProspectProfile.objects.get(user=user)
-    assert profile.status == ProspectProfile.Status.ACCOUNT_CREATED
-    assert profile.company == "Marque OK"
+
+@pytest.mark.django_db
+@override_settings(PROSPECT_RATE_LIMIT_MAX_ATTEMPTS=2)
+def test_spoofed_forwarded_ip_does_not_bypass_prospect_rate_limit(client):
+    for forwarded_ip in ("198.51.100.1", "198.51.100.2"):
+        assert client.post(reverse("prospects:step1"), step1_payload()).status_code == 302
+        assert client.post(reverse("prospects:step2"), step2_payload()).status_code == 302
+        with patch("apps.notifications.tasks.send_access_request_verification_email_task.delay"):
+            with TestCase.captureOnCommitCallbacks(execute=True):
+                response = client.post(
+                    reverse("prospects:step3"),
+                    {"terms_accepted": "on"},
+                    HTTP_X_FORWARDED_FOR=forwarded_ip,
+                )
+        assert response.status_code == 302
+
+    assert client.post(reverse("prospects:step1"), step1_payload()).status_code == 302
+    assert client.post(reverse("prospects:step2"), step2_payload()).status_code == 302
+    response = client.post(
+        reverse("prospects:step3"),
+        {"terms_accepted": "on"},
+        HTTP_X_FORWARDED_FOR="198.51.100.3",
+    )
+    assert response.status_code == 429
+
+
+@pytest.mark.django_db
+def test_email_verification_moves_request_to_staff_queue_and_is_idempotent(client):
+    profile = submit_request(client)
+    token = make_email_verification_token(profile)
+    url = reverse("prospects:verify-email", kwargs={"token": token})
+
+    with patch(
+        "apps.notifications.tasks.send_access_request_submitted_internal_email_task.delay"
+    ) as delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            response = client.get(url)
+    assert response.status_code == 200
+    profile.refresh_from_db()
+    assert profile.status == ProspectProfile.Status.PENDING_REVIEW
+    assert profile.email_verified_at is not None
+    delay.assert_called_once_with(str(profile.public_id))
+
+    with patch(
+        "apps.notifications.tasks.send_access_request_submitted_internal_email_task.delay"
+    ) as repeated_delay:
+        assert client.get(url).status_code == 200
+    repeated_delay.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_only_reviewer_can_approve_and_approval_keeps_org_inactive(client):
+    profile = submit_request(client)
+    profile.status = ProspectProfile.Status.PENDING_REVIEW
+    profile.save(update_fields=("status", "updated_at"))
+    basic_staff = User.objects.create_user(
+        email="staff@example.com", password="pass", is_staff=True
+    )
+    basic_staff.user_permissions.add(Permission.objects.get(codename="access_staff_portal"))
+    client.force_login(basic_staff)
+    approve_url = reverse(
+        "portal:staff-access-request-approve",
+        kwargs={"profile_public_id": profile.public_id},
+    )
+    assert client.post(approve_url).status_code == 403
+
+    reviewer = User.objects.create_user(
+        email="reviewer@example.com", password="pass", is_staff=True
+    )
+    reviewer.user_permissions.add(
+        Permission.objects.get(codename="access_staff_portal"),
+        Permission.objects.get(codename="view_prospectprofile"),
+        Permission.objects.get(codename="review_prospectprofile"),
+    )
+    client.force_login(reviewer)
+    with patch("apps.notifications.tasks.send_access_request_approved_email_task.delay") as delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            response = client.post(approve_url, {"review_note": "SIREN contrôlé"})
+    assert response.status_code == 302
+    profile.refresh_from_db()
+    assert profile.status == ProspectProfile.Status.APPROVED_PENDING_ACTIVATION
     assert profile.customer is not None
-
-    conf = client.get(reverse("prospects:confirmation"))
-    assert conf.status_code == 200
-    body = conf.content.decode()
-    assert "Jean" in body
-    assert "Bienvenue" in body
+    assert profile.customer.is_active is False
+    invitation = CustomerInvitation.objects.get(customer=profile.customer)
+    assert invitation.role == CustomerMembership.Role.OWNER
+    delay.assert_called_once_with(str(invitation.public_id))
 
 
 @pytest.mark.django_db
-def test_prospect_step4_rejects_duplicate_email():
-    User.objects.create_user(email="existing@example.com", password="pass")
-
-    client = Client()
-    email = "existing@example.com"
-    for step, data in [
-        (
-            "prospects:step1",
-            {
-                "first_name": "A",
-                "last_name": "B",
-                "email": email,
-                "phone": "0600000000",
-                "company": "Co",
-                "country": "FR",
-                "activity_type": "other",
-            },
-        ),
-        (
-            "prospects:step2",
-            {
-                "service_interest": "unsure",
-                "project_timing": "exploring",
-            },
-        ),
-        (
-            "prospects:step3",
-            {
-                "monthly_volume": "lt10",
-                "order_frequency": "punctual",
-                "urgency": "low",
-            },
-        ),
-    ]:
-        r = client.post(reverse(step), data)
-        assert r.status_code == 302, step
-
-    response = client.post(
-        reverse("prospects:step4"),
-        {
-            "password": "Another-Complex-2026!",
-            "password_confirm": "Another-Complex-2026!",
-        },
+def test_owner_activation_creates_account_and_membership_without_auto_login(client):
+    profile = submit_request(client)
+    profile.status = ProspectProfile.Status.PENDING_REVIEW
+    profile.save(update_fields=("status", "updated_at"))
+    reviewer = User.objects.create_user(
+        email="reviewer@example.com",
+        password="pass",
+        is_staff=True,
     )
-    assert response.status_code == 200
-    assert "existe" in response.content.decode().lower()
+    reviewer.user_permissions.add(
+        Permission.objects.get(codename="access_staff_portal"),
+        Permission.objects.get(codename="review_prospectprofile"),
+    )
+    with patch("apps.notifications.tasks.send_access_request_approved_email_task.delay"):
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            profile = ProspectReviewService().approve(
+                profile_public_id=profile.public_id,
+                actor=reviewer,
+            )
+    invitation = CustomerInvitation.objects.get(customer=profile.customer)
+    token = make_invitation_token(invitation)
 
-
-@pytest.mark.django_db
-def test_prospect_step2_redirects_without_step1():
-    client = Client()
-    response = client.get(reverse("prospects:step2"))
+    with patch("apps.notifications.tasks.send_account_activated_email_task.delay"):
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            response = client.post(
+                reverse("portal:customer-invitation-accept", kwargs={"token": token}),
+                {
+                    "password": "ComplexPass-2026!",
+                    "password_confirm": "ComplexPass-2026!",
+                },
+            )
     assert response.status_code == 302
-    assert response.url == reverse("prospects:step1")
+    profile.refresh_from_db()
+    assert profile.status == ProspectProfile.Status.ACTIVE
+    assert profile.customer.is_active is True
+    assert profile.user is not None
+    membership = CustomerMembership.objects.get(customer=profile.customer, user=profile.user)
+    assert membership.role == CustomerMembership.Role.OWNER
+    assert "_auth_user_id" not in client.session
 
 
 @pytest.mark.django_db
-def test_portal_login_still_accessible():
-    client = Client()
-    r = client.get(reverse("portal:login"))
-    assert r.status_code == 200
-
-
-@pytest.mark.django_db
-def test_prospect_urls_use_demande_acces_and_legacy_redirects():
+def test_simplified_tunnel_has_three_steps_and_legacy_step4_redirects(client):
     assert reverse("prospects:step1") == "/demande-acces/etape-1/"
-    client = Client()
-    r = client.get("/compte-pro/etape-1/", follow=False)
-    assert r.status_code == 301
-    assert r["Location"] == "/demande-acces/etape-1/"
+    response = client.get(reverse("prospects:step4"))
+    assert response.status_code == 302
+    assert response.url == reverse("prospects:step3")

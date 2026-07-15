@@ -1,0 +1,16 @@
+{% extends "prospects/base_tunnel.html" %}
+{% block title %}Activer votre accès — Prenium DTF{% endblock %}
+{% block prospect_section_head %}<div class="landing-section-head prospect-tunnel__intro"><p class="landing-kicker landing-kicker--pill">Invitation sécurisée</p><h2 class="prospect-tunnel__title">{% if invitation %}Rejoindre {{ invitation.customer.name }}{% else %}Invitation indisponible{% endif %}</h2><p class="landing-auth-lead prospect-tunnel__lead">{% if invitation %}Rôle proposé : {{ invitation.get_role_display }}{% endif %}</p></div>{% endblock %}
+{% block prospect_inner %}
+{% if error %}<div class="dui-alert dui-alert-error" role="alert">{{ error }}</div>{% elif existing_account %}
+  <div class="prospect-success-card"><h3>Un compte existe déjà pour {{ invitation.email }}</h3>{% if email_matches %}<p>Confirmez pour ajouter cette organisation à votre compte.</p><form method="post">{% csrf_token %}<button class="ui-btn ui-btn-primary" type="submit">Accepter l’invitation</button></form>{% else %}<p>Connectez-vous avec cette adresse avant d’accepter.</p><form method="post">{% csrf_token %}<button class="ui-btn ui-btn-primary" type="submit">Me connecter</button></form>{% endif %}</div>
+{% else %}
+  <form method="post" class="ui-form-stack prospect-form" novalidate data-submit-loading>{% csrf_token %}
+    <div class="prospect-form__panel"><p class="ui-help">Créez votre mot de passe. Il ne sera jamais transmis par e-mail.</p>
+      <div class="ui-field-group"><label class="ui-label" for="id_password">Mot de passe</label><input class="ui-input{% if form.password.errors %} ui-input--error{% endif %}" id="id_password" name="password" type="password" required autocomplete="new-password">{% if form.password.errors %}<p class="error-text">{{ form.password.errors.0 }}</p>{% endif %}</div>
+      <div class="ui-field-group"><label class="ui-label" for="id_password_confirm">Confirmation</label><input class="ui-input{% if form.password_confirm.errors %} ui-input--error{% endif %}" id="id_password_confirm" name="password_confirm" type="password" required autocomplete="new-password">{% if form.password_confirm.errors %}<p class="error-text">{{ form.password_confirm.errors.0 }}</p>{% endif %}</div>
+      {% if form.non_field_errors %}<p class="error-text">{{ form.non_field_errors.0 }}</p>{% endif %}
+    </div><button class="ui-btn ui-btn-primary ui-btn-wide" type="submit">Activer mon accès</button>
+  </form>
+{% endif %}
+{% endblock %}

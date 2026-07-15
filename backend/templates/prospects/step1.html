@@ -1,183 +1,124 @@
 {% extends "prospects/base_tunnel.html" %}
 
-{% block title %}Demande d’accès — étape 1 - Prenium DTF{% endblock %}
+{% block title %}Votre entreprise — Prenium DTF{% endblock %}
+{% block body_class %}{{ block.super }} prospect-step1-page{% endblock %}
 
 {% block prospect_section_head %}
-<div class="landing-section-head prospect-tunnel__intro">
-  <p class="landing-kicker landing-kicker--pill">Accès atelier Prenium</p>
-  <h2 class="prospect-tunnel__title">Votre profil</h2>
-  <p class="landing-auth-lead prospect-tunnel__lead">Quelques repères pour personnaliser votre accompagnement — sans engagement.</p>
+<div class="landing-section-head prospect-tunnel__intro prospect-step1__intro">
+  <div class="prospect-step1__intro-topline">
+    <p class="landing-kicker landing-kicker--pill">Ouverture de compte professionnel</p>
+    <span class="prospect-step1__time">Environ 2 minutes</span>
+  </div>
+  <h2 class="prospect-tunnel__title">Votre entreprise,<br>simplement.</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Présentez-nous votre activité. Aucun document à transmettre aujourd’hui.</p>
+  <ul class="prospect-step1__proofs" aria-label="Garanties du parcours">
+    <li><span aria-hidden="true">✓</span> Validation humaine</li>
+    <li><span aria-hidden="true">✓</span> Données protégées</li>
+    <li><span aria-hidden="true">✓</span> Sans engagement</li>
+  </ul>
 </div>
 {% endblock %}
 
 {% block prospect_inner %}
-<form method="post" class="flex flex-col gap-7 prospect-form prospect-form--step1 text-left" novalidate data-submit-loading>
+<form method="post" class="ui-form-stack prospect-form prospect-step1" novalidate data-submit-loading x-data="{ country: '{{ form.country.value|default:'FR' }}' }">
   {% csrf_token %}
   {% if form.non_field_errors %}
-  <div class="dui-alert dui-alert-error border border-error/35 bg-error/15 text-error-content text-center justify-center" role="alert">
-    {% for e in form.non_field_errors %}<span class="text-sm">{{ e }}</span>{% endfor %}
-  </div>
+  <div class="dui-alert dui-alert-error prospect-step1__alert" role="alert">{{ form.non_field_errors.0 }}</div>
   {% endif %}
 
-  <section class="prospect-form__section" aria-labelledby="prospect-step1-contact-heading">
-    <h3 id="prospect-step1-contact-heading" class="prospect-form__section-title">Identité &amp; contact</h3>
-    <div class="prospect-form__panel">
-      <div class="prospect-form__grid">
-    {% with f=form.first_name %}
-    <div class="dui-form-control w-full">
-      <label class="product-form-label" for="id_first_name">{{ f.label }}</label>
-      <input
-        class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
-        id="id_first_name"
-        name="first_name"
-        value="{{ f.value|default:'' }}"
-        required
-        autocomplete="given-name"
-        placeholder="Prénom"
-      />
-      {% if f.errors %}<p class="text-sm text-error" role="alert">{{ f.errors.0 }}</p>{% endif %}
-    </div>
-    {% endwith %}
-    {% with f=form.last_name %}
-    <div class="dui-form-control w-full">
-      <label class="product-form-label" for="id_last_name">{{ f.label }}</label>
-      <input
-        class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
-        id="id_last_name"
-        name="last_name"
-        value="{{ f.value|default:'' }}"
-        required
-        autocomplete="family-name"
-        placeholder="Nom"
-      />
-      {% if f.errors %}<p class="text-sm text-error" role="alert">{{ f.errors.0 }}</p>{% endif %}
-    </div>
-    {% endwith %}
+  <section class="prospect-form__section prospect-step1__section" aria-labelledby="contact-heading">
+    <div class="prospect-step1__section-head">
+      <span class="prospect-form__section-index" aria-hidden="true">01</span>
+      <div>
+        <h3 id="contact-heading" class="prospect-form__section-title">Vos coordonnées</h3>
+        <p class="prospect-step1__section-help">La personne qui pilotera le compte après validation IDS.</p>
       </div>
-
-      {% with f=form.email %}
-  <div class="dui-form-control w-full">
-    <label class="product-form-label" for="id_email">{{ f.label }}</label>
-    <input
-      class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
-      id="id_email"
-      name="email"
-      type="email"
-      value="{{ f.value|default:'' }}"
-      required
-      autocomplete="email"
-      placeholder="Email professionnel"
-    />
-    {% if f.errors %}<p class="text-sm text-error" role="alert">{{ f.errors.0 }}</p>{% endif %}
-  </div>
-      {% endwith %}
-
-      <div class="prospect-form__grid">
-    {% with f=form.phone %}
-    <div class="dui-form-control w-full">
-      <label class="product-form-label" for="id_phone">{{ f.label }}</label>
-      <input
-        class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
-        id="id_phone"
-        name="phone"
-        value="{{ f.value|default:'' }}"
-        required
-        autocomplete="tel"
-        inputmode="tel"
-        placeholder="Téléphone"
-      />
-      {% if f.errors %}<p class="text-sm text-error" role="alert">{{ f.errors.0 }}</p>{% endif %}
+      <span class="prospect-step1__section-meta">4 champs</span>
     </div>
-    {% endwith %}
-    {% with f=form.company %}
-    <div class="dui-form-control w-full">
-      <label class="product-form-label" for="id_company">{{ f.label }}</label>
-      <input
-        class="dui-input dui-input-bordered w-full checkout-dui-input{% if f.errors %} border-error/60{% endif %}"
-        id="id_company"
-        name="company"
-        value="{{ f.value|default:'' }}"
-        required
-        autocomplete="organization"
-        placeholder="Société"
-      />
-      {% if f.errors %}<p class="text-sm text-error" role="alert">{{ f.errors.0 }}</p>{% endif %}
-    </div>
-    {% endwith %}
+    <div class="prospect-form__panel prospect-step1__surface prospect-step1__contact-grid">
+      <div class="dui-form-control prospect-step1__field">
+        <label class="product-form-label" for="id_first_name">{{ form.first_name.label }}</label>
+        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.first_name.errors %} border-error/60{% endif %}" id="id_first_name" name="first_name" value="{{ form.first_name.value|default:'' }}" required autocomplete="given-name" placeholder="Camille">
+        {% if form.first_name.errors %}<p class="error-text" role="alert">{{ form.first_name.errors.0 }}</p>{% endif %}
       </div>
-
-      {% with f=form.country %}
-  <div class="dui-form-control w-full">
-    <label class="product-form-label" for="id_country">{{ f.label }}</label>
-    <select
-      class="dui-select dui-select-bordered w-full checkout-dui-input min-h-12{% if f.errors %} border-error/60{% endif %}"
-      id="id_country"
-      name="country"
-      required
-      autocomplete="country"
-    >
-      {% for val, label in f.field.choices %}
-      <option value="{{ val }}" {% if f.value == val %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-    {% if f.errors %}<p class="text-sm text-error" role="alert">{{ f.errors.0 }}</p>{% endif %}
-  </div>
-      {% endwith %}
+      <div class="dui-form-control prospect-step1__field">
+        <label class="product-form-label" for="id_last_name">{{ form.last_name.label }}</label>
+        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.last_name.errors %} border-error/60{% endif %}" id="id_last_name" name="last_name" value="{{ form.last_name.value|default:'' }}" required autocomplete="family-name" placeholder="Martin">
+        {% if form.last_name.errors %}<p class="error-text" role="alert">{{ form.last_name.errors.0 }}</p>{% endif %}
+      </div>
+      <div class="dui-form-control prospect-step1__field">
+        <label class="product-form-label" for="id_email">{{ form.email.label }}</label>
+        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.email.errors %} border-error/60{% endif %}" id="id_email" name="email" type="email" value="{{ form.email.value|default:'' }}" required autocomplete="email" inputmode="email" placeholder="camille@votre-societe.fr">
+        {% if form.email.errors %}<p class="error-text" role="alert">{{ form.email.errors.0 }}</p>{% endif %}
+      </div>
+      <div class="dui-form-control prospect-step1__field">
+        <label class="product-form-label" for="id_phone">{{ form.phone.label }}</label>
+        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.phone.errors %} border-error/60{% endif %}" id="id_phone" name="phone" type="tel" value="{{ form.phone.value|default:'' }}" required autocomplete="tel" inputmode="tel" placeholder="+33 6 12 34 56 78">
+        {% if form.phone.errors %}<p class="error-text" role="alert">{{ form.phone.errors.0 }}</p>{% endif %}
+      </div>
     </div>
   </section>
 
-  <fieldset class="prospect-fieldset prospect-fieldset--activity">
-    <legend class="ui-sr-only" id="activity-legend">{{ form.activity_type.label }}</legend>
-    <div class="prospect-form__panel prospect-fieldset__panel">
-    <p class="prospect-fieldset__kicker">Votre activité</p>
-    <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="activity-help">
-      Choisissez le profil le plus proche du vôtre — une seule réponse, vous pourrez détailler avec notre équipe ensuite.
-    </p>
-    <div
-      class="prospect-choice-grid prospect-choice-grid--activity"
-      role="radiogroup"
-      aria-labelledby="activity-legend"
-      aria-describedby="activity-help"
-    >
-      {% for val, label in form.activity_type.field.choices %}
-      {% if val %}
-      <label class="prospect-choice-card prospect-choice-card--activity{% if form.activity_type.value == val %} is-selected{% endif %}">
-        <input
-          type="radio"
-          name="activity_type"
-          value="{{ val }}"
-          class="prospect-choice-card__input prospect-choice-card__input--hidden"
-          {% if form.activity_type.value == val %}checked{% endif %}
-          required
-        />
-        <span class="prospect-choice-card__radio" aria-hidden="true"></span>
-        <span class="prospect-choice-card__body">
-          <span class="prospect-choice-card__title">{{ label }}</span>
-          {% if val == "brand" %}
-          <span class="prospect-choice-card__hint">Marque, collection, prêt-à-porter</span>
-          {% elif val == "printer" %}
-          <span class="prospect-choice-card__hint">Revente, grossiste, reprographie</span>
-          {% elif val == "workshop" %}
-          <span class="prospect-choice-card__hint">Production, flocage, finition sur site</span>
-          {% elif val == "creator" %}
-          <span class="prospect-choice-card__hint">Studio, indépendant, petites séries</span>
-          {% elif val == "other" %}
-          <span class="prospect-choice-card__hint">Profil hybride ou spécifique — on affine ensemble</span>
-          {% endif %}
-        </span>
-      </label>
-      {% endif %}
-      {% endfor %}
+  <section class="prospect-form__section prospect-step1__section" aria-labelledby="company-heading">
+    <div class="prospect-step1__section-head">
+      <span class="prospect-form__section-index" aria-hidden="true">02</span>
+      <div>
+        <h3 id="company-heading" class="prospect-form__section-title">Votre structure</h3>
+        <p class="prospect-step1__section-help">Ces informations nous permettent de vérifier votre activité professionnelle.</p>
+      </div>
+      <span class="prospect-step1__section-meta">Aucun justificatif</span>
     </div>
-    {% if form.activity_type.errors %}
-    <p class="text-sm text-error mt-3" role="alert">{{ form.activity_type.errors.0 }}</p>
-    {% endif %}
-    </div>
-  </fieldset>
+    <div class="prospect-form__panel prospect-step1__surface prospect-step1__company-grid">
+      <div class="dui-form-control prospect-step1__field prospect-step1__field--full">
+        <label class="product-form-label" for="id_company">{{ form.company.label }}</label>
+        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.company.errors %} border-error/60{% endif %}" id="id_company" name="company" value="{{ form.company.value|default:'' }}" required autocomplete="organization" placeholder="Nom commercial ou raison sociale">
+        {% if form.company.errors %}<p class="error-text" role="alert">{{ form.company.errors.0 }}</p>{% endif %}
+      </div>
+      <div class="dui-form-control prospect-step1__field">
+        <label class="product-form-label" for="id_country">{{ form.country.label }}</label>
+        <select class="dui-select dui-select-bordered checkout-dui-input{% if form.country.errors %} border-error/60{% endif %}" id="id_country" name="country" required x-model="country" autocomplete="country">
+          {% for value, label in form.country.field.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        </select>
+        {% if form.country.errors %}<p class="error-text" role="alert">{{ form.country.errors.0 }}</p>{% endif %}
+      </div>
+      <div class="dui-form-control prospect-step1__field" x-show="country === 'FR'" x-cloak>
+        <label class="product-form-label" for="id_siren">Numéro SIREN <span class="prospect-step1__label-hint">9 chiffres</span></label>
+        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.siren.errors %} border-error/60{% endif %}" id="id_siren" name="siren" value="{{ form.siren.value|default:'' }}" inputmode="numeric" maxlength="14" :required="country === 'FR'" aria-describedby="siren-help" placeholder="123 456 789">
+        <p class="prospect-step1__field-help" id="siren-help">Présent sur votre extrait INSEE ou Kbis.</p>
+        {% if form.siren.errors %}<p class="error-text" role="alert">{{ form.siren.errors.0 }}</p>{% endif %}
+      </div>
+      <div class="dui-form-control prospect-step1__field" x-show="country !== 'FR'" x-cloak>
+        <label class="product-form-label" for="id_vat_number">N° de TVA / identifiant fiscal</label>
+        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.vat_number.errors %} border-error/60{% endif %}" id="id_vat_number" name="vat_number" value="{{ form.vat_number.value|default:'' }}" maxlength="40" :required="country !== 'FR'" placeholder="Ex. BE0123456789">
+        {% if form.vat_number.errors %}<p class="error-text" role="alert">{{ form.vat_number.errors.0 }}</p>{% endif %}
+      </div>
 
-  <div class="prospect-form__footer">
-    <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'home' %}">Annuler</a>
-    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Continuer</button>
+      <fieldset class="prospect-step1__activity prospect-step1__field--full">
+        <legend>{{ form.activity_type.label }}</legend>
+        <p id="activity-help">Choisissez le profil le plus proche de votre activité.</p>
+        <div class="prospect-step1__activity-grid" role="radiogroup" aria-describedby="activity-help">
+          {% for value, label in form.activity_type.field.choices %}
+          {% if value %}
+          <label class="prospect-step1__activity-card">
+            <input type="radio" name="activity_type" value="{{ value }}" {% if form.activity_type.value == value %}checked{% endif %} required>
+            <span class="prospect-step1__activity-copy">
+              <strong>{{ label }}</strong>
+              <small>{% if value == 'brand' %}Collection &amp; retail{% elif value == 'printer' %}Production &amp; revente{% elif value == 'workshop' %}Flocage &amp; finition{% elif value == 'creator' %}Studio &amp; petites séries{% else %}Profil hybride{% endif %}</small>
+            </span>
+            <span class="prospect-step1__activity-check" aria-hidden="true">✓</span>
+          </label>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% if form.activity_type.errors %}<p class="error-text" role="alert">{{ form.activity_type.errors.0 }}</p>{% endif %}
+      </fieldset>
+    </div>
+  </section>
+
+  <div class="prospect-form__footer prospect-step1__footer">
+    <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'home' %}">Retour au site</a>
+    <p><span>Étape suivante</span><strong>Votre besoin &amp; vos volumes</strong></p>
+    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Continuer vers mon projet <span aria-hidden="true">→</span></button>
   </div>
 </form>
 {% endblock %}

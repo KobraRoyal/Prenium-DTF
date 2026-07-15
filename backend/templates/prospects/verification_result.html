@@ -1,0 +1,4 @@
+{% extends "prospects/base_tunnel.html" %}
+{% block title %}Vérification de la demande — Prenium DTF{% endblock %}
+{% block prospect_section_head %}<div class="landing-section-head prospect-tunnel__intro"><p class="landing-kicker landing-kicker--pill">Vérification e-mail</p><h2 class="prospect-tunnel__title">{% if verified %}Adresse confirmée{% else %}Lien non valide{% endif %}</h2></div>{% endblock %}
+{% block prospect_inner %}<div class="prospect-success-card {% if not verified %}is-error{% endif %}">{% if verified %}<span class="prospect-success-card__icon" aria-hidden="true">✓</span><h3>Votre demande est maintenant en cours d’examen</h3><p>L’équipe IDS vous informera par e-mail dès qu’une décision sera prise.</p>{% else %}<h3>La vérification n’a pas abouti</h3><p>{{ message }}</p><a class="ui-btn ui-btn-primary" href="{% url 'prospects:step1' %}">Déposer une nouvelle demande</a>{% endif %}</div>{% endblock %}

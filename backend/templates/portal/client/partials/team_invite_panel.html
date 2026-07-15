@@ -1,0 +1,86 @@
+<aside class="card team-invite-card" id="team-invite-panel" aria-labelledby="team-invite-title">
+  <div class="team-invite-card__head">
+    <div>
+      <p class="team-invite-card__eyebrow">Accès sécurisé</p>
+      <h2 id="team-invite-title">Inviter un collaborateur</h2>
+    </div>
+    <span class="badge is-neutral">Lien valable 72 h</span>
+  </div>
+
+  <p class="muted team-invite-card__intro">
+    La personne recevra un lien personnel pour créer son accès ou rejoindre l’organisation.
+  </p>
+
+  {% if invited_email %}
+    <div class="team-invite-success" role="status">
+      <strong>Invitation enregistrée</strong>
+      <span>{{ invited_email }}</span>
+      <small>L’e-mail sécurisé est maintenant pris en charge par notre service d’envoi.</small>
+    </div>
+  {% endif %}
+
+  <form
+    class="ui-form-stack team-invite-form"
+    method="post"
+    action="{% url 'portal:client-team-invite' customer_public_id=customer.public_id %}"
+    hx-post="{% url 'portal:client-team-invite' customer_public_id=customer.public_id %}"
+    hx-target="#team-invite-panel"
+    hx-swap="outerHTML"
+    hx-indicator="#portal-htmx-indicator"
+    data-submit-loading
+  >
+    {% csrf_token %}
+
+    {% include "components/forms/field_group.html" with label="E-mail professionnel" name="email" id="invite_email" type="email" autocomplete="email" required=True show_label=True placeholder="collaborateur@entreprise.fr" value=invitation_form.email.value error=invitation_form.email.errors.0 help_text="Utilisez l’adresse professionnelle personnelle du collaborateur." %}
+
+    <div class="ui-field-group">
+      <label class="ui-label" for="invite_role">Niveau d’accès</label>
+      <p class="ui-help" id="invite_role-help">Attribuez uniquement les droits nécessaires à son travail.</p>
+      <select
+        class="ui-input{% if invitation_form.role.errors %} ui-input--error{% endif %}"
+        id="invite_role"
+        name="role"
+        aria-describedby="invite_role-help{% if invitation_form.role.errors %} invite_role-error{% endif %}"
+        {% if invitation_form.role.errors %}aria-invalid="true"{% endif %}
+      >
+        {% for value, label in invitation_form.role.field.choices %}
+          <option value="{{ value }}"{% if invitation_form.role.value == value %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if invitation_form.role.errors %}
+        <p class="error-text ui-error-text" id="invite_role-error" role="alert">{{ invitation_form.role.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    {% if invitation_form.non_field_errors %}
+      <div class="dui-alert dui-alert-error" role="alert">{{ invitation_form.non_field_errors.0 }}</div>
+    {% endif %}
+
+    {% include "components/forms/form_actions.html" with primary_label="Envoyer l’invitation" htmx_disable=True %}
+  </form>
+
+  <div class="team-pending" aria-live="polite">
+    <div class="team-pending__head">
+      <h3>Invitations en attente</h3>
+      <span class="badge is-warning">{{ invitations|length }}</span>
+    </div>
+    {% if invitations %}
+      <div class="team-pending__list">
+        {% for invitation in invitations %}
+          <div class="pending-invite">
+            <span>
+              <strong>{{ invitation.email }}</strong>
+              <small>{{ invitation.get_role_display }} · expire le {{ invitation.expires_at|date:"d/m/Y à H:i" }}</small>
+            </span>
+            <form method="post" action="{% url 'portal:client-team-invitation-revoke' customer_public_id=customer.public_id invitation_public_id=invitation.public_id %}">
+              {% csrf_token %}
+              <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit">Révoquer</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="team-pending__empty muted">Aucune invitation en attente.</p>
+    {% endif %}
+  </div>
+</aside>

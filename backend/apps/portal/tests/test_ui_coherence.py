@@ -88,12 +88,33 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_landing_mobile_performance_contract_is_explicit(self) -> None:
         landing_css = static_source("css/components/landing.css")
+        conversion_css = static_source("css/components/landing-conversion.css")
+        css_entrypoint = static_source("css/input.css")
 
         self.assertIn("content-visibility: auto", landing_css)
         self.assertIn("contain-intrinsic-block-size: auto 900px", landing_css)
         self.assertIn(".landing-hero__actions", landing_css)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", landing_css)
         self.assertIn(".landing-mobile-primary-cta", landing_css)
+        self.assertIn("content-visibility: auto", conversion_css)
+        self.assertIn("contain-intrinsic-block-size: auto 900px", conversion_css)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", conversion_css)
+        self.assertIn('@import "./components/landing-conversion.css"', css_entrypoint)
+
+    def test_landing_conversion_keeps_one_primary_funnel_and_no_duplicate_form(self) -> None:
+        home = template_source("shop/home.html")
+        hero = template_source("shop/partials/landing_hero.html")
+        process = template_source("shop/partials/landing_how_it_works.html")
+        final_cta = template_source("shop/partials/landing_cta_final.html")
+
+        self.assertIn("landing-conversion-page", home)
+        self.assertNotIn('include "shop/partials/landing_contact.html"', home)
+        self.assertNotIn('include "shop/partials/landing_team.html"', home)
+        self.assertIn("prospects:step1", hero)
+        self.assertIn("prospects:step1", process)
+        self.assertIn("prospects:step1", final_cta)
+        self.assertNotIn("<form", hero + process + final_cta)
+        self.assertNotIn("{% url 'services' %}", final_cta)
 
     def test_product_views_do_not_reintroduce_dark_theme_text_on_light_panels(self) -> None:
         paths = [
@@ -121,7 +142,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
     def test_checkout_and_prospect_mobile_layouts_are_compact(self) -> None:
         product_css = static_source("css/components/product-shell.css")
         prospect_css = static_source("css/components/prospect-tunnel.css")
-        step4 = template_source("prospects/step4.html")
+        journey_css = static_source("css/components/prospect-journey.css")
+        invitation = template_source("portal/access/invitation_accept.html")
 
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", product_css)
         self.assertIn(".product-checkout-card > .dui-card-body", product_css)
@@ -132,7 +154,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
             prospect_css,
         )
         self.assertIn("display: none", prospect_css)
-        self.assertIn('autocomplete="username"', step4)
+        self.assertIn("@media (max-width: 767px)", journey_css)
+        self.assertIn("grid-template-columns: 1fr", journey_css)
+        self.assertIn("prefers-reduced-motion: reduce", journey_css)
+        self.assertIn('autocomplete="new-password"', invitation)
 
     def test_portal_breadcrumb_partials_use_semantic_nav(self) -> None:
         paths = [
@@ -241,11 +266,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
     def test_public_header_keeps_conversion_navigation_focused(self) -> None:
         source = template_source("components/nav/landing_header.html")
 
-        self.assertIn("Services", source)
-        self.assertIn("Cas", source)
-        self.assertIn("Contact", source)
+        self.assertIn("Solutions", source)
+        self.assertIn("Méthode", source)
+        self.assertIn("Pour qui", source)
         self.assertIn("Connexion", source)
         self.assertIn("Demander un accès", source)
+        self.assertNotIn("Contact", source)
         self.assertNotIn(">Équipe<", source)
         self.assertNotIn(">Commander<", source)
         self.assertNotIn(">Espace client<", source)
@@ -392,8 +418,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "prospects/step1.html",
             "prospects/step2.html",
             "prospects/step3.html",
-            "prospects/step4.html",
             "prospects/confirmation.html",
+            "prospects/verification_result.html",
+            "portal/access/invitation_accept.html",
         ]
 
         for path in paths:
@@ -456,7 +483,6 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "prospects/step1.html",
             "prospects/step2.html",
             "prospects/step3.html",
-            "prospects/step4.html",
         ]
 
         for path in paths:
@@ -478,10 +504,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "id_phone",
             "id_company",
             "id_country",
+            "id_siren",
+            "id_vat_number",
         ]:
             with self.subTest(field_id=field_id):
                 self.assertIn(f'class="product-form-label" for="{field_id}"', source)
                 self.assertNotIn(f'class="ui-sr-only" for="{field_id}"', source)
+
+        self.assertIn("<legend>{{ form.activity_type.label }}</legend>", source)
 
     def test_b2b_order_project_flow_reuses_portal_htmx_contracts(self) -> None:
         detail = template_source("portal/client/order_project_detail.html")

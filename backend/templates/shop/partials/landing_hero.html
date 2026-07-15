@@ -1,38 +1,48 @@
-{% load static %}
-<section id="landing-hero" class="landing-section agency-hero landing-hero--animate" aria-labelledby="landing-hero-title">
-  <picture class="agency-hero__media" aria-hidden="true">
-    <source srcset="{% static 'img/landing/dtf-brutalist-workshop.webp' %}" type="image/webp">
-    <img
-      src="{% static 'img/landing/dtf-brutalist-workshop.webp' %}"
-      width="1500"
-      height="845"
-      alt=""
-      decoding="async"
-      fetchpriority="high"
-    >
-  </picture>
-  <div class="agency-hero__overlay" aria-hidden="true"></div>
-  <div class="landing-shell agency-hero__content">
-    <p class="agency-kicker">Service DTF B2B · Fichier contrôlé à chaque commande</p>
-    <h1 id="landing-hero-title">DTF pro, fichier contrôlé.</h1>
-    <p class="agency-hero__claim">Qualité atelier, dossier par dossier.</p>
-    <p class="agency-hero__lead">Transferts DTF premium, <strong>contrôle prépresse avant impression</strong> et suivi de commande dans votre portail B2B.</p>
-    <div class="agency-actions landing-hero__actions">
-      <a class="agency-button agency-button--primary" href="{% url 'prospects:step1' %}">Ouvrir mon accès pro</a>
-      <a class="agency-button" href="{% url 'services' %}">Découvrir l’offre</a>
+<section id="landing-hero" class="landing-section conversion-hero" aria-labelledby="landing-hero-title">
+  <div class="landing-shell conversion-hero__grid">
+    <div class="conversion-hero__copy">
+      <p class="conversion-eyebrow"><span aria-hidden="true"></span> Production DTF · Réservée aux professionnels</p>
+      <h1 id="landing-hero-title">Du fichier au transfert, <em>tout est sous contrôle.</em></h1>
+      <p class="conversion-hero__lead">Prenium DTF contrôle vos fichiers avant impression, orchestre la production et garde chaque étape visible dans votre portail B2B.</p>
+      <div class="conversion-hero__actions">
+        <a class="conversion-button conversion-button--primary" href="{% url 'prospects:step1' %}">
+          Ouvrir mon accès pro
+          <span aria-hidden="true">↗</span>
+        </a>
+        <a class="conversion-button conversion-button--ghost" href="#landing-how-it-works">Voir le process</a>
+      </div>
+      <p class="conversion-hero__note">Demande en 3 étapes <span>·</span> Réponse sous 1 à 2 jours ouvrés <span>·</span> Sans engagement</p>
     </div>
-    <ul class="agency-hero__badges" aria-label="Points clés">
-      <li class="agency-pill">Réservé aux pros (B2B)</li>
-      <li class="agency-pill">Fichier vérifié avant presse</li>
-      <li class="agency-pill">Qualité presse maîtrisée</li>
-      <li class="agency-pill">Suivi par dossier</li>
-    </ul>
+
+    <div class="conversion-board" aria-label="Aperçu du suivi d’une commande dans le portail Prenium DTF">
+      <div class="conversion-board__topline">
+        <span class="conversion-board__live"><i aria-hidden="true"></i> Dossier en cours</span>
+        <span>Portail B2B</span>
+      </div>
+      <div class="conversion-board__title">
+        <div>
+          <span>Commande professionnelle</span>
+          <strong>Chaque étape.<br>Un seul suivi.</strong>
+        </div>
+        <span class="conversion-board__badge">Traçable</span>
+      </div>
+      <ol class="conversion-board__timeline">
+        <li class="is-done"><span>01</span><div><strong>Fichier reçu</strong><small>Documents centralisés</small></div><b>✓</b></li>
+        <li class="is-done"><span>02</span><div><strong>Contrôle prépresse</strong><small>Résolution, contours, transparence</small></div><b>✓</b></li>
+        <li class="is-active"><span>03</span><div><strong>Production atelier</strong><small>Statut visible dans le portail</small></div><b aria-hidden="true"></b></li>
+        <li><span>04</span><div><strong>Expédition</strong><small>Suivi associé à la commande</small></div><b aria-hidden="true"></b></li>
+      </ol>
+      <div class="conversion-board__footer">
+        <span>Fichiers</span><span>Production</span><span>Expédition</span><span>Facturation</span>
+      </div>
+    </div>
   </div>
 </section>
 
-<div class="agency-marquee" aria-hidden="true">
-  <div class="agency-marquee__track">
-    <span>DTF premium</span><span>/</span><span>Fichier contrôlé</span><span>/</span><span>Réservé aux pros</span><span>/</span><span>Suivi par dossier</span><span>/</span>
-    <span>DTF premium</span><span>/</span><span>Fichier contrôlé</span><span>/</span><span>Réservé aux pros</span><span>/</span><span>Suivi par dossier</span><span>/</span>
+<aside class="conversion-proofbar" aria-label="Les engagements du parcours Prenium DTF">
+  <div class="landing-shell conversion-proofbar__grid">
+    <p><span>01</span><strong>Avant presse</strong><small>Fichier contrôlé</small></p>
+    <p><span>02</span><strong>Pendant l’atelier</strong><small>Statuts lisibles</small></p>
+    <p><span>03</span><strong>Après production</strong><small>Expédition suivie</small></p>
   </div>
-</div>
+</aside>

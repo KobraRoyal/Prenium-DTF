@@ -1,91 +1,121 @@
 from __future__ import annotations
 
+import hashlib
+
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login
-from django.contrib.auth.views import redirect_to_login
+from django.core.cache import cache
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
-from django.urls import reverse
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.debug import sensitive_post_parameters
 
-from .forms import (
-    ProspectStep1Form,
-    ProspectStep2Form,
-    ProspectStep3Form,
-    ProspectStep4AccountForm,
-)
+from .forms import ProspectStep1Form, ProspectStep2Form, ProspectStep3ReviewForm
+from .models import ProspectProfile
 from .services.onboarding import ProspectDraft, ProspectOnboardingError, ProspectOnboardingService
 from .session import clear_draft, get_draft, has_steps, update_draft
 from .stepper import stepper_items_for_step
 
-PROSPECT_STEPS = ("step1", "step2", "step3")
+TOTAL_STEPS = 3
 
 
 def _client_ip(request: HttpRequest) -> str | None:
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
+    if getattr(settings, "PROSPECT_RATE_LIMIT_TRUST_X_FORWARDED_FOR", False) and forwarded:
         return forwarded.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR")
 
 
-def _draft_to_dataclass(request) -> ProspectDraft | None:
-    d = get_draft(request)
-    s1, s2, s3 = d.get("step1"), d.get("step2"), d.get("step3")
-    if not all(isinstance(x, dict) and x for x in (s1, s2, s3)):
+def _draft_to_dataclass(request: HttpRequest) -> ProspectDraft | None:
+    draft = get_draft(request)
+    step1, step2 = draft.get("step1"), draft.get("step2")
+    if not all(isinstance(step, dict) and step for step in (step1, step2)):
         return None
-    return ProspectDraft(step1=s1, step2=s2, step3=s3)
+    return ProspectDraft(step1=step1, step2=step2)
+
+
+def _submission_rate_limited(request: HttpRequest, email: str) -> bool:
+    identity = f"{_client_ip(request) or 'unknown'}:{email.strip().lower()}"
+    digest = hashlib.sha256(identity.encode()).hexdigest()
+    key = f"prospect-submit:{digest}"
+    window = int(getattr(settings, "PROSPECT_RATE_LIMIT_WINDOW_SECONDS", 3600))
+    maximum = int(getattr(settings, "PROSPECT_RATE_LIMIT_MAX_ATTEMPTS", 5))
+    if cache.add(key, 1, timeout=window):
+        return False
+    try:
+        attempts = cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=window)
+        return False
+    return attempts > maximum
+
+
+def _context(step: int, **extra) -> dict:
+    return {
+        "step": step,
+        "total_steps": TOTAL_STEPS,
+        "steps": stepper_items_for_step(step, TOTAL_STEPS),
+        **extra,
+    }
+
+
+def _choice_label(form_class, field_name: str, value: str) -> str:
+    return dict(form_class.base_fields[field_name].choices).get(value, value)
+
+
+def _summary_for_draft(draft: dict) -> dict[str, str]:
+    step1 = draft.get("step1") or {}
+    step2 = draft.get("step2") or {}
+    return {
+        "company": str(step1.get("company") or ""),
+        "contact": f"{step1.get('first_name', '')} {step1.get('last_name', '')}".strip(),
+        "email": str(step1.get("email") or ""),
+        "country": _choice_label(ProspectStep1Form, "country", step1.get("country", "")),
+        "legal_id": (
+            f"SIREN {step1.get('siren', '')}"
+            if step1.get("country") == "FR"
+            else str(step1.get("vat_number") or "")
+        ),
+        "service": _choice_label(
+            ProspectStep2Form,
+            "service_interest",
+            step2.get("service_interest", ""),
+        ),
+        "volume": _choice_label(
+            ProspectStep2Form,
+            "monthly_volume",
+            step2.get("monthly_volume", ""),
+        ),
+        "timing": _choice_label(
+            ProspectStep2Form,
+            "project_timing",
+            step2.get("project_timing", ""),
+        ),
+    }
 
 
 class ProspectStep1View(View):
+    template_name = "prospects/step1.html"
+
     def get(self, request: HttpRequest) -> HttpResponse:
-        initial = get_draft(request).get("step1") or {}
-        form = ProspectStep1Form(initial=initial)
-        return render(
-            request,
-            "prospects/step1.html",
-            {
-                "form": form,
-                "step": 1,
-                "total_steps": 4,
-                "steps": stepper_items_for_step(1, 4),
-            },
-        )
+        form = ProspectStep1Form(initial=get_draft(request).get("step1") or {})
+        return render(request, self.template_name, _context(1, form=form))
 
     def post(self, request: HttpRequest) -> HttpResponse:
         form = ProspectStep1Form(request.POST)
         if form.is_valid():
             update_draft(request, "step1", form.cleaned_data)
             return redirect("prospects:step2")
-        return render(
-            request,
-            "prospects/step1.html",
-            {
-                "form": form,
-                "step": 1,
-                "total_steps": 4,
-                "steps": stepper_items_for_step(1, 4),
-            },
-        )
+        return render(request, self.template_name, _context(1, form=form))
 
 
 class ProspectStep2View(View):
+    template_name = "prospects/step2.html"
+
     def get(self, request: HttpRequest) -> HttpResponse:
         if not has_steps(request, "step1"):
             return redirect("prospects:step1")
-        initial = get_draft(request).get("step2") or {}
-        form = ProspectStep2Form(initial=initial)
-        return render(
-            request,
-            "prospects/step2.html",
-            {
-                "form": form,
-                "step": 2,
-                "total_steps": 4,
-                "steps": stepper_items_for_step(2, 4),
-            },
-        )
+        form = ProspectStep2Form(initial=get_draft(request).get("step2") or {})
+        return render(request, self.template_name, _context(2, form=form))
 
     def post(self, request: HttpRequest) -> HttpResponse:
         if not has_steps(request, "step1"):
@@ -94,156 +124,113 @@ class ProspectStep2View(View):
         if form.is_valid():
             update_draft(request, "step2", form.cleaned_data)
             return redirect("prospects:step3")
-        return render(
-            request,
-            "prospects/step2.html",
-            {
-                "form": form,
-                "step": 2,
-                "total_steps": 4,
-                "steps": stepper_items_for_step(2, 4),
-            },
-        )
+        return render(request, self.template_name, _context(2, form=form))
 
 
 class ProspectStep3View(View):
+    template_name = "prospects/step3.html"
+
     def get(self, request: HttpRequest) -> HttpResponse:
         if not has_steps(request, "step1", "step2"):
             return redirect("prospects:step1")
-        initial = get_draft(request).get("step3") or {}
-        form = ProspectStep3Form(initial=initial)
+        draft = get_draft(request)
         return render(
             request,
-            "prospects/step3.html",
-            {
-                "form": form,
-                "step": 3,
-                "total_steps": 4,
-                "steps": stepper_items_for_step(3, 4),
-            },
+            self.template_name,
+            _context(
+                3,
+                form=ProspectStep3ReviewForm(),
+                draft=draft,
+                summary=_summary_for_draft(draft),
+            ),
         )
 
     def post(self, request: HttpRequest) -> HttpResponse:
         if not has_steps(request, "step1", "step2"):
             return redirect("prospects:step1")
-        form = ProspectStep3Form(request.POST)
-        if form.is_valid():
-            update_draft(request, "step3", form.cleaned_data)
-            return redirect("prospects:step4")
-        return render(
-            request,
-            "prospects/step3.html",
-            {
-                "form": form,
-                "step": 3,
-                "total_steps": 4,
-                "steps": stepper_items_for_step(3, 4),
-            },
-        )
-
-
-@method_decorator(sensitive_post_parameters("password", "password_confirm"), name="dispatch")
-class ProspectStep4View(View):
-    def get(self, request: HttpRequest) -> HttpResponse:
-        if not has_steps(request, "step1", "step2", "step3"):
-            return redirect("prospects:step1")
-        form = ProspectStep4AccountForm()
-        return render(
-            request,
-            "prospects/step4.html",
-            {
-                "form": form,
-                "step": 4,
-                "total_steps": 4,
-                "draft": get_draft(request),
-                "steps": stepper_items_for_step(4, 4),
-            },
-        )
-
-    def post(self, request: HttpRequest) -> HttpResponse:
-        if not has_steps(request, "step1", "step2", "step3"):
-            return redirect("prospects:step1")
-        form = ProspectStep4AccountForm(request.POST)
-        if not form.is_valid():
-            return render(
-                request,
-                "prospects/step4.html",
-                {
-                    "form": form,
-                    "step": 4,
-                    "total_steps": 4,
-                    "draft": get_draft(request),
-                    "steps": stepper_items_for_step(4, 4),
-                },
-            )
-
+        form = ProspectStep3ReviewForm(request.POST)
         draft = _draft_to_dataclass(request)
         if draft is None:
-            messages.error(request, "Session expirée ou incomplète. Recommencez depuis l’étape 1.")
+            messages.error(request, "Session expirée. Recommencez votre demande.")
             return redirect("prospects:step1")
-
-        service = ProspectOnboardingService()
-        try:
-            profile = service.complete_from_draft(
-                draft=draft,
-                password=form.cleaned_data["password"],
-                ip_address=_client_ip(request),
-            )
-        except ProspectOnboardingError as exc:
-            messages.error(request, str(exc))
+        if not form.is_valid():
+            draft_data = get_draft(request)
             return render(
                 request,
-                "prospects/step4.html",
-                {
-                    "form": form,
-                    "step": 4,
-                    "total_steps": 4,
-                    "draft": get_draft(request),
-                    "steps": stepper_items_for_step(4, 4),
-                },
+                self.template_name,
+                _context(
+                    3,
+                    form=form,
+                    draft=draft_data,
+                    summary=_summary_for_draft(draft_data),
+                ),
             )
-
+        if _submission_rate_limited(request, str(draft.step1.get("email", ""))):
+            messages.error(
+                request,
+                "Trop de tentatives ont été détectées. Réessayez dans une heure.",
+            )
+            draft_data = get_draft(request)
+            return render(
+                request,
+                self.template_name,
+                _context(
+                    3,
+                    form=form,
+                    draft=draft_data,
+                    summary=_summary_for_draft(draft_data),
+                ),
+                status=429,
+            )
+        try:
+            profile = ProspectOnboardingService().submit_from_draft(
+                draft=draft,
+                ip_address=_client_ip(request),
+            )
+        except ProspectOnboardingError:
+            messages.error(
+                request,
+                "Nous ne pouvons pas enregistrer la demande pour le moment. Réessayez plus tard.",
+            )
+            draft_data = get_draft(request)
+            return render(
+                request,
+                self.template_name,
+                _context(
+                    3,
+                    form=form,
+                    draft=draft_data,
+                    summary=_summary_for_draft(draft_data),
+                ),
+            )
         clear_draft(request)
-        login(request, profile.user, backend="django.contrib.auth.backends.ModelBackend")
         request.session["prospect_confirmation_public_id"] = str(profile.public_id)
         return redirect("prospects:confirmation")
 
 
 class ProspectConfirmationView(View):
     def get(self, request: HttpRequest) -> HttpResponse:
-        if not request.user.is_authenticated:
-            return redirect_to_login(next=reverse("prospects:confirmation"))
+        public_id = request.session.get("prospect_confirmation_public_id")
+        profile = ProspectProfile.objects.filter(public_id=public_id).first() if public_id else None
+        return render(request, "prospects/confirmation.html", {"profile": profile})
 
-        from .models import ProspectProfile
 
-        pid = request.session.pop("prospect_confirmation_public_id", None)
-        profile = None
-        if pid:
-            profile = (
-                ProspectProfile.objects.select_related("customer")
-                .filter(
-                    public_id=pid,
-                    user=request.user,
-                )
-                .first()
+class ProspectEmailVerificationView(View):
+    def get(self, request: HttpRequest, token: str) -> HttpResponse:
+        try:
+            profile = ProspectOnboardingService().verify_email(
+                token=token,
+                ip_address=_client_ip(request),
             )
-        if profile is None:
-            profile = (
-                ProspectProfile.objects.select_related("customer").filter(user=request.user).first()
+        except ProspectOnboardingError as exc:
+            return render(
+                request,
+                "prospects/verification_result.html",
+                {"verified": False, "message": str(exc)},
+                status=400,
             )
-        if profile is None:
-            return redirect("portal:client-dashboard")
-
-        customer = profile.customer
-        customer_pid = customer.public_id if customer else None
         return render(
             request,
-            "prospects/confirmation.html",
-            {
-                "profile": profile,
-                "customer_public_id": customer_pid,
-                "customer": customer,
-                "nav_mode": "client",
-                "nav_key": "client-dashboard",
-            },
+            "prospects/verification_result.html",
+            {"verified": True, "profile": profile},
         )

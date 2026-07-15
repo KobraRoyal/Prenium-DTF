@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-# Libellés courts + aide — cohérents avec les titres d’étape (templates step1–4).
+# Libellés courts + aide — cohérents avec le tunnel simplifié en trois étapes.
 PROSPECT_STEP_META: tuple[tuple[str, str], ...] = (
-    ("Profil", "Identité & société"),
-    ("Besoin", "Service recherché"),
-    ("Volume", "Cadence & urgence"),
-    ("Compte", "Sécurisation"),
+    ("Entreprise", "Identité vérifiée"),
+    ("Projet", "Besoin & volume"),
+    ("Validation", "Récapitulatif"),
 )
 
 
@@ -18,7 +17,7 @@ class ProspectStepperItem(TypedDict):
     is_complete: bool
 
 
-def stepper_items_for_step(current_step: int, total_steps: int = 4) -> list[ProspectStepperItem]:
+def stepper_items_for_step(current_step: int, total_steps: int = 3) -> list[ProspectStepperItem]:
     """Éléments pour `prospects/partials/stepper.html` (état courant / complété)."""
     if total_steps < 1:
         return []

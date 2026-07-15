@@ -90,6 +90,15 @@ EMAIL_TAGS = (
         "Commentaire Atelier",
         "Merci de fournir une version 300 DPI sur fond transparent.",
     ),
+    EmailTag("prospect.first_name", "Prénom du prospect", "Camille"),
+    EmailTag("prospect.last_name", "Nom du prospect", "Martin"),
+    EmailTag("prospect.company", "Société du prospect", "Atelier Démo"),
+    EmailTag("prospect.email", "E-mail du prospect", "camille@atelier-demo.fr"),
+    EmailTag("prospect.country", "Pays du prospect", "FR"),
+    EmailTag("prospect.siren", "SIREN", "123456789"),
+    EmailTag("prospect.vat_number", "N° TVA / fiscal", "BE0123456789"),
+    EmailTag("invitation.role", "Rôle invité", "Collaborateur"),
+    EmailTag("action.url", "Lien d'action sécurisé", "https://example.test/activation/"),
 )
 ALLOWED_TAG_KEYS = frozenset(tag.key for tag in EMAIL_TAGS)
 
@@ -116,6 +125,101 @@ def _definition(
 
 
 EMAIL_TEMPLATE_DEFINITIONS = (
+    _definition(
+        EmailTemplate.Event.ACCESS_REQUEST_EMAIL_VERIFICATION,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Vérification demande d'accès",
+        audience_label="Prospect",
+        description="Confirme que l'adresse professionnelle appartient au demandeur.",
+        subject="Confirmez votre demande d'accès Prenium DTF",
+        body=(
+            "Bonjour {{ prospect.first_name }},\n\n"
+            "Merci pour votre demande d'accès au nom de {{ prospect.company }}.\n"
+            "Confirmez votre adresse professionnelle avec ce lien valable 48 heures :\n"
+            "{{ action.url }}\n\n"
+            "Après confirmation, l'équipe IDS examinera votre demande.\n\n"
+            "Cordialement,\nL'équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.ACCESS_REQUEST_SUBMITTED_INTERNAL,
+        EmailTemplate.Audience.INTERNAL,
+        event_label="Nouvelle demande d'accès",
+        audience_label="Équipe interne",
+        description="Alerte IDS après vérification de l'e-mail du prospect.",
+        subject="[Accès] Nouvelle demande — {{ prospect.company }}",
+        body=(
+            "Une demande d'accès vérifiée attend votre décision.\n\n"
+            "Société : {{ prospect.company }}\n"
+            "Contact : {{ prospect.first_name }} {{ prospect.last_name }}\n"
+            "E-mail : {{ prospect.email }}\n"
+            "Pays : {{ prospect.country }}\n"
+            "SIREN : {{ prospect.siren }}\n"
+            "TVA / identifiant fiscal : {{ prospect.vat_number }}\n\n"
+            "Examiner la demande : {{ action.url }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.ACCESS_REQUEST_APPROVED,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Demande d'accès validée",
+        audience_label="Prospect",
+        description="Invite le propriétaire à activer son organisation.",
+        subject="Votre accès Prenium DTF est validé",
+        body=(
+            "Bonjour {{ prospect.first_name }},\n\n"
+            "Votre demande pour {{ customer.name }} a été validée.\n"
+            "Activez votre compte propriétaire avec ce lien valable 72 heures :\n"
+            "{{ action.url }}\n\n"
+            "Cordialement,\nL'équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.ACCESS_REQUEST_REJECTED,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Demande d'accès refusée",
+        audience_label="Prospect",
+        description="Informe le prospect de la décision IDS.",
+        subject="Mise à jour de votre demande d'accès Prenium DTF",
+        body=(
+            "Bonjour {{ prospect.first_name }},\n\n"
+            "Nous ne pouvons pas valider votre demande pour {{ prospect.company }} en l'état.\n\n"
+            "Motif : {{ review.reason }}\n\n"
+            "Vous pouvez répondre à cet e-mail si vous souhaitez apporter des précisions.\n\n"
+            "Cordialement,\nL'équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.ACCOUNT_ACTIVATED,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Compte activé",
+        audience_label="Client",
+        description="Confirmation après activation d'un accès organisationnel.",
+        subject="Bienvenue dans l'espace {{ customer.name }}",
+        body=(
+            "Bonjour,\n\n"
+            "Votre accès à l'organisation {{ customer.name }} est maintenant actif "
+            "avec le rôle {{ invitation.role }}.\n\n"
+            "Connexion : {{ action.url }}\n\n"
+            "Cordialement,\nL'équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.CUSTOMER_MEMBER_INVITED,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Collaborateur invité",
+        audience_label="Client",
+        description="Invitation sécurisée à rejoindre une organisation.",
+        subject="Invitation à rejoindre {{ customer.name }}",
+        body=(
+            "Bonjour,\n\n"
+            "Vous êtes invité à rejoindre {{ customer.name }} sur Prenium DTF "
+            "avec le rôle {{ invitation.role }}.\n\n"
+            "Accepter l'invitation sous 72 heures : {{ action.url }}\n\n"
+            "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.\n\n"
+            "Cordialement,\nL'équipe {{ site.name }}"
+        ),
+    ),
     _definition(
         EmailTemplate.Event.ORDER_CREATED,
         EmailTemplate.Audience.CLIENT,
@@ -331,8 +435,7 @@ EMAIL_TEMPLATE_DEFINITIONS = (
     ),
 )
 DEFINITIONS_BY_KEY = {
-    (definition.event, definition.audience): definition
-    for definition in EMAIL_TEMPLATE_DEFINITIONS
+    (definition.event, definition.audience): definition for definition in EMAIL_TEMPLATE_DEFINITIONS
 }
 
 
@@ -491,15 +594,27 @@ class EmailTemplateService:
         order: Order,
         context_overrides: dict[str, str] | None = None,
     ) -> tuple[str, str] | None:
-        template = self.get_effective_template(event=event, audience=audience)
-        if not template.is_active:
-            return None
         context = context_for_order(order)
         if context_overrides:
             context.update({key: str(value) for key, value in context_overrides.items()})
-        subject = render_template_text(template.subject_template, context)
+        return self.render_for_context(event=event, audience=audience, context=context)
+
+    def render_for_context(
+        self,
+        *,
+        event: str,
+        audience: str,
+        context: dict[str, str],
+    ) -> tuple[str, str] | None:
+        template = self.get_effective_template(event=event, audience=audience)
+        if not template.is_active:
+            return None
+        # Les exemples servent uniquement à l'aperçu du backoffice. Un e-mail réel
+        # ne doit jamais compléter une donnée absente avec une valeur fictive.
+        merged_context = {key: str(value) for key, value in context.items()}
+        subject = render_template_text(template.subject_template, merged_context)
         subject = re.sub(r"[\r\n]+", " ", subject).strip()
-        return subject, render_template_text(template.body_template, context)
+        return subject, render_template_text(template.body_template, merged_context)
 
     @transaction.atomic
     def save_override(
@@ -519,9 +634,7 @@ class EmailTemplateService:
             body_template=body_template,
         )
         template = (
-            EmailTemplate.objects.select_for_update()
-            .filter(event=event, audience=audience)
-            .first()
+            EmailTemplate.objects.select_for_update().filter(event=event, audience=audience).first()
         )
         if template is None:
             template = EmailTemplate(event=event, audience=audience)

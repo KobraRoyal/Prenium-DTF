@@ -10,6 +10,8 @@
 @import "./components/workflow.css";
 @import "./components/product-shell.css";
 @import "./components/landing.css";
+@import "./components/landing-conversion.css";
+@import "./components/prospect-journey.css";
 
 @tailwind base;
 @tailwind components;

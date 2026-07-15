@@ -136,4 +136,3 @@ def client_project_refs(project, variant="row"):
         "mono_ids": False,
     }
 
-
