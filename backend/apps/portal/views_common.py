@@ -172,6 +172,19 @@ class ClientOwnerRequiredMixin(ScopedCustomerMixin):
         return super(ScopedCustomerMixin, self).dispatch(request, *args, **kwargs)
 
 
+class ClientTeamManagerRequiredMixin(ScopedCustomerMixin):
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        customer_public_id = kwargs.get("customer_public_id")
+        membership = access_scope_service.get_customer_membership(request.user, customer_public_id)
+        if membership is None or not membership.can_manage_team:
+            raise PermissionDenied
+        self.customer_membership = membership
+        self.customer = membership.customer
+        return super(ScopedCustomerMixin, self).dispatch(request, *args, **kwargs)
+
+
 class StaffPortalMixin(LoginRequiredMixin):
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:

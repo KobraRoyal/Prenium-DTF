@@ -13,6 +13,10 @@ class MembershipScope:
     customer_name: str
     role: str
 
+    @property
+    def can_manage_team(self) -> bool:
+        return self.role in {CustomerMembership.Role.OWNER, CustomerMembership.Role.ADMIN}
+
     def to_dict(self) -> dict[str, str | bool]:
         return {
             "membership_public_id": str(self.membership_public_id),
@@ -91,6 +95,10 @@ class AccessScopeService:
     def can_manage_customer(self, user, customer_public_id: UUID | str) -> bool:
         membership = self.get_customer_membership(user, customer_public_id)
         return membership is not None and membership.is_owner
+
+    def can_manage_customer_team(self, user, customer_public_id: UUID | str) -> bool:
+        membership = self.get_customer_membership(user, customer_public_id)
+        return membership is not None and membership.can_manage_team
 
     def can_access_staff_portal(self, user) -> bool:
         return bool(

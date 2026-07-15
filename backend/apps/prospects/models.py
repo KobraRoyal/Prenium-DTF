@@ -6,7 +6,7 @@ from apps.customers.models import Customer
 
 
 class ProspectProfile(BaseModel):
-    """Profil qualifié créé à l’issue du tunnel prospect (distinct du checkout)."""
+    """Demande d'accès pré-tenant soumise avant création du compte client."""
 
     class ActivityType(models.TextChoices):
         BRAND = "brand", "Marque textile"
@@ -44,10 +44,20 @@ class ProspectProfile(BaseModel):
         HIGH = "high", "Élevée"
 
     class Status(models.TextChoices):
-        NEW = "new", "Nouveau"
-        QUALIFIED = "qualified", "Qualifié"
-        ACCOUNT_CREATED = "account_created", "Compte créé"
-        CONVERTED = "converted", "Converti"
+        PENDING_EMAIL_VERIFICATION = (
+            "pending_email_verification",
+            "E-mail à vérifier",
+        )
+        PENDING_REVIEW = "pending_review", "En attente de validation"
+        NEEDS_INFORMATION = "needs_information", "Informations complémentaires requises"
+        APPROVED_PENDING_ACTIVATION = (
+            "approved_pending_activation",
+            "Validée — activation requise",
+        )
+        ACTIVE = "active", "Compte actif"
+        REJECTED = "rejected", "Refusée"
+        EXPIRED = "expired", "Expirée"
+        CANCELLED = "cancelled", "Annulée"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -70,6 +80,9 @@ class ProspectProfile(BaseModel):
     phone = models.CharField(max_length=32)
     company = models.CharField(max_length=255)
     country = models.CharField(max_length=2)
+    siren = models.CharField(max_length=9, blank=True)
+    vat_number = models.CharField(max_length=32, blank=True)
+    normalized_email = models.EmailField(blank=True, db_index=True)
 
     activity_type = models.CharField(max_length=32, choices=ActivityType.choices)
     service_interest = models.CharField(max_length=32, choices=ServiceInterest.choices)
@@ -83,9 +96,25 @@ class ProspectProfile(BaseModel):
     status = models.CharField(
         max_length=32,
         choices=Status.choices,
-        default=Status.NEW,
+        default=Status.PENDING_EMAIL_VERIFICATION,
         db_index=True,
     )
+    is_open = models.BooleanField(default=False, db_index=True)
+    verification_version = models.PositiveIntegerField(default=1)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_prospect_profiles",
+    )
+    review_note = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
     source = models.CharField(max_length=64, default="tunnel_web")
 
     class Meta:
@@ -93,6 +122,16 @@ class ProspectProfile(BaseModel):
         indexes = [
             models.Index(fields=("status", "created_at")),
             models.Index(fields=("email",)),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("normalized_email",),
+                condition=models.Q(is_open=True),
+                name="uniq_open_prospect_normalized_email",
+            ),
+        ]
+        permissions = [
+            ("review_prospectprofile", "Can approve or reject access requests"),
         ]
 
     def __str__(self) -> str:

@@ -1,102 +1,78 @@
 {% extends "prospects/base_tunnel.html" %}
 
-{% block title %}Demande d’accès — étape 3 - Prenium DTF{% endblock %}
+{% block title %}Vérifiez votre demande — Prenium DTF{% endblock %}
+{% block body_class %}{{ block.super }} prospect-step3-page{% endblock %}
 
 {% block prospect_section_head %}
-<div class="landing-section-head prospect-tunnel__intro">
-  <p class="landing-kicker landing-kicker--pill">Accès atelier Prenium</p>
-  <h2 class="prospect-tunnel__title">Volume &amp; rythme</h2>
-  <p class="landing-auth-lead prospect-tunnel__lead">Des repères simples pour dimensionner la production et anticiper le bon niveau de service.</p>
+<div class="landing-section-head prospect-tunnel__intro prospect-journey__intro">
+  <div class="prospect-journey__intro-line">
+    <p class="landing-kicker landing-kicker--pill">Dernière vérification</p>
+    <span>Avant envoi</span>
+  </div>
+  <h2 class="prospect-tunnel__title">Votre dossier<br>est prêt.</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Relisez l’essentiel. Après confirmation de votre e-mail, une personne de l’équipe IDS étudiera votre demande.</p>
 </div>
 {% endblock %}
 
 {% block prospect_inner %}
-<form method="post" class="ui-form-stack prospect-form prospect-form--step3 text-left" novalidate data-submit-loading>
-  {% csrf_token %}
-  {% if form.non_field_errors %}
-  <div class="dui-alert dui-alert-error border border-error/35 bg-error/15 text-error-content text-center justify-center" role="alert">
-    {% for e in form.non_field_errors %}<span class="text-sm">{{ e }}</span>{% endfor %}
+<section class="prospect-summary prospect-summary--premium prospect-review" aria-labelledby="review-title">
+  <div class="prospect-summary__header prospect-review__header">
+    <span class="prospect-summary__check" aria-hidden="true">✓</span>
+    <div>
+      <p>Récapitulatif</p>
+      <h3 id="review-title" class="prospect-summary__title">Les informations essentielles</h3>
+    </div>
+    <a href="{% url 'prospects:step1' %}">Modifier l’entreprise</a>
   </div>
-  {% endif %}
 
-  <fieldset class="prospect-fieldset prospect-fieldset--activity">
-    <legend class="ui-sr-only" id="monthly-volume-legend">{{ form.monthly_volume.label }}</legend>
-    <div class="prospect-form__panel prospect-fieldset__panel">
-      <p class="prospect-fieldset__kicker">Volume mensuel</p>
-      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="monthly-volume-help">Choisissez un ordre de grandeur. Cela sert à préparer la capacité de production adaptée à votre compte.</p>
-      <div class="prospect-choice-grid" role="radiogroup" aria-labelledby="monthly-volume-legend" aria-describedby="monthly-volume-help">
-        {% for val, label in form.monthly_volume.field.choices %}
-        {% if val %}
-        <label class="prospect-choice-card prospect-choice-card--activity{% if form.monthly_volume.value == val %} is-selected{% endif %}">
-          <input type="radio" name="monthly_volume" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.monthly_volume.value == val %}checked{% endif %} required />
-          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
-          <span class="prospect-choice-card__body">
-            <span class="prospect-choice-card__title">{{ label }}</span>
-            <span class="prospect-choice-card__hint">Repère de charge mensuelle pour l'atelier.</span>
-          </span>
-        </label>
-        {% endif %}
-        {% endfor %}
+  <dl class="prospect-summary__dl prospect-review__grid">
+    <div class="prospect-review__item prospect-review__item--wide"><dt>Entreprise</dt><dd>{{ summary.company }}</dd></div>
+    <div class="prospect-review__item"><dt>Contact</dt><dd>{{ summary.contact }}</dd></div>
+    <div class="prospect-review__item"><dt>E-mail</dt><dd>{{ summary.email }}</dd></div>
+    <div class="prospect-review__item"><dt>Pays</dt><dd>{{ summary.country }}</dd></div>
+    <div class="prospect-review__item"><dt>Identifiant légal</dt><dd>{{ summary.legal_id }}</dd></div>
+    <div class="prospect-review__item prospect-review__item--accent"><dt>Service</dt><dd>{{ summary.service }}</dd></div>
+    <div class="prospect-review__item"><dt>Volume</dt><dd>{{ summary.volume }}</dd></div>
+    <div class="prospect-review__item"><dt>Calendrier</dt><dd>{{ summary.timing }}</dd></div>
+  </dl>
+
+  <div class="prospect-review__notice">
+    <span aria-hidden="true">i</span>
+    <p><strong>Aucun compte ni mot de passe n’est créé maintenant.</strong> L’activation intervient uniquement après validation de votre demande.</p>
+  </div>
+</section>
+
+<form method="post" class="ui-form-stack prospect-form prospect-review-form text-left" novalidate data-submit-loading>
+  {% csrf_token %}
+  {% if messages %}{% for message in messages %}<div class="dui-alert dui-alert-error" role="alert">{{ message }}</div>{% endfor %}{% endif %}
+
+  <section class="prospect-review-confirm" aria-labelledby="confirm-title">
+    <div class="prospect-project-section__head">
+      <span aria-hidden="true">03</span>
+      <div>
+        <h3 id="confirm-title">Confirmer et envoyer</h3>
+        <p>Une dernière validation avant l’étude du dossier.</p>
       </div>
-      {% if form.monthly_volume.errors %}
-      <p class="text-sm text-error mt-3" role="alert">{{ form.monthly_volume.errors.0 }}</p>
-      {% endif %}
     </div>
-  </fieldset>
+    <label class="prospect-consent-card{% if form.terms_accepted.errors %} is-error{% endif %}">
+      <input type="checkbox" name="terms_accepted" required {% if form.terms_accepted.value %}checked{% endif %}>
+      <span class="prospect-consent-card__control" aria-hidden="true">✓</span>
+      <span><strong>Je confirme ma demande d’accès professionnel</strong><small>{{ form.terms_accepted.label }}</small></span>
+    </label>
+    {% if form.terms_accepted.errors %}<p class="error-text" role="alert">{{ form.terms_accepted.errors.0 }}</p>{% endif %}
+  </section>
 
-  <fieldset class="prospect-fieldset prospect-fieldset--activity">
-    <legend class="ui-sr-only" id="order-frequency-legend">{{ form.order_frequency.label }}</legend>
-    <div class="prospect-form__panel prospect-fieldset__panel">
-      <p class="prospect-fieldset__kicker">Fréquence</p>
-      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="order-frequency-help">Indiquez le rythme probable de vos commandes pour calibrer la relation dans la durée.</p>
-      <div class="prospect-choice-grid prospect-choice-grid--freq" role="radiogroup" aria-labelledby="order-frequency-legend" aria-describedby="order-frequency-help">
-        {% for val, label in form.order_frequency.field.choices %}
-        {% if val %}
-        <label class="prospect-choice-card prospect-choice-card--activity{% if form.order_frequency.value == val %} is-selected{% endif %}">
-          <input type="radio" name="order_frequency" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.order_frequency.value == val %}checked{% endif %} required />
-          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
-          <span class="prospect-choice-card__body">
-            <span class="prospect-choice-card__title">{{ label }}</span>
-            <span class="prospect-choice-card__hint">Rythme estimé de sollicitation du portail et de l'atelier.</span>
-          </span>
-        </label>
-        {% endif %}
-        {% endfor %}
-      </div>
-      {% if form.order_frequency.errors %}
-      <p class="text-sm text-error mt-3" role="alert">{{ form.order_frequency.errors.0 }}</p>
-      {% endif %}
-    </div>
-  </fieldset>
+  <div class="prospect-next-steps" aria-label="Étapes suivantes">
+    <div class="prospect-next-steps__heading"><span>Après l’envoi</span><strong>Vous gardez la visibilité sur chaque étape.</strong></div>
+    <span><b>01</b><span><strong>Vérification e-mail</strong><small>Lien valable 48 heures</small></span></span>
+    <span><b>02</b><span><strong>Validation IDS</strong><small>Lecture humaine du dossier</small></span></span>
+    <span><b>03</b><span><strong>Activation sécurisée</strong><small>Création de votre mot de passe</small></span></span>
+  </div>
 
-  <fieldset class="prospect-fieldset prospect-fieldset--activity">
-    <legend class="ui-sr-only" id="urgency-legend">{{ form.urgency.label }}</legend>
-    <div class="prospect-form__panel prospect-fieldset__panel">
-      <p class="prospect-fieldset__kicker">Urgence</p>
-      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="urgency-help">Précisez votre niveau d'urgence pour aider l'équipe à prioriser la prise de contact initiale.</p>
-      <div class="prospect-choice-grid prospect-choice-grid--urgency" role="radiogroup" aria-labelledby="urgency-legend" aria-describedby="urgency-help">
-        {% for val, label in form.urgency.field.choices %}
-        {% if val %}
-        <label class="prospect-choice-card prospect-choice-card--activity{% if form.urgency.value == val %} is-selected{% endif %}">
-          <input type="radio" name="urgency" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.urgency.value == val %}checked{% endif %} required />
-          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
-          <span class="prospect-choice-card__body">
-            <span class="prospect-choice-card__title">{{ label }}</span>
-            <span class="prospect-choice-card__hint">Niveau de réactivité attendu au démarrage.</span>
-          </span>
-        </label>
-        {% endif %}
-        {% endfor %}
-      </div>
-      {% if form.urgency.errors %}
-      <p class="text-sm text-error mt-3" role="alert">{{ form.urgency.errors.0 }}</p>
-      {% endif %}
-    </div>
-  </fieldset>
-
-  <div class="prospect-form__footer">
+  <div class="prospect-form__footer prospect-journey__footer">
     <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'prospects:step2' %}">Retour</a>
-    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Continuer</button>
+    <p><span>Délai habituel</span><strong>1 à 2 jours ouvrés</strong></p>
+    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Envoyer ma demande <span aria-hidden="true">→</span></button>
   </div>
 </form>
 {% endblock %}

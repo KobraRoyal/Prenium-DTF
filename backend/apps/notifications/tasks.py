@@ -1,6 +1,13 @@
 from celery import shared_task
 
+from apps.customers.models import CustomerInvitation
 from apps.notifications.services.transactional import (
+    send_access_request_approved_email,
+    send_access_request_rejected_email,
+    send_access_request_submitted_internal_email,
+    send_access_request_verification_email,
+    send_account_activated_email,
+    send_customer_invitation_email,
     send_file_correction_requested_email,
     send_order_created_email,
     send_order_priced_email,
@@ -10,6 +17,7 @@ from apps.notifications.services.transactional import (
     send_payment_captured_email,
 )
 from apps.orders.models import Order
+from apps.prospects.models import ProspectProfile
 from apps.uploads.models import OrderUploadReview
 from apps.uploads.services.reviews import OrderUploadReviewService
 
@@ -20,6 +28,94 @@ def _get_order(order_public_id: str) -> Order | None:
         .select_related("customer", "created_by", "shipment")
         .first()
     )
+
+
+def _get_profile(profile_public_id: str) -> ProspectProfile | None:
+    return (
+        ProspectProfile.objects.filter(public_id=profile_public_id)
+        .select_related("customer")
+        .first()
+    )
+
+
+def _get_invitation(invitation_public_id: str) -> CustomerInvitation | None:
+    return (
+        CustomerInvitation.objects.filter(public_id=invitation_public_id)
+        .select_related("customer", "accepted_by")
+        .first()
+    )
+
+
+@shared_task(
+    name="notifications.send_access_request_verification_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_access_request_verification_email_task(profile_public_id: str) -> None:
+    if profile := _get_profile(profile_public_id):
+        send_access_request_verification_email(profile=profile)
+
+
+@shared_task(
+    name="notifications.send_access_request_submitted_internal_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_access_request_submitted_internal_email_task(profile_public_id: str) -> None:
+    if profile := _get_profile(profile_public_id):
+        send_access_request_submitted_internal_email(profile=profile)
+
+
+@shared_task(
+    name="notifications.send_access_request_approved_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_access_request_approved_email_task(invitation_public_id: str) -> None:
+    if invitation := _get_invitation(invitation_public_id):
+        send_access_request_approved_email(invitation=invitation)
+
+
+@shared_task(
+    name="notifications.send_access_request_rejected_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_access_request_rejected_email_task(profile_public_id: str) -> None:
+    if profile := _get_profile(profile_public_id):
+        send_access_request_rejected_email(profile=profile)
+
+
+@shared_task(
+    name="notifications.send_customer_invitation_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_customer_invitation_email_task(invitation_public_id: str) -> None:
+    if invitation := _get_invitation(invitation_public_id):
+        send_customer_invitation_email(invitation=invitation)
+
+
+@shared_task(
+    name="notifications.send_account_activated_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_account_activated_email_task(invitation_public_id: str) -> None:
+    if invitation := _get_invitation(invitation_public_id):
+        send_account_activated_email(invitation=invitation)
 
 
 @shared_task(

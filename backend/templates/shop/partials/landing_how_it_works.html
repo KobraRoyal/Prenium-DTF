@@ -1,31 +1,31 @@
-<section id="landing-how-it-works" class="landing-section agency-section agency-section--ink landing-reveal">
+<section id="landing-how-it-works" class="landing-section conversion-section conversion-section--ink landing-reveal" aria-labelledby="landing-process-title">
   <div class="landing-shell">
-    <div class="agency-section-head">
-      <p class="agency-kicker">Orchestration</p>
-      <h2>Du visuel brut au livrable atelier.</h2>
-      <p class="agency-lead">Le parcours évite les décisions implicites : chaque étape rend visible ce qui doit être produit, contrôlé ou livré.</p>
-    </div>
-    <ol class="process-grid" aria-label="Déroulé du service">
-      <li class="process-card">
-        <span class="process-card__step">01 / Brief</span>
-        <h3>Vous envoyez la demande</h3>
-        <p>Commande DTF, préparation fichier ou besoin hybride : le point d’entrée reste simple et cadré.</p>
+    <header class="conversion-section__head">
+      <p class="conversion-kicker">Le process</p>
+      <h2 id="landing-process-title">Simple pour vous. Cadré pour l’atelier.</h2>
+      <p>Vous savez ce qui se passe, ce qui est attendu et où en est votre dossier.</p>
+    </header>
+    <ol class="conversion-process" aria-label="Déroulé d’une commande professionnelle">
+      <li>
+        <span class="conversion-process__number">01</span>
+        <div><small>Accès</small><h3>Votre profil est validé</h3><p>Vous renseignez votre activité en trois étapes. Notre équipe vérifie la demande avant d’ouvrir l’espace professionnel.</p></div>
       </li>
-      <li class="process-card">
-        <span class="process-card__step">02 / Check</span>
-        <h3>Le fichier est contrôlé</h3>
-        <p>Transparence, résolution, contours, dimensions, base blanche et export sont vérifiés avant production.</p>
+      <li>
+        <span class="conversion-process__number">02</span>
+        <div><small>Brief</small><h3>Vous cadrez la demande</h3><p>Besoin de production, préparation fichier ou demande hybride : les informations restent liées au bon dossier.</p></div>
       </li>
-      <li class="process-card">
-        <span class="process-card__step">03 / Make</span>
-        <h3>L’atelier produit</h3>
-        <p>Les transferts DTF sont préparés ou le fichier est optimisé selon le livrable attendu.</p>
+      <li>
+        <span class="conversion-process__number">03</span>
+        <div><small>Contrôle</small><h3>Le fichier passe en prépresse</h3><p>Les éléments techniques nécessaires sont vérifiés avant d’engager la production.</p></div>
       </li>
-      <li class="process-card">
-        <span class="process-card__step">04 / Ship</span>
-        <h3>Vous suivez la suite</h3>
-        <p>Statut, expédition, documents et facture restent accessibles dans un espace client dédié.</p>
+      <li>
+        <span class="conversion-process__number">04</span>
+        <div><small>Atelier</small><h3>Vous suivez production et envoi</h3><p>Statuts, expédition et documents restent accessibles depuis votre espace client.</p></div>
       </li>
     </ol>
+    <div class="conversion-process__cta">
+      <p><strong>Prêt à démarrer ?</strong> La demande d’accès prend quelques minutes.</p>
+      <a class="conversion-button conversion-button--primary" href="{% url 'prospects:step1' %}">Demander mon accès <span aria-hidden="true">↗</span></a>
+    </div>
   </div>
 </section>

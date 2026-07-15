@@ -61,6 +61,7 @@
 ## Derniers chantiers transverses
 
 - [x] Lot 1 refonte frontend — Design foundations / shell / navigation implémenté (tokens, shell portail, headers, page heads, formulaires, tables, feedback, skeletons, tabs)
+- [x] Sprint 13 renforcé — Demande d’accès en trois étapes, validation IDS, activation propriétaire et invitations d’équipe multi-tenant
 
 ## Blocages
 - [ ] Aucun blocage technique immédiat sur le socle Sprint 01
@@ -266,3 +267,15 @@
 - [x] Audit des décisions sans copie du commentaire client
 - [x] Tests service, isolation, permissions, e-mail et UI ajoutés
 - [x] Recette desktop/mobile et feedback toast accentué validés
+
+## Micro-lot 11.9 — Landing conversion ultra (2026-07-15)
+
+- [x] Audit conversion initial 61/100 et P1 mobile documentés
+- [x] Landing recentrée sur un CTA unique vers la demande d’accès professionnel
+- [x] Hero sans image lourde avec aperçu CSS du suivi B2B
+- [x] Formulaire public dupliqué et sections répétitives supprimés
+- [x] Preuves basées sur le workflow réel, sans chiffre ni témoignage invérifiable
+- [x] Responsive vérifié sans overflow à 375, 768 et 1440 px
+- [x] Menu mobile, FAQ, CTA et absence d’erreurs console validés
+- [x] Score final 92/100 — verdict premium, aucun P1 restant
+- [x] 38 tests UI ciblés passés et documentation du lot ajoutée

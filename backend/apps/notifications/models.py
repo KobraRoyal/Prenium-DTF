@@ -18,12 +18,24 @@ class EmailTemplate(BaseModel):
             "file_correction_requested",
             "Correction fichier demandée",
         )
+        ACCESS_REQUEST_EMAIL_VERIFICATION = (
+            "access_request_email_verification",
+            "Vérification demande d'accès",
+        )
+        ACCESS_REQUEST_SUBMITTED_INTERNAL = (
+            "access_request_submitted_internal",
+            "Nouvelle demande d'accès",
+        )
+        ACCESS_REQUEST_APPROVED = "access_request_approved", "Demande d'accès validée"
+        ACCESS_REQUEST_REJECTED = "access_request_rejected", "Demande d'accès refusée"
+        ACCOUNT_ACTIVATED = "account_activated", "Compte activé"
+        CUSTOMER_MEMBER_INVITED = "customer_member_invited", "Collaborateur invité"
 
     class Audience(models.TextChoices):
         CLIENT = "client", "Client"
         INTERNAL = "internal", "Équipe interne"
 
-    event = models.CharField("Événement", max_length=32, choices=Event.choices)
+    event = models.CharField("Événement", max_length=48, choices=Event.choices)
     audience = models.CharField("Audience", max_length=16, choices=Audience.choices)
     subject_template = models.CharField("Objet", max_length=255)
     body_template = models.TextField("Message")

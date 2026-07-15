@@ -1,0 +1,53 @@
+{% extends "portal/layout.html" %}
+{% block title %}Équipe — {{ customer.name }}{% endblock %}
+{% block portal_content %}
+{% include "components/portal/page_head.html" with kicker="Organisation" title="Équipe & accès" subtitle="Invitez vos collaborateurs avec le strict niveau d’accès nécessaire." %}
+{% if messages %}{% for message in messages %}<div class="dui-alert {% if message.tags == 'success' %}dui-alert-success{% else %}dui-alert-error{% endif %}" role="status">{{ message }}</div>{% endfor %}{% endif %}
+<div class="team-layout">
+  <section class="card team-members-card">
+    <div class="team-members-card__head">
+      <div>
+        <p class="team-invite-card__eyebrow">Organisation</p>
+        <h2>Membres</h2>
+      </div>
+      <span class="badge is-neutral">{{ memberships|length }} accès</span>
+    </div>
+    <div class="team-list">
+      {% for membership in memberships %}
+        <article class="team-row">
+          <div class="team-row__identity">
+            <strong>{{ membership.user.get_full_name|default:membership.user.email }}</strong>
+            <p class="muted">{{ membership.user.email }}</p>
+            <span class="badge {% if membership.is_active %}is-success{% else %}is-neutral{% endif %}">{% if membership.is_active %}Actif{% else %}Désactivé{% endif %}</span>
+          </div>
+          <div class="team-row__controls">
+            {% if membership.role == 'owner' %}
+              <span class="badge is-success">Propriétaire</span>
+            {% elif membership.user != request.user %}
+              <form method="post" action="{% url 'portal:client-team-member-role' customer_public_id=customer.public_id membership_public_id=membership.public_id %}" class="team-row__actions">
+                {% csrf_token %}
+                <label class="ui-sr-only" for="member-role-{{ membership.public_id }}">Rôle de {{ membership.user.email }}</label>
+                <select class="ui-input" id="member-role-{{ membership.public_id }}" name="role">
+                  {% for value, label in role_choices %}<option value="{{ value }}"{% if membership.role == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Modifier</button>
+              </form>
+              {% if membership.is_active %}
+                <form method="post" action="{% url 'portal:client-team-member-deactivate' customer_public_id=customer.public_id membership_public_id=membership.public_id %}">
+                  {% csrf_token %}
+                  <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit">Désactiver</button>
+                </form>
+              {% endif %}
+            {% else %}
+              <span class="badge">{{ membership.get_role_display }}</span>
+            {% endif %}
+          </div>
+        </article>
+      {% empty %}
+        <div class="empty-state"><p>Aucun membre actif pour cette organisation.</p></div>
+      {% endfor %}
+    </div>
+  </section>
+  {% include "portal/client/partials/team_invite_panel.html" %}
+</div>
+{% endblock %}

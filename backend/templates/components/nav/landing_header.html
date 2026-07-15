@@ -28,10 +28,10 @@
       data-product-menu
       aria-label="Navigation principale"
     >
-      <a class="nav-link nav-link--ghost agency-nav__link{% if current_url == 'services' %} is-active{% endif %}" {% if current_url == 'services' %}aria-current="page"{% endif %} href="{% url 'services' %}">Services</a>
+      <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'home' %}#landing-services">Solutions</a>
       {% if current_namespace != "prospects" %}
-      <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'home' %}#landing-cases">Cas</a>
-      <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'home' %}#landing-contact">Contact</a>
+      <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'home' %}#landing-how-it-works">Méthode</a>
+      <a class="nav-link nav-link--ghost agency-nav__link" href="{% url 'home' %}#landing-cases">Pour qui</a>
       {% endif %}
       <a class="nav-link nav-link--ghost agency-nav__link agency-nav__link--secondary" href="{% url 'portal:login' %}">Connexion</a>
       {% if current_namespace != "prospects" %}

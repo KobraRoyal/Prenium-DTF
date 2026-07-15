@@ -35,6 +35,16 @@ Réglages de référence : `backend/config/settings/base.py` ; durcissement prod
 - [ ] Mutations sensibles couvertes par `apps.auditlog` (commandes, paiements, production, uploads, etc.) selon le périmètre livré
 - [ ] Consultation des journaux d’audit staff / admin conforme aux rôles
 
+## 6 bis. Demandes d’accès et invitations
+
+- [ ] La soumission prospect ne crée ni utilisateur ni tenant actif
+- [ ] La décision exige `prospects.review_prospectprofile`
+- [ ] Les liens de vérification et d’invitation sont signés, versionnés et expirants
+- [ ] Une invitation acceptée ou révoquée n’est plus réutilisable
+- [ ] Un compte existant doit s’authentifier avec l’adresse invitée
+- [ ] Les actions d’équipe sont rescopées par organisation et couvertes par des tests d’accès croisé
+- [ ] `PUBLIC_BASE_URL` utilise l’origine HTTPS publique réelle
+
 ## 7. Exploitation
 - [ ] Sauvegardes base et médias (runbook déploiement)
 - [ ] Politique de rétention des logs et des données personnelles alignée avec le métier
@@ -46,6 +56,8 @@ Réglages de référence : `backend/config/settings/base.py` ; durcissement prod
 - Élévation de privilège (client → staff)
 - Transition de statut ou mutation non autorisée
 - Rafale de POST login → **429** puis stabilité du reste du site
+- Invitation d’un tenant présentée sur la route équipe d’un autre tenant
+- Réutilisation d’une invitation après acceptation ou révocation
 
 ## Références code
 - Middleware login : `apps/accounts/middleware.py`

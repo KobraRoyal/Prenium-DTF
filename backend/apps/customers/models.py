@@ -7,7 +7,9 @@ from django.db import models
 from apps.core.models import BaseModel
 
 CUSTOMER_ROLE_OWNER = "owner"
+CUSTOMER_ROLE_ADMIN = "admin"
 CUSTOMER_ROLE_MEMBER = "member"
+CUSTOMER_ROLE_READONLY = "readonly"
 
 ZERO_AMOUNT = Decimal("0.00")
 
@@ -50,6 +52,8 @@ class Customer(BaseModel):
 
     name = models.CharField(max_length=255)
     billing_email = models.EmailField(blank=True)
+    siren = models.CharField(max_length=9, blank=True)
+    vat_number = models.CharField(max_length=32, blank=True)
     is_active = models.BooleanField(default=True)
     b2b_order_projects_enabled = models.BooleanField(
         "Projets de commande B2B activés",
@@ -197,8 +201,10 @@ class CustomerBillingProfile(BaseModel):
 
 class CustomerMembership(BaseModel):
     class Role(models.TextChoices):
-        OWNER = CUSTOMER_ROLE_OWNER, "Owner"
-        MEMBER = CUSTOMER_ROLE_MEMBER, "Member"
+        OWNER = CUSTOMER_ROLE_OWNER, "Propriétaire"
+        ADMIN = CUSTOMER_ROLE_ADMIN, "Administrateur"
+        MEMBER = CUSTOMER_ROLE_MEMBER, "Collaborateur"
+        READONLY = CUSTOMER_ROLE_READONLY, "Lecture seule"
 
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="memberships")
     user = models.ForeignKey(
@@ -227,3 +233,80 @@ class CustomerMembership(BaseModel):
     @property
     def is_owner(self) -> bool:
         return self.role == self.Role.OWNER
+
+    @property
+    def can_manage_team(self) -> bool:
+        return self.role in {self.Role.OWNER, self.Role.ADMIN}
+
+
+class CustomerInvitation(BaseModel):
+    """Invitation à rejoindre une organisation, sans stocker le jeton brut."""
+
+    class Kind(models.TextChoices):
+        OWNER_ACTIVATION = "owner_activation", "Activation du propriétaire"
+        COLLABORATOR = "collaborator", "Invitation d'un collaborateur"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "En attente"
+        ACCEPTED = "accepted", "Acceptée"
+        REVOKED = "revoked", "Révoquée"
+        EXPIRED = "expired", "Expirée"
+
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="invitations",
+    )
+    email = models.EmailField()
+    role = models.CharField(
+        max_length=16,
+        choices=CustomerMembership.Role.choices,
+        default=CustomerMembership.Role.MEMBER,
+    )
+    kind = models.CharField(
+        max_length=24,
+        choices=Kind.choices,
+        default=Kind.COLLABORATOR,
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="customer_invitations_sent",
+    )
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="customer_invitations_accepted",
+    )
+    token_version = models.PositiveIntegerField(default=1)
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("customer", "email"),
+                condition=models.Q(status="pending"),
+                name="uniq_pending_customer_invitation_email",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("customer", "status", "created_at")),
+            models.Index(fields=("email", "status")),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.email} -> {self.customer} ({self.role})"

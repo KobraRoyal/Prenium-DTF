@@ -1,23 +1,4 @@
-{% extends "portal/layout.html" %}
-
-{% block title %}Bienvenue - Prenium DTF{% endblock %}
-
-{% block portal_content %}
-{% include "components/portal/page_head.html" with kicker="Accès activé" title="Bienvenue, "|add:profile.first_name subtitle="Votre espace est prêt — lancez une commande ou explorez le catalogue." %}
-
-<section class="card">
-  <ul class="prospect-confirm__actions">
-    <li>
-      <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-dashboard' %}">Accéder à mon espace</a>
-    </li>
-    {% if customer_public_id %}
-    <li>
-      <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-checkout' customer_public_id=customer_public_id %}">Lancer ma première commande</a>
-    </li>
-    {% endif %}
-    <li>
-      <a class="ui-btn ui-btn-secondary" href="{% url 'services' %}">Voir les offres</a>
-    </li>
-  </ul>
-</section>
-{% endblock %}
+{% extends "prospects/base_tunnel.html" %}
+{% block title %}Demande reçue — Prenium DTF{% endblock %}
+{% block prospect_section_head %}<div class="landing-section-head prospect-tunnel__intro"><p class="landing-kicker landing-kicker--pill">Demande enregistrée</p>{% if profile.status == 'pending_email_verification' %}<h2 class="prospect-tunnel__title">Consultez votre boîte e-mail</h2><p class="landing-auth-lead prospect-tunnel__lead">Nous venons d’envoyer un lien de vérification{% if profile %} à {{ profile.email }}{% endif %}. Il reste valable 48 heures.</p>{% else %}<h2 class="prospect-tunnel__title">Votre demande est déjà en cours</h2><p class="landing-auth-lead prospect-tunnel__lead">Notre équipe dispose déjà d’une demande active pour cette adresse professionnelle.</p>{% endif %}</div>{% endblock %}
+{% block prospect_inner %}<div class="prospect-success-card"><span class="prospect-success-card__icon" aria-hidden="true">✉</span>{% if profile.status == 'pending_email_verification' %}<h3>Une dernière action avant l’examen IDS</h3><p>Cliquez sur le lien reçu. Votre demande rejoindra ensuite la file de validation de notre équipe.</p>{% else %}<h3>Aucune nouvelle action nécessaire</h3><p>Vous serez informé par e-mail dès que votre demande évoluera.</p>{% endif %}<a class="ui-btn ui-btn-secondary" href="{% url 'home' %}">Retour au site</a></div>{% endblock %}

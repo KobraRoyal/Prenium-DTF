@@ -1,0 +1,1515 @@
+/*
+ * Tunnel d’accès professionnel — « atelier éditorial haute précision ».
+ * Cette couche est volontairement chargée après les composants historiques :
+ * elle unifie les trois étapes sans modifier les écrans staff/client voisins.
+ */
+
+body.prospect-journey-page {
+  --journey-ink: #0a0a0a;
+  --journey-paper: #f4f0e6;
+  --journey-surface: #fffdf8;
+  --journey-muted: #665f53;
+  --journey-line: rgba(10, 10, 10, 0.18);
+  --journey-lime: #d9ff1f;
+  --journey-blue: #8bdef8;
+  --journey-pink: #ff5d9e;
+  --journey-error: #c6283d;
+  background-color: var(--journey-paper);
+  background-image:
+    radial-gradient(circle at 8% 12%, rgba(217, 255, 31, 0.18), transparent 18rem),
+    linear-gradient(90deg, rgba(10, 10, 10, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(10, 10, 10, 0.035) 1px, transparent 1px);
+  background-size: auto, 40px 40px, 40px 40px;
+  color: var(--journey-ink);
+}
+
+body.prospect-journey-page .prospect-journey {
+  width: 100% !important;
+  max-width: none !important;
+  padding: clamp(0.75rem, 2vw, 2rem) clamp(0.75rem, 2.4vw, 2.5rem) clamp(2.5rem, 6vw, 6rem) !important;
+}
+
+body.prospect-journey-page .prospect-journey__frame {
+  display: grid !important;
+  grid-template-columns: minmax(20rem, 0.43fr) minmax(0, 1fr) !important;
+  gap: 0 !important;
+  align-items: stretch !important;
+  width: min(100%, 83rem);
+  margin: 0 auto;
+  padding: 0;
+  border: 2px solid var(--journey-ink);
+  background: var(--journey-surface);
+  box-shadow: 12px 12px 0 var(--journey-ink);
+}
+
+body.prospect-journey-page .prospect-journey__rail {
+  min-width: 0;
+  border-right: 2px solid var(--journey-ink);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 45%),
+    var(--journey-ink);
+  color: #fff;
+}
+
+body.prospect-journey-page .prospect-journey__rail-inner {
+  position: sticky;
+  top: 5.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.8rem, 4vh, 3.25rem);
+  min-height: calc(100dvh - 8.5rem);
+  padding: clamp(1.5rem, 3vw, 2.8rem) !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #fff;
+}
+
+body.prospect-journey-page .prospect-journey__rail-heading {
+  display: grid;
+  gap: 1rem;
+}
+
+body.prospect-journey-page .prospect-shell__eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 0.85rem;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: var(--journey-lime);
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-shell__eyebrow span:last-child {
+  color: rgba(255, 255, 255, 0.58);
+  font-variant-numeric: tabular-nums;
+}
+
+body.prospect-journey-page .prospect-shell__title {
+  max-width: 11ch;
+  margin: 0;
+  color: #fff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: clamp(2.35rem, 3.55vw, 4.55rem);
+  font-weight: 900;
+  letter-spacing: -0.065em;
+  line-height: 0.88;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-shell__lead {
+  max-width: 31rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+body.prospect-journey-page .prospect-journey__progress {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.prospect-journey__progress-copy {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+body.prospect-journey-page .prospect-tunnel__step-meta {
+  width: auto;
+  margin: 0 0 0.32rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.67rem;
+  letter-spacing: 0.11em;
+}
+
+.prospect-journey__progress-number {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.prospect-journey__progress-number strong {
+  color: var(--journey-lime);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 2.75rem;
+  font-weight: 900;
+  line-height: 0.8;
+}
+
+.prospect-journey__progress-number span {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+body.prospect-journey-page .prospect-tunnel__track {
+  width: 100%;
+  height: 0.38rem;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+body.prospect-journey-page .prospect-tunnel__track-fill {
+  background: linear-gradient(90deg, var(--journey-lime), var(--journey-blue), var(--journey-pink));
+  box-shadow: none;
+}
+
+body.prospect-journey-page .prospect-stepper__list {
+  display: grid;
+  gap: 0;
+  overflow: visible;
+}
+
+body.prospect-journey-page .prospect-stepper__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0 0 1.45rem;
+  color: rgba(255, 255, 255, 0.42);
+  text-align: left;
+}
+
+body.prospect-journey-page .prospect-stepper__item:last-child {
+  padding-bottom: 0;
+}
+
+body.prospect-journey-page .prospect-stepper__item::after {
+  content: "";
+  position: absolute;
+  top: 2.45rem;
+  bottom: 0.18rem;
+  left: 1.34rem;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+body.prospect-journey-page .prospect-stepper__item:last-child::after {
+  display: none;
+}
+
+body.prospect-journey-page .prospect-stepper__index {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  background: var(--journey-ink);
+  color: rgba(255, 255, 255, 0.58);
+  box-shadow: none;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+body.prospect-journey-page .prospect-stepper__item.is-current .prospect-stepper__index {
+  border-color: var(--journey-lime);
+  background: var(--journey-lime);
+  color: var(--journey-ink);
+  box-shadow: 3px 3px 0 rgba(255, 255, 255, 0.96);
+}
+
+body.prospect-journey-page .prospect-stepper__item.is-complete .prospect-stepper__index {
+  border-color: #fff;
+  background: #fff;
+  color: var(--journey-ink);
+}
+
+body.prospect-journey-page .prospect-stepper__copy {
+  display: grid;
+  gap: 0.12rem;
+  padding-top: 0.05rem;
+}
+
+.prospect-stepper__meta {
+  color: inherit;
+  font-size: 0.59rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-stepper__label {
+  max-width: none;
+  color: #fff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-stepper__help {
+  max-width: none;
+  margin: 0.05rem 0 0;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 0.68rem;
+}
+
+body.prospect-journey-page .prospect-stepper__item.is-current .prospect-stepper__meta,
+body.prospect-journey-page .prospect-stepper__item.is-current .prospect-stepper__help {
+  color: var(--journey-lime);
+}
+
+.prospect-journey__promise {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: auto;
+  padding: 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.prospect-journey__promise > p {
+  margin: 0;
+  color: var(--journey-lime);
+  font-size: 0.63rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.prospect-journey__promise > strong {
+  max-width: 26rem;
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+body.prospect-journey-page .prospect-shell__trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0.65rem 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.67rem;
+  line-height: 1.4;
+  list-style: none;
+}
+
+body.prospect-journey-page .prospect-shell__trust li {
+  position: relative;
+  margin: 0;
+  padding-left: 0.85rem;
+}
+
+body.prospect-journey-page .prospect-shell__trust li::before {
+  content: "";
+  position: absolute;
+  top: 0.42rem;
+  left: 0;
+  width: 0.38rem;
+  height: 0.38rem;
+  background: var(--journey-lime);
+}
+
+body.prospect-journey-page .prospect-journey__main {
+  min-width: 0;
+  padding: clamp(1.4rem, 3.8vw, 3.6rem);
+  background:
+    linear-gradient(145deg, rgba(139, 222, 248, 0.08), transparent 26rem),
+    var(--journey-surface);
+}
+
+.prospect-journey__utility {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: clamp(1.4rem, 4vw, 3.25rem);
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--journey-line);
+  color: var(--journey-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.prospect-journey__utility span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.prospect-journey__utility i {
+  width: 0.48rem;
+  height: 0.48rem;
+  background: var(--journey-lime);
+  box-shadow: 0 0 0 2px var(--journey-ink);
+}
+
+.prospect-journey__utility strong {
+  color: var(--journey-ink);
+}
+
+body.prospect-journey-page .prospect-journey__panel {
+  display: grid;
+  gap: clamp(1.6rem, 4vw, 3.15rem);
+  width: 100%;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.prospect-journey-page .prospect-journey__intro,
+body.prospect-journey-page .prospect-step1__intro {
+  display: grid;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: left;
+}
+
+.prospect-journey__intro-line,
+body.prospect-journey-page .prospect-step1__intro-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.prospect-journey__intro-line > span,
+body.prospect-journey-page .prospect-step1__time {
+  min-height: 0;
+  padding: 0.28rem 0.5rem;
+  border: 1px solid var(--journey-line);
+  background: transparent;
+  color: var(--journey-muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-journey__intro .landing-kicker,
+body.prospect-journey-page .prospect-step1__intro .landing-kicker {
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--journey-ink);
+  background: var(--journey-lime);
+  color: var(--journey-ink);
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+}
+
+body.prospect-journey-page .prospect-journey__intro .prospect-tunnel__title,
+body.prospect-journey-page .prospect-step1__intro .prospect-tunnel__title {
+  max-width: 12ch;
+  margin: 0;
+  color: var(--journey-ink);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: clamp(3rem, 6.1vw, 5.8rem);
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  line-height: 0.87;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-journey__intro .prospect-tunnel__lead,
+body.prospect-journey-page .prospect-step1__intro .prospect-tunnel__lead {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--journey-muted);
+  font-size: clamp(0.98rem, 1.3vw, 1.08rem);
+  line-height: 1.6;
+}
+
+/* Champs et sections communs */
+body.prospect-journey-page .prospect-form {
+  gap: 0;
+}
+
+body.prospect-journey-page .prospect-step1__section,
+.prospect-project-section,
+.prospect-review-confirm {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+body.prospect-journey-page .prospect-step1__section + .prospect-step1__section,
+.prospect-project-section + .prospect-project-section {
+  margin-top: 2.25rem;
+}
+
+body.prospect-journey-page .prospect-step1__section-head,
+.prospect-project-section__head {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+body.prospect-journey-page .prospect-step1__section-head .prospect-form__section-index,
+.prospect-project-section__head > span {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 0;
+  background: var(--journey-ink);
+  color: #fff;
+  box-shadow: 3px 3px 0 var(--journey-lime);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+body.prospect-journey-page .prospect-step1__section-head .prospect-form__section-title,
+.prospect-project-section__head h3 {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--journey-ink);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-step1__section-help,
+.prospect-project-section__head p {
+  max-width: 34rem;
+  margin: 0.15rem 0 0;
+  color: var(--journey-muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+body.prospect-journey-page .prospect-step1__section-meta {
+  padding: 0.32rem 0.52rem;
+  border: 1px solid var(--journey-line);
+  background: transparent;
+  color: var(--journey-muted);
+  font-size: 0.59rem;
+}
+
+body.prospect-journey-page .prospect-step1__surface,
+.prospect-project-section,
+.prospect-review-confirm {
+  border: 1px solid var(--journey-line);
+  background: rgba(255, 255, 255, 0.52);
+  box-shadow: none;
+}
+
+body.prospect-journey-page .prospect-step1__surface {
+  padding: clamp(1rem, 2.2vw, 1.45rem);
+}
+
+.prospect-project-section,
+.prospect-review-confirm {
+  padding: clamp(1rem, 2.3vw, 1.55rem);
+}
+
+body.prospect-journey-page .prospect-step1__field .product-form-label,
+.prospect-project-fieldset legend,
+.prospect-project-goal .product-form-label {
+  color: var(--journey-ink);
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 0.73rem;
+  font-weight: 900;
+  letter-spacing: 0.025em;
+}
+
+body.prospect-journey-page .prospect-panel .checkout-dui-input,
+body.prospect-journey-page .prospect-panel .dui-input.dui-input-bordered,
+body.prospect-journey-page .prospect-panel select.dui-select.dui-select-bordered {
+  min-height: 3.35rem;
+  border: 1.5px solid var(--journey-ink);
+  border-radius: 0;
+  background: var(--journey-surface);
+  color: var(--journey-ink);
+  box-shadow: none;
+  font-size: 1rem;
+  transition: box-shadow 180ms ease, background-color 180ms ease;
+}
+
+body.prospect-journey-page .prospect-panel textarea.checkout-dui-input {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+body.prospect-journey-page .prospect-panel .checkout-dui-input:hover {
+  background: #fff;
+  box-shadow: inset 4px 0 0 var(--journey-lime);
+}
+
+body.prospect-journey-page .prospect-panel .checkout-dui-input:focus,
+body.prospect-journey-page .prospect-panel select.dui-select:focus {
+  outline: 3px solid var(--journey-lime);
+  outline-offset: 2px;
+  box-shadow: none;
+  transform: none;
+}
+
+body.prospect-journey-page .prospect-step1__proofs {
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+body.prospect-journey-page .prospect-step1__proofs li {
+  min-height: 2.35rem;
+  border-color: var(--journey-line);
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 0.69rem;
+}
+
+body.prospect-journey-page .prospect-step1__proofs span {
+  background: var(--journey-lime);
+}
+
+body.prospect-journey-page .prospect-step1__activity-card {
+  min-height: 4.75rem;
+  border: 1px solid var(--journey-line);
+  background: var(--journey-surface);
+}
+
+body.prospect-journey-page .prospect-step1__activity-card:hover {
+  border-color: var(--journey-ink);
+  box-shadow: inset 0 -4px 0 var(--journey-lime);
+  transform: none;
+}
+
+body.prospect-journey-page .prospect-step1__activity-card:has(input:checked) {
+  border-color: var(--journey-ink);
+  background: var(--journey-lime);
+  box-shadow: 4px 4px 0 var(--journey-ink);
+  transform: translate(-2px, -2px);
+}
+
+/* Étape 2 — choix tactiles */
+.prospect-project-form {
+  display: grid;
+  gap: 1.35rem;
+}
+
+.prospect-project-fieldset {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+  margin: 0;
+  padding: 1rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--journey-line);
+}
+
+.prospect-project-fieldset__help {
+  margin: -0.25rem 0 0;
+  color: var(--journey-muted);
+  font-size: 0.72rem;
+}
+
+.prospect-project-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.prospect-project-options--compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.prospect-project-option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.15rem minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: start;
+  min-height: 5.2rem;
+  margin: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--journey-line);
+  background: var(--journey-surface);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.prospect-project-option:hover {
+  border-color: var(--journey-ink);
+  box-shadow: inset 0 -4px 0 var(--journey-lime);
+}
+
+.prospect-project-option:active {
+  transform: scale(0.985);
+}
+
+.prospect-project-option:focus-within {
+  outline: 3px solid var(--journey-lime);
+  outline-offset: 2px;
+}
+
+.prospect-project-option:has(input:checked) {
+  border-color: var(--journey-ink);
+  background: var(--journey-lime);
+  box-shadow: 4px 4px 0 var(--journey-ink);
+  transform: translate(-2px, -2px);
+}
+
+.prospect-project-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.prospect-project-option__marker {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.08rem;
+  border: 1.5px solid var(--journey-ink);
+  background: transparent;
+}
+
+.prospect-project-option:has(input:checked) .prospect-project-option__marker {
+  background: var(--journey-ink);
+  box-shadow: inset 0 0 0 3px var(--journey-lime);
+}
+
+.prospect-project-option__copy {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.prospect-project-option__copy strong {
+  color: var(--journey-ink);
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.prospect-project-option__copy small {
+  color: var(--journey-muted);
+  font-size: 0.65rem;
+  line-height: 1.35;
+}
+
+.prospect-project-option__check {
+  display: none;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  background: var(--journey-ink);
+  color: #fff;
+  font-size: 0.65rem;
+}
+
+.prospect-project-option:has(input:checked) .prospect-project-option__check {
+  display: grid;
+}
+
+.prospect-project-option--compact {
+  min-height: 3.65rem;
+  align-items: center;
+}
+
+.prospect-project-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.prospect-project-options--metric {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.prospect-project-option--metric {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 3.5rem;
+  align-items: center;
+  padding: 0.75rem;
+}
+
+.prospect-project-fieldset--urgency {
+  margin-top: 0.1rem;
+}
+
+.prospect-project-goal {
+  display: grid;
+  gap: 0.45rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--journey-line);
+}
+
+.prospect-project-goal__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.prospect-project-goal__label span,
+.prospect-project-goal > p {
+  margin: 0;
+  color: var(--journey-muted);
+  font-size: 0.65rem;
+}
+
+/* Étape 3 — récapitulatif et consentement */
+body.prospect-journey-page .prospect-review {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid var(--journey-ink);
+  background: var(--journey-surface);
+  box-shadow: 7px 7px 0 var(--journey-ink);
+}
+
+body.prospect-journey-page .prospect-review__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 1.1rem;
+  background: var(--journey-ink);
+  color: #fff;
+}
+
+body.prospect-journey-page .prospect-summary__check {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 0;
+  background: var(--journey-lime);
+  color: var(--journey-ink);
+}
+
+.prospect-review__header p {
+  margin: 0 0 0.14rem;
+  color: var(--journey-lime);
+  font-size: 0.61rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-review__header .prospect-summary__title {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.prospect-review__header a {
+  min-height: 2.75rem;
+  padding: 0.62rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-review__header a {
+  color: #fff !important;
+}
+
+.prospect-review__header a:hover,
+.prospect-review__header a:focus-visible {
+  border-color: var(--journey-lime);
+  background: var(--journey-lime);
+  color: var(--journey-ink) !important;
+}
+
+body.prospect-journey-page .prospect-review__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.prospect-review__item {
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border-right: 1px solid var(--journey-line);
+  border-bottom: 1px solid var(--journey-line);
+}
+
+.prospect-review__item:nth-child(even) {
+  border-right: 0;
+}
+
+.prospect-review__item--wide {
+  grid-column: 1 / -1;
+  border-right: 0;
+}
+
+.prospect-review__item--accent {
+  background: var(--journey-lime);
+}
+
+body.prospect-journey-page .prospect-review__item dt {
+  color: var(--journey-muted);
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-review__item dd {
+  margin: 0.28rem 0 0;
+  overflow-wrap: anywhere;
+  color: var(--journey-ink);
+  font-size: 0.91rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.prospect-review__notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--journey-blue) 38%, white);
+}
+
+.prospect-review__notice > span {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--journey-ink);
+  color: var(--journey-ink);
+  font-family: Georgia, serif;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.prospect-review__notice p {
+  margin: 0;
+  color: var(--journey-ink);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.prospect-review-form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+body.prospect-journey-page .prospect-consent-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.3rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  min-height: 4.5rem;
+  padding: 1rem;
+  border: 1.5px solid var(--journey-ink);
+  background: var(--journey-surface);
+}
+
+body.prospect-journey-page .prospect-consent-card:hover {
+  box-shadow: inset 4px 0 0 var(--journey-lime);
+}
+
+body.prospect-journey-page .prospect-consent-card:has(input:checked) {
+  background: var(--journey-lime);
+  box-shadow: 4px 4px 0 var(--journey-ink);
+}
+
+body.prospect-journey-page .prospect-consent-card:focus-within {
+  outline: 3px solid var(--journey-lime);
+  outline-offset: 2px;
+}
+
+body.prospect-journey-page .prospect-consent-card input {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  opacity: 0;
+}
+
+.prospect-consent-card__control {
+  display: grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  margin: 0.05rem 0 0;
+  border: 1.5px solid var(--journey-ink);
+  background: #fff;
+  color: transparent;
+  font-size: 0.68rem;
+}
+
+.prospect-consent-card:has(input:checked) .prospect-consent-card__control {
+  background: var(--journey-ink);
+  color: #fff;
+}
+
+body.prospect-journey-page .prospect-consent-card strong {
+  color: var(--journey-ink);
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+body.prospect-journey-page .prospect-consent-card small {
+  color: var(--journey-muted);
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+body.prospect-journey-page .prospect-consent-card.is-error {
+  border-color: var(--journey-error);
+  box-shadow: 4px 4px 0 var(--journey-error);
+}
+
+body.prospect-journey-page .prospect-next-steps {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid var(--journey-ink);
+  background: var(--journey-ink);
+}
+
+.prospect-next-steps__heading {
+  display: grid;
+  align-content: center;
+  gap: 0.2rem;
+  padding: 0.9rem;
+  color: #fff;
+}
+
+.prospect-next-steps__heading span {
+  color: var(--journey-lime);
+  font-size: 0.59rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.prospect-next-steps__heading strong {
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+body.prospect-journey-page .prospect-next-steps > span {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.85rem 0.7rem;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: #fff;
+}
+
+body.prospect-journey-page .prospect-next-steps b {
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 0;
+  background: transparent;
+  color: var(--journey-lime);
+  font-size: 0.59rem;
+}
+
+body.prospect-journey-page .prospect-next-steps > span > span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+body.prospect-journey-page .prospect-next-steps strong {
+  color: #fff;
+  font-size: 0.67rem;
+  line-height: 1.2;
+}
+
+body.prospect-journey-page .prospect-next-steps small {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.56rem;
+  line-height: 1.25;
+}
+
+/* Neutralise les anciennes règles globales `.prospect-next-steps span`. */
+body.prospect-journey-page .prospect-next-steps span {
+  border: 0;
+  background: transparent !important;
+}
+
+body.prospect-journey-page .prospect-next-steps > span {
+  padding: 0.85rem 0.7rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+body.prospect-journey-page .prospect-next-steps__heading span {
+  color: var(--journey-lime);
+}
+
+body.prospect-journey-page .prospect-next-steps > span > span {
+  padding: 0;
+}
+
+/* Navigation de formulaire */
+body.prospect-journey-page .prospect-journey__footer,
+body.prospect-journey-page .prospect-step1__footer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1.4rem;
+  padding-top: 1.15rem;
+  border-top: 1.5px solid var(--journey-ink);
+}
+
+body.prospect-journey-page .prospect-journey__footer > p,
+body.prospect-journey-page .prospect-step1__footer > p {
+  display: grid;
+  gap: 0.08rem;
+  margin: 0;
+  color: var(--journey-muted);
+}
+
+body.prospect-journey-page .prospect-journey__footer > p span,
+body.prospect-journey-page .prospect-step1__footer > p span {
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+body.prospect-journey-page .prospect-journey__footer > p strong,
+body.prospect-journey-page .prospect-step1__footer > p strong {
+  color: var(--journey-ink);
+  font-size: 0.72rem;
+}
+
+body.prospect-journey-page .prospect-form__footer .ui-btn {
+  min-height: 3.15rem;
+}
+
+body.prospect-journey-page .prospect-form__btn-primary {
+  min-width: 14rem;
+  border-color: var(--journey-ink);
+  background: var(--journey-lime);
+  color: var(--journey-ink);
+  box-shadow: 4px 4px 0 var(--journey-ink);
+}
+
+body.prospect-journey-page .prospect-form__btn-primary:hover,
+body.prospect-journey-page .prospect-form__btn-primary:focus-visible {
+  border-color: var(--journey-ink);
+  background: #edff84;
+  color: var(--journey-ink);
+  box-shadow: 6px 6px 0 var(--journey-ink);
+  transform: translate(-2px, -2px);
+}
+
+body.prospect-journey-page .prospect-form__btn-secondary {
+  min-width: 6.5rem;
+  border-color: var(--journey-ink);
+  background: transparent;
+  color: var(--journey-ink);
+  box-shadow: none;
+}
+
+body.prospect-journey-page .error-text {
+  color: var(--journey-error);
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+body.prospect-journey-page .prospect-success-card {
+  border: 2px solid var(--journey-ink);
+  background: var(--journey-surface);
+  box-shadow: 7px 7px 0 var(--journey-ink);
+}
+
+@media (max-width: 1199px) {
+  body.prospect-journey-page .prospect-journey__frame {
+    grid-template-columns: minmax(18rem, 0.38fr) minmax(0, 1fr);
+  }
+
+  body.prospect-journey-page .prospect-next-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .prospect-next-steps__heading {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  }
+}
+
+@media (max-width: 1023px) {
+  body.prospect-journey-page .prospect-journey__frame {
+    display: block !important;
+  }
+
+  body.prospect-journey-page .prospect-journey__rail {
+    border-right: 0;
+    border-bottom: 2px solid var(--journey-ink);
+  }
+
+  body.prospect-journey-page .prospect-journey__rail-inner {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(15rem, 0.8fr);
+    gap: 1.5rem;
+    min-height: 0;
+    padding: 1.5rem !important;
+  }
+
+  body.prospect-journey-page .prospect-shell__title {
+    max-width: 18ch;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+  }
+
+  body.prospect-journey-page .prospect-journey__progress,
+  body.prospect-journey-page .prospect-stepper {
+    grid-column: 1 / -1;
+  }
+
+  body.prospect-journey-page .prospect-stepper__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  body.prospect-journey-page .prospect-stepper__item {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: 0.65rem;
+    padding: 0;
+  }
+
+  body.prospect-journey-page .prospect-stepper__item::after {
+    display: none;
+  }
+
+  body.prospect-journey-page .prospect-stepper__index {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .prospect-journey__promise {
+    align-self: end;
+    margin: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  body.prospect-journey-page .prospect-journey {
+    padding: 0.65rem 0.55rem 2.5rem !important;
+  }
+
+  body.prospect-journey-page .prospect-journey__frame {
+    border-width: 1.5px;
+    box-shadow: 5px 5px 0 var(--journey-ink);
+  }
+
+  body.prospect-journey-page .prospect-journey__rail-inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1rem !important;
+  }
+
+  body.prospect-journey-page .prospect-journey__rail-heading {
+    gap: 0.65rem;
+  }
+
+  body.prospect-journey-page .prospect-shell__title {
+    display: block;
+    max-width: 15ch;
+    font-size: clamp(1.65rem, 8.5vw, 2.15rem);
+    line-height: 0.92;
+  }
+
+  body.prospect-journey-page .prospect-shell__lead,
+  .prospect-journey__promise {
+    display: none;
+  }
+
+  body.prospect-journey-page .prospect-journey__progress {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.75rem;
+  }
+
+  .prospect-journey__progress-copy {
+    display: contents;
+  }
+
+  body.prospect-journey-page .prospect-tunnel__step-meta {
+    align-self: center;
+    margin: 0;
+  }
+
+  .prospect-journey__progress-number strong {
+    font-size: 2rem;
+  }
+
+  body.prospect-journey-page .prospect-tunnel__track {
+    grid-column: 1 / -1;
+  }
+
+  body.prospect-journey-page .prospect-stepper__list {
+    gap: 0.35rem;
+  }
+
+  body.prospect-journey-page .prospect-stepper__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    text-align: center;
+  }
+
+  body.prospect-journey-page .prospect-stepper__index {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.62rem;
+  }
+
+  .prospect-stepper__meta,
+  body.prospect-journey-page .prospect-stepper__help {
+    display: none;
+  }
+
+  body.prospect-journey-page .prospect-stepper__label {
+    font-size: 0.66rem;
+  }
+
+  body.prospect-journey-page .prospect-journey__main {
+    padding: 1rem 0.85rem 1.25rem;
+  }
+
+  .prospect-journey__utility {
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.65rem;
+    font-size: 0.58rem;
+  }
+
+  body.prospect-journey-page .prospect-journey__panel {
+    gap: 1.6rem;
+  }
+
+  .prospect-journey__intro-line,
+  body.prospect-journey-page .prospect-step1__intro-topline {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  body.prospect-journey-page .prospect-journey__intro .prospect-tunnel__title,
+  body.prospect-journey-page .prospect-step1__intro .prospect-tunnel__title {
+    max-width: 11ch;
+    font-size: clamp(2.55rem, 13vw, 3.5rem);
+    line-height: 0.86;
+  }
+
+  body.prospect-journey-page .prospect-journey__intro .prospect-tunnel__lead,
+  body.prospect-journey-page .prospect-step1__intro .prospect-tunnel__lead {
+    font-size: 0.94rem;
+  }
+
+  body.prospect-journey-page .prospect-step1__proofs {
+    grid-template-columns: 1fr;
+  }
+
+  body.prospect-journey-page .prospect-step1__proofs li {
+    min-height: 2rem;
+  }
+
+  body.prospect-journey-page .prospect-step1__section-head,
+  .prospect-project-section__head {
+    grid-template-columns: 2.6rem minmax(0, 1fr);
+    gap: 0.7rem;
+  }
+
+  body.prospect-journey-page .prospect-step1__section-head .prospect-form__section-index,
+  .prospect-project-section__head > span {
+    width: 2.6rem;
+    height: 2.6rem;
+  }
+
+  body.prospect-journey-page .prospect-step1__section-meta {
+    display: none;
+  }
+
+  body.prospect-journey-page .prospect-step1__surface,
+  .prospect-project-section,
+  .prospect-review-confirm {
+    padding: 0.85rem;
+  }
+
+  .prospect-project-options--services {
+    grid-template-columns: 1fr;
+  }
+
+  .prospect-project-options--compact,
+  .prospect-project-options--metric {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .prospect-project-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .prospect-project-option {
+    min-height: 4.65rem;
+  }
+
+  .prospect-project-option--compact,
+  .prospect-project-option--metric {
+    min-height: 3.5rem;
+  }
+
+  body.prospect-journey-page .prospect-review__header {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 0.9rem;
+  }
+
+  .prospect-review__header a {
+    grid-column: 1 / -1;
+    width: 100%;
+    text-align: center;
+  }
+
+  body.prospect-journey-page .prospect-review__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .prospect-review__item,
+  .prospect-review__item:nth-child(even) {
+    border-right: 0;
+  }
+
+  .prospect-review__item--wide {
+    grid-column: auto;
+  }
+
+  body.prospect-journey-page .prospect-next-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .prospect-next-steps__heading,
+  body.prospect-journey-page .prospect-next-steps > span {
+    border: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  body.prospect-journey-page .prospect-next-steps > span:last-child {
+    border-bottom: 0;
+  }
+
+  body.prospect-journey-page .prospect-journey__footer,
+  body.prospect-journey-page .prospect-step1__footer {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  body.prospect-journey-page .prospect-journey__footer .prospect-form__btn-primary,
+  body.prospect-journey-page .prospect-step1__footer .prospect-form__btn-primary {
+    order: -2;
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.prospect-journey-page .prospect-journey__footer > p,
+  body.prospect-journey-page .prospect-step1__footer > p {
+    order: -1;
+    padding: 0.6rem 0.7rem;
+    border-left: 3px solid var(--journey-lime);
+    background: rgba(10, 10, 10, 0.035);
+  }
+
+  body.prospect-journey-page .prospect-form__btn-secondary {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.prospect-journey-page .prospect-journey__rail-heading,
+  body.prospect-journey-page .prospect-journey__progress,
+  body.prospect-journey-page .prospect-stepper,
+  body.prospect-journey-page .prospect-journey__utility,
+  body.prospect-journey-page .prospect-journey__intro,
+  body.prospect-journey-page .prospect-form,
+  body.prospect-journey-page .prospect-review {
+    animation: journey-reveal 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  body.prospect-journey-page .prospect-journey__progress { animation-delay: 60ms; }
+  body.prospect-journey-page .prospect-stepper { animation-delay: 100ms; }
+  body.prospect-journey-page .prospect-journey__intro { animation-delay: 80ms; }
+  body.prospect-journey-page .prospect-form,
+  body.prospect-journey-page .prospect-review { animation-delay: 140ms; }
+}
+
+@keyframes journey-reveal {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.prospect-journey-page *,
+  body.prospect-journey-page *::before,
+  body.prospect-journey-page *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

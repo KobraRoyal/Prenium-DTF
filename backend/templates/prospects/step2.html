@@ -1,91 +1,136 @@
 {% extends "prospects/base_tunnel.html" %}
 
-{% block title %}Demande d’accès — étape 2 - Prenium DTF{% endblock %}
+{% block title %}Votre projet — Prenium DTF{% endblock %}
+{% block body_class %}{{ block.super }} prospect-step2-page{% endblock %}
 
 {% block prospect_section_head %}
-<div class="landing-section-head prospect-tunnel__intro">
-  <p class="landing-kicker landing-kicker--pill">Accès atelier Prenium</p>
-  <h2 class="prospect-tunnel__title">Votre besoin principal</h2>
-  <p class="landing-auth-lead prospect-tunnel__lead">Quelques repères pour orienter l'atelier vers le bon niveau d'accompagnement et le bon service.</p>
+<div class="landing-section-head prospect-tunnel__intro prospect-journey__intro">
+  <div class="prospect-journey__intro-line">
+    <p class="landing-kicker landing-kicker--pill">Votre projet de production</p>
+    <span>5 choix rapides</span>
+  </div>
+  <h2 class="prospect-tunnel__title">Donnons la bonne<br>échelle à votre projet.</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Quelques repères suffisent pour que notre équipe prépare une réponse utile, des volumes au bon rythme.</p>
 </div>
 {% endblock %}
 
 {% block prospect_inner %}
-<form method="post" class="ui-form-stack prospect-form prospect-form--step2 text-left" novalidate data-submit-loading>
+<form method="post" class="ui-form-stack prospect-form prospect-project-form text-left" novalidate data-submit-loading>
   {% csrf_token %}
-  {% if form.non_field_errors %}
-  <div class="dui-alert dui-alert-error border border-error/35 bg-error/15 text-error-content text-center justify-center" role="alert">
-    {% for e in form.non_field_errors %}<span class="text-sm">{{ e }}</span>{% endfor %}
-  </div>
-  {% endif %}
+  {% if form.non_field_errors %}<div class="dui-alert dui-alert-error" role="alert">{{ form.non_field_errors.0 }}</div>{% endif %}
 
-  <fieldset class="prospect-fieldset prospect-fieldset--activity">
-    <legend class="ui-sr-only" id="service-interest-legend">{{ form.service_interest.label }}</legend>
-    <div class="prospect-form__panel prospect-fieldset__panel">
-      <p class="prospect-fieldset__kicker">Service recherché</p>
-      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="service-interest-help">Choisissez l'orientation la plus proche de votre besoin actuel. Cela nous aide à préparer le bon parcours de commande.</p>
-      <div class="prospect-choice-grid prospect-choice-grid--2" role="radiogroup" aria-labelledby="service-interest-legend" aria-describedby="service-interest-help">
-        {% for val, label in form.service_interest.field.choices %}
-        {% if val %}
-        <label class="prospect-choice-card prospect-choice-card--activity{% if form.service_interest.value == val %} is-selected{% endif %}">
-          <input type="radio" name="service_interest" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.service_interest.value == val %}checked{% endif %} required />
-          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
-          <span class="prospect-choice-card__body">
-            <span class="prospect-choice-card__title">{{ label }}</span>
-            <span class="prospect-choice-card__hint">Service principal à activer dans votre espace.</span>
-          </span>
-        </label>
-        {% endif %}
-        {% endfor %}
+  <section class="prospect-project-section" aria-labelledby="project-scope-title">
+    <div class="prospect-project-section__head">
+      <span aria-hidden="true">01</span>
+      <div>
+        <h3 id="project-scope-title">Le besoin</h3>
+        <p>Ce que vous souhaitez produire et à quel horizon.</p>
       </div>
-      {% if form.service_interest.errors %}
-      <p class="text-sm text-error mt-3" role="alert">{{ form.service_interest.errors.0 }}</p>
-      {% endif %}
     </div>
-  </fieldset>
 
-  {% with f=form.main_goal %}
-  <section class="prospect-form__section" aria-labelledby="prospect-step2-goal-heading">
-    <h3 id="prospect-step2-goal-heading" class="prospect-form__section-title">Contexte</h3>
-    <div class="prospect-form__panel">
-      <div class="ui-field-group">
-        <label class="ui-label" for="id_main_goal">Objectif principal (optionnel)</label>
-        <p class="ui-help">Décrivez en une phrase ce que vous cherchez à lancer, tester ou produire.</p>
-        <textarea class="ui-input{% if f.errors %} ui-input--error{% endif %} prospect-textarea" id="id_main_goal" name="main_goal" rows="3" autocomplete="off" placeholder="Ex. lancer une capsule, tester le DTF, fiabiliser mes réassorts…">{{ f.value|default:'' }}</textarea>
-        {% if f.errors %}<p class="error-text" role="alert">{{ f.errors.0 }}</p>{% endif %}
+    <fieldset class="prospect-project-fieldset">
+      <legend>{{ form.service_interest.label }}</legend>
+      <p class="prospect-project-fieldset__help">Sélectionnez la réponse la plus proche de votre besoin actuel.</p>
+      <div class="prospect-project-options prospect-project-options--services">
+        {% for value, label in form.service_interest.field.choices %}{% if value %}
+        <label class="prospect-project-option">
+          <input type="radio" name="service_interest" value="{{ value }}" {% if form.service_interest.value == value %}checked{% endif %} required>
+          <span class="prospect-project-option__marker" aria-hidden="true"></span>
+          <span class="prospect-project-option__copy">
+            <strong>{{ label }}</strong>
+            <small>{% if value == 'dtf_meter' %}Impression prête à presser{% elif value == 'file_prep' %}Fichiers contrôlés et optimisés{% elif value == 'both' %}Préparation + impression{% else %}L’équipe vous orientera{% endif %}</small>
+          </span>
+          <span class="prospect-project-option__check" aria-hidden="true">✓</span>
+        </label>
+        {% endif %}{% endfor %}
       </div>
+      {% if form.service_interest.errors %}<p class="error-text" role="alert">{{ form.service_interest.errors.0 }}</p>{% endif %}
+    </fieldset>
+
+    <fieldset class="prospect-project-fieldset">
+      <legend>{{ form.project_timing.label }}</legend>
+      <div class="prospect-project-options prospect-project-options--compact">
+        {% for value, label in form.project_timing.field.choices %}{% if value %}
+        <label class="prospect-project-option prospect-project-option--compact">
+          <input type="radio" name="project_timing" value="{{ value }}" {% if form.project_timing.value == value %}checked{% endif %} required>
+          <span class="prospect-project-option__marker" aria-hidden="true"></span>
+          <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
+          <span class="prospect-project-option__check" aria-hidden="true">✓</span>
+        </label>
+        {% endif %}{% endfor %}
+      </div>
+      {% if form.project_timing.errors %}<p class="error-text" role="alert">{{ form.project_timing.errors.0 }}</p>{% endif %}
+    </fieldset>
+  </section>
+
+  <section class="prospect-project-section" aria-labelledby="project-rhythm-title">
+    <div class="prospect-project-section__head">
+      <span aria-hidden="true">02</span>
+      <div>
+        <h3 id="project-rhythm-title">Le rythme</h3>
+        <p>Des estimations suffisent, vous pourrez les ajuster ensuite.</p>
+      </div>
+    </div>
+
+    <div class="prospect-project-metrics">
+      <fieldset class="prospect-project-fieldset">
+        <legend>{{ form.monthly_volume.label }}</legend>
+        <div class="prospect-project-options prospect-project-options--metric">
+          {% for value, label in form.monthly_volume.field.choices %}{% if value %}
+          <label class="prospect-project-option prospect-project-option--metric">
+            <input type="radio" name="monthly_volume" value="{{ value }}" {% if form.monthly_volume.value == value %}checked{% endif %} required>
+            <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
+            <span class="prospect-project-option__check" aria-hidden="true">✓</span>
+          </label>
+          {% endif %}{% endfor %}
+        </div>
+        {% if form.monthly_volume.errors %}<p class="error-text" role="alert">{{ form.monthly_volume.errors.0 }}</p>{% endif %}
+      </fieldset>
+
+      <fieldset class="prospect-project-fieldset">
+        <legend>{{ form.order_frequency.label }}</legend>
+        <div class="prospect-project-options prospect-project-options--metric">
+          {% for value, label in form.order_frequency.field.choices %}{% if value %}
+          <label class="prospect-project-option prospect-project-option--metric">
+            <input type="radio" name="order_frequency" value="{{ value }}" {% if form.order_frequency.value == value %}checked{% endif %} required>
+            <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
+            <span class="prospect-project-option__check" aria-hidden="true">✓</span>
+          </label>
+          {% endif %}{% endfor %}
+        </div>
+        {% if form.order_frequency.errors %}<p class="error-text" role="alert">{{ form.order_frequency.errors.0 }}</p>{% endif %}
+      </fieldset>
+    </div>
+
+    <fieldset class="prospect-project-fieldset prospect-project-fieldset--urgency">
+      <legend>{{ form.urgency.label }}</legend>
+      <div class="prospect-project-options prospect-project-options--compact">
+        {% for value, label in form.urgency.field.choices %}{% if value %}
+        <label class="prospect-project-option prospect-project-option--compact">
+          <input type="radio" name="urgency" value="{{ value }}" {% if form.urgency.value == value %}checked{% endif %} required>
+          <span class="prospect-project-option__marker" aria-hidden="true"></span>
+          <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
+          <span class="prospect-project-option__check" aria-hidden="true">✓</span>
+        </label>
+        {% endif %}{% endfor %}
+      </div>
+      {% if form.urgency.errors %}<p class="error-text" role="alert">{{ form.urgency.errors.0 }}</p>{% endif %}
+    </fieldset>
+
+    <div class="dui-form-control prospect-project-goal">
+      <div class="prospect-project-goal__label">
+        <label class="product-form-label" for="id_main_goal">Objectif principal</label>
+        <span>Optionnel · 500 caractères</span>
+      </div>
+      <textarea class="dui-textarea dui-textarea-bordered w-full checkout-dui-input" id="id_main_goal" name="main_goal" rows="3" maxlength="500" placeholder="Ex. lancer une capsule de 100 pièces le mois prochain">{{ form.main_goal.value|default:'' }}</textarea>
+      <p>Une phrase suffit pour nous donner le contexte.</p>
     </div>
   </section>
-  {% endwith %}
 
-  <fieldset class="prospect-fieldset prospect-fieldset--activity">
-    <legend class="ui-sr-only" id="project-timing-legend">{{ form.project_timing.label }}</legend>
-    <div class="prospect-form__panel prospect-fieldset__panel">
-      <p class="prospect-fieldset__kicker">Calendrier</p>
-      <p class="prospect-fieldset__help prospect-fieldset__help--activity" id="project-timing-help">Indiquez à quel horizon se situe votre besoin. Cela nous aide à prioriser la prise de contact.</p>
-      <div class="prospect-choice-grid" role="radiogroup" aria-labelledby="project-timing-legend" aria-describedby="project-timing-help">
-        {% for val, label in form.project_timing.field.choices %}
-        {% if val %}
-        <label class="prospect-choice-card prospect-choice-card--activity{% if form.project_timing.value == val %} is-selected{% endif %}">
-          <input type="radio" name="project_timing" value="{{ val }}" class="prospect-choice-card__input prospect-choice-card__input--hidden" {% if form.project_timing.value == val %}checked{% endif %} required />
-          <span class="prospect-choice-card__radio" aria-hidden="true"></span>
-          <span class="prospect-choice-card__body">
-            <span class="prospect-choice-card__title">{{ label }}</span>
-            <span class="prospect-choice-card__hint">Repère de mise en route pour l'équipe commerciale et atelier.</span>
-          </span>
-        </label>
-        {% endif %}
-        {% endfor %}
-      </div>
-      {% if form.project_timing.errors %}
-      <p class="text-sm text-error mt-3" role="alert">{{ form.project_timing.errors.0 }}</p>
-      {% endif %}
-    </div>
-  </fieldset>
-
-  <div class="prospect-form__footer">
+  <div class="prospect-form__footer prospect-journey__footer">
     <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'prospects:step1' %}">Retour</a>
-    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Continuer</button>
+    <p><span>Étape suivante</span><strong>Vérifier votre demande</strong></p>
+    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Voir le récapitulatif <span aria-hidden="true">→</span></button>
   </div>
 </form>
 {% endblock %}

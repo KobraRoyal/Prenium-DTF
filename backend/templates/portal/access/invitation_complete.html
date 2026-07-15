@@ -1,0 +1,4 @@
+{% extends "prospects/base_tunnel.html" %}
+{% block title %}Accès activé — Prenium DTF{% endblock %}
+{% block prospect_section_head %}<div class="landing-section-head prospect-tunnel__intro"><p class="landing-kicker landing-kicker--pill">Activation terminée</p><h2 class="prospect-tunnel__title">Votre accès est prêt</h2><p class="landing-auth-lead prospect-tunnel__lead">Connectez-vous pour retrouver votre organisation et commencer à travailler avec l’équipe IDS.</p></div>{% endblock %}
+{% block prospect_inner %}<div class="prospect-success-card"><span class="prospect-success-card__icon" aria-hidden="true">✓</span><a class="ui-btn ui-btn-primary" href="{% url 'portal:login' %}">Se connecter</a></div>{% endblock %}

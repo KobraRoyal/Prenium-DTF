@@ -1,5 +1,18 @@
 from django.urls import path
 
+from .views_access_management import (
+    ClientTeamInvitationRevokeView,
+    ClientTeamInviteView,
+    ClientTeamMemberDeactivateView,
+    ClientTeamMemberRoleView,
+    ClientTeamView,
+    CustomerInvitationAcceptView,
+    CustomerInvitationCompleteView,
+    StaffAccessRequestApproveView,
+    StaffAccessRequestDetailView,
+    StaffAccessRequestListView,
+    StaffAccessRequestRejectView,
+)
 from .views_auth import PortalLoginView, PortalLogoutView
 from .views_b2b_order_projects import (
     ClientOrderProjectAutosaveView,
@@ -63,7 +76,42 @@ app_name = "portal"
 urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
     path("logout/", PortalLogoutView.as_view(), name="logout"),
+    path(
+        "acces/invitation/<str:token>/",
+        CustomerInvitationAcceptView.as_view(),
+        name="customer-invitation-accept",
+    ),
+    path(
+        "acces/activation-terminee/",
+        CustomerInvitationCompleteView.as_view(),
+        name="customer-invitation-complete",
+    ),
     path("client/", ClientDashboardView.as_view(), name="client-dashboard"),
+    path(
+        "client/customers/<uuid:customer_public_id>/team/",
+        ClientTeamView.as_view(),
+        name="client-team",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/team/invite/",
+        ClientTeamInviteView.as_view(),
+        name="client-team-invite",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/team/invitations/<uuid:invitation_public_id>/revoke/",
+        ClientTeamInvitationRevokeView.as_view(),
+        name="client-team-invitation-revoke",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/team/members/<uuid:membership_public_id>/role/",
+        ClientTeamMemberRoleView.as_view(),
+        name="client-team-member-role",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/team/members/<uuid:membership_public_id>/deactivate/",
+        ClientTeamMemberDeactivateView.as_view(),
+        name="client-team-member-deactivate",
+    ),
     path(
         "client/customers/<uuid:customer_public_id>/order-projects/",
         ClientOrderProjectListView.as_view(),
@@ -200,6 +248,26 @@ urlpatterns = [
         name="client-checkout-submit",
     ),
     path("staff/", StaffDashboardView.as_view(), name="staff-dashboard"),
+    path(
+        "staff/access-requests/",
+        StaffAccessRequestListView.as_view(),
+        name="staff-access-request-list",
+    ),
+    path(
+        "staff/access-requests/<uuid:profile_public_id>/",
+        StaffAccessRequestDetailView.as_view(),
+        name="staff-access-request-detail",
+    ),
+    path(
+        "staff/access-requests/<uuid:profile_public_id>/approve/",
+        StaffAccessRequestApproveView.as_view(),
+        name="staff-access-request-approve",
+    ),
+    path(
+        "staff/access-requests/<uuid:profile_public_id>/reject/",
+        StaffAccessRequestRejectView.as_view(),
+        name="staff-access-request-reject",
+    ),
     path(
         "staff/settings/email-templates/",
         StaffEmailTemplateListView.as_view(),
