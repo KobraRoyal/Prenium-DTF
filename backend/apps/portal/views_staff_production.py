@@ -5,6 +5,7 @@ from django.http import Http404
 from django.shortcuts import render
 from django.views import View
 
+from apps.gang_sheets.models import GangSheet
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
     badge_tone_for_status,
@@ -35,6 +36,12 @@ class StaffOrderPanelProductionView(StaffOrderContextMixin, View):
             "can_transition": request.user.has_perm("production.transition_productionjob"),
             "transition_error": transition_error,
             "meterage_hx_target": "#staff-order-meterage-slot-production",
+            "gang_sheets": GangSheet.objects.for_order(self.order).filter(
+                status=GangSheet.Status.VALIDATED
+            ),
+            "can_download_gang_sheet_final": request.user.has_perm(
+                "gang_sheets.download_final_gangsheet"
+            ),
             **meterage,
             "badge_tone_for_status": badge_tone_for_status,
             "status_label": status_label,

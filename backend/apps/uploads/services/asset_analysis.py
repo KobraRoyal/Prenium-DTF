@@ -260,6 +260,10 @@ class AssetAnalysisService:
             customer=version.customer,
             asset__current_version=version,
         ).update(width_mm=width_mm, height_mm=height_mm)
+        version.asset.gang_sheet_sources.filter(
+            customer=version.customer,
+            asset__current_version=version,
+        ).update(width_mm=width_mm, height_mm=height_mm)
         return {"width": str(width_mm), "height": str(height_mm)}
 
     def _probable_white_background(self, image) -> bool:

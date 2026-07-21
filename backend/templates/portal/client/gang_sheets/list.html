@@ -1,0 +1,83 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Gang Sheet Generator Pro — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="gang-sheet-page">
+  {% include "components/portal/page_head.html" with kicker="Studio d’imposition DTF" title="Gang Sheet Generator Pro" subtitle="Importez vos visuels, composez sur la laize atelier et créez votre projet de commande uniquement lorsque la planche est validée." %}
+
+  <nav class="gang-workflow" aria-label="Étapes de création d’une planche">
+    <ol>
+      <li class="is-active" aria-current="step"><span>01</span><div><strong>Créer</strong><small>Nouvelle planche</small></div></li>
+      <li><span>02</span><div><strong>Importer</strong><small>Galerie analysée</small></div></li>
+      <li><span>03</span><div><strong>Composer</strong><small>Imposition & contrôle</small></div></li>
+      <li><span>04</span><div><strong>Commander</strong><small>Après validation</small></div></li>
+    </ol>
+  </nav>
+
+  {% if form_error %}<div class="alert alert--danger" role="alert">{{ form_error }}</div>{% endif %}
+
+  <section class="card gang-sheet-create-card" aria-labelledby="new-gang-sheet-title">
+    <div class="gang-sheet-create-card__intro">
+      <p class="product-eyebrow">Démarrer une composition</p>
+      <h2 id="new-gang-sheet-title">Créer une planche autonome</h2>
+      <p>Vous n’avez pas besoin de créer un projet au préalable. La largeur est verrouillée par l’atelier ; la hauteur, la surface et le prix s’ajustent pendant l’imposition.</p>
+      <ul class="gang-sheet-feature-list" aria-label="Fonctions disponibles">
+        <li><span aria-hidden="true">✓</span> Import et analyse des fichiers</li>
+        <li><span aria-hidden="true">✓</span> Quantités, rangées et colonnes</li>
+        <li><span aria-hidden="true">✓</span> Placement automatique optimisé</li>
+      </ul>
+    </div>
+    <form method="post" class="ui-form-stack gang-sheet-create-card__form">
+      {% csrf_token %}
+      {% include "components/forms/field_group.html" with id="gang-sheet-name" name="name" label="Nom de la planche" type="text" placeholder="Ex. Logos équipe — série juillet" show_label=1 required=1 %}
+      <p class="gang-form-hint">Un brouillon est créé immédiatement. Vous pourrez ensuite importer jusqu’à 20 fichiers à la fois.</p>
+      {% include "components/forms/form_actions.html" with primary_label="Créer et ouvrir le studio" %}
+    </form>
+  </section>
+
+  <section class="gang-sheet-library" aria-labelledby="gang-sheet-library-title">
+    <div class="gang-sheet-section-head">
+      <div>
+        <p class="product-eyebrow">Bibliothèque</p>
+        <h2 id="gang-sheet-library-title">Mes planches</h2>
+      </div>
+      <span class="product-pill">{{ sheets|length }} planche{{ sheets|length|pluralize }}</span>
+    </div>
+    <div class="gang-sheet-card-grid">
+      {% for sheet in sheets %}
+      <article class="gang-sheet-card">
+        <a class="gang-sheet-card__link" href="{% url 'portal:client-gang-sheet-editor' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}">
+          <div class="gang-sheet-card__preview" aria-hidden="true">
+            <span class="gang-sheet-card__format">{{ sheet.width_mm|floatformat:0 }} × {{ sheet.height_mm|floatformat:0 }} mm</span>
+            <div class="gang-sheet-card__mockup"><i></i><i></i><i></i><i></i><i></i></div>
+            <span class="gang-sheet-card__preview-label">{% if sheet.preview_file %}Aperçu disponible{% else %}Composition en cours{% endif %}</span>
+          </div>
+          <div class="gang-sheet-card__body">
+            <div class="gang-sheet-card__status-row">
+              <span class="gang-status-badge gang-status-badge--{{ sheet.status }}">{{ sheet.get_status_display }}</span>
+              <span>Ouvrir le studio <span aria-hidden="true">→</span></span>
+            </div>
+            <h3>{{ sheet.name }}</h3>
+            <small>{% if sheet.project %}Projet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</small>
+            <dl class="gang-sheet-card__facts">
+              <div><dt>Surface</dt><dd>{{ sheet.surface_sqm }} m²</dd></div>
+              <div><dt>Estimation HT</dt><dd>{{ sheet.estimated_price_eur }} €</dd></div>
+            </dl>
+          </div>
+        </a>
+        <div class="gang-sheet-card__actions">
+          {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="list" label="Supprimer la planche" %}
+        </div>
+      </article>
+      {% empty %}
+      <div class="empty-state gang-sheet-empty">
+        <span class="gang-sheet-empty__mark" aria-hidden="true">GS</span>
+        <h3>Votre studio est prêt</h3>
+        <p>Créez votre première planche ci-dessus, puis importez directement vos fichiers dans sa galerie privée.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

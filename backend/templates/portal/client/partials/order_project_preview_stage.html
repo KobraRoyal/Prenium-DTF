@@ -1,6 +1,5 @@
-{% with analysis_status=version.analysis_status|default:"pending" %}
-<div class="b2b-preview-stage is-checker{% if analysis_status == 'pending' or analysis_status == 'processing' %} is-analyzing{% endif %}" data-configurator-stage>
-  {% if version and analysis_status != "pending" and analysis_status != "processing" %}
+<div class="b2b-preview-stage is-checker{% if item.analysis_pending %} is-analyzing{% endif %}" data-configurator-stage>
+  {% if version and not item.analysis_pending %}
   <div class="b2b-preview-bounds" data-configurator-bounds data-configurator-bounds-visible>
     <img
       class="b2b-preview-image"
@@ -34,7 +33,7 @@
   </div>
   {% endif %}
 </div>
-{% if version and analysis_status != "pending" and analysis_status != "processing" %}
+{% if version and not item.analysis_pending %}
 {% if item.technical_review.thin_zone.detected or item.technical_review.semi_transparency.detected %}
 <div class="b2b-quality-overlays" role="group" aria-label="Contrôles de l’aperçu qualité">
   <div class="b2b-quality-overlays__actions">
@@ -68,4 +67,3 @@
   {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="preview-hex-"|add:item.public_id preview_mode=True initial_color="#ffffff" %}
 </div>
 {% endif %}
-{% endwith %}

@@ -43,6 +43,25 @@
     </ol>
   </section>
 
+  {% if gang_sheets %}
+  <section class="operator-subpanel" aria-labelledby="gang-sheets-production-title">
+    <div class="operator-section-head">
+      <div>
+        <p class="operator-section-head__eyebrow">Fichiers imposés au workflow</p>
+        <h4 id="gang-sheets-production-title">Gang Sheets validées</h4>
+      </div>
+    </div>
+    <div class="gang-sheet-production-list">
+      {% for sheet in gang_sheets %}
+      <article>
+        <div><strong>{{ sheet.name }}</strong><small>{{ sheet.width_mm }} × {{ sheet.height_mm }} mm · {{ sheet.surface_sqm }} m²</small></div>
+        {% if can_download_gang_sheet_final %}<a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-gang-sheet-final-download' sheet_public_id=sheet.public_id %}">Télécharger le PDF HD</a>{% else %}<span class="badge badge--muted">Accès HD restreint</span>{% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   {% if order.billing_mode == "deferred" %}
   <section id="staff-order-meterage-slot-production" class="staff-meterage-slot operator-subpanel" aria-label="Métrage de production">
     {% include "components/portal/staff_meterage_section.html" %}

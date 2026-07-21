@@ -12,6 +12,7 @@
 @import "./components/landing.css";
 @import "./components/landing-conversion.css";
 @import "./components/prospect-journey.css";
+@import "./components/gang-sheet.css";
 
 @tailwind base;
 @tailwind components;

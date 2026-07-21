@@ -27,5 +27,6 @@ PASSWORD_HASHERS = [
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+GOOGLE_DRIVE_SYNC_ENABLED = False
 STATIC_ROOT = Path(tempfile.gettempdir()) / "prenium-dtf-test-static"
 MEDIA_ROOT = Path(tempfile.gettempdir()) / "prenium-dtf-test-media"

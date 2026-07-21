@@ -286,3 +286,24 @@
 - [x] Menu mobile, FAQ, CTA et absence d’erreurs console validés
 - [x] Score final 92/100 — verdict premium, aucun P1 restant
 - [x] 38 tests UI ciblés passés et documentation du lot ajoutée
+
+## Sprint 31 — Gang Sheet Generator Pro (2026-07-15)
+
+- [x] App métier dédiée, modèles tenant-scoped, indexes et contraintes
+- [x] Création autonome sans projet préalable et galerie source propre à la planche
+- [x] Import multiple avec validation, versioning et analyse partagés avec les projets B2B
+- [x] Laize et règles de composition configurables par l’Atelier, snapshot par planche
+- [x] Éditeur client : occurrences, taille réelle, déplacement, rotation, duplication et suppression
+- [x] Galerie filtrable, quantité batch, grille rangées/colonnes, proportions et taux d’occupation
+- [x] Placement automatique optimisé, hauteur automatique et erreurs géométriques
+- [x] Surface et estimation de prix HT en temps réel
+- [x] Brouillons versionnés et protection contre les écrasements concurrents
+- [x] Rendu Celery avec aperçu PNG client et PDF HD privé
+- [x] Validation, rattachement commande et accès depuis le workflow Production
+- [x] Projet `READY_GANG_SHEET` idempotent après validation avec uniquement le PDF final
+- [x] PDF final verrouillé : téléchargement et remplacement client interdits
+- [x] Permissions, audit et tests d’isolation croisée
+- [x] UI/UX harmonisée avec le portail : workflow 4 étapes, studio pro et responsive 375 px sans overflow
+- [x] Ajout de fichier harmonisé Gang Sheet / Order Project : choisir puis ouvrir le configurateur prérempli
+- [x] Suite complète : 441 tests passés ; recette desktop/mobile et PDF de production contrôlés
+- [ ] Recette RIP du PDF HD sur la machine Atelier cible

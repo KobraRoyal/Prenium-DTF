@@ -32,6 +32,74 @@ class AssetService:
         self.transitions = B2BOrderProjectTransitionPolicy()
 
     @transaction.atomic
+    def create_asset(
+        self,
+        *,
+        customer,
+        actor,
+        name,
+        uploaded_file,
+        source: str,
+        auto_size_requested: bool = False,
+        schedule_analysis: bool = True,
+        metadata: dict | None = None,
+    ) -> AssetVersion:
+        """Crée un asset client sans le coupler à un projet de commande."""
+        cleaned_name = str(name or getattr(uploaded_file, "name", "Visuel")).strip()
+        asset = Asset.objects.create(
+            customer=customer,
+            created_by=actor if getattr(actor, "is_authenticated", False) else None,
+            name=(cleaned_name or "Visuel")[:255],
+        )
+        version = self._create_version(
+            asset=asset,
+            actor=actor,
+            uploaded_file=uploaded_file,
+            replaced_version=None,
+            auto_size_requested=auto_size_requested,
+        )
+        asset.current_version = version
+        asset.save(update_fields=["current_version", "updated_at"])
+        self._audit(
+            "created",
+            asset=asset,
+            version=version,
+            actor=actor,
+            source=source,
+            metadata=metadata,
+        )
+        if schedule_analysis:
+            transaction.on_commit(lambda: self.schedule_analysis(version=version))
+        return version
+
+    @transaction.atomic
+    def create_production_asset(
+        self,
+        *,
+        customer,
+        actor,
+        name,
+        uploaded_file,
+        source: str,
+        metadata: dict | None = None,
+    ) -> AssetVersion:
+        """Crée le livrable HD puis lance les contrôles qualité du workflow commande."""
+        production_metadata = {
+            **(metadata or {}),
+            "production_output": True,
+        }
+        return self.create_asset(
+            customer=customer,
+            actor=actor,
+            name=name,
+            uploaded_file=uploaded_file,
+            source=source,
+            auto_size_requested=False,
+            schedule_analysis=True,
+            metadata=production_metadata,
+        )
+
+    @transaction.atomic
     def attach_project_item_file(
         self,
         *,
@@ -107,6 +175,23 @@ class AssetService:
         )
         if item is None or item.asset_id is None:
             raise AssetDomainError("ASSET_NOT_FOUND", "Aucun fichier à remplacer pour cette ligne.")
+        from apps.b2b_order_projects.models import B2BOrderProject
+
+        is_gang_sheet_output = (
+            locked_project.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET
+        )
+        if not is_gang_sheet_output:
+            from apps.gang_sheets.models import GangSheet
+
+            is_gang_sheet_output = GangSheet.objects.filter(
+                customer=locked_project.customer,
+                production_asset_id=item.asset_id,
+            ).exists()
+        if is_gang_sheet_output:
+            raise AssetDomainError(
+                "PRODUCTION_ASSET_LOCKED",
+                "Le fichier final de cette planche est verrouillé pour la production.",
+            )
         asset = Asset.objects.select_for_update().get(
             pk=item.asset_id,
             customer=locked_project.customer,
@@ -561,6 +646,30 @@ class AssetService:
             ),
             "version_public_id": str(version.public_id) if version else None,
         }
+
+    def production_review_for_item(self, *, item) -> dict[str, object]:
+        """Conserve les contrôles qualité du PDF HD sans recalculer sa résolution globale."""
+        version = getattr(getattr(item, "asset", None), "current_version", None)
+        review = self.technical_review_for_item(item=item)
+        if version is None or version.analysis_status not in {
+            AssetVersion.AnalysisStatus.READY,
+            AssetVersion.AnalysisStatus.WARNING,
+        }:
+            return review
+
+        review.update(
+            {
+                "level": "warning" if review["issues"] else "good",
+                "label": "Contrôle du fichier HD",
+                "message": (
+                    "PDF HD hybride · vectoriel, mixte et raster préservés · contrôlez "
+                    "les détails fins, les semi-transparences et la couleur du support."
+                ),
+                "effective_dpi": None,
+                "resolution_display": "PDF hybride",
+            }
+        )
+        return review
 
     def _create_version(
         self,

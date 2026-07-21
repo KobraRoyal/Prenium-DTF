@@ -35,6 +35,7 @@
           <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-dashboard' %}is-active{% endif %}" {% if nav_key == 'client-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:client-dashboard' %}">Accueil</a>
           {% if customer %}
           <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-orders' %}is-active{% endif %}" {% if nav_key == 'client-orders' %}aria-current="page"{% endif %} href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Commandes</a>
+          {% if b2b_order_projects_globally_enabled %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-gang-sheets' %}is-active{% endif %}" {% if nav_key == 'client-gang-sheets' %}aria-current="page"{% endif %} href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=customer.public_id %}">Gang Sheets</a>{% endif %}
           {% if customer_membership.can_manage_team or selected_membership.can_manage_team %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-team' %}is-active{% endif %}" {% if nav_key == 'client-team' %}aria-current="page"{% endif %} href="{% url 'portal:client-team' customer_public_id=customer.public_id %}">Équipe</a>{% endif %}
           <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta {% if nav_key == 'client-checkout' %}is-active{% endif %}" {% if nav_key == 'client-checkout' %}aria-current="page"{% endif %} href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Nouvelle commande</a>
           {% endif %}
@@ -45,6 +46,7 @@
           {% if perms.prospects.view_prospectprofile %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-access-requests' %}is-active{% endif %}" {% if nav_key == 'staff-access-requests' %}aria-current="page"{% endif %} href="{% url 'portal:staff-access-request-list' %}">Accès</a>{% endif %}
           {% if b2b_order_projects_globally_enabled and perms.b2b_order_projects.view_b2borderproject %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-order-projects' %}is-active{% endif %}" {% if nav_key == 'staff-order-projects' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-project-list' %}">Projets B2B</a>{% endif %}
           {% if perms.notifications.view_emailtemplate %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-email-templates' %}is-active{% endif %}" {% if nav_key == 'staff-email-templates' %}aria-current="page"{% endif %} href="{% url 'portal:staff-email-template-list' %}">E-mails</a>{% endif %}
+          {% if perms.gang_sheets.configure_gangsheet %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-gang-sheet-settings' %}is-active{% endif %}" {% if nav_key == 'staff-gang-sheet-settings' %}aria-current="page"{% endif %} href="{% url 'portal:staff-gang-sheet-settings' %}">Laize</a>{% endif %}
           {% endif %}
         </div>
         <div class="product-nav__account">

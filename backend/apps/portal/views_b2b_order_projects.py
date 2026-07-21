@@ -15,6 +15,7 @@ from apps.b2b_order_projects.services import (
     B2BOrderProjectService,
     ProjectDomainError,
 )
+from apps.gang_sheets.models import GangSheet
 from apps.orders.references import project_client_reference
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
@@ -55,10 +56,33 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
         )
         if project is None:
             raise Http404
-        for item in project.items.all():
-            item.effective_dpi = asset_service.effective_dpi_for_item(item=item)
-            item.technical_review = asset_service.technical_review_for_item(item=item)
-            item.can_replace_asset = asset_service.can_replace_project_item_file(item=item)
+        items = list(project.items.all())
+        if project.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET:
+            production_asset_ids = {item.asset_id for item in items if item.asset_id}
+        else:
+            production_asset_ids = set(
+                GangSheet.objects.filter(
+                    customer=project.customer,
+                    production_asset_id__in={item.asset_id for item in items if item.asset_id},
+                ).values_list("production_asset_id", flat=True)
+            )
+        project.has_locked_gang_sheet_output = bool(production_asset_ids)
+        for item in items:
+            item.is_production_gang_sheet_asset = item.asset_id in production_asset_ids
+            version = getattr(getattr(item, "asset", None), "current_version", None)
+            item.analysis_pending = bool(
+                version and version.analysis_status in {"pending", "processing"}
+            )
+            if item.is_production_gang_sheet_asset:
+                item.technical_review = asset_service.production_review_for_item(item=item)
+                item.effective_dpi = item.technical_review["effective_dpi"]
+            else:
+                item.effective_dpi = asset_service.effective_dpi_for_item(item=item)
+                item.technical_review = asset_service.technical_review_for_item(item=item)
+            item.can_replace_asset = (
+                not item.is_production_gang_sheet_asset
+                and asset_service.can_replace_project_item_file(item=item)
+            )
         project.can_delete = project_service.can_client_delete(project)
         return project
 
@@ -71,9 +95,15 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
         analysis_pending = False
         if project is not None:
             analysis_pending = any(
-                item.asset_id
-                and item.asset.current_version_id
-                and item.asset.current_version.analysis_status in {"pending", "processing"}
+                getattr(
+                    item,
+                    "analysis_pending",
+                    bool(
+                        item.asset_id
+                        and item.asset.current_version_id
+                        and item.asset.current_version.analysis_status in {"pending", "processing"}
+                    ),
+                )
                 for item in project.items.all()
             )
         ctx = {
@@ -375,8 +405,21 @@ class ClientOrderProjectItemAssetView(ClientProjectFeatureMixin, View):
 
 class ClientOrderProjectItemAssetDownloadView(ClientProjectFeatureMixin, View):
     def get(self, request, customer_public_id, project_public_id, item_public_id):
+        project = self.get_project_or_404(project_public_id)
+        item, _version = asset_service.get_project_item_version(
+            project=project,
+            item_public_id=item_public_id,
+        )
+        if (
+            item is not None
+            and GangSheet.objects.filter(
+                customer=project.customer,
+                production_asset=item.asset,
+            ).exists()
+        ):
+            raise Http404
         version = asset_service.prepare_project_download(
-            project=self.get_project_or_404(project_public_id),
+            project=project,
             item_public_id=item_public_id,
             actor=request.user,
             source="client_portal",

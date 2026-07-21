@@ -1138,6 +1138,61 @@ function initB2BConfigurators(scope = document, { force = false } = {}) {
   });
 }
 
+function openConfiguratorDialog(dialog) {
+  if (!(dialog instanceof HTMLDialogElement)) {
+    return;
+  }
+  if (!dialog.open) {
+    dialog.showModal();
+  }
+  initB2BConfigurators(dialog, { force: true });
+}
+
+function updateSelectedFilesSummary(root, input) {
+  const summary = root.querySelector("[data-selected-files-summary]");
+  if (!(summary instanceof HTMLElement)) {
+    return;
+  }
+  const files = Array.from(input.files || []);
+  if (files.length === 0) {
+    summary.textContent = "Aucun fichier sélectionné.";
+    return;
+  }
+  summary.textContent = files.length === 1
+    ? files[0].name
+    : `${files.length} fichiers sélectionnés · aperçu du premier fichier`;
+}
+
+function openFilePickerBeforeDialog(opener) {
+  const dialog = document.getElementById(opener.dataset.filePickerDialog || "");
+  if (!(dialog instanceof HTMLDialogElement)) {
+    return;
+  }
+  const targetInput = dialog.querySelector("[data-configurator-file]");
+  if (!(targetInput instanceof HTMLInputElement) || targetInput.disabled) {
+    return;
+  }
+
+  const picker = document.createElement("input");
+  picker.type = "file";
+  picker.accept = targetInput.accept;
+  picker.multiple = targetInput.multiple;
+  picker.addEventListener(
+    "change",
+    () => {
+      if (!picker.files?.length) {
+        return;
+      }
+      targetInput.closest("form")?.reset();
+      targetInput.files = picker.files;
+      openConfiguratorDialog(dialog);
+      targetInput.dispatchEvent(new Event("change", { bubbles: true }));
+    },
+    { once: true }
+  );
+  picker.click();
+}
+
 function bindConfiguratorEvents() {
   if (configuratorEventsBound) {
     return;
@@ -1153,6 +1208,7 @@ function bindConfiguratorEvents() {
     if (!root) {
       return;
     }
+    updateSelectedFilesSummary(root, input);
     const file = input.files?.[0];
     if (file) {
       previewSelectedFile(root, file);
@@ -1162,6 +1218,12 @@ function bindConfiguratorEvents() {
   document.body.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
+      return;
+    }
+    const filePickerOpener = target.closest("[data-file-picker-dialog]");
+    if (filePickerOpener instanceof HTMLElement) {
+      event.preventDefault();
+      openFilePickerBeforeDialog(filePickerOpener);
       return;
     }
     const zoomControl = target.closest(
@@ -1229,10 +1291,7 @@ function bindConfiguratorEvents() {
     const opener = target.closest("[data-dialog-open]");
     if (opener instanceof HTMLElement) {
       const dialog = document.getElementById(opener.dataset.dialogOpen || "");
-      if (dialog instanceof HTMLDialogElement && !dialog.open) {
-        dialog.showModal();
-        initB2BConfigurators(dialog, { force: true });
-      }
+      openConfiguratorDialog(dialog);
       return;
     }
     const closer = target.closest("[data-dialog-close]");
