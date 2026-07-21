@@ -1,0 +1,86 @@
+<div
+  class="gang-asset-list"
+  data-asset-list
+  data-has-pending="{{ has_pending_assets|yesno:'true,false' }}"
+  aria-live="polite"
+  aria-busy="{{ has_pending_assets|yesno:'true,false' }}"
+  {% if has_pending_assets %}
+    hx-get="{% url 'portal:client-gang-sheet-asset-gallery' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+    hx-trigger="every 2s"
+    hx-target="this"
+    hx-swap="outerHTML"
+    hx-sync="this:replace"
+  {% endif %}
+>
+  {% for asset in assets %}
+  <article class="gang-asset-card" data-asset-card data-asset-name="{{ asset.name|lower }}">
+    <div class="gang-asset-card__preview">
+      {% if asset.preview_url %}<img src="{{ asset.preview_url }}" alt="Aperçu de {{ asset.name }}" loading="lazy">{% else %}<div class="gang-asset-card__pending" aria-hidden="true"><span></span></div>{% endif %}
+    </div>
+    <div class="gang-asset-card__body">
+      <strong title="{{ asset.name }}">{{ asset.name }}</strong>
+      <small class="gang-asset-status gang-asset-status--{{ asset.analysis_status }}">{{ asset.analysis_label }}{% if asset.width_mm and asset.height_mm %} · {{ asset.width_mm }} × {{ asset.height_mm }} mm{% endif %}</small>
+      <div class="gang-asset-card__meta-row">
+        <small data-asset-usage="{{ asset.public_id }}">{{ asset.usage_count }} sur la planche</small>
+        {% if can_manage_gallery %}
+          {% if asset.can_remove %}
+          <button
+            type="button"
+            class="gang-asset-card__remove"
+            data-dialog-open="remove-gang-asset-dialog-{{ asset.source_public_id }}"
+            aria-haspopup="dialog"
+            title="Retirer ce visuel de la galerie"
+          >Retirer</button>
+          {% else %}
+          <button
+            type="button"
+            class="gang-asset-card__remove"
+            disabled
+            title="Supprimez d’abord toutes les occurrences de ce visuel"
+          >Utilisé</button>
+          {% endif %}
+        {% endif %}
+      </div>
+      <div class="gang-asset-card__add">
+        <label>Quantité<input type="number" min="1" max="200" step="1" value="1" inputmode="numeric" data-asset-quantity></label>
+        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-add-asset="{{ asset.public_id }}" data-asset-ready="{{ asset.is_ready|yesno:'true,false' }}" {% if not can_edit or not asset.is_ready %}disabled{% endif %}>{% if asset.is_ready %}Ajouter + placer{% else %}Analyse en cours{% endif %}</button>
+      </div>
+    </div>
+    {% if asset.can_remove %}
+    <dialog
+      class="b2b-confirm-dialog"
+      id="remove-gang-asset-dialog-{{ asset.source_public_id }}"
+      aria-labelledby="remove-gang-asset-title-{{ asset.source_public_id }}"
+      aria-describedby="remove-gang-asset-desc-{{ asset.source_public_id }}"
+    >
+      <div class="b2b-confirm-dialog__shell">
+        <div class="b2b-confirm-dialog__content">
+          <h2 id="remove-gang-asset-title-{{ asset.source_public_id }}">Retirer ce visuel ?</h2>
+          <p id="remove-gang-asset-desc-{{ asset.source_public_id }}" class="b2b-confirm-dialog__lead">
+            <strong>{{ asset.name }}</strong> ne sera plus proposé dans la galerie de cette planche.
+          </p>
+          <p class="b2b-confirm-dialog__hint">
+            Le fichier source reste conservé dans votre espace documentaire et vos autres projets.
+          </p>
+        </div>
+        <div class="b2b-confirm-dialog__actions">
+          <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+          <form
+            method="post"
+            action="{% url 'portal:client-gang-sheet-source-asset-remove' customer_public_id=customer.public_id sheet_public_id=sheet.public_id source_asset_public_id=asset.source_public_id %}"
+            hx-post="{% url 'portal:client-gang-sheet-source-asset-remove' customer_public_id=customer.public_id sheet_public_id=sheet.public_id source_asset_public_id=asset.source_public_id %}"
+            hx-target="closest [data-asset-list]"
+            hx-swap="outerHTML"
+          >
+            {% csrf_token %}
+            <button class="ui-btn ui-btn-danger" type="submit">Retirer de la galerie</button>
+          </form>
+        </div>
+      </div>
+    </dialog>
+    {% endif %}
+  </article>
+  {% empty %}
+  <div class="empty-state gang-asset-empty"><strong>Galerie vide</strong><p>Choisissez vos premiers fichiers : la fenêtre de vérification s’ouvrira automatiquement.</p><button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-file-picker-dialog="gang-asset-dialog" aria-controls="gang-asset-dialog" aria-haspopup="dialog" {% if not can_edit %}disabled{% endif %}>Ajouter un visuel</button></div>
+  {% endfor %}
+</div>

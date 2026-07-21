@@ -7,6 +7,10 @@ from django.utils import timezone
 from apps.auditlog.services import record_event
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.b2b_order_projects.services.projects import B2BOrderProjectService, ProjectDomainError
+from apps.gang_sheets.services.drive import (
+    GangSheetDriveSyncRequired,
+    GangSheetDriveSyncService,
+)
 from apps.orders.services.orders import OrderService
 from apps.uploads.services.drive import OrderDriveFolderService
 from apps.uploads.services.uploads import OrderUploadService
@@ -19,10 +23,12 @@ class B2BOrderProjectCheckoutService:
         project_service: B2BOrderProjectService | None = None,
         order_service: OrderService | None = None,
         upload_service: OrderUploadService | None = None,
+        gang_sheet_drive_service: GangSheetDriveSyncService | None = None,
     ):
         self.project_service = project_service or B2BOrderProjectService()
         self.order_service = order_service or OrderService()
         self.upload_service = upload_service or OrderUploadService()
+        self.gang_sheet_drive_service = gang_sheet_drive_service or GangSheetDriveSyncService()
 
     @transaction.atomic
     def checkout_project(
@@ -94,6 +100,14 @@ class B2BOrderProjectCheckoutService:
                     {"item_public_id": str(item.public_id)},
                 )
 
+        try:
+            self.gang_sheet_drive_service.assert_project_outputs_synced(project=locked)
+        except GangSheetDriveSyncRequired as error:
+            raise ProjectDomainError(
+                "GANG_SHEET_DRIVE_SYNC_REQUIRED",
+                str(error),
+            ) from error
+
         order = self.order_service.create_b2b_deferred_order(
             customer=locked.customer,
             actor=actor,
@@ -145,6 +159,15 @@ class B2BOrderProjectCheckoutService:
                 "status",
                 "updated_at",
             ]
+        )
+
+        from apps.gang_sheets.services import GangSheetService
+
+        GangSheetService().attach_validated_sheets_to_order(
+            project=locked,
+            order=order,
+            actor=actor,
+            source=source,
         )
 
         record_event(

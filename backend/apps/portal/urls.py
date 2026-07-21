@@ -51,6 +51,23 @@ from .views_client import (
     ClientOrderUploadDownloadView,
     ClientOrderUploadPreviewView,
 )
+from .views_gang_sheets import (
+    ClientGangSheetAddItemView,
+    ClientGangSheetAssetGalleryView,
+    ClientGangSheetAssetPreviewView,
+    ClientGangSheetAssetUploadView,
+    ClientGangSheetDeleteView,
+    ClientGangSheetEditorView,
+    ClientGangSheetItemActionView,
+    ClientGangSheetLayoutView,
+    ClientGangSheetListCreateView,
+    ClientGangSheetPreviewDownloadView,
+    ClientGangSheetSourceAssetRemoveView,
+    ClientGangSheetStateView,
+    ClientGangSheetWorkflowActionView,
+    StaffGangSheetFinalDownloadView,
+    StaffGangSheetSettingsView,
+)
 from .views_staff import StaffOrderDetailView, StaffOrderListView, StaffOrderPriceView
 from .views_staff_billing import StaffInvoiceMarkPaidView, StaffOrderPanelBillingView
 from .views_staff_dashboard import StaffDashboardView
@@ -178,6 +195,71 @@ urlpatterns = [
         name="client-order-project-cancel",
     ),
     path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/",
+        ClientGangSheetListCreateView.as_view(),
+        name="client-gang-sheet-list-create",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/",
+        ClientGangSheetEditorView.as_view(),
+        name="client-gang-sheet-editor",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/delete/",
+        ClientGangSheetDeleteView.as_view(),
+        name="client-gang-sheet-delete",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/state/",
+        ClientGangSheetStateView.as_view(),
+        name="client-gang-sheet-state",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/layout/",
+        ClientGangSheetLayoutView.as_view(),
+        name="client-gang-sheet-layout",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/add/",
+        ClientGangSheetAddItemView.as_view(),
+        name="client-gang-sheet-item-add",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/<uuid:item_public_id>/<str:action>/",
+        ClientGangSheetItemActionView.as_view(),
+        name="client-gang-sheet-item-action",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/actions/<str:action>/",
+        ClientGangSheetWorkflowActionView.as_view(),
+        name="client-gang-sheet-workflow-action",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:asset_version_public_id>/preview/",
+        ClientGangSheetAssetPreviewView.as_view(),
+        name="client-gang-sheet-asset-preview",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/gallery/",
+        ClientGangSheetAssetGalleryView.as_view(),
+        name="client-gang-sheet-asset-gallery",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/upload/",
+        ClientGangSheetAssetUploadView.as_view(),
+        name="client-gang-sheet-asset-upload",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/remove/",
+        ClientGangSheetSourceAssetRemoveView.as_view(),
+        name="client-gang-sheet-source-asset-remove",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/preview/download/",
+        ClientGangSheetPreviewDownloadView.as_view(),
+        name="client-gang-sheet-preview-download",
+    ),
+    path(
         "client/customers/<uuid:customer_public_id>/orders/",
         ClientOrderListView.as_view(),
         name="client-order-list",
@@ -272,6 +354,16 @@ urlpatterns = [
         "staff/settings/email-templates/",
         StaffEmailTemplateListView.as_view(),
         name="staff-email-template-list",
+    ),
+    path(
+        "staff/settings/gang-sheets/",
+        StaffGangSheetSettingsView.as_view(),
+        name="staff-gang-sheet-settings",
+    ),
+    path(
+        "staff/gang-sheets/<uuid:sheet_public_id>/production/download/",
+        StaffGangSheetFinalDownloadView.as_view(),
+        name="staff-gang-sheet-final-download",
     ),
     path(
         "staff/settings/email-templates/<str:event>/<str:audience>/",

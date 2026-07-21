@@ -1,5 +1,5 @@
 {% load l10n %}
-<div class="b2b-dialog-editor{% if item.asset and item.asset.current_version %}{% if item.asset.current_version.analysis_status == 'pending' or item.asset.current_version.analysis_status == 'processing' %} is-analysis-pending{% endif %}{% endif %}{% if item.can_replace_asset %} has-replace-before-analysis{% endif %}" data-b2b-configurator>
+<div class="b2b-dialog-editor{% if item.analysis_pending %} is-analysis-pending{% endif %}{% if item.can_replace_asset %} has-replace-before-analysis{% endif %}" data-b2b-configurator>
   <div class="b2b-configurator__preview">
     {% if item.asset and item.asset.current_version %}
     {% with version=item.asset.current_version %}
@@ -15,11 +15,33 @@
   <div class="b2b-visual-card__details">
     {% if item.asset and item.asset.current_version %}
     {% with version=item.asset.current_version review=item.technical_review %}
-    {% if version.analysis_status != "pending" and version.analysis_status != "processing" %}
+    {% if not item.analysis_pending %}
     {% include "portal/client/partials/order_project_quality_review.html" %}
     {% if version.analysis_error %}<p class="b2b-analysis-error">{{ version.analysis_error }}</p>{% endif %}
 
+    {% if item.is_production_gang_sheet_asset %}
+    <div class="b2b-visual-validation">
+      <p class="gang-inspector-note"><strong>Planche HD verrouillée.</strong> L’analyse porte sur le PDF final généré par le Gang Sheet Builder. Vérifiez les détails fins, les semi-transparences et la couleur du support avant de commander.</p>
+    </div>
     {% if review.can_confirm and project.status != "submitted" and project.status != "converted" and project.status != "cancelled" %}
+    <form
+      class="b2b-visual-validation"
+      method="post"
+      hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='confirm-analysis' %}"
+      hx-target="#order-project-items"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      data-submit-loading
+    >
+      {% csrf_token %}
+      {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
+      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié le fichier HD, les détails fins, les semi-transparences et la couleur du support.</span></label>
+      <div class="b2b-dialog-actions">
+        <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer le support{% else %}Valider pour commander{% endif %}</button>
+      </div>
+    </form>
+    {% endif %}
+    {% elif review.can_confirm and project.status != "submitted" and project.status != "converted" and project.status != "cancelled" %}
     <form
       class="b2b-visual-validation"
       method="post"

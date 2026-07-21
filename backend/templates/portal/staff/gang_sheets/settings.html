@@ -1,0 +1,27 @@
+{% extends "portal/layout.html" %}
+{% load l10n %}
+
+{% block title %}Réglages Gang Sheet — Atelier{% endblock %}
+
+{% block portal_content %}
+<div class="gang-settings-page">
+  <header class="gang-sheet-page__hero">
+    <div><p class="ui-eyebrow">Réglage machine</p><h1>Laize & contraintes Gang Sheet</h1><p>Ces valeurs sont imposées aux nouvelles planches. Les brouillons existants conservent leur instantané pour garantir la traçabilité.</p></div>
+    <span class="gang-sheet-page__step">Atelier uniquement</span>
+  </header>
+  <section class="gang-sheet-create-card">
+    <div><h2>Paramètres de composition</h2><p>Dimensions exprimées en millimètres. La hauteur client est calculée automatiquement au pas défini.</p></div>
+    <form method="post" class="ui-form-stack">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="ui-field-group">
+        <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        <input class="ui-input" type="number" name="{{ field.name }}" id="{{ field.id_for_label }}" value="{{ field.value|default_if_none:''|unlocalize }}" step="0.01" required>
+        {% for error in field.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+      </div>
+      {% endfor %}
+      {% include "components/forms/form_actions.html" with primary_label="Enregistrer les réglages" %}
+    </form>
+  </section>
+</div>
+{% endblock %}

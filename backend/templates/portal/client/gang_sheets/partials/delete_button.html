@@ -1,0 +1,47 @@
+{% if sheet.can_delete and can_edit %}
+<button
+  type="button"
+  class="{{ button_class|default:'ui-btn ui-btn-danger ui-btn-sm' }}"
+  data-dialog-open="delete-gang-sheet-dialog-{{ sheet.public_id }}"
+  aria-haspopup="dialog"
+>
+  {{ label|default:"Supprimer" }}
+</button>
+<dialog
+  class="b2b-confirm-dialog"
+  id="delete-gang-sheet-dialog-{{ sheet.public_id }}"
+  aria-labelledby="delete-gang-sheet-title-{{ sheet.public_id }}"
+  aria-describedby="delete-gang-sheet-desc-{{ sheet.public_id }}"
+>
+  <div class="b2b-confirm-dialog__shell">
+    <div class="b2b-confirm-dialog__content">
+      <h2 id="delete-gang-sheet-title-{{ sheet.public_id }}">{% if sheet.project_id and sheet.production_asset_id %}Retirer cette Gang Sheet ?{% else %}Supprimer cette Gang Sheet ?{% endif %}</h2>
+      <p id="delete-gang-sheet-desc-{{ sheet.public_id }}" class="b2b-confirm-dialog__lead">
+        {% if sheet.project_id and sheet.production_asset_id %}
+          <strong>{{ sheet.name }}</strong> sera supprimée de votre bibliothèque Gang Sheet.
+        {% else %}
+          <strong>{{ sheet.name }}</strong> et toute sa composition seront supprimées définitivement.
+        {% endif %}
+      </p>
+      <p class="b2b-confirm-dialog__hint">
+        {% if sheet.project_id and sheet.production_asset_id %}
+          Le projet de commande et son fichier HD seront conservés.{% if sheet.order_id %} La commande déjà créée restera également intacte.{% endif %}
+        {% else %}
+          Les visuels sources restent disponibles dans votre espace documentaire.
+        {% endif %}
+      </p>
+    </div>
+    <div class="b2b-confirm-dialog__actions">
+      <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+      <form
+        method="post"
+        action="{% url 'portal:client-gang-sheet-delete' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="return_to" value="{{ return_to|default:'list' }}">
+        <button class="ui-btn ui-btn-danger" type="submit">{% if sheet.project_id and sheet.production_asset_id %}Retirer la Gang Sheet{% else %}Supprimer définitivement{% endif %}</button>
+      </form>
+    </div>
+  </div>
+</dialog>
+{% endif %}

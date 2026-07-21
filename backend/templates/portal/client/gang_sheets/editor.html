@@ -1,0 +1,219 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}{{ sheet.name }} — Gang Sheet Generator Pro{% endblock %}
+
+{% block portal_content %}
+{{ gang_sheet_state|json_script:"gang-sheet-initial-state" }}
+<div
+  class="gang-editor"
+  data-gang-sheet-editor
+  data-state-url="{% url 'portal:client-gang-sheet-state' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+  data-layout-url="{% url 'portal:client-gang-sheet-layout' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+  data-add-url="{% url 'portal:client-gang-sheet-item-add' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+  data-action-url-template="{% url 'portal:client-gang-sheet-workflow-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id action='ACTION' %}"
+  data-item-url-template="{% url 'portal:client-gang-sheet-item-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id item_public_id='00000000-0000-0000-0000-000000000000' action='ACTION' %}"
+  data-preview-url="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+  data-order-project-url="{% url 'portal:client-gang-sheet-workflow-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id action='create-order-project' %}"
+  data-can-edit="{{ can_edit|yesno:'true,false' }}"
+>
+  <input type="hidden" data-csrf value="{{ csrf_token }}">
+
+  <header class="gang-editor__header">
+    <div class="gang-editor__heading">
+      <nav class="ui-breadcrumb" aria-label="Fil d’Ariane">
+        <ol class="ui-breadcrumb__list">
+          <li class="ui-breadcrumb__item"><a href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=customer.public_id %}">Gang Sheets</a></li>
+          <li class="ui-breadcrumb__item" aria-current="page">{{ sheet.name }}</li>
+        </ol>
+      </nav>
+      <div class="gang-editor__title-row">
+        <div>
+          <p class="product-eyebrow">{% if sheet.project %}Projet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</p>
+          <h1>{{ sheet.name }}</h1>
+          <p>Studio d’imposition DTF — dimensions réelles et contrôles en temps réel.</p>
+        </div>
+        <div class="gang-editor__title-actions">
+          <span class="gang-status-badge gang-status-badge--{{ sheet.status }}">{{ sheet.get_status_display }}</span>
+          {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="editor" label="Supprimer la planche" %}
+        </div>
+      </div>
+    </div>
+    <div class="gang-editor__metrics" aria-label="Indicateurs de la planche" aria-live="polite">
+      <div><span>Laize atelier</span><strong data-metric-width>—</strong></div>
+      <div><span>Hauteur auto</span><strong data-metric-height>—</strong></div>
+      <div><span>Visuels</span><strong data-metric-items>0</strong></div>
+      <div><span>Occupation</span><strong data-metric-usage>0 %</strong></div>
+      <div><span>Surface</span><strong data-metric-surface>—</strong></div>
+      <div class="is-price"><span>Estimation HT</span><strong data-metric-price>—</strong></div>
+    </div>
+  </header>
+
+  <nav class="gang-workflow gang-workflow--editor" aria-label="Progression de la planche">
+    <ol>
+      <li class="is-active"><span>01</span><div><strong>Fichiers</strong><small>Importer & analyser</small></div></li>
+      <li class="is-active" aria-current="step"><span>02</span><div><strong>Composition</strong><small>Placer & contrôler</small></div></li>
+      <li class="{% if sheet.status == 'ready' or sheet.status == 'validated' %}is-active{% endif %}"><span>03</span><div><strong>Validation</strong><small>Rendu haute définition</small></div></li>
+      <li class="{% if sheet.project %}is-active{% endif %}"><span>04</span><div><strong>Commande</strong><small>Créer le projet B2B</small></div></li>
+    </ol>
+  </nav>
+
+  <div class="gang-editor__status" data-editor-status role="status">
+    <span class="gang-editor__status-dot" aria-hidden="true"></span>
+    <strong data-status-text>Brouillon prêt</strong>
+    <span data-issue-count></span>
+    <span class="gang-editor__status-help">Les modifications sont enregistrées uniquement avec le bouton Enregistrer.</span>
+  </div>
+
+  <dialog class="b2b-configurator-dialog gang-asset-dialog" id="gang-asset-dialog" aria-labelledby="gang-asset-dialog-title">
+    <div class="b2b-dialog-shell">
+      <header class="b2b-dialog-head">
+        <div>
+          <p class="product-eyebrow">Nouvelle source</p>
+          <h2 id="gang-asset-dialog-title">Vérifier l’import</h2>
+        </div>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+      </header>
+      <div class="b2b-dialog-body">
+        <form
+          method="post"
+          enctype="multipart/form-data"
+          action="{% url 'portal:client-gang-sheet-asset-upload' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+          class="gang-asset-modal-form"
+          data-submit-loading
+        >
+          {% csrf_token %}
+          <div class="b2b-configurator__workspace" data-b2b-configurator>
+            <div class="b2b-configurator__preview">
+              <div class="b2b-preview-stage is-checker" data-configurator-stage>
+                <div class="b2b-preview-bounds" data-configurator-bounds hidden>
+                  <img class="b2b-preview-image" alt="Aperçu du fichier sélectionné" data-configurator-preview hidden>
+                </div>
+                <div class="b2b-preview-bounds" data-configurator-bounds hidden>
+                  <canvas class="b2b-preview-document" role="img" aria-label="Aperçu du PDF sélectionné" data-configurator-document-preview hidden></canvas>
+                </div>
+                <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Choisissez un fichier</strong><span>L’aperçu s’affichera avant l’import.</span></div>
+              </div>
+              <div class="b2b-background-tools" aria-label="Fond de l’aperçu">
+                <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-configurator-bg="checker" aria-label="Damier" aria-pressed="true" title="Damier"></button>
+                <button type="button" class="b2b-swatch-btn b2b-swatch-btn--white b2b-bg-button is-white" data-configurator-bg="#ffffff" aria-label="Blanc" aria-pressed="false" title="Blanc"></button>
+                <button type="button" class="b2b-swatch-btn b2b-swatch-btn--black b2b-bg-button is-black" data-configurator-bg="#111111" aria-label="Noir" aria-pressed="false" title="Noir"></button>
+              </div>
+            </div>
+            <div class="b2b-configurator__controls gang-asset-modal-form__controls">
+              <p class="product-eyebrow">Fichiers à analyser</p>
+              <label class="dui-form-control">
+                <span class="product-form-label">Fichier(s)</span>
+                <input class="dui-file-input dui-file-input-bordered w-full" type="file" name="files" multiple accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff,.psd,.ai,.eps" data-configurator-file {% if not can_edit %}disabled{% endif %} required>
+              </label>
+              <div class="gang-asset-modal-form__params" data-configurator-params hidden>
+                <p class="gang-asset-modal-form__selection" data-selected-files-summary aria-live="polite">Aucun fichier sélectionné.</p>
+                <p class="b2b-configurator__file-meta"><span data-configurator-pixels>Les dimensions seront confirmées par l’analyse technique.</span></p>
+                <div class="gang-asset-modal-form__notice">
+                  <strong>Après l’import</strong>
+                  <span>Chaque fichier rejoint la galerie privée de cette planche. Il devient ajoutable dès que son contrôle technique est terminé.</span>
+                </div>
+                <div class="b2b-dialog-actions">
+                  <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Annuler</button>
+                  <button class="ui-btn ui-btn-primary" type="submit" {% if not can_edit %}disabled{% endif %}>Importer et analyser</button>
+                </div>
+              </div>
+              <p class="muted text-sm" data-configurator-hint>Sélectionnez un fichier pour continuer.</p>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="gang-editor__workspace">
+    <aside class="gang-editor__sidebar" aria-label="Bibliothèque de fichiers">
+      <div class="gang-editor__panel-label"><span>01</span> Fichiers</div>
+      <div class="gang-editor__panel-head">
+        <h2>Galerie visuelle</h2>
+        <p>Importez vos sources, laissez le contrôle technique s’exécuter, puis indiquez la quantité.</p>
+      </div>
+      <div class="gang-asset-launcher">
+        <span class="gang-asset-dropzone__icon" aria-hidden="true">＋</span>
+        <div><strong>Ajouter des visuels</strong><small>Choisissez vos fichiers, puis vérifiez-les dans la fenêtre d’import.</small></div>
+        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-file-picker-dialog="gang-asset-dialog" aria-controls="gang-asset-dialog" aria-haspopup="dialog" {% if not can_edit %}disabled{% endif %}>Choisir les fichiers</button>
+      </div>
+      <label class="gang-asset-search">
+        <span class="sr-only">Rechercher un visuel</span>
+        <input type="search" placeholder="Rechercher dans la galerie…" data-asset-search autocomplete="off">
+      </label>
+      {% include "portal/client/gang_sheets/partials/asset_gallery.html" %}
+    </aside>
+
+    <main class="gang-editor__stage">
+      <div class="gang-editor__stage-head">
+        <div class="gang-editor__panel-label"><span>02</span> Composition</div>
+        <strong>Plan de travail</strong>
+      </div>
+      <div class="gang-editor__toolbar" role="toolbar" aria-label="Outils de composition">
+        <div class="gang-editor__toolbar-actions">
+          <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-auto-place {% if not can_edit %}disabled{% endif %}>Imposition auto</button>
+          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-save-layout {% if not can_edit %}disabled{% endif %}>Enregistrer</button>
+        </div>
+        <span class="gang-editor__toolbar-hint">Glisser · redimensionner · <kbd>R</kbd> pivoter · <kbd>⌘S</kbd> enregistrer</span>
+      </div>
+      <div class="gang-sheet-ruler gang-sheet-ruler--horizontal" aria-hidden="true"></div>
+      <div class="gang-sheet-canvas-wrap">
+        <div class="gang-sheet-ruler gang-sheet-ruler--vertical" aria-hidden="true"></div>
+        <div class="gang-sheet-canvas" data-sheet-canvas role="application" aria-label="Planche DTF interactive"></div>
+      </div>
+    </main>
+
+    <aside class="gang-editor__inspector" aria-label="Propriétés et validation">
+      <div class="gang-editor__panel-label"><span>03</span> Réglages & contrôle</div>
+      <section class="gang-inspector-panel" data-empty-inspector>
+        <p class="product-eyebrow">Sélection</p>
+        <h2>Choisissez un visuel</h2>
+        <p>Cliquez sur une occurrence pour régler sa taille réelle, sa rotation ou la dupliquer.</p>
+      </section>
+      <section class="gang-inspector-panel" data-item-inspector hidden>
+        <p class="product-eyebrow">Occurrence active</p>
+        <h2 data-selected-name>Visuel</h2>
+        <div class="gang-inspector-grid">
+          <label>Largeur <span><input type="number" min="0.01" step="0.1" data-input-width> cm</span></label>
+          <label>Hauteur <span><input type="number" min="0.01" step="0.1" data-input-height> cm</span></label>
+          <label>Position X <span><input type="number" step="0.1" data-input-x> cm</span></label>
+          <label>Position Y <span><input type="number" step="0.1" data-input-y> cm</span></label>
+        </div>
+        <label class="gang-ratio-lock"><input type="checkbox" data-lock-ratio checked> Conserver les proportions</label>
+        <div class="gang-inspector-actions">
+          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-rotate-item>↻ Pivoter 90°</button>
+          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-duplicate-item>Dupliquer</button>
+          <button type="button" class="ui-btn ui-btn-danger ui-btn-sm" data-delete-item>Supprimer</button>
+        </div>
+        <div class="gang-repeat-panel">
+          <div><p class="product-eyebrow">Imposition régulière</p><strong>Rangées × colonnes</strong></div>
+          <div class="gang-repeat-grid">
+            <label>Rangées<input type="number" min="1" max="200" value="2" data-grid-rows></label>
+            <label>Colonnes<input type="number" min="1" max="200" value="2" data-grid-columns></label>
+            <label>Espace X<input type="number" min="0" max="100" step="0.1" value="0" data-grid-spacing-x><span>mm</span></label>
+            <label>Espace Y<input type="number" min="0" max="100" step="0.1" value="0" data-grid-spacing-y><span>mm</span></label>
+          </div>
+          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-create-grid>Créer la grille</button>
+          <small>Le visuel sélectionné devient le premier exemplaire de la grille.</small>
+        </div>
+      </section>
+      <section class="gang-inspector-panel gang-inspector-panel--validation">
+        <p class="product-eyebrow">Contrôle final</p>
+        <h2>Prêt à produire ?</h2>
+        <ul data-issues-list><li class="is-ok">Aucune anomalie de placement.</li></ul>
+        <div class="gang-validation-actions">
+          <button type="button" class="ui-btn ui-btn-primary" data-render-sheet {% if not can_edit %}disabled{% endif %}>Générer le rendu HD</button>
+          <button type="button" class="ui-btn ui-btn-secondary" data-validate-sheet {% if not can_edit %}disabled{% endif %}>Valider la planche</button>
+          {% if sheet.project %}
+          <a class="ui-btn ui-btn-primary" data-open-order-project href="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=sheet.project.public_id %}">Continuer vers la commande →</a>
+          {% else %}
+          <button type="button" class="ui-btn ui-btn-primary" data-create-order-project {% if not can_create_order or not can_edit %}disabled{% endif %}>Créer le projet de commande →</button>
+          {% endif %}
+          <a class="ui-btn ui-btn-ghost" data-download-preview href="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}" hidden>Télécharger l’aperçu</a>
+        </div>
+        <p class="gang-inspector-note"><strong>Fichier de production protégé.</strong> Le rendu HD reste exclusivement accessible à l’atelier et au workflow de production.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}

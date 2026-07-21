@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "apps.catalog",
     "apps.billing",
     "apps.b2b_order_projects",
+    "apps.gang_sheets",
     "apps.orders",
     "apps.production",
     "apps.portal",

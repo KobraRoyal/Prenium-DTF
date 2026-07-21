@@ -145,6 +145,7 @@ class B2BOrderProjectService:
     def add_item(self, *, project, actor, data: dict, source: str) -> B2BOrderProjectItem:
         locked = self._lock(project)
         self._ensure_editable(locked)
+        self._ensure_project_accepts_items(locked)
         values = self._normalize_item_data(data, require_all=True)
         next_position = (
             B2BOrderProjectItem.objects.for_project(locked).aggregate(value=Max("sort_order"))[
@@ -173,6 +174,7 @@ class B2BOrderProjectService:
         locked = self._lock(project)
         self._ensure_editable(locked)
         item = self._get_item(locked, item_public_id, for_update=True)
+        self._ensure_item_mutable(item)
         values = self._normalize_item_data(data, require_all=False)
         changed = []
         for field, value in values.items():
@@ -223,6 +225,9 @@ class B2BOrderProjectService:
         )
         if item is None:
             raise ProjectDomainError("PROJECT_ITEM_NOT_FOUND", "Visuel introuvable.")
+        production_item = self._is_production_item(item)
+        if not production_item:
+            self._ensure_item_mutable(item)
         version = getattr(getattr(item, "asset", None), "current_version", None)
         if version is None or version.analysis_status not in {"ready", "warning"}:
             raise ProjectDomainError(
@@ -234,6 +239,10 @@ class B2BOrderProjectService:
         changed = []
         if payload:
             values = self._normalize_item_data(payload, require_all=False)
+            if production_item:
+                values = {
+                    field: value for field, value in values.items() if field == "support_color_hex"
+                }
             for field, value in values.items():
                 if getattr(item, field) != value:
                     setattr(item, field, value)
@@ -288,6 +297,7 @@ class B2BOrderProjectService:
         locked = self._lock(project)
         self._ensure_editable(locked)
         item = self._get_item(locked, item_public_id, for_update=True)
+        self._ensure_item_mutable(item)
         public_id = item.public_id
         position = item.sort_order
         item.delete()
@@ -308,6 +318,7 @@ class B2BOrderProjectService:
         locked = self._lock(project)
         self._ensure_editable(locked)
         source_item = self._get_item(locked, item_public_id, for_update=True)
+        self._ensure_item_mutable(source_item)
         next_position = (
             B2BOrderProjectItem.objects.for_project(locked).aggregate(value=Max("sort_order"))[
                 "value"
@@ -607,6 +618,47 @@ class B2BOrderProjectService:
         if item is None:
             raise ProjectDomainError("PROJECT_ITEM_NOT_FOUND", "Ligne de projet introuvable.")
         return item
+
+    @staticmethod
+    def _ensure_item_mutable(item):
+        if not item.asset_id:
+            return
+        if B2BOrderProjectService._is_production_item(item):
+            raise ProjectDomainError(
+                "GANG_SHEET_OUTPUT_LOCKED",
+                "Le fichier final de cette planche est verrouillé pour la production.",
+            )
+
+    @staticmethod
+    def _is_production_item(item) -> bool:
+        if not item.asset_id:
+            return False
+        if item.project.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET:
+            return True
+        from apps.gang_sheets.models import GangSheet
+
+        return GangSheet.objects.filter(
+            customer=item.customer,
+            production_asset_id=item.asset_id,
+        ).exists()
+
+    @staticmethod
+    def _ensure_project_accepts_items(project):
+        if (
+            project.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET
+            and project.items.exists()
+        ):
+            raise ProjectDomainError(
+                "GANG_SHEET_PROJECT_LOCKED",
+                "Ce projet contient uniquement le fichier final de la planche validée.",
+            )
+        from apps.gang_sheets.models import GangSheet
+
+        if GangSheet.objects.filter(customer=project.customer, project=project).exists():
+            raise ProjectDomainError(
+                "GANG_SHEET_PROJECT_LOCKED",
+                "Ce projet contient uniquement le fichier final de la planche validée.",
+            )
 
     def _lock(self, project):
         return (

@@ -37,6 +37,7 @@
 - [Sprint 28 — Fiche commande Atelier orientée action](sprint-28-fiche-commande-atelier-focus.md)
 - [Sprint 29 — Consignes support et dimensions dans le contrôle et l’OF](sprint-29-consignes-support-dimensions-of.md)
 - [Sprint 30 — Console Atelier UI/UX](sprint-30-console-atelier-ui-ux.md)
+- [Sprint 31 — Gang Sheet Generator Pro](sprint-31-gang-sheet-generator-pro.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)
