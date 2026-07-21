@@ -12,4 +12,12 @@ repos:
       - id: ruff
         args: ["--fix"]
       - id: ruff-format
-
+  - repo: local
+    hooks:
+      - id: codex-agent-contracts
+        name: validate Codex agent contracts
+        entry: python scripts/check_codex_agents.py
+        language: python
+        additional_dependencies: ["tomli==2.2.1"]
+        pass_filenames: false
+        files: ^(\.codex/|AGENTS\.md$|docs/architecture/CODEX_AGENT_ORCHESTRATION\.md$)

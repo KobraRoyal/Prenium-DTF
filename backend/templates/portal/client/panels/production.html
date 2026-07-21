@@ -1,8 +1,11 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="production" %}
-<div class="panel">
+<div class="panel client-order-panel client-order-panel--production">
   <div class="panel-head panel-head--compact">
-    <h3 class="font-display text-lg">Historique des statuts</h3>
+    <div>
+      <h3 class="font-display text-lg">Historique des statuts</h3>
+      <p class="client-order-panel__lead">Les étapes confirmées par l’atelier apparaissent ici dans l’ordre chronologique.</p>
+    </div>
   </div>
   {% if status_history %}
   <ol class="client-status-timeline" aria-label="Historique des statuts de la commande">

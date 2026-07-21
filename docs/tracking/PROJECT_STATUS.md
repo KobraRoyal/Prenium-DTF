@@ -32,6 +32,7 @@
 - [x] Sprint 27 — Aperçus visuels dans les OF et onglets Atelier sans icônes
 - [x] Sprint 28 — Fiche commande Atelier orientée action, sans redondance ni icônes
 - [x] Sprint 29 — Couleur support et dimensions client visibles dans Contrôle et l’OF
+- [x] Sprint 33 — Navigation SaaS client et Atelier, centre `Mon compte`, bibliothèque et studio Gang Sheets premium avec recette multi-écran/Docker validée
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement
@@ -57,6 +58,7 @@
 - [x] Lot 11.9 — Audit cohérence UI/UX ciblé clôturé à 100/100 sans impact métier ni permissions
 - [x] Lot 11.10 — Système de boutons SaaS unifié livré sur portail/prospect/actions staff
 - [x] Lot 11.11 — Audit global UI/UX orchestré par sous-agents, corrections header/tabs/empty states/shipping et documentation livrées
+- [x] Lot 33 — Navigation SaaS partagée, centre de compte Owner, bibliothèque filtrable et studio Gang Sheets responsive livrés sans changement de permissions objet
 
 ## Derniers chantiers transverses
 
@@ -284,8 +286,21 @@
 - [x] Preuves basées sur le workflow réel, sans chiffre ni témoignage invérifiable
 - [x] Responsive vérifié sans overflow à 375, 768 et 1440 px
 - [x] Menu mobile, FAQ, CTA et absence d’erreurs console validés
+- [x] Hardening Impeccable du 2026-07-21 : audit passé de 14/20 à 19/20
+- [x] Contraste CTA 17,15:1, cibles tactiles 44px et typographie responsive corrigés
+- [x] Cache CSS invalidé (`20260721f`) et rendu Docker vérifié à 1280/375/320 px
+- [x] Non-régression confirmée : 479 tests complets, 39 tests UI ciblés et lint vert
 - [x] Score final 92/100 — verdict premium, aucun P1 restant
 - [x] 38 tests UI ciblés passés et documentation du lot ajoutée
+
+## Micro-lot portail client — fiche commande (2026-07-21)
+
+- [x] Résumé commande restructuré avec libellés sémantiques, tarification et note client lisible
+- [x] Workflow HTMX simplifié sans cartes ni ombres imbriquées
+- [x] Onglets, breadcrumb, timeline et fichiers longs adaptés au mobile avec cibles 44px
+- [x] Visuels et Avancement vérifiés dans une session client authentifiée, sans erreur console
+- [x] Isolation inter-client et restrictions membre/propriétaire conservées
+- [x] Validation complète : 480 tests, 60 tests ciblés, lint, Django et migrations conformes
 
 ## Sprint 31 — Gang Sheet Generator Pro (2026-07-15)
 
@@ -304,6 +319,16 @@
 - [x] PDF final verrouillé : téléchargement et remplacement client interdits
 - [x] Permissions, audit et tests d’isolation croisée
 - [x] UI/UX harmonisée avec le portail : workflow 4 étapes, studio pro et responsive 375 px sans overflow
+- [x] Studio premium v2 : canevas prioritaire, panneaux internes, zoom, état non enregistré et navigation mobile par sections
 - [x] Ajout de fichier harmonisé Gang Sheet / Order Project : choisir puis ouvrir le configurateur prérempli
 - [x] Suite complète : 441 tests passés ; recette desktop/mobile et PDF de production contrôlés
 - [ ] Recette RIP du PDF HD sur la machine Atelier cible
+
+## Sprint 32 — Orchestration Codex des sous-agents (2026-07-21)
+
+- [x] Six agents Codex natifs configurés avec une matrice Terra/Sol explicite
+- [x] Concurrence limitée à trois sous-agents, profondeur limitée à un
+- [x] Propriété d’écriture exclusive et revue sécurité indépendante documentées
+- [x] Validateur autonome, tests contractuels, hook pre-commit et étape CI intégrés
+- [x] Runtime Goose existant conservé sans modification
+- [x] Validation complète : contrats, Django, migrations et 478 tests passés

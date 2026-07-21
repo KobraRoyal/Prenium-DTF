@@ -30,6 +30,7 @@ def test_access_scope_service_returns_staff_and_customer_scope():
     assert scope.has_staff_portal_access is True
     assert scope.customer_public_ids == (str(customer.public_id),)
     assert scope.memberships[0].role == CustomerMembership.Role.OWNER
+    assert scope.memberships[0].role_label == "Propriétaire"
 
 
 @pytest.mark.django_db

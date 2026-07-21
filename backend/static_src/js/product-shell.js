@@ -17,6 +17,12 @@ function setProductMenuOpen(button, menu, open) {
   menu.classList.toggle("is-open", open);
   button.setAttribute("aria-expanded", open ? "true" : "false");
 
+  if (!open) {
+    menu.querySelectorAll("[data-product-nav-details][open]").forEach((details) => {
+      details.removeAttribute("open");
+    });
+  }
+
   const label = open ? button.dataset.menuCloseLabel : button.dataset.menuOpenLabel;
   if (label) {
     button.setAttribute("aria-label", label);
@@ -36,6 +42,21 @@ function closeProductMenus(exceptMenu = null) {
     }
 
     menu.classList.remove("is-open");
+  });
+}
+
+function closeProductNavDetails(exceptDetails = null, restoreFocus = false) {
+  document.querySelectorAll("[data-product-nav-details][open]").forEach((details) => {
+    if (details === exceptDetails) {
+      return;
+    }
+
+    const summary = details.querySelector("summary");
+    const containedFocus = details.contains(document.activeElement);
+    details.removeAttribute("open");
+    if (restoreFocus && containedFocus && summary instanceof HTMLElement) {
+      summary.focus();
+    }
   });
 }
 
@@ -77,9 +98,23 @@ function initProductMenuFallback() {
       return;
     }
 
+    const detailsSummary = target.closest("[data-product-nav-details] > summary");
+    if (detailsSummary) {
+      const details = detailsSummary.parentElement;
+      if (details instanceof HTMLDetailsElement) {
+        closeProductNavDetails(details);
+      }
+      return;
+    }
+
     if (target.closest("[data-product-menu] a, [data-product-menu] button[type='submit']")) {
+      closeProductNavDetails();
       closeProductMenus();
       return;
+    }
+
+    if (!target.closest("[data-product-nav-details]")) {
+      closeProductNavDetails();
     }
 
     if (!target.closest("[data-product-menu].is-open")) {
@@ -89,6 +124,7 @@ function initProductMenuFallback() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      closeProductNavDetails(null, true);
       closeProductMenus();
     }
   });

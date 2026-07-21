@@ -95,6 +95,25 @@ Score : **92/100 — premium**.
 - [x] aucun formulaire dans la landing
 - [x] aucune erreur console observée
 
+## Hardening Impeccable — 2026-07-21
+
+Le nouvel audit Impeccable est passé de **14/20 à 19/20 — excellent**. Les familles
+Space Grotesk et DM Sans sont conservées comme identité existante ; le détecteur
+typographique ne remonte plus aucune anomalie actionnable.
+
+- [x] contraste du CTA principal corrigé de `1,1:1` à `17,15:1` ;
+- [x] cibles de navigation et d’action portées à au moins `44 px` ;
+- [x] échelle des titres resserrée à `6rem` maximum, interlettrage à `-0,035em` maximum ;
+- [x] textes mobiles du hero et de la FAQ maintenus à `1rem` ;
+- [x] grilles décoratives, kickers répétés et index non signifiants supprimés ;
+- [x] logo du header réduit à une cible sémantique unique ;
+- [x] version du bundle CSS portée à `20260721b` pour invalider le cache navigateur ;
+- [x] contrôles réels dans Docker à `1280`, `375` et `320 px`, sans overflow ;
+- [x] menu mobile validé (`aria-expanded`, libellé et cinq liens) ;
+- [x] aucune erreur ni alerte console ;
+- [x] `479` tests complets et `39` tests UI ciblés passés ;
+- [x] lint, format ciblé, check Django, migrations et contrats des six agents validés.
+
 ## Définition de terminé
 
 - [x] code implémenté
@@ -103,4 +122,3 @@ Score : **92/100 — premium**.
 - [x] aucune donnée inter-tenant exposée
 - [x] audit/log métier non requis : aucun événement métier nouveau
 - [x] documentation et checklist mises à jour
-

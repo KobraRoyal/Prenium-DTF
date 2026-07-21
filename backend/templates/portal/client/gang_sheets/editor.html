@@ -15,6 +15,7 @@
   data-preview-url="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-order-project-url="{% url 'portal:client-gang-sheet-workflow-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id action='create-order-project' %}"
   data-can-edit="{{ can_edit|yesno:'true,false' }}"
+  data-has-project="{{ sheet.project_id|yesno:'true,false' }}"
 >
   <input type="hidden" data-csrf value="{{ csrf_token }}">
 
@@ -27,41 +28,43 @@
         </ol>
       </nav>
       <div class="gang-editor__title-row">
-        <div>
-          <p class="product-eyebrow">{% if sheet.project %}Projet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</p>
+        <div class="gang-editor__title-copy">
+          <span class="gang-editor__project-ref">{% if sheet.project %}Projet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</span>
           <h1>{{ sheet.name }}</h1>
-          <p>Studio d’imposition DTF — dimensions réelles et contrôles en temps réel.</p>
+          <p>Composez, contrôlez puis validez votre planche DTF.</p>
         </div>
         <div class="gang-editor__title-actions">
           <span class="gang-status-badge gang-status-badge--{{ sheet.status }}">{{ sheet.get_status_display }}</span>
-          {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="editor" label="Supprimer la planche" %}
+          {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="editor" label="Supprimer" button_class="ui-btn ui-btn-ghost ui-btn-sm gang-editor__delete" %}
         </div>
       </div>
     </div>
-    <div class="gang-editor__metrics" aria-label="Indicateurs de la planche" aria-live="polite">
-      <div><span>Laize atelier</span><strong data-metric-width>—</strong></div>
-      <div><span>Hauteur auto</span><strong data-metric-height>—</strong></div>
-      <div><span>Visuels</span><strong data-metric-items>0</strong></div>
-      <div><span>Occupation</span><strong data-metric-usage>0 %</strong></div>
-      <div><span>Surface</span><strong data-metric-surface>—</strong></div>
-      <div class="is-price"><span>Estimation HT</span><strong data-metric-price>—</strong></div>
-    </div>
+    <dl class="gang-editor__metrics" aria-label="Indicateurs de la planche" aria-live="polite">
+      <div><dt>Format</dt><dd><strong data-metric-width>—</strong> × <strong data-metric-height>—</strong></dd></div>
+      <div><dt>Visuels</dt><dd data-metric-items>0</dd></div>
+      <div><dt>Occupation</dt><dd data-metric-usage>0 %</dd></div>
+      <div><dt>Surface</dt><dd data-metric-surface>—</dd></div>
+      <div class="is-price"><dt>Estimation HT</dt><dd data-metric-price>—</dd></div>
+    </dl>
   </header>
 
-  <nav class="gang-workflow gang-workflow--editor" aria-label="Progression de la planche">
-    <ol>
-      <li class="is-active"><span>01</span><div><strong>Fichiers</strong><small>Importer & analyser</small></div></li>
-      <li class="is-active" aria-current="step"><span>02</span><div><strong>Composition</strong><small>Placer & contrôler</small></div></li>
-      <li class="{% if sheet.status == 'ready' or sheet.status == 'validated' %}is-active{% endif %}"><span>03</span><div><strong>Validation</strong><small>Rendu haute définition</small></div></li>
-      <li class="{% if sheet.project %}is-active{% endif %}"><span>04</span><div><strong>Commande</strong><small>Créer le projet B2B</small></div></li>
-    </ol>
-  </nav>
-
-  <div class="gang-editor__status" data-editor-status role="status">
-    <span class="gang-editor__status-dot" aria-hidden="true"></span>
-    <strong data-status-text>Brouillon prêt</strong>
-    <span data-issue-count></span>
-    <span class="gang-editor__status-help">Les modifications sont enregistrées uniquement avec le bouton Enregistrer.</span>
+  <div class="gang-editor__progress-row">
+    <nav class="gang-workflow gang-workflow--editor" aria-label="Progression de la planche">
+      <ol>
+        <li class="is-complete" data-workflow-step="files"><span aria-hidden="true">✓</span><div><strong>Fichiers</strong><small>Sources prêtes</small></div></li>
+        <li data-workflow-step="composition" class="{% if sheet.status == 'ready' or sheet.status == 'validated' %}is-complete{% else %}is-active{% endif %}" {% if sheet.status != 'ready' and sheet.status != 'validated' %}aria-current="step"{% endif %}><span aria-hidden="true">{% if sheet.status == 'ready' or sheet.status == 'validated' %}✓{% else %}2{% endif %}</span><div><strong>Composition</strong><small>Plan de travail</small></div></li>
+        <li data-workflow-step="validation" class="{% if sheet.status == 'validated' %}is-complete{% elif sheet.status == 'ready' or sheet.status == 'rendering' or sheet.status == 'render_failed' %}is-active{% endif %}" {% if sheet.status == 'ready' or sheet.status == 'rendering' or sheet.status == 'render_failed' %}aria-current="step"{% endif %}><span aria-hidden="true">{% if sheet.status == 'validated' %}✓{% else %}3{% endif %}</span><div><strong>Validation</strong><small>Rendu HD</small></div></li>
+        <li data-workflow-step="order" class="{% if sheet.project %}is-complete{% elif sheet.status == 'validated' %}is-active{% endif %}" {% if sheet.status == 'validated' and not sheet.project %}aria-current="step"{% endif %}><span aria-hidden="true">{% if sheet.project %}✓{% else %}4{% endif %}</span><div><strong>Commande</strong><small>Projet B2B</small></div></li>
+      </ol>
+    </nav>
+    <div class="gang-editor__status" data-editor-status role="status" aria-live="polite">
+      <span class="gang-editor__status-dot" aria-hidden="true"></span>
+      <span class="gang-editor__status-copy">
+        <strong data-status-text>Brouillon prêt</strong>
+        <small data-status-detail>Vos modifications locales seront signalées ici.</small>
+      </span>
+      <span class="gang-editor__issue-count" data-issue-count></span>
+    </div>
   </div>
 
   <dialog class="b2b-configurator-dialog gang-asset-dialog" id="gang-asset-dialog" aria-labelledby="gang-asset-dialog-title">
@@ -125,17 +128,26 @@
     </div>
   </dialog>
 
+  <nav class="gang-editor__mobile-tabs" aria-label="Sections du studio">
+    <button type="button" data-mobile-panel-tab="assets" aria-controls="gang-editor-assets" aria-selected="false">Fichiers <span>{{ assets|length }}</span></button>
+    <button type="button" data-mobile-panel-tab="canvas" aria-controls="gang-editor-canvas" aria-selected="true" class="is-active">Composition</button>
+    <button type="button" data-mobile-panel-tab="settings" aria-controls="gang-editor-settings" aria-selected="false">Réglages <span data-mobile-issue-count>0</span></button>
+  </nav>
+
   <div class="gang-editor__workspace">
-    <aside class="gang-editor__sidebar" aria-label="Bibliothèque de fichiers">
-      <div class="gang-editor__panel-label"><span>01</span> Fichiers</div>
+    <aside class="gang-editor__sidebar" id="gang-editor-assets" data-editor-panel="assets" aria-label="Bibliothèque de fichiers">
+      <div class="gang-editor__panel-label">
+        <span aria-hidden="true">01</span>
+        <div><strong>Fichiers</strong><small>Bibliothèque privée</small></div>
+      </div>
       <div class="gang-editor__panel-head">
-        <h2>Galerie visuelle</h2>
-        <p>Importez vos sources, laissez le contrôle technique s’exécuter, puis indiquez la quantité.</p>
+        <h2>Vos visuels</h2>
+        <p>Ajoutez un fichier prêt, puis choisissez le nombre d’exemplaires à placer.</p>
       </div>
       <div class="gang-asset-launcher">
         <span class="gang-asset-dropzone__icon" aria-hidden="true">＋</span>
-        <div><strong>Ajouter des visuels</strong><small>Choisissez vos fichiers, puis vérifiez-les dans la fenêtre d’import.</small></div>
-        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-file-picker-dialog="gang-asset-dialog" aria-controls="gang-asset-dialog" aria-haspopup="dialog" {% if not can_edit %}disabled{% endif %}>Choisir les fichiers</button>
+        <div><strong>Importer des visuels</strong><small>PNG, JPG, PDF, TIFF, PSD, AI ou EPS.</small></div>
+        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-file-picker-dialog="gang-asset-dialog" aria-controls="gang-asset-dialog" aria-haspopup="dialog" {% if not can_edit %}disabled{% endif %}>Ajouter des fichiers</button>
       </div>
       <label class="gang-asset-search">
         <span class="sr-only">Rechercher un visuel</span>
@@ -144,34 +156,43 @@
       {% include "portal/client/gang_sheets/partials/asset_gallery.html" %}
     </aside>
 
-    <main class="gang-editor__stage">
+    <section class="gang-editor__stage is-mobile-active" id="gang-editor-canvas" data-editor-panel="canvas" aria-label="Composition de la planche">
       <div class="gang-editor__stage-head">
-        <div class="gang-editor__panel-label"><span>02</span> Composition</div>
-        <strong>Plan de travail</strong>
+        <div>
+          <strong>Plan de travail</strong>
+          <small>Dimensions réelles en centimètres</small>
+        </div>
+        <span data-canvas-format>—</span>
       </div>
       <div class="gang-editor__toolbar" role="toolbar" aria-label="Outils de composition">
         <div class="gang-editor__toolbar-actions">
-          <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-auto-place {% if not can_edit %}disabled{% endif %}>Imposition auto</button>
-          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-save-layout {% if not can_edit %}disabled{% endif %}>Enregistrer</button>
+          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-auto-place {% if not can_edit %}disabled{% endif %}>Imposition automatique</button>
         </div>
-        <span class="gang-editor__toolbar-hint">Glisser · redimensionner · <kbd>R</kbd> pivoter · <kbd>⌘S</kbd> enregistrer</span>
+        <div class="gang-editor__zoom" aria-label="Zoom du plan de travail">
+          <button type="button" data-zoom-out aria-label="Réduire le zoom">−</button>
+          <button type="button" data-zoom-reset aria-label="Réinitialiser le zoom"><span data-zoom-value>100 %</span></button>
+          <button type="button" data-zoom-in aria-label="Augmenter le zoom">＋</button>
+        </div>
+        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm gang-editor__save" data-save-layout {% if not can_edit %}disabled{% endif %}>Enregistrer</button>
+        <span class="gang-editor__toolbar-hint"><kbd>R</kbd> pivoter · <kbd>⌘S</kbd> enregistrer</span>
       </div>
-      <div class="gang-sheet-ruler gang-sheet-ruler--horizontal" aria-hidden="true"></div>
       <div class="gang-sheet-canvas-wrap">
-        <div class="gang-sheet-ruler gang-sheet-ruler--vertical" aria-hidden="true"></div>
         <div class="gang-sheet-canvas" data-sheet-canvas role="application" aria-label="Planche DTF interactive"></div>
       </div>
-    </main>
+    </section>
 
-    <aside class="gang-editor__inspector" aria-label="Propriétés et validation">
-      <div class="gang-editor__panel-label"><span>03</span> Réglages & contrôle</div>
+    <aside class="gang-editor__inspector" id="gang-editor-settings" data-editor-panel="settings" aria-label="Propriétés et validation">
+      <div class="gang-editor__panel-label">
+        <span aria-hidden="true">03</span>
+        <div><strong>Réglages</strong><small>Sélection et contrôle</small></div>
+      </div>
       <section class="gang-inspector-panel" data-empty-inspector>
-        <p class="product-eyebrow">Sélection</p>
-        <h2>Choisissez un visuel</h2>
-        <p>Cliquez sur une occurrence pour régler sa taille réelle, sa rotation ou la dupliquer.</p>
+        <span class="gang-inspector-panel__icon" aria-hidden="true">↖</span>
+        <h2>Sélectionnez un visuel</h2>
+        <p>Cliquez sur une occurrence pour modifier ses dimensions, sa position ou sa rotation.</p>
       </section>
       <section class="gang-inspector-panel" data-item-inspector hidden>
-        <p class="product-eyebrow">Occurrence active</p>
+        <span class="gang-inspector-panel__context">Visuel sélectionné</span>
         <h2 data-selected-name>Visuel</h2>
         <div class="gang-inspector-grid">
           <label>Largeur <span><input type="number" min="0.01" step="0.1" data-input-width> cm</span></label>
@@ -186,7 +207,7 @@
           <button type="button" class="ui-btn ui-btn-danger ui-btn-sm" data-delete-item>Supprimer</button>
         </div>
         <div class="gang-repeat-panel">
-          <div><p class="product-eyebrow">Imposition régulière</p><strong>Rangées × colonnes</strong></div>
+          <div><span>Répétition</span><strong>Créer une grille régulière</strong></div>
           <div class="gang-repeat-grid">
             <label>Rangées<input type="number" min="1" max="200" value="2" data-grid-rows></label>
             <label>Colonnes<input type="number" min="1" max="200" value="2" data-grid-columns></label>
@@ -198,8 +219,10 @@
         </div>
       </section>
       <section class="gang-inspector-panel gang-inspector-panel--validation">
-        <p class="product-eyebrow">Contrôle final</p>
-        <h2>Prêt à produire ?</h2>
+        <div class="gang-validation-heading">
+          <span aria-hidden="true">✓</span>
+          <div><h2>Contrôle de production</h2><p>Vérifiez la composition avant de générer le rendu.</p></div>
+        </div>
         <ul data-issues-list><li class="is-ok">Aucune anomalie de placement.</li></ul>
         <div class="gang-validation-actions">
           <button type="button" class="ui-btn ui-btn-primary" data-render-sheet {% if not can_edit %}disabled{% endif %}>Générer le rendu HD</button>
@@ -211,7 +234,7 @@
           {% endif %}
           <a class="ui-btn ui-btn-ghost" data-download-preview href="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}" hidden>Télécharger l’aperçu</a>
         </div>
-        <p class="gang-inspector-note"><strong>Fichier de production protégé.</strong> Le rendu HD reste exclusivement accessible à l’atelier et au workflow de production.</p>
+        <p class="gang-inspector-note"><strong>Rendu de production sécurisé</strong>Le fichier HD reste réservé à l’atelier et au workflow de production.</p>
       </section>
     </aside>
   </div>

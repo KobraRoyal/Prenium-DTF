@@ -1,0 +1,6 @@
+# Project-scoped Codex orchestration limits.
+# Keep fan-out shallow: the root agent owns decisions and final validation.
+[agents]
+max_threads = 3
+max_depth = 1
+interrupt_message = true

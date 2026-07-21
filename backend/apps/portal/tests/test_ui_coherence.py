@@ -116,6 +116,73 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("<form", hero + process + final_cta)
         self.assertNotIn("{% url 'services' %}", final_cta)
 
+    def test_landing_impeccable_accessibility_and_visual_contracts(self) -> None:
+        landing_css = static_source("css/components/landing.css")
+        conversion_css = static_source("css/components/landing-conversion.css")
+        base = template_source("base.html")
+        logo = template_source("components/brand/logo.html")
+        partials = "".join(
+            template_source(path)
+            for path in [
+                "shop/partials/landing_services.html",
+                "shop/partials/landing_quality_proof.html",
+                "shop/partials/landing_case_studies.html",
+                "shop/partials/landing_how_it_works.html",
+                "shop/partials/landing_faq.html",
+                "shop/partials/landing_cta_final.html",
+            ]
+        )
+
+        self.assertIn(":not(.conversion-button)", landing_css)
+        self.assertIn(
+            "body.landing-conversion-page .conversion-button.conversion-button--primary",
+            conversion_css,
+        )
+        self.assertIn(
+            "body.ui-marketing-body.landing-conversion-page .conversion-hero h1",
+            conversion_css,
+        )
+        self.assertIn("font-size: clamp(3.6rem, 6.2vw, 6rem)", conversion_css)
+        self.assertIn("letter-spacing: -0.035em", conversion_css)
+        self.assertNotIn("7.4rem", conversion_css)
+        self.assertNotIn("letter-spacing: -0.055em", conversion_css)
+        self.assertNotIn("background-size: 54px 54px", conversion_css)
+        self.assertNotIn("background-size: 48px 48px", landing_css)
+        self.assertNotIn("conversion-kicker", partials)
+        self.assertNotIn("conversion-transform__index", partials)
+        self.assertIn("min-height: 2.75rem", conversion_css)
+        self.assertIn("app.css' %}?v=20260721s", base)
+        self.assertIn("app.js' %}?v=20260721l", base)
+        self.assertIn("ui-brand-lockup__home", logo)
+        self.assertEqual(logo.count("<a "), 1)
+
+    def test_client_order_detail_polish_keeps_one_surface_and_mobile_contracts(self) -> None:
+        detail = template_source("portal/client/order_detail.html")
+        breadcrumb = template_source("components/portal/breadcrumbs/client_order_detail.html")
+        product_css = static_source("css/components/product-shell.css")
+        panels = "".join(
+            template_source(path)
+            for path in [
+                "portal/client/panels/uploads.html",
+                "portal/client/panels/production.html",
+                "portal/client/panels/shipping.html",
+                "portal/client/panels/billing.html",
+            ]
+        )
+
+        self.assertIn('class="client-order-detail"', detail)
+        self.assertIn('class="client-order-summary__facts"', detail)
+        self.assertIn("Commande soumise", detail)
+        self.assertIn("Tarification", detail)
+        self.assertIn("Informations transmises", detail)
+        self.assertIn('subtitle_prefix="Votre référence"', detail)
+        self.assertIn("client-order-panel", panels)
+        self.assertIn("ui-breadcrumb__item--order-ref", breadcrumb)
+        self.assertIn(".client-order-detail .workflow-panel", product_css)
+        self.assertIn("box-shadow: none !important", product_css)
+        self.assertIn("min-height: 2.75rem", product_css)
+        self.assertIn("overflow-x: auto", product_css)
+
     def test_product_views_do_not_reintroduce_dark_theme_text_on_light_panels(self) -> None:
         paths = [
             "portal/client/checkout.html",
@@ -283,35 +350,133 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Demander un accès", source)
 
     def test_portal_header_uses_role_focused_labels(self) -> None:
-        source = template_source("components/nav/portal_header.html")
+        header = template_source("components/nav/portal_header.html")
+        client_nav = template_source("components/nav/portal_client_navigation.html")
+        staff_nav = template_source("components/nav/portal_staff_navigation.html")
+        profile = template_source("components/nav/portal_profile_menu.html")
+        profile_icon = template_source("components/nav/profile_icon.html")
+        create_menu = template_source("components/nav/portal_client_create_menu.html")
+        create_icon = template_source("components/nav/creation_icon.html")
+        portal_tags = app_source("apps/portal/templatetags/portal_tags.py")
 
-        self.assertIn(">Accueil</a>", source)
-        self.assertIn(">Nouvelle commande</a>", source)
-        self.assertIn(">Tableau de bord</a>", source)
-        self.assertIn(">Commandes</a>", source)
-        self.assertIn("Menu", source)
-        self.assertIn("Pilotage atelier", source)
-        self.assertNotIn("Pilotage staff", source)
-        self.assertNotIn("Accès sécurisé", source)
-        self.assertIn("ui-btn ui-btn-ghost ui-btn-sm shrink-0 product-menu-button", source)
-        self.assertIn("product-nav__link", source)
-        self.assertIn("product-nav__cta", source)
-        self.assertIn("product-nav__logout", source)
-        self.assertIn("product-nav__brand", source)
-        self.assertIn("product-nav__primary", source)
-        self.assertIn("product-nav__account", source)
-        self.assertIn("ui-btn ui-btn-primary ui-btn-sm product-nav__login", source)
-        self.assertNotIn("Accueil client", source)
-        self.assertNotIn("Accueil staff", source)
-        self.assertNotIn("Commandes staff", source)
-        self.assertNotIn(">Dashboard</a>", source)
-        self.assertNotIn("Ops staff", source)
-        self.assertNotIn("Backoffice staff", source)
-        self.assertNotIn("btn-nav-cta", source)
-        self.assertNotIn('class="btn', source)
-        self.assertNotIn(">Commander</a>", source)
-        self.assertNotIn("x-data", source)
-        self.assertNotIn("@click", source)
+        self.assertIn(">Dashboard</a>", client_nav)
+        self.assertNotIn("Planches DTF", client_nav)
+        self.assertIn(">Dashboard</a>", staff_nav)
+        self.assertIn(">Commandes</a>", staff_nav)
+        self.assertIn("Outils Atelier", staff_nav)
+        self.assertIn("Demandes d’accès", staff_nav)
+        self.assertIn("Modèles d’e-mails", staff_nav)
+        self.assertIn("Réglages de laize", staff_nav)
+        self.assertIn("Espace client", header)
+        self.assertIn(">Atelier</span>", header)
+        self.assertIn("product-menu-button__icon", header)
+        self.assertIn("ui-btn ui-btn-ghost ui-btn-sm product-menu-button", header)
+        self.assertIn("portal_profile_menu.html", header)
+        self.assertIn("portal_navigation_access as portal_nav_access", header)
+        self.assertIn("product-nav__brand", header)
+        self.assertIn("product-nav__account", header)
+        self.assertIn("product-profile__trigger", profile)
+        self.assertIn("product-profile__menu", profile)
+        self.assertIn("Mon compte", profile)
+        self.assertIn("Mes informations", profile)
+        self.assertIn("Se déconnecter", profile)
+        self.assertNotIn("Voir le site", profile)
+        self.assertNotIn("product-profile__trigger-copy", profile)
+        self.assertIn("{% csrf_token %}", profile)
+        self.assertIn("request.user.is_staff and perms.accounts.access_staff_portal", profile)
+        self.assertIn("portal:client-team", profile)
+        self.assertIn("portal:staff-dashboard", profile)
+        self.assertIn("portal:logout", profile)
+        self.assertIn("portal:profile", profile)
+        self.assertIn("data-product-nav-details", profile)
+        self.assertIn("portal_nav_access.can_manage_team", profile)
+        self.assertEqual(profile_icon.count("<svg"), 4)
+        self.assertEqual(profile_icon.count('aria-hidden="true"'), 4)
+        self.assertIn("Créer une commande", create_menu)
+        self.assertIn("À partir de fichiers", create_menu)
+        self.assertIn("Générer une Gang Sheet", create_menu)
+        self.assertIn("portal:client-order-project-create", create_menu)
+        self.assertIn("portal:client-gang-sheet-list-create", create_menu)
+        self.assertIn("data-product-nav-details", create_menu)
+        self.assertEqual(create_icon.count("<svg"), 2)
+        self.assertIn("def portal_navigation_access", portal_tags)
+        self.assertIn("get_customer_membership", portal_tags)
+        self.assertIn("portal_client_navigation.html", header)
+        self.assertIn("portal_staff_navigation.html", header)
+        self.assertIn("data-product-nav-details", staff_nav)
+        self.assertIn('aria-current="page"', client_nav)
+        self.assertIn('aria-current="page"', staff_nav)
+        self.assertNotIn("Pilotage staff", header)
+        self.assertNotIn("btn-nav-cta", header)
+        self.assertNotIn('class="btn', header)
+        self.assertNotIn("x-data", header)
+        self.assertNotIn("@click", header)
+        self.assertNotIn(">Équipe</a>", client_nav)
+
+    def test_client_navigation_hides_project_tools_without_customer_eligibility(self) -> None:
+        source = template_source("components/nav/portal_client_navigation.html")
+        create_menu = template_source("components/nav/portal_client_create_menu.html")
+
+        self.assertNotIn("client-gang-sheet-list-create", source)
+        self.assertIn("portal_nav_access.project_creation_enabled", create_menu)
+        self.assertNotIn("{% if b2b_order_projects_globally_enabled %}", source)
+
+    def test_account_and_gang_sheet_libraries_use_task_focused_layouts(self) -> None:
+        profile = template_source("portal/profile.html")
+        gang_library = template_source("portal/client/gang_sheets/list.html")
+        form_actions = template_source("components/forms/form_actions.html")
+
+        self.assertIn("account-profile-layout", profile)
+        self.assertIn("account-profile-rail", profile)
+        self.assertIn("account-profile-panel", profile)
+        self.assertIn('x-on:input="dirty = true"', profile)
+        self.assertIn("primary_disabled_until_dirty=1", profile)
+        self.assertIn('x-bind:disabled="!dirty"', form_actions)
+        self.assertIn("gang-library-head", gang_library)
+        self.assertIn("gang-sheet-toolbar", gang_library)
+        self.assertIn('id="create-gang-sheet-dialog"', gang_library)
+        self.assertIn("data-dialog-auto-open", gang_library)
+        self.assertIn("data-status-group", gang_library)
+        self.assertIn("?display=inline", gang_library)
+        self.assertNotIn('class="gang-workflow"', gang_library)
+        self.assertNotIn("Créer une planche autonome", gang_library)
+
+    def test_gang_sheet_editor_behaves_like_a_responsive_production_studio(self) -> None:
+        editor = template_source("portal/client/gang_sheets/editor.html")
+        canvas_css = static_source("css/components/gang-sheet.css")
+        studio_css = static_source("css/components/gang-sheet-studio.css")
+        runtime = static_source("js/gang-sheet-editor.js")
+        css_entrypoint = static_source("css/input.css")
+
+        self.assertIn("gang-editor__progress-row", editor)
+        self.assertIn('data-mobile-panel-tab="canvas"', editor)
+        self.assertIn("data-zoom-reset", editor)
+        self.assertIn("data-status-detail", editor)
+        self.assertIn("gang-validation-heading", editor)
+        self.assertIn('@import "./components/gang-sheet-studio.css"', css_entrypoint)
+        self.assertIn("height: max(43rem, calc(100dvh - 8rem))", studio_css)
+        self.assertNotIn("body.product-shell:has(.gang-editor) .app-main", studio_css)
+        self.assertNotIn("width: min(96rem", studio_css)
+        self.assertIn("[data-editor-panel].is-mobile-active", studio_css)
+        self.assertIn("min-height: 2.75rem", studio_css)
+        self.assertIn("function setMobilePanel", runtime)
+        self.assertIn("function renderZoom", runtime)
+        self.assertIn(".gang-sheet-item img { position: absolute; top: 50%; left: 50%;", canvas_css)
+        self.assertIn(
+            "translate(-50%, -50%) rotate(${item.rotation}deg)",
+            runtime,
+        )
+        self.assertIn('window.addEventListener("beforeunload"', runtime)
+        self.assertIn("root.dataset.dirty = String(dirty)", runtime)
+
+    def test_portal_navigation_closes_secondary_tools_accessibly(self) -> None:
+        runtime = static_source("js/product-shell.js")
+
+        self.assertIn("closeProductNavDetails", runtime)
+        self.assertIn('event.key === "Escape"', runtime)
+        self.assertIn("restoreFocus && containedFocus", runtime)
+        self.assertIn('details.removeAttribute("open")', runtime)
+        self.assertIn("data-product-nav-details", runtime)
 
     def test_portal_header_and_lists_share_the_tablet_breakpoint(self) -> None:
         header = template_source("components/nav/portal_header.html")
@@ -352,6 +517,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         ]
 
         self.assertIn("ui-brand-lockup__mark", logo)
+        self.assertIn("ui-brand-lockup__home", logo)
         self.assertIn("Prenium DTF", logo)
         self.assertIn("via IDS supply", logo)
         self.assertIn("brand_home_url as resolved_brand_home_url", logo)
@@ -531,6 +697,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         )
         product_shell = static_source("css/components/product-shell.css")
         header = template_source("components/nav/portal_header.html")
+        staff_navigation = template_source("components/nav/portal_staff_navigation.html")
 
         summary = template_source("portal/client/partials/order_project_summary.html")
 
@@ -655,6 +822,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('document.createElement("input")', configurator_runtime)
         self.assertIn('targetInput.dispatchEvent(new Event("change"', configurator_runtime)
         self.assertIn('file.type === "application/pdf"', configurator_runtime)
+        self.assertIn("async function isPdfCompatibleIllustrator", configurator_runtime)
+        self.assertIn("file.slice(0, 5).arrayBuffer()", configurator_runtime)
+        self.assertIn(
+            "declaredPdf || await isPdfCompatibleIllustrator(file)",
+            configurator_runtime,
+        )
+        self.assertIn('typeof pdfDocument?.destroy === "function"', configurator_runtime)
+        self.assertIn('typeof loadingTask?.destroy === "function"', configurator_runtime)
         self.assertIn("data-configurator-document-preview", configurator_runtime)
         self.assertIn("pdfJsModuleUrl", configurator_runtime)
         self.assertIn('background: "rgba(0, 0, 0, 0)"', configurator_runtime)
@@ -683,7 +858,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("HTMLIFrameElement", configurator_runtime)
         self.assertNotIn("innerHTML", configurator_runtime)
         self.assertNotIn("Configurateur DTF", header)
-        self.assertIn("Projets B2B", header)
+        self.assertIn("Projets B2B", staff_navigation)
         dashboard = template_source("portal/client/dashboard.html")
         self.assertNotIn("client-dashboard-toolbar", dashboard)
         self.assertNotIn(">Nouvelle commande</a>", dashboard)

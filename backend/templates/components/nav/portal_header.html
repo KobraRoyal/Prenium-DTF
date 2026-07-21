@@ -1,65 +1,55 @@
+{% load portal_tags %}
+{% portal_navigation_access as portal_nav_access %}
 <header class="app-header landing-saas-header product-header">
   <div class="app-main app-nav landing-saas-nav ui-shell-main product-nav">
     <div class="product-nav__brand">
       {% if nav_mode == "client" %}
-      {% include "components/brand/logo.html" with brand_home_href="portal:client-dashboard" brand_home_label="Retour à l'accueil client" %}
-      <span class="portal-top-meta__pill">Portail client</span>
+      {% include "components/brand/logo.html" with brand_home_href="portal:client-dashboard" brand_home_label="Retour à l'espace client" %}
+      <span class="product-nav__workspace"><span aria-hidden="true"></span>Espace client</span>
       {% elif nav_mode == "staff" %}
-      {% include "components/brand/logo.html" with brand_home_href="portal:staff-dashboard" brand_home_label="Retour au tableau de bord atelier" %}
-      <span class="portal-top-meta__pill">Pilotage atelier</span>
+      {% include "components/brand/logo.html" with brand_home_href="portal:staff-dashboard" brand_home_label="Retour à l'Atelier" %}
+      <span class="product-nav__workspace"><span aria-hidden="true"></span>Atelier</span>
       {% else %}
       {% include "components/brand/logo.html" %}
       {% endif %}
     </div>
-    <div class="product-nav__controls">
-      <button
-        type="button"
-        class="ui-btn ui-btn-ghost ui-btn-sm shrink-0 product-menu-button"
-        aria-expanded="false"
-        aria-controls="portal-primary-nav"
-        aria-label="Ouvrir le menu du portail"
-        data-product-menu-toggle
-        data-menu-open-label="Ouvrir le menu du portail"
-        data-menu-close-label="Fermer le menu du portail"
-      >
-        Menu
-      </button>
-      <nav
-        id="portal-primary-nav"
-        class="nav-group landing-saas-nav__links product-nav__links"
-        data-product-menu
-        aria-label="Navigation portail"
-      >
-        <div class="product-nav__primary">
-          {% if nav_mode == "client" %}
-          <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-dashboard' %}is-active{% endif %}" {% if nav_key == 'client-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:client-dashboard' %}">Accueil</a>
-          {% if customer %}
-          <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-orders' %}is-active{% endif %}" {% if nav_key == 'client-orders' %}aria-current="page"{% endif %} href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Commandes</a>
-          {% if b2b_order_projects_globally_enabled %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-gang-sheets' %}is-active{% endif %}" {% if nav_key == 'client-gang-sheets' %}aria-current="page"{% endif %} href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=customer.public_id %}">Gang Sheets</a>{% endif %}
-          {% if customer_membership.can_manage_team or selected_membership.can_manage_team %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-team' %}is-active{% endif %}" {% if nav_key == 'client-team' %}aria-current="page"{% endif %} href="{% url 'portal:client-team' customer_public_id=customer.public_id %}">Équipe</a>{% endif %}
-          <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta {% if nav_key == 'client-checkout' %}is-active{% endif %}" {% if nav_key == 'client-checkout' %}aria-current="page"{% endif %} href="{% url 'portal:client-checkout' customer_public_id=customer.public_id %}">Nouvelle commande</a>
-          {% endif %}
-          {% endif %}
-          {% if nav_mode == "staff" %}
-          <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-dashboard' %}is-active{% endif %}" {% if nav_key == 'staff-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:staff-dashboard' %}">Tableau de bord</a>
-          <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes</a>
-          {% if perms.prospects.view_prospectprofile %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-access-requests' %}is-active{% endif %}" {% if nav_key == 'staff-access-requests' %}aria-current="page"{% endif %} href="{% url 'portal:staff-access-request-list' %}">Accès</a>{% endif %}
-          {% if b2b_order_projects_globally_enabled and perms.b2b_order_projects.view_b2borderproject %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-order-projects' %}is-active{% endif %}" {% if nav_key == 'staff-order-projects' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-project-list' %}">Projets B2B</a>{% endif %}
-          {% if perms.notifications.view_emailtemplate %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-email-templates' %}is-active{% endif %}" {% if nav_key == 'staff-email-templates' %}aria-current="page"{% endif %} href="{% url 'portal:staff-email-template-list' %}">E-mails</a>{% endif %}
-          {% if perms.gang_sheets.configure_gangsheet %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-gang-sheet-settings' %}is-active{% endif %}" {% if nav_key == 'staff-gang-sheet-settings' %}aria-current="page"{% endif %} href="{% url 'portal:staff-gang-sheet-settings' %}">Laize</a>{% endif %}
-          {% endif %}
-        </div>
-        <div class="product-nav__account">
-          {% if request.user.is_authenticated %}
-          <form method="post" action="{% url 'portal:logout' %}" class="inline-nav-form m-0">
-            {% csrf_token %}
-            <button class="ui-btn ui-btn-ghost ui-btn-sm product-nav__logout" type="submit">Déconnexion</button>
-          </form>
-          {% else %}
-          <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__login" href="{% url 'portal:login' %}">Connexion</a>
-          {% endif %}
-        </div>
-      </nav>
-    </div>
+
+    <button
+      type="button"
+      class="ui-btn ui-btn-ghost ui-btn-sm product-menu-button"
+      aria-expanded="false"
+      aria-controls="portal-primary-nav"
+      aria-label="Ouvrir le menu du portail"
+      data-product-menu-toggle
+      data-menu-open-label="Ouvrir le menu du portail"
+      data-menu-close-label="Fermer le menu du portail"
+    >
+      <span class="product-menu-button__icon" aria-hidden="true"><span></span><span></span></span>
+      <span>Menu</span>
+    </button>
+
+    <nav
+      id="portal-primary-nav"
+      class="nav-group landing-saas-nav__links product-nav__links"
+      data-product-menu
+      aria-label="Navigation principale"
+    >
+      <div class="product-nav__body">
+        {% if nav_mode == "client" %}
+          {% include "components/nav/portal_client_navigation.html" %}
+        {% elif nav_mode == "staff" %}
+          {% include "components/nav/portal_staff_navigation.html" %}
+        {% endif %}
+      </div>
+
+      <div class="product-nav__account">
+        <span class="product-nav__section-label">Compte</span>
+        {% if request.user.is_authenticated %}
+          {% include "components/nav/portal_profile_menu.html" %}
+        {% else %}
+        <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__login" href="{% url 'portal:login' %}">Connexion</a>
+        {% endif %}
+      </div>
+    </nav>
   </div>
 </header>

@@ -2,6 +2,7 @@ from django import template
 from django.urls import reverse
 
 from apps.accounts.services.access import AccessScopeService
+from apps.b2b_order_projects.permissions import b2b_order_projects_enabled_for_customer
 from apps.core.public_refs import short_public_ref
 from apps.orders.references import order_client_reference, project_client_reference
 
@@ -43,6 +44,68 @@ def brand_home_url(context) -> str:
     user = context["request"].user
     url_name = access_scope_service.resolve_brand_home_url_name(user)
     return reverse(url_name)
+
+
+@register.simple_tag(takes_context=True)
+def portal_navigation_access(context) -> dict[str, object]:
+    """Expose un contrat de navigation client stable, quel que soit le contexte de vue."""
+    empty = {
+        "can_manage_team": False,
+        "customer_name": "",
+        "customer_public_id": "",
+        "project_creation_enabled": False,
+        "role_label": "",
+    }
+    request = context.get("request")
+    if (
+        context.get("nav_mode") != "client"
+        or request is None
+        or not getattr(request.user, "is_authenticated", False)
+    ):
+        return empty
+
+    customer = context.get("customer")
+    membership = context.get("customer_membership") or context.get("membership")
+    selected_membership = context.get("selected_membership")
+
+    if membership is None:
+        customer_public_id = getattr(customer, "public_id", None)
+        if customer_public_id is None and request.resolver_match is not None:
+            customer_public_id = request.resolver_match.kwargs.get("customer_public_id")
+        if customer_public_id is not None:
+            membership = access_scope_service.get_customer_membership(
+                request.user, customer_public_id
+            )
+            if membership is not None:
+                customer = membership.customer
+
+    if membership is not None:
+        customer = customer or membership.customer
+        role_label = membership.get_role_display()
+        can_manage_team = membership.can_manage_team
+    elif selected_membership is not None:
+        role_label = selected_membership.role_label
+        can_manage_team = selected_membership.can_manage_team
+    else:
+        return empty
+
+    customer_public_id = getattr(customer, "public_id", None) or getattr(
+        selected_membership, "customer_public_id", ""
+    )
+    customer_name = getattr(customer, "name", "") or getattr(
+        selected_membership, "customer_name", ""
+    )
+    return {
+        "can_manage_team": bool(can_manage_team),
+        "customer_name": customer_name,
+        "customer_public_id": customer_public_id,
+        "project_creation_enabled": bool(
+            customer is not None
+            and b2b_order_projects_enabled_for_customer(customer)
+            and customer.b2b_order_projects_enabled
+        ),
+        "role_label": role_label,
+    }
 
 
 @register.filter
@@ -135,4 +198,3 @@ def client_project_refs(project, variant="row"):
         "variant": variant,
         "mono_ids": False,
     }
-

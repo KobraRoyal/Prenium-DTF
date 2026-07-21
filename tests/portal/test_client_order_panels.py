@@ -96,6 +96,8 @@ def test_production_panel_shows_status_history():
     html = response.content.decode()
     assert response.status_code == 200
     assert "Historique des statuts" in html
+    assert "client-order-panel--production" in html
+    assert "Les étapes confirmées par l’atelier" in html
     assert "Commande transmise" in html
     assert "En production" in html
     assert "Lancement atelier" in html

@@ -1,0 +1,86 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Mon compte - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="account-profile-page">
+  <header class="account-profile-head">
+    <div>
+      <h1>Mon compte</h1>
+      <p>Gérez votre identité et les accès associés à votre espace Prenium DTF.</p>
+    </div>
+  </header>
+
+  {% if saved %}
+  <p
+    class="ui-sr-only"
+    role="status"
+    x-data
+    x-init="$nextTick(() => window.preniumToast?.('Vos informations ont été enregistrées.', 'success'))"
+  >Vos informations ont été enregistrées.</p>
+  {% endif %}
+
+  <div class="account-profile-layout">
+    <aside class="account-profile-rail" aria-label="Navigation du compte">
+      <div class="account-profile-identity">
+        <span class="account-profile-card__avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
+        <div>
+          <strong>{% if request.user.first_name or request.user.last_name %}{{ request.user.first_name }} {{ request.user.last_name }}{% else %}Mon compte{% endif %}</strong>
+          <small>
+            {% if nav_mode == "staff" %}Équipe Atelier
+            {% elif selected_membership %}{{ selected_membership.role_label }} · {{ selected_membership.customer_name }}
+            {% else %}Compte client{% endif %}
+          </small>
+        </div>
+      </div>
+
+      <nav class="account-profile-nav" aria-label="Rubriques du compte">
+        <a class="is-active" href="#personal-information" aria-current="page"><span>Informations personnelles</span><span aria-hidden="true">→</span></a>
+        <a href="#connection-email"><span>Connexion</span><span aria-hidden="true">→</span></a>
+        {% if nav_mode == "client" and selected_membership.can_manage_team and customer %}
+        <a href="{% url 'portal:client-team' customer_public_id=customer.public_id %}"><span>Gérer l’équipe</span><span aria-hidden="true">→</span></a>
+        {% endif %}
+      </nav>
+    </aside>
+
+    <section class="account-profile-panel" id="personal-information" aria-labelledby="personal-information-title">
+      <header class="account-profile-panel__head">
+        <div>
+          <h2 id="personal-information-title">Informations personnelles</h2>
+          <p>Ces informations permettent à l’équipe d’identifier clairement votre contact.</p>
+        </div>
+      </header>
+
+      <form
+        method="post"
+        class="ui-form-stack account-profile-form"
+        data-submit-loading
+        x-data="{ dirty: false }"
+        x-on:input="dirty = true"
+        x-on:submit="dirty = false"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="space" value="{{ nav_mode }}">
+        <div class="account-profile-form__grid">
+          {% include "components/forms/field_group.html" with id="id_first_name" name="first_name" label="Prénom" type="text" autocomplete="given-name" value=form.first_name.value|default:"" error=form.first_name.errors.0 show_label=1 %}
+          {% include "components/forms/field_group.html" with id="id_last_name" name="last_name" label="Nom" type="text" autocomplete="family-name" value=form.last_name.value|default:"" error=form.last_name.errors.0 show_label=1 %}
+        </div>
+
+        <div class="account-profile-connection" id="connection-email">
+          <div class="account-profile-connection__copy">
+            <span class="account-profile-email__icon" aria-hidden="true">@</span>
+            <span><strong>E-mail de connexion</strong><small>Utilisé pour vous authentifier à votre espace.</small></span>
+          </div>
+          <div class="account-profile-email" aria-label="E-mail de connexion non modifiable">
+            <span>{{ request.user.email }}</span>
+            <span class="account-profile-email__status"><span aria-hidden="true">●</span> Non modifiable</span>
+          </div>
+          <p>Pour modifier cet e-mail, contactez l’équipe IDS afin de sécuriser le changement d’accès.</p>
+        </div>
+
+        {% include "components/forms/form_actions.html" with primary_label="Enregistrer mes informations" primary_class_full="ui-btn ui-btn-primary ui-btn-wide" primary_disabled_until_dirty=1 htmx_disable=1 %}
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

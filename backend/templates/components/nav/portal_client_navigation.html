@@ -1,0 +1,8 @@
+<span class="product-nav__section-label">Navigation</span>
+<div class="product-nav__primary" aria-label="Espace client">
+  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-dashboard' %}is-active{% endif %}" {% if nav_key == 'client-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:client-dashboard' %}">Dashboard</a>
+  {% if portal_nav_access.customer_public_id %}
+  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'client-orders' %}is-active{% endif %}" {% if nav_key == 'client-orders' %}aria-current="page"{% endif %} href="{% url 'portal:client-order-list' customer_public_id=portal_nav_access.customer_public_id %}">Commandes</a>
+  {% endif %}
+</div>
+{% include "components/nav/portal_client_create_menu.html" %}

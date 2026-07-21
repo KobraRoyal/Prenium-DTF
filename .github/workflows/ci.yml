@@ -26,6 +26,9 @@ jobs:
           cache: "pip"
           cache-dependency-path: backend/requirements/dev.txt
 
+      - name: Validate Codex agent contracts
+        run: python scripts/check_codex_agents.py
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip

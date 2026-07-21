@@ -5,6 +5,8 @@ if (root) {
   let state = JSON.parse(initialNode.textContent);
   let selectedId = null;
   let busy = false;
+  let dirty = false;
+  let zoom = 1;
   let pollTimer = null;
   let galleryWasPending = qPendingGallery();
   const canEdit = root.dataset.canEdit === "true";
@@ -14,6 +16,31 @@ if (root) {
   const qa = (selector) => Array.from(root.querySelectorAll(selector));
   const round = (value, digits = 2) => Number(Number(value).toFixed(digits));
   const selected = () => state.items.find((item) => item.public_id === selectedId);
+
+  function setDirty(value = true) {
+    dirty = value;
+    root.dataset.dirty = String(dirty);
+  }
+
+  function renderZoom() {
+    const stage = q("[data-editor-panel='canvas']");
+    const availableWidth = Math.max(320, (stage?.clientWidth || 0) - 64);
+    const baseWidth = Math.min(700, availableWidth);
+    canvas.style.width = `${Math.round(baseWidth * zoom)}px`;
+    q("[data-zoom-value]").textContent = `${Math.round(zoom * 100)} %`;
+  }
+
+  function setMobilePanel(panelName) {
+    qa("[data-mobile-panel-tab]").forEach((tab) => {
+      const active = tab.dataset.mobilePanelTab === panelName;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+    });
+    qa("[data-editor-panel]").forEach((panel) => {
+      panel.classList.toggle("is-mobile-active", panel.dataset.editorPanel === panelName);
+    });
+    if (panelName === "canvas") window.requestAnimationFrame(renderZoom);
+  }
 
   function qPendingGallery() {
     return root?.querySelector("[data-asset-list]")?.dataset.hasPending === "true";
@@ -69,6 +96,7 @@ if (root) {
   function render() {
     refreshCalculatedState();
     canvas.style.aspectRatio = `${state.width_mm} / ${state.height_mm}`;
+    renderZoom();
     canvas.innerHTML = "";
     const issueIds = new Set(state.issues.flatMap((issue) => issue.item_public_ids));
     state.items.forEach((item) => {
@@ -86,7 +114,7 @@ if (root) {
       image.src = item.preview_url;
       image.alt = "";
       image.draggable = false;
-      image.style.transform = `rotate(${item.rotation}deg)`;
+      image.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
       if ([90, 270].includes(Number(item.rotation))) {
         image.style.width = `${(item.width_mm / item.height_mm) * 100}%`;
         image.style.height = `${(item.height_mm / item.width_mm) * 100}%`;
@@ -113,6 +141,7 @@ if (root) {
     renderAssetGallery();
     renderInspector();
     renderIssues();
+    renderWorkflow();
     renderStatus();
   }
 
@@ -125,6 +154,8 @@ if (root) {
     q("[data-metric-usage]").textContent = `${round(usage, 1)} %`;
     q("[data-metric-surface]").textContent = `${Number(state.surface_sqm).toFixed(4)} m²`;
     q("[data-metric-price]").textContent = `${Number(state.estimated_price_eur).toFixed(2)} €`;
+    q("[data-canvas-format]").textContent = `${round(state.width_mm / 10, 1)} × ${round(state.height_mm / 10, 1)} cm`;
+    q("[data-mobile-issue-count]").textContent = state.issues.length;
   }
 
   function renderAssetGallery() {
@@ -154,6 +185,7 @@ if (root) {
 
   function renderIssues() {
     const list = q("[data-issues-list]");
+    root.dataset.hasIssues = String(state.issues.length > 0);
     if (!state.issues.length) {
       list.innerHTML = '<li class="is-ok">Aucune anomalie de placement.</li>';
       return;
@@ -167,6 +199,33 @@ if (root) {
       .join("");
   }
 
+  function renderWorkflow() {
+    const hasProject = root.dataset.hasProject === "true";
+    const status = state.status;
+    const steps = {
+      files: "complete",
+      composition: ["ready", "validated"].includes(status) ? "complete" : "active",
+      validation:
+        status === "validated"
+          ? "complete"
+          : ["rendering", "ready", "render_failed"].includes(status)
+            ? "active"
+            : "pending",
+      order: hasProject ? "complete" : status === "validated" ? "active" : "pending",
+    };
+    const stepNumbers = { files: "1", composition: "2", validation: "3", order: "4" };
+    qa("[data-workflow-step]").forEach((node) => {
+      const step = node.dataset.workflowStep;
+      const stepState = steps[step];
+      node.classList.toggle("is-active", stepState === "active");
+      node.classList.toggle("is-complete", stepState === "complete");
+      if (stepState === "active") node.setAttribute("aria-current", "step");
+      else node.removeAttribute("aria-current");
+      node.querySelector(":scope > span").textContent =
+        stepState === "complete" ? "✓" : stepNumbers[step];
+    });
+  }
+
   function renderStatus() {
     const labels = {
       draft: "Brouillon modifiable",
@@ -175,8 +234,20 @@ if (root) {
       validated: "Planche validée pour la production",
       render_failed: state.render_error || "Le rendu a échoué",
     };
-    q("[data-status-text]").textContent = busy ? "Enregistrement…" : labels[state.status] || state.status;
-    q("[data-issue-count]").textContent = state.issues.length ? `· ${state.issues.length} anomalie${state.issues.length > 1 ? "s" : ""}` : "· placement valide";
+    q("[data-status-text]").textContent = busy
+      ? "Enregistrement en cours…"
+      : dirty
+        ? "Modifications non enregistrées"
+        : labels[state.status] || state.status;
+    q("[data-status-detail]").textContent = dirty
+      ? "Enregistrez pour sécuriser cette version."
+      : state.status === "validated"
+        ? "La composition est verrouillée et prête pour la commande."
+        : "Toutes les modifications sont enregistrées.";
+    q("[data-issue-count]").textContent = state.issues.length
+      ? `${state.issues.length} anomalie${state.issues.length > 1 ? "s" : ""}`
+      : "Placement valide";
+    root.dataset.dirty = String(dirty);
     root.dataset.sheetStatus = state.status;
     const locked = ["rendering", "validated"].includes(state.status);
     qa(
@@ -185,7 +256,9 @@ if (root) {
       const assetPending = control.matches("[data-add-asset]") && control.dataset.assetReady !== "true";
       control.disabled = !canEdit || locked || assetPending;
     });
-    q("[data-auto-place]").disabled = !canEdit || locked || state.items.length === 0;
+    q("[data-save-layout]").disabled = !canEdit || locked || !dirty || busy;
+    q("[data-save-layout]").textContent = busy ? "Enregistrement…" : dirty ? "Enregistrer" : "Enregistré";
+    q("[data-auto-place]").disabled = !canEdit || locked || state.items.length === 0 || busy;
     q("[data-create-grid]").disabled = !canEdit || locked || !selected();
     q("[data-download-preview]").hidden = !["ready", "validated"].includes(state.status);
     q("[data-validate-sheet]").disabled = !canEdit || state.status !== "ready" || state.issues.length > 0;
@@ -223,6 +296,7 @@ if (root) {
         item.x_mm = round(start.x + (moveEvent.clientX - startX) * mmPerPxX);
         item.y_mm = round(start.y + (moveEvent.clientY - startY) * mmPerPxY);
       }
+      setDirty();
       render();
     };
     const end = () => {
@@ -275,6 +349,7 @@ if (root) {
     state.estimated_price_eur = payload.estimated_price_eur;
     state.issues = payload.issues;
     state.status = "draft";
+    setDirty(false);
     render();
     if (notify) window.preniumToast?.("Brouillon enregistré.", "success");
   }
@@ -282,6 +357,7 @@ if (root) {
   async function reloadState() {
     const payload = await request(root.dataset.stateUrl);
     state = payload.sheet;
+    setDirty(false);
     if (!state.items.some((item) => item.public_id === selectedId)) selectedId = null;
     render();
   }
@@ -344,6 +420,23 @@ if (root) {
 
   q("[data-asset-search]").addEventListener("input", filterAssetGallery);
 
+  qa("[data-mobile-panel-tab]").forEach((tab) => {
+    tab.addEventListener("click", () => setMobilePanel(tab.dataset.mobilePanelTab));
+  });
+
+  q("[data-zoom-out]").addEventListener("click", () => {
+    zoom = Math.max(0.5, round(zoom - 0.25, 2));
+    renderZoom();
+  });
+  q("[data-zoom-reset]").addEventListener("click", () => {
+    zoom = 1;
+    renderZoom();
+  });
+  q("[data-zoom-in]").addEventListener("click", () => {
+    zoom = Math.min(1.5, round(zoom + 0.25, 2));
+    renderZoom();
+  });
+
   root.addEventListener("htmx:afterSwap", (event) => {
     if (!event.target.matches("[data-asset-list]")) return;
     renderAssetGallery();
@@ -361,7 +454,14 @@ if (root) {
   q("[data-render-sheet]").addEventListener("click", () => runAction("render", { saveFirst: true }));
   q("[data-validate-sheet]").addEventListener("click", () => runAction("validate"));
   q("[data-create-order-project]")?.addEventListener("click", () => runAction("create-order-project"));
-  q("[data-rotate-item]").addEventListener("click", () => { const item = selected(); if (item) { item.rotation = (Number(item.rotation) + 90) % 360; render(); } });
+  q("[data-rotate-item]").addEventListener("click", () => {
+    const item = selected();
+    if (item) {
+      item.rotation = (Number(item.rotation) + 90) % 360;
+      setDirty();
+      render();
+    }
+  });
   async function duplicateSelected() {
     const item = selected(); if (!item) return;
     try {
@@ -375,6 +475,7 @@ if (root) {
   async function deleteSelected() {
     const item = selected(); if (!item) return;
     try {
+      if (dirty) await saveLayout({ notify: false });
       const url = root.dataset.itemUrlTemplate.replace("00000000-0000-0000-0000-000000000000", item.public_id).replace("ACTION", "delete");
       await request(url, { method: "POST" }); selectedId = null; await reloadState(); window.preniumToast?.("Occurrence supprimée.", "success");
     } catch (error) { window.preniumToast?.(error.message, "error"); }
@@ -414,6 +515,7 @@ if (root) {
       } else {
         item[key] = next;
       }
+      setDirty();
       render();
     });
   });
@@ -428,6 +530,7 @@ if (root) {
       duplicateSelected();
     } else if (event.key.toLowerCase() === "r" && selected()) {
       selected().rotation = (Number(selected().rotation) + 90) % 360;
+      setDirty();
       render();
     } else if ((event.key === "Delete" || event.key === "Backspace") && selected()) {
       event.preventDefault();
@@ -438,7 +541,13 @@ if (root) {
     }
   });
 
-  window.addEventListener("resize", render);
+  window.addEventListener("beforeunload", (event) => {
+    if (!dirty) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+  window.addEventListener("resize", renderZoom);
+  setMobilePanel("canvas");
   render();
   if (state.status === "rendering") startPolling();
 }

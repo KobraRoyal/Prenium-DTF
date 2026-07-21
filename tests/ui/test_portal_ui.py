@@ -80,7 +80,10 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
     detail_html = detail_response.content.decode()
+    assert "client-order-detail" in detail_html
     assert "client-order-summary" in detail_html
+    assert "client-order-summary__facts" in detail_html
+    assert "Commande soumise" in detail_html
     assert 'role="tablist"' in detail_html
     assert "client-order-panel" in detail_html
     assert "N° IDS" in detail_html
@@ -88,11 +91,127 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     assert "Visuels" in detail_html
     assert "Contrôle" not in detail_html
     assert uploads_panel_response.status_code == 200
-    assert "Visuels transmis" in uploads_panel_response.content.decode()
+    uploads_html = uploads_panel_response.content.decode()
+    assert "Visuels transmis" in uploads_html
+    assert "client-order-panel--uploads" in uploads_html
     assert inspection_panel_response.status_code == 200
     assert production_panel_response.status_code == 200
     assert shipping_panel_response.status_code == 200
     assert billing_panel_response.status_code == 200
+
+
+@pytest.mark.django_db
+@override_settings(B2B_ORDER_PROJECTS_ENABLED=True)
+def test_client_navigation_only_shows_planche_tools_for_eligible_customer():
+    user = get_user_model().objects.create_user(
+        email="client-navigation@example.com", password="pass"
+    )
+    customer = Customer.objects.create(name="Navigation client", b2b_order_projects_enabled=False)
+    CustomerMembership.objects.create(
+        customer=customer, user=user, role=CustomerMembership.Role.OWNER
+    )
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="15.00",
+        total_amount="15.00",
+    )
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+
+    disabled_html = client.get(reverse("portal:client-dashboard")).content.decode()
+    assert "Dashboard" in disabled_html
+    assert "Créer une commande" in disabled_html
+    assert "Planches DTF" not in disabled_html
+    assert "Générer une Gang Sheet" not in disabled_html
+
+    customer.b2b_order_projects_enabled = True
+    customer.save(update_fields=["b2b_order_projects_enabled"])
+
+    enabled_html = client.get(reverse("portal:client-dashboard")).content.decode()
+    assert "Planches DTF" not in enabled_html
+    assert "À partir de fichiers" in enabled_html
+    assert "Générer une Gang Sheet" in enabled_html
+    assert "product-profile__trigger" in enabled_html
+    assert "Mon compte" in enabled_html
+    assert "Propriétaire · Navigation client" in enabled_html
+    assert "Gérer l’équipe" in enabled_html
+    assert "Ouvrir l’Atelier" not in enabled_html
+    assert "Se déconnecter" in enabled_html
+
+    owner_urls = [
+        reverse("portal:client-dashboard"),
+        reverse(
+            "portal:client-order-list",
+            kwargs={"customer_public_id": customer.public_id},
+        ),
+        reverse(
+            "portal:client-order-project-create",
+            kwargs={"customer_public_id": customer.public_id},
+        ),
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        ),
+        reverse(
+            "portal:client-gang-sheet-list-create",
+            kwargs={"customer_public_id": customer.public_id},
+        ),
+    ]
+    for url in owner_urls:
+        response = client.get(url)
+        assert response.status_code == 200
+        page_html = response.content.decode()
+        assert page_html.count("Gérer l’équipe") == 1
+        assert "Propriétaire · Navigation client" in page_html
+        assert "À partir de fichiers" in page_html
+        assert "Générer une Gang Sheet" in page_html
+
+    user.is_staff = True
+    user.save(update_fields=["is_staff"])
+    user.user_permissions.add(Permission.objects.get(codename="access_staff_portal"))
+    client.logout()
+    assert client.login(email=user.email, password="pass")
+
+    hybrid_html = client.get(reverse("portal:client-dashboard")).content.decode()
+    assert "Ouvrir l’Atelier" in hybrid_html
+    assert "Passer au pilotage opérationnel" in hybrid_html
+
+
+@pytest.mark.django_db
+def test_staff_navigation_groups_only_authorized_secondary_tools():
+    staff_user = get_user_model().objects.create_user(
+        email="staff-navigation@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    staff_user.user_permissions.add(Permission.objects.get(codename="access_staff_portal"))
+    client = Client()
+    assert client.login(email=staff_user.email, password="pass")
+
+    limited_html = client.get(reverse("portal:staff-dashboard")).content.decode()
+    assert "Dashboard" in limited_html
+    assert "Commandes" in limited_html
+    assert "Mon compte" in limited_html
+    assert "Équipe Atelier" in limited_html
+    assert "Mes informations" in limited_html
+    assert "Voir le site" not in limited_html
+    assert "Gérer l’équipe" not in limited_html
+    assert "Outils Atelier" not in limited_html
+    assert "Modèles d’e-mails" not in limited_html
+
+    staff_user.user_permissions.add(Permission.objects.get(codename="view_emailtemplate"))
+
+    authorized_html = client.get(reverse("portal:staff-dashboard")).content.decode()
+    assert "Outils Atelier" in authorized_html
+    assert "Modèles d’e-mails" in authorized_html
+    assert "Demandes d’accès" not in authorized_html
+    assert "Réglages de laize" not in authorized_html
 
 
 @pytest.mark.django_db

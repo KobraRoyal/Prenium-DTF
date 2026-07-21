@@ -1,62 +1,83 @@
 {% extends "portal/layout.html" %}
 
-{% block title %}Gang Sheet Generator Pro — Prenium DTF{% endblock %}
+{% block title %}Mes Gang Sheets — Prenium DTF{% endblock %}
 
 {% block portal_content %}
 <div class="gang-sheet-page">
-  {% include "components/portal/page_head.html" with kicker="Studio d’imposition DTF" title="Gang Sheet Generator Pro" subtitle="Importez vos visuels, composez sur la laize atelier et créez votre projet de commande uniquement lorsque la planche est validée." %}
-
-  <nav class="gang-workflow" aria-label="Étapes de création d’une planche">
-    <ol>
-      <li class="is-active" aria-current="step"><span>01</span><div><strong>Créer</strong><small>Nouvelle planche</small></div></li>
-      <li><span>02</span><div><strong>Importer</strong><small>Galerie analysée</small></div></li>
-      <li><span>03</span><div><strong>Composer</strong><small>Imposition & contrôle</small></div></li>
-      <li><span>04</span><div><strong>Commander</strong><small>Après validation</small></div></li>
-    </ol>
-  </nav>
-
-  {% if form_error %}<div class="alert alert--danger" role="alert">{{ form_error }}</div>{% endif %}
-
-  <section class="card gang-sheet-create-card" aria-labelledby="new-gang-sheet-title">
-    <div class="gang-sheet-create-card__intro">
-      <p class="product-eyebrow">Démarrer une composition</p>
-      <h2 id="new-gang-sheet-title">Créer une planche autonome</h2>
-      <p>Vous n’avez pas besoin de créer un projet au préalable. La largeur est verrouillée par l’atelier ; la hauteur, la surface et le prix s’ajustent pendant l’imposition.</p>
-      <ul class="gang-sheet-feature-list" aria-label="Fonctions disponibles">
-        <li><span aria-hidden="true">✓</span> Import et analyse des fichiers</li>
-        <li><span aria-hidden="true">✓</span> Quantités, rangées et colonnes</li>
-        <li><span aria-hidden="true">✓</span> Placement automatique optimisé</li>
-      </ul>
+  <header class="gang-library-head">
+    <div>
+      <h1>Mes Gang Sheets</h1>
+      <p>Créez, reprenez et commandez vos compositions DTF depuis un seul espace.</p>
     </div>
-    <form method="post" class="ui-form-stack gang-sheet-create-card__form">
-      {% csrf_token %}
-      {% include "components/forms/field_group.html" with id="gang-sheet-name" name="name" label="Nom de la planche" type="text" placeholder="Ex. Logos équipe — série juillet" show_label=1 required=1 %}
-      <p class="gang-form-hint">Un brouillon est créé immédiatement. Vous pourrez ensuite importer jusqu’à 20 fichiers à la fois.</p>
-      {% include "components/forms/form_actions.html" with primary_label="Créer et ouvrir le studio" %}
-    </form>
-  </section>
+    {% if can_edit %}
+    <button class="ui-btn ui-btn-primary gang-library-head__create" type="button" data-dialog-open="create-gang-sheet-dialog" aria-haspopup="dialog">
+      <span aria-hidden="true">+</span> Nouvelle planche
+    </button>
+    {% else %}
+    <span class="product-pill">Consultation seule</span>
+    {% endif %}
+  </header>
 
-  <section class="gang-sheet-library" aria-labelledby="gang-sheet-library-title">
-    <div class="gang-sheet-section-head">
-      <div>
-        <p class="product-eyebrow">Bibliothèque</p>
-        <h2 id="gang-sheet-library-title">Mes planches</h2>
-      </div>
+  <section
+    class="gang-sheet-library"
+    aria-labelledby="gang-sheet-library-title"
+    x-data="{
+      filter: 'all',
+      query: '',
+      matches(card) {
+        const matchesFilter = this.filter === 'all' || card.dataset.statusGroup === this.filter;
+        return matchesFilter && card.dataset.search.includes(this.query.trim().toLowerCase());
+      },
+      hasResults() {
+        return Array.from(this.$refs.grid.querySelectorAll('[data-gang-sheet-card]')).some((card) => this.matches(card));
+      }
+    }"
+  >
+    <div class="gang-sheet-library__title-row">
+      <h2 id="gang-sheet-library-title">Bibliothèque</h2>
       <span class="product-pill">{{ sheets|length }} planche{{ sheets|length|pluralize }}</span>
     </div>
-    <div class="gang-sheet-card-grid">
+
+    {% if sheets %}
+    <div class="gang-sheet-toolbar" aria-label="Filtrer les Gang Sheets">
+      <div class="gang-sheet-filters" role="group" aria-label="Filtrer par statut">
+        <button type="button" x-on:click="filter = 'all'" x-bind:aria-pressed="filter === 'all'" x-bind:class="{ 'is-active': filter === 'all' }">Toutes</button>
+        <button type="button" x-on:click="filter = 'draft'" x-bind:aria-pressed="filter === 'draft'" x-bind:class="{ 'is-active': filter === 'draft' }">Brouillons</button>
+        <button type="button" x-on:click="filter = 'processing'" x-bind:aria-pressed="filter === 'processing'" x-bind:class="{ 'is-active': filter === 'processing' }">En traitement</button>
+        <button type="button" x-on:click="filter = 'validated'" x-bind:aria-pressed="filter === 'validated'" x-bind:class="{ 'is-active': filter === 'validated' }">Validées</button>
+        <button type="button" x-on:click="filter = 'ordered'" x-bind:aria-pressed="filter === 'ordered'" x-bind:class="{ 'is-active': filter === 'ordered' }">Commandées</button>
+      </div>
+      <label class="gang-sheet-search">
+        <span class="ui-sr-only">Rechercher une Gang Sheet</span>
+        <span aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Rechercher une planche" x-model.debounce.150ms="query" autocomplete="off">
+      </label>
+    </div>
+    {% endif %}
+
+    <div class="gang-sheet-card-grid" x-ref="grid">
       {% for sheet in sheets %}
-      <article class="gang-sheet-card">
-        <a class="gang-sheet-card__link" href="{% url 'portal:client-gang-sheet-editor' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}">
-          <div class="gang-sheet-card__preview" aria-hidden="true">
+      <article
+        class="gang-sheet-card"
+        data-gang-sheet-card
+        data-status-group="{% if sheet.order_id %}ordered{% elif sheet.status == 'validated' %}validated{% elif sheet.status == 'draft' %}draft{% else %}processing{% endif %}"
+        data-search="{{ sheet.name|lower }} {% if sheet.project %}{{ sheet.project.project_number|lower }}{% endif %} {{ sheet.get_status_display|lower }}"
+        x-show="matches($el)"
+      >
+        <a class="gang-sheet-card__link" href="{% if sheet.order_id %}{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=sheet.order.public_id %}{% else %}{% url 'portal:client-gang-sheet-editor' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}{% endif %}">
+          <div class="gang-sheet-card__preview">
             <span class="gang-sheet-card__format">{{ sheet.width_mm|floatformat:0 }} × {{ sheet.height_mm|floatformat:0 }} mm</span>
+            {% if sheet.preview_file %}
+            <img src="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}?display=inline" alt="Aperçu de la Gang Sheet {{ sheet.name }}" loading="lazy">
+            {% else %}
             <div class="gang-sheet-card__mockup"><i></i><i></i><i></i><i></i><i></i></div>
+            {% endif %}
             <span class="gang-sheet-card__preview-label">{% if sheet.preview_file %}Aperçu disponible{% else %}Composition en cours{% endif %}</span>
           </div>
           <div class="gang-sheet-card__body">
             <div class="gang-sheet-card__status-row">
               <span class="gang-status-badge gang-status-badge--{{ sheet.status }}">{{ sheet.get_status_display }}</span>
-              <span>Ouvrir le studio <span aria-hidden="true">→</span></span>
+              <span>Modifiée le {{ sheet.updated_at|date:"d/m/Y" }}</span>
             </div>
             <h3>{{ sheet.name }}</h3>
             <small>{% if sheet.project %}Projet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</small>
@@ -64,20 +85,74 @@
               <div><dt>Surface</dt><dd>{{ sheet.surface_sqm }} m²</dd></div>
               <div><dt>Estimation HT</dt><dd>{{ sheet.estimated_price_eur }} €</dd></div>
             </dl>
+            <span class="gang-sheet-card__primary">
+              {% if sheet.order_id %}Voir la commande
+              {% elif sheet.status == 'validated' %}Commander
+              {% elif sheet.status == 'ready' %}Finaliser la planche
+              {% elif sheet.status == 'rendering' %}Suivre le rendu
+              {% elif sheet.status == 'render_failed' %}Corriger le rendu
+              {% else %}Reprendre la composition{% endif %}
+              <span aria-hidden="true">→</span>
+            </span>
           </div>
         </a>
-        <div class="gang-sheet-card__actions">
-          {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="list" label="Supprimer la planche" %}
-        </div>
+        {% if sheet.can_delete and can_edit %}
+        <details class="gang-sheet-card__menu">
+          <summary aria-label="Actions pour la planche {{ sheet.name }}" title="Autres actions"><span aria-hidden="true">•••</span></summary>
+          <div class="gang-sheet-card__menu-panel">
+            {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="list" label="Supprimer" button_class="gang-sheet-card__delete-action" %}
+          </div>
+        </details>
+        {% endif %}
       </article>
       {% empty %}
       <div class="empty-state gang-sheet-empty">
         <span class="gang-sheet-empty__mark" aria-hidden="true">GS</span>
-        <h3>Votre studio est prêt</h3>
-        <p>Créez votre première planche ci-dessus, puis importez directement vos fichiers dans sa galerie privée.</p>
+        <h3>Créez votre première Gang Sheet</h3>
+        <p>Importez vos fichiers, composez votre planche et préparez votre commande depuis le studio privé.</p>
+        {% if can_edit %}<button class="ui-btn ui-btn-primary" type="button" data-dialog-open="create-gang-sheet-dialog" aria-haspopup="dialog">Nouvelle planche</button>{% endif %}
       </div>
       {% endfor %}
+      {% if sheets %}
+      <div class="empty-state gang-sheet-empty gang-sheet-empty--filtered" x-show="!hasResults()" x-cloak>
+        <h3>Aucune planche trouvée</h3>
+        <p>Modifiez la recherche ou réinitialisez les filtres pour retrouver vos Gang Sheets.</p>
+        <button class="ui-btn ui-btn-secondary" type="button" x-on:click="filter = 'all'; query = ''">Réinitialiser les filtres</button>
+      </div>
+      {% endif %}
     </div>
   </section>
+
+  {% if can_edit %}
+  <dialog
+    class="b2b-confirm-dialog gang-sheet-create-dialog"
+    id="create-gang-sheet-dialog"
+    aria-labelledby="new-gang-sheet-title"
+    aria-describedby="new-gang-sheet-description"
+    {% if form_error %}data-dialog-auto-open{% endif %}
+  >
+    <form method="post" class="b2b-confirm-dialog__shell gang-sheet-create-dialog__shell">
+      {% csrf_token %}
+      <header class="gang-sheet-create-dialog__head">
+        <div>
+          <span class="gang-sheet-create-dialog__mark" aria-hidden="true">GS</span>
+          <div>
+            <h2 id="new-gang-sheet-title">Nouvelle Gang Sheet</h2>
+            <p id="new-gang-sheet-description">Donnez un nom à votre composition. Le studio s’ouvrira immédiatement.</p>
+          </div>
+        </div>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+      </header>
+      <div class="gang-sheet-create-dialog__body ui-form-stack">
+        {% include "components/forms/field_group.html" with id="gang-sheet-name" name="name" label="Nom de la planche" type="text" placeholder="Ex. Logos équipe — série juillet" show_label=1 required=1 autofocus=1 error=form_error %}
+        <p class="gang-form-hint">Vous pourrez importer jusqu’à 20 fichiers à la fois, puis ajuster les quantités et le placement.</p>
+      </div>
+      <footer class="b2b-confirm-dialog__actions gang-sheet-create-dialog__actions">
+        <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+        <button class="ui-btn ui-btn-primary" type="submit">Créer et ouvrir le studio</button>
+      </footer>
+    </form>
+  </dialog>
+  {% endif %}
 </div>
 {% endblock %}

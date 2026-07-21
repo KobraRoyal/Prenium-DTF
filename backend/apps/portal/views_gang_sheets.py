@@ -496,7 +496,7 @@ class ClientGangSheetPreviewDownloadView(ClientGangSheetMixin, View):
         response = FileResponse(
             sheet.preview_file,
             content_type="image/png",
-            as_attachment=True,
+            as_attachment=request.GET.get("display") != "inline",
             filename=f"{sheet.name[:80]}-apercu.png",
         )
         response["Cache-Control"] = "private, no-store"

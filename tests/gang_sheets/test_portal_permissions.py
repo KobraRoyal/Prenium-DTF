@@ -30,10 +30,87 @@ def test_gang_sheet_library_uses_the_shared_portal_design_system(client):
 
     assert response.status_code == 200
     content = response.content.decode()
-    assert "page-head page-head--premium" in content
-    assert 'class="gang-workflow"' in content
-    assert "Créer une planche autonome" in content
+    assert "Mes Gang Sheets" in content
+    assert 'class="gang-library-head"' in content
+    assert 'class="gang-sheet-toolbar"' not in content
+    assert 'id="create-gang-sheet-dialog"' in content
+    assert 'data-dialog-open="create-gang-sheet-dialog"' in content
+    assert "Nouvelle planche" in content
     assert "Créer et ouvrir le studio" in content
+    assert 'class="gang-workflow"' not in content
+    assert "Créer une planche autonome" not in content
+
+
+def test_gang_sheet_library_exposes_filters_and_a_scoped_inline_preview(client):
+    user, customer, _project = create_customer_scope(email="studio-preview@example.com")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Collection été")
+    sheet.preview_file = SimpleUploadedFile(
+        "preview.png",
+        b"preview",
+        content_type="image/png",
+    )
+    sheet.save(update_fields=["preview_file", "updated_at"])
+    client.force_login(user)
+    preview_url = reverse(
+        "portal:client-gang-sheet-preview-download",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+
+    library = client.get(
+        reverse(
+            "portal:client-gang-sheet-list-create",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+    )
+
+    assert library.status_code == 200
+    content = library.content.decode()
+    assert 'class="gang-sheet-toolbar"' in content
+    assert "Brouillons" in content
+    assert "En traitement" in content
+    assert "Validées" in content
+    assert "Commandées" in content
+    assert 'data-status-group="draft"' in content
+    assert f"{preview_url}?display=inline" in content
+    assert "Reprendre la composition" in content
+    assert "Supprimer la planche" not in content
+    assert 'aria-label="Actions pour la planche Collection été"' in content
+
+    inline_preview = client.get(f"{preview_url}?display=inline")
+    assert inline_preview.status_code == 200
+    assert inline_preview["Cache-Control"] == "private, no-store"
+    assert inline_preview["Content-Disposition"].startswith("inline;")
+
+
+def test_gang_sheet_inline_preview_remains_customer_scoped(client):
+    owner, customer, _project = create_customer_scope(email="preview-owner@example.com")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=owner, name="Privée")
+    sheet.preview_file = SimpleUploadedFile(
+        "private-preview.png",
+        b"preview",
+        content_type="image/png",
+    )
+    sheet.save(update_fields=["preview_file", "updated_at"])
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="preview-outsider@example.com"
+    )
+    client.force_login(outsider)
+
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-preview-download",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {"display": "inline"},
+    )
+
+    assert response.status_code == 404
 
 
 def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
@@ -52,14 +129,18 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     content = response.content.decode()
     assert 'aria-label="Progression de la planche"' in content
     assert 'aria-current="step"' in content
-    assert "Galerie visuelle" in content
+    assert "Vos visuels" in content
     assert "Plan de travail" in content
-    assert "Fichier de production protégé" in content
+    assert "Contrôle de production" in content
+    assert "Rendu de production sécurisé" in content
+    assert 'data-mobile-panel-tab="canvas"' in content
+    assert "data-zoom-reset" in content
+    assert "data-status-detail" in content
     assert 'id="gang-asset-dialog"' in content
     assert 'data-file-picker-dialog="gang-asset-dialog"' in content
     assert 'name="files" multiple' in content
     assert "Vérifier l’import" in content
-    assert "Supprimer la planche" in content
+    assert "gang-editor__delete" in content
     assert "Supprimer cette Gang Sheet ?" in content
 
 
@@ -430,7 +511,7 @@ def test_pending_gallery_refreshes_itself_and_exposes_visual_when_analysis_is_re
     assert 'data-has-pending="false"' in ready_content
     assert 'hx-trigger="every 2s"' not in ready_content
     assert 'data-asset-ready="true"' in ready_content
-    assert "Ajouter + placer" in ready_content
+    assert "Placer sur la planche" in ready_content
 
 
 def test_owner_can_remove_an_unused_visual_from_gallery_with_htmx(client):
