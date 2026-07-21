@@ -31,10 +31,17 @@
     min-width: 0;
   }
 
+  .ui-brand-lockup__home,
+  .ui-brand-lockup__home:hover {
+    min-height: 2.75rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
   .ui-brand-lockup__mark {
     display: inline-grid;
-    width: 2.4rem;
-    height: 2.4rem;
+    width: 2.75rem;
+    height: 2.75rem;
     flex: 0 0 auto;
     place-items: center;
     border: 2px solid #0b0b0b;
@@ -65,7 +72,6 @@
   }
 
   .ui-brand-lockup__subtitle {
-    margin: 0;
     color: #6f675a;
     font-size: 0.68rem;
     font-weight: 800;

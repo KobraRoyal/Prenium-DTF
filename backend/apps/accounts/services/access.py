@@ -17,6 +17,10 @@ class MembershipScope:
     def can_manage_team(self) -> bool:
         return self.role in {CustomerMembership.Role.OWNER, CustomerMembership.Role.ADMIN}
 
+    @property
+    def role_label(self) -> str:
+        return CustomerMembership.Role(self.role).label
+
     def to_dict(self) -> dict[str, str | bool]:
         return {
             "membership_public_id": str(self.membership_public_id),

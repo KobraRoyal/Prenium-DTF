@@ -6,6 +6,21 @@
 
 ---
 
+## Mise à jour — 21 juillet 2026
+
+La navigation authentifiée client et Atelier utilise désormais un shell SaaS commun plus sobre. Les entrées principales restent visibles, les fonctions Atelier secondaires sont regroupées sous `Outils`, l’action `Créer une commande` est distinguée des liens de consultation et le compte connecté est identifiable.
+
+Points contrôlés :
+
+- [x] état actif avec `aria-current="page"` ;
+- [x] menu client limité aux fonctions réellement éligibles ;
+- [x] outils Atelier filtrés par permissions existantes ;
+- [x] menu mobile pleine largeur sans débordement du header à 375 px ;
+- [x] navigation clavier et fermeture `Escape` ;
+- [x] aucun changement de route, de scope client ou de permission serveur.
+
+---
+
 ## Mise à jour — 13 juin 2026
 
 | Indicateur | Valeur |
@@ -221,3 +236,70 @@ Lot du 2026-06-14 :
 - Header landing et portail harmonisés : suppression des anciens boutons `.btn` dans les templates de navigation, mode `auth` neutre sur login, libellés staff FR.
 - États vides client/staff rendus actionnables.
 - Panneau shipping staff aligné avec le payload backend déjà accepté.
+
+## 11. Mise à jour — polish Impeccable de la fiche commande
+
+Lot du 2026-07-21 :
+
+- résumé restructuré en faits sémantiques (`Statut`, `Commande soumise`, `Tarification`) avec prise en charge explicite de l’alerte encours ;
+- note client isolée sous le libellé `Informations transmises`, sans modifier sa donnée métier ;
+- référence client contextualisée dans le titre et breadcrumb raccourci sur mobile ;
+- onglets HTMX portés à une cible tactile de `44 px`, état actif et URL `?panel=` conservés ;
+- quatre niveaux de cadres/ombres imbriqués ramenés à une seule surface de workflow ;
+- panneaux Visuels, Avancement, Expédition et Facture alignés sur une classe client commune ;
+- noms de fichiers longs, cartes mobiles et boutons contenus dans la largeur utile ;
+- recette authentifiée à `1280 × 900` et `375 × 812`, sans overflow ni erreur console ;
+- sécurité inchangée : routes UUID, scope client et distinction membre/propriétaire conservés ;
+- validation : `480` tests complets, `60` tests ciblés, Ruff, Django et migrations conformes.
+
+## 12. Mise à jour — header SaaS et menu profil
+
+Lot du 2026-07-21 :
+
+- compte connecté regroupé sous une entrée compacte `initiale + Mon compte`, sans nom, prénom ni e-mail dans le déclencheur ;
+- rôle et espace courant explicités dans le panneau, avec une page `Mes informations` dédiée à la modification du prénom et du nom ;
+- e-mail de connexion conservé en lecture seule pour éviter un changement d’identifiant insuffisamment sécurisé ;
+- raccourcis contextualisés : gestion d’équipe pour les rôles autorisés et bascule Atelier pour les comptes hybrides ;
+- raccourci `Voir le site` supprimé car sans utilité dans ce parcours authentifié ;
+- déconnexion POST avec jeton CSRF conservée et isolée des actions de navigation ;
+- composant progressif basé sur `details/summary`, complété par fermeture mutuelle, clic extérieur et restitution du focus sur `Escape` ;
+- menu mobile intégré au flux, largeur bornée et cibles tactiles d’au moins `44 px` ;
+- ajout de la route authentifiée `/account/profile/`, sans changement de scope client ni de permission objet.
+
+Complément du même lot :
+
+- libellé `Dashboard` adopté dans les navigations client et Atelier ;
+- résolution du rôle centralisée pour supprimer l’affichage intermittent de `Gérer l’équipe` entre les vues ;
+- action `Créer une commande` transformée en menu progressif avec deux intentions explicites : fichiers prêts à produire ou Gang Sheet ;
+- option Gang Sheet masquée si le flag global ou l’éligibilité du client ne l’autorise pas ;
+- lien autonome `Planches DTF` retiré du header afin de garder une seule entrée de création ;
+- fermeture mutuelle des menus `Créer`, `Outils` et `Mon compte`, avec support `Escape` et clic extérieur.
+
+## 13. Mise à jour — centre de compte et bibliothèque Gang Sheets
+
+Lot du 2026-07-21 :
+
+- page `Mon compte` distillée en une seule surface de formulaire, avec identité et navigation contextuelle séparées du contenu éditable ;
+- bouton d’enregistrement désactivé tant qu’aucune modification n’est détectée, avec repli progressif si JavaScript est indisponible ;
+- confirmation après sauvegarde diffusée dans le système de toast commun, sans déplacement de la mise en page ;
+- accès Owner à `Gérer l’équipe` conservé dans le rail du compte ;
+- liste Gang Sheets transformée en bibliothèque visuelle : titre compact, CTA `Nouvelle planche`, filtres de statut, recherche locale et cartes adaptées aux statuts métier ;
+- parcours explicatif en quatre étapes retiré de la liste et conservé dans le studio, où il accompagne réellement l’utilisateur ;
+- formulaire de création déplacé dans un dialogue accessible, automatiquement rouvert avec l’erreur inline en cas de validation serveur ;
+- vrais aperçus servis en disposition inline par la route authentifiée et scopée existante ;
+- suppression reléguée dans un menu secondaire, puis confirmée par le dialogue sécurisé existant ;
+- recette réelle desktop/mobile sans débordement, y compris toolbar défilante à `375 px`.
+
+## 14. Mise à jour — studio Gang Sheet premium
+
+Lot du 2026-07-21 :
+
+- hiérarchie recentrée sur le travail de composition : identité compacte, indicateurs utiles et canevas dominant ;
+- planche longue contenue dans un espace de travail dimensionné au viewport, avec défilement interne au lieu d’allonger toute la page ;
+- bibliothèque et inspecteur rendus indépendants afin de conserver les outils visibles pendant la composition ;
+- progression synchronisée avec les statuts `draft`, `rendering`, `ready` et `validated` ;
+- modifications locales signalées explicitement, bouton d’enregistrement contextualisé et prévention d’une sortie accidentelle ;
+- zoom accessible à `50`, `75`, `100`, `125` et `150 %`, sans modifier les coordonnées ni les dimensions métier ;
+- expérience mobile convertie en navigation par sections, `Composition` étant la tâche affichée par défaut ;
+- contrôles de production regroupés et reformulés sans exposer le PDF HD protégé ;
+- endpoints, permissions multi-tenant et règles de validation inchangés.

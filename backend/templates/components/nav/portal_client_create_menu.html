@@ -1,0 +1,22 @@
+{% if portal_nav_access.customer_public_id %}
+  {% if portal_nav_access.project_creation_enabled %}
+  <details class="product-nav__more product-create-menu" data-product-nav-details>
+    <summary class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta product-create-menu__trigger" aria-label="Ouvrir le menu Créer une commande">
+      <span>Créer une commande</span>
+      <span class="product-nav__chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="product-nav__more-menu product-create-menu__menu" aria-label="Créer une commande">
+      <a class="product-nav__more-link product-create-menu__option" href="{% url 'portal:client-order-project-create' customer_public_id=portal_nav_access.customer_public_id %}">
+        {% include "components/nav/creation_icon.html" with name="files" %}
+        <span><strong>À partir de fichiers</strong><small>Importer vos visuels prêts à produire</small></span>
+      </a>
+      <a class="product-nav__more-link product-create-menu__option" href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=portal_nav_access.customer_public_id %}">
+        {% include "components/nav/creation_icon.html" with name="gang-sheet" %}
+        <span><strong>Générer une Gang Sheet</strong><small>Composer automatiquement votre planche DTF</small></span>
+      </a>
+    </div>
+  </details>
+  {% else %}
+  <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta {% if nav_key == 'client-checkout' %}is-active{% endif %}" {% if nav_key == 'client-checkout' %}aria-current="page"{% endif %} href="{% url 'portal:client-checkout' customer_public_id=portal_nav_access.customer_public_id %}">Créer une commande</a>
+  {% endif %}
+{% endif %}

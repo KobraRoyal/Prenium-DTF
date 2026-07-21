@@ -104,68 +104,50 @@
     white-space: nowrap;
   }
 
-  /* Liste et création */
-  body.product-shell .gang-sheet-create-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(19rem, 0.85fr);
-    gap: clamp(1.5rem, 5vw, 4.5rem);
-    margin: 0;
-    padding: clamp(1.2rem, 3vw, 2rem);
+  /* Bibliothèque et création progressive */
+  .gang-sheet-page {
+    width: min(100%, 72rem);
+    min-width: 0;
+    margin-inline: auto;
   }
 
-  .gang-sheet-create-card__intro h2,
-  .gang-sheet-section-head h2 {
-    margin: 0.55rem 0 0.65rem;
-    font-family: "Space Grotesk", system-ui, sans-serif;
-    font-size: clamp(1.45rem, 3vw, 2.25rem);
-    font-weight: 900;
-    line-height: 1;
-    text-transform: uppercase;
-  }
-
-  .gang-sheet-create-card__intro > p:not(.product-eyebrow) {
-    max-width: 58ch;
-    margin: 0;
-    color: var(--product-muted, #4c463b);
-    line-height: 1.6;
-  }
-
-  .gang-sheet-feature-list {
-    display: grid;
-    gap: 0.55rem;
-    margin: 1.15rem 0 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .gang-sheet-feature-list li {
+  .gang-library-head {
     display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    font-size: 0.82rem;
-    font-weight: 800;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 2px solid var(--product-line, #0b0b0b);
   }
 
-  .gang-sheet-feature-list li span {
-    display: grid;
-    width: 1.25rem;
-    height: 1.25rem;
-    place-items: center;
-    border: 1px solid var(--product-line, #0b0b0b);
-    background: var(--product-accent, #dcff1a);
-    font-size: 0.68rem;
+  .gang-library-head h1,
+  .gang-library-head p {
+    margin: 0;
   }
 
-  .gang-sheet-create-card__form {
-    align-self: center;
-    padding: 1rem;
-    border: 2px solid var(--product-line, #0b0b0b);
-    background: var(--product-panel-strong, #f3ead6);
+  .gang-library-head h1 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 2.4rem;
+    font-weight: 850;
+    letter-spacing: -0.035em;
+    line-height: 1;
   }
 
-  .gang-sheet-create-card__form .form-actions,
-  .gang-sheet-create-card__form .ui-btn {
-    width: 100%;
+  .gang-library-head p {
+    max-width: 62ch;
+    margin-top: 0.55rem;
+    color: var(--product-muted, #4c463b);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .gang-library-head__create {
+    flex: 0 0 auto;
+  }
+
+  .gang-library-head__create > span {
+    font-size: 1.05rem;
+    line-height: 1;
   }
 
   .gang-form-hint {
@@ -175,24 +157,117 @@
     line-height: 1.45;
   }
 
-  .gang-sheet-section-head {
+  .gang-sheet-library {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    gap: 1rem;
+  }
+
+  .gang-sheet-library__title-row {
     display: flex;
-    align-items: end;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    padding-bottom: 0.85rem;
-    border-bottom: 2px solid var(--product-line, #0b0b0b);
+  }
+
+  .gang-sheet-library__title-row h2 {
+    margin: 0;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 1.2rem;
+    font-weight: 850;
+    line-height: 1.2;
+  }
+
+  .gang-sheet-toolbar {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 22%, transparent);
+    background: color-mix(in srgb, var(--product-panel-strong, #f3ead6) 34%, var(--product-panel, #fffdf8));
+  }
+
+  .gang-sheet-filters {
+    display: flex;
+    min-width: 0;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .gang-sheet-filters button {
+    min-height: 2.75rem;
+    flex: 0 0 auto;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--product-muted, #4c463b);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 750;
+    transition: border-color 170ms ease, background-color 170ms ease, color 170ms ease;
+  }
+
+  .gang-sheet-filters button:hover,
+  .gang-sheet-filters button:focus-visible,
+  .gang-sheet-filters button.is-active {
+    border-color: var(--product-line, #0b0b0b);
+    background: var(--product-panel, #fffdf8);
+    color: var(--product-ink, #0b0b0b);
+  }
+
+  .gang-sheet-filters button.is-active {
+    box-shadow: 2px 2px 0 var(--product-line, #0b0b0b);
+  }
+
+  .gang-sheet-search {
+    display: grid;
+    grid-template-columns: auto minmax(10rem, 15rem);
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.75rem;
+    padding: 0 0.6rem;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
+    background: var(--product-panel, #fffdf8);
+  }
+
+  .gang-sheet-search > span[aria-hidden="true"] {
+    color: var(--product-muted, #4c463b);
+    font-size: 1rem;
+  }
+
+  .gang-sheet-search input {
+    min-width: 0;
+    height: 2.65rem;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--product-ink, #0b0b0b);
+    font: inherit;
+    font-size: 0.75rem;
+  }
+
+  .gang-sheet-search:focus-within {
+    outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
+    outline-offset: 2px;
   }
 
   .gang-sheet-card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
     gap: 1.1rem;
-    margin-top: 1rem;
   }
 
   .gang-sheet-card {
-    overflow: hidden;
+    position: relative;
+    min-width: 0;
+    overflow: visible;
     border: 2px solid var(--product-line, #0b0b0b);
     background: var(--product-panel, #fffdf8);
     box-shadow: 4px 4px 0 #0b0b0b;
@@ -207,8 +282,13 @@
 
   .gang-sheet-card__link {
     display: block;
+    overflow: hidden;
     color: inherit;
     text-decoration: none;
+  }
+
+  .gang-sheet-card:has(.gang-sheet-card__menu[open]) {
+    z-index: 3;
   }
 
   .gang-sheet-card__link:focus-visible {
@@ -219,15 +299,18 @@
   .gang-sheet-card__preview {
     position: relative;
     display: grid;
-    min-height: 10rem;
+    height: 11rem;
     place-items: center;
     overflow: hidden;
     border-bottom: 2px solid var(--product-line, #0b0b0b);
-    background:
-      linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-      #191919;
-    background-size: 18px 18px;
+    background: #191919;
+  }
+
+  .gang-sheet-card__preview > img {
+    width: 100%;
+    height: 100%;
+    padding: 0.75rem;
+    object-fit: contain;
   }
 
   .gang-sheet-card__mockup {
@@ -286,6 +369,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.6rem;
+    padding-right: 3rem;
     color: var(--product-muted, #4c463b);
     font-size: 0.68rem;
     font-weight: 800;
@@ -296,9 +380,8 @@
     margin: 0.15rem 0 0;
     font-family: "Space Grotesk", system-ui, sans-serif;
     font-size: 1.05rem;
-    font-weight: 900;
+    font-weight: 850;
     text-overflow: ellipsis;
-    text-transform: uppercase;
     white-space: nowrap;
   }
 
@@ -339,12 +422,79 @@
     font-weight: 900;
   }
 
-  .gang-sheet-card__actions {
+  .gang-sheet-card__primary {
     display: flex;
-    justify-content: flex-end;
-    padding: 0.7rem 0.9rem;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+    padding-top: 0.75rem;
     border-top: 1px solid var(--product-line, #0b0b0b);
+    color: var(--product-ink, #0b0b0b);
+    font-size: 0.74rem;
+    font-weight: 850;
+  }
+
+  .gang-sheet-card__menu {
+    position: absolute;
+    top: 11.65rem;
+    right: 0.65rem;
+    z-index: 2;
+  }
+
+  .gang-sheet-card__menu > summary {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
+    background: var(--product-panel, #fffdf8);
+    color: var(--product-ink, #0b0b0b);
+    cursor: pointer;
+    list-style: none;
+    font-weight: 900;
+  }
+
+  .gang-sheet-card__menu > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .gang-sheet-card__menu > summary:hover,
+  .gang-sheet-card__menu > summary:focus-visible,
+  .gang-sheet-card__menu[open] > summary {
+    border-color: var(--product-line, #0b0b0b);
     background: var(--product-panel-strong, #f3ead6);
+  }
+
+  .gang-sheet-card__menu-panel {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    right: 0;
+    width: 10rem;
+    padding: 0.35rem;
+    border: 1px solid var(--product-line, #0b0b0b);
+    background: var(--product-panel, #fffdf8);
+    box-shadow: 3px 3px 0 var(--product-line, #0b0b0b);
+  }
+
+  .gang-sheet-card__delete-action {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.65rem;
+    border: 0;
+    background: transparent;
+    color: var(--product-danger, #b42318);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-align: left;
+  }
+
+  .gang-sheet-card__delete-action:hover,
+  .gang-sheet-card__delete-action:focus-visible {
+    background: color-mix(in srgb, var(--product-danger, #b42318) 10%, var(--product-panel, #fffdf8));
   }
 
   .gang-status-badge {
@@ -385,6 +535,84 @@
     font-family: "Space Grotesk", system-ui, sans-serif;
     font-weight: 900;
     box-shadow: 4px 4px 0 #0b0b0b;
+  }
+
+  .gang-sheet-empty h3,
+  .gang-sheet-empty p {
+    margin-inline: auto;
+  }
+
+  .gang-sheet-empty p {
+    max-width: 52ch;
+  }
+
+  .gang-sheet-empty--filtered {
+    min-height: 11rem;
+  }
+
+  .gang-sheet-create-dialog {
+    width: min(100% - 2rem, 34rem);
+  }
+
+  .gang-sheet-create-dialog__shell {
+    display: grid;
+    gap: 0;
+  }
+
+  .gang-sheet-create-dialog__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 24%, transparent);
+  }
+
+  .gang-sheet-create-dialog__head > div {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .gang-sheet-create-dialog__head h2,
+  .gang-sheet-create-dialog__head p {
+    margin: 0;
+  }
+
+  .gang-sheet-create-dialog__head h2 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 1.15rem;
+    line-height: 1.2;
+  }
+
+  .gang-sheet-create-dialog__head p {
+    max-width: 42ch;
+    margin-top: 0.25rem;
+    color: var(--product-muted, #4c463b);
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+
+  .gang-sheet-create-dialog__mark {
+    display: grid;
+    width: 2.6rem;
+    height: 2.6rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 2px solid var(--product-line, #0b0b0b);
+    background: var(--product-accent, #dcff1a);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 0.75rem;
+    font-weight: 900;
+  }
+
+  .gang-sheet-create-dialog__body {
+    padding: 1.1rem;
+  }
+
+  .gang-sheet-create-dialog__actions {
+    padding: 0.9rem 1.1rem 1.1rem;
+    border-top: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 24%, transparent);
   }
 
   /* En-tête du studio */
@@ -911,7 +1139,7 @@
   }
 
   .gang-sheet-item:active { cursor: grabbing; }
-  .gang-sheet-item img { display: block; width: 100%; height: 100%; object-fit: fill; transform-origin: center; pointer-events: none; }
+  .gang-sheet-item img { position: absolute; top: 50%; left: 50%; display: block; width: 100%; height: 100%; object-fit: fill; transform-origin: center; pointer-events: none; }
   .gang-sheet-item > span:not(.gang-sheet-item__resize) { position: absolute; left: 50%; bottom: 0.2rem; z-index: 2; max-width: 95%; padding: 0.1rem 0.25rem; color: #fff; background: rgba(0, 0, 0, 0.76); font-size: 0.55rem; white-space: nowrap; transform: translateX(-50%); pointer-events: none; }
   .gang-sheet-item.is-selected { z-index: 4; border-color: #da5217; box-shadow: 0 0 0 3px rgba(218, 82, 23, 0.35); }
   .gang-sheet-item.has-issue { border-color: #be123c; box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.28); }
@@ -969,6 +1197,7 @@
   }
 
   @media (max-width: 900px) {
+    .gang-sheet-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gang-editor__header { grid-template-columns: minmax(0, 1fr); }
     .gang-editor__metrics { border-top: 2px solid var(--product-line, #0b0b0b); border-left: 0; }
     .gang-workflow small { display: none; }
@@ -976,8 +1205,15 @@
   }
 
   @media (max-width: 760px) {
-    body.product-shell .gang-sheet-create-card { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
-    .gang-sheet-section-head { align-items: flex-start; flex-direction: column; }
+    .gang-library-head { align-items: stretch; flex-direction: column; }
+    .gang-library-head h1 { font-size: 2rem; }
+    .gang-library-head__create { width: 100%; }
+    .gang-sheet-toolbar { align-items: stretch; flex-direction: column; }
+    .gang-sheet-search { grid-template-columns: auto minmax(0, 1fr); width: 100%; }
+    .gang-sheet-card-grid { grid-template-columns: minmax(0, 1fr); }
+    .gang-sheet-create-dialog__actions,
+    .gang-sheet-create-dialog__actions .ui-btn { width: 100%; }
+    .gang-sheet-create-dialog__actions { flex-direction: column-reverse; }
     .gang-workflow li { flex-direction: column; gap: 0.3rem; text-align: center; }
     .gang-workflow strong { font-size: 0.62rem; }
     .gang-workflow li > span { width: 1.65rem; height: 1.65rem; font-size: 0.6rem; }
@@ -1006,7 +1242,11 @@
   @media (max-width: 420px) {
     .gang-workflow li { padding-inline: 0.2rem; }
     .gang-workflow strong { font-size: 0.56rem; }
+    .gang-sheet-library__title-row { align-items: flex-start; flex-direction: column; }
     .gang-sheet-card__status-row { align-items: flex-start; flex-direction: column; }
+    .gang-sheet-create-dialog { width: 100vw; max-height: 100dvh; border-width: 0; box-shadow: none; }
+    .gang-sheet-create-dialog__shell { min-height: 100dvh; align-content: start; }
+    .gang-sheet-create-dialog__actions { margin-top: auto; }
     .gang-asset-card { grid-template-columns: 4.5rem minmax(0, 1fr); }
     .gang-asset-card__add { grid-template-columns: 4rem minmax(0, 1fr); }
   }

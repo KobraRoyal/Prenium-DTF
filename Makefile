@@ -1,4 +1,4 @@
-.PHONY: help up health check migrations-plan test test-ui test-orders test-b2b lint format audit shell logs-web logs-worker sync-frontend
+.PHONY: help up health agents-check check migrations-plan test test-ui test-orders test-b2b lint format audit shell logs-web logs-worker sync-frontend
 
 help:
 	@printf '%s\n' \
@@ -6,6 +6,7 @@ help:
 		'  make up              Start local Docker services' \
 		'  make sync-frontend   Build CSS, collectstatic, restart web' \
 		'  make health          Check HTTP health endpoint' \
+		'  make agents-check    Validate Codex agent contracts' \
 		'  make check           Run Django system checks in Docker' \
 		'  make migrations-plan Check pending Django migrations' \
 		'  make test            Run pytest in Docker' \
@@ -24,6 +25,9 @@ up:
 
 health:
 	curl --fail --silent --show-error http://localhost:8080/healthz/
+
+agents-check:
+	docker compose run --rm --entrypoint sh web -lc 'cd /app && python scripts/check_codex_agents.py'
 
 check:
 	docker compose exec web sh -lc 'cd /app/backend && python manage.py check'

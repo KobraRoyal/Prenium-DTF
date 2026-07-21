@@ -37,6 +37,14 @@ Construire un SaaS e-commerce premium DTF avec backoffice workflow, stockage doc
 - Mettre à jour la documentation du lot concerné
 - Ne pas toucher à des domaines non demandés sauf si nécessaire et justifié
 
+## Orchestration Codex
+- Appliquer `docs/architecture/CODEX_AGENT_ORCHESTRATION.md` pour toute délégation
+- Ne déléguer que des tâches bornées et indépendantes ; garder les tâches triviales dans l’agent racine
+- Utiliser Terra pour exploration, documentation, tests et triage ; Sol pour écriture, architecture et sécurité
+- Limiter l’exécution à trois sous-agents et une profondeur
+- Attribuer un seul propriétaire d’écriture par ensemble de fichiers ; l’agent racine intègre et valide
+- Imposer une relecture sécurité indépendante pour tout changement multi-tenant, RBAC, fichier, webhook, secret ou audit
+
 ## Définition de terminé
 Une tâche n’est terminée que si :
 - code implémenté

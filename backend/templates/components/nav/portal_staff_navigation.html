@@ -1,0 +1,27 @@
+<span class="product-nav__section-label">Navigation</span>
+<div class="product-nav__primary" aria-label="Atelier">
+  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-dashboard' %}is-active{% endif %}" {% if nav_key == 'staff-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:staff-dashboard' %}">Dashboard</a>
+  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes</a>
+</div>
+
+{% if perms.prospects.view_prospectprofile or perms.b2b_order_projects.view_b2borderproject or perms.notifications.view_emailtemplate or perms.gang_sheets.configure_gangsheet %}
+<details class="product-nav__more" data-product-nav-details>
+  <summary class="product-nav__more-trigger {% if nav_key == 'staff-access-requests' or nav_key == 'staff-order-projects' or nav_key == 'staff-email-templates' or nav_key == 'staff-gang-sheet-settings' %}is-active{% endif %}">
+    <span>
+      {% if nav_key == 'staff-access-requests' %}Demandes d’accès
+      {% elif nav_key == 'staff-order-projects' %}Projets B2B
+      {% elif nav_key == 'staff-email-templates' %}E-mails
+      {% elif nav_key == 'staff-gang-sheet-settings' %}Réglages de laize
+      {% else %}Outils{% endif %}
+    </span>
+    <span class="product-nav__chevron" aria-hidden="true"></span>
+  </summary>
+  <div class="product-nav__more-menu" aria-label="Outils Atelier">
+    <span class="product-nav__section-label">Outils Atelier</span>
+    {% if perms.prospects.view_prospectprofile %}<a class="product-nav__more-link {% if nav_key == 'staff-access-requests' %}is-active{% endif %}" {% if nav_key == 'staff-access-requests' %}aria-current="page"{% endif %} href="{% url 'portal:staff-access-request-list' %}"><strong>Demandes d’accès</strong><small>Valider les nouveaux comptes</small></a>{% endif %}
+    {% if b2b_order_projects_globally_enabled and perms.b2b_order_projects.view_b2borderproject %}<a class="product-nav__more-link {% if nav_key == 'staff-order-projects' %}is-active{% endif %}" {% if nav_key == 'staff-order-projects' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-project-list' %}"><strong>Projets B2B</strong><small>Contrôler les commandes à finaliser</small></a>{% endif %}
+    {% if perms.notifications.view_emailtemplate %}<a class="product-nav__more-link {% if nav_key == 'staff-email-templates' %}is-active{% endif %}" {% if nav_key == 'staff-email-templates' %}aria-current="page"{% endif %} href="{% url 'portal:staff-email-template-list' %}"><strong>Modèles d’e-mails</strong><small>Gérer les messages transactionnels</small></a>{% endif %}
+    {% if perms.gang_sheets.configure_gangsheet %}<a class="product-nav__more-link {% if nav_key == 'staff-gang-sheet-settings' %}is-active{% endif %}" {% if nav_key == 'staff-gang-sheet-settings' %}aria-current="page"{% endif %} href="{% url 'portal:staff-gang-sheet-settings' %}"><strong>Réglages de laize</strong><small>Configurer les planches Atelier</small></a>{% endif %}
+  </div>
+</details>
+{% endif %}

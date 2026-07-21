@@ -1,8 +1,11 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="uploads" %}
-<div class="panel">
+<div class="panel client-order-panel client-order-panel--uploads">
   <div class="panel-head panel-head--compact client-order-uploads-head">
-    <h3 class="font-display text-lg">Visuels transmis</h3>
+    <div>
+      <h3 class="font-display text-lg">Visuels transmis</h3>
+      <p class="client-order-panel__lead">Consultez les fichiers rattachés à cette commande et leur statut de contrôle.</p>
+    </div>
     {% if reorder_enabled and uploads %}
     <form method="post" action="{% url 'portal:client-order-reorder' customer_public_id=customer.public_id order_public_id=order.public_id %}">
       {% csrf_token %}

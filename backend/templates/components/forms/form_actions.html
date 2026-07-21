@@ -4,6 +4,7 @@
     class="{% if primary_class_full %}{{ primary_class_full }}{% else %}ui-btn ui-btn-primary{% if primary_class %} {{ primary_class }}{% endif %}{% endif %}"
     type="{{ submit_type|default:'submit' }}"
     {% if primary_disabled %}disabled{% endif %}
+    {% if primary_disabled_until_dirty %}x-bind:disabled="!dirty" x-bind:aria-disabled="String(!dirty)"{% endif %}
     {% if htmx_disable %}hx-disabled-elt="this"{% endif %}
   >{{ primary_label }}</button>
   {% endif %}

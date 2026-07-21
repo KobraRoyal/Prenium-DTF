@@ -30,6 +30,7 @@
             data-dialog-open="remove-gang-asset-dialog-{{ asset.source_public_id }}"
             aria-haspopup="dialog"
             title="Retirer ce visuel de la galerie"
+            aria-label="Retirer {{ asset.name }} de la galerie"
           >Retirer</button>
           {% else %}
           <button
@@ -42,8 +43,8 @@
         {% endif %}
       </div>
       <div class="gang-asset-card__add">
-        <label>Quantité<input type="number" min="1" max="200" step="1" value="1" inputmode="numeric" data-asset-quantity></label>
-        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-add-asset="{{ asset.public_id }}" data-asset-ready="{{ asset.is_ready|yesno:'true,false' }}" {% if not can_edit or not asset.is_ready %}disabled{% endif %}>{% if asset.is_ready %}Ajouter + placer{% else %}Analyse en cours{% endif %}</button>
+        <label>Qté<input type="number" min="1" max="200" step="1" value="1" inputmode="numeric" data-asset-quantity></label>
+        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-add-asset="{{ asset.public_id }}" data-asset-ready="{{ asset.is_ready|yesno:'true,false' }}" {% if not can_edit or not asset.is_ready %}disabled{% endif %}>{% if asset.is_ready %}Placer sur la planche{% else %}Analyse en cours{% endif %}</button>
       </div>
     </div>
     {% if asset.can_remove %}

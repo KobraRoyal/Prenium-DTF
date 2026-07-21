@@ -68,6 +68,7 @@ from .views_gang_sheets import (
     StaffGangSheetFinalDownloadView,
     StaffGangSheetSettingsView,
 )
+from .views_profile import PortalProfileView
 from .views_staff import StaffOrderDetailView, StaffOrderListView, StaffOrderPriceView
 from .views_staff_billing import StaffInvoiceMarkPaidView, StaffOrderPanelBillingView
 from .views_staff_dashboard import StaffDashboardView
@@ -93,6 +94,7 @@ app_name = "portal"
 urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
     path("logout/", PortalLogoutView.as_view(), name="logout"),
+    path("account/profile/", PortalProfileView.as_view(), name="profile"),
     path(
         "acces/invitation/<str:token>/",
         CustomerInvitationAcceptView.as_view(),

@@ -37,7 +37,7 @@ def test_marketing_pages_are_accessible_for_anonymous():
     assert "Connexion" in home_html
     assert "Transferts DTF prêts atelier" in home_html
     assert "Fichiers fiabilisés avant impression" in home_html
-    assert "Pensé pour les pros" in home_html
+    assert "Votre métier change. L’exigence reste." in home_html
     assert 'id="landing-services"' in home_html
     assert 'id="landing-cases"' in home_html
     assert 'id="landing-how-it-works"' in home_html

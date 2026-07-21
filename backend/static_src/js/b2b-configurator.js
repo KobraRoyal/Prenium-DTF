@@ -377,6 +377,25 @@ async function readEmbeddedDpiFromFile(file) {
   return null;
 }
 
+async function isPdfCompatibleIllustrator(file) {
+  if (!(file instanceof File) || !file.name.toLowerCase().endsWith(".ai")) {
+    return false;
+  }
+  try {
+    const signature = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+    return (
+      signature.length === 5
+      && signature[0] === 0x25
+      && signature[1] === 0x50
+      && signature[2] === 0x44
+      && signature[3] === 0x46
+      && signature[4] === 0x2d
+    );
+  } catch (_error) {
+    return false;
+  }
+}
+
 function markPreviewBounds(node, visible = true) {
   setPreviewMediaVisible(node, visible);
 }
@@ -439,13 +458,14 @@ function updateSuggestedSizeFromPoints(root, widthPt, heightPt, detail) {
 
 async function renderPdfPreview(root, file, canvas, placeholder, renderToken) {
   let pdfDocument = null;
+  let loadingTask = null;
   try {
     const pdfJs = await loadPdfJs();
     const fileBuffer = await file.arrayBuffer();
     if (previewRenderTokens.get(root) !== renderToken) {
       return;
     }
-    const loadingTask = pdfJs.getDocument({ data: new Uint8Array(fileBuffer) });
+    loadingTask = pdfJs.getDocument({ data: new Uint8Array(fileBuffer) });
     pdfDocument = await loadingTask.promise;
     const page = await pdfDocument.getPage(1);
     const baseViewport = page.getViewport({ scale: 1 });
@@ -500,13 +520,23 @@ async function renderPdfPreview(root, file, canvas, placeholder, renderToken) {
       "Le fichier pourra tout de même être analysé après son ajout."
     );
   } finally {
-    if (pdfDocument !== null) {
-      await pdfDocument.destroy();
+    const destroyTarget =
+      typeof pdfDocument?.destroy === "function"
+        ? pdfDocument
+        : typeof loadingTask?.destroy === "function"
+          ? loadingTask
+          : null;
+    if (destroyTarget !== null) {
+      try {
+        await destroyTarget.destroy();
+      } catch (_cleanupError) {
+        // Preview cleanup must never replace the result with a console error.
+      }
     }
   }
 }
 
-function previewSelectedFile(root, file) {
+async function previewSelectedFile(root, file) {
   root.dataset.previewZoom = String(previewZoomMin);
   const preview = root.querySelector("[data-configurator-preview]");
   const documentPreview = root.querySelector("[data-configurator-document-preview]");
@@ -551,12 +581,29 @@ function previewSelectedFile(root, file) {
     previewObjectUrls.delete(root);
   }
 
+  const normalizedName = file.name.toLowerCase();
   const isBrowserImage = browserPreviewMimeTypes.has(file.type);
-  const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  const declaredPdf = file.type === "application/pdf" || normalizedName.endsWith(".pdf");
+  if (!declaredPdf && normalizedName.endsWith(".ai")) {
+    setPlaceholder(placeholder, "Lecture de l’aperçu Illustrator…", file.name);
+  }
+  const isPdf = declaredPdf || await isPdfCompatibleIllustrator(file);
+  if (previewRenderTokens.get(root) !== renderToken) {
+    return;
+  }
   if (!isBrowserImage && !isPdf) {
-    setPlaceholder(placeholder, "Aperçu en préparation", file.name);
+    const isIllustrator = normalizedName.endsWith(".ai");
+    setPlaceholder(
+      placeholder,
+      isIllustrator ? "Aperçu généré après l’import" : "Aperçu en préparation",
+      isIllustrator
+        ? "Ce fichier Illustrator natif sera rasterisé par le serveur sécurisé."
+        : file.name
+    );
     if (pixels instanceof HTMLElement) {
-      pixels.textContent = "Le fichier sera analysé en arrière-plan dès son ajout.";
+      pixels.textContent = isIllustrator
+        ? "Le fichier original restera inchangé pendant la génération de l’aperçu."
+        : "Le fichier sera analysé en arrière-plan dès son ajout.";
     }
     revealConfiguratorParams(root);
     return;

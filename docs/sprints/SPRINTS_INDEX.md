@@ -38,6 +38,8 @@
 - [Sprint 29 — Consignes support et dimensions dans le contrôle et l’OF](sprint-29-consignes-support-dimensions-of.md)
 - [Sprint 30 — Console Atelier UI/UX](sprint-30-console-atelier-ui-ux.md)
 - [Sprint 31 — Gang Sheet Generator Pro](sprint-31-gang-sheet-generator-pro.md)
+- [Sprint 32 — Orchestration Codex des sous-agents](sprint-32-codex-agent-orchestration.md)
+- [Sprint 33 — Navigation SaaS client et Atelier](sprint-33-navigation-portails-saas.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

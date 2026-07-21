@@ -4,12 +4,12 @@
 {% else %}
   {% brand_home_url as resolved_brand_home_url %}
 {% endif %}
-<div class="ui-brand-lockup">
-  <a class="ui-brand-lockup__mark" href="{{ resolved_brand_home_url }}" aria-label="{% if brand_home_label %}{{ brand_home_label }}{% elif request.user.is_authenticated %}Retour au tableau de bord{% else %}Accueil Prenium DTF{% endif %}">
+<a class="ui-brand-lockup ui-brand-lockup__home" href="{{ resolved_brand_home_url }}" aria-label="{% if brand_home_label %}{{ brand_home_label }}{% elif request.user.is_authenticated %}Retour au tableau de bord{% else %}Accueil Prenium DTF{% endif %}">
+  <span class="ui-brand-lockup__mark">
     <span aria-hidden="true">P</span>
-  </a>
-  <div class="ui-brand-lockup__copy">
-    <a class="ui-brand-lockup__name" href="{{ resolved_brand_home_url }}">Prenium DTF</a>
-    <p class="ui-brand-lockup__subtitle">via IDS supply</p>
-  </div>
-</div>
+  </span>
+  <span class="ui-brand-lockup__copy">
+    <span class="ui-brand-lockup__name">Prenium DTF</span>
+    <span class="ui-brand-lockup__subtitle">via IDS supply</span>
+  </span>
+</a>
