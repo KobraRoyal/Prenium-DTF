@@ -535,6 +535,193 @@ def test_occurrences_auto_place_without_overlap_and_height_is_automatic():
     assert sheet.surface_sqm > 0
 
 
+def test_delete_occurrences_removes_the_exact_selection_atomically_and_audits_it():
+    user, customer, project = create_customer_scope(email="batch-delete-service@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Suppression groupée")
+    items = service.add_occurrences(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        quantity=3,
+        actor=user,
+    )
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+
+    deleted_count = service.delete_occurrences(
+        sheet=sheet,
+        item_public_ids=[items[0].public_id, items[2].public_id, items[0].public_id],
+        actor=user,
+    )
+
+    sheet.refresh_from_db()
+    remaining = list(sheet.items.all())
+    audit = AuditLogEntry.objects.get(action="gang_sheet.items_batch_deleted")
+    assert deleted_count == 2
+    assert [item.public_id for item in remaining] == [items[1].public_id]
+    assert remaining[0].z_index == 1
+    assert sheet.revision == initial_revision + 1
+    assert audit.metadata["item_count"] == 2
+    assert set(audit.metadata["item_public_ids"]) == {
+        str(items[0].public_id),
+        str(items[2].public_id),
+    }
+
+
+def test_delete_occurrences_rolls_back_when_one_selected_item_is_missing():
+    user, customer, project = create_customer_scope(email="batch-delete-atomic@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Suppression atomique")
+    items = service.add_occurrences(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        quantity=2,
+        actor=user,
+    )
+
+    with pytest.raises(GangSheetDomainError) as exc:
+        service.delete_occurrences(
+            sheet=sheet,
+            item_public_ids=[items[0].public_id, "00000000-0000-0000-0000-000000000000"],
+            actor=user,
+        )
+
+    assert exc.value.code == "ITEM_NOT_FOUND"
+    assert set(sheet.items.values_list("public_id", flat=True)) == {
+        items[0].public_id,
+        items[1].public_id,
+    }
+
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.save(update_fields=["status", "updated_at"])
+    with pytest.raises(GangSheetDomainError) as locked_exc:
+        service.delete_occurrences(
+            sheet=sheet,
+            item_public_ids=[items[0].public_id, items[1].public_id],
+            actor=user,
+        )
+
+    assert locked_exc.value.code == "SHEET_LOCKED"
+    assert sheet.items.count() == 2
+
+
+def test_delete_occurrences_rejects_items_from_another_sheet_or_tenant_atomically():
+    user, customer, project = create_customer_scope(email="batch-delete-boundary@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Planche autorisée")
+    selected_item = service.add_occurrence(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        actor=user,
+    )
+    same_tenant_sheet = service.create_sheet(
+        project=project,
+        actor=user,
+        name="Autre planche du client",
+    )
+    same_tenant_item = service.add_occurrence(
+        sheet=same_tenant_sheet,
+        asset_version_public_id=version.public_id,
+        actor=user,
+    )
+    other_user, other_customer, other_project = create_customer_scope(
+        email="batch-delete-other-tenant@example.com"
+    )
+    _other_asset, other_version = attach_png_asset(
+        customer=other_customer,
+        project=other_project,
+        user=other_user,
+    )
+    other_sheet = service.create_sheet(
+        project=other_project,
+        actor=other_user,
+        name="Planche d'un autre client",
+    )
+    other_tenant_item = service.add_occurrence(
+        sheet=other_sheet,
+        asset_version_public_id=other_version.public_id,
+        actor=other_user,
+    )
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+
+    for foreign_item in (same_tenant_item, other_tenant_item):
+        with pytest.raises(GangSheetDomainError) as exc:
+            service.delete_occurrences(
+                sheet=sheet,
+                item_public_ids=[selected_item.public_id, foreign_item.public_id],
+                actor=user,
+            )
+
+        assert exc.value.code == "ITEM_NOT_FOUND"
+        sheet.refresh_from_db()
+        assert sheet.revision == initial_revision
+        assert sheet.items.filter(public_id=selected_item.public_id).exists()
+        assert foreign_item.__class__.objects.filter(pk=foreign_item.pk).exists()
+        assert not AuditLogEntry.objects.filter(
+            action="gang_sheet.items_batch_deleted",
+            target_public_id=sheet.public_id,
+        ).exists()
+
+
+def test_delete_occurrences_rollback_preserves_derived_files_and_database(
+    monkeypatch,
+    django_capture_on_commit_callbacks,
+):
+    user, customer, project = create_customer_scope(email="batch-delete-file-rollback@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Rendu à préserver")
+    items = service.add_occurrences(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        quantity=2,
+        actor=user,
+    )
+    sheet.status = GangSheet.Status.READY
+    sheet.preview_file = SimpleUploadedFile("preview.png", b"preview", content_type="image/png")
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf", b"%PDF-1.4\n%%EOF\n", content_type="application/pdf"
+    )
+    sheet.save(update_fields=["status", "preview_file", "final_file", "updated_at"])
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+    preview_storage = sheet.preview_file.storage
+    preview_name = sheet.preview_file.name
+    final_storage = sheet.final_file.storage
+    final_name = sheet.final_file.name
+
+    def fail_after_mark_dirty(_sheet):
+        raise RuntimeError("forced refresh failure")
+
+    monkeypatch.setattr(service, "_refresh_sheet", fail_after_mark_dirty)
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(RuntimeError, match="forced refresh failure"):
+            service.delete_occurrences(
+                sheet=sheet,
+                item_public_ids=[item.public_id for item in items],
+                actor=user,
+            )
+
+    sheet.refresh_from_db()
+    assert callbacks == []
+    assert sheet.revision == initial_revision
+    assert sheet.status == GangSheet.Status.READY
+    assert sheet.preview_file.name == preview_name
+    assert sheet.final_file.name == final_name
+    assert preview_storage.exists(preview_name)
+    assert final_storage.exists(final_name)
+    assert sheet.items.count() == 2
+    assert not AuditLogEntry.objects.filter(
+        action="gang_sheet.items_batch_deleted",
+        target_public_id=sheet.public_id,
+    ).exists()
+
+
 def test_auto_place_persists_and_applies_axis_specific_spacing():
     user, customer, project = create_customer_scope(email="axis-spacing@example.com")
     _asset, version = attach_png_asset(

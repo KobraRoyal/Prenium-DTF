@@ -4,6 +4,16 @@ if (root) {
   const initialNode = document.getElementById("gang-sheet-initial-state");
   let state = JSON.parse(initialNode.textContent);
   let selectedId = null;
+  let selectedIds = new Set();
+  let alignmentReference = "selection";
+  let suppressNextItemClick = false;
+  let suppressNextCanvasClick = false;
+  let snapEnabled = true;
+  let snapGuides = [];
+  let touchMultiSelect = false;
+  let undoStack = [];
+  let redoStack = [];
+  let savedLayoutSignature = "";
   let busy = false;
   let dirty = false;
   let zoom = 1;
@@ -14,8 +24,90 @@ if (root) {
   const csrf = root.querySelector("[data-csrf]").value;
   const q = (selector) => root.querySelector(selector);
   const qa = (selector) => Array.from(root.querySelectorAll(selector));
+  const canvasClearZone = q("[data-canvas-clear-zone]");
   const round = (value, digits = 2) => Number(Number(value).toFixed(digits));
-  const selected = () => state.items.find((item) => item.public_id === selectedId);
+  const selected = () => state.items.find((item) => item.public_id === selectedId && selectedIds.has(item.public_id));
+  const selectedItems = () => state.items.filter((item) => selectedIds.has(item.public_id));
+  const effectiveAlignmentReference = () => selectedIds.size > 1 ? alignmentReference : "sheet";
+  const HISTORY_LIMIT = 40;
+
+  function layoutSnapshot() {
+    return state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation }) => ({
+      public_id,
+      x_mm,
+      y_mm,
+      width_mm,
+      height_mm,
+      rotation,
+    }));
+  }
+
+  function layoutSignature(snapshot = layoutSnapshot()) {
+    return JSON.stringify(snapshot);
+  }
+
+  savedLayoutSignature = layoutSignature();
+
+  function syncLayoutDirtyState() {
+    setDirty(layoutSignature() !== savedLayoutSignature);
+  }
+
+  function resetLayoutHistory() {
+    undoStack = [];
+    redoStack = [];
+    renderHistoryControls();
+  }
+
+  function commitLayoutMutation(before) {
+    if (!before || layoutSignature(before) === layoutSignature()) return false;
+    undoStack.push(before);
+    if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+    redoStack = [];
+    syncLayoutDirtyState();
+    renderHistoryControls();
+    return true;
+  }
+
+  function restoreLayoutSnapshot(snapshot) {
+    const valuesById = new Map(snapshot.map((item) => [item.public_id, item]));
+    state.items.forEach((item) => {
+      const saved = valuesById.get(item.public_id);
+      if (!saved) return;
+      item.x_mm = saved.x_mm;
+      item.y_mm = saved.y_mm;
+      item.width_mm = saved.width_mm;
+      item.height_mm = saved.height_mm;
+      item.rotation = saved.rotation;
+    });
+  }
+
+  function undoLayoutMutation() {
+    if (!canEdit || ["rendering", "validated"].includes(state.status) || !undoStack.length || busy) return;
+    const previous = undoStack.pop();
+    redoStack.push(layoutSnapshot());
+    restoreLayoutSnapshot(previous);
+    snapGuides = [];
+    syncLayoutDirtyState();
+    render();
+  }
+
+  function redoLayoutMutation() {
+    if (!canEdit || ["rendering", "validated"].includes(state.status) || !redoStack.length || busy) return;
+    const next = redoStack.pop();
+    undoStack.push(layoutSnapshot());
+    restoreLayoutSnapshot(next);
+    snapGuides = [];
+    syncLayoutDirtyState();
+    render();
+  }
+
+  function renderHistoryControls() {
+    const locked = ["rendering", "validated"].includes(state.status);
+    const undo = q("[data-undo-layout]");
+    const redo = q("[data-redo-layout]");
+    if (undo) undo.disabled = !canEdit || locked || busy || undoStack.length === 0;
+    if (redo) redo.disabled = !canEdit || locked || busy || redoStack.length === 0;
+  }
 
   function setDirty(value = true) {
     dirty = value;
@@ -87,7 +179,7 @@ if (root) {
 
   function positionSelectedItemToolbar() {
     const toolbar = canvas.querySelector("[data-item-toolbar]");
-    const itemNode = selectedId ? canvas.querySelector(`[data-item-id="${selectedId}"]`) : null;
+    const itemNode = selectedIds.size === 1 && selectedId ? canvas.querySelector(`[data-item-id="${selectedId}"]`) : null;
     if (!toolbar || !itemNode) return;
     const gap = 6;
     const canvasRect = canvas.getBoundingClientRect();
@@ -185,13 +277,15 @@ if (root) {
       const size = effectiveSize(item);
       const node = document.createElement("button");
       node.type = "button";
-      node.className = `gang-sheet-item${selectedId === item.public_id ? " is-selected" : ""}${issueIds.has(item.public_id) ? " has-issue" : ""}`;
+      const isSelected = selectedIds.has(item.public_id);
+      node.className = `gang-sheet-item${isSelected ? " is-selected" : ""}${selectedId === item.public_id ? " is-primary" : ""}${issueIds.has(item.public_id) ? " has-issue" : ""}`;
       node.dataset.itemId = item.public_id;
       node.style.left = `${(item.x_mm / state.width_mm) * 100}%`;
       node.style.top = `${(item.y_mm / state.height_mm) * 100}%`;
       node.style.width = `${(size.width / state.width_mm) * 100}%`;
       node.style.height = `${(size.height / state.height_mm) * 100}%`;
       node.setAttribute("aria-label", `${item.asset_name}, ${round(item.width_mm / 10, 1)} par ${round(item.height_mm / 10, 1)} centimètres`);
+      node.setAttribute("aria-pressed", String(isSelected));
       const image = document.createElement("img");
       image.src = item.preview_url;
       image.alt = "";
@@ -211,13 +305,20 @@ if (root) {
       handle.className = "gang-sheet-item__resize";
       handle.dataset.resizeHandle = "";
       node.append(preview, label, handle);
-      node.addEventListener("click", () => selectItem(item.public_id));
+      node.addEventListener("click", (event) => {
+        if (suppressNextItemClick) {
+          suppressNextItemClick = false;
+          return;
+        }
+        selectItem(item.public_id, { additive: touchMultiSelect || event.shiftKey || event.ctrlKey || event.metaKey });
+      });
       if (canEdit) {
         node.addEventListener("pointerdown", (event) => startPointerAction(event, item));
       }
       canvas.append(node);
     });
-    if (selected()) renderSelectedItemToolbar(selected());
+    renderSnapGuides();
+    if (selectedIds.size === 1 && selected()) renderSelectedItemToolbar(selected());
     if (!state.items.length) {
       const empty = document.createElement("div");
       empty.className = "gang-sheet-canvas__empty";
@@ -258,9 +359,26 @@ if (root) {
 
   function renderInspector() {
     const item = selected();
-    q("[data-empty-inspector]").hidden = Boolean(item);
-    q("[data-item-inspector]").hidden = !item;
-    if (!item) return;
+    const selectionCount = selectedIds.size;
+    q("[data-empty-inspector]").hidden = selectionCount > 0;
+    q("[data-item-inspector]").hidden = selectionCount !== 1 || !item;
+    q("[data-alignment-panel]").hidden = selectionCount === 0;
+    const selectionDelete = q("[data-delete-selected]");
+    selectionDelete.hidden = selectionCount < 2;
+    selectionDelete.textContent = selectionCount > 1
+      ? `Supprimer la sélection (${selectionCount})`
+      : "Supprimer la sélection";
+    if (selectionCount > 0) {
+      q("[data-selection-summary]").textContent = `${selectionCount} visuel${selectionCount > 1 ? "s" : ""} sélectionné${selectionCount > 1 ? "s" : ""}`;
+      const reference = effectiveAlignmentReference();
+      qa("[data-align-reference]").forEach((control) => {
+        control.checked = control.value === reference;
+      });
+      q("[data-alignment-help]").textContent = reference === "selection"
+        ? "Les visuels s’alignent sur le cadre global de la sélection."
+        : "Les visuels s’alignent dans la zone utile de la planche en respectant ses marges.";
+    }
+    if (!item || selectionCount !== 1) return;
     q("[data-selected-name]").textContent = item.asset_name;
     q("[data-input-width]").value = round(item.width_mm / 10, 2);
     q("[data-input-height]").value = round(item.height_mm / 10, 2);
@@ -276,17 +394,71 @@ if (root) {
   function renderIssues() {
     const list = q("[data-issues-list]");
     root.dataset.hasIssues = String(state.issues.length > 0);
+    list.replaceChildren();
     if (!state.issues.length) {
-      list.innerHTML = '<li class="is-ok">Aucune anomalie de placement.</li>';
+      const ok = document.createElement("li");
+      ok.className = "is-ok";
+      ok.textContent = "Aucune anomalie de placement.";
+      list.append(ok);
       return;
     }
-    const grouped = state.issues.reduce((acc, issue) => {
-      acc[issue.code] = (acc[issue.code] || 0) + 1;
-      return acc;
-    }, {});
-    list.innerHTML = Object.entries(grouped)
-      .map(([code, count]) => `<li class="is-error">${count} ${code === "overflow" ? "débordement" : "chevauchement"}${count > 1 ? "s" : ""}</li>`)
-      .join("");
+    state.issues.forEach((issue, index) => {
+      const row = document.createElement("li");
+      row.className = "is-error";
+      const focus = document.createElement("button");
+      focus.type = "button";
+      focus.dataset.issueFocus = String(index);
+      focus.textContent = issue.message || (issue.code === "overflow" ? "Un visuel déborde de la zone utile." : "Des visuels se chevauchent.");
+      focus.setAttribute("aria-label", `${focus.textContent} Sélectionner sur la planche.`);
+      row.append(focus);
+      if (issue.code === "overflow" && canEdit) {
+        const fix = document.createElement("button");
+        fix.type = "button";
+        fix.className = "gang-issue-fix";
+        fix.dataset.issueFix = String(index);
+        fix.textContent = "Ramener dans la planche";
+        row.append(fix);
+      }
+      list.append(row);
+    });
+  }
+
+  function focusIssue(index) {
+    const issue = state.issues[Number(index)];
+    if (!issue) return;
+    const availableIds = new Set(state.items.map((item) => item.public_id));
+    selectedIds = new Set((issue.item_public_ids || []).filter((publicId) => availableIds.has(publicId)));
+    selectedId = Array.from(selectedIds)[0] || null;
+    if (window.matchMedia("(max-width: 980px)").matches) setMobilePanel("canvas");
+    render();
+    window.requestAnimationFrame(() => {
+      canvas.querySelector(`[data-item-id="${selectedId}"]`)?.focus({ preventScroll: false });
+    });
+  }
+
+  function fixOverflowIssue(index) {
+    const issue = state.issues[Number(index)];
+    if (!issue || issue.code !== "overflow" || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    const before = layoutSnapshot();
+    const affectedItems = (issue.item_public_ids || [])
+      .map((publicId) => state.items.find((candidate) => candidate.public_id === publicId))
+      .filter(Boolean);
+    const cannotFit = affectedItems.some((item) => {
+      const size = effectiveSize(item);
+      return size.width > state.width_mm || size.height > state.height_mm;
+    });
+    if (cannotFit) {
+      window.preniumToast?.("Ce visuel est plus grand que la planche. Réduisez ses dimensions avant de le replacer.", "error");
+      return;
+    }
+    affectedItems.forEach((item) => {
+      const size = effectiveSize(item);
+      item.x_mm = round(Math.max(0, Math.min(item.x_mm, state.width_mm - size.width)));
+      item.y_mm = round(Math.max(0, Math.min(item.y_mm, state.height_mm - size.height)));
+    });
+    if (!commitLayoutMutation(before)) return;
+    focusIssue(index);
+    window.preniumToast?.("Le visuel a été ramené dans la planche.", "success");
   }
 
   function renderWorkflow() {
@@ -341,15 +513,36 @@ if (root) {
     root.dataset.sheetStatus = state.status;
     const locked = ["rendering", "validated"].includes(state.status);
     qa(
-      "[data-add-asset], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-duplicate-item], [data-delete-item], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item]"
+      "[data-add-asset], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix]"
     ).forEach((control) => {
       const assetPending = control.matches("[data-add-asset]") && control.dataset.assetReady !== "true";
       control.disabled = !canEdit || locked || assetPending;
+    });
+    qa("[data-issue-focus]").forEach((control) => {
+      control.disabled = busy;
     });
     q("[data-save-layout]").disabled = !canEdit || locked || !dirty || busy;
     q("[data-save-layout]").textContent = busy ? "Enregistrement…" : dirty ? "Enregistrer" : "Enregistré";
     q("[data-auto-place]").disabled = !canEdit || locked || state.items.length === 0 || busy;
     q("[data-apply-spacing]").disabled = !canEdit || locked || state.items.length === 0 || busy;
+    qa("[data-align]").forEach((control) => {
+      control.disabled = !canEdit || locked || selectedIds.size === 0 || busy;
+    });
+    qa("[data-align-reference]").forEach((control) => {
+      control.disabled = !canEdit || locked || busy || (control.value === "selection" && selectedIds.size < 2);
+    });
+    qa("[data-distribute]").forEach((control) => {
+      control.disabled = !canEdit || locked || busy || selectedIds.size < 3;
+    });
+    qa("[data-apply-selection-gap]").forEach((control) => {
+      control.disabled = !canEdit || locked || busy || selectedIds.size < 2;
+    });
+    q("[data-selection-gap]").disabled = !canEdit || locked || busy || selectedIds.size < 2;
+    q("[data-delete-selected]").disabled = !canEdit || locked || busy || selectedIds.size < 2;
+    q("[data-select-all]").disabled = !canEdit || locked || busy || state.items.length === 0;
+    q("[data-snap-toggle]").setAttribute("aria-pressed", String(snapEnabled));
+    q("[data-touch-multiselect]").setAttribute("aria-pressed", String(touchMultiSelect));
+    renderHistoryControls();
     q("[data-download-preview]").hidden = !["ready", "validated"].includes(state.status);
     q("[data-validate-sheet]").disabled = !canEdit || state.status !== "ready" || state.issues.length > 0;
     q("[data-render-sheet]").disabled = !canEdit || state.items.length === 0 || state.issues.length > 0 || locked;
@@ -358,25 +551,209 @@ if (root) {
     }
   }
 
-  function selectItem(publicId) {
-    selectedId = publicId;
+  function clearSelection() {
+    selectedId = null;
+    selectedIds.clear();
+  }
+
+  function selectItem(publicId, { additive = false } = {}) {
+    if (!additive) {
+      selectedIds = new Set([publicId]);
+      selectedId = publicId;
+      render();
+      return;
+    }
+    if (selectedIds.has(publicId)) {
+      selectedIds.delete(publicId);
+      if (selectedId === publicId) selectedId = Array.from(selectedIds).at(-1) || null;
+    } else {
+      selectedIds.add(publicId);
+      selectedId = publicId;
+    }
     render();
   }
 
-  function startPointerAction(event, item) {
-    if (state.status === "validated" || state.status === "rendering") return;
+  function selectAllItems() {
+    selectedIds = new Set(state.items.map((item) => item.public_id));
+    selectedId = state.items.at(-1)?.public_id || null;
+    render();
+  }
+
+  function toggleTouchMultiSelect() {
+    touchMultiSelect = !touchMultiSelect;
+    const control = q("[data-touch-multiselect]");
+    control?.classList.toggle("is-active", touchMultiSelect);
+    control?.setAttribute("aria-pressed", String(touchMultiSelect));
+    root.dataset.touchMultiSelect = String(touchMultiSelect);
+    renderStatus();
+  }
+
+  function renderSnapGuides() {
+    snapGuides.forEach((guide) => {
+      const node = document.createElement("span");
+      node.className = `gang-snap-guide gang-snap-guide--${guide.axis}`;
+      node.dataset.snapGuide = guide.axis;
+      node.setAttribute("aria-hidden", "true");
+      if (guide.axis === "x") node.style.left = `${(guide.value / state.width_mm) * 100}%`;
+      else node.style.top = `${(guide.value / state.height_mm) * 100}%`;
+      canvas.append(node);
+    });
+  }
+
+  function calculateSnapForMove(movingItems, movingStarts, deltaX, deltaY) {
+    if (!snapEnabled || !movingItems.length) return { deltaX, deltaY, guides: [] };
+    const movingIds = new Set(movingItems.map((item) => item.public_id));
+    const bounds = movingItems.reduce((result, item) => {
+      const start = movingStarts.get(item.public_id);
+      const size = effectiveSize(item);
+      return {
+        left: Math.min(result.left, start.x + deltaX),
+        top: Math.min(result.top, start.y + deltaY),
+        right: Math.max(result.right, start.x + deltaX + size.width),
+        bottom: Math.max(result.bottom, start.y + deltaY + size.height),
+      };
+    }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
+    const margin = Math.max(0, Number(state.margin_mm) || 0);
+    const xTargets = [margin, state.width_mm / 2, Math.max(margin, state.width_mm - margin)];
+    const yTargets = [margin, state.height_mm / 2, Math.max(margin, state.height_mm - margin)];
+    state.items.forEach((other) => {
+      if (movingIds.has(other.public_id)) return;
+      const size = effectiveSize(other);
+      xTargets.push(other.x_mm, other.x_mm + size.width / 2, other.x_mm + size.width);
+      yTargets.push(other.y_mm, other.y_mm + size.height / 2, other.y_mm + size.height);
+    });
+    const toleranceX = Math.max(1, Math.min(3, (state.width_mm / Math.max(canvas.clientWidth, 1)) * 7));
+    const toleranceY = Math.max(1, Math.min(3, (state.height_mm / Math.max(canvas.clientHeight, 1)) * 7));
+    const closest = (anchors, targets, tolerance) => {
+      let best = null;
+      anchors.forEach((anchor) => targets.forEach((target) => {
+        const distance = target - anchor;
+        if (Math.abs(distance) <= tolerance && (!best || Math.abs(distance) < Math.abs(best.distance))) {
+          best = { distance, target };
+        }
+      }));
+      return best;
+    };
+    const snapX = closest([bounds.left, (bounds.left + bounds.right) / 2, bounds.right], xTargets, toleranceX);
+    const snapY = closest([bounds.top, (bounds.top + bounds.bottom) / 2, bounds.bottom], yTargets, toleranceY);
+    return {
+      deltaX: deltaX + (snapX?.distance || 0),
+      deltaY: deltaY + (snapY?.distance || 0),
+      guides: [
+        ...(snapX ? [{ axis: "x", value: snapX.target }] : []),
+        ...(snapY ? [{ axis: "y", value: snapY.target }] : []),
+      ],
+    };
+  }
+
+  function startRectangleSelection(event) {
+    if (event.target !== canvas || event.pointerType === "touch" || event.button !== 0) return;
     event.preventDefault();
-    selectedId = item.public_id;
+    const pointerId = event.pointerId;
+    const canvasRect = canvas.getBoundingClientRect();
+    const startX = Math.max(0, Math.min(canvasRect.width, event.clientX - canvasRect.left));
+    const startY = Math.max(0, Math.min(canvasRect.height, event.clientY - canvasRect.top));
+    const additive = event.shiftKey || event.ctrlKey || event.metaKey;
+    const previousSelection = new Set(selectedIds);
+    const previousSelectedId = selectedId;
+    const initialSelection = additive ? new Set(selectedIds) : new Set();
+    const marquee = document.createElement("span");
+    let moved = false;
+    marquee.className = "gang-selection-marquee";
+    marquee.dataset.selectionMarquee = "";
+    marquee.setAttribute("aria-hidden", "true");
+    canvas.append(marquee);
+    canvas.setPointerCapture?.(event.pointerId);
+    const move = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      const currentX = Math.max(0, Math.min(canvasRect.width, moveEvent.clientX - canvasRect.left));
+      const currentY = Math.max(0, Math.min(canvasRect.height, moveEvent.clientY - canvasRect.top));
+      moved = moved || Math.abs(currentX - startX) > 2 || Math.abs(currentY - startY) > 2;
+      const left = Math.min(startX, currentX);
+      const top = Math.min(startY, currentY);
+      const right = Math.max(startX, currentX);
+      const bottom = Math.max(startY, currentY);
+      marquee.style.left = `${left}px`;
+      marquee.style.top = `${top}px`;
+      marquee.style.width = `${right - left}px`;
+      marquee.style.height = `${bottom - top}px`;
+      const area = {
+        left: (left / canvasRect.width) * state.width_mm,
+        top: (top / canvasRect.height) * state.height_mm,
+        right: (right / canvasRect.width) * state.width_mm,
+        bottom: (bottom / canvasRect.height) * state.height_mm,
+      };
+      selectedIds = new Set(initialSelection);
+      state.items.forEach((item) => {
+        const size = effectiveSize(item);
+        const intersects = item.x_mm < area.right
+          && item.x_mm + size.width > area.left
+          && item.y_mm < area.bottom
+          && item.y_mm + size.height > area.top;
+        if (intersects) selectedIds.add(item.public_id);
+      });
+      Array.from(canvas.querySelectorAll("[data-item-id]")).forEach((node) => {
+        const isSelected = selectedIds.has(node.dataset.itemId);
+        node.classList.toggle("is-selected", isSelected);
+        node.setAttribute("aria-pressed", String(isSelected));
+      });
+    };
+    const cleanup = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", cancel);
+      if (canvas.hasPointerCapture?.(pointerId)) canvas.releasePointerCapture(pointerId);
+      marquee.remove();
+    };
+    const end = (endEvent) => {
+      if (endEvent.pointerId !== pointerId) return;
+      cleanup();
+      suppressNextCanvasClick = moved;
+      selectedId = Array.from(selectedIds).at(-1) || null;
+      render();
+      if (moved) window.setTimeout(() => { suppressNextCanvasClick = false; }, 0);
+    };
+    const cancel = (cancelEvent) => {
+      if (cancelEvent.pointerId !== pointerId) return;
+      cleanup();
+      selectedIds = previousSelection;
+      selectedId = previousSelectedId;
+      render();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", cancel);
+  }
+
+  function startPointerAction(event, item) {
+    if (!canEdit || busy || state.status === "validated" || state.status === "rendering" || event.button !== 0) return;
+    if (event.shiftKey || event.ctrlKey || event.metaKey) return;
+    if (touchMultiSelect && event.pointerType === "touch" && !selectedIds.has(item.public_id)) return;
+    event.preventDefault();
+    const pointerId = event.pointerId;
+    canvas.setPointerCapture?.(pointerId);
     const resizing = event.target.closest("[data-resize-handle]");
+    if (!selectedIds.has(item.public_id) || resizing) {
+      selectedIds = new Set([item.public_id]);
+    }
+    selectedId = item.public_id;
     const startX = event.clientX;
     const startY = event.clientY;
     const start = { x: item.x_mm, y: item.y_mm, width: item.width_mm, height: item.height_mm };
+    const movingItems = resizing ? [item] : selectedItems();
+    const movingStarts = new Map(movingItems.map((movingItem) => [movingItem.public_id, { x: movingItem.x_mm, y: movingItem.y_mm }]));
+    const before = layoutSnapshot();
+    const wasDirty = dirty;
+    let moved = false;
     const move = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
       const mmPerPxX = state.width_mm / canvas.clientWidth;
       const mmPerPxY = state.height_mm / canvas.clientHeight;
+      let deltaX = (moveEvent.clientX - startX) * mmPerPxX;
+      let deltaY = (moveEvent.clientY - startY) * mmPerPxY;
+      moved = moved || Math.abs(moveEvent.clientX - startX) > 2 || Math.abs(moveEvent.clientY - startY) > 2;
+      if (!moved) return;
       if (resizing) {
-        const deltaX = (moveEvent.clientX - startX) * mmPerPxX;
-        const deltaY = (moveEvent.clientY - startY) * mmPerPxY;
         resizeItemFromPointer(item, {
           start,
           deltaX,
@@ -384,18 +761,50 @@ if (root) {
           lockRatio: q("[data-lock-ratio]").checked,
         });
       } else {
-        item.x_mm = round(start.x + (moveEvent.clientX - startX) * mmPerPxX);
-        item.y_mm = round(start.y + (moveEvent.clientY - startY) * mmPerPxY);
+        const snapped = calculateSnapForMove(movingItems, movingStarts, deltaX, deltaY);
+        deltaX = snapped.deltaX;
+        deltaY = snapped.deltaY;
+        snapGuides = snapped.guides;
+        movingItems.forEach((movingItem) => {
+          const movingStart = movingStarts.get(movingItem.public_id);
+          movingItem.x_mm = round(movingStart.x + deltaX);
+          movingItem.y_mm = round(movingStart.y + deltaY);
+        });
       }
       setDirty();
       render();
     };
-    const end = () => {
+    const cleanup = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", cancel);
+      if (canvas.hasPointerCapture?.(pointerId)) canvas.releasePointerCapture(pointerId);
+    };
+    const end = (endEvent) => {
+      if (endEvent.pointerId !== pointerId) return;
+      cleanup();
+      suppressNextItemClick = moved;
+      snapGuides = [];
+      if (moved) {
+        if (!commitLayoutMutation(before)) setDirty(wasDirty);
+      } else {
+        setDirty(wasDirty);
+      }
+      render();
+      if (moved) window.setTimeout(() => { suppressNextItemClick = false; }, 0);
+    };
+    const cancel = (cancelEvent) => {
+      if (cancelEvent.pointerId !== pointerId) return;
+      cleanup();
+      restoreLayoutSnapshot(before);
+      suppressNextItemClick = false;
+      snapGuides = [];
+      setDirty(wasDirty);
+      render();
     };
     window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", end, { once: true });
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", cancel);
   }
 
   function setBusy(value) {
@@ -440,7 +849,9 @@ if (root) {
     state.estimated_price_eur = payload.estimated_price_eur;
     state.issues = payload.issues;
     state.status = "draft";
+    savedLayoutSignature = layoutSignature();
     setDirty(false);
+    resetLayoutHistory();
     render();
     if (notify) window.preniumToast?.("Brouillon enregistré.", "success");
   }
@@ -448,8 +859,12 @@ if (root) {
   async function reloadState() {
     const payload = await request(root.dataset.stateUrl);
     state = payload.sheet;
+    savedLayoutSignature = layoutSignature();
     setDirty(false);
-    if (!state.items.some((item) => item.public_id === selectedId)) selectedId = null;
+    resetLayoutHistory();
+    const availableIds = new Set(state.items.map((item) => item.public_id));
+    selectedIds = new Set(Array.from(selectedIds).filter((publicId) => availableIds.has(publicId)));
+    if (!selectedId || !selectedIds.has(selectedId)) selectedId = Array.from(selectedIds).at(-1) || null;
     syncSpacingControls();
     render();
   }
@@ -882,6 +1297,33 @@ if (root) {
     zoom = Math.min(1.5, round(zoom + 0.25, 2));
     renderZoom();
   });
+  q("[data-undo-layout]").addEventListener("click", undoLayoutMutation);
+  q("[data-redo-layout]").addEventListener("click", redoLayoutMutation);
+  q("[data-snap-toggle]").addEventListener("click", () => {
+    snapEnabled = !snapEnabled;
+    snapGuides = [];
+    q("[data-snap-toggle]").classList.toggle("is-active", snapEnabled);
+    q("[data-snap-toggle]").setAttribute("aria-pressed", String(snapEnabled));
+  });
+  q("[data-select-all]").addEventListener("click", selectAllItems);
+  q("[data-touch-multiselect]").addEventListener("click", toggleTouchMultiSelect);
+  canvas.addEventListener("pointerdown", startRectangleSelection);
+  function clearSelectionFromCanvasBackground(event) {
+    if (
+      ![canvas, canvasClearZone].includes(event.target)
+      || event.shiftKey
+      || event.ctrlKey
+      || event.metaKey
+    ) return;
+    if (suppressNextCanvasClick) {
+      suppressNextCanvasClick = false;
+      return;
+    }
+    if (!selectedIds.size) return;
+    clearSelection();
+    render();
+  }
+  canvasClearZone.addEventListener("click", clearSelectionFromCanvasBackground);
 
   root.addEventListener("htmx:afterSwap", (event) => {
     if (!event.target.matches("[data-asset-list]")) return;
@@ -910,23 +1352,160 @@ if (root) {
     return runAction("auto-place", { saveFirst: true, body: spacingRequestBody() });
   }
 
+  function selectionBounds(items) {
+    return items.reduce((bounds, item) => {
+      const size = effectiveSize(item);
+      return {
+        left: Math.min(bounds.left, item.x_mm),
+        top: Math.min(bounds.top, item.y_mm),
+        right: Math.max(bounds.right, item.x_mm + size.width),
+        bottom: Math.max(bounds.bottom, item.y_mm + size.height),
+      };
+    }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
+  }
+
+  function alignmentBounds(items) {
+    if (effectiveAlignmentReference() === "selection") return selectionBounds(items);
+    const margin = Math.max(0, Number(state.margin_mm) || 0);
+    return {
+      left: margin,
+      top: margin,
+      right: Math.max(margin, state.width_mm - margin),
+      bottom: Math.max(margin, state.height_mm - margin),
+    };
+  }
+
+  function alignSelectedItems(direction) {
+    const items = selectedItems();
+    if (!items.length || !canEdit || ["rendering", "validated"].includes(state.status)) return;
+    const before = layoutSnapshot();
+    const bounds = alignmentBounds(items);
+    const centerX = (bounds.left + bounds.right) / 2;
+    const centerY = (bounds.top + bounds.bottom) / 2;
+    items.forEach((item) => {
+      const size = effectiveSize(item);
+      if (direction === "left") item.x_mm = round(bounds.left);
+      else if (direction === "center-x") item.x_mm = round(centerX - size.width / 2);
+      else if (direction === "right") item.x_mm = round(bounds.right - size.width);
+      else if (direction === "top") item.y_mm = round(bounds.top);
+      else if (direction === "center-y") item.y_mm = round(centerY - size.height / 2);
+      else if (direction === "bottom") item.y_mm = round(bounds.bottom - size.height);
+    });
+    const labels = {
+      left: "à gauche",
+      "center-x": "au centre horizontal",
+      right: "à droite",
+      top: "en haut",
+      "center-y": "au centre vertical",
+      bottom: "en bas",
+    };
+    const referenceLabel = effectiveAlignmentReference() === "selection" ? "la sélection" : "la planche";
+    commitLayoutMutation(before);
+    render();
+    window.preniumToast?.(`${items.length} visuel${items.length > 1 ? "s" : ""} aligné${items.length > 1 ? "s" : ""} ${labels[direction]} sur ${referenceLabel}.`, "success");
+  }
+
+  function distributeSelectedItems(axis) {
+    const items = selectedItems();
+    if (items.length < 3 || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    const before = layoutSnapshot();
+    const horizontal = axis === "horizontal";
+    const sorted = [...items].sort((first, second) => horizontal
+      ? first.x_mm - second.x_mm
+      : first.y_mm - second.y_mm);
+    const first = sorted[0];
+    const last = sorted.at(-1);
+    const firstStart = horizontal ? first.x_mm : first.y_mm;
+    const lastSize = effectiveSize(last);
+    const lastEnd = (horizontal ? last.x_mm + lastSize.width : last.y_mm + lastSize.height);
+    const totalSize = sorted.reduce((total, item) => {
+      const size = effectiveSize(item);
+      return total + (horizontal ? size.width : size.height);
+    }, 0);
+    const gap = (lastEnd - firstStart - totalSize) / (sorted.length - 1);
+    if (gap < 0) {
+      window.preniumToast?.("La sélection manque d’espace pour être répartie sans chevauchement.", "error");
+      return;
+    }
+    let cursor = firstStart;
+    sorted.forEach((item) => {
+      if (horizontal) item.x_mm = round(cursor);
+      else item.y_mm = round(cursor);
+      const size = effectiveSize(item);
+      cursor += (horizontal ? size.width : size.height) + gap;
+    });
+    commitLayoutMutation(before);
+    render();
+    window.preniumToast?.(`Répartition ${horizontal ? "horizontale" : "verticale"} appliquée.`, "success");
+  }
+
+  function applyPreciseGap(axis) {
+    const items = selectedItems();
+    if (items.length < 2 || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    const input = q("[data-selection-gap]");
+    const gap = Math.max(0, Math.min(1000, Number(input.value) || 0));
+    input.value = round(gap, 2);
+    const before = layoutSnapshot();
+    const horizontal = axis === "horizontal";
+    const sorted = [...items].sort((first, second) => horizontal
+      ? first.x_mm - second.x_mm
+      : first.y_mm - second.y_mm);
+    let cursor = horizontal ? sorted[0].x_mm : sorted[0].y_mm;
+    const requiredSpan = sorted.reduce((total, item) => {
+      const size = effectiveSize(item);
+      return total + (horizontal ? size.width : size.height);
+    }, 0) + gap * (sorted.length - 1);
+    const placementLimit = horizontal ? state.width_mm : state.maximum_height_mm;
+    if (cursor < 0 || cursor + requiredSpan > placementLimit) {
+      window.preniumToast?.(`L’écart demandé ferait déborder la sélection ${horizontal ? "de la largeur" : "de la hauteur maximale"} de la planche.`, "error");
+      return;
+    }
+    sorted.forEach((item) => {
+      if (horizontal) item.x_mm = round(cursor);
+      else item.y_mm = round(cursor);
+      const size = effectiveSize(item);
+      cursor += (horizontal ? size.width : size.height) + gap;
+    });
+    commitLayoutMutation(before);
+    render();
+    window.preniumToast?.(`Écart ${horizontal ? "horizontal" : "vertical"} fixé à ${round(gap, 2)} mm.`, "success");
+  }
+
   q("[data-save-layout]").addEventListener("click", () => saveLayout().catch((error) => window.preniumToast?.(error.message, "error")));
   q("[data-auto-place]").addEventListener("click", autoPlaceWithSpacing);
   q("[data-apply-spacing]").addEventListener("click", autoPlaceWithSpacing);
+  qa("[data-align-reference]").forEach((control) => {
+    control.addEventListener("change", () => {
+      alignmentReference = control.value;
+      renderInspector();
+      renderStatus();
+    });
+  });
+  qa("[data-align]").forEach((control) => {
+    control.addEventListener("click", () => alignSelectedItems(control.dataset.align));
+  });
+  qa("[data-distribute]").forEach((control) => {
+    control.addEventListener("click", () => distributeSelectedItems(control.dataset.distribute));
+  });
+  qa("[data-apply-selection-gap]").forEach((control) => {
+    control.addEventListener("click", () => applyPreciseGap(control.dataset.applySelectionGap));
+  });
   q("[data-render-sheet]").addEventListener("click", () => runAction("render", { saveFirst: true }));
   q("[data-validate-sheet]").addEventListener("click", () => runAction("validate"));
   q("[data-create-order-project]")?.addEventListener("click", () => runAction("create-order-project"));
   function rotateSelected() {
     const item = selected();
-    if (item) {
+    if (item && canEdit && !busy && !["rendering", "validated"].includes(state.status)) {
+      const before = layoutSnapshot();
       item.rotation = (Number(item.rotation) + 90) % 360;
-      setDirty();
+      commitLayoutMutation(before);
       render();
     }
   }
   q("[data-rotate-item]").addEventListener("click", rotateSelected);
   async function duplicateSelected() {
-    const item = selected(); if (!item) return;
+    const item = selected();
+    if (!item || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
     try {
       await saveLayout({ notify: false });
       const url = root.dataset.itemUrlTemplate.replace("00000000-0000-0000-0000-000000000000", item.public_id).replace("ACTION", "duplicate");
@@ -936,16 +1515,45 @@ if (root) {
   q("[data-duplicate-item]").addEventListener("click", duplicateSelected);
 
   async function deleteSelected() {
-    const item = selected(); if (!item) return;
+    const items = selectedItems();
+    if (!items.length || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    const itemPublicIds = items.map((item) => item.public_id);
+    if (itemPublicIds.length > 1) {
+      const confirmed = window.confirm(
+        `Supprimer définitivement les ${itemPublicIds.length} visuels sélectionnés de cette planche ?`
+      );
+      if (!confirmed) return;
+    }
     try {
       if (dirty) await saveLayout({ notify: false });
-      const url = root.dataset.itemUrlTemplate.replace("00000000-0000-0000-0000-000000000000", item.public_id).replace("ACTION", "delete");
-      await request(url, { method: "POST" }); selectedId = null; await reloadState(); window.preniumToast?.("Occurrence supprimée.", "success");
+      const payload = await request(root.dataset.batchDeleteUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_public_ids: itemPublicIds }),
+      });
+      clearSelection();
+      await reloadState();
+      const deletedCount = Number(payload.deleted_count) || itemPublicIds.length;
+      window.preniumToast?.(
+        `${deletedCount} visuel${deletedCount > 1 ? "s" : ""} supprimé${deletedCount > 1 ? "s" : ""}.`,
+        "success"
+      );
     } catch (error) { window.preniumToast?.(error.message, "error"); }
   }
   q("[data-delete-item]").addEventListener("click", deleteSelected);
+  q("[data-delete-selected]").addEventListener("click", deleteSelected);
 
   root.addEventListener("click", (event) => {
+    const issueFix = event.target.closest("[data-issue-fix]");
+    if (issueFix && !issueFix.disabled) {
+      fixOverflowIssue(issueFix.dataset.issueFix);
+      return;
+    }
+    const issueFocus = event.target.closest("[data-issue-focus]");
+    if (issueFocus && !issueFocus.disabled) {
+      focusIssue(issueFocus.dataset.issueFocus);
+      return;
+    }
     const rotateButton = event.target.closest("[data-canvas-rotate-item]");
     if (rotateButton && !rotateButton.disabled) {
       rotateSelected();
@@ -958,6 +1566,7 @@ if (root) {
   [["[data-input-width]", "width_mm"], ["[data-input-height]", "height_mm"], ["[data-input-x]", "x_mm"], ["[data-input-y]", "y_mm"]].forEach(([selector, key]) => {
     q(selector).addEventListener("change", (event) => {
       const item = selected(); if (!item) return;
+      const before = layoutSnapshot();
       const next = round(Number(event.target.value) * 10);
       if (key === "width_mm" && q("[data-lock-ratio]").checked) {
         const ratio = item.height_mm / item.width_mm;
@@ -970,26 +1579,38 @@ if (root) {
       } else {
         item[key] = next;
       }
-      setDirty();
+      commitLayoutMutation(before);
       render();
     });
   });
 
   window.addEventListener("keydown", (event) => {
     if (event.target.closest("input, textarea, select")) return;
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+    const modifier = event.metaKey || event.ctrlKey;
+    if (modifier && event.key.toLowerCase() === "y") {
+      event.preventDefault();
+      redoLayoutMutation();
+    } else if (modifier && event.key.toLowerCase() === "z") {
+      event.preventDefault();
+      if (event.shiftKey) redoLayoutMutation();
+      else undoLayoutMutation();
+    } else if (modifier && event.key.toLowerCase() === "a") {
+      event.preventDefault();
+      selectAllItems();
+    } else if (modifier && event.key.toLowerCase() === "s" && canEdit && !busy && !["rendering", "validated"].includes(state.status)) {
       event.preventDefault();
       saveLayout().catch((error) => window.preniumToast?.(error.message, "error"));
-    } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
+    } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d" && canEdit && selectedIds.size === 1) {
       event.preventDefault();
       duplicateSelected();
-    } else if (event.key.toLowerCase() === "r" && selected()) {
+    } else if (event.key.toLowerCase() === "r" && canEdit && selectedIds.size === 1 && selected()) {
+      event.preventDefault();
       rotateSelected();
-    } else if ((event.key === "Delete" || event.key === "Backspace") && selected()) {
+    } else if ((event.key === "Delete" || event.key === "Backspace") && canEdit && selectedIds.size > 0) {
       event.preventDefault();
       deleteSelected();
     } else if (event.key === "Escape") {
-      selectedId = null;
+      clearSelection();
       render();
     }
   });

@@ -36,6 +36,7 @@ from apps.uploads.services.assets import AssetDomainError, AssetService
 HUNDREDTH = Decimal("0.01")
 FOUR_PLACES = Decimal("0.0001")
 MAX_BATCH_OCCURRENCES = 200
+MAX_BATCH_DELETE_OCCURRENCES = 1000
 MAX_SOURCE_ASSETS = 100
 MAX_SPACING_MM = Decimal("100.00")
 
@@ -486,6 +487,64 @@ class GangSheetService:
             source=source,
             metadata={"item_public_id": deleted_id},
         )
+
+    @transaction.atomic
+    def delete_occurrences(
+        self,
+        *,
+        sheet,
+        item_public_ids,
+        actor,
+        source="client_portal",
+    ) -> int:
+        if item_public_ids is not None and not isinstance(item_public_ids, list | tuple):
+            raise GangSheetDomainError(
+                "INVALID_ITEM_SELECTION",
+                "La sélection de visuels est invalide.",
+            )
+        if len(item_public_ids or []) > MAX_BATCH_DELETE_OCCURRENCES:
+            raise GangSheetDomainError(
+                "BATCH_DELETE_LIMIT_EXCEEDED",
+                f"La suppression est limitée à {MAX_BATCH_DELETE_OCCURRENCES} visuels par action.",
+            )
+        selected_ids = list(
+            dict.fromkeys(str(public_id) for public_id in (item_public_ids or []) if public_id)
+        )
+        if not selected_ids:
+            raise GangSheetDomainError(
+                "ITEM_SELECTION_REQUIRED",
+                "Sélectionnez au moins un visuel à supprimer.",
+            )
+        locked = self._lock_editable(sheet)
+        try:
+            items = list(locked.items.select_for_update().filter(public_id__in=selected_ids))
+        except (ValidationError, ValueError) as error:
+            raise GangSheetDomainError(
+                "INVALID_ITEM_SELECTION",
+                "La sélection de visuels est invalide.",
+            ) from error
+        if len(items) != len(selected_ids):
+            raise GangSheetDomainError(
+                "ITEM_NOT_FOUND",
+                "Un ou plusieurs visuels sélectionnés sont introuvables.",
+            )
+
+        deleted_ids = [str(item.public_id) for item in items]
+        GangSheetItem.objects.filter(pk__in=[item.pk for item in items]).delete()
+        self._normalize_z_indexes(locked)
+        self._mark_dirty(locked)
+        self._refresh_sheet(locked)
+        self._audit(
+            "items_batch_deleted",
+            sheet=locked,
+            actor=actor,
+            source=source,
+            metadata={
+                "item_count": len(deleted_ids),
+                "item_public_ids": deleted_ids,
+            },
+        )
+        return len(deleted_ids)
 
     @transaction.atomic
     def remove_source_asset(
@@ -945,12 +1004,13 @@ class GangSheetService:
         sheet.revision += 1
         sheet.status = GangSheet.Status.DRAFT
         sheet.render_error = ""
-        if sheet.preview_file:
-            sheet.preview_file.delete(save=False)
-            sheet.preview_file = ""
-        if sheet.final_file:
-            sheet.final_file.delete(save=False)
-            sheet.final_file = ""
+        stored_files = [
+            (field.storage, field.name)
+            for field in (sheet.preview_file, sheet.final_file)
+            if field.name
+        ]
+        sheet.preview_file = ""
+        sheet.final_file = ""
         sheet.rendered_at = None
         sheet.save(
             update_fields=[
@@ -963,6 +1023,10 @@ class GangSheetService:
                 "updated_at",
             ]
         )
+        if stored_files:
+            transaction.on_commit(
+                lambda stored_files=stored_files: self._delete_stored_files(stored_files)
+            )
 
     @staticmethod
     def _normalize_z_indexes(sheet):

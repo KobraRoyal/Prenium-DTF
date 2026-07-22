@@ -151,8 +151,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("conversion-kicker", partials)
         self.assertNotIn("conversion-transform__index", partials)
         self.assertIn("min-height: 2.75rem", conversion_css)
-        self.assertIn("app.css' %}?v=20260721y", base)
-        self.assertIn("app.js' %}?v=20260721s", base)
+        self.assertIn("app.css' %}?v=20260722d", base)
+        self.assertIn("app.js' %}?v=20260722d", base)
         self.assertIn("ui-brand-lockup__home", logo)
         self.assertEqual(logo.count("<a "), 1)
 
@@ -461,6 +461,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("data-spacing-x", editor)
         self.assertIn("data-spacing-y", editor)
         self.assertIn("data-apply-spacing", editor)
+        self.assertIn("data-alignment-panel", editor)
+        self.assertIn('value="selection" data-align-reference', editor)
+        self.assertIn('value="sheet" data-align-reference', editor)
+        for direction in ["left", "center-x", "right", "top", "center-y", "bottom"]:
+            self.assertIn(f'data-align="{direction}"', editor)
         self.assertNotIn("Répétition", editor)
         self.assertNotIn("data-grid-rows", editor)
         self.assertNotIn("Créer la grille", editor)
@@ -497,17 +502,91 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("function autoPlaceWithSpacing", runtime)
         self.assertIn('body.append("spacing_x_mm", spacingX)', runtime)
         self.assertIn('body.append("spacing_y_mm", spacingY)', runtime)
+        self.assertIn("let selectedIds = new Set()", runtime)
+        self.assertIn("function selectionBounds", runtime)
+        self.assertIn("function alignmentBounds", runtime)
+        self.assertIn("function alignSelectedItems", runtime)
+        self.assertIn('effectiveAlignmentReference() === "selection"', runtime)
+        self.assertIn("event.shiftKey || event.ctrlKey || event.metaKey", runtime)
+        self.assertIn("item.x_mm = round(centerX - size.width / 2)", runtime)
+        self.assertIn("item.y_mm = round(centerY - size.height / 2)", runtime)
         self.assertNotIn("function createSelectedGrid", runtime)
         self.assertNotIn('attribute: "data-canvas-repeat-item"', runtime)
         self.assertIn(".gang-sheet-item-toolbar", studio_css)
         self.assertIn(".gang-spacing-panel", studio_css)
         self.assertIn(".gang-spacing-grid", studio_css)
+        self.assertIn(".gang-alignment-panel", studio_css)
+        self.assertIn(".gang-alignment-reference", studio_css)
+        self.assertIn(".gang-alignment-actions", studio_css)
+        self.assertIn(".gang-sheet-item.is-primary .gang-sheet-item__resize", studio_css)
         self.assertIn(
             "translate(-50%, -50%) rotate(${item.rotation}deg)",
             runtime,
         )
         self.assertIn('window.addEventListener("beforeunload"', runtime)
         self.assertIn("root.dataset.dirty = String(dirty)", runtime)
+
+    def test_gang_sheet_editor_exposes_safe_precision_tools(self) -> None:
+        editor = template_source("portal/client/gang_sheets/editor.html")
+        studio_css = static_source("css/components/gang-sheet-studio.css")
+        runtime = static_source("js/gang-sheet-editor.js")
+
+        for marker in [
+            "data-undo-layout",
+            "data-redo-layout",
+            "data-snap-toggle",
+            "data-select-all",
+            "data-touch-multiselect",
+            "data-delete-selected",
+            "data-batch-delete-url",
+            "data-canvas-clear-zone",
+            'data-distribute="horizontal"',
+            'data-distribute="vertical"',
+            "data-selection-gap",
+            'data-apply-selection-gap="horizontal"',
+            'data-apply-selection-gap="vertical"',
+            "data-issues-list",
+        ]:
+            self.assertIn(marker, editor)
+
+        for marker in [
+            "function layoutSnapshot",
+            "function commitLayoutMutation",
+            "function undoLayoutMutation",
+            "function redoLayoutMutation",
+            "function resetLayoutHistory",
+            "function calculateSnapForMove",
+            "function renderSnapGuides",
+            "function startRectangleSelection",
+            "function toggleTouchMultiSelect",
+            "function distributeSelectedItems",
+            "function applyPreciseGap",
+            "function focusIssue",
+            "function fixOverflowIssue",
+        ]:
+            self.assertIn(marker, runtime)
+
+        self.assertIn("const HISTORY_LIMIT = 40", runtime)
+        self.assertIn("function syncLayoutDirtyState", runtime)
+        self.assertIn("layoutSignature() !== savedLayoutSignature", runtime)
+        self.assertIn("resetLayoutHistory();", runtime)
+        self.assertIn("focus.dataset.issueFocus", runtime)
+        self.assertIn("fix.dataset.issueFix", runtime)
+        self.assertIn('window.addEventListener("pointercancel", cancel)', runtime)
+        self.assertIn('event.key.toLowerCase() === "y"', runtime)
+        self.assertIn("async function deleteSelected", runtime)
+        self.assertIn("root.dataset.batchDeleteUrl", runtime)
+        self.assertIn("window.confirm", runtime)
+        self.assertIn("suppressNextCanvasClick", runtime)
+        self.assertIn("function clearSelectionFromCanvasBackground", runtime)
+        self.assertIn('q("[data-canvas-clear-zone]")', runtime)
+        self.assertIn(".gang-snap-guide", studio_css)
+        self.assertIn(".gang-selection-marquee", studio_css)
+        self.assertIn(".gang-editor__history", studio_css)
+        self.assertIn(".gang-editor__selection-tools", studio_css)
+        self.assertIn(".gang-editor__touch-multiselect", studio_css)
+        self.assertIn(".gang-issue-fix", studio_css)
+        self.assertIn(".gang-selection-delete", studio_css)
 
     def test_portal_navigation_closes_secondary_tools_accessibly(self) -> None:
         runtime = static_source("js/product-shell.js")

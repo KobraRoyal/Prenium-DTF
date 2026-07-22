@@ -63,6 +63,12 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   asset HD, upload de production et verrouillage métier restent conservés.
 - Galerie actualisée automatiquement pendant l’analyse : un visuel devient ajoutable dès que son
   contrôle technique se termine, sans rechargement manuel du studio.
+- Outils de précision P1 : historique local Annuler/Rétablir borné à 40 opérations de composition,
+  aimantation avec guides visuels, distribution régulière et écart exact de la sélection.
+- Sélection multiple par cadre à la souris et mode multi-tap tactile, avec sélection globale ; les
+  anomalies sont focalisables et les débordements corrigeables lorsqu’ils tiennent dans la planche.
+- Suppression atomique de plusieurs occurrences sélectionnées, avec confirmation du nombre,
+  audit métier unique et désélection par clic ou tap sur le fond vide du canvas.
 
 ## Fichiers principaux
 
@@ -110,13 +116,27 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   et inversion des axes lors du redimensionnement d’une occurrence tournée.
 - [x] Test UX des actions contextuelles : rotation et suppression accessibles sur le canevas,
   panneau X/Y sans répétition, application serveur et comportement responsive.
+- [x] Multi-sélection avec Maj/Ctrl/Cmd, déplacement groupé et six alignements selon deux
+  référentiels explicites : cadre global de la sélection ou zone utile de la planche.
+- [x] Historique Annuler/Rétablir, aimantation et guides, cadre de sélection, multi-tap tactile,
+  distribution régulière, écart précis et anomalies focalisables avec correction sûre du débordement.
+- [x] Suppression par lot tenant-scopée, protégée en lecture seule, auditée et atomique si un ID de
+  la sélection est absent ; payload JSON borné avant verrouillage, isolation inter-planche/inter-client
+  et fichiers dérivés préservés en cas de rollback ; clic/tap sur le fond pour désélectionner sans
+  casser le cadre souris.
 - [x] Les annotations et liens interactifs des sources ne sont pas propagés au PDF de production.
 - [x] Intégration checkout : planches validées rattachées à la commande.
 - [x] Build Tailwind/DaisyUI exécuté.
 - [x] Classes dynamiques du canvas conservées après minification Tailwind.
-- [x] Suite complète : 509 tests passés ; Ruff check global, format du lot, Django check, migrations et JavaScript conformes.
+- [x] Suite complète : 517 tests passés ; Ruff check global, format du lot, Django check, migrations et JavaScript conformes.
 - [x] Recette navigateur desktop et mobile : quantité, imposition automatique avec espacements X/Y,
   proportions, compteurs et absence d’overflow à 375 px, sans erreur console.
+- [x] Recette navigateur des alignements : sélection simple/multiple, gauche sur sélection, droite
+  sur planche avec marge, six commandes accessibles et panneau responsive sans débordement.
+- [x] Recette navigateur P1 : sélection multiple, écart précis, Annuler/Rétablir jusqu’à l’état
+  enregistré, anomalies recalculées, ratio physique du canvas et réglages sans overflow à 375 px.
+- [x] Recette navigateur suppression par lot : sélection de trois visuels, confirmation et suppression
+  atomique, désélection par clic sur la zone vide, bouton responsive à 375 px et aucune erreur console.
 - [x] Recette UI du nouveau studio : cohérence avec le portail, ordre mobile Galerie → Composition →
   Contrôle, métriques et états vides lisibles, aucune erreur console.
 - [x] Recette du sélecteur direct Gang Sheet et Order Project : annulation sans modale, sélection puis

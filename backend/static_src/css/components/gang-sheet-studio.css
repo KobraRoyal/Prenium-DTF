@@ -649,6 +649,7 @@
     top: 2.9rem;
     z-index: 6;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     margin: 0;
@@ -663,6 +664,58 @@
   .gang-editor__toolbar-actions {
     display: flex;
     gap: 0.4rem;
+  }
+
+  .gang-editor__history,
+  .gang-editor__selection-tools {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
+    border-radius: 0.4rem;
+    background: #fff;
+  }
+
+  .gang-editor__history button,
+  .gang-editor__selection-tools button {
+    min-height: 2.75rem;
+    padding: 0 0.62rem;
+    border: 0;
+    background: transparent;
+    color: var(--product-ink, #0b0b0b);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.64rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .gang-editor__history button {
+    min-width: 2.75rem;
+    padding: 0;
+    font-size: 1rem;
+  }
+
+  .gang-editor__history button + button,
+  .gang-editor__selection-tools button + button {
+    border-left: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 16%, transparent);
+  }
+
+  .gang-editor__history button:hover,
+  .gang-editor__selection-tools button:hover,
+  .gang-editor__selection-tools button.is-active {
+    background: color-mix(in srgb, var(--product-accent, #dcff1a) 18%, #fff);
+  }
+
+  .gang-editor__history button:focus-visible,
+  .gang-editor__selection-tools button:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
+    outline-offset: -3px;
+  }
+
+  .gang-editor__touch-multiselect {
+    display: none;
   }
 
   .gang-editor__toolbar .ui-btn {
@@ -712,6 +765,7 @@
   }
 
   .gang-editor__toolbar-hint {
+    flex-basis: 100%;
     margin-left: 0;
     color: var(--product-muted, #4c463b);
     font-size: 0.61rem;
@@ -735,6 +789,36 @@
     flex: 0 0 auto;
     border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 55%, transparent);
     box-shadow: 0 5px 8px rgba(11, 11, 11, 0.2);
+    touch-action: none;
+  }
+
+  .gang-snap-guide {
+    position: absolute;
+    z-index: calc(var(--gang-z-item-actions) - 1);
+    pointer-events: none;
+    background: #1f66ff;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72);
+  }
+
+  .gang-snap-guide--x {
+    top: 0;
+    bottom: 0;
+    width: 1px;
+  }
+
+  .gang-snap-guide--y {
+    right: 0;
+    left: 0;
+    height: 1px;
+  }
+
+  .gang-selection-marquee {
+    position: absolute;
+    z-index: var(--gang-z-item-actions);
+    border: 1px solid #1f66ff;
+    background: rgba(31, 102, 255, 0.12);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7) inset;
+    pointer-events: none;
   }
 
   .gang-sheet-item.is-selected {
@@ -751,6 +835,13 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .gang-sheet-item.is-primary .gang-sheet-item__resize {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .gang-sheet-item-toolbar {
@@ -861,6 +952,217 @@
     min-height: 2.75rem;
   }
 
+  .gang-alignment-panel {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .gang-alignment-panel[hidden] {
+    display: none;
+  }
+
+  .gang-alignment-panel__heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+  }
+
+  .gang-alignment-panel__heading > span {
+    display: grid;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.4rem;
+    background: color-mix(in srgb, var(--product-accent, #dcff1a) 28%, #fff);
+    color: var(--product-ink, #0b0b0b);
+    font-size: 0.85rem;
+    font-weight: 900;
+  }
+
+  .gang-alignment-reference {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .gang-alignment-reference legend {
+    margin-bottom: 0.3rem;
+    color: var(--product-muted, #4c463b);
+    font-size: 0.61rem;
+    font-weight: 800;
+  }
+
+  .gang-alignment-reference > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.2rem;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 26%, transparent);
+    border-radius: 0.45rem;
+    background: color-mix(in srgb, var(--product-panel-strong, #f3ead6) 65%, #fff);
+  }
+
+  .gang-alignment-reference label {
+    position: relative;
+    min-width: 0;
+    cursor: pointer;
+  }
+
+  .gang-alignment-reference input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .gang-alignment-reference span {
+    display: grid;
+    min-height: 2.35rem;
+    place-items: center;
+    border-radius: 0.3rem;
+    color: var(--product-muted, #4c463b);
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  .gang-alignment-reference input:checked + span {
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(11, 11, 11, 0.16);
+    color: var(--product-ink, #0b0b0b);
+  }
+
+  .gang-alignment-reference input:focus-visible + span {
+    outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
+    outline-offset: 1px;
+  }
+
+  .gang-alignment-reference input:disabled + span {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .gang-alignment-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .gang-alignment-actions button {
+    display: grid;
+    min-width: 0;
+    min-height: 2.75rem;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 32%, transparent);
+    border-radius: 0.35rem;
+    background: #fff;
+    color: var(--product-ink, #0b0b0b);
+    cursor: pointer;
+  }
+
+  .gang-alignment-actions button:hover {
+    border-color: var(--product-line, #0b0b0b);
+    background: color-mix(in srgb, var(--product-accent, #dcff1a) 16%, #fff);
+  }
+
+  .gang-alignment-actions button:focus-visible {
+    outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
+    outline-offset: 1px;
+  }
+
+  .gang-alignment-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+  }
+
+  .gang-alignment-actions svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: square;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+  }
+
+  .gang-alignment-panel__help {
+    margin: 0;
+  }
+
+  .gang-distribution-tools,
+  .gang-precise-gap {
+    display: grid;
+    gap: 0.3rem;
+  }
+
+  .gang-distribution-tools > span,
+  .gang-precise-gap > label {
+    color: var(--product-muted, #4c463b);
+    font-size: 0.61rem;
+    font-weight: 800;
+  }
+
+  .gang-distribution-tools > div,
+  .gang-precise-gap > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .gang-distribution-tools button,
+  .gang-precise-gap button {
+    min-height: 2.5rem;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 32%, transparent);
+    border-radius: 0.35rem;
+    background: #fff;
+    color: var(--product-ink, #0b0b0b);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.65rem;
+    font-weight: 800;
+  }
+
+  .gang-distribution-tools button:hover,
+  .gang-precise-gap button:hover {
+    border-color: var(--product-line, #0b0b0b);
+    background: color-mix(in srgb, var(--product-accent, #dcff1a) 16%, #fff);
+  }
+
+  .gang-distribution-tools button:focus-visible,
+  .gang-precise-gap button:focus-visible,
+  .gang-precise-gap input:focus-visible {
+    outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
+    outline-offset: 1px;
+  }
+
+  .gang-precise-gap {
+    grid-template-columns: minmax(0, 1fr) 5.25rem;
+    align-items: end;
+  }
+
+  .gang-precise-gap label {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .gang-precise-gap label > span {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .gang-precise-gap input {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 34%, transparent);
+    border-radius: 0.35rem;
+    background: #fff;
+    color: var(--product-ink, #0b0b0b);
+    font: inherit;
+  }
+
   .gang-spacing-panel {
     display: grid;
     gap: 0.7rem;
@@ -969,6 +1271,49 @@
   .gang-inspector-panel--validation li.is-error {
     background: #ffe6eb;
     color: #8d1732;
+  }
+
+  .gang-inspector-panel--validation li.is-error {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    align-items: center;
+  }
+
+  .gang-inspector-panel--validation li.is-error button {
+    min-height: 2.25rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid currentColor;
+    border-radius: 0.3rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.64rem;
+    font-weight: 800;
+    text-align: left;
+  }
+
+  .gang-inspector-panel--validation li.is-error button:first-child {
+    border-color: transparent;
+  }
+
+  .gang-inspector-panel--validation li.is-error button:hover {
+    background: rgba(141, 23, 50, 0.09);
+  }
+
+  .gang-inspector-panel--validation li.is-error button:focus-visible {
+    outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
+    outline-offset: 1px;
+  }
+
+  .gang-inspector-panel--validation .gang-issue-fix {
+    white-space: nowrap;
+  }
+
+  .gang-selection-delete {
+    width: 100%;
+    min-height: 2.75rem;
   }
 
   .gang-validation-actions .ui-btn {
@@ -1192,31 +1537,45 @@
     }
 
     .gang-editor__toolbar {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: stretch;
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      overflow-x: auto;
+      scrollbar-width: thin;
     }
 
     .gang-editor__toolbar-actions {
-      min-width: 0;
+      min-width: max-content;
+      flex: 0 0 auto;
     }
 
     .gang-editor__toolbar-actions .ui-btn {
-      width: 100%;
+      width: auto;
       padding-inline: 0.55rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     .gang-editor__zoom {
-      grid-column: 1 / -1;
-      grid-row: 2;
-      justify-self: center;
+      flex: 0 0 auto;
     }
 
     .gang-editor__save {
+      flex: 0 0 auto;
       margin-left: 0;
+    }
+
+    .gang-editor__history,
+    .gang-editor__selection-tools {
+      flex: 0 0 auto;
+    }
+
+    .gang-inspector-panel--validation li.is-error {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .gang-inspector-panel--validation .gang-issue-fix {
+      width: 100%;
+      white-space: normal;
     }
 
     .gang-sheet-canvas-wrap {
@@ -1230,5 +1589,11 @@
     .gang-editor__inspector .gang-inspector-panel--validation {
       border-top: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 18%, transparent);
       border-left: 0;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .gang-editor__touch-multiselect {
+      display: inline-block;
     }
   }

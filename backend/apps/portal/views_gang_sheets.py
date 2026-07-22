@@ -413,6 +413,26 @@ class ClientGangSheetAddItemView(ClientGangSheetMixin, View):
         return JsonResponse({"ok": True, "created_count": len(items)}, status=201)
 
 
+class ClientGangSheetBatchDeleteItemsView(ClientGangSheetMixin, View):
+    def post(self, request, customer_public_id, sheet_public_id):
+        self.require_write_access()
+        sheet = self.get_sheet_or_404(sheet_public_id)
+        try:
+            body = json.loads(request.body or b"{}")
+            if not isinstance(body, dict):
+                raise GangSheetDomainError("INVALID_JSON", "Requête invalide.")
+            deleted_count = gang_sheet_service.delete_occurrences(
+                sheet=sheet,
+                item_public_ids=body.get("item_public_ids"),
+                actor=request.user,
+            )
+        except (json.JSONDecodeError, UnicodeDecodeError, GangSheetDomainError) as error:
+            if isinstance(error, GangSheetDomainError):
+                return _json_error(error)
+            return _json_error(GangSheetDomainError("INVALID_JSON", "Requête invalide."))
+        return JsonResponse({"ok": True, "deleted_count": deleted_count})
+
+
 class ClientGangSheetItemActionView(ClientGangSheetMixin, View):
     def post(self, request, customer_public_id, sheet_public_id, item_public_id, action):
         self.require_write_access()

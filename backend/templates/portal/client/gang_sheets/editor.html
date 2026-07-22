@@ -10,6 +10,7 @@
   data-state-url="{% url 'portal:client-gang-sheet-state' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-layout-url="{% url 'portal:client-gang-sheet-layout' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-add-url="{% url 'portal:client-gang-sheet-item-add' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+  data-batch-delete-url="{% url 'portal:client-gang-sheet-items-delete-batch' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-action-url-template="{% url 'portal:client-gang-sheet-workflow-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id action='ACTION' %}"
   data-item-url-template="{% url 'portal:client-gang-sheet-item-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id item_public_id='00000000-0000-0000-0000-000000000000' action='ACTION' %}"
   data-preview-url="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
@@ -195,15 +196,24 @@
         <div class="gang-editor__toolbar-actions">
           <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-auto-place {% if not can_edit %}disabled{% endif %}>Imposition automatique</button>
         </div>
+        <div class="gang-editor__history" role="group" aria-label="Historique de la composition">
+          <button type="button" data-undo-layout aria-label="Annuler la dernière modification" title="Annuler (Ctrl ou Cmd + Z)" disabled>↶</button>
+          <button type="button" data-redo-layout aria-label="Rétablir la dernière modification" title="Rétablir (Maj + Ctrl ou Cmd + Z)" disabled>↷</button>
+        </div>
+        <div class="gang-editor__selection-tools" role="group" aria-label="Aides au placement et à la sélection">
+          <button type="button" class="is-active" data-snap-toggle aria-pressed="true" title="Activer ou désactiver l’aimantation">Aimants</button>
+          <button type="button" data-select-all title="Sélectionner tous les visuels">Tout sélectionner</button>
+          <button type="button" class="gang-editor__touch-multiselect" data-touch-multiselect aria-pressed="false" title="Toucher plusieurs visuels pour les sélectionner">Sélection multiple</button>
+        </div>
         <div class="gang-editor__zoom" aria-label="Zoom du plan de travail">
           <button type="button" data-zoom-out aria-label="Réduire le zoom">−</button>
           <button type="button" data-zoom-reset aria-label="Réinitialiser le zoom"><span data-zoom-value>100 %</span></button>
           <button type="button" data-zoom-in aria-label="Augmenter le zoom">＋</button>
         </div>
         <button type="button" class="ui-btn ui-btn-primary ui-btn-sm gang-editor__save" data-save-layout {% if not can_edit %}disabled{% endif %}>Enregistrer</button>
-        <span class="gang-editor__toolbar-hint"><kbd>R</kbd> pivoter · <kbd>⌘S</kbd> enregistrer</span>
+        <span class="gang-editor__toolbar-hint"><kbd>Maj</kbd> + clic ou cadre pour sélectionner · <kbd>⌘Z</kbd> annuler · <kbd>⌘S</kbd> enregistrer</span>
       </div>
-      <div class="gang-sheet-canvas-wrap">
+      <div class="gang-sheet-canvas-wrap" data-canvas-clear-zone>
         <div class="gang-sheet-canvas" data-sheet-canvas role="application" aria-label="Planche DTF interactive"></div>
       </div>
     </section>
@@ -216,7 +226,7 @@
       <section class="gang-inspector-panel" data-empty-inspector>
         <span class="gang-inspector-panel__icon" aria-hidden="true">↖</span>
         <h2>Sélectionnez un visuel</h2>
-        <p>Cliquez sur une occurrence pour modifier ses dimensions, sa position ou sa rotation.</p>
+        <p>Cliquez sur une occurrence. Maintenez Maj, Ctrl ou Cmd pour en sélectionner plusieurs.</p>
       </section>
       <section class="gang-inspector-panel" data-item-inspector hidden>
         <span class="gang-inspector-panel__context">Visuel sélectionné</span>
@@ -233,6 +243,58 @@
           <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-duplicate-item>Dupliquer</button>
           <button type="button" class="ui-btn ui-btn-danger ui-btn-sm" data-delete-item>Supprimer</button>
         </div>
+      </section>
+      <section class="gang-inspector-panel gang-alignment-panel" data-alignment-panel hidden aria-labelledby="gang-alignment-title">
+        <div class="gang-alignment-panel__heading">
+          <span aria-hidden="true">⊞</span>
+          <div>
+            <h2 id="gang-alignment-title">Alignement</h2>
+            <p data-selection-summary>1 visuel sélectionné</p>
+          </div>
+        </div>
+        <fieldset class="gang-alignment-reference">
+          <legend>Aligner par rapport à</legend>
+          <div>
+            <label><input type="radio" name="gang-alignment-reference" value="selection" data-align-reference checked><span>Sélection</span></label>
+            <label><input type="radio" name="gang-alignment-reference" value="sheet" data-align-reference><span>Planche</span></label>
+          </div>
+        </fieldset>
+        <div class="gang-alignment-actions" role="toolbar" aria-label="Aligner les visuels sélectionnés">
+          <button type="button" data-align="left" aria-label="Aligner à gauche" title="Aligner à gauche">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 3v18M7 7h10v4H7zM7 14h7v4H7z"/></svg>
+          </button>
+          <button type="button" data-align="center-x" aria-label="Centrer horizontalement" title="Centrer horizontalement">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v18M6 7h12v4H6zM8 14h8v4H8z"/></svg>
+          </button>
+          <button type="button" data-align="right" aria-label="Aligner à droite" title="Aligner à droite">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 3v18M7 7h10v4H7zM10 14h7v4h-7z"/></svg>
+          </button>
+          <button type="button" data-align="top" aria-label="Aligner en haut" title="Aligner en haut">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 4h18M7 7h4v10H7zM14 7h4v7h-4z"/></svg>
+          </button>
+          <button type="button" data-align="center-y" aria-label="Centrer verticalement" title="Centrer verticalement">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M7 6h4v12H7zM14 8h4v8h-4z"/></svg>
+          </button>
+          <button type="button" data-align="bottom" aria-label="Aligner en bas" title="Aligner en bas">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 20h18M7 7h4v10H7zM14 10h4v7h-4z"/></svg>
+          </button>
+        </div>
+        <div class="gang-distribution-tools">
+          <span>Répartir régulièrement</span>
+          <div role="group" aria-label="Répartir les visuels sélectionnés">
+            <button type="button" data-distribute="horizontal" aria-label="Répartir horizontalement" title="Répartir horizontalement">↔ Horizontal</button>
+            <button type="button" data-distribute="vertical" aria-label="Répartir verticalement" title="Répartir verticalement">↕ Vertical</button>
+          </div>
+        </div>
+        <div class="gang-precise-gap">
+          <label for="gang-selection-gap">Écart précis <span><input id="gang-selection-gap" type="number" min="0" max="1000" step="0.1" value="2" inputmode="decimal" data-selection-gap> mm</span></label>
+          <div role="group" aria-label="Appliquer l’écart précis">
+            <button type="button" data-apply-selection-gap="horizontal" aria-label="Appliquer l’écart horizontal précis">X</button>
+            <button type="button" data-apply-selection-gap="vertical" aria-label="Appliquer l’écart vertical précis">Y</button>
+          </div>
+        </div>
+        <button type="button" class="ui-btn ui-btn-danger ui-btn-sm gang-selection-delete" data-delete-selected hidden>Supprimer la sélection</button>
+        <p class="gang-alignment-panel__help" data-alignment-help>La sélection utilise son cadre global comme référence.</p>
       </section>
       <section class="gang-inspector-panel gang-spacing-panel" aria-labelledby="gang-spacing-title">
         <div class="gang-spacing-panel__heading">

@@ -144,6 +144,28 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert "data-spacing-x" in content
     assert "data-spacing-y" in content
     assert "data-apply-spacing" in content
+    assert "Alignement" in content
+    assert 'value="selection" data-align-reference' in content
+    assert 'value="sheet" data-align-reference' in content
+    assert 'data-align="left"' in content
+    assert 'data-align="center-x"' in content
+    assert 'data-align="right"' in content
+    assert 'data-align="top"' in content
+    assert 'data-align="center-y"' in content
+    assert 'data-align="bottom"' in content
+    assert "data-undo-layout" in content
+    assert "data-redo-layout" in content
+    assert "data-snap-toggle" in content
+    assert "data-select-all" in content
+    assert "data-touch-multiselect" in content
+    assert 'data-distribute="horizontal"' in content
+    assert 'data-distribute="vertical"' in content
+    assert "data-selection-gap" in content
+    assert 'data-apply-selection-gap="horizontal"' in content
+    assert 'data-apply-selection-gap="vertical"' in content
+    assert "data-batch-delete-url" in content
+    assert "data-delete-selected" in content
+    assert "data-canvas-clear-zone" in content
     assert "Répétition" not in content
     assert "Créer la grille" not in content
     assert 'id="gang-asset-dialog"' in content
@@ -430,6 +452,149 @@ def test_readonly_member_cannot_mutate_layout(client):
     )
 
     assert response.status_code == 403
+
+
+def test_owner_can_delete_multiple_selected_occurrences_in_one_request(client):
+    user, customer, project = create_customer_scope(email="batch-delete-owner@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Suppression portail")
+    items = service.add_occurrences(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        quantity=3,
+        actor=user,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-items-delete-batch",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        data=json.dumps({"item_public_ids": [str(items[0].public_id), str(items[1].public_id)]}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["deleted_count"] == 2
+    assert list(sheet.items.values_list("public_id", flat=True)) == [items[2].public_id]
+
+
+def test_batch_delete_rejects_invalid_json_selection_before_mutation(client):
+    user, customer, project = create_customer_scope(email="batch-delete-invalid@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Entrées invalides")
+    item = service.add_occurrence(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        actor=user,
+    )
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+    url = reverse(
+        "portal:client-gang-sheet-items-delete-batch",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    invalid_requests = (
+        (b"\xff", "INVALID_JSON"),
+        ("[]", "INVALID_JSON"),
+        ("null", "INVALID_JSON"),
+        ('"selection"', "INVALID_JSON"),
+        (json.dumps({"item_public_ids": []}), "ITEM_SELECTION_REQUIRED"),
+        (json.dumps({"item_public_ids": "invalid"}), "INVALID_ITEM_SELECTION"),
+        (json.dumps({"item_public_ids": ["not-a-uuid"]}), "INVALID_ITEM_SELECTION"),
+        (
+            json.dumps({"item_public_ids": [str(item.public_id)] * 1001}),
+            "BATCH_DELETE_LIMIT_EXCEEDED",
+        ),
+    )
+    client.force_login(user)
+
+    for body, expected_code in invalid_requests:
+        response = client.post(url, data=body, content_type="application/json")
+
+        assert response.status_code == 400
+        assert response.json()["error"]["code"] == expected_code
+        sheet.refresh_from_db()
+        assert sheet.revision == initial_revision
+        assert sheet.items.filter(public_id=item.public_id).exists()
+
+    assert not AuditLogEntry.objects.filter(
+        action="gang_sheet.items_batch_deleted",
+        target_public_id=sheet.public_id,
+    ).exists()
+
+
+def test_batch_delete_is_readonly_protected_and_tenant_scoped(client):
+    owner, customer, project = create_customer_scope(email="batch-delete-scope@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=owner, name="Planche privée")
+    item = service.add_occurrence(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        actor=owner,
+    )
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="batch-delete-outsider@example.com"
+    )
+    readonly, readonly_customer, readonly_project = create_customer_scope(
+        email="batch-delete-readonly@example.com",
+        role=CustomerMembership.Role.READONLY,
+    )
+    _readonly_asset, readonly_version = attach_png_asset(
+        customer=readonly_customer,
+        project=readonly_project,
+        user=readonly,
+    )
+    readonly_sheet = service.create_sheet(
+        project=readonly_project,
+        actor=readonly,
+        name="Lecture seule",
+    )
+    readonly_item = service.add_occurrence(
+        sheet=readonly_sheet,
+        asset_version_public_id=readonly_version.public_id,
+        actor=readonly,
+    )
+
+    client.force_login(outsider)
+    cross_tenant_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-items-delete-batch",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        data=json.dumps({"item_public_ids": [str(item.public_id)]}),
+        content_type="application/json",
+    )
+    client.force_login(readonly)
+    readonly_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-items-delete-batch",
+            kwargs={
+                "customer_public_id": readonly_customer.public_id,
+                "sheet_public_id": readonly_sheet.public_id,
+            },
+        ),
+        data=json.dumps({"item_public_ids": [str(readonly_item.public_id)]}),
+        content_type="application/json",
+    )
+
+    assert cross_tenant_response.status_code == 404
+    assert readonly_response.status_code == 403
+    assert sheet.items.filter(public_id=item.public_id).exists()
+    assert readonly_sheet.items.filter(public_id=readonly_item.public_id).exists()
 
 
 def test_owner_can_apply_axis_spacing_through_the_scoped_workflow_action(client):
