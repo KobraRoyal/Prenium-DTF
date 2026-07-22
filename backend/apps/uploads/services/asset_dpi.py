@@ -230,17 +230,79 @@ def extract_pdf_source_metrics(document, page) -> SourceMetrics:
 
 
 def extract_pdf_artboard_size_mm(document, page) -> tuple[float, float]:
-    xmp = document.get_xml_metadata() or ""
-    match = re.search(
-        r"xmpTPg:MaxPageSize[\s\S]{0,500}?stDim:w=\"([\d.]+)\"[\s\S]{0,250}?stDim:h=\"([\d.]+)\"[\s\S]{0,250}?Millimeters",
-        xmp,
-    )
-    if match:
-        return round(float(match.group(1)), 2), round(float(match.group(2)), 2)
+    """Return print size in mm aligned with the import preview (PDF.js MediaBox).
 
-    width_mm = float(page.rect.width) / 72.0 * 25.4
-    height_mm = float(page.rect.height) / 72.0 * 25.4
-    return round(width_mm, 2), round(height_mm, 2)
+    Illustrator XMP MaxPageSize is often a legacy artboard (e.g. 20 in) that no longer
+    matches the page MediaBox shown in the verify-import dialog. When XMP and MediaBox
+    disagree, MediaBox wins so analysis matches what the client already displayed.
+    """
+    media_width_mm = round(float(page.rect.width) / 72.0 * 25.4, 2)
+    media_height_mm = round(float(page.rect.height) / 72.0 * 25.4, 2)
+
+    xmp_size = _parse_xmp_max_page_size_mm(document.get_xml_metadata() or "")
+    if xmp_size is None:
+        return media_width_mm, media_height_mm
+
+    xmp_width_mm, xmp_height_mm = xmp_size
+    if _pdf_dimensions_agree(
+        xmp_width_mm,
+        xmp_height_mm,
+        media_width_mm,
+        media_height_mm,
+        tolerance=0.15,
+    ):
+        return round(xmp_width_mm, 2), round(xmp_height_mm, 2)
+    return media_width_mm, media_height_mm
+
+
+def _parse_xmp_max_page_size_mm(xmp: str) -> tuple[float, float] | None:
+    match = re.search(
+        r"xmpTPg:MaxPageSize[\s\S]{0,800}?"
+        r"(?:stDim:w=\"([\d.]+)\"|<stDim:w>([\d.]+)</stDim:w>)[\s\S]{0,300}?"
+        r"(?:stDim:h=\"([\d.]+)\"|<stDim:h>([\d.]+)</stDim:h>)[\s\S]{0,300}?"
+        r"(?:stDim:unit=\"([A-Za-z]+)\"|<stDim:unit>([A-Za-z]+)</stDim:unit>|"
+        r"(Millimeters|Inches|Centimeters))",
+        xmp,
+        flags=re.IGNORECASE,
+    )
+    if match is None:
+        return None
+
+    width_raw = match.group(1) or match.group(2)
+    height_raw = match.group(3) or match.group(4)
+    unit = (match.group(5) or match.group(6) or match.group(7) or "").lower()
+    if not width_raw or not height_raw or not unit:
+        return None
+
+    width = float(width_raw)
+    height = float(height_raw)
+    if unit == "inches":
+        width *= 25.4
+        height *= 25.4
+    elif unit == "centimeters":
+        width *= 10.0
+        height *= 10.0
+    elif unit != "millimeters":
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return width, height
+
+
+def _pdf_dimensions_agree(
+    width_a: float,
+    height_a: float,
+    width_b: float,
+    height_b: float,
+    *,
+    tolerance: float,
+) -> bool:
+    if width_a <= 0 or height_a <= 0 or width_b <= 0 or height_b <= 0:
+        return False
+    return (
+        abs(width_a - width_b) / width_b <= tolerance
+        and abs(height_a - height_b) / height_b <= tolerance
+    )
 
 
 def pdf_page_has_vector_artwork(page) -> bool:
@@ -262,16 +324,33 @@ def pdf_page_has_vector_artwork(page) -> bool:
 
 
 def should_use_pdf_artboard_dimensions(page, source_metrics: SourceMetrics) -> bool:
-    if not pdf_page_has_vector_artwork(page):
-        return False
-    if not source_metrics.placement_width_in or not source_metrics.placement_height_in:
+    """Prefer MediaBox/artboard for print layout size.
+
+    Intrinsic embedded DPI (pixels ÷ tag) often describes the source file, not the
+    size at which the image is placed on the PDF page. For DTF we must follow the
+    page geometry shown in the import preview whenever the artwork fills most of
+    the page, including raster-only PDFs.
+    """
+    page_area = (source_metrics.page_width_in or 0) * (source_metrics.page_height_in or 0)
+    placement_w = source_metrics.placement_width_in
+    placement_h = source_metrics.placement_height_in
+    if not placement_w or not placement_h or page_area <= 0:
         return True
 
-    page_area = (source_metrics.page_width_in or 0) * (source_metrics.page_height_in or 0)
-    placement_area = source_metrics.placement_width_in * source_metrics.placement_height_in
-    if page_area <= 0 or placement_area <= 0:
+    placement_area = placement_w * placement_h
+    if placement_area <= 0:
         return True
-    return (page_area / placement_area) > 1.5
+
+    coverage = placement_area / page_area
+    # Raster (nearly) full-page → align with PDF.js / MediaBox preview.
+    if coverage >= (2.0 / 3.0):
+        return True
+
+    # Illustrator-style mixed docs: large page with a partial photo + vectors.
+    if pdf_page_has_vector_artwork(page) and (page_area / placement_area) > 1.5:
+        return True
+
+    return False
 
 
 def parse_eps_page_size_inches(content: bytes) -> tuple[float, float] | None:

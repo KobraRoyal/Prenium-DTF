@@ -226,9 +226,34 @@ class AssetAnalysisService:
         metadata = result.get("metadata") or {}
         page_width_in = result.get("page_width_in")
         page_height_in = result.get("page_height_in")
+        placement_width_in = metadata.get("placement_width_in")
+        placement_height_in = metadata.get("placement_height_in")
         if metadata.get("uses_artboard_dimensions") and metadata.get("artboard_width_mm"):
+            # PDF MediaBox / artboard — matches import preview (points → mm).
             width_mm = Decimal(str(metadata["artboard_width_mm"])).quantize(Decimal("0.01"))
             height_mm = Decimal(str(metadata["artboard_height_mm"])).quantize(Decimal("0.01"))
+            if page_width_in and page_height_in:
+                page_width_mm = (Decimal(str(page_width_in)) * millimeters_per_inch).quantize(
+                    Decimal("0.01")
+                )
+                page_height_mm = (Decimal(str(page_height_in)) * millimeters_per_inch).quantize(
+                    Decimal("0.01")
+                )
+                # Guard against legacy XMP MaxPageSize that disagrees with MediaBox.
+                if page_width_mm > 0 and page_height_mm > 0:
+                    width_delta = abs(width_mm - page_width_mm) / page_width_mm
+                    height_delta = abs(height_mm - page_height_mm) / page_height_mm
+                    if width_delta > Decimal("0.15") or height_delta > Decimal("0.15"):
+                        width_mm = page_width_mm
+                        height_mm = page_height_mm
+        elif placement_width_in and placement_height_in:
+            # Motif partiel sur la page : taille de pose PDF, pas px÷DPI intrinsèque.
+            width_mm = (Decimal(str(placement_width_in)) * millimeters_per_inch).quantize(
+                Decimal("0.01")
+            )
+            height_mm = (Decimal(str(placement_height_in)) * millimeters_per_inch).quantize(
+                Decimal("0.01")
+            )
         elif result.get("dpi_x") and result.get("image_width") and result.get("image_height"):
             dpi_x = Decimal(str(result["dpi_x"]))
             dpi_y = Decimal(str(result["dpi_y"] or result["dpi_x"]))

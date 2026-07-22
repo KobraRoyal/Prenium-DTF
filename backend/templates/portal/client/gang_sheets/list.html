@@ -11,7 +11,8 @@
     </div>
     {% if can_edit %}
     <button class="ui-btn ui-btn-primary gang-library-head__create" type="button" data-dialog-open="create-gang-sheet-dialog" aria-haspopup="dialog">
-      <span aria-hidden="true">+</span> Nouvelle planche
+      {% include "portal/client/gang_sheets/partials/icon.html" with name="plus" size="16" %}
+      Nouvelle planche
     </button>
     {% else %}
     <span class="product-pill">Consultation seule</span>
@@ -49,7 +50,7 @@
       </div>
       <label class="gang-sheet-search">
         <span class="ui-sr-only">Rechercher une Gang Sheet</span>
-        <span aria-hidden="true">⌕</span>
+        <span class="gang-sheet-search__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="search" size="16" %}</span>
         <input type="search" placeholder="Rechercher une planche" x-model.debounce.150ms="query" autocomplete="off">
       </label>
     </div>

@@ -325,10 +325,52 @@ def test_pdf_auto_size_uses_embedded_display_size_for_mixed_documents():
     assert analyzed.analysis.dpi_x == pytest.approx(300.0, rel=0.01)
     assert str(item.width_mm) == "50.80"
     assert str(item.height_mm) == "25.40"
+    assert analyzed.analysis.metadata["uses_artboard_dimensions"] is False
     assert AssetService().effective_dpi_for_item(item=item) == 300.0
     review = AssetService().technical_review_for_item(item=item)
     assert review["level"] == "good"
     assert review["is_vector"] is False
+
+
+@pytest.mark.django_db
+@override_settings(B2B_RECOMMENDED_DPI=300, B2B_MIN_ACCEPTABLE_DPI=200)
+def test_pdf_auto_size_uses_mediabox_for_full_page_raster_with_mismatched_embedded_dpi():
+    """Regression: import preview shows MediaBox mm; analysis must not use inflated px÷DPI."""
+    user, _customer, project, item = project_scope("pdf-fullpage-dpi@example.com")
+    # Intrinsic tag says 20×20 in (508 mm) but the image fills an ~205×217 mm page.
+    image_buffer = BytesIO()
+    Image.new("RGB", (6000, 6000), (20, 80, 160)).save(
+        image_buffer, format="JPEG", dpi=(300, 300)
+    )
+    document = pymupdf.open()
+    page = document.new_page(width=583, height=616)
+    page.insert_image(page.rect, stream=image_buffer.getvalue())
+    pdf_bytes = document.tobytes()
+    document.close()
+
+    version = AssetService().attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=SimpleUploadedFile(
+            "hawks-tirage-dtf.pdf",
+            pdf_bytes,
+            content_type="application/pdf",
+        ),
+        source="test",
+        auto_size_requested=True,
+    )
+
+    analyzed = AssetAnalysisService().analyze(version_public_id=version.public_id, source="test")
+    item.refresh_from_db()
+
+    expected_width = round(583 / 72 * 25.4, 2)
+    expected_height = round(616 / 72 * 25.4, 2)
+    assert analyzed.analysis.metadata["uses_artboard_dimensions"] is True
+    assert float(item.width_mm) == pytest.approx(expected_width, abs=0.02)
+    assert float(item.height_mm) == pytest.approx(expected_height, abs=0.02)
+    assert float(item.width_mm) < 300
+    assert float(item.height_mm) < 300
 
 
 @pytest.mark.django_db

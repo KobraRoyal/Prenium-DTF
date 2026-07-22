@@ -140,7 +140,7 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert 'data-mobile-panel-tab="canvas"' in content
     assert "data-zoom-reset" in content
     assert "data-status-detail" in content
-    assert "Espacement des visuels" in content
+    assert "Espacement auto-imposition" in content
     assert "data-spacing-x" in content
     assert "data-spacing-y" in content
     assert "data-apply-spacing" in content

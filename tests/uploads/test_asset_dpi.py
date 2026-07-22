@@ -57,6 +57,8 @@ def test_extract_pdf_source_metrics_uses_embedded_image_resolution():
     assert metrics.display_width_in == pytest.approx(2.0, rel=0.01)
     assert metrics.display_height_in == pytest.approx(1.0, rel=0.01)
     assert metrics.placement_effective_dpi == pytest.approx(216.0, rel=0.01)
+    assert metrics.uses_artboard_dimensions is True
+    assert metrics.dimension_basis == "page"
 
 
 def test_extract_pdf_source_metrics_prefers_embedded_dpi_when_upscaled_on_page():
@@ -73,6 +75,8 @@ def test_extract_pdf_source_metrics_prefers_embedded_dpi_when_upscaled_on_page()
     assert metrics.display_width_in == pytest.approx(4.0, rel=0.01)
     assert metrics.display_height_in == pytest.approx(4.0, rel=0.01)
     assert metrics.placement_effective_dpi == pytest.approx(102.61, rel=0.01)
+    assert metrics.uses_artboard_dimensions is True
+    assert metrics.artboard_width_mm == pytest.approx(595 / 72 * 25.4, rel=0.01)
 
 
 def test_extract_pdf_source_metrics_tracks_partial_embedded_display_size():
@@ -90,6 +94,54 @@ def test_extract_pdf_source_metrics_tracks_partial_embedded_display_size():
     assert metrics.dpi_source == "embedded"
     assert metrics.page_width_in == pytest.approx(595 / 72, rel=0.01)
     assert metrics.uses_artboard_dimensions is False
+
+
+def test_extract_pdf_artboard_size_mm_rejects_xmp_that_disagrees_with_mediabox():
+    document = pymupdf.open()
+    page = document.new_page(width=583, height=616)
+    # Legacy Illustrator artboard (~20 in as Millimeters) while MediaBox is ~205 mm.
+    document.set_xml_metadata(
+        '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>'
+        '<x:xmpmeta xmlns:x="adobe:ns:meta/">'
+        '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+        '<rdf:Description xmlns:xmpTPg="http://ns.adobe.com/xap/1.0/t/pg/" '
+        'xmlns:stDim="http://ns.adobe.com/xap/1.0/sType/Dimensions#">'
+        "<xmpTPg:MaxPageSize rdf:parseType='Resource'>"
+        "<stDim:w>507.95</stDim:w>"
+        "<stDim:h>507.95</stDim:h>"
+        "<stDim:unit>Millimeters</stDim:unit>"
+        "</xmpTPg:MaxPageSize>"
+        "</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end=\"w\"?>"
+    )
+    width_mm, height_mm = extract_pdf_artboard_size_mm(document, page)
+    document.close()
+
+    assert width_mm == pytest.approx(583 / 72 * 25.4, abs=0.05)
+    assert height_mm == pytest.approx(616 / 72 * 25.4, abs=0.05)
+    assert width_mm < 300
+
+
+def test_extract_pdf_artboard_size_mm_converts_xmp_inches_when_aligned_with_mediabox():
+    document = pymupdf.open()
+    page = document.new_page(width=720, height=576)
+    document.set_xml_metadata(
+        '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>'
+        '<x:xmpmeta xmlns:x="adobe:ns:meta/">'
+        '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+        '<rdf:Description xmlns:xmpTPg="http://ns.adobe.com/xap/1.0/t/pg/" '
+        'xmlns:stDim="http://ns.adobe.com/xap/1.0/sType/Dimensions#">'
+        "<xmpTPg:MaxPageSize rdf:parseType='Resource'>"
+        "<stDim:w>10</stDim:w>"
+        "<stDim:h>8</stDim:h>"
+        "<stDim:unit>Inches</stDim:unit>"
+        "</xmpTPg:MaxPageSize>"
+        "</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end=\"w\"?>"
+    )
+    width_mm, height_mm = extract_pdf_artboard_size_mm(document, page)
+    document.close()
+
+    assert width_mm == pytest.approx(254.0, abs=0.1)
+    assert height_mm == pytest.approx(203.2, abs=0.1)
 
 
 def test_extract_pdf_source_metrics_uses_artboard_for_vector_mixed_documents():

@@ -142,12 +142,14 @@
   }
 
   .gang-library-head__create {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     flex: 0 0 auto;
   }
 
-  .gang-library-head__create > span {
-    font-size: 1.05rem;
-    line-height: 1;
+  .gang-library-head__create .gang-icon {
+    flex: 0 0 auto;
   }
 
   .gang-form-hint {
@@ -235,9 +237,11 @@
     background: var(--product-panel, #fffdf8);
   }
 
-  .gang-sheet-search > span[aria-hidden="true"] {
+  .gang-sheet-search > span[aria-hidden="true"],
+  .gang-sheet-search__icon {
+    display: grid;
+    place-items: center;
     color: var(--product-muted, #4c463b);
-    font-size: 1rem;
   }
 
   .gang-sheet-search input {

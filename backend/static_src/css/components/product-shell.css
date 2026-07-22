@@ -46,6 +46,11 @@
     max-width: min(1180px, calc(100vw - 1rem));
   }
 
+  body.product-shell.product-shell--studio .app-main {
+    width: min(1540px, calc(100vw - 1.5rem));
+    max-width: none;
+  }
+
   body.product-shell.portal-shell.landing-saas .app-header.landing-saas-header.product-header {
     position: sticky;
     top: 0;
