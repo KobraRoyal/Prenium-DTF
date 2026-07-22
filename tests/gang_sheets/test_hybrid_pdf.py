@@ -77,6 +77,7 @@ def _composition(
     width_mm="40.00",
     height_mm="20.00",
     rotation=0,
+    crop=None,
 ):
     user, customer, _project = create_customer_scope(email=email)
     asset = Asset.objects.create(customer=customer, created_by=user, name=filename)
@@ -95,6 +96,7 @@ def _composition(
     asset.current_version = version
     asset.save(update_fields=["current_version", "updated_at"])
     sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="PDF hybride")
+    crop = crop or {}
     GangSheetSourceAsset.objects.create(
         customer=customer,
         sheet=sheet,
@@ -102,6 +104,10 @@ def _composition(
         added_by=user,
         width_mm=width_mm,
         height_mm=height_mm,
+        crop_x=crop.get("x", "0"),
+        crop_y=crop.get("y", "0"),
+        crop_width=crop.get("width", "1"),
+        crop_height=crop.get("height", "1"),
     )
     item = GangSheetItem.objects.create(
         customer=customer,
@@ -160,6 +166,7 @@ def test_mixed_pdf_keeps_vector_commands_and_native_raster_pixels():
         content=_mixed_pdf(),
         filename="mixed.pdf",
         mime_type="application/pdf",
+        crop={"x": "0.20", "y": "0.10", "width": "0.70", "height": "0.80"},
     )
 
     content = GangSheetHybridPdfComposer().compose(sheet=sheet, items=[item])
@@ -169,6 +176,24 @@ def test_mixed_pdf_keeps_vector_commands_and_native_raster_pixels():
         assert page.get_drawings()
         images = page.get_images(full=True)
         assert any(image[2:4] == (41, 23) for image in images)
+
+
+def test_cropped_vector_pdf_keeps_vector_commands_without_rasterizing():
+    sheet, item = _composition(
+        email="hybrid-cropped-vector@example.com",
+        content=_vector_pdf(),
+        filename="cropped-logo.pdf",
+        mime_type="application/pdf",
+        crop={"x": "0.25", "y": "0.10", "width": "0.50", "height": "0.80"},
+    )
+
+    content = GangSheetHybridPdfComposer().compose(sheet=sheet, items=[item])
+
+    with pymupdf.open(stream=content, filetype="pdf") as document:
+        page = document[0]
+        assert page.get_drawings()
+        assert page.get_images(full=True) == []
+        assert page.get_fonts(full=True)
 
 
 def test_transparent_png_is_embedded_at_source_definition_with_alpha_mask():
@@ -185,6 +210,22 @@ def test_transparent_png_is_embedded_at_source_definition_with_alpha_mask():
         images = document[0].get_images(full=True)
         assert any(image[2:4] == (307, 149) and image[1] > 0 for image in images)
         assert document[0].get_drawings() == []
+
+
+def test_cropped_raster_keeps_only_native_pixels_without_resampling():
+    sheet, item = _composition(
+        email="hybrid-cropped-raster@example.com",
+        content=_transparent_png(),
+        filename="cropped-transparent.png",
+        mime_type="image/png",
+        crop={"x": "0.25", "y": "0.20", "width": "0.50", "height": "0.50"},
+    )
+
+    content = GangSheetHybridPdfComposer().compose(sheet=sheet, items=[item])
+
+    with pymupdf.open(stream=content, filetype="pdf") as document:
+        images = document[0].get_images(full=True)
+        assert any(image[2:4] == (155, 76) and image[1] > 0 for image in images)
 
 
 def test_rotated_raster_uses_the_exact_effective_print_dimensions():

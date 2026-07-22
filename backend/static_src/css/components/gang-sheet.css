@@ -893,7 +893,6 @@
 
   .gang-asset-search input:focus,
   .gang-inspector-grid input:focus,
-  .gang-repeat-grid input:focus,
   .gang-asset-card__add input:focus {
     border-color: var(--product-line, #0b0b0b);
     outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
@@ -1013,7 +1012,6 @@
   }
 
   .gang-asset-card__add label,
-  .gang-repeat-grid label,
   .gang-inspector-grid label {
     display: grid;
     gap: 0.2rem;
@@ -1025,7 +1023,6 @@
   }
 
   .gang-asset-card__add input,
-  .gang-repeat-grid input,
   .gang-inspector-grid input {
     width: 100%;
     min-width: 0;
@@ -1099,8 +1096,9 @@
 
   .gang-sheet-canvas {
     position: relative;
+    box-sizing: content-box;
     width: min(100%, 760px);
-    min-height: 9.375rem;
+    min-height: 0;
     overflow: hidden;
     border: 2px solid var(--product-line, #0b0b0b);
     background:
@@ -1127,6 +1125,7 @@
 
   .gang-sheet-item {
     position: absolute;
+    box-sizing: content-box;
     display: block;
     min-width: 5px;
     min-height: 5px;
@@ -1139,8 +1138,9 @@
   }
 
   .gang-sheet-item:active { cursor: grabbing; }
-  .gang-sheet-item img { position: absolute; top: 50%; left: 50%; display: block; width: 100%; height: 100%; object-fit: fill; transform-origin: center; pointer-events: none; }
-  .gang-sheet-item > span:not(.gang-sheet-item__resize) { position: absolute; left: 50%; bottom: 0.2rem; z-index: 2; max-width: 95%; padding: 0.1rem 0.25rem; color: #fff; background: rgba(0, 0, 0, 0.76); font-size: 0.55rem; white-space: nowrap; transform: translateX(-50%); pointer-events: none; }
+  .gang-sheet-item__preview { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .gang-sheet-item__preview img { position: absolute; top: 50%; left: 50%; display: block; width: 100%; height: 100%; object-fit: fill; transform-origin: center; pointer-events: none; }
+  .gang-sheet-item__label { position: absolute; left: 50%; bottom: 0.2rem; z-index: 2; max-width: 95%; padding: 0.1rem 0.25rem; color: #fff; background: rgba(0, 0, 0, 0.76); font-size: 0.55rem; white-space: nowrap; transform: translateX(-50%); pointer-events: none; }
   .gang-sheet-item.is-selected { z-index: 4; border-color: #da5217; box-shadow: 0 0 0 3px rgba(218, 82, 23, 0.35); }
   .gang-sheet-item.has-issue { border-color: #be123c; box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.28); }
   .gang-sheet-item__resize { position: absolute; right: -6px; bottom: -6px; z-index: 5; width: 12px; height: 12px; border: 2px solid #fff; background: #da5217; cursor: nwse-resize; }
@@ -1155,22 +1155,6 @@
   .gang-ratio-lock input { accent-color: #da5217; }
   .gang-inspector-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-top: 0.75rem; }
   .gang-inspector-actions > :last-child { grid-column: 1 / -1; }
-
-  .gang-repeat-panel {
-    display: grid;
-    gap: 0.65rem;
-    margin-top: 0.85rem;
-    padding: 0.7rem;
-    border: 2px solid var(--product-line, #0b0b0b);
-    background: var(--product-panel-strong, #f3ead6);
-  }
-
-  .gang-repeat-panel .product-eyebrow { margin: 0 0 0.35rem; }
-  .gang-repeat-panel > div > strong { font-family: "Space Grotesk", system-ui, sans-serif; font-size: 0.8rem; text-transform: uppercase; }
-  .gang-repeat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
-  .gang-repeat-grid label { position: relative; }
-  .gang-repeat-grid label span { position: absolute; right: 0.45rem; bottom: 0.43rem; color: var(--product-muted, #4c463b); font-size: 0.58rem; text-transform: none; pointer-events: none; }
-  .gang-repeat-panel > small { color: var(--product-muted, #4c463b); font-size: 0.62rem; line-height: 1.35; }
 
   .gang-inspector-panel--validation { display: grid; gap: 0.55rem; }
   .gang-inspector-panel--validation ul { display: grid; gap: 0.35rem; margin: 0.2rem 0; padding: 0; list-style: none; }

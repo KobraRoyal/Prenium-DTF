@@ -200,6 +200,18 @@ class GangSheet(BaseModel):
     item_spacing_mm = models.DecimalField(
         max_digits=6, decimal_places=2, default=ZERO, validators=[MinValueValidator(ZERO)]
     )
+    item_spacing_x_mm = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=ZERO,
+        validators=[MinValueValidator(ZERO), MaxValueValidator(Decimal("100.00"))],
+    )
+    item_spacing_y_mm = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=ZERO,
+        validators=[MinValueValidator(ZERO), MaxValueValidator(Decimal("100.00"))],
+    )
     surface_sqm = models.DecimalField(
         max_digits=12, decimal_places=4, default=ZERO, validators=[MinValueValidator(ZERO)]
     )
@@ -366,6 +378,10 @@ class GangSheetSourceAsset(BaseModel):
         blank=True,
         validators=[MinValueValidator(MIN_MM)],
     )
+    crop_x = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("0"))
+    crop_y = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("0"))
+    crop_width = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("1"))
+    crop_height = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("1"))
     sort_order = models.PositiveIntegerField(default=1)
 
     objects = GangSheetSourceAssetQuerySet.as_manager()
@@ -381,6 +397,27 @@ class GangSheetSourceAsset(BaseModel):
                 ),
                 name="gang_source_dimensions_pair",
             ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    crop_x__gte=0,
+                    crop_y__gte=0,
+                    crop_width__gte=Decimal("0.01"),
+                    crop_height__gte=Decimal("0.01"),
+                    crop_x__lte=1,
+                    crop_y__lte=1,
+                    crop_width__lte=1,
+                    crop_height__lte=1,
+                ),
+                name="gang_source_crop_unit_bounds",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(crop_x__lte=Decimal("1") - models.F("crop_width")),
+                name="gang_source_crop_x_extent",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(crop_y__lte=Decimal("1") - models.F("crop_height")),
+                name="gang_source_crop_y_extent",
+            ),
         ]
         indexes = [
             models.Index(fields=("customer", "sheet", "sort_order")),
@@ -395,6 +432,35 @@ class GangSheetSourceAsset(BaseModel):
             )
         if self.customer_id and self.asset_id and self.customer_id != self.asset.customer_id:
             raise ValidationError({"asset": "Le fichier doit appartenir au même client."})
+        from apps.gang_sheets.services.cropping import CropBox, CropValidationError
+
+        try:
+            CropBox.from_source_asset(self)
+        except CropValidationError as error:
+            raise ValidationError({"crop_width": str(error)}) from error
+
+    @property
+    def has_crop(self) -> bool:
+        return any(
+            (
+                self.crop_x != Decimal("0"),
+                self.crop_y != Decimal("0"),
+                self.crop_width != Decimal("1"),
+                self.crop_height != Decimal("1"),
+            )
+        )
+
+    @property
+    def effective_width_mm(self):
+        if self.width_mm is None:
+            return None
+        return (self.width_mm * self.crop_width).quantize(Decimal("0.01"))
+
+    @property
+    def effective_height_mm(self):
+        if self.height_mm is None:
+            return None
+        return (self.height_mm * self.crop_height).quantize(Decimal("0.01"))
 
     def __str__(self) -> str:
         return f"{self.sheet.name} — {self.asset.name}"

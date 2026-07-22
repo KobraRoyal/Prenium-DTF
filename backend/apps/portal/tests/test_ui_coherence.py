@@ -151,8 +151,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("conversion-kicker", partials)
         self.assertNotIn("conversion-transform__index", partials)
         self.assertIn("min-height: 2.75rem", conversion_css)
-        self.assertIn("app.css' %}?v=20260721s", base)
-        self.assertIn("app.js' %}?v=20260721l", base)
+        self.assertIn("app.css' %}?v=20260721y", base)
+        self.assertIn("app.js' %}?v=20260721s", base)
         self.assertIn("ui-brand-lockup__home", logo)
         self.assertEqual(logo.count("<a "), 1)
 
@@ -452,6 +452,18 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('data-mobile-panel-tab="canvas"', editor)
         self.assertIn("data-zoom-reset", editor)
         self.assertIn("data-status-detail", editor)
+        self.assertIn("data-gang-crop-box", editor)
+        self.assertIn('name="crop_manifest"', editor)
+        self.assertIn("Recadrage non destructif", editor)
+        self.assertIn("data-crop-manual", editor)
+        self.assertIn("data-crop-auto", editor)
+        self.assertIn("Espacement des visuels", editor)
+        self.assertIn("data-spacing-x", editor)
+        self.assertIn("data-spacing-y", editor)
+        self.assertIn("data-apply-spacing", editor)
+        self.assertNotIn("Répétition", editor)
+        self.assertNotIn("data-grid-rows", editor)
+        self.assertNotIn("Créer la grille", editor)
         self.assertIn("gang-validation-heading", editor)
         self.assertIn('@import "./components/gang-sheet-studio.css"', css_entrypoint)
         self.assertIn("height: max(43rem, calc(100dvh - 8rem))", studio_css)
@@ -461,7 +473,35 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("min-height: 2.75rem", studio_css)
         self.assertIn("function setMobilePanel", runtime)
         self.assertIn("function renderZoom", runtime)
-        self.assertIn(".gang-sheet-item img { position: absolute; top: 50%; left: 50%;", canvas_css)
+        self.assertIn("function startCropPointerAction", runtime)
+        self.assertIn("function detectPreviewAutoCrop", runtime)
+        self.assertIn('mode: cropModes[index] || "manual"', runtime)
+        self.assertIn('new CustomEvent("b2b:preview-file-request"', runtime)
+        self.assertIn("min-height: 0", canvas_css)
+        self.assertGreaterEqual(canvas_css.count("box-sizing: content-box"), 2)
+        self.assertNotIn("min-height: 9.375rem", canvas_css)
+        self.assertIn(
+            ".gang-sheet-item__preview { position: absolute; inset: 0; overflow: hidden;",
+            canvas_css,
+        )
+        self.assertIn(
+            ".gang-sheet-item__preview img { position: absolute; top: 50%; left: 50%;",
+            canvas_css,
+        )
+        self.assertIn("function resizeItemFromPointer", runtime)
+        self.assertIn("item.height_mm = Math.max(1, round(start.height + deltaX))", runtime)
+        self.assertIn("function renderSelectedItemToolbar", runtime)
+        self.assertIn('attribute: "data-canvas-rotate-item"', runtime)
+        self.assertIn('attribute: "data-canvas-delete-item"', runtime)
+        self.assertIn("function spacingRequestBody", runtime)
+        self.assertIn("function autoPlaceWithSpacing", runtime)
+        self.assertIn('body.append("spacing_x_mm", spacingX)', runtime)
+        self.assertIn('body.append("spacing_y_mm", spacingY)', runtime)
+        self.assertNotIn("function createSelectedGrid", runtime)
+        self.assertNotIn('attribute: "data-canvas-repeat-item"', runtime)
+        self.assertIn(".gang-sheet-item-toolbar", studio_css)
+        self.assertIn(".gang-spacing-panel", studio_css)
+        self.assertIn(".gang-spacing-grid", studio_css)
         self.assertIn(
             "translate(-50%, -50%) rotate(${item.rotation}deg)",
             runtime,

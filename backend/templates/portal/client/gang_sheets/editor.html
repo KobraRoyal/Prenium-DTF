@@ -90,9 +90,17 @@
               <div class="b2b-preview-stage is-checker" data-configurator-stage>
                 <div class="b2b-preview-bounds" data-configurator-bounds hidden>
                   <img class="b2b-preview-image" alt="Aperçu du fichier sélectionné" data-configurator-preview hidden>
+                  <div class="gang-crop-box" data-gang-crop-box tabindex="0" role="group" aria-label="Zone de recadrage" hidden>
+                    <span data-crop-handle="nw" aria-hidden="true"></span><span data-crop-handle="ne" aria-hidden="true"></span>
+                    <span data-crop-handle="se" aria-hidden="true"></span><span data-crop-handle="sw" aria-hidden="true"></span>
+                  </div>
                 </div>
                 <div class="b2b-preview-bounds" data-configurator-bounds hidden>
                   <canvas class="b2b-preview-document" role="img" aria-label="Aperçu du PDF sélectionné" data-configurator-document-preview hidden></canvas>
+                  <div class="gang-crop-box" data-gang-crop-box tabindex="0" role="group" aria-label="Zone de recadrage" hidden>
+                    <span data-crop-handle="nw" aria-hidden="true"></span><span data-crop-handle="ne" aria-hidden="true"></span>
+                    <span data-crop-handle="se" aria-hidden="true"></span><span data-crop-handle="sw" aria-hidden="true"></span>
+                  </div>
                 </div>
                 <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Choisissez un fichier</strong><span>L’aperçu s’affichera avant l’import.</span></div>
               </div>
@@ -109,8 +117,27 @@
                 <input class="dui-file-input dui-file-input-bordered w-full" type="file" name="files" multiple accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff,.psd,.ai,.eps" data-configurator-file {% if not can_edit %}disabled{% endif %} required>
               </label>
               <div class="gang-asset-modal-form__params" data-configurator-params hidden>
+                <input type="hidden" name="crop_manifest" value="[]" data-crop-manifest>
                 <p class="gang-asset-modal-form__selection" data-selected-files-summary aria-live="polite">Aucun fichier sélectionné.</p>
                 <p class="b2b-configurator__file-meta"><span data-configurator-pixels>Les dimensions seront confirmées par l’analyse technique.</span></p>
+                <section class="gang-crop-controls" data-gang-crop-controls aria-labelledby="gang-crop-title">
+                  <div class="gang-crop-controls__head">
+                    <div><strong id="gang-crop-title">Recadrage non destructif</strong><span data-crop-status>Visuel complet conservé</span></div>
+                    <div class="gang-crop-controls__nav" data-crop-file-nav hidden>
+                      <button type="button" data-crop-file-previous aria-label="Fichier précédent">‹</button>
+                      <span data-crop-file-label></span>
+                      <button type="button" data-crop-file-next aria-label="Fichier suivant">›</button>
+                    </div>
+                  </div>
+                  <div class="gang-crop-mode" role="group" aria-label="Mode de recadrage">
+                    <button type="button" class="is-active" data-crop-manual aria-pressed="true" disabled><strong>Manuel</strong><span>Cadre libre</span></button>
+                    <button type="button" data-crop-auto aria-pressed="false" disabled><strong>Auto</strong><span>Illustration + pixels</span></button>
+                  </div>
+                  <div class="gang-crop-controls__actions">
+                    <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" data-crop-reset disabled>Conserver tout le visuel</button>
+                  </div>
+                  <p data-crop-help>Choisissez Manuel pour cadrer librement ou Auto pour détecter le contenu du fichier.</p>
+                </section>
                 <div class="gang-asset-modal-form__notice">
                   <strong>Après l’import</strong>
                   <span>Chaque fichier rejoint la galerie privée de cette planche. Il devient ajoutable dès que son contrôle technique est terminé.</span>
@@ -206,17 +233,20 @@
           <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-duplicate-item>Dupliquer</button>
           <button type="button" class="ui-btn ui-btn-danger ui-btn-sm" data-delete-item>Supprimer</button>
         </div>
-        <div class="gang-repeat-panel">
-          <div><span>Répétition</span><strong>Créer une grille régulière</strong></div>
-          <div class="gang-repeat-grid">
-            <label>Rangées<input type="number" min="1" max="200" value="2" data-grid-rows></label>
-            <label>Colonnes<input type="number" min="1" max="200" value="2" data-grid-columns></label>
-            <label>Espace X<input type="number" min="0" max="100" step="0.1" value="0" data-grid-spacing-x><span>mm</span></label>
-            <label>Espace Y<input type="number" min="0" max="100" step="0.1" value="0" data-grid-spacing-y><span>mm</span></label>
+      </section>
+      <section class="gang-inspector-panel gang-spacing-panel" aria-labelledby="gang-spacing-title">
+        <div class="gang-spacing-panel__heading">
+          <span aria-hidden="true">↔</span>
+          <div>
+            <h2 id="gang-spacing-title">Espacement des visuels</h2>
+            <p>Réglez le vide appliqué par l’imposition automatique.</p>
           </div>
-          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-create-grid>Créer la grille</button>
-          <small>Le visuel sélectionné devient le premier exemplaire de la grille.</small>
         </div>
+        <div class="gang-spacing-grid">
+          <label for="gang-spacing-x">Horizontal X <span><input id="gang-spacing-x" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-spacing-x> mm</span></label>
+          <label for="gang-spacing-y">Vertical Y <span><input id="gang-spacing-y" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-spacing-y> mm</span></label>
+        </div>
+        <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-apply-spacing>Appliquer et réorganiser</button>
       </section>
       <section class="gang-inspector-panel gang-inspector-panel--validation">
         <div class="gang-validation-heading">

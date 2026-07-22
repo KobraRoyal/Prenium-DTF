@@ -1,6 +1,142 @@
 /* Studio Gang Sheet v2 — surface de travail dense, responsive et orientée tâche. */
 
+  .gang-crop-box {
+    position: absolute;
+    z-index: 5;
+    box-sizing: border-box;
+    border: 2px solid #dcff1a;
+    background: transparent;
+    box-shadow: 0 0 0 100vmax rgba(8, 8, 8, 0.58), inset 0 0 0 1px rgba(11, 11, 11, 0.8);
+    cursor: move;
+    line-height: 1;
+    outline: 0;
+    touch-action: none;
+  }
+
+  .gang-crop-box:focus-visible {
+    border-color: #fff;
+    box-shadow: 0 0 0 100vmax rgba(8, 8, 8, 0.58), 0 0 0 4px #1f66ff;
+  }
+
+  .gang-crop-box [data-crop-handle] {
+    position: absolute;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #0b0b0b;
+    border-radius: 50%;
+    background: #dcff1a;
+  }
+
+  .gang-crop-box [data-crop-handle="nw"] { top: 0; left: 0; cursor: nwse-resize; transform: translate(-50%, -50%); }
+  .gang-crop-box [data-crop-handle="ne"] { top: 0; right: 0; cursor: nesw-resize; transform: translate(50%, -50%); }
+  .gang-crop-box [data-crop-handle="se"] { right: 0; bottom: 0; cursor: nwse-resize; transform: translate(50%, 50%); }
+  .gang-crop-box [data-crop-handle="sw"] { bottom: 0; left: 0; cursor: nesw-resize; transform: translate(-50%, 50%); }
+
+  .gang-crop-controls {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 30%, transparent);
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--product-blue, #1f66ff) 6%, #fff);
+  }
+
+  .gang-crop-controls__head,
+  .gang-crop-controls__actions,
+  .gang-crop-controls__nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .gang-crop-controls__head { justify-content: space-between; }
+  .gang-crop-controls__head > div:first-child { display: grid; gap: 0.15rem; }
+  .gang-crop-controls__head strong { font-size: 0.75rem; }
+  .gang-crop-controls__head span,
+  .gang-crop-controls > p { color: var(--product-muted, #4c463b); font-size: 0.65rem; line-height: 1.4; }
+  .gang-crop-controls > p { margin: 0; }
+
+  .gang-crop-mode {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .gang-crop-mode button {
+    display: grid;
+    min-height: 3.25rem;
+    gap: 0.1rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 35%, transparent);
+    border-radius: 0.45rem;
+    background: #fff;
+    color: var(--product-ink, #0b0b0b);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .gang-crop-mode button strong { font-size: 0.72rem; }
+  .gang-crop-mode button span { color: var(--product-muted, #4c463b); font-size: 0.62rem; }
+
+  .gang-crop-mode button.is-active {
+    border-color: var(--product-blue, #1f66ff);
+    background: color-mix(in srgb, var(--product-blue, #1f66ff) 10%, #fff);
+    box-shadow: inset 0 0 0 1px var(--product-blue, #1f66ff);
+  }
+
+  .gang-crop-mode button:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--product-blue, #1f66ff) 35%, transparent);
+    outline-offset: 2px;
+  }
+
+  .gang-crop-mode button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .gang-crop-controls__nav {
+    min-width: 0;
+    max-width: 50%;
+  }
+
+  .gang-crop-controls__nav button {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--product-line, #0b0b0b);
+    border-radius: 0.4rem;
+    background: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 1rem;
+  }
+
+  .gang-crop-controls__nav span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gang-asset-card__preview { position: relative; }
+
+  .gang-asset-card__crop-badge {
+    position: absolute;
+    top: 0.35rem;
+    left: 0.35rem;
+    padding: 0.2rem 0.35rem;
+    border-radius: 999px;
+    background: #0b0b0b;
+    color: #fff;
+    font-size: 0.52rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
   .gang-editor {
+    --gang-z-item-actions: 8;
     gap: 0.75rem;
     min-width: 0;
   }
@@ -617,6 +753,66 @@
     border-radius: 50%;
   }
 
+  .gang-sheet-item-toolbar {
+    position: absolute;
+    z-index: var(--gang-z-item-actions);
+    display: flex;
+    max-width: calc(100% - 0.75rem);
+    align-items: center;
+    gap: 0.18rem;
+    padding: 0.22rem;
+    border-radius: 0.45rem;
+    background: #171511;
+    box-shadow: 0 3px 7px rgba(11, 11, 11, 0.32);
+  }
+
+  .gang-sheet-item-action {
+    display: inline-flex;
+    min-height: 2rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.28rem;
+    padding: 0.35rem 0.5rem;
+    border: 0;
+    border-radius: 0.3rem;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.65rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .gang-sheet-item-action > span:first-child {
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .gang-sheet-item-action:hover {
+    background: rgba(255, 255, 255, 0.13);
+  }
+
+  .gang-sheet-item-action.is-danger {
+    color: #ffbdc8;
+  }
+
+  .gang-sheet-item-action.is-danger:hover {
+    background: #8d1732;
+    color: #fff;
+  }
+
+  .gang-sheet-item-action:focus-visible {
+    outline: 3px solid #dcff1a;
+    outline-offset: -2px;
+  }
+
+  .gang-sheet-item-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
   .gang-inspector-panel {
     padding: 0.85rem 0.75rem;
   }
@@ -636,8 +832,7 @@
     font-size: 1rem;
   }
 
-  .gang-inspector-panel__context,
-  .gang-repeat-panel > div > span {
+  .gang-inspector-panel__context {
     display: block;
     margin-bottom: 0.25rem;
     color: var(--product-muted, #4c463b);
@@ -646,7 +841,7 @@
   }
 
   .gang-inspector-grid input,
-  .gang-repeat-grid input {
+  .gang-spacing-grid input {
     min-height: 2.75rem;
     border-color: color-mix(in srgb, var(--product-line, #0b0b0b) 34%, transparent);
     border-radius: 0.35rem;
@@ -662,20 +857,78 @@
   }
 
   .gang-inspector-actions .ui-btn,
-  .gang-repeat-panel .ui-btn {
+  .gang-spacing-panel > .ui-btn {
     min-height: 2.75rem;
   }
 
-  .gang-repeat-panel {
-    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 18%, transparent);
-    border-radius: 0.5rem;
-    background: color-mix(in srgb, var(--product-panel-strong, #f3ead6) 45%, #fff);
+  .gang-spacing-panel {
+    display: grid;
+    gap: 0.7rem;
   }
 
-  .gang-repeat-panel > div > strong {
-    font-family: "DM Sans", system-ui, sans-serif;
-    font-size: 0.78rem;
-    text-transform: none;
+  .gang-spacing-panel__heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+  }
+
+  .gang-spacing-panel__heading > span {
+    display: grid;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.4rem;
+    background: var(--product-panel-strong, #f3ead6);
+    color: var(--product-ink, #0b0b0b);
+    font-size: 0.8rem;
+    font-weight: 900;
+  }
+
+  .gang-spacing-panel__heading p {
+    margin-top: 0.15rem;
+    color: var(--product-muted, #4c463b);
+    font-size: 0.66rem;
+    line-height: 1.4;
+  }
+
+  .gang-spacing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .gang-spacing-grid label {
+    display: grid;
+    gap: 0.25rem;
+    color: var(--product-muted, #4c463b);
+    font-size: 0.61rem;
+    font-weight: 800;
+  }
+
+  .gang-spacing-grid label > span {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .gang-spacing-grid input {
+    width: 100%;
+    min-width: 0;
+    padding: 0.45rem 0.5rem;
+    background: #fff;
+    color: var(--product-ink, #0b0b0b);
+    font: inherit;
+  }
+
+  .gang-spacing-grid input:focus-visible {
+    border-color: #da5217;
+    outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
+    outline-offset: 1px;
+  }
+
+  .gang-spacing-panel > .ui-btn {
+    width: 100%;
   }
 
   .gang-validation-heading {
@@ -855,6 +1108,24 @@
   }
 
   @media (max-width: 640px) {
+    .gang-crop-controls__head {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .gang-crop-controls__nav {
+      max-width: 100%;
+    }
+
+    .gang-crop-controls__actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .gang-crop-controls__actions .ui-btn {
+      width: 100%;
+    }
+
     .gang-editor {
       gap: 0.6rem;
     }

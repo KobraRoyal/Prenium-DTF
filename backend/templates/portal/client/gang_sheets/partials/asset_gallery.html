@@ -16,6 +16,7 @@
   <article class="gang-asset-card" data-asset-card data-asset-name="{{ asset.name|lower }}">
     <div class="gang-asset-card__preview">
       {% if asset.preview_url %}<img src="{{ asset.preview_url }}" alt="Aperçu de {{ asset.name }}" loading="lazy">{% else %}<div class="gang-asset-card__pending" aria-hidden="true"><span></span></div>{% endif %}
+      {% if asset.has_crop %}<span class="gang-asset-card__crop-badge">Recadré</span>{% endif %}
     </div>
     <div class="gang-asset-card__body">
       <strong title="{{ asset.name }}">{{ asset.name }}</strong>

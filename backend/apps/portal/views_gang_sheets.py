@@ -14,6 +14,14 @@ from apps.customers.models import CustomerMembership
 from apps.gang_sheets.forms import GangSheetSiteSettingsForm
 from apps.gang_sheets.models import GangSheet, GangSheetSiteSettings
 from apps.gang_sheets.services import GangSheetDomainError, GangSheetService
+from apps.gang_sheets.services.cropping import (
+    CROP_MODE_MANUAL,
+    CropBox,
+    CropInstruction,
+    CropValidationError,
+    crop_image,
+    parse_crop_manifest,
+)
 from apps.portal.htmx import with_toast
 from apps.portal.views_b2b_order_projects import ClientProjectFeatureMixin
 from apps.portal.views_common import StaffDomainPermissionMixin
@@ -93,8 +101,9 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                     "analysis_status": version.analysis_status if version else "failed",
                     "analysis_label": version.get_analysis_status_display() if version else "Échec",
                     "is_ready": is_ready,
-                    "width_mm": entry.width_mm,
-                    "height_mm": entry.height_mm,
+                    "width_mm": entry.effective_width_mm,
+                    "height_mm": entry.effective_height_mm,
+                    "has_crop": entry.has_crop,
                     "usage_count": usage_count,
                     "can_remove": can_manage_gallery and usage_count == 0,
                 }
@@ -296,14 +305,31 @@ class ClientGangSheetAssetUploadView(ClientGangSheetMixin, View):
                 f"Importez au maximum {self.max_files_per_request} fichiers à la fois.",
                 "error",
             )
+        try:
+            crops = parse_crop_manifest(
+                request.POST.get("crop_manifest", ""),
+                file_count=len(uploaded_files),
+            )
+        except CropValidationError as error:
+            return with_toast(
+                HttpResponseRedirect(self._editor_url(sheet)),
+                str(error),
+                "error",
+            )
         imported = 0
         errors = []
-        for uploaded_file in uploaded_files:
+        for index, uploaded_file in enumerate(uploaded_files):
+            instruction = crops.get(
+                index,
+                CropInstruction(mode=CROP_MODE_MANUAL, crop=CropBox.full()),
+            )
             try:
                 gang_sheet_service.upload_source_asset(
                     sheet=sheet,
                     actor=request.user,
                     uploaded_file=uploaded_file,
+                    crop=instruction.crop,
+                    crop_mode=instruction.mode,
                 )
                 imported += 1
             except GangSheetDomainError as error:
@@ -423,8 +449,13 @@ class ClientGangSheetWorkflowActionView(ClientGangSheetMixin, View):
         sheet = self.get_sheet_or_404(sheet_public_id)
         try:
             if action == "auto-place":
-                gang_sheet_service.auto_place(sheet=sheet, actor=request.user)
-                message = "Placement automatique terminé."
+                gang_sheet_service.auto_place(
+                    sheet=sheet,
+                    actor=request.user,
+                    spacing_x_mm=request.POST.get("spacing_x_mm"),
+                    spacing_y_mm=request.POST.get("spacing_y_mm"),
+                )
+                message = "Espacement appliqué et planche réorganisée."
             elif action == "render":
                 gang_sheet_service.request_render(sheet=sheet, actor=request.user)
                 message = "Rendu haute définition lancé."
@@ -466,14 +497,36 @@ class ClientGangSheetAssetPreviewView(ClientGangSheetMixin, View):
         )
         if version is None:
             raise Http404
+        source_asset = (
+            sheet.source_assets.filter(
+                customer=sheet.customer,
+                asset=version.asset,
+            )
+            .order_by("sort_order")
+            .first()
+        )
+        if source_asset is None:
+            raise Http404
+        crop = CropBox.from_source_asset(source_asset)
         analysis = getattr(version, "analysis", None)
-        if analysis is not None and analysis.thumbnail:
+        if analysis is not None and analysis.thumbnail and crop.is_full:
             analysis.thumbnail.open("rb")
             response = FileResponse(analysis.thumbnail, content_type="image/webp")
         else:
             try:
-                rendered = asset_preview_renderer.render(version=version)
-                image = rendered.image.convert("RGBA")
+                if analysis is not None and analysis.thumbnail:
+                    analysis.thumbnail.open("rb")
+                    with Image.open(analysis.thumbnail) as stored_thumbnail:
+                        stored_thumbnail.load()
+                        image = stored_thumbnail.convert("RGBA")
+                    analysis.thumbnail.close()
+                else:
+                    rendered = asset_preview_renderer.render(version=version)
+                    image = rendered.image.convert("RGBA")
+                    rendered.image.close()
+                cropped = crop_image(image, crop)
+                image.close()
+                image = cropped
                 image.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
                 output = BytesIO()
                 image.save(output, format="PNG", optimize=True)

@@ -14,7 +14,7 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - Galerie filtrable avec statut d’analyse, dimensions détectées et compteur d’utilisation.
 - Quantité par visuel (jusqu’à 200 occurrences par action), créée atomiquement et immédiatement
   soumise à l’imposition automatique.
-- Répétition régulière d’une occurrence en rangées × colonnes avec espacements X/Y contrôlés.
+- Espacements horizontal X et vertical Y persistants, appliqués à l’imposition automatique.
 - Occurrences multiples, déplacement, redimensionnement, rotation, duplication et suppression.
 - Verrouillage des proportions, raccourcis clavier, compteur d’occurrences et taux d’occupation.
 - Placement automatique bottom-left avec rotation et hauteur automatique arrondie au pas Atelier.
@@ -42,6 +42,18 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   guidés et zone de travail conservant ses interactions tactiles à 375 px.
 - Ajout de visuel unifié avec Order Project : sélection du fichier en premier, puis ouverture
   automatique du configurateur déjà prérempli avec aperçu et paramètres utiles.
+- Recadrage non destructif dans la modal d’un nouveau visuel, avec navigation par fichier lors
+  d’un import multiple, dimensions de placement recalculées et source originale conservée.
+- Choix Manuel/Auto par fichier : détection des pixels visibles pour le raster, des objets natifs
+  pour le vectoriel et union illustration + pixels pour les documents mixtes, confirmée côté serveur.
+- Canvas physique non déformé : ratio laize/hauteur respecté même sur les planches courtes, aperçu
+  clipsé dans son cadre et redimensionnement 90°/270° aligné sur les axes visibles.
+- Barre contextuelle sur le visuel sélectionné : rotation et suppression accessibles directement
+  sur le canevas ; l’inspecteur conserve duplication, dimensions, position et proportions.
+- Panneau d’espacement simplifié sans création de grille : réglages X/Y indépendants, accessibles
+  sans sélection, puis application explicite avec réorganisation automatique de la planche.
+- Crop HD adapté aux sources raster, vectorielles et mixtes : pixels natifs sans rééchantillonnage,
+  clip PDF préservant les objets vectoriels et voie EPS/AI vectorielle inchangée.
 - Suppression sécurisée d’une planche avant validation, depuis la bibliothèque ou le studio, avec
   confirmation explicite, conservation des sources et nettoyage des rendus générés.
 - Retrait dynamique d’un visuel libre de la galerie, avec blocage explicite tant que des occurrences
@@ -58,6 +70,7 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - `backend/apps/gang_sheets/services/{gang_sheets,geometry,rendering,hybrid_pdf}.py`
 - `backend/apps/gang_sheets/migrations/0001_initial.py`
 - `backend/apps/gang_sheets/migrations/0003_gangsheet_production_asset_*.py`
+- `backend/apps/gang_sheets/migrations/0006_gangsheet_axis_spacing.py`
 - `backend/apps/portal/views_gang_sheets.py`
 - `backend/templates/portal/client/gang_sheets/`
 - `backend/templates/portal/staff/gang_sheets/settings.html`
@@ -89,12 +102,20 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - [x] Test de rendu PNG/PDF et taille physique gérée côté serveur.
 - [x] Tests structurels PDF : tracés vectoriels, document mixte, définition raster native,
   transparence, rotation en dimensions réelles et conversion EPS vectorielle.
+- [x] Tests de crop : manifeste multi-fichiers, bornes serveur, isolation client, dimensions utiles,
+  pixels natifs raster et conservation des commandes vectorielles/mixes dans le PDF HD.
+- [x] Tests de crop Auto : transparence PNG, fond opaque JPEG, objets PDF vectoriels, union PDF mixte,
+  recalcul serveur autoritaire et contrat UI Manuel/Auto.
+- [x] Test de non-régression canvas : absence de hauteur minimale déformante, calque d’aperçu clipsé
+  et inversion des axes lors du redimensionnement d’une occurrence tournée.
+- [x] Test UX des actions contextuelles : rotation et suppression accessibles sur le canevas,
+  panneau X/Y sans répétition, application serveur et comportement responsive.
 - [x] Les annotations et liens interactifs des sources ne sont pas propagés au PDF de production.
 - [x] Intégration checkout : planches validées rattachées à la commande.
 - [x] Build Tailwind/DaisyUI exécuté.
 - [x] Classes dynamiques du canvas conservées après minification Tailwind.
-- [x] Suite complète : 476 tests passés ; Ruff check global, format du lot, Django check, migrations et JavaScript conformes.
-- [x] Recette navigateur desktop et mobile : quantité, imposition automatique, grille 2 × 2,
+- [x] Suite complète : 509 tests passés ; Ruff check global, format du lot, Django check, migrations et JavaScript conformes.
+- [x] Recette navigateur desktop et mobile : quantité, imposition automatique avec espacements X/Y,
   proportions, compteurs et absence d’overflow à 375 px, sans erreur console.
 - [x] Recette UI du nouveau studio : cohérence avec le portail, ordre mobile Galerie → Composition →
   Contrôle, métriques et états vides lisibles, aucune erreur console.

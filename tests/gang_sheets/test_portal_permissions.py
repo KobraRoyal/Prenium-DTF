@@ -1,6 +1,9 @@
 import json
+from decimal import Decimal
+from io import BytesIO
 
 import pytest
+from apps.auditlog.models import AuditLogEntry
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import CustomerMembership
 from apps.gang_sheets.models import GangSheet, GangSheetSourceAsset
@@ -11,6 +14,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from PIL import Image, ImageDraw
 
 from .helpers import attach_png_asset, create_customer_scope, mark_gang_sheet_drive_synced
 
@@ -136,10 +140,22 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert 'data-mobile-panel-tab="canvas"' in content
     assert "data-zoom-reset" in content
     assert "data-status-detail" in content
+    assert "Espacement des visuels" in content
+    assert "data-spacing-x" in content
+    assert "data-spacing-y" in content
+    assert "data-apply-spacing" in content
+    assert "Répétition" not in content
+    assert "Créer la grille" not in content
     assert 'id="gang-asset-dialog"' in content
     assert 'data-file-picker-dialog="gang-asset-dialog"' in content
     assert 'name="files" multiple' in content
     assert "Vérifier l’import" in content
+    assert "Recadrage non destructif" in content
+    assert 'name="crop_manifest"' in content
+    assert "data-gang-crop-box" in content
+    assert "data-crop-manual" in content
+    assert "data-crop-auto" in content
+    assert "Illustration + pixels" in content
     assert "gang-editor__delete" in content
     assert "Supprimer cette Gang Sheet ?" in content
 
@@ -416,6 +432,91 @@ def test_readonly_member_cannot_mutate_layout(client):
     assert response.status_code == 403
 
 
+def test_owner_can_apply_axis_spacing_through_the_scoped_workflow_action(client):
+    user, customer, project = create_customer_scope(email="spacing-owner@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Espacement portail")
+    service.add_occurrences(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        quantity=2,
+        actor=user,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-workflow-action",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "action": "auto-place",
+            },
+        ),
+        {"spacing_x_mm": "6.50", "spacing_y_mm": "9.25"},
+    )
+
+    sheet.refresh_from_db()
+    assert response.status_code == 200
+    assert response.json()["message"] == "Espacement appliqué et planche réorganisée."
+    assert sheet.item_spacing_x_mm == Decimal("6.50")
+    assert sheet.item_spacing_y_mm == Decimal("9.25")
+
+
+def test_axis_spacing_action_is_readonly_protected_and_tenant_scoped(client):
+    owner_a, customer_a, project_a = create_customer_scope(email="spacing-a@example.com")
+    _asset_a, version_a = attach_png_asset(
+        customer=customer_a,
+        project=project_a,
+        user=owner_a,
+    )
+    service = GangSheetService()
+    sheet_a = service.create_sheet(project=project_a, actor=owner_a, name="Privée A")
+    service.add_occurrence(
+        sheet=sheet_a,
+        asset_version_public_id=version_a.public_id,
+        actor=owner_a,
+    )
+    owner_b, customer_b, _project_b = create_customer_scope(email="spacing-b@example.com")
+    readonly, customer_c, project_c = create_customer_scope(
+        email="spacing-readonly@example.com",
+        role=CustomerMembership.Role.READONLY,
+    )
+    sheet_c = service.create_sheet(project=project_c, actor=readonly, name="Lecture seule")
+
+    client.force_login(owner_b)
+    cross_tenant_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-workflow-action",
+            kwargs={
+                "customer_public_id": customer_b.public_id,
+                "sheet_public_id": sheet_a.public_id,
+                "action": "auto-place",
+            },
+        ),
+        {"spacing_x_mm": "6", "spacing_y_mm": "8"},
+    )
+    client.force_login(readonly)
+    readonly_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-workflow-action",
+            kwargs={
+                "customer_public_id": customer_c.public_id,
+                "sheet_public_id": sheet_c.public_id,
+                "action": "auto-place",
+            },
+        ),
+        {"spacing_x_mm": "6", "spacing_y_mm": "8"},
+    )
+
+    sheet_a.refresh_from_db()
+    assert cross_tenant_response.status_code == 404
+    assert readonly_response.status_code == 403
+    assert sheet_a.item_spacing_x_mm == sheet_a.item_spacing_mm
+    assert sheet_a.item_spacing_y_mm == sheet_a.item_spacing_mm
+
+
 def test_owner_can_add_a_quantity_and_auto_place_from_the_gallery(client):
     user, customer, project = create_customer_scope(email="gallery-owner@example.com")
     _asset, version = attach_png_asset(
@@ -478,6 +579,165 @@ def test_owner_can_create_sheet_and_upload_gallery_without_project(client, monke
     assert sheet.project is None
     assert upload_response.status_code == 302
     assert sheet.source_assets.count() == 1
+
+
+def test_owner_can_upload_multiple_visuals_with_independent_non_destructive_crops(
+    client,
+    monkeypatch,
+):
+    user, customer, _project = create_customer_scope(email="crop-upload@example.com")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Crops privés")
+    monkeypatch.setattr(
+        "apps.uploads.services.assets.AssetService.schedule_analysis",
+        lambda self, version: None,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": [
+                SimpleUploadedFile(
+                    "left.png",
+                    b"\x89PNG\r\n\x1a\n" + b"0" * 64,
+                    content_type="image/png",
+                ),
+                SimpleUploadedFile(
+                    "right.png",
+                    b"\x89PNG\r\n\x1a\n" + b"1" * 64,
+                    content_type="image/png",
+                ),
+            ],
+            "crop_manifest": json.dumps(
+                [
+                    {"index": 0, "x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6},
+                    {"index": 1, "x": 0.2, "y": 0.1, "width": 0.7, "height": 0.8},
+                ]
+            ),
+        },
+    )
+
+    assert response.status_code == 302
+    sources = list(sheet.source_assets.order_by("sort_order"))
+    assert len(sources) == 2
+    assert sources[0].crop_x == Decimal("0.100000")
+    assert sources[0].crop_width == Decimal("0.500000")
+    assert sources[1].crop_y == Decimal("0.100000")
+    assert sources[1].crop_height == Decimal("0.800000")
+
+
+def test_auto_crop_upload_recomputes_visible_pixels_server_side(client, monkeypatch):
+    user, customer, _project = create_customer_scope(email="auto-crop-upload@example.com")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Crop auto")
+    monkeypatch.setattr(
+        "apps.uploads.services.assets.AssetService.schedule_analysis",
+        lambda self, version: None,
+    )
+    image = Image.new("RGBA", (100, 80), (0, 0, 0, 0))
+    ImageDraw.Draw(image).rectangle((20, 10, 79, 69), fill=(20, 90, 220, 255))
+    output = BytesIO()
+    image.save(output, format="PNG")
+    image.close()
+    client.force_login(user)
+
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": SimpleUploadedFile(
+                "auto.png",
+                output.getvalue(),
+                content_type="image/png",
+            ),
+            "crop_manifest": json.dumps(
+                [
+                    {
+                        "index": 0,
+                        "mode": "auto",
+                        "x": 0,
+                        "y": 0,
+                        "width": 1,
+                        "height": 1,
+                    }
+                ]
+            ),
+        },
+    )
+
+    assert response.status_code == 302
+    source = sheet.source_assets.get()
+    assert source.crop_x == Decimal("0.180000")
+    assert source.crop_y == Decimal("0.100000")
+    assert source.crop_width == Decimal("0.640000")
+    assert source.crop_height == Decimal("0.800000")
+    event = AuditLogEntry.objects.get(action="gang_sheet.source_uploaded")
+    assert event.metadata["crop_mode"] == "auto"
+    assert event.metadata["auto_crop"]["content_kind"] == "raster"
+    assert event.metadata["auto_crop"]["basis"] == "visible_pixels"
+
+
+def test_invalid_or_cross_tenant_crop_upload_is_rejected(client, monkeypatch):
+    owner, customer, _project = create_customer_scope(email="crop-owner@example.com")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=owner, name="Crop protégé")
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="crop-outsider@example.com"
+    )
+    monkeypatch.setattr(
+        "apps.uploads.services.assets.AssetService.schedule_analysis",
+        lambda self, version: None,
+    )
+    client.force_login(owner)
+    invalid_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": SimpleUploadedFile(
+                "invalid.png",
+                b"\x89PNG\r\n\x1a\n" + b"0" * 64,
+                content_type="image/png",
+            ),
+            "crop_manifest": '[{"index":0,"x":0.8,"y":0,"width":0.4,"height":1}]',
+        },
+    )
+    client.force_login(outsider)
+    cross_tenant_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": SimpleUploadedFile(
+                "private.png",
+                b"\x89PNG\r\n\x1a\n" + b"0" * 64,
+                content_type="image/png",
+            ),
+            "crop_manifest": '[{"index":0,"mode":"auto","x":0,"y":0,"width":1,"height":1}]',
+        },
+    )
+
+    assert invalid_response.status_code == 302
+    assert json.loads(invalid_response.headers["X-Prenium-Toast"])["variant"] == "error"
+    assert cross_tenant_response.status_code == 404
+    assert sheet.source_assets.count() == 0
 
 
 def test_pending_gallery_refreshes_itself_and_exposes_visual_when_analysis_is_ready(client):

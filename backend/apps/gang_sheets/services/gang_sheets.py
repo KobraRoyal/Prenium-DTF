@@ -19,6 +19,14 @@ from apps.gang_sheets.models import (
     GangSheetSiteSettings,
     GangSheetSourceAsset,
 )
+from apps.gang_sheets.services.cropping import (
+    CROP_MODE_AUTO,
+    CROP_MODE_MANUAL,
+    VALID_CROP_MODES,
+    AutoCropError,
+    AutoCropService,
+    CropBox,
+)
 from apps.gang_sheets.services.drive import GangSheetDriveSyncService
 from apps.gang_sheets.services.geometry import GangSheetGeometryService, normalize_rotation
 from apps.orders.services.pricing import OrderPricingService
@@ -29,6 +37,7 @@ HUNDREDTH = Decimal("0.01")
 FOUR_PLACES = Decimal("0.0001")
 MAX_BATCH_OCCURRENCES = 200
 MAX_SOURCE_ASSETS = 100
+MAX_SPACING_MM = Decimal("100.00")
 
 
 class GangSheetDomainError(ValueError):
@@ -54,12 +63,14 @@ class GangSheetService:
         assets=None,
         projects=None,
         drive_sync=None,
+        auto_crop=None,
     ):
         self.geometry = geometry or GangSheetGeometryService()
         self.pricing = pricing or OrderPricingService()
         self.assets = assets or AssetService()
         self.projects = projects or B2BOrderProjectService()
         self.drive_sync = drive_sync or GangSheetDriveSyncService()
+        self.auto_crop = auto_crop or AutoCropService()
 
     def list_customer_sheets(self, customer):
         return GangSheet.objects.for_customer(customer).select_related(
@@ -163,6 +174,8 @@ class GangSheetService:
             height_step_mm=config.height_step_mm,
             margin_mm=config.margin_mm,
             item_spacing_mm=config.item_spacing_mm,
+            item_spacing_x_mm=config.item_spacing_mm,
+            item_spacing_y_mm=config.item_spacing_mm,
             unit_price_eur=unit_price,
         )
         if project is not None:
@@ -195,6 +208,8 @@ class GangSheetService:
         sheet,
         actor,
         uploaded_file,
+        crop: CropBox | None = None,
+        crop_mode: str = CROP_MODE_MANUAL,
         source="client_portal",
     ):
         locked = self._lock_editable(sheet)
@@ -203,6 +218,21 @@ class GangSheetService:
                 "SOURCE_ASSET_LIMIT",
                 f"Une galerie est limitée à {MAX_SOURCE_ASSETS} fichiers.",
             )
+        if crop_mode not in VALID_CROP_MODES:
+            raise GangSheetDomainError(
+                "INVALID_CROP_MODE",
+                "Le mode de recadrage est invalide.",
+            )
+        crop = crop or CropBox.full()
+        auto_crop_metadata = None
+        if crop_mode == CROP_MODE_AUTO:
+            try:
+                auto_crop_result = self.auto_crop.detect(uploaded_file)
+            except AutoCropError as error:
+                raise GangSheetDomainError("AUTO_CROP_FAILED", str(error)) from error
+            crop = auto_crop_result.crop
+            auto_crop_metadata = auto_crop_result.to_metadata()
+        crop.validate()
         asset_name = Path(str(getattr(uploaded_file, "name", "Visuel"))).stem or "Visuel"
         try:
             version = self.assets.create_asset(
@@ -222,6 +252,10 @@ class GangSheetService:
             sheet=locked,
             asset=version.asset,
             added_by=actor if getattr(actor, "is_authenticated", False) else None,
+            crop_x=crop.x,
+            crop_y=crop.y,
+            crop_width=crop.width,
+            crop_height=crop.height,
             sort_order=next_position,
         )
         self._audit(
@@ -232,6 +266,9 @@ class GangSheetService:
             metadata={
                 "asset_public_id": str(version.asset.public_id),
                 "asset_version_public_id": str(version.public_id),
+                "crop_mode": crop_mode,
+                "crop": crop.to_metadata(),
+                "auto_crop": auto_crop_metadata,
             },
         )
         return source_asset, version
@@ -419,8 +456,8 @@ class GangSheetService:
             customer=locked.customer,
             sheet=locked,
             asset_version=source_item.asset_version,
-            x_mm=source_item.x_mm + locked.item_spacing_mm,
-            y_mm=source_item.y_mm + locked.item_spacing_mm,
+            x_mm=source_item.x_mm + locked.item_spacing_x_mm,
+            y_mm=source_item.y_mm + locked.item_spacing_y_mm,
             width_mm=source_item.width_mm,
             height_mm=source_item.height_mm,
             rotation=source_item.rotation,
@@ -591,11 +628,36 @@ class GangSheetService:
         return locked, issues
 
     @transaction.atomic
-    def auto_place(self, *, sheet, actor, source="client_portal"):
+    def auto_place(
+        self,
+        *,
+        sheet,
+        actor,
+        spacing_x_mm=None,
+        spacing_y_mm=None,
+        source="client_portal",
+    ):
         locked = self._lock_editable(sheet)
         items = list(locked.items.select_for_update())
         if not items:
             raise GangSheetDomainError("ITEMS_REQUIRED", "Ajoutez au moins un visuel.")
+        spacing_x = self._spacing_decimal(
+            locked.item_spacing_x_mm if spacing_x_mm is None else spacing_x_mm
+        )
+        spacing_y = self._spacing_decimal(
+            locked.item_spacing_y_mm if spacing_y_mm is None else spacing_y_mm
+        )
+        locked.item_spacing_x_mm = spacing_x
+        locked.item_spacing_y_mm = spacing_y
+        locked.item_spacing_mm = max(spacing_x, spacing_y)
+        locked.save(
+            update_fields=[
+                "item_spacing_mm",
+                "item_spacing_x_mm",
+                "item_spacing_y_mm",
+                "updated_at",
+            ]
+        )
         changed = self.geometry.auto_place(sheet=locked, items=items)
         GangSheetItem.objects.bulk_update(changed, ["x_mm", "y_mm", "rotation", "updated_at"])
         self._mark_dirty(locked)
@@ -607,7 +669,16 @@ class GangSheetService:
                 "La planche est trop petite pour placer toutes les occurrences.",
                 {"issues": issues},
             )
-        self._audit("auto_placed", sheet=locked, actor=actor, source=source)
+        self._audit(
+            "auto_placed",
+            sheet=locked,
+            actor=actor,
+            source=source,
+            metadata={
+                "spacing_x_mm": str(spacing_x),
+                "spacing_y_mm": str(spacing_y),
+            },
+        )
         return locked
 
     @transaction.atomic
@@ -790,6 +861,8 @@ class GangSheetService:
             "height_step_mm": float(sheet.height_step_mm),
             "margin_mm": float(sheet.margin_mm),
             "spacing_mm": float(sheet.item_spacing_mm),
+            "spacing_x_mm": float(sheet.item_spacing_x_mm),
+            "spacing_y_mm": float(sheet.item_spacing_y_mm),
             "surface_sqm": float(sheet.surface_sqm),
             "unit_price_eur": float(sheet.unit_price_eur),
             "estimated_price_eur": float(sheet.estimated_price_eur),
@@ -833,7 +906,7 @@ class GangSheetService:
             .first()
         )
         if source_asset is not None and source_asset.width_mm and source_asset.height_mm:
-            return source_asset.width_mm, source_asset.height_mm
+            return source_asset.effective_width_mm, source_asset.effective_height_mm
         analysis = getattr(version, "analysis", None)
         if (
             analysis
@@ -917,6 +990,22 @@ class GangSheetService:
         number = Decimal(str(value)).quantize(HUNDREDTH)
         if number < 0 or (number == 0 and not allow_zero):
             raise ValueError("Les dimensions doivent être strictement positives.")
+        return number
+
+    @classmethod
+    def _spacing_decimal(cls, value):
+        try:
+            number = cls._decimal(value, allow_zero=True)
+        except (InvalidOperation, TypeError, ValueError) as error:
+            raise GangSheetDomainError(
+                "INVALID_SPACING",
+                "L’espacement doit être compris entre 0 et 100 mm.",
+            ) from error
+        if number > MAX_SPACING_MM:
+            raise GangSheetDomainError(
+                "INVALID_SPACING",
+                "L’espacement doit être compris entre 0 et 100 mm.",
+            )
         return number
 
     @staticmethod

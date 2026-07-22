@@ -42,15 +42,29 @@ class AssetPreviewRenderer:
 
     def render(self, *, version) -> RenderedAssetPreview:
         content = self._read_content(version)
-        extension = Path(version.original_filename).suffix.lower()
-        if version.mime_type == "application/pdf" or content.startswith(b"%PDF-"):
+        return self.render_content(
+            content=content,
+            original_filename=version.original_filename,
+            mime_type=version.mime_type,
+        )
+
+    def render_content(
+        self,
+        *,
+        content: bytes,
+        original_filename: str,
+        mime_type: str,
+    ) -> RenderedAssetPreview:
+        """Génère un aperçu borné depuis un contenu déjà validé."""
+        extension = Path(original_filename).suffix.lower()
+        if mime_type == "application/pdf" or content.startswith(b"%PDF-"):
             return self._render_pdf(content=content, extension=extension)
-        if extension == ".psd" or version.mime_type in {
+        if extension == ".psd" or mime_type in {
             "image/vnd.adobe.photoshop",
             "application/x-photoshop",
         }:
             return self._render_psd(content=content)
-        if extension in {".ai", ".eps"} or version.mime_type == "application/postscript":
+        if extension in {".ai", ".eps"} or mime_type == "application/postscript":
             return self._render_postscript(content=content, extension=extension)
         return self._render_pillow(content=content, extension=extension)
 

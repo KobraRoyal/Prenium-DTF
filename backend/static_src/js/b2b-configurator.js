@@ -41,6 +41,15 @@ function setPlaceholder(placeholder, title, detail) {
   placeholder.hidden = false;
 }
 
+function notifyPreviewState(root, eventName, file, media = null) {
+  root.dispatchEvent(
+    new CustomEvent(eventName, {
+      bubbles: true,
+      detail: { file, media },
+    })
+  );
+}
+
 function setPreviewBackground(root, value, activeControl = null) {
   const stage = root.querySelector("[data-configurator-stage]");
   if (!(stage instanceof HTMLElement)) {
@@ -509,6 +518,7 @@ async function renderPdfPreview(root, file, canvas, placeholder, renderToken) {
     );
     revealConfiguratorParams(root);
     scheduleFitPreviewMedia(root);
+    notifyPreviewState(root, "b2b:preview-ready", file, canvas);
   } catch (_error) {
     if (previewRenderTokens.get(root) !== renderToken) {
       return;
@@ -519,6 +529,7 @@ async function renderPdfPreview(root, file, canvas, placeholder, renderToken) {
       "Aperçu PDF indisponible",
       "Le fichier pourra tout de même être analysé après son ajout."
     );
+    notifyPreviewState(root, "b2b:preview-unavailable", file);
   } finally {
     const destroyTarget =
       typeof pdfDocument?.destroy === "function"
@@ -606,6 +617,7 @@ async function previewSelectedFile(root, file) {
         : "Le fichier sera analysé en arrière-plan dès son ajout.";
     }
     revealConfiguratorParams(root);
+    notifyPreviewState(root, "b2b:preview-unavailable", file);
     return;
   }
 
@@ -641,6 +653,7 @@ async function previewSelectedFile(root, file) {
     );
     revealConfiguratorParams(root);
     scheduleFitPreviewMedia(root);
+    notifyPreviewState(root, "b2b:preview-ready", file, preview);
   };
   preview.onerror = () => {
     if (previewRenderTokens.get(root) !== renderToken) {
@@ -648,6 +661,7 @@ async function previewSelectedFile(root, file) {
     }
     setPreviewMediaVisible(preview, false);
     setPlaceholder(placeholder, "Aperçu indisponible", file.name);
+    notifyPreviewState(root, "b2b:preview-unavailable", file);
   };
   preview.src = objectUrl;
 }
@@ -1258,6 +1272,14 @@ function bindConfiguratorEvents() {
     updateSelectedFilesSummary(root, input);
     const file = input.files?.[0];
     if (file) {
+      previewSelectedFile(root, file);
+    }
+  });
+
+  document.body.addEventListener("b2b:preview-file-request", (event) => {
+    const root = event.target;
+    const file = event.detail?.file;
+    if (root instanceof HTMLElement && file instanceof File) {
       previewSelectedFile(root, file);
     }
   });

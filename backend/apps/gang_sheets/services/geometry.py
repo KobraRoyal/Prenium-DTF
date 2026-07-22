@@ -96,7 +96,8 @@ class GangSheetGeometryService:
         """
 
         margin = Decimal(sheet.margin_mm)
-        spacing = Decimal(sheet.item_spacing_mm)
+        spacing_x = Decimal(sheet.item_spacing_x_mm)
+        spacing_y = Decimal(sheet.item_spacing_y_mm)
         max_right = Decimal(sheet.width_mm) - margin
         max_bottom = Decimal(sheet.maximum_height_mm) - margin
         placed: list[Rect] = []
@@ -117,8 +118,8 @@ class GangSheetGeometryService:
             xs = {margin}
             ys = {margin}
             for rect in placed:
-                xs.add(rect.right + spacing)
-                ys.add(rect.bottom + spacing)
+                xs.add(rect.right + spacing_x)
+                ys.add(rect.bottom + spacing_y)
             for rotation in rotations:
                 if rotation in {90, 270}:
                     width, height = Decimal(item.height_mm), Decimal(item.width_mm)
@@ -131,10 +132,10 @@ class GangSheetGeometryService:
                             continue
                         padded = Rect(
                             candidate.public_id,
-                            candidate.x - spacing,
-                            candidate.y - spacing,
-                            candidate.width + spacing * 2,
-                            candidate.height + spacing * 2,
+                            candidate.x - spacing_x,
+                            candidate.y - spacing_y,
+                            candidate.width + spacing_x * 2,
+                            candidate.height + spacing_y * 2,
                         )
                         if any(self.overlaps(padded, existing) for existing in placed):
                             continue

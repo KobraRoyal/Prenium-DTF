@@ -9,6 +9,7 @@ from django.utils import timezone
 from PIL import Image
 
 from apps.gang_sheets.models import GangSheet
+from apps.gang_sheets.services.cropping import CropBox, crop_image
 from apps.gang_sheets.services.drive import GangSheetDriveSyncService
 from apps.gang_sheets.services.geometry import GangSheetGeometryService
 from apps.gang_sheets.services.hybrid_pdf import GangSheetHybridPdfComposer
@@ -99,11 +100,18 @@ class GangSheetRenderService:
         else:
             width_px = self.preview_width_px
         canvas = Image.new("RGBA", (width_px, height_px), (255, 255, 255, 0))
+        crops = {
+            entry.asset_id: CropBox.from_source_asset(entry)
+            for entry in sheet.source_assets.filter(customer=sheet.customer)
+        }
         for item in items:
             target_width = max(1, round(float(item.width_mm) * scale))
             target_height = max(1, round(float(item.height_mm) * scale))
             image = self._source_image(
-                item.asset_version, target_width=target_width, target_height=target_height
+                item.asset_version,
+                crop=crops.get(item.asset_version.asset_id, CropBox.full()),
+                target_width=target_width,
+                target_height=target_height,
             )
             image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
             image = self._rotate(image, item.rotation)
@@ -119,21 +127,36 @@ class GangSheetRenderService:
     def _render_production_pdf(self, sheet, items) -> bytes:
         return self.production_composer.compose(sheet=sheet, items=items)
 
-    def _source_image(self, version, *, target_width: int, target_height: int) -> Image.Image:
+    def _source_image(
+        self,
+        version,
+        *,
+        crop: CropBox,
+        target_width: int,
+        target_height: int,
+    ) -> Image.Image:
         content = self._read_version(version)
         if version.mime_type == "application/pdf" or content.startswith(b"%PDF-"):
             try:
                 with pymupdf.open(stream=content, filetype="pdf") as document:
                     page = document.load_page(0)
+                    page_rect = page.rect
+                    clip = pymupdf.Rect(
+                        page_rect.x0 + float(crop.x) * page_rect.width,
+                        page_rect.y0 + float(crop.y) * page_rect.height,
+                        page_rect.x0 + float(crop.x + crop.width) * page_rect.width,
+                        page_rect.y0 + float(crop.y + crop.height) * page_rect.height,
+                    )
                     zoom = max(
-                        target_width / max(page.rect.width, 1),
-                        target_height / max(page.rect.height, 1),
+                        target_width / max(clip.width, 1),
+                        target_height / max(clip.height, 1),
                     )
                     pixmap = page.get_pixmap(
                         matrix=pymupdf.Matrix(zoom, zoom),
                         colorspace=pymupdf.csRGB,
                         alpha=True,
                         annots=False,
+                        clip=clip,
                     )
                     return Image.frombytes("RGBA", (pixmap.width, pixmap.height), pixmap.samples)
             except (RuntimeError, ValueError) as error:
@@ -144,7 +167,9 @@ class GangSheetRenderService:
             converted = image.convert("RGBA")
             image.close()
             image = converted
-        return image
+        cropped = crop_image(image, crop)
+        image.close()
+        return cropped
 
     @staticmethod
     def _read_version(version) -> bytes:

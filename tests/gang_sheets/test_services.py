@@ -44,6 +44,40 @@ def test_standalone_sheet_does_not_require_an_order_project():
     assert sheet.source_assets.count() == 0
 
 
+def test_occurrence_uses_the_cropped_physical_dimensions():
+    user, customer, project = create_customer_scope(email="cropped-size@example.com")
+    asset, version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        width_mm="100.00",
+        height_mm="50.00",
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(customer=customer, actor=user, name="Dimensions crop")
+    GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset,
+        added_by=user,
+        width_mm="100.00",
+        height_mm="50.00",
+        crop_x="0.10",
+        crop_y="0.20",
+        crop_width="0.50",
+        crop_height="0.40",
+    )
+
+    item = service.add_occurrence(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        actor=user,
+    )
+
+    assert item.width_mm == Decimal("50.00")
+    assert item.height_mm == Decimal("20.00")
+
+
 def test_draft_sheet_deletion_removes_composition_and_renders_but_preserves_sources(
     django_capture_on_commit_callbacks,
 ):
@@ -460,12 +494,15 @@ def test_sheet_snapshots_workshop_width_and_calculates_live_price():
     config = GangSheetSiteSettings.current()
     config.roll_width_mm = Decimal("570.00")
     config.minimum_height_mm = Decimal("120.00")
+    config.item_spacing_mm = Decimal("4.50")
     config.save()
 
     sheet = GangSheetService().create_sheet(project=project, actor=user, name="Série A")
 
     assert sheet.width_mm == Decimal("570.00")
     assert sheet.height_mm == Decimal("120.00")
+    assert sheet.item_spacing_x_mm == Decimal("4.50")
+    assert sheet.item_spacing_y_mm == Decimal("4.50")
     assert sheet.surface_sqm == Decimal("0.0684")
     assert sheet.unit_price_eur == Decimal("25.00")
     assert sheet.estimated_price_eur == Decimal("1.71")
@@ -496,6 +533,70 @@ def test_occurrences_auto_place_without_overlap_and_height_is_automatic():
     assert GangSheetGeometryService().issues(sheet=sheet, items=items) == []
     assert sheet.height_mm >= Decimal("60.00")
     assert sheet.surface_sqm > 0
+
+
+def test_auto_place_persists_and_applies_axis_specific_spacing():
+    user, customer, project = create_customer_scope(email="axis-spacing@example.com")
+    _asset, version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        width_mm="100.00",
+        height_mm="100.00",
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Espacement XY")
+    service.add_occurrences(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        quantity=2,
+        actor=user,
+    )
+
+    service.auto_place(
+        sheet=sheet,
+        actor=user,
+        spacing_x_mm="7.25",
+        spacing_y_mm="11.50",
+    )
+
+    sheet.refresh_from_db()
+    items = sorted(sheet.items.all(), key=lambda item: (item.y_mm, item.x_mm))
+    assert sheet.item_spacing_x_mm == Decimal("7.25")
+    assert sheet.item_spacing_y_mm == Decimal("11.50")
+    assert items[1].x_mm - items[0].effective_width_mm - items[0].x_mm == Decimal("7.25")
+    assert items[1].y_mm == items[0].y_mm
+    assert GangSheetGeometryService().issues(sheet=sheet, items=items) == []
+
+
+def test_auto_place_applies_vertical_spacing_when_a_new_column_does_not_fit():
+    user, customer, project = create_customer_scope(email="vertical-spacing@example.com")
+    _asset, version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        width_mm="270.00",
+        height_mm="270.00",
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Espacement vertical")
+    service.add_occurrences(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        quantity=2,
+        actor=user,
+    )
+
+    service.auto_place(
+        sheet=sheet,
+        actor=user,
+        spacing_x_mm="7.25",
+        spacing_y_mm="11.50",
+    )
+
+    items = sorted(sheet.items.all(), key=lambda item: (item.y_mm, item.x_mm))
+    assert items[1].y_mm - items[0].effective_height_mm - items[0].y_mm == Decimal("11.50")
+    assert items[1].x_mm == items[0].x_mm
 
 
 def test_batch_quantity_creates_and_places_every_occurrence_atomically():

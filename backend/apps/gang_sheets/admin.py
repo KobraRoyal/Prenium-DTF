@@ -27,7 +27,17 @@ class GangSheetItemInline(admin.TabularInline):
 class GangSheetSourceAssetInline(admin.TabularInline):
     model = GangSheetSourceAsset
     extra = 0
-    readonly_fields = ("public_id", "customer", "asset", "width_mm", "height_mm")
+    readonly_fields = (
+        "public_id",
+        "customer",
+        "asset",
+        "width_mm",
+        "height_mm",
+        "crop_x",
+        "crop_y",
+        "crop_width",
+        "crop_height",
+    )
 
 
 class GangSheetDriveSyncInline(admin.StackedInline):

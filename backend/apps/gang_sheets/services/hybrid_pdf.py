@@ -6,7 +6,9 @@ from io import BytesIO
 from pathlib import Path
 
 import pymupdf
+from PIL import Image
 
+from apps.gang_sheets.services.cropping import CropBox, crop_image
 from apps.uploads.services.asset_preview import AssetPreviewRenderer
 
 MM_TO_POINTS = 72 / 25.4
@@ -36,6 +38,10 @@ class GangSheetHybridPdfComposer:
         source_contents: dict[int, bytes] = {}
         raster_streams: dict[int, bytes] = {}
         raster_xrefs: dict[int, int] = {}
+        crops = {
+            entry.asset_id: CropBox.from_source_asset(entry)
+            for entry in sheet.source_assets.filter(customer=sheet.customer)
+        }
         try:
             page = output.new_page(
                 width=float(sheet.width_mm) * MM_TO_POINTS,
@@ -43,6 +49,7 @@ class GangSheetHybridPdfComposer:
             )
             for item in items:
                 version = item.asset_version
+                crop = crops.get(version.asset_id, CropBox.full())
                 content = source_contents.get(version.pk)
                 if content is None:
                     content = self._read_version(version)
@@ -52,7 +59,12 @@ class GangSheetHybridPdfComposer:
                     if source_document is None:
                         source_document = self._open_pdf(content)
                         source_documents[version.pk] = source_document
-                    self._place_pdf(page=page, item=item, source_document=source_document)
+                    self._place_pdf(
+                        page=page,
+                        item=item,
+                        source_document=source_document,
+                        crop=crop,
+                    )
                 elif self._is_postscript_source(version=version):
                     source_document = source_documents.get(version.pk)
                     if source_document is None:
@@ -60,11 +72,20 @@ class GangSheetHybridPdfComposer:
                             self._convert_postscript_to_pdf(version=version, content=content)
                         )
                         source_documents[version.pk] = source_document
-                    self._place_pdf(page=page, item=item, source_document=source_document)
+                    self._place_pdf(
+                        page=page,
+                        item=item,
+                        source_document=source_document,
+                        crop=crop,
+                    )
                 else:
                     stream = raster_streams.get(version.pk)
                     if stream is None:
-                        stream = self._raster_stream(version=version, content=content)
+                        stream = self._raster_stream(
+                            version=version,
+                            content=content,
+                            crop=crop,
+                        )
                         raster_streams[version.pk] = stream
                     raster_xrefs[version.pk] = self._place_raster(
                         page=page,
@@ -102,9 +123,17 @@ class GangSheetHybridPdfComposer:
                 document.close()
             output.close()
 
-    def _place_pdf(self, *, page, item, source_document) -> None:
+    def _place_pdf(self, *, page, item, source_document, crop: CropBox) -> None:
         if source_document.page_count < 1:
             raise HybridPdfCompositionError("Le document source ne contient aucune page.")
+        source_page = source_document.load_page(0)
+        source_rect = source_page.rect
+        clip = pymupdf.Rect(
+            source_rect.x0 + float(crop.x) * source_rect.width,
+            source_rect.y0 + float(crop.y) * source_rect.height,
+            source_rect.x0 + float(crop.x + crop.width) * source_rect.width,
+            source_rect.y0 + float(crop.y + crop.height) * source_rect.height,
+        )
         page.show_pdf_page(
             self._item_rect(item),
             source_document,
@@ -112,6 +141,7 @@ class GangSheetHybridPdfComposer:
             keep_proportion=False,
             overlay=True,
             rotate=int(item.rotation) % 360,
+            clip=clip,
         )
 
     def _place_raster(self, *, page, item, stream: bytes, existing_xref: int | None) -> int:
@@ -124,12 +154,27 @@ class GangSheetHybridPdfComposer:
             **kwargs,
         )
 
-    def _raster_stream(self, *, version, content: bytes) -> bytes:
-        if version.mime_type in DIRECT_RASTER_MIME_TYPES:
+    def _raster_stream(self, *, version, content: bytes, crop: CropBox) -> bytes:
+        if version.mime_type in DIRECT_RASTER_MIME_TYPES and crop.is_full:
             return content
-        rendered = self.preview_renderer.render(version=version)
-        image = rendered.image
+        if version.mime_type in DIRECT_RASTER_MIME_TYPES:
+            try:
+                with Image.open(BytesIO(content)) as source:
+                    source.seek(0)
+                    source.load()
+                    image = source.copy()
+                    image.info.update(source.info)
+            except (OSError, ValueError) as error:
+                raise HybridPdfCompositionError(
+                    "Le visuel raster ne peut pas être recadré."
+                ) from error
+        else:
+            rendered = self.preview_renderer.render(version=version)
+            image = rendered.image
         try:
+            cropped = crop_image(image, crop)
+            image.close()
+            image = cropped
             if image.mode not in {"RGB", "RGBA"}:
                 converted = image.convert("RGBA")
                 image.close()

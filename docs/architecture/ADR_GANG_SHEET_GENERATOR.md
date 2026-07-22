@@ -62,6 +62,22 @@ rééchantillonnage. Les PNG, JPEG et TIFF sont intégrés avec leurs pixels nat
 et leur profil ICC lorsque le format le fournit. Les formats de travail raster non intégrables
 directement, notamment PSD, utilisent leur composite aplati en PNG sans redimensionnement.
 
+Le recadrage proposé dans la modal d’import est non destructif. La planche stocke une fenêtre
+normalisée `(x, y, largeur, hauteur)` sur `GangSheetSourceAsset`, tandis que l’`AssetVersion`
+originale reste inchangée. Les dimensions physiques proposées et les aperçus utilisent cette
+fenêtre. Dans le PDF HD, une source PDF ou mixte est placée avec un clip PDF natif ; ses tracés,
+textes, polices et images embarquées ne sont donc pas aplatis. Les sources EPS/AI PostScript sont
+d’abord converties en PDF vectoriel selon la voie existante, puis clippées. Pour une source raster,
+seuls les pixels compris dans la fenêtre sont conservés, sans mise à l’échelle ni rééchantillonnage.
+
+La modal propose un mode Manuel et un mode Auto par fichier. Auto utilise la transparence ou le
+fond dominant pour borner les pixels raster. Pour un PDF vectoriel, il unit les limites natives des
+tracés, textes et nuances ; pour un PDF mixte, il ajoute les limites des images embarquées. Les
+formats EPS/AI/PSD/TIFF sans aperçu navigateur sont analysés via leur aperçu serveur sécurisé. La
+proposition visuelle du navigateur reste indicative : lors de l’import, le serveur relit l’original,
+recalcule la fenêtre et audite le type détecté (`vector`, `raster` ou `mixed`). Une modification du
+cadre Auto dans la modal repasse explicitement le fichier en mode Manuel.
+
 L’aperçu client et les diagnostics de finesse/semi-transparence restent volontairement
 rasterisés : ils sont indépendants du livrable HD. Le compositeur crée une page neuve et ne copie
 pas les annotations, liens ou actions interactives des PDF sources. La taille, la rotation et la
@@ -77,6 +93,8 @@ audités et aucun identifiant Drive n’est envoyé au portail client.
 
 - Tous les objets client sont filtrés par `Customer` et exposés par UUID public.
 - Une occurrence ne peut référencer que la version courante analysée d’un asset de sa galerie.
+- Les coordonnées de crop sont revalidées côté serveur et contraintes à la surface du visuel.
+- Le mode Auto ignore les coordonnées proposées par le navigateur et recalcule depuis l’original.
 - Les membres `readonly` ne peuvent modifier, rendre ou valider une planche.
 - Aucun chemin de stockage ni `MEDIA_URL` n’est exposé.
 - La validation, le rendu et la configuration Atelier sont audités.
