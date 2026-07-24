@@ -1,0 +1,120 @@
+{% extends "portal/layout.html" %}
+{% block title %}{{ customer.name }} — Compte client{% endblock %}
+{% block portal_content %}
+{% include "components/portal/page_head.html" with kicker="Comptes clients" title=customer.name subtitle="Identité, utilisateurs et conditions tarifaires." %}
+
+<p class="mb-4">
+  <a class="ui-link" href="{% url 'portal:staff-customer-list' %}">← Retour à la liste</a>
+</p>
+
+<section class="card mb-4" aria-labelledby="customer-summary-title">
+  <h2 id="customer-summary-title" class="font-display text-lg mb-3">Synthèse</h2>
+  <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div><dt class="muted text-sm">Statut</dt><dd>{% if customer.is_active %}<span class="badge is-success">Actif</span>{% else %}<span class="badge is-danger">Inactif</span>{% endif %}</dd></div>
+    <div><dt class="muted text-sm">Règlement</dt><dd>{{ customer.get_preferred_settlement_method_display }}</dd></div>
+    <div><dt class="muted text-sm">Cycle</dt><dd>{% if billing_profile %}{{ billing_profile.get_billing_cycle_display }}{% else %}<span class="muted">Non défini</span>{% endif %}</dd></div>
+    <div><dt class="muted text-sm">Réf. publique</dt><dd><code>{{ customer.public_id }}</code></dd></div>
+  </dl>
+</section>
+
+{% if can_edit_account and account_form %}
+<section class="card mb-4" aria-labelledby="account-form-title">
+  <h2 id="account-form-title" class="font-display text-lg mb-3">Compte &amp; identité</h2>
+  <form class="ui-form-stack" method="post" action="{% url 'portal:staff-customer-account-update' customer_public_id=customer.public_id %}">
+    {% csrf_token %}
+    <div class="grid gap-3 md:grid-cols-2">
+      {% for field in account_form %}
+      <div class="ui-field-group{% if field.name == 'notes' %} md:col-span-2{% endif %}">
+        {% if field.field.widget.input_type == 'checkbox' %}
+        <label class="ui-label flex items-center gap-2" for="{{ field.id_for_label }}">
+          {{ field }}
+          <span>{{ field.label }}</span>
+        </label>
+        {% else %}
+        <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% endif %}
+        {% if field.help_text %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<p class="error-text ui-error-text" role="alert">{{ field.errors|striptags }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions mt-4">
+      <button class="ui-btn ui-btn-primary" type="submit">Enregistrer le compte</button>
+    </div>
+  </form>
+</section>
+{% else %}
+<section class="card mb-4">
+  <h2 class="font-display text-lg mb-2">Compte &amp; identité</h2>
+  <p class="muted m-0">Lecture seule — permission <code>change_customer</code> requise pour modifier.</p>
+</section>
+{% endif %}
+
+{% if can_edit_pricing and pricing_form %}
+<section class="card mb-4" aria-labelledby="pricing-form-title">
+  <h2 id="pricing-form-title" class="font-display text-lg mb-3">Conditions tarifaires</h2>
+  <p class="muted text-sm mb-3">Ces paramètres s’appliquent aux prochaines tarifications (commandes différées). La facturation périodique utilise le cycle et l’encours.</p>
+  <form class="ui-form-stack" method="post" action="{% url 'portal:staff-customer-pricing-update' customer_public_id=customer.public_id %}">
+    {% csrf_token %}
+    <div class="grid gap-3 md:grid-cols-2">
+      {% for field in pricing_form %}
+      <div class="ui-field-group{% if field.name == 'enforce_credit_block' %} md:col-span-2{% endif %}">
+        {% if field.field.widget.input_type == 'checkbox' %}
+        <label class="ui-label flex items-center gap-2" for="{{ field.id_for_label }}">
+          {{ field }}
+          <span>{{ field.label }}</span>
+        </label>
+        {% else %}
+        <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% endif %}
+        {% if field.help_text %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<p class="error-text ui-error-text" role="alert">{{ field.errors|striptags }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions mt-4">
+      <button class="ui-btn ui-btn-primary" type="submit">Enregistrer les conditions</button>
+    </div>
+  </form>
+</section>
+{% else %}
+<section class="card mb-4">
+  <h2 class="font-display text-lg mb-2">Conditions tarifaires</h2>
+  <dl class="grid gap-3 sm:grid-cols-2">
+    <div><dt class="muted text-sm">Forfait fichier</dt><dd>{% if customer.negotiated_file_preparation_fee_eur %}{{ customer.negotiated_file_preparation_fee_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
+    <div><dt class="muted text-sm">Prix m²</dt><dd>{% if billing_profile and billing_profile.price_per_sqm_eur %}{{ billing_profile.price_per_sqm_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
+    <div><dt class="muted text-sm">Cycle</dt><dd>{% if billing_profile %}{{ billing_profile.get_billing_cycle_display }}{% else %}—{% endif %}</dd></div>
+    <div><dt class="muted text-sm">Encours</dt><dd>{% if billing_profile and billing_profile.credit_limit_eur %}{{ billing_profile.credit_limit_eur }} €{% else %}—{% endif %}</dd></div>
+  </dl>
+  {% if not can_edit_pricing %}
+  <p class="muted mt-3 mb-0">Permission <code>manage_customer_pricing</code> requise pour modifier.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card table-wrap" aria-labelledby="members-title">
+  <h2 id="members-title" class="font-display text-lg mb-3">Utilisateurs rattachés</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>E-mail</th>
+        <th>Rôle</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for membership in memberships %}
+      <tr>
+        <td>{{ membership.user.email }}</td>
+        <td>{{ membership.get_role_display }}</td>
+        <td>{% if membership.is_active %}<span class="badge is-success">Actif</span>{% else %}<span class="badge is-neutral">Inactif</span>{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3"><div class="empty-state">Aucun utilisateur rattaché.</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
