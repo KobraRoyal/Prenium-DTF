@@ -3,84 +3,75 @@
 {% block title %}Mon compte - Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="account-profile-page">
-  <header class="account-profile-head">
-    <div>
-      <h1>Mon compte</h1>
-      <p>Gérez votre identité et les accès associés à votre espace Prenium DTF.</p>
-    </div>
-  </header>
+<div class="account-profile-page" x-data="{ dirty: false }">
+  {% include "components/portal/page_head.html" with kicker="Compte" title="Mon compte" subtitle="Identité de contact et accès à votre espace Prenium DTF." %}
 
   {% if saved %}
   <p
     class="ui-sr-only"
     role="status"
-    x-data
     x-init="$nextTick(() => window.preniumToast?.('Vos informations ont été enregistrées.', 'success'))"
   >Vos informations ont été enregistrées.</p>
   {% endif %}
 
   <div class="account-profile-layout">
-    <aside class="account-profile-rail" aria-label="Navigation du compte">
-      <div class="account-profile-identity">
-        <span class="account-profile-card__avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
-        <div>
-          <strong>{% if request.user.first_name or request.user.last_name %}{{ request.user.first_name }} {{ request.user.last_name }}{% else %}Mon compte{% endif %}</strong>
-          <small>
-            {% if nav_mode == "staff" %}Équipe Atelier
-            {% elif selected_membership %}{{ selected_membership.role_label }} · {{ selected_membership.customer_name }}
-            {% else %}Compte client{% endif %}
-          </small>
-        </div>
-      </div>
+    {% include "components/portal/account_rail.html" with account_section="identity" %}
 
-      <nav class="account-profile-nav" aria-label="Rubriques du compte">
-        <a class="is-active" href="#personal-information" aria-current="page"><span>Informations personnelles</span><span aria-hidden="true">→</span></a>
-        <a href="#connection-email"><span>Connexion</span><span aria-hidden="true">→</span></a>
-        {% if nav_mode == "client" and selected_membership.can_manage_team and customer %}
-        <a href="{% url 'portal:client-team' customer_public_id=customer.public_id %}"><span>Gérer l’équipe</span><span aria-hidden="true">→</span></a>
-        {% endif %}
-      </nav>
-    </aside>
-
-    <section class="account-profile-panel" id="personal-information" aria-labelledby="personal-information-title">
-      <header class="account-profile-panel__head">
-        <div>
-          <h2 id="personal-information-title">Informations personnelles</h2>
-          <p>Ces informations permettent à l’équipe d’identifier clairement votre contact.</p>
-        </div>
-      </header>
-
-      <form
-        method="post"
-        class="ui-form-stack account-profile-form"
-        data-submit-loading
-        x-data="{ dirty: false }"
-        x-on:input="dirty = true"
-        x-on:submit="dirty = false"
-      >
-        {% csrf_token %}
-        <input type="hidden" name="space" value="{{ nav_mode }}">
-        <div class="account-profile-form__grid">
-          {% include "components/forms/field_group.html" with id="id_first_name" name="first_name" label="Prénom" type="text" autocomplete="given-name" value=form.first_name.value|default:"" error=form.first_name.errors.0 show_label=1 %}
-          {% include "components/forms/field_group.html" with id="id_last_name" name="last_name" label="Nom" type="text" autocomplete="family-name" value=form.last_name.value|default:"" error=form.last_name.errors.0 show_label=1 %}
-        </div>
-
-        <div class="account-profile-connection" id="connection-email">
-          <div class="account-profile-connection__copy">
-            <span class="account-profile-email__icon" aria-hidden="true">@</span>
-            <span><strong>E-mail de connexion</strong><small>Utilisé pour vous authentifier à votre espace.</small></span>
+    <div class="account-profile-main">
+      <section class="account-profile-panel" aria-labelledby="personal-information-title">
+        <header class="account-profile-panel__head">
+          <div>
+            <h2 id="personal-information-title">Identité</h2>
+            <p>Ces informations permettent à l’équipe d’identifier votre contact sur les dossiers.</p>
           </div>
-          <div class="account-profile-email" aria-label="E-mail de connexion non modifiable">
-            <span>{{ request.user.email }}</span>
-            <span class="account-profile-email__status"><span aria-hidden="true">●</span> Non modifiable</span>
-          </div>
-          <p>Pour modifier cet e-mail, contactez l’équipe IDS afin de sécuriser le changement d’accès.</p>
-        </div>
+        </header>
 
-        {% include "components/forms/form_actions.html" with primary_label="Enregistrer mes informations" primary_class_full="ui-btn ui-btn-primary ui-btn-wide" primary_disabled_until_dirty=1 htmx_disable=1 %}
-      </form>
-    </section>
+        <form
+          method="post"
+          class="ui-form-stack account-profile-form"
+          data-submit-loading
+          x-on:input="dirty = true"
+          x-on:submit="dirty = false"
+        >
+          {% csrf_token %}
+          <input type="hidden" name="space" value="{{ nav_mode }}">
+
+          <div class="account-profile-form__grid">
+            {% include "components/forms/field_group.html" with id="id_first_name" name="first_name" label="Prénom" type="text" autocomplete="given-name" value=form.first_name.value|default:"" error=form.first_name.errors.0 show_label=1 %}
+            {% include "components/forms/field_group.html" with id="id_last_name" name="last_name" label="Nom" type="text" autocomplete="family-name" value=form.last_name.value|default:"" error=form.last_name.errors.0 show_label=1 %}
+          </div>
+
+          <section class="account-profile-connection" aria-labelledby="connection-email-title">
+            <header class="account-profile-connection__head">
+              <div>
+                <h3 id="connection-email-title">E-mail de connexion</h3>
+                <p>Adresse utilisée pour vous authentifier. Elle ne peut pas être modifiée ici.</p>
+              </div>
+              <span class="account-profile-lock-badge">
+                <span class="account-profile-lock-badge__icon" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                    <rect x="3.5" y="7.5" width="9" height="6.5" rx="1.2"></rect>
+                    <path d="M5.5 7.5V5.6a2.5 2.5 0 0 1 5 0V7.5"></path>
+                  </svg>
+                </span>
+                Verrouillé
+              </span>
+            </header>
+
+            <div class="account-profile-email" aria-label="E-mail de connexion non modifiable">
+              <span class="account-profile-email__value">{{ request.user.email }}</span>
+            </div>
+            <p class="account-profile-connection__help">Pour changer cet e-mail, contactez l’équipe IDS afin de sécuriser le nouvel accès.</p>
+          </section>
+
+          <div class="account-profile-form__footer">
+            <p class="account-profile-form__hint" x-show="!dirty" x-cloak>Modifiez un champ pour activer l’enregistrement.</p>
+            <p class="account-profile-form__hint is-ready" x-show="dirty" x-cloak>Modifications non enregistrées.</p>
+            {% include "components/forms/form_actions.html" with primary_label="Enregistrer" primary_class_full="ui-btn ui-btn-primary" primary_disabled_until_dirty=1 htmx_disable=1 %}
+          </div>
+        </form>
+      </section>
+    </div>
   </div>
 </div>
 {% endblock %}

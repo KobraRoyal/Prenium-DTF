@@ -35,6 +35,15 @@ def test_owner_can_invite_but_member_cannot_access_team(client):
     assert client.get(team_url).status_code == 403
 
     client.force_login(owner)
+    team_page = client.get(team_url)
+    assert team_page.status_code == 200
+    team_html = team_page.content.decode()
+    assert "account-profile-layout" in team_html
+    assert "account-profile-nav" in team_html
+    assert "Identité" in team_html
+    assert "Équipe" in team_html
+    assert "Inviter un collaborateur" in team_html
+
     with patch("apps.notifications.tasks.send_customer_invitation_email_task.delay") as delay:
         with TestCase.captureOnCommitCallbacks(execute=True):
             response = client.post(

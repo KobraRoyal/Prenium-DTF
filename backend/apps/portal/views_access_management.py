@@ -233,6 +233,7 @@ class ClientTeamView(ClientTeamManagerRequiredMixin, View):
                 "role_choices": CustomerMemberRoleForm.base_fields["role"].choices,
                 "nav_mode": "client",
                 "nav_key": "client-team",
+                "account_section": "team",
             },
         )
 

@@ -32,8 +32,11 @@ def test_user_can_update_personal_information_without_changing_login_email():
     assert "Mon compte" in html
     assert "account-profile-layout" in html
     assert "account-profile-rail" in html
-    assert "Informations personnelles" in html
-    assert "Connexion" in html
+    assert "Identité" in html
+    assert "E-mail de connexion" in html
+    assert "Verrouillé" in html
+    assert 'href="#connection-email"' not in html
+    assert "Modifiez un champ pour activer l’enregistrement." in html
     assert 'x-on:input="dirty = true"' in html
     assert 'x-bind:disabled="!dirty"' in html
     assert 'name="first_name"' in html
