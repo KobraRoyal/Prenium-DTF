@@ -59,6 +59,7 @@
 - [x] Lot 11.10 — Système de boutons SaaS unifié livré sur portail/prospect/actions staff
 - [x] Lot 11.11 — Audit global UI/UX orchestré par sous-agents, corrections header/tabs/empty states/shipping et documentation livrées
 - [x] Lot 33 — Navigation SaaS partagée, centre de compte Owner, bibliothèque filtrable et studio Gang Sheets responsive livrés sans changement de permissions objet
+- [x] Administration staff comptes clients + conditions tarifaires (Atelier)
 
 ## Derniers chantiers transverses
 

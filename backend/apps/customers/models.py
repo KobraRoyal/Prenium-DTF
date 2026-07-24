@@ -145,6 +145,12 @@ class Customer(BaseModel):
 
     class Meta:
         ordering = ("name",)
+        permissions = [
+            (
+                "manage_customer_pricing",
+                "Peut définir les conditions tarifaires d’un compte client",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name

@@ -1,0 +1,91 @@
+{% extends "portal/layout.html" %}
+{% block title %}Comptes clients — Prenium DTF{% endblock %}
+{% block portal_content %}
+{% include "components/portal/page_head.html" with kicker="Atelier" title="Comptes clients" subtitle="Administrer les entreprises et leurs conditions tarifaires." %}
+
+<form class="card ui-form-stack mb-4" method="get" role="search">
+  <div class="flex flex-wrap items-end gap-3">
+    <div class="ui-field-group grow min-w-[14rem]">
+      <label class="ui-label" for="customer-search">Recherche</label>
+      <input class="ui-input" id="customer-search" type="search" name="q" value="{{ search_query }}" placeholder="Raison sociale, e-mail, SIREN…">
+    </div>
+    <div class="ui-field-group">
+      <label class="ui-label" for="customer-status">Statut</label>
+      <select class="ui-input" id="customer-status" name="status">
+        <option value="active"{% if active_status == "active" %} selected{% endif %}>Actifs</option>
+        <option value="inactive"{% if active_status == "inactive" %} selected{% endif %}>Inactifs</option>
+        <option value="all"{% if active_status == "all" %} selected{% endif %}>Tous</option>
+      </select>
+    </div>
+    <button class="ui-btn ui-btn-secondary" type="submit">Filtrer</button>
+  </div>
+</form>
+
+<section class="card table-wrap" aria-label="Liste des comptes clients">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Entreprise</th>
+        <th>Règlement</th>
+        <th>Tarif m²</th>
+        <th>Encours</th>
+        <th>Statut</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for customer in page_obj %}
+      <tr>
+        <td>
+          <strong>{{ customer.name }}</strong><br>
+          <span class="muted">{{ customer.billing_email|default:"—" }}</span>
+        </td>
+        <td>{{ customer.get_preferred_settlement_method_display }}</td>
+        <td>
+          {% if customer.billing_profile.price_per_sqm_eur %}
+          {{ customer.billing_profile.price_per_sqm_eur }} €/m²
+          {% else %}
+          <span class="muted">Catalogue</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if customer.billing_profile.credit_limit_eur %}
+          {{ customer.billing_profile.credit_limit_eur }} €
+          {% else %}
+          <span class="muted">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if customer.is_active %}
+          <span class="badge is-success">Actif</span>
+          {% else %}
+          <span class="badge is-danger">Inactif</span>
+          {% endif %}
+        </td>
+        <td>
+          <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-customer-detail' customer_public_id=customer.public_id %}">Ouvrir</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6">
+          <div class="empty-state">Aucun compte client pour ces filtres.</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="pagination" aria-label="Pagination">
+  {% if page_obj.has_previous %}
+  <a href="?q={{ search_query|urlencode }}&status={{ active_status }}&page={{ page_obj.previous_page_number }}">Précédent</a>
+  {% endif %}
+  <span>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+  <a href="?q={{ search_query|urlencode }}&status={{ active_status }}&page={{ page_obj.next_page_number }}">Suivant</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

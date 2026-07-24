@@ -13,6 +13,12 @@ from .views_access_management import (
     StaffAccessRequestListView,
     StaffAccessRequestRejectView,
 )
+from .views_staff_customers import (
+    StaffCustomerAccountUpdateView,
+    StaffCustomerDetailView,
+    StaffCustomerListView,
+    StaffCustomerPricingUpdateView,
+)
 from .views_auth import PortalLoginView, PortalLogoutView
 from .views_b2b_order_projects import (
     ClientOrderProjectAutosaveView,
@@ -342,6 +348,26 @@ urlpatterns = [
         "staff/access-requests/",
         StaffAccessRequestListView.as_view(),
         name="staff-access-request-list",
+    ),
+    path(
+        "staff/customers/",
+        StaffCustomerListView.as_view(),
+        name="staff-customer-list",
+    ),
+    path(
+        "staff/customers/<uuid:customer_public_id>/",
+        StaffCustomerDetailView.as_view(),
+        name="staff-customer-detail",
+    ),
+    path(
+        "staff/customers/<uuid:customer_public_id>/account/",
+        StaffCustomerAccountUpdateView.as_view(),
+        name="staff-customer-account-update",
+    ),
+    path(
+        "staff/customers/<uuid:customer_public_id>/pricing/",
+        StaffCustomerPricingUpdateView.as_view(),
+        name="staff-customer-pricing-update",
     ),
     path(
         "staff/access-requests/<uuid:profile_public_id>/",
