@@ -48,6 +48,7 @@ class Customer(BaseModel):
 
     class PreferredSettlementMethod(models.TextChoices):
         PAYPAL = "paypal", "PayPal"
+        STRIPE = "stripe", "Stripe (carte)"
         WIRE_TRANSFER = "wire_transfer", "Virement bancaire"
 
     name = models.CharField(max_length=255)
@@ -137,7 +138,8 @@ class Customer(BaseModel):
         choices=PreferredSettlementMethod.choices,
         default=PreferredSettlementMethod.WIRE_TRANSFER,
         help_text=(
-            "PayPal (paiement en ligne) ou virement — utilisé comme référence comptable / UI."
+            "PayPal / Stripe (paiement en ligne immédiat) ou virement — "
+            "hors facturation mensuelle différée."
         ),
     )
 

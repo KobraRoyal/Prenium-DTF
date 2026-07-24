@@ -97,7 +97,10 @@ Effets :
 
 ## Paiement en ligne
 
-- `PaymentService.initiate_payment_for_customer_order` **refuse** les commandes `billing_mode = deferred` et les montants ≤ 0 (hors flux immédiat classique).
+- `PaymentService.initiate_payment_for_customer_order` **refuse** les commandes `billing_mode = deferred` et les montants ≤ 0.
+- Pour le paiement immédiat (`billing_mode = immediate`) : **PayPal** et **Stripe Checkout** via abstraction `PaymentGateway`.
+- Doc dédiée : [ONLINE_PAYMENTS.md](./ONLINE_PAYMENTS.md).
+- La facturation périodique (`BillingStatement`) reste hors paiement en ligne.
 
 ## API REST (`orders`)
 

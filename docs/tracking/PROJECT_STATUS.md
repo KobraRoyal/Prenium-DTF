@@ -15,6 +15,7 @@
 - [x] Sprint 08 — Expédition Sendcloud
 - [x] Sprint 09 — Frontend produit (espace client + backoffice staff)
 - [x] Sprint 10 — Paiement PayPal + facturation automatique
+- [x] Extension paiements en ligne multi-provider (PayPal + Stripe Checkout) hors facturation différée
 - [x] Sprint 11 — Tunnel produit final + polish UX
 - [x] Micro-sprint 11.1 bis — Frontend e-commerce premium + tunnel de commande moderne
 - [x] Micro-sprint 11.2 — Landing page premium UI/UX

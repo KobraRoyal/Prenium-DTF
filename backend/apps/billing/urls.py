@@ -2,8 +2,10 @@ from django.urls import path
 
 from .views import (
     BackendPayPalCaptureView,
+    BackendStripeWebhookView,
     ClientInvoiceDetailView,
     ClientInvoiceDownloadView,
+    ClientOnlinePaymentInitiateView,
     ClientPayPalPaymentInitiateView,
     StaffBillingDetailView,
 )
@@ -11,6 +13,11 @@ from .views import (
 app_name = "billing"
 
 urlpatterns = [
+    path(
+        "api/client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/payments/initiate/",
+        ClientOnlinePaymentInitiateView.as_view(),
+        name="client-payment-initiate",
+    ),
     path(
         "api/client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/payments/paypal/initiate/",
         ClientPayPalPaymentInitiateView.as_view(),
@@ -35,5 +42,10 @@ urlpatterns = [
         "api/backend/paypal/capture/",
         BackendPayPalCaptureView.as_view(),
         name="backend-paypal-capture",
+    ),
+    path(
+        "api/backend/stripe/webhook/",
+        BackendStripeWebhookView.as_view(),
+        name="backend-stripe-webhook",
     ),
 ]

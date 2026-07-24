@@ -60,12 +60,43 @@ def create_order(customer, actor):
 
 
 class FakePayPalGateway:
+    provider = "paypal"
+
     def __init__(self, *, fail_create: bool = False, fail_capture: bool = False):
         self.fail_create = fail_create
         self.fail_capture = fail_capture
         self.counter = 0
 
-    def create_order(self, *, order):
+    def create_checkout(self, *, order, success_url: str = "", cancel_url: str = ""):
+        result = self.create_order(order=order)
+        return type(
+            "CheckoutCreateResult",
+            (),
+            {
+                "provider_payment_id": result.paypal_order_id,
+                "status": result.status,
+                "checkout_url": result.approval_url,
+                "payload": result.payload,
+                "provider_capture_id": "",
+            },
+        )()
+
+    def confirm_checkout(self, *, provider_payment_id: str):
+        result = self.capture_order(paypal_order_id=provider_payment_id)
+        return type(
+            "CheckoutConfirmResult",
+            (),
+            {
+                "provider_payment_id": provider_payment_id,
+                "provider_capture_id": result.capture_id,
+                "status": result.status,
+                "payload": result.payload,
+                "amount_total_cents": None,
+                "currency": None,
+            },
+        )()
+
+    def create_order(self, *, order, return_url: str = "", cancel_url: str = ""):
         if self.fail_create:
             from apps.billing.services.paypal import PayPalAPIError
 
@@ -98,9 +129,70 @@ class FakePayPalGateway:
         )()
 
 
+class FakeStripeGateway:
+    provider = "stripe"
+
+    def __init__(self, *, fail_create: bool = False, fail_confirm: bool = False):
+        self.fail_create = fail_create
+        self.fail_confirm = fail_confirm
+        self.counter = 0
+
+    def create_checkout(self, *, order, success_url: str = "", cancel_url: str = ""):
+        if self.fail_create:
+            from apps.billing.services.stripe_gateway import StripeAPIError
+
+            raise StripeAPIError("Stripe unavailable.")
+        self.counter += 1
+        session_id = f"cs_test_{order.public_id.hex[:8]}_{self.counter}"
+        return type(
+            "CheckoutCreateResult",
+            (),
+            {
+                "provider_payment_id": session_id,
+                "status": "open",
+                "checkout_url": f"https://checkout.stripe.test/pay/{session_id}",
+                "payload": {"id": session_id, "status": "open", "url": f"https://checkout.stripe.test/pay/{session_id}"},
+                "provider_capture_id": f"pi_{order.public_id.hex[:8]}",
+            },
+        )()
+
+    def confirm_checkout(self, *, provider_payment_id: str):
+        if self.fail_confirm:
+            from apps.billing.services.stripe_gateway import StripeAPIError
+
+            raise StripeAPIError("Stripe confirm failed.")
+        return type(
+            "CheckoutConfirmResult",
+            (),
+            {
+                "provider_payment_id": provider_payment_id,
+                "provider_capture_id": f"pi_from_{provider_payment_id}",
+                "status": "COMPLETED",
+                "payload": {
+                    "id": provider_payment_id,
+                    "payment_status": "paid",
+                    "status": "complete",
+                    "payment_intent": f"pi_from_{provider_payment_id}",
+                },
+                "amount_total_cents": 2500,
+                "currency": "EUR",
+            },
+        )()
+
+
 def client_initiate_route(customer_public_id, order_public_id):
     return reverse(
         "billing:client-paypal-payment-initiate",
+        kwargs={
+            "customer_public_id": customer_public_id,
+            "order_public_id": order_public_id,
+        },
+    )
+
+
+def client_online_initiate_route(customer_public_id, order_public_id):
+    return reverse(
+        "billing:client-payment-initiate",
         kwargs={
             "customer_public_id": customer_public_id,
             "order_public_id": order_public_id,

@@ -21,15 +21,45 @@
   </div>
   {% endif %}
 
+  {% if order.billing_mode != "deferred" and settlement_method == "wire_transfer" and not invoice %}
+  <div class="dui-alert dui-alert-info product-alert mb-4" role="status">
+    <p class="m-0">Règlement par virement bancaire. La facture sera marquée payée après rapprochement comptable.</p>
+  </div>
+  {% endif %}
+
+  {% if show_pay_cta %}
+  <div class="mb-4 rounded-xl border border-base-300/70 bg-base-100/80 p-4">
+    <p class="m-0 mb-3 text-sm">
+      Montant à régler :
+      <strong>{{ order.total_amount }} {{ order.currency }}</strong>
+      {% if online_provider == "stripe" %}via Stripe{% else %}via PayPal{% endif %}.
+    </p>
+    <form method="post" action="{% url 'portal:client-order-payment-initiate' customer_public_id=order.customer.public_id order_public_id=order.public_id %}">
+      {% csrf_token %}
+      <input type="hidden" name="provider" value="{{ online_provider }}">
+      <button type="submit" class="ui-btn ui-btn-primary">
+        {% if online_provider == "stripe" %}Payer par carte (Stripe){% else %}Payer avec PayPal{% endif %}
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
   {% if payment %}
   <div class="dui-alert product-alert mb-4 {% if payment.status == 'captured' %}dui-alert-success{% elif payment.status == 'failed' %}dui-alert-error{% else %}dui-alert-info{% endif %}">
     <p class="m-0">
-      Paiement :
+      Paiement
+      {% if payment.provider == "stripe" %}Stripe{% elif payment.provider == "paypal" %}PayPal{% else %}{{ payment.provider }}{% endif %}
+      :
       <span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>
       — {{ payment.amount }} {{ payment.currency }}
     </p>
     {% if payment.last_error_message %}
     <p class="mt-2 mb-0 text-sm">{{ payment.last_error_message }}</p>
+    {% endif %}
+    {% if payment.status != "captured" and payment.approval_url and not show_pay_cta %}
+    <p class="mt-2 mb-0">
+      <a class="ui-link font-semibold underline-offset-2 hover:underline" href="{{ payment.approval_url }}">Reprendre le paiement</a>
+    </p>
     {% endif %}
   </div>
   {% endif %}
@@ -52,7 +82,7 @@
       Télécharger la facture
     </a>
   </p>
-  {% elif order.billing_mode != "deferred" and not payment %}
+  {% elif order.billing_mode != "deferred" and not payment and not show_pay_cta %}
   <div class="empty-state p-4">
     <p>Facture disponible après confirmation du paiement.</p>
   </div>

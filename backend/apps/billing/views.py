@@ -15,6 +15,9 @@ from rest_framework.views import APIView
 from apps.accounts.permissions import HasStaffBillingReadAccess
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
+from apps.billing.models import Payment
+from apps.billing.services.gateways import PaymentGatewayError
+from apps.billing.services.stripe_gateway import StripeGateway
 from apps.customers.permissions import HasScopedCustomerAccess
 
 from .services.payments import PaymentService
@@ -39,7 +42,12 @@ def serialize_payment(payment) -> dict[str, object]:
         "currency": payment.currency,
         "paypal_order_id": payment.paypal_order_id,
         "paypal_capture_id": payment.paypal_capture_id,
+        "stripe_checkout_session_id": payment.stripe_checkout_session_id,
+        "stripe_payment_intent_id": payment.stripe_payment_intent_id,
+        "provider_payment_id": payment.provider_payment_id,
+        "provider_capture_id": payment.provider_capture_id,
         "approval_url": payment.approval_url,
+        "checkout_url": payment.checkout_url,
         "last_error_message": payment.last_error_message,
         "captured_at": payment.captured_at.isoformat() if payment.captured_at else None,
         "created_at": payment.created_at.isoformat(),
@@ -86,16 +94,68 @@ def _client_ip(request) -> str:
     return request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR") or "0.0.0.0"
 
 
+def _build_checkout_urls(*, request, customer_public_id, order_public_id) -> tuple[str, str]:
+    base = settings.PUBLIC_BASE_URL.rstrip("/")
+    success = (
+        f"{base}/portal/client/customers/{customer_public_id}/orders/{order_public_id}"
+        f"/payments/return/?status=success"
+    )
+    cancel = (
+        f"{base}/portal/client/customers/{customer_public_id}/orders/{order_public_id}"
+        f"/payments/return/?status=cancel"
+    )
+    # Append payment placeholder replaced after create for Stripe-style success URLs.
+    return success, cancel
+
+
 class ClientPayPalPaymentInitiateView(APIView):
+    """Compat historique : initiation forcée PayPal."""
+
     permission_classes = [IsAuthenticated, HasScopedCustomerAccess]
 
     def post(self, request, customer_public_id, order_public_id):
+        success_url, cancel_url = _build_checkout_urls(
+            request=request,
+            customer_public_id=customer_public_id,
+            order_public_id=order_public_id,
+        )
         try:
             _order, payment = payment_service.initiate_payment_for_customer_order(
                 customer=self.customer,
                 order_public_id=order_public_id,
                 actor=request.user,
                 source="client_api",
+                provider=Payment.Provider.PAYPAL,
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+        except DjangoValidationError as error:
+            raise_api_validation_error(error)
+        if payment is None:
+            raise Http404
+        return Response(serialize_payment(payment), status=201)
+
+
+class ClientOnlinePaymentInitiateView(APIView):
+    permission_classes = [IsAuthenticated, HasScopedCustomerAccess]
+
+    def post(self, request, customer_public_id, order_public_id):
+        provider = str(request.data.get("provider", "")).strip().lower() or None
+        success_url, cancel_url = _build_checkout_urls(
+            request=request,
+            customer_public_id=customer_public_id,
+            order_public_id=order_public_id,
+        )
+        success_url = f"{success_url}&session_id={{CHECKOUT_SESSION_ID}}"
+        try:
+            _order, payment = payment_service.initiate_payment_for_customer_order(
+                customer=self.customer,
+                order_public_id=order_public_id,
+                actor=request.user,
+                source="client_api",
+                provider=provider,
+                success_url=success_url,
+                cancel_url=cancel_url,
             )
         except DjangoValidationError as error:
             raise_api_validation_error(error)
@@ -252,6 +312,81 @@ class BackendPayPalCaptureView(APIView):
         return Response(
             {
                 "order_public_id": str(order.public_id),
+                "payment": serialize_payment(payment),
+                "invoice": serialize_invoice(invoice) if invoice else None,
+            }
+        )
+
+
+class BackendStripeWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        payload = request.body
+        signature = request.headers.get("Stripe-Signature", "")
+        try:
+            gateway = StripeGateway()
+            event = gateway.verify_and_parse_webhook(
+                payload=payload,
+                signature_header=signature,
+            )
+        except PaymentGatewayError as exc:
+            logger.warning("stripe_webhook_rejected", extra={"reason": str(exc)})
+            record_event(
+                action="security.stripe_webhook_rejected",
+                status=AuditLogEntry.Status.FAILURE,
+                message=str(exc)[:255],
+                metadata={"path": request.path},
+            )
+            raise PermissionDenied("Invalid Stripe webhook.") from exc
+
+        event_type = str(event.get("type", "")).strip()
+        event_id = str(event.get("id", "")).strip()
+        data_object = (event.get("data") or {}).get("object") or {}
+        if event_type != "checkout.session.completed":
+            return Response({"received": True, "ignored": event_type})
+
+        session_id = str(data_object.get("id", "")).strip()
+        payment_intent = data_object.get("payment_intent")
+        if isinstance(payment_intent, dict):
+            payment_intent_id = str(payment_intent.get("id", "")).strip()
+        else:
+            payment_intent_id = str(payment_intent or "").strip()
+        payment_status = str(data_object.get("payment_status", "")).strip().lower()
+        if not session_id or payment_status != "paid":
+            return Response({"received": True, "ignored": "not_paid"})
+
+        try:
+            order, payment, invoice = payment_service.confirm_stripe_checkout_session(
+                checkout_session_id=session_id,
+                payment_intent_id=payment_intent_id,
+                actor=None,
+                source="stripe_webhook",
+                event_id=event_id,
+                payload=data_object if isinstance(data_object, dict) else {},
+            )
+        except DjangoValidationError as error:
+            raise_api_validation_error(error)
+
+        if payment is None:
+            # Session inconnue : on n'échoue pas le webhook (évite retry infini) mais on audit.
+            record_event(
+                action="billing.stripe_webhook_unknown_session",
+                status=AuditLogEntry.Status.FAILURE,
+                message="Stripe checkout session not found locally.",
+                metadata={
+                    "stripe_event_id": event_id,
+                    "checkout_session_id": session_id,
+                },
+            )
+            return Response({"received": True, "matched": False}, status=202)
+
+        return Response(
+            {
+                "received": True,
+                "matched": True,
+                "order_public_id": str(order.public_id) if order else None,
                 "payment": serialize_payment(payment),
                 "invoice": serialize_invoice(invoice) if invoice else None,
             }

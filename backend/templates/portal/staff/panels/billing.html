@@ -11,7 +11,7 @@
 
   <section class="billing-overview" aria-label="Synthèse de facturation">
     <article><span>Montant commande</span><strong>{{ order.total_amount }} {{ order.currency }}</strong><small>{{ order.pricing_status|human_status }}</small></article>
-    <article><span>Mode</span><strong>{{ order.billing_mode|human_status }}</strong><small>{% if order.customer.preferred_settlement_method == "paypal" %}Règlement PayPal{% else %}Virement bancaire{% endif %}</small></article>
+    <article><span>Mode</span><strong>{{ order.billing_mode|human_status }}</strong><small>{% if order.customer.preferred_settlement_method == "paypal" %}Règlement PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Règlement Stripe{% else %}Virement bancaire{% endif %}</small></article>
     <article><span>Paiement</span><strong>{% if payment %}{{ payment.status|human_status }}{% else %}Non enregistré{% endif %}</strong><small>{% if payment %}{{ payment.amount }} {{ payment.currency }}{% else %}Aucune transaction liée{% endif %}</small></article>
     <article><span>Facture</span><strong>{% if invoice %}{{ invoice.invoice_number }}{% else %}Non générée{% endif %}</strong><small>{% if invoice and invoice.paid_at %}Payée le {{ invoice.paid_at|date:"d/m/Y" }}{% elif invoice %}{{ invoice.status|human_status }}{% else %}En attente du flux comptable{% endif %}</small></article>
   </section>
@@ -24,11 +24,13 @@
         <div><dt>Montant</dt><dd>{{ payment.amount }} {{ payment.currency }}</dd></div>
         <div><dt>Fournisseur</dt><dd>{{ payment.provider|human_status }}</dd></div>
         {% if payment.paypal_order_id %}<div><dt>Référence PayPal</dt><dd><code>{{ payment.paypal_order_id }}</code></dd></div>{% endif %}
+        {% if payment.stripe_checkout_session_id %}<div><dt>Session Stripe</dt><dd><code>{{ payment.stripe_checkout_session_id }}</code></dd></div>{% endif %}
+        {% if payment.stripe_payment_intent_id %}<div><dt>PaymentIntent Stripe</dt><dd><code>{{ payment.stripe_payment_intent_id }}</code></dd></div>{% endif %}
         {% if payment.captured_at %}<div><dt>Capturé le</dt><dd>{{ payment.captured_at|date:"d/m/Y · H:i" }}</dd></div>{% endif %}
       </dl>
       {% if payment.last_error_message %}<div class="alert alert--danger" role="alert"><p>{{ payment.last_error_message }}</p></div>{% endif %}
       {% else %}
-      <div class="operator-empty-inline"><strong>Aucun paiement lié</strong><p>{% if order.customer.preferred_settlement_method == "wire_transfer" %}Situation normale tant que le virement n’a pas été rapproché.{% else %}La transaction PayPal apparaîtra après création du paiement.{% endif %}</p></div>
+      <div class="operator-empty-inline"><strong>Aucun paiement lié</strong><p>{% if order.customer.preferred_settlement_method == "wire_transfer" %}Situation normale tant que le virement n’a pas été rapproché.{% elif order.customer.preferred_settlement_method == "stripe" %}La transaction Stripe apparaîtra après création du paiement.{% else %}La transaction PayPal apparaîtra après création du paiement.{% endif %}</p></div>
       {% endif %}
     </section>
 

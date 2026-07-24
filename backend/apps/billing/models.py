@@ -82,6 +82,7 @@ class PaymentQuerySet(models.QuerySet):
 class Payment(BaseModel):
     class Provider(models.TextChoices):
         PAYPAL = "paypal", "PayPal"
+        STRIPE = "stripe", "Stripe"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -108,6 +109,8 @@ class Payment(BaseModel):
     currency = models.CharField(max_length=3)
     paypal_order_id = models.CharField(max_length=255, blank=True)
     paypal_capture_id = models.CharField(max_length=255, blank=True)
+    stripe_checkout_session_id = models.CharField(max_length=255, blank=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True)
     approval_url = models.URLField(max_length=2048, blank=True)
     source = models.CharField(max_length=32, default="client_api")
     request_snapshot = models.JSONField(default=dict, blank=True)
@@ -133,14 +136,41 @@ class Payment(BaseModel):
                 condition=~Q(paypal_capture_id=""),
                 name="uniq_payment_paypal_capture_id_non_empty",
             ),
+            models.UniqueConstraint(
+                fields=("stripe_checkout_session_id",),
+                condition=~Q(stripe_checkout_session_id=""),
+                name="uniq_payment_stripe_checkout_session_id_non_empty",
+            ),
+            models.UniqueConstraint(
+                fields=("stripe_payment_intent_id",),
+                condition=~Q(stripe_payment_intent_id=""),
+                name="uniq_payment_stripe_payment_intent_id_non_empty",
+            ),
         ]
         indexes = [
             models.Index(fields=("order", "status", "created_at")),
             models.Index(fields=("status", "updated_at")),
+            models.Index(fields=("provider", "status")),
         ]
 
     def __str__(self) -> str:
         return f"{self.order.public_id} - {self.provider} - {self.status}"
+
+    @property
+    def provider_payment_id(self) -> str:
+        if self.provider == self.Provider.STRIPE:
+            return self.stripe_checkout_session_id
+        return self.paypal_order_id
+
+    @property
+    def provider_capture_id(self) -> str:
+        if self.provider == self.Provider.STRIPE:
+            return self.stripe_payment_intent_id
+        return self.paypal_capture_id
+
+    @property
+    def checkout_url(self) -> str:
+        return self.approval_url
 
 
 class InvoiceQuerySet(models.QuerySet):

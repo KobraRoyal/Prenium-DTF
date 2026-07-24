@@ -38,6 +38,7 @@ from .views_checkout import (
     ClientCheckoutUploadPartialView,
     ClientCheckoutView,
 )
+from .views_payments import ClientOrderPaymentInitiateView, ClientOrderPaymentReturnView
 from .views_client import (
     ClientDashboardView,
     ClientOrderDetailView,
@@ -301,6 +302,16 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/panels/billing/",
         ClientOrderPanelBillingView.as_view(),
         name="client-order-panel-billing",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/payments/initiate/",
+        ClientOrderPaymentInitiateView.as_view(),
+        name="client-order-payment-initiate",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/payments/return/",
+        ClientOrderPaymentReturnView.as_view(),
+        name="client-order-payment-return",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/preview/",

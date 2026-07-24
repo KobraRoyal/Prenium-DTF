@@ -8,14 +8,20 @@ from urllib import error, parse, request
 
 from django.conf import settings
 
+from apps.billing.services.gateways import (
+    CheckoutConfirmResult,
+    CheckoutCreateResult,
+    PaymentGatewayConfigurationError,
+    PaymentGatewayError,
+)
 from apps.orders.models import Order
 
 
-class PayPalConfigurationError(Exception):
+class PayPalConfigurationError(PaymentGatewayConfigurationError):
     pass
 
 
-class PayPalAPIError(Exception):
+class PayPalAPIError(PaymentGatewayError):
     pass
 
 
@@ -35,6 +41,8 @@ class PayPalCaptureResult:
 
 
 class PayPalGateway:
+    provider = "paypal"
+
     def __init__(self):
         self.client_id = settings.PAYPAL_CLIENT_ID
         self.client_secret = settings.PAYPAL_CLIENT_SECRET
@@ -45,8 +53,50 @@ class PayPalGateway:
                 "PayPal credentials must be configured via environment variables."
             )
 
-    def create_order(self, *, order: Order) -> PayPalCreateOrderResult:
+    def create_checkout(
+        self,
+        *,
+        order: Order,
+        success_url: str,
+        cancel_url: str,
+    ) -> CheckoutCreateResult:
+        result = self.create_order(
+            order=order,
+            return_url=success_url,
+            cancel_url=cancel_url,
+        )
+        return CheckoutCreateResult(
+            provider_payment_id=result.paypal_order_id,
+            status=result.status,
+            checkout_url=result.approval_url,
+            payload=result.payload,
+        )
+
+    def confirm_checkout(self, *, provider_payment_id: str) -> CheckoutConfirmResult:
+        result = self.capture_order(paypal_order_id=provider_payment_id)
+        return CheckoutConfirmResult(
+            provider_payment_id=provider_payment_id,
+            provider_capture_id=result.capture_id,
+            status=result.status,
+            payload=result.payload,
+        )
+
+    def create_order(
+        self,
+        *,
+        order: Order,
+        return_url: str = "",
+        cancel_url: str = "",
+    ) -> PayPalCreateOrderResult:
         access_token = self._get_access_token()
+        application_context = {
+            "brand_name": "Prenium DTF",
+            "user_action": "PAY_NOW",
+        }
+        if return_url:
+            application_context["return_url"] = return_url
+        if cancel_url:
+            application_context["cancel_url"] = cancel_url
         payload = {
             "intent": "CAPTURE",
             "purchase_units": [
@@ -59,10 +109,7 @@ class PayPalGateway:
                     },
                 }
             ],
-            "application_context": {
-                "brand_name": "Prenium DTF",
-                "user_action": "PAY_NOW",
-            },
+            "application_context": application_context,
         }
         response_payload = self._request_json(
             method="POST",
