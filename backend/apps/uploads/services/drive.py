@@ -16,14 +16,31 @@ from apps.orders.models import Order
 from apps.uploads.models import OrderDriveFolder, OrderUpload, OrderUploadDriveSync
 
 ORDER_DRIVE_ROOT_FOLDER_NAME = "Commandes"
+ORDER_DRIVE_SOURCE_FOLDER = "00_source_Client"
+ORDER_DRIVE_PRODUCTION_FOLDER = "01_Production"
 ORDER_DRIVE_SUBFOLDERS = (
-    "00_source_client",
-    "01_controle",
-    "02_production",
-    "03_of",
-    "04_shipping",
-    "05_archive",
+    ORDER_DRIVE_SOURCE_FOLDER,
+    ORDER_DRIVE_PRODUCTION_FOLDER,
 )
+# Clés historiques encore présentes dans folder_ids JSON (soft-fill / lecture).
+ORDER_DRIVE_SOURCE_FOLDER_ALIASES = (
+    ORDER_DRIVE_SOURCE_FOLDER,
+    "00_source_client",
+)
+ORDER_DRIVE_PRODUCTION_FOLDER_ALIASES = (
+    ORDER_DRIVE_PRODUCTION_FOLDER,
+    "02_production",
+)
+
+
+def resolve_order_drive_subfolder_id(folder_ids: dict | None, *candidates: str) -> str:
+    """Retourne le premier ID Drive connu parmi les noms candidats."""
+    mapping = folder_ids or {}
+    for name in candidates:
+        value = str(mapping.get(name) or "").strip()
+        if value:
+            return value
+    raise KeyError(f"Drive subfolder not found among: {', '.join(candidates)}")
 
 
 class GoogleDriveConfigurationError(Exception):
@@ -309,7 +326,10 @@ class OrderUploadDriveSyncService:
                 actor=actor,
                 source=source,
             )
-            source_folder_id = drive_folder.folder_ids["00_source_client"]
+            source_folder_id = resolve_order_drive_subfolder_id(
+                drive_folder.folder_ids,
+                *ORDER_DRIVE_SOURCE_FOLDER_ALIASES,
+            )
             with order_upload.file.open("rb") as handle:
                 content = handle.read()
 
@@ -453,6 +473,56 @@ class OrderUploadDriveSyncService:
             },
         )
         return sync
+
+    def _get_gateway(self) -> GoogleDriveGateway:
+        if self.gateway is None:
+            self.gateway = GoogleDriveGateway()
+        return self.gateway
+
+    def _get_folder_service(self) -> OrderDriveFolderService:
+        if self.folder_service is None:
+            self.folder_service = OrderDriveFolderService(gateway=self._get_gateway())
+        return self.folder_service
+
+
+class OrderProductionDriveSyncService:
+    """Pousse un livrable ready-to-print (PDF opérateur / Gang Sheet) vers ``01_Production``."""
+
+    def __init__(
+        self,
+        *,
+        gateway: GoogleDriveGateway | None = None,
+        folder_service: OrderDriveFolderService | None = None,
+    ):
+        self.gateway = gateway
+        self.folder_service = folder_service
+
+    def sync_bytes(
+        self,
+        *,
+        order,
+        filename: str,
+        content: bytes,
+        mime_type: str,
+        actor=None,
+        source: str = "system",
+    ) -> str:
+        drive_folder = self._get_folder_service().ensure_order_folder(
+            order=order,
+            actor=actor,
+            source=source,
+        )
+        production_folder_id = resolve_order_drive_subfolder_id(
+            drive_folder.folder_ids,
+            *ORDER_DRIVE_PRODUCTION_FOLDER_ALIASES,
+        )
+        cleaned = get_valid_filename(filename) or "production.pdf"
+        return self._get_gateway().upload_file(
+            parent_id=production_folder_id,
+            name=cleaned,
+            mime_type=mime_type,
+            content=content,
+        )
 
     def _get_gateway(self) -> GoogleDriveGateway:
         if self.gateway is None:

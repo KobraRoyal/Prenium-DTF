@@ -916,6 +916,14 @@ class GangSheetService:
                 source=source,
                 metadata={"order_public_id": str(order.public_id)},
             )
+            if sheet.final_file:
+                transaction.on_commit(
+                    lambda locked_sheet=sheet: self.drive_sync.force_resync(
+                        sheet=locked_sheet,
+                        actor=actor,
+                        source=f"{source}.order_attach",
+                    )
+                )
         return sheets
 
     def serialize_sheet(self, sheet, *, preview_url_resolver) -> dict:

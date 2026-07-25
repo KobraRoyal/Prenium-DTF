@@ -79,12 +79,62 @@ def test_drive_sync_uploads_exact_hd_bytes_and_is_idempotent():
     assert len(gateway.uploads) == 1
     assert gateway.uploads[0]["content"] == content
     assert gateway.uploads[0]["mime_type"] == "application/pdf"
+    assert gateway.uploads[0]["parent_id"].endswith("/01_Production")
     assert "/Gang Sheets/" in gateway.uploads[0]["parent_id"]
     assert GangSheetDriveSync.objects.for_customer(customer).get() == sync
     assert AuditLogEntry.objects.filter(
         action="gang_sheet.drive_synced",
         target_public_id=sheet.public_id,
     ).exists()
+
+
+def test_drive_sync_uploads_source_assets_and_pdf_into_order_folders():
+    from apps.orders.models import Order
+    from apps.uploads.models import OrderDriveFolder
+
+    user, customer, _project, sheet, content = create_hd_sheet(
+        email="gang-drive-order@example.com"
+    )
+    asset, version = attach_png_asset(customer=customer, project=_project, user=user)
+    GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset,
+        added_by=user,
+        width_mm="100.00",
+        height_mm="50.00",
+    )
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="0.00",
+        total_amount="0.00",
+    )
+    sheet.order = order
+    sheet.save(update_fields=["order", "updated_at"])
+
+    gateway = FakeDriveGateway()
+    sync = GangSheetDriveSyncService(gateway=gateway).sync_sheet(
+        sheet=sheet, actor=user, source="test.order"
+    )
+
+    assert sync.status == GangSheetDriveSync.Status.SYNCED
+    assert OrderDriveFolder.objects.filter(order=order).exists()
+    folder_ids = order.drive_folder.folder_ids
+    assert set(folder_ids) >= {"00_source_Client", "01_Production"}
+    assert len(gateway.uploads) == 2
+    parents = {item["parent_id"] for item in gateway.uploads}
+    assert folder_ids["00_source_Client"] in parents
+    assert folder_ids["01_Production"] in parents
+    pdf_upload = next(item for item in gateway.uploads if item["mime_type"] == "application/pdf")
+    assert pdf_upload["content"] == content
+    assert pdf_upload["parent_id"] == folder_ids["01_Production"]
+    source_upload = next(item for item in gateway.uploads if item["mime_type"] != "application/pdf")
+    assert source_upload["parent_id"] == folder_ids["00_source_Client"]
+    assert "src-" in source_upload["name"]
+    assert version.original_filename in source_upload["name"] or "logo" in source_upload["name"]
 
 
 def test_drive_sync_failure_is_tracked_and_audited():

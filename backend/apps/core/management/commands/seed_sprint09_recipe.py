@@ -579,7 +579,8 @@ class Command(BaseCommand):
                 "relative_path": f"Commandes/SEED/{order.public_id}",
                 "order_folder_id": f"seed-folder-{str(order.public_id)[:8]}",
                 "folder_ids": {
-                    "00_source_client": f"seed-src-{str(order.public_id)[:8]}",
+                    "00_source_Client": f"seed-src-{str(order.public_id)[:8]}",
+                    "01_Production": f"seed-prod-{str(order.public_id)[:8]}",
                     "01_controle": f"seed-ctrl-{str(order.public_id)[:8]}",
                     "04_shipping": f"seed-ship-{str(order.public_id)[:8]}",
                 },
@@ -599,7 +600,7 @@ class Command(BaseCommand):
             "drive_folder": drive_folder,
             "status": status,
             "drive_filename": upload.original_filename,
-            "remote_folder_id": drive_folder.folder_ids.get("00_source_client", ""),
+            "remote_folder_id": drive_folder.folder_ids.get("00_source_Client", ""),
             "drive_file_id": drive_file_id,
             "last_error": last_error,
             "last_attempt_at": timezone.now(),

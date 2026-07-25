@@ -137,7 +137,7 @@ def test_drive_sync_service_creates_order_folder_and_syncs_upload():
     assert sync.drive_folder is not None
     assert sync.drive_folder.shared_drive_id == "shared-drive-id"
     assert sync.drive_folder.relative_path.endswith(order.short_ref)
-    assert sync.drive_folder.folder_ids["00_source_client"] == sync.remote_folder_id
+    assert sync.drive_folder.folder_ids["00_source_Client"] == sync.remote_folder_id
     assert OrderDriveFolder.objects.filter(order=order).exists()
     assert sync_again.drive_file_id == sync.drive_file_id
     assert len(gateway.uploads) == 1
@@ -170,7 +170,7 @@ def test_drive_sync_service_uses_single_order_folder_for_multiple_uploads():
     ]
 
     assert OrderDriveFolder.objects.filter(order=order).count() == 1
-    source_folder_id = syncs[0].drive_folder.folder_ids["00_source_client"]
+    source_folder_id = syncs[0].drive_folder.folder_ids["00_source_Client"]
     assert all(sync.remote_folder_id == source_folder_id for sync in syncs)
     assert all(sync.drive_folder_id == syncs[0].drive_folder_id for sync in syncs)
     assert len(gateway.uploads) == 3
