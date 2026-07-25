@@ -718,7 +718,8 @@
 
   .operator-panel-hero__eyebrow,
   .operator-section-head__eyebrow,
-  .scan-result__eyebrow {
+  .scan-result__eyebrow,
+  .scan-result__label {
     margin: 0 0 0.25rem;
     color: var(--product-ink-soft, #5d554d);
     font-size: 0.68rem;

@@ -27,12 +27,16 @@
       <dt>Montant</dt>
       <dd><strong>{{ order.total_amount }} {{ order.currency }}</strong></dd>
     </div>
-    {% elif order.billing_mode == "deferred" %}
+    {% elif order.billing_mode == "deferred" or order.uses_atelier_pricing %}
     <div class="client-order-summary__fact client-order-summary__fact--pricing">
       <dt>Tarification</dt>
       <dd>Après contrôle technique</dd>
     </div>
     {% endif %}
+    <div class="client-order-summary__fact">
+      <dt>Règlement</dt>
+      <dd>{{ order.billing_mode|human_status }}</dd>
+    </div>
   </dl>
   {% if order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
   <div class="client-order-summary__alert">

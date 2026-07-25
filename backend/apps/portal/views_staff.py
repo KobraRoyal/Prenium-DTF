@@ -91,7 +91,7 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
 
     def get(self, request, order_public_id):
         can_price = request.user.has_perm("orders.change_order")
-        deferred = self.order.billing_mode == Order.BillingMode.DEFERRED
+        can_price_order = can_price and self.order.uses_atelier_pricing()
         try:
             production_job = self.order.production_job
         except ProductionJob.DoesNotExist:
@@ -111,7 +111,7 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
                 "production_job": production_job,
                 "order_drive_url": order_drive_url,
                 "staff_order_focus": staff_order_focus,
-                "can_price_order": can_price and deferred,
+                "can_price_order": can_price_order,
                 "price_error": request.GET.get("price_error", ""),
                 "priced_ok": request.GET.get("priced") == "1",
                 "nav_mode": "staff",

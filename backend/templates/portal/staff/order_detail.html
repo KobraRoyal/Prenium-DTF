@@ -13,6 +13,7 @@
     <h1 id="staff-order-title">{{ order.customer.name }}</h1>
     <div class="staff-order-focus__statuses" aria-label="État de la commande">
       <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
+      <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
       <span class="badge {{ staff_order_focus.review_tone }}">{{ staff_order_focus.review_label }}</span>
       <span class="badge {{ staff_order_focus.production_status|badge_tone }}">{{ staff_order_focus.production_label }}</span>
     </div>
@@ -53,7 +54,7 @@
       {% if order_drive_url %}
       <a class="ui-btn ui-btn-secondary" href="{{ order_drive_url }}" target="_blank" rel="noopener noreferrer">Ouvrir le dossier Drive</a>
       {% endif %}
-      <a class="ui-link staff-order-focus__back" href="{% url 'portal:staff-order-list' %}">Retour à la file</a>
+      <a class="ui-link staff-order-focus__back" href="{% url 'portal:staff-dashboard' %}">Retour à la file Atelier</a>
     </div>
   </div>
 </section>

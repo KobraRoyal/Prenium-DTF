@@ -1,4 +1,4 @@
-<div id="staff-order-inspection-panel" class="workflow-panel">
+<div id="staff-order-inspection-panel" class="workflow-panel atelier-inspection">
   <div class="workflow-panel__hero max-sm:flex-col max-sm:items-stretch">
     <div>
       <h3 class="workflow-panel__title">Validation des fichiers</h3>
@@ -6,30 +6,18 @@
     </div>
     {% if perms.notifications.view_emailtemplate %}
     <div class="workflow-panel__actions max-sm:w-full">
-      <a class="ui-btn ui-btn-ghost ui-btn-sm max-sm:w-full" href="{% url 'portal:staff-email-template-edit' event='file_correction_requested' audience='client' %}">Modifier l’e-mail client</a>
+      <a class="ui-btn ui-btn-ghost max-sm:w-full" href="{% url 'portal:staff-email-template-edit' event='file_correction_requested' audience='client' %}">Modifier l’e-mail client</a>
     </div>
     {% endif %}
   </div>
 
   {% if uploads %}
-  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Synthèse des validations">
-    <article class="rounded-lg border border-[color:var(--line)] bg-[color:var(--surface)] p-3">
-      <p class="m-0 text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">À contrôler</p>
-      <p class="m-0 mt-1 font-display text-2xl font-bold">{{ pending_review_count }}</p>
-    </article>
-    <article class="rounded-lg border border-[color:var(--line)] bg-[color:var(--surface)] p-3">
-      <p class="m-0 text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Prêts pour production</p>
-      <p class="m-0 mt-1 font-display text-2xl font-bold text-[color:var(--success)]">{{ approved_review_count }}</p>
-    </article>
-    <article class="rounded-lg border border-[color:var(--line)] bg-[color:var(--surface)] p-3">
-      <p class="m-0 text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Corrections demandées</p>
-      <p class="m-0 mt-1 font-display text-2xl font-bold text-[color:var(--danger)]">{{ changes_requested_count }}</p>
-    </article>
-    <article class="rounded-lg border border-[color:var(--line)] bg-[color:var(--surface)] p-3">
-      <p class="m-0 text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Alertes automatiques</p>
-      <p class="m-0 mt-1 font-display text-2xl font-bold{% if automatic_attention_count %} text-[color:var(--warning)]{% endif %}">{{ automatic_attention_count }}</p>
-    </article>
-  </div>
+  <p class="atelier-inspection__summary" aria-label="Synthèse des validations">
+    <span><strong>{{ pending_review_count }}</strong> à contrôler</span>
+    <span><strong class="text-[color:var(--success)]">{{ approved_review_count }}</strong> prêts</span>
+    <span><strong class="text-[color:var(--danger)]">{{ changes_requested_count }}</strong> corrections</span>
+    <span><strong{% if automatic_attention_count %} class="text-[color:var(--warning)]"{% endif %}>{{ automatic_attention_count }}</strong> alertes auto</span>
+  </p>
 
   {% if all_uploads_approved %}
   <div class="alert alert--success mt-4" role="status"><p><strong>Commande prête :</strong> tous les fichiers sont approuvés pour production.</p></div>
@@ -40,19 +28,19 @@
   <div class="mt-4 grid gap-4">
     {% for upload in uploads %}
     {% with review=upload.atelier_review inspection=upload.inspection upload_id=upload.public_id|stringformat:"s" %}
-    <article class="grid overflow-hidden rounded-xl border border-[color:var(--line)] bg-[color:var(--surface)] lg:grid-cols-[minmax(13rem,16rem)_1fr]">
+    <article class="atelier-inspection__file">
       <a
-        class="group grid min-h-48 place-items-center overflow-hidden border-b border-[color:var(--line)] bg-[linear-gradient(45deg,#f3efe7_25%,transparent_25%,transparent_75%,#f3efe7_75%),linear-gradient(45deg,#f3efe7_25%,#fff_25%,#fff_75%,#f3efe7_75%)] bg-[length:20px_20px] bg-[position:0_0,10px_10px] lg:border-b-0 lg:border-r"
+        class="atelier-inspection__preview"
         href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}"
         target="_blank"
         rel="noopener"
         aria-label="Ouvrir l’aperçu de {{ upload.original_filename }}"
       >
-        <img class="max-h-64 w-full object-contain transition-transform duration-200 group-hover:scale-[1.02]" src="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
+        <img src="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
       </a>
 
-      <div class="min-w-0 p-4">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div class="atelier-inspection__body">
+        <div class="atelier-inspection__head">
           <div class="min-w-0">
             <h4 class="m-0 break-words font-display text-lg font-bold">{{ upload.original_filename }}</h4>
             <p class="muted m-0 mt-1 text-xs">{{ upload.mime_type }} · {{ upload.size_bytes|filesizeformat }}</p>
@@ -66,18 +54,18 @@
           {% endif %}
         </div>
 
-        <dl class="mt-3 grid gap-2 sm:grid-cols-2" aria-label="Consignes client pour {{ upload.original_filename }}">
-          <div class="rounded-lg border border-[color:var(--line)] bg-[color:var(--card)] p-3">
-            <dt class="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Taille demandée</dt>
-            <dd class="m-0 mt-1 font-semibold">{{ upload.production_specs.dimensions_label }}</dd>
+        <dl class="atelier-inspection__specs" aria-label="Consignes client pour {{ upload.original_filename }}">
+          <div>
+            <dt>Taille demandée</dt>
+            <dd>{{ upload.production_specs.dimensions_label }}</dd>
           </div>
-          <div class="rounded-lg border border-[color:var(--line)] bg-[color:var(--card)] p-3">
-            <dt class="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Couleur du support</dt>
-            <dd class="m-0 mt-1 flex items-center gap-2 font-semibold">
+          <div>
+            <dt>Couleur du support</dt>
+            <dd class="flex items-center gap-2">
               {% if upload.production_specs.support_color_is_multicolor %}
               <span class="b2b-support-color-badge is-rainbow">Multicolore</span>
               {% elif upload.production_specs.support_color %}
-              <span class="h-5 w-5 shrink-0 rounded-full border border-[color:var(--line)]" style="background-color: {{ upload.production_specs.support_color }}" aria-hidden="true"></span>
+              <span class="atelier-inspection__swatch" style="background-color: {{ upload.production_specs.support_color }}" aria-hidden="true"></span>
               <code>{{ upload.production_specs.support_color_label }}</code>
               {% else %}
               {{ upload.production_specs.support_color_label }}
@@ -86,9 +74,9 @@
           </div>
         </dl>
 
-        <div class="mt-4 grid gap-3 md:grid-cols-2">
-          <section class="rounded-lg border border-[color:var(--line)] p-3" aria-label="Analyse automatique">
-            <p class="m-0 text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Analyse automatique</p>
+        <div class="atelier-inspection__columns">
+          <section aria-label="Analyse automatique">
+            <h5 class="atelier-inspection__section-title">Analyse automatique</h5>
             <div class="mt-2 flex flex-wrap items-center gap-2">
               {% if inspection and inspection.status == 'ok' %}
               <span class="badge is-neutral">Analyse réussie</span>
@@ -104,8 +92,8 @@
             {% if inspection.summary_message %}<p class="muted m-0 mt-2 text-sm">{{ inspection.summary_message }}</p>{% endif %}
           </section>
 
-          <section class="rounded-lg border border-[color:var(--line)] p-3" aria-label="Décision Atelier">
-            <p class="m-0 text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Décision Atelier</p>
+          <section aria-label="Décision Atelier">
+            <h5 class="atelier-inspection__section-title">Décision Atelier</h5>
             {% if review and review.reviewed_at %}
             <p class="m-0 mt-2 text-sm"><strong>{{ review.get_status_display }}</strong></p>
             <p class="muted m-0 mt-1 text-xs">{{ review.reviewed_by.email|default:"Compte supprimé" }} · {{ review.reviewed_at|date:"d/m/Y H:i" }}</p>
@@ -122,20 +110,20 @@
           </section>
         </div>
 
-        <div class="mt-4 flex flex-wrap items-center gap-2">
-          <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>
+        <div class="atelier-inspection__actions">
+          <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>
           {% if can_review_uploads and not review or can_review_uploads and review.status != 'approved' %}
           <form method="post" action="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-post="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-target="#staff-order-inspection-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator">
             {% csrf_token %}
             <input type="hidden" name="status" value="approved">
-            <button class="ui-btn ui-btn-primary ui-btn-sm" type="submit" data-htmx-disable>Approuver pour production</button>
+            <button class="ui-btn ui-btn-primary" type="submit" data-htmx-disable>Approuver pour production</button>
           </form>
           {% endif %}
         </div>
 
         {% if can_review_uploads %}
-        <details class="mt-3 rounded-lg border border-[color:var(--line)] p-3"{% if error_upload_id == upload_id %} open{% endif %}>
-          <summary class="cursor-pointer font-semibold text-[color:var(--danger)]">Demander une correction au client</summary>
+        <details class="atelier-inspection__correction"{% if error_upload_id == upload_id %} open{% endif %}>
+          <summary>Demander une correction au client</summary>
           <form class="ui-form-stack mt-3" method="post" action="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-post="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-target="#staff-order-inspection-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator">
             {% csrf_token %}
             <input type="hidden" name="status" value="changes_requested">
@@ -153,7 +141,7 @@
             </div>
             <div class="flex flex-wrap items-center justify-between gap-3">
               <p class="muted m-0 text-xs">Le message utilisera le modèle d’e-mail client personnalisable.</p>
-              <button class="ui-btn ui-btn-danger ui-btn-sm" type="submit" data-htmx-disable>Enregistrer et notifier</button>
+              <button class="ui-btn ui-btn-danger" type="submit" data-htmx-disable>Enregistrer et notifier</button>
             </div>
           </form>
         </details>

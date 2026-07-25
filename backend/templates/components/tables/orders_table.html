@@ -1,6 +1,6 @@
 {% load portal_tags %}
-{# Tableau desktop + cartes empilées sur petit écran (P3 accessibilité mobile) #}
-<div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap">
+{# Tableau desktop + cartes empilées — breakpoint tablette 960px (aligné product-shell). #}
+<div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
   <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
     <caption class="sr-only">Liste des commandes</caption>
     <thead>
@@ -15,7 +15,7 @@
         <th>Statut</th>
         <th>Total</th>
         <th>Créée le</th>
-        <th></th>
+        <th><span class="sr-only">Actions</span></th>
       </tr>
     </thead>
     <tbody>
@@ -50,6 +50,9 @@
         <td>
           <div class="ui-table-status-stack">
             <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
+            {% if variant == "staff" %}
+            <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
+            {% endif %}
             {% if order.pricing_status != 'priced' %}<span class="ui-inline-flag">Tarif à confirmer</span>{% endif %}
           </div>
         </td>
@@ -75,9 +78,9 @@
         <td>
           <div class="ui-table-actions">
             {% if variant == "staff" %}
-            <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
+            <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
             {% else %}
-            <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
+            <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
             {% endif %}
           </div>
         </td>
@@ -87,7 +90,7 @@
   </table>
 </div>
 
-<div class="ui-orders-list-mobile space-y-3" aria-label="Liste des commandes">
+<div class="ui-orders-list-mobile grid gap-3 min-[960px]:hidden" aria-label="Liste des commandes">
   {% for order in orders %}
   <article class="ui-mobile-order-card {% if order.credit_hold_status == 'blocked' or order.status == 'cancelled' %}ui-card-anomaly{% elif order.credit_hold_status == 'warning' or order.pricing_status != 'priced' %}ui-card-warning{% endif %}">
     <div class="flex flex-wrap items-start justify-between gap-2">
@@ -109,6 +112,9 @@
     </div>
     <div class="mt-3 flex flex-wrap items-center gap-2">
       <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
+      {% if variant == "staff" %}
+      <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
+      {% endif %}
       {% if order.pricing_status != "priced" %}
       <span class="ui-inline-flag">Tarif à confirmer</span>
       {% endif %}
@@ -121,9 +127,9 @@
     <p class="muted mt-2 text-xs">Créée le {{ order.created_at|date:"d/m/Y H:i" }}</p>
     <div class="mt-4 flex flex-wrap gap-2">
       {% if variant == "staff" %}
-      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
+      <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
       {% else %}
-      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
+      <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
       {% endif %}
     </div>
   </article>

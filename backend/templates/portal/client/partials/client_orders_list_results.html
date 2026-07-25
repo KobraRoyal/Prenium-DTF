@@ -34,6 +34,10 @@
   <p class="muted">Aucune commande ne correspond à « {{ search_query }} ».</p>
 </div>
 {% else %}
-{% url 'portal:client-checkout' customer_public_id=customer.public_id as checkout_url %}
-{% include "components/ui/empty_state.html" with title="Aucune commande" message="Vous n'avez pas encore de commandes dans cet espace client." cta_url=checkout_url cta_label="Créer une commande" %}
+{% if b2b_order_projects_globally_enabled %}
+{% url 'portal:client-order-project-create' customer_public_id=customer.public_id as create_order_url %}
+{% else %}
+{% url 'portal:client-checkout' customer_public_id=customer.public_id as create_order_url %}
+{% endif %}
+{% include "components/ui/empty_state.html" with title="Aucune commande" message="Vous n'avez pas encore de commandes dans cet espace client." cta_url=create_order_url cta_label="Créer une commande" %}
 {% endif %}

@@ -150,7 +150,10 @@ def test_reorder_from_order_creates_project_with_visuals():
     order = Order.objects.create(
         customer=customer,
         created_by=user,
-        status=Order.Status.SUBMITTED,
+        status=Order.Status.DRAFT,
+        source="client_portal",
+        billing_mode=Order.BillingMode.IMMEDIATE,
+        pricing_status=Order.PricingStatus.PENDING,
         currency="EUR",
         subtotal_amount="10.00",
         total_amount="10.00",
@@ -165,6 +168,8 @@ def test_reorder_from_order_creates_project_with_visuals():
         {"file": png_upload(), "quantity": "2", "support_color_hex": "#112233"},
         format="multipart",
     )
+    order.status = Order.Status.SUBMITTED
+    order.save(update_fields=["status", "updated_at"])
 
     response = upload_client.post(
         reverse(

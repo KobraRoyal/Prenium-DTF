@@ -1,12 +1,23 @@
 {% load portal_tags %}
-<div class="workflow-panel workflow-panel--operator scan-station">
+<div
+  class="workflow-panel workflow-panel--operator scan-station"
+  x-data="{ scanIdentifier: '', inputFocused: false }"
+  x-init="$nextTick(() => { $refs.scanInput.focus({ preventScroll: true }); inputFocused = document.activeElement === $refs.scanInput })"
+>
   <header class="workflow-panel__hero operator-panel-hero">
     <div>
-      <p class="operator-panel-hero__eyebrow">Poste code-barres</p>
       <h3 class="workflow-panel__title">Scan Atelier</h3>
       <p class="workflow-panel__meta">Contrôlez un OF ou enregistrez son changement d’état sans quitter le poste de production.</p>
     </div>
-    <div class="operator-panel-hero__signal"><span aria-hidden="true"></span>Lecteur prêt</div>
+    <div
+      class="operator-panel-hero__signal"
+      role="status"
+      aria-live="polite"
+      :class="{ 'is-ready': inputFocused, 'is-waiting': !inputFocused }"
+    >
+      <span aria-hidden="true"></span>
+      <span x-text="inputFocused ? 'Champ prêt pour la douchette' : 'Replacer le focus dans le champ OF'"></span>
+    </div>
   </header>
 
   {% if scan_error %}
@@ -16,7 +27,7 @@
   <section class="scan-result" role="status" aria-live="polite">
     <div class="scan-result__status" aria-hidden="true">OK</div>
     <div>
-      <p class="scan-result__eyebrow">{% if scan_result.mode == "transition" %}Transition enregistrée{% else %}OF reconnu{% endif %}</p>
+      <p class="scan-result__label">{% if scan_result.mode == "transition" %}Transition enregistrée{% else %}OF reconnu{% endif %}</p>
       <h4>{{ scan_result.job.manufacturing_order_number }}</h4>
       <p>Commande {{ scan_result.job.order.short_ref|upper }} · <span class="badge {{ scan_result.job.status|badge_tone }}">{{ scan_result.job.status|human_status }}</span></p>
     </div>
@@ -24,9 +35,8 @@
   </section>
   {% endif %}
 
-  <section class="scan-console" aria-labelledby="staff-scan-form-heading" x-data="{ scanIdentifier: '' }" x-init="$nextTick(() => $refs.scanInput.focus({ preventScroll: true }))">
+  <section class="scan-console" aria-labelledby="staff-scan-form-heading">
     <div class="scan-console__intro">
-      <p class="operator-section-head__eyebrow">Lecture immédiate</p>
       <h4 id="staff-scan-form-heading">Scannez la référence OF</h4>
       <p>Le curseur reste dans le champ principal pour enchaîner les lectures avec une douchette USB.</p>
     </div>
@@ -35,7 +45,20 @@
       {% csrf_token %}
       <div class="scan-primary-field">
         <label for="id_scan_identifier">Référence OF</label>
-        <input class="ui-input" id="id_scan_identifier" name="scan_identifier" type="text" required autocomplete="off" spellcheck="false" placeholder="OF-AAAAMMJJ-XXXXXXXX" x-ref="scanInput" x-model="scanIdentifier" />
+        <input
+          class="ui-input"
+          id="id_scan_identifier"
+          name="scan_identifier"
+          type="text"
+          required
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="OF-AAAAMMJJ-XXXXXXXX"
+          x-ref="scanInput"
+          x-model="scanIdentifier"
+          @focus="inputFocused = true"
+          @blur="inputFocused = false"
+        />
         <button class="scan-current-order" type="button" @click="scanIdentifier = '{{ job.scan_identifier|escapejs }}'; $nextTick(() => $refs.scanInput.focus())">
           Utiliser l’OF de cette commande <code>{{ job.manufacturing_order_number }}</code>
         </button>

@@ -1,120 +1,247 @@
 {% extends "portal/layout.html" %}
+{% load portal_tags %}
+
 {% block title %}{{ customer.name }} — Compte client{% endblock %}
+
 {% block portal_content %}
-{% include "components/portal/page_head.html" with kicker="Comptes clients" title=customer.name subtitle="Identité, utilisateurs et conditions tarifaires." %}
+{% include "components/portal/breadcrumbs/staff_customers.html" %}
 
-<p class="mb-4">
-  <a class="ui-link" href="{% url 'portal:staff-customer-list' %}">← Retour à la liste</a>
-</p>
-
-<section class="card mb-4" aria-labelledby="customer-summary-title">
-  <h2 id="customer-summary-title" class="font-display text-lg mb-3">Synthèse</h2>
-  <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-    <div><dt class="muted text-sm">Statut</dt><dd>{% if customer.is_active %}<span class="badge is-success">Actif</span>{% else %}<span class="badge is-danger">Inactif</span>{% endif %}</dd></div>
-    <div><dt class="muted text-sm">Règlement</dt><dd>{{ customer.get_preferred_settlement_method_display }}</dd></div>
-    <div><dt class="muted text-sm">Cycle</dt><dd>{% if billing_profile %}{{ billing_profile.get_billing_cycle_display }}{% else %}<span class="muted">Non défini</span>{% endif %}</dd></div>
-    <div><dt class="muted text-sm">Réf. publique</dt><dd><code>{{ customer.public_id }}</code></dd></div>
-  </dl>
-</section>
-
-{% if can_edit_account and account_form %}
-<section class="card mb-4" aria-labelledby="account-form-title">
-  <h2 id="account-form-title" class="font-display text-lg mb-3">Compte &amp; identité</h2>
-  <form class="ui-form-stack" method="post" action="{% url 'portal:staff-customer-account-update' customer_public_id=customer.public_id %}">
-    {% csrf_token %}
-    <div class="grid gap-3 md:grid-cols-2">
-      {% for field in account_form %}
-      <div class="ui-field-group{% if field.name == 'notes' %} md:col-span-2{% endif %}">
-        {% if field.field.widget.input_type == 'checkbox' %}
-        <label class="ui-label flex items-center gap-2" for="{{ field.id_for_label }}">
-          {{ field }}
-          <span>{{ field.label }}</span>
-        </label>
+<section class="staff-customer-detail" aria-label="Fiche compte client">
+  <header class="card staff-customer-focus" aria-labelledby="staff-customer-title">
+    <div class="staff-customer-focus__identity">
+      <p class="staff-customer-focus__eyebrow">Compte client</p>
+      <h1 id="staff-customer-title">{{ customer.name }}</h1>
+      <div class="staff-customer-focus__statuses" aria-label="État du compte">
+        {% if customer.is_active %}
+        <span class="badge is-success">Actif</span>
         {% else %}
-        <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
+        <span class="badge is-danger">Inactif</span>
         {% endif %}
-        {% if field.help_text %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
-        {% if field.errors %}<p class="error-text ui-error-text" role="alert">{{ field.errors|striptags }}</p>{% endif %}
+        <span class="badge {{ customer.default_billing_mode|badge_tone }}" title="{{ customer.default_billing_mode|human_status }}">{{ customer.default_billing_mode|settlement_badge }}</span>
+        <span class="badge is-neutral">{{ customer.get_preferred_settlement_method_display }}</span>
       </div>
-      {% endfor %}
     </div>
-    <div class="form-actions mt-4">
-      <button class="ui-btn ui-btn-primary" type="submit">Enregistrer le compte</button>
-    </div>
-  </form>
-</section>
-{% else %}
-<section class="card mb-4">
-  <h2 class="font-display text-lg mb-2">Compte &amp; identité</h2>
-  <p class="muted m-0">Lecture seule — permission <code>change_customer</code> requise pour modifier.</p>
-</section>
-{% endif %}
+    <dl class="staff-customer-focus__facts">
+      <div>
+        <dt>E-mail facturation</dt>
+        <dd>{% if customer.billing_email %}{{ customer.billing_email }}{% else %}<span class="muted">Non renseigné</span>{% endif %}</dd>
+      </div>
+      <div>
+        <dt>Cycle</dt>
+        <dd>{% if billing_profile %}{{ billing_profile.get_billing_cycle_display }}{% else %}<span class="muted">Non défini</span>{% endif %}</dd>
+      </div>
+      <div>
+        <dt>Plafond encours</dt>
+        <dd>{% if billing_profile and billing_profile.credit_limit_eur %}{{ billing_profile.credit_limit_eur }} €{% else %}<span class="muted">Sans plafond</span>{% endif %}</dd>
+      </div>
+      <div>
+        <dt>Réf. publique</dt>
+        <dd><code>{{ customer.public_id|short_ref }}</code></dd>
+      </div>
+    </dl>
+  </header>
 
-{% if can_edit_pricing and pricing_form %}
-<section class="card mb-4" aria-labelledby="pricing-form-title">
-  <h2 id="pricing-form-title" class="font-display text-lg mb-3">Conditions tarifaires</h2>
-  <p class="muted text-sm mb-3">Ces paramètres s’appliquent aux prochaines tarifications (commandes différées). La facturation périodique utilise le cycle et l’encours.</p>
-  <form class="ui-form-stack" method="post" action="{% url 'portal:staff-customer-pricing-update' customer_public_id=customer.public_id %}">
-    {% csrf_token %}
-    <div class="grid gap-3 md:grid-cols-2">
-      {% for field in pricing_form %}
-      <div class="ui-field-group{% if field.name == 'enforce_credit_block' %} md:col-span-2{% endif %}">
-        {% if field.field.widget.input_type == 'checkbox' %}
-        <label class="ui-label flex items-center gap-2" for="{{ field.id_for_label }}">
-          {{ field }}
-          <span>{{ field.label }}</span>
-        </label>
-        {% else %}
-        <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
-        {% endif %}
-        {% if field.help_text %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
-        {% if field.errors %}<p class="error-text ui-error-text" role="alert">{{ field.errors|striptags }}</p>{% endif %}
+  {% if can_edit_account and account_form %}
+  <section class="card staff-customer-panel" aria-labelledby="account-form-title">
+    <div class="staff-customer-panel__head">
+      <div>
+        <h2 id="account-form-title">Compte &amp; règlement</h2>
+        <p class="muted text-sm m-0">Identité, mode Encours / Comptant CB, adresses et notes internes.</p>
       </div>
-      {% endfor %}
     </div>
-    <div class="form-actions mt-4">
-      <button class="ui-btn ui-btn-primary" type="submit">Enregistrer les conditions</button>
-    </div>
-  </form>
-</section>
-{% else %}
-<section class="card mb-4">
-  <h2 class="font-display text-lg mb-2">Conditions tarifaires</h2>
-  <dl class="grid gap-3 sm:grid-cols-2">
-    <div><dt class="muted text-sm">Forfait fichier</dt><dd>{% if customer.negotiated_file_preparation_fee_eur %}{{ customer.negotiated_file_preparation_fee_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
-    <div><dt class="muted text-sm">Prix m²</dt><dd>{% if billing_profile and billing_profile.price_per_sqm_eur %}{{ billing_profile.price_per_sqm_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
-    <div><dt class="muted text-sm">Cycle</dt><dd>{% if billing_profile %}{{ billing_profile.get_billing_cycle_display }}{% else %}—{% endif %}</dd></div>
-    <div><dt class="muted text-sm">Encours</dt><dd>{% if billing_profile and billing_profile.credit_limit_eur %}{{ billing_profile.credit_limit_eur }} €{% else %}—{% endif %}</dd></div>
-  </dl>
-  {% if not can_edit_pricing %}
-  <p class="muted mt-3 mb-0">Permission <code>manage_customer_pricing</code> requise pour modifier.</p>
+    <form class="ui-form-stack staff-customer-form" method="post" action="{% url 'portal:staff-customer-account-update' customer_public_id=customer.public_id %}" data-submit-loading>
+      {% csrf_token %}
+
+      <fieldset class="staff-customer-fieldset">
+        <legend>Identité</legend>
+        <div class="grid gap-3 md:grid-cols-2">
+          {% include "portal/staff/customers/_field.html" with field=account_form.name %}
+          {% include "portal/staff/customers/_field.html" with field=account_form.billing_email %}
+          {% include "portal/staff/customers/_field.html" with field=account_form.siren %}
+          {% include "portal/staff/customers/_field.html" with field=account_form.vat_number %}
+          <div class="ui-field-group md:col-span-2">
+            <label class="ui-label flex items-center gap-2" for="{{ account_form.is_active.id_for_label }}">
+              {{ account_form.is_active }}
+              <span>{{ account_form.is_active.label }}</span>
+            </label>
+            {% if account_form.is_active.errors %}<p class="error-text ui-error-text" role="alert">{{ account_form.is_active.errors|striptags }}</p>{% endif %}
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="staff-customer-fieldset staff-customer-fieldset--settlement">
+        <legend>Mode de règlement</legend>
+        <p class="muted text-sm m-0">En comptant CB, l’encours n’est plus proposé au client. En encours, il peut encore choisir le comptant CB commande par commande.</p>
+        <div class="b2b-settlement-choice__options staff-customer-settlement" role="radiogroup" aria-label="Mode de règlement par défaut">
+          {% for value, label in account_form.default_billing_mode.field.choices %}
+          <label class="b2b-settlement-choice__option">
+            <input
+              type="radio"
+              name="{{ account_form.default_billing_mode.html_name }}"
+              value="{{ value }}"
+              {% if account_form.default_billing_mode.value == value %}checked{% endif %}
+              required
+            >
+            <span>
+              {% if value == "deferred" %}
+              <strong>Encours</strong>
+              <small>Facturation différée selon le cycle et le plafond d’encours.</small>
+              {% else %}
+              <strong>Comptant — carte bancaire</strong>
+              <small>Prix atelier d’abord, puis paiement Stripe depuis l’espace client.</small>
+              {% endif %}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+        {% if account_form.default_billing_mode.errors %}
+        <p class="error-text ui-error-text" role="alert">{{ account_form.default_billing_mode.errors|striptags }}</p>
+        {% endif %}
+        <div class="grid gap-3 md:grid-cols-2 mt-3">
+          {% include "portal/staff/customers/_field.html" with field=account_form.preferred_settlement_method %}
+          {% include "portal/staff/customers/_field.html" with field=account_form.default_shipping_mode %}
+        </div>
+      </fieldset>
+
+      <fieldset class="staff-customer-fieldset">
+        <legend>Adresses</legend>
+        <div class="staff-customer-address-grid">
+          <div>
+            <h3 class="staff-customer-subheading">Facturation</h3>
+            <div class="grid gap-3">
+              {% include "portal/staff/customers/_field.html" with field=account_form.billing_address_line1 %}
+              {% include "portal/staff/customers/_field.html" with field=account_form.billing_address_line2 %}
+              <div class="grid gap-3 sm:grid-cols-3">
+                {% include "portal/staff/customers/_field.html" with field=account_form.billing_postal_code %}
+                {% include "portal/staff/customers/_field.html" with field=account_form.billing_city %}
+                {% include "portal/staff/customers/_field.html" with field=account_form.billing_country %}
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 class="staff-customer-subheading">Livraison</h3>
+            <div class="grid gap-3">
+              {% include "portal/staff/customers/_field.html" with field=account_form.shipping_address_line1 %}
+              {% include "portal/staff/customers/_field.html" with field=account_form.shipping_address_line2 %}
+              <div class="grid gap-3 sm:grid-cols-3">
+                {% include "portal/staff/customers/_field.html" with field=account_form.shipping_postal_code %}
+                {% include "portal/staff/customers/_field.html" with field=account_form.shipping_city %}
+                {% include "portal/staff/customers/_field.html" with field=account_form.shipping_country %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="staff-customer-fieldset">
+        <legend>Notes</legend>
+        {% include "portal/staff/customers/_field.html" with field=account_form.notes %}
+      </fieldset>
+
+      <div class="form-actions">
+        <button class="ui-btn ui-btn-primary" type="submit">Enregistrer le compte</button>
+      </div>
+    </form>
+  </section>
+  {% else %}
+  <section class="card staff-customer-panel" aria-labelledby="account-readonly-title">
+    <h2 id="account-readonly-title" class="text-lg mb-3">Compte &amp; règlement</h2>
+    <dl class="staff-customer-focus__facts staff-customer-focus__facts--embedded">
+      <div>
+        <dt>Mode</dt>
+        <dd><span class="badge {{ customer.default_billing_mode|badge_tone }}">{{ customer.default_billing_mode|settlement_badge }}</span></dd>
+      </div>
+      <div>
+        <dt>Canal</dt>
+        <dd>{{ customer.get_preferred_settlement_method_display }}</dd>
+      </div>
+      <div>
+        <dt>Acheminement</dt>
+        <dd>{{ customer.get_default_shipping_mode_display }}</dd>
+      </div>
+      <div>
+        <dt>Statut</dt>
+        <dd>{% if customer.is_active %}Actif{% else %}Inactif{% endif %}</dd>
+      </div>
+    </dl>
+    <p class="muted mt-3 mb-0">Lecture seule — permission <code>change_customer</code> requise pour modifier.</p>
+  </section>
   {% endif %}
-</section>
-{% endif %}
 
-<section class="card table-wrap" aria-labelledby="members-title">
-  <h2 id="members-title" class="font-display text-lg mb-3">Utilisateurs rattachés</h2>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>E-mail</th>
-        <th>Rôle</th>
-        <th>Statut</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for membership in memberships %}
-      <tr>
-        <td>{{ membership.user.email }}</td>
-        <td>{{ membership.get_role_display }}</td>
-        <td>{% if membership.is_active %}<span class="badge is-success">Actif</span>{% else %}<span class="badge is-neutral">Inactif</span>{% endif %}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="3"><div class="empty-state">Aucun utilisateur rattaché.</div></td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% if can_edit_pricing and pricing_form %}
+  <section class="card staff-customer-panel" aria-labelledby="pricing-form-title">
+    <div class="staff-customer-panel__head">
+      <div>
+        <h2 id="pricing-form-title">Conditions tarifaires</h2>
+        <p class="muted text-sm m-0">Tarifs négociés et règles d’encours pour les prochaines tarifications atelier.</p>
+      </div>
+    </div>
+    <form class="ui-form-stack" method="post" action="{% url 'portal:staff-customer-pricing-update' customer_public_id=customer.public_id %}" data-submit-loading>
+      {% csrf_token %}
+      <div class="grid gap-3 md:grid-cols-2">
+        {% for field in pricing_form %}
+        <div class="ui-field-group{% if field.name == 'enforce_credit_block' %} md:col-span-2{% endif %}">
+          {% if field.field.widget.input_type == 'checkbox' %}
+          <label class="ui-label flex items-center gap-2" for="{{ field.id_for_label }}">
+            {{ field }}
+            <span>{{ field.label }}</span>
+          </label>
+          {% else %}
+          <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% endif %}
+          {% if field.help_text %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
+          {% if field.errors %}<p class="error-text ui-error-text" role="alert">{{ field.errors|striptags }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <button class="ui-btn ui-btn-primary" type="submit">Enregistrer les conditions</button>
+      </div>
+    </form>
+  </section>
+  {% else %}
+  <section class="card staff-customer-panel" aria-labelledby="pricing-readonly-title">
+    <h2 id="pricing-readonly-title" class="text-lg mb-3">Conditions tarifaires</h2>
+    <dl class="staff-customer-focus__facts staff-customer-focus__facts--embedded">
+      <div><dt>Forfait fichier</dt><dd>{% if customer.negotiated_file_preparation_fee_eur %}{{ customer.negotiated_file_preparation_fee_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
+      <div><dt>Prix m²</dt><dd>{% if billing_profile and billing_profile.price_per_sqm_eur %}{{ billing_profile.price_per_sqm_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
+      <div><dt>Cycle</dt><dd>{% if billing_profile %}{{ billing_profile.get_billing_cycle_display }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Encours</dt><dd>{% if billing_profile and billing_profile.credit_limit_eur %}{{ billing_profile.credit_limit_eur }} €{% else %}—{% endif %}</dd></div>
+    </dl>
+    {% if not can_edit_pricing %}
+    <p class="muted mt-3 mb-0">Permission <code>manage_customer_pricing</code> requise pour modifier.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="card staff-customer-panel table-wrap overflow-x-auto" aria-labelledby="members-title">
+    <div class="staff-customer-panel__head">
+      <div>
+        <h2 id="members-title">Utilisateurs rattachés</h2>
+        <p class="muted text-sm m-0">Accès portail liés à ce compte entreprise.</p>
+      </div>
+    </div>
+    <table class="table min-w-[28rem]">
+      <thead>
+        <tr>
+          <th>E-mail</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for membership in memberships %}
+        <tr>
+          <td>{{ membership.user.email }}</td>
+          <td>{{ membership.get_role_display }}</td>
+          <td>{% if membership.is_active %}<span class="badge is-success">Actif</span>{% else %}<span class="badge is-neutral">Inactif</span>{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3"><div class="empty-state">Aucun utilisateur rattaché.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
 </section>
 {% endblock %}

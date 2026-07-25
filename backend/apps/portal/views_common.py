@@ -113,7 +113,7 @@ def staff_order_upload_rows(order):
 
 def can_set_meterage_override(request, order: Order) -> bool:
     return (
-        order.billing_mode == Order.BillingMode.DEFERRED
+        order.uses_atelier_pricing()
         and order.status in (Order.Status.DRAFT, Order.Status.SUBMITTED)
         and request.user.has_perm("orders.change_order")
     )

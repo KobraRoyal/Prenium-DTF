@@ -2,7 +2,6 @@
 <div class="workflow-panel workflow-panel--operator shipping-station">
   <header class="workflow-panel__hero operator-panel-hero">
     <div>
-      <p class="operator-panel-hero__eyebrow">Logistique Sendcloud</p>
       <h3 class="workflow-panel__title">Expédition</h3>
       <p class="workflow-panel__meta">Préparez l’étiquette au bon moment, puis gardez le suivi transporteur à portée de main.</p>
     </div>
@@ -12,7 +11,6 @@
   <section class="shipping-readiness{% if shipping_ready %} is-ready{% endif %}" aria-labelledby="shipping-readiness-title">
     <span class="shipping-readiness__index" aria-hidden="true">01</span>
     <div>
-      <p class="operator-section-head__eyebrow">Pré-requis</p>
       <h4 id="shipping-readiness-title">{% if shipping_ready %}La production est prête à expédier{% else %}Terminez la production avant de créer l’envoi{% endif %}</h4>
       <p>Statut Atelier : <strong>{% if production_job %}{{ production_job.status|human_status }}{% else %}OF non initialisé{% endif %}</strong>. Sendcloud n’accepte la création qu’à l’étape « Prêt à expédier ».</p>
     </div>
@@ -24,7 +22,7 @@
   {% if shipment %}
   <section class="shipment-status-card" aria-labelledby="shipment-status-title">
     <div class="shipment-status-card__head">
-      <div><p class="operator-section-head__eyebrow">Envoi actif</p><h4 id="shipment-status-title">{{ shipment.status|human_status }}</h4></div>
+      <div><h4 id="shipment-status-title">{{ shipment.status|human_status }}</h4></div>
       <span class="badge {{ shipment.status|badge_tone }}">{{ shipment.status|human_status }}</span>
     </div>
     <dl class="shipment-status-card__facts">
@@ -47,7 +45,7 @@
   {% else %}
   <section class="shipping-form-shell" aria-labelledby="staff-shipping-form-heading">
     <div class="operator-section-head">
-      <div><p class="operator-section-head__eyebrow">Étape 02</p><h4 id="staff-shipping-form-heading">Créer l’étiquette d’expédition</h4><p>Les coordonnées connues du client sont préremplies. Vérifiez-les avant l’envoi.</p></div>
+      <div><h4 id="staff-shipping-form-heading">Créer l’étiquette d’expédition</h4><p>Les coordonnées connues du client sont préremplies. Vérifiez-les avant l’envoi.</p></div>
     </div>
 
     <form class="shipping-guided-form" hx-post="{% url 'portal:staff-order-panel-shipping' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>

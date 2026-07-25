@@ -101,8 +101,8 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
 
 
 @pytest.mark.django_db
-@override_settings(B2B_ORDER_PROJECTS_ENABLED=True)
-def test_client_navigation_only_shows_planche_tools_for_eligible_customer():
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_client_navigation_shows_project_creation_for_all_active_customers():
     user = get_user_model().objects.create_user(
         email="client-navigation@example.com", password="pass"
     )
@@ -121,16 +121,9 @@ def test_client_navigation_only_shows_planche_tools_for_eligible_customer():
     client = Client()
     assert client.login(email=user.email, password="pass")
 
-    disabled_html = client.get(reverse("portal:client-dashboard")).content.decode()
-    assert "Dashboard" in disabled_html
-    assert "Créer une commande" in disabled_html
-    assert "Planches DTF" not in disabled_html
-    assert "Générer une Gang Sheet" not in disabled_html
-
-    customer.b2b_order_projects_enabled = True
-    customer.save(update_fields=["b2b_order_projects_enabled"])
-
     enabled_html = client.get(reverse("portal:client-dashboard")).content.decode()
+    assert "Dashboard" in enabled_html
+    assert "Créer une commande" in enabled_html
     assert "Planches DTF" not in enabled_html
     assert "À partir de fichiers" in enabled_html
     assert "Générer une Gang Sheet" in enabled_html
@@ -181,6 +174,28 @@ def test_client_navigation_only_shows_planche_tools_for_eligible_customer():
     hybrid_html = client.get(reverse("portal:client-dashboard")).content.decode()
     assert "Ouvrir l’Atelier" in hybrid_html
     assert "Passer au pilotage opérationnel" in hybrid_html
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=False)
+def test_client_navigation_falls_back_to_classic_checkout_when_projects_disabled():
+    user = get_user_model().objects.create_user(
+        email="client-checkout-fallback@example.com", password="pass"
+    )
+    customer = Customer.objects.create(name="Checkout fallback")
+    CustomerMembership.objects.create(
+        customer=customer, user=user, role=CustomerMembership.Role.OWNER
+    )
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+
+    html = client.get(reverse("portal:client-dashboard")).content.decode()
+    assert "Créer une commande" in html
+    assert "À partir de fichiers" not in html
+    assert "Générer une Gang Sheet" not in html
+    assert reverse(
+        "portal:client-checkout", kwargs={"customer_public_id": customer.public_id}
+    ) in html
 
 
 @pytest.mark.django_db
@@ -284,6 +299,7 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
         customer=customer,
         created_by=staff_user,
         status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
         currency="EUR",
         subtotal_amount="12.00",
         total_amount="12.00",
@@ -341,7 +357,8 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert "File Atelier" in dashboard_html
     assert "product-shell--portal" in dashboard_html
     assert "Commandes Atelier" in dashboard_html
-    assert 'role="tablist"' in dashboard_html
+    assert 'aria-label="Filtrer la file Atelier"' in dashboard_html
+    assert 'role="tablist"' not in dashboard_html
     assert "Prêts à imprimer" in dashboard_html
     assert "Imprimer les 5 derniers OF prêts" in dashboard_html
     assert "Contrats permissions" not in dashboard_html
@@ -360,7 +377,7 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert "/panels/inspection/" in detail_html
     assert "Valider les fichiers" in detail_html
     assert "Tracer l&#x27;avancement" in detail_html
-    assert "Retour à la file" in detail_html
+    assert "Retour à la file Atelier" in detail_html
     assert production_panel_response.status_code == 200
     production_html = production_panel_response.content.decode()
     assert "data-submit-loading" in production_html
@@ -378,7 +395,7 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert "Générer l’étiquette" not in shipping_html
     assert scan_panel_response.status_code == 200
     scan_html = scan_panel_response.content.decode()
-    assert "Lecture immédiate" in scan_html
+    assert "Scannez la référence OF" in scan_html
     assert "Utiliser l’OF de cette commande" in scan_html
     assert "$refs.scanInput.focus({ preventScroll: true })" in scan_html
     assert "data-submit-loading" in scan_html
