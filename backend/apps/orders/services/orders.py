@@ -45,16 +45,18 @@ class OrderService:
             .first()
         )
 
-    def list_staff_orders(self):
-        return (
-            Order.objects.select_related("customer", "created_by")
-            .prefetch_related("items", "items__service")
-            .order_by("-created_at")
+    def list_staff_orders(self, *, include_cancelled: bool = False):
+        queryset = Order.objects.select_related("customer", "created_by").prefetch_related(
+            "items",
+            "items__service",
         )
+        if not include_cancelled:
+            queryset = queryset.exclude(status=Order.Status.CANCELLED)
+        return queryset.order_by("-created_at")
 
     def get_staff_order(self, order_public_id):
         return (
-            Order.objects.select_related("customer", "created_by")
+            Order.objects.select_related("customer", "created_by", "cancelled_by")
             .prefetch_related(
                 "items",
                 "items__service",
@@ -66,6 +68,135 @@ class OrderService:
             .filter(public_id=order_public_id)
             .first()
         )
+
+    def staff_delete_block_reason(self, order: Order) -> str | None:
+        """Motif métier empêchant la suppression Atelier, ou None si autorisée."""
+        if order.status == Order.Status.CANCELLED:
+            return "Cette commande est déjà supprimée de la file Atelier."
+
+        from apps.billing.models import Invoice, Payment
+        from apps.production.models import ProductionJob
+        from apps.shipping.models import Shipment
+
+        if Payment.objects.filter(
+            order_id=order.pk,
+            status=Payment.Status.CAPTURED,
+        ).exists():
+            return "Impossible de supprimer : un paiement a déjà été capturé."
+
+        if Payment.objects.filter(
+            order_id=order.pk,
+            status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
+        ).exists():
+            return "Impossible de supprimer : un paiement en ligne est encore en cours."
+
+        if Invoice.objects.filter(order_id=order.pk).exists():
+            return "Impossible de supprimer : un justificatif ou une facture existe déjà."
+
+        try:
+            production_job = order.production_job
+        except ProductionJob.DoesNotExist:
+            production_job = None
+        if production_job is not None and production_job.status != ProductionJob.Status.QUEUED:
+            return (
+                "Impossible de supprimer : la production a déjà démarré "
+                f"({production_job.get_status_display()})."
+            )
+        if production_job is not None and production_job.started_at is not None:
+            return "Impossible de supprimer : la production a déjà démarré."
+
+        if Shipment.objects.filter(order_id=order.pk).exists():
+            return "Impossible de supprimer : une expédition est déjà associée."
+
+        return None
+
+    def can_staff_delete_order(self, order: Order) -> bool:
+        return self.staff_delete_block_reason(order) is None
+
+    def delete_staff_order(
+        self,
+        *,
+        order_public_id,
+        actor,
+        source: str,
+        reason: str = "",
+    ) -> Order:
+        """Retire la commande de la file Atelier (soft-cancel), sans hard-delete."""
+        cleaned_reason = str(reason or "").strip()[:255]
+        order = (
+            Order.objects.select_related("customer")
+            .filter(public_id=order_public_id)
+            .first()
+        )
+        if order is None:
+            raise ValidationError("Commande introuvable.")
+
+        block_reason = self.staff_delete_block_reason(order)
+        if block_reason is not None:
+            record_event(
+                action="order.delete_rejected",
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=order,
+                metadata={
+                    "order_public_id": str(order.public_id),
+                    "customer_public_id": str(order.customer.public_id),
+                    "reason": block_reason,
+                    "source": source,
+                },
+            )
+            raise ValidationError(block_reason)
+
+        with transaction.atomic():
+            order = (
+                Order.objects.select_for_update()
+                .select_related("customer")
+                .filter(public_id=order_public_id)
+                .first()
+            )
+            if order is None:
+                raise ValidationError("Commande introuvable.")
+
+            block_reason = self.staff_delete_block_reason(order)
+            if block_reason is not None:
+                raise ValidationError(block_reason)
+
+            from apps.billing.models import Payment
+            from django.utils import timezone
+
+            now = timezone.now()
+            previous_status = order.status
+            order.status = Order.Status.CANCELLED
+            order.cancelled_at = now
+            order.cancelled_by = actor if getattr(actor, "is_authenticated", False) else None
+            order.cancellation_reason = cleaned_reason
+            order.save(
+                update_fields=[
+                    "status",
+                    "cancelled_at",
+                    "cancelled_by",
+                    "cancellation_reason",
+                    "updated_at",
+                ]
+            )
+            Payment.objects.filter(
+                order_id=order.pk,
+                status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
+            ).update(status=Payment.Status.CANCELLED, updated_at=now)
+
+            record_event(
+                action="order.deleted_atelier",
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=order,
+                metadata={
+                    "order_public_id": str(order.public_id),
+                    "customer_public_id": str(order.customer.public_id),
+                    "cancellation_reason": cleaned_reason,
+                    "source": source,
+                    "previous_status": previous_status,
+                },
+            )
+
+        return self.get_staff_order(order_public_id)
 
     def paginate_orders(self, queryset, *, page_number, page_size):
         paginator = Paginator(queryset, page_size)

@@ -7,7 +7,6 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
-from apps.orders.models import Order
 from apps.portal.views_common import (
     StaffDomainPermissionMixin,
     StaffPortalMixin,
@@ -92,6 +91,11 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
     def get(self, request, order_public_id):
         can_price = request.user.has_perm("orders.change_order")
         can_price_order = can_price and self.order.uses_atelier_pricing()
+        can_delete_perm = request.user.has_perm("orders.delete_atelier_order")
+        delete_block_reason = (
+            order_service.staff_delete_block_reason(self.order) if can_delete_perm else None
+        )
+        can_delete_order = can_delete_perm and delete_block_reason is None
         try:
             production_job = self.order.production_job
         except ProductionJob.DoesNotExist:
@@ -112,7 +116,11 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
                 "order_drive_url": order_drive_url,
                 "staff_order_focus": staff_order_focus,
                 "can_price_order": can_price_order,
+                "can_delete_order": can_delete_order,
+                "can_delete_perm": can_delete_perm,
+                "delete_block_reason": delete_block_reason,
                 "price_error": request.GET.get("price_error", ""),
+                "delete_error": request.GET.get("delete_error", ""),
                 "priced_ok": request.GET.get("priced") == "1",
                 "nav_mode": "staff",
                 "nav_key": "staff-orders",
@@ -120,3 +128,31 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
                 "status_label": status_label,
             },
         )
+
+
+class StaffOrderDeleteView(StaffPortalMixin, View):
+    """Soft-cancel Atelier : retire la commande de la file sans hard-delete."""
+
+    def post(self, request, order_public_id):
+        if not request.user.has_perm("orders.delete_atelier_order"):
+            raise PermissionDenied
+        order = order_service.get_staff_order(order_public_id)
+        if order is None:
+            raise Http404
+        detail_url = reverse(
+            "portal:staff-order-detail",
+            kwargs={"order_public_id": order_public_id},
+        )
+        try:
+            order_service.delete_staff_order(
+                order_public_id=order_public_id,
+                actor=request.user,
+                source="staff_portal",
+                reason=request.POST.get("reason", ""),
+            )
+        except ValidationError as exc:
+            messages_list = getattr(exc, "messages", None) or [str(exc)]
+            return HttpResponseRedirect(
+                f"{detail_url}?delete_error={' '.join(messages_list)[:200]}"
+            )
+        return HttpResponseRedirect(reverse("portal:staff-order-list") + "?deleted=1")

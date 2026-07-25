@@ -77,7 +77,12 @@ from .views_gang_sheets import (
     StaffGangSheetSettingsView,
 )
 from .views_profile import PortalProfileView
-from .views_staff import StaffOrderDetailView, StaffOrderListView, StaffOrderPriceView
+from .views_staff import (
+    StaffOrderDeleteView,
+    StaffOrderDetailView,
+    StaffOrderListView,
+    StaffOrderPriceView,
+)
 from .views_staff_billing import StaffInvoiceMarkPaidView, StaffOrderPanelBillingView
 from .views_staff_dashboard import StaffDashboardView
 from .views_staff_documents import StaffManufacturingOrderBatchPdfView
@@ -445,6 +450,11 @@ urlpatterns = [
         "staff/orders/<uuid:order_public_id>/price/",
         StaffOrderPriceView.as_view(),
         name="staff-order-price",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/delete/",
+        StaffOrderDeleteView.as_view(),
+        name="staff-order-delete",
     ),
     path(
         "staff/orders/<uuid:order_public_id>/panels/uploads/",

@@ -218,6 +218,7 @@ class Command(BaseCommand):
             "catalog.view_catalogservice",
             "orders.view_order",
             "orders.change_order",
+            "orders.delete_atelier_order",
             "uploads.view_orderupload",
             "uploads.view_orderuploadinspection",
             "uploads.review_orderupload",

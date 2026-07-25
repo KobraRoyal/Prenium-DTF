@@ -32,6 +32,7 @@ class Order(BaseModel):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
         SUBMITTED = "submitted", "Submitted"
+        CANCELLED = "cancelled", "Cancelled"
 
     class BillingMode(models.TextChoices):
         IMMEDIATE = "immediate", "Paiement comptant (carte bancaire)"
@@ -105,6 +106,15 @@ class Order(BaseModel):
         ),
         validators=[MinValueValidator(MIN_METERAGE_LINEAR_M)],
     )
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="cancelled_orders",
+    )
+    cancellation_reason = models.CharField(max_length=255, blank=True)
 
     objects = OrderQuerySet.as_manager()
 
@@ -115,6 +125,9 @@ class Order(BaseModel):
             models.Index(fields=("status", "created_at")),
             models.Index(fields=("customer", "billing_mode", "pricing_status")),
             models.Index(fields=("billing_statement", "created_at")),
+        ]
+        permissions = [
+            ("delete_atelier_order", "Peut supprimer une commande Atelier"),
         ]
 
     def __str__(self) -> str:

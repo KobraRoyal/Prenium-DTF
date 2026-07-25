@@ -299,12 +299,16 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_staff_order_detail_keeps_only_actionable_summary(self) -> None:
         source = template_source("portal/staff/order_detail.html")
+        delete_partial = template_source("portal/staff/partials/order_delete_button.html")
 
         self.assertIn('class="card staff-order-focus"', source)
         self.assertIn("Prochaine action", source)
         self.assertIn("Ordre de fabrication", source)
         self.assertIn("settlement_badge", source)
         self.assertIn("order.billing_mode|badge_tone", source)
+        self.assertIn("portal/staff/partials/order_delete_button.html", source)
+        self.assertIn("portal:staff-order-delete", delete_partial)
+        self.assertIn("can_delete_order", delete_partial)
         self.assertNotIn("staff_customer_snapshot.html", source)
         self.assertNotIn("staff_order_workflow_summary.html", source)
         self.assertNotIn("order-command-bar", source)

@@ -51,6 +51,7 @@
         <button type="submit" class="ui-btn ui-btn-secondary">Calculer le prix</button>
       </form>
       {% endif %}
+      {% include "portal/staff/partials/order_delete_button.html" %}
       {% if order_drive_url %}
       <a class="ui-btn ui-btn-secondary" href="{{ order_drive_url }}" target="_blank" rel="noopener noreferrer">Ouvrir le dossier Drive</a>
       {% endif %}
@@ -63,6 +64,11 @@
 {% if price_error %}
 <div class="alert alert--danger" role="alert">
   <p>{{ price_error }}</p>
+</div>
+{% endif %}
+{% if delete_error %}
+<div class="alert alert--danger" role="alert">
+  <p>{{ delete_error }}</p>
 </div>
 {% endif %}
 {% if priced_ok %}

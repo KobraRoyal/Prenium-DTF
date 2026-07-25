@@ -31,7 +31,7 @@ order_pricing_service = OrderPricingService()
 def badge_tone_for_status(status: str) -> str:
     positive = {"ok", "synced", "created", "completed", "ready_to_ship", "submitted"}
     warning = {"warning", "pending", "queued", "in_progress"}
-    negative = {"error", "failed", "blocked", "draft"}
+    negative = {"error", "failed", "blocked", "draft", "cancelled"}
     if status in positive:
         return "is-success"
     if status in warning:

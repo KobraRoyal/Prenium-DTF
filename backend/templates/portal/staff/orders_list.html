@@ -6,6 +6,12 @@
 {% block portal_content %}
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_orders_list.html" title="Commandes" subtitle="Vue opérationnelle centralisée avec lecture rapide des statuts et prochaines actions." %}
 
+{% if request.GET.deleted == "1" %}
+<div class="alert alert--success workflow-panel__feedback workflow-panel__feedback--ephemeral" role="status">
+  <p>Commande retirée de la file Atelier.</p>
+</div>
+{% endif %}
+
 <section class="card">
   {% if orders %}
   {% ui_orders_table orders=orders variant="staff" %}

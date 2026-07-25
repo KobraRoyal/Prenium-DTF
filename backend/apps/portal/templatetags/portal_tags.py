@@ -142,7 +142,7 @@ def badge_tone(status):
         "under_review",
         "immediate",
     }
-    negative = {"error", "failed", "blocked", "draft"}
+    negative = {"error", "failed", "blocked", "draft", "cancelled"}
     if status in positive:
         return "is-success"
     if status in warning:

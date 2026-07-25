@@ -19,6 +19,7 @@ class ProductionWorkflowService:
     document_status_labels = {
         Order.Status.DRAFT: "Brouillon",
         Order.Status.SUBMITTED: "Soumise",
+        Order.Status.CANCELLED: "Annulée",
         ProductionJob.Status.QUEUED: "En attente Atelier",
         ProductionJob.Status.IN_PROGRESS: "En production",
         ProductionJob.Status.BLOCKED: "Bloqué",
@@ -374,6 +375,11 @@ class ProductionWorkflowService:
             if normalized_status not in allowed_targets:
                 rejection_message = (
                     f"Transition from {from_status} to {normalized_status} is not allowed."
+                )
+            elif locked_job.order.status == Order.Status.CANCELLED:
+                rejection_message = (
+                    "Cette commande a été retirée de la file Atelier : "
+                    "aucune transition de production n’est possible."
                 )
             else:
                 if normalized_status == ProductionJob.Status.IN_PROGRESS:
