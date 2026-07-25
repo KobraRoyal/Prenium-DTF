@@ -18,11 +18,20 @@ from apps.uploads.models import OrderDriveFolder, OrderUpload, OrderUploadDriveS
 ORDER_DRIVE_ROOT_FOLDER_NAME = "Commandes"
 ORDER_DRIVE_SOURCE_FOLDER = "00_source_Client"
 ORDER_DRIVE_PRODUCTION_FOLDER = "01_Production"
+# Arborescence canonique unique à la création Drive commande (ne pas élargir).
 ORDER_DRIVE_SUBFOLDERS = (
     ORDER_DRIVE_SOURCE_FOLDER,
     ORDER_DRIVE_PRODUCTION_FOLDER,
 )
-# Clés historiques encore présentes dans folder_ids JSON (soft-fill / lecture).
+# Noms historiques : lecture / soft-fill uniquement, jamais créés.
+ORDER_DRIVE_LEGACY_SUBFOLDERS = (
+    "00_source_client",
+    "01_controle",
+    "02_production",
+    "03_of",
+    "04_shipping",
+    "05_archive",
+)
 ORDER_DRIVE_SOURCE_FOLDER_ALIASES = (
     ORDER_DRIVE_SOURCE_FOLDER,
     "00_source_client",
@@ -223,7 +232,13 @@ class OrderDriveFolderService:
                 name=order_folder_name,
             )
 
-            folder_ids = dict(getattr(existing, "folder_ids", None) or {})
+            # Préserver les IDs legacy déjà connus (aliases lecture), sans les recréer.
+            previous_ids = dict(getattr(existing, "folder_ids", None) or {})
+            folder_ids = {
+                name: folder_id
+                for name, folder_id in previous_ids.items()
+                if name in ORDER_DRIVE_LEGACY_SUBFOLDERS and folder_id
+            }
             for folder_name in ORDER_DRIVE_SUBFOLDERS:
                 folder_ids[folder_name] = gateway.ensure_folder(
                     parent_id=order_folder_id,

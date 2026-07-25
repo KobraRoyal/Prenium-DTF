@@ -151,6 +151,74 @@ def test_drive_sync_service_creates_order_folder_and_syncs_upload():
 
 
 @pytest.mark.django_db
+def test_ensure_order_folder_creates_only_source_and_production_subfolders():
+    from apps.uploads.services.drive import (
+        ORDER_DRIVE_PRODUCTION_FOLDER,
+        ORDER_DRIVE_SOURCE_FOLDER,
+        ORDER_DRIVE_SUBFOLDERS,
+        OrderDriveFolderService,
+    )
+
+    assert ORDER_DRIVE_SUBFOLDERS == (
+        ORDER_DRIVE_SOURCE_FOLDER,
+        ORDER_DRIVE_PRODUCTION_FOLDER,
+    )
+
+    user, customer, _membership = create_customer_scope("drive-folders@example.com", "Acme")
+    order = create_order(customer, user)
+    gateway = FakeDriveGateway()
+
+    drive_folder = OrderDriveFolderService(gateway=gateway).ensure_order_folder(
+        order=order,
+        actor=user,
+        source="test",
+    )
+
+    created_subfolders = {
+        name
+        for (_parent, name) in gateway.folders
+        if name
+        not in {
+            "Commandes",
+            order.created_at.strftime("%Y"),
+            order.created_at.strftime("%m"),
+            order.short_ref,
+        }
+    }
+    assert created_subfolders == {
+        ORDER_DRIVE_SOURCE_FOLDER,
+        ORDER_DRIVE_PRODUCTION_FOLDER,
+    }
+    assert set(drive_folder.folder_ids) == {
+        ORDER_DRIVE_SOURCE_FOLDER,
+        ORDER_DRIVE_PRODUCTION_FOLDER,
+    }
+
+    # Soft-fill : dossiers legacy déjà référencés restent en DB, sans être recréés sur Drive.
+    drive_folder.folder_ids = {
+        **drive_folder.folder_ids,
+        "01_controle": "legacy-controle-id",
+        "05_archive": "legacy-archive-id",
+    }
+    drive_folder.folder_ids.pop(ORDER_DRIVE_PRODUCTION_FOLDER, None)
+    drive_folder.save(update_fields=["folder_ids"])
+
+    gateway.folders.clear()
+    refreshed = OrderDriveFolderService(gateway=gateway).ensure_order_folder(
+        order=order,
+        actor=user,
+        source="test",
+    )
+    recreated = {name for (_parent, name) in gateway.folders}
+    assert ORDER_DRIVE_PRODUCTION_FOLDER in recreated
+    assert "01_controle" not in recreated
+    assert "05_archive" not in recreated
+    assert refreshed.folder_ids[ORDER_DRIVE_SOURCE_FOLDER]
+    assert refreshed.folder_ids[ORDER_DRIVE_PRODUCTION_FOLDER]
+    assert refreshed.folder_ids["01_controle"] == "legacy-controle-id"
+
+
+@pytest.mark.django_db
 @override_settings(
     ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
     ORDER_UPLOAD_MAX_BYTES=1024,

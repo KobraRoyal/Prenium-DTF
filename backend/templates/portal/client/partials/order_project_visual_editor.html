@@ -32,6 +32,7 @@
       hx-swap="outerHTML"
       hx-indicator="#portal-htmx-indicator"
       data-submit-loading
+      data-visual-confirm
     >
       {% csrf_token %}
       {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Exemplaires de planche" %}
@@ -51,6 +52,7 @@
       hx-swap="outerHTML"
       hx-indicator="#portal-htmx-indicator"
       data-submit-loading
+      data-visual-confirm
     >
       {% csrf_token %}
       <input type="hidden" name="name" value="{{ item.name }}">

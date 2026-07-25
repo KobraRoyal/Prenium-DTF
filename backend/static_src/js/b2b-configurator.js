@@ -10,6 +10,8 @@ const pdfJsWorkerUrl = "/static/vendor/pdfjs/pdf.worker.js";
 let pdfJsPromise = null;
 let configuratorEventsBound = false;
 let projectDialogToRestore = "";
+/** Dialog à ne pas rouvrir après un confirm support / validation réussi. */
+let projectDialogCloseOnSuccess = "";
 
 function loadPdfJs() {
   if (pdfJsPromise === null) {
@@ -795,6 +797,13 @@ function setMulticolorMode(fieldset, enabled) {
     hexInput.readOnly = enabled;
     if (enabled) {
       hexInput.value = "";
+      // Multicouleur : le hex vide ne doit pas bloquer la soumission HTML5.
+      hexInput.removeAttribute("required");
+      hexInput.removeAttribute("aria-required");
+      hexInput.setCustomValidity("");
+    } else if (fieldset.hasAttribute("data-support-color-required")) {
+      hexInput.setAttribute("required", "true");
+      hexInput.setAttribute("aria-required", "true");
     }
   }
   updateSupportColorStatus(fieldset);
@@ -1409,7 +1418,34 @@ document.body.addEventListener("htmx:afterSwap", (event) => {
   initB2BConfigurators(document, { force: true });
 });
 
+document.body.addEventListener("htmx:beforeRequest", (event) => {
+  const elt = event.detail?.elt;
+  if (!(elt instanceof HTMLElement)) {
+    return;
+  }
+  const dialog = elt.closest("dialog[id^='visual-dialog-']");
+  if (!(dialog instanceof HTMLDialogElement) || !dialog.open) {
+    return;
+  }
+  const confirmForm =
+    elt.matches("form[data-visual-confirm], form[data-add-visual-confirm]")
+      ? elt
+      : elt.closest("form[data-visual-confirm], form[data-add-visual-confirm]");
+  if (confirmForm instanceof HTMLFormElement) {
+    // Validation / enregistrement support : fermer la modal après succès.
+    projectDialogCloseOnSuccess = dialog.id;
+    projectDialogToRestore = "";
+    return;
+  }
+  // Autres actions HTMX dans la modal (remplacer fichier…) : la rouvrir après swap.
+  projectDialogToRestore = dialog.id;
+});
+
 document.body.addEventListener("htmx:afterSettle", () => {
+  // Pendant un confirm support, ne jamais rouvrir ici (afterOnLoad gère succès / erreur).
+  if (projectDialogCloseOnSuccess) {
+    return;
+  }
   if (!projectDialogToRestore) {
     return;
   }
@@ -1423,12 +1459,37 @@ document.body.addEventListener("htmx:afterSettle", () => {
 
 document.body.addEventListener("htmx:afterOnLoad", (event) => {
   const elt = event.detail?.elt;
+  const xhr = event.detail?.xhr;
+  const successful = Boolean(event.detail?.successful);
+  const status = Number(xhr?.status || 0);
+  const ok = successful || (status >= 200 && status < 300);
+
   if (
-    event.detail?.successful
+    ok
     && elt instanceof HTMLFormElement
     && elt.matches("[data-add-visual-confirm]")
   ) {
     document.getElementById("add-visual-dialog")?.close();
+  }
+
+  if (!projectDialogCloseOnSuccess) {
+    return;
+  }
+
+  const dialogId = projectDialogCloseOnSuccess;
+  projectDialogCloseOnSuccess = "";
+  projectDialogToRestore = "";
+
+  if (ok) {
+    // Succès : modal reste fermée.
+    return;
+  }
+
+  // Erreur : rouvrir immédiatement (afterSettle a déjà eu lieu).
+  const dialog = document.getElementById(dialogId);
+  if (dialog instanceof HTMLDialogElement && !dialog.open) {
+    dialog.showModal();
+    initB2BConfigurators(dialog, { force: true });
   }
 });
 
@@ -1437,18 +1498,37 @@ document.body.addEventListener("htmx:load", (event) => {
   mountConfigurator(element instanceof HTMLElement ? element : document);
 });
 
+function findOpenVisualDialog(root) {
+  if (!(root instanceof HTMLElement)) {
+    return null;
+  }
+  if (
+    root instanceof HTMLDialogElement
+    && root.open
+    && root.id.startsWith("visual-dialog-")
+  ) {
+    return root;
+  }
+  const dialogs = root.querySelectorAll("dialog[id^='visual-dialog-']");
+  for (const dialog of dialogs) {
+    if (dialog instanceof HTMLDialogElement && dialog.open) {
+      return dialog;
+    }
+  }
+  return null;
+}
+
 document.body.addEventListener("htmx:beforeCleanupElement", (event) => {
   const cleanupRoot = event.detail?.elt;
   if (!(cleanupRoot instanceof HTMLElement)) {
     return;
   }
-  const openProjectDialog = cleanupRoot.matches(
-    "dialog[open][id^='visual-dialog-']"
-  )
-    ? cleanupRoot
-    : cleanupRoot.querySelector("dialog[open][id^='visual-dialog-']");
-  if (openProjectDialog instanceof HTMLDialogElement) {
-    projectDialogToRestore = openProjectDialog.id;
+  // Ne pas forcer la réouverture si on ferme volontairement après confirm.
+  if (!projectDialogCloseOnSuccess) {
+    const openProjectDialog = findOpenVisualDialog(cleanupRoot);
+    if (openProjectDialog instanceof HTMLDialogElement) {
+      projectDialogToRestore = openProjectDialog.id;
+    }
   }
   closeAllHexColorPopovers();
   cleanupRoot.querySelectorAll("[data-hex-color-control]").forEach((control) => {

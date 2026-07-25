@@ -56,7 +56,11 @@
     </div>
   </div>
   {% if item.technical_review.thin_zone.detected %}
+  {% if item.support_color_hex and not item.support_color_is_multicolor %}
+  <p class="muted">Contour atelier prévu pour la couleur support {{ item.support_color_hex|upper }}.</p>
+  {% else %}
   <p><strong>Couleur du support obligatoire.</strong></p>
+  {% endif %}
   {% endif %}
 </div>
 {% endif %}
