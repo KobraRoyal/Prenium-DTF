@@ -37,8 +37,9 @@ def test_member_cannot_access_owner_order_panels():
     assert detail.status_code == 200
     assert "Visuels" in html
     assert "Avancement" in html
-    assert "Expédition" not in html
-    assert "Facture" not in html
+    assert "Expédition" in html
+    assert "client-order-panel-billing" not in html
+    assert 'panel=billing"' not in html and "?panel=billing" not in html
 
     shipping = client.get(
         reverse(
@@ -52,7 +53,8 @@ def test_member_cannot_access_owner_order_panels():
             kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
         )
     )
-    assert shipping.status_code == 403
+    assert shipping.status_code == 200
+    assert "Expédition" in shipping.content.decode()
     assert billing.status_code == 403
 
 
@@ -103,6 +105,78 @@ def test_production_panel_shows_status_history():
     assert "Lancement atelier" in html
     assert 'hx-swap-oob="outerHTML:#client-order-breadcrumb"' in html
     assert "Avancement" in html
+
+
+@pytest.mark.django_db
+def test_owner_shipping_panel_and_order_summary_show_tracking():
+    from django.utils import timezone
+
+    from apps.shipping.models import Shipment
+
+    user = get_user_model().objects.create_user(email="ship-owner@example.com", password="pass")
+    customer = Customer.objects.create(name="Ship Owner")
+    CustomerMembership.objects.create(
+        customer=customer, user=user, role=CustomerMembership.Role.OWNER
+    )
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="10.00",
+        total_amount="10.00",
+    )
+    Shipment.objects.create(
+        order=order,
+        status=Shipment.Status.CREATED,
+        shipping_option_code="sendcloud:letter",
+        tracking_number="TRK-CLIENT-001",
+        tracking_url="https://tracking.example.test/TRK-CLIENT-001",
+        sendcloud_status_code="IN_TRANSIT",
+        sendcloud_status_message="En transit",
+        shipped_at=timezone.now(),
+        source="test",
+    )
+
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+
+    detail = client.get(
+        reverse(
+            "portal:client-order-detail",
+            kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
+        )
+    )
+    detail_html = detail.content.decode()
+    assert detail.status_code == 200
+    assert "Expédiée" in detail_html
+    assert "TRK-CLIENT-001" in detail_html
+    assert "Suivre le colis" in detail_html
+
+    shipping = client.get(
+        reverse(
+            "portal:client-order-panel-shipping",
+            kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
+        )
+    )
+    shipping_html = shipping.content.decode()
+    assert shipping.status_code == 200
+    assert "Votre commande est en route" in shipping_html
+    assert "TRK-CLIENT-001" in shipping_html
+    assert "Suivre mon colis" in shipping_html
+    assert "client-shipment-card--shipped" in shipping_html
+
+    production = client.get(
+        reverse(
+            "portal:client-order-panel-production",
+            kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
+        )
+    )
+    production_html = production.content.decode()
+    assert production.status_code == 200
+    assert "Commande expédiée" in production_html
+    assert "TRK-CLIENT-001" in production_html
+    assert "Suivre mon colis" in production_html
 
 
 @pytest.mark.django_db

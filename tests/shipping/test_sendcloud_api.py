@@ -6,7 +6,7 @@ from apps.production.services.workflow import ProductionWorkflowService
 from apps.shipping.models import Shipment
 from apps.shipping.services.sendcloud import (
     SendcloudAPIError,
-    SendcloudShipmentResult,
+    SendcloudOrderResult,
     ShipmentService,
 )
 from django.contrib.auth import get_user_model
@@ -131,25 +131,27 @@ class FakeSendcloudGateway:
     def __init__(self, *, should_fail: bool = False):
         self.should_fail = should_fail
 
-    def build_request_payload(self, *, order, shipment_request):
-        return {
-            "order_public_id": str(order.public_id),
-            "shipment_request": shipment_request,
-        }
+    def build_order_payload(self, *, order, shipment_request):
+        return [
+            {
+                "order_public_id": str(order.public_id),
+                "shipment_request": shipment_request,
+            }
+        ]
 
-    def create_shipment(self, *, payload):
+    def declare_order(self, *, payload):
         if self.should_fail:
             raise SendcloudAPIError("Carrier timeout")
-        return SendcloudShipmentResult(
-            shipment_id="sc-shipment-123",
-            parcel_id="383707309",
-            status_code="READY_TO_SEND",
-            status_message="Ready to send",
-            tracking_number="TRK-123456",
-            tracking_url="https://tracking.example.test/TRK-123456",
-            label_content=b"%PDF-1.4 fake label",
-            label_mime_type="application/pdf",
+        return SendcloudOrderResult(
+            sendcloud_order_id="sc-order-123",
+            order_id="order-ext-1",
+            order_number="order-ext-1",
+            status_code="DECLARED",
+            status_message="Declared in Sendcloud — awaiting label",
         )
+
+    def find_parcels_for_order_number(self, *, order_number: str):
+        return []
 
     def fetch_parcel(self, *, parcel_id: str):
         return {
@@ -190,8 +192,9 @@ def test_staff_with_permission_can_create_shipment(monkeypatched_shipment_servic
     payload = response.json()
     assert payload["order_public_id"] == str(order.public_id)
     assert payload["status"] == Shipment.Status.CREATED
-    assert payload["tracking_number"] == "TRK-123456"
-    assert payload["label"]["has_file"] is True
+    assert payload["sendcloud_order_id"] == "sc-order-123"
+    assert payload["tracking_number"] == ""
+    assert payload["label"]["has_file"] is False
     assert "panel.sendcloud.sc" not in str(payload)
 
 
@@ -216,7 +219,8 @@ def test_staff_with_permission_can_view_shipment_detail(monkeypatched_shipment_s
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
     assert payload["public_id"] == str(Shipment.objects.get(order=order).public_id)
-    assert payload["label"]["filename"].endswith(".pdf")
+    assert payload["sendcloud_order_id"] == "sc-order-123"
+    assert payload["label"]["has_file"] is False
     assert "secret" not in str(payload).lower()
     assert "file_path" not in str(payload)
 
@@ -336,6 +340,9 @@ def test_staff_can_sync_tracking(monkeypatched_shipment_service):
         format="json",
     )
     assert create_response.status_code == status.HTTP_201_CREATED
+    shipment = Shipment.objects.get(order=order)
+    shipment.sendcloud_parcel_id = "383707309"
+    shipment.save(update_fields=["sendcloud_parcel_id", "updated_at"])
 
     sync_response = client.post(
         shipment_sync_route(order.public_id),
@@ -368,8 +375,8 @@ def test_client_can_read_scoped_shipment_without_internal_ids(monkeypatched_ship
     response = client.get(client_shipment_route(customer.public_id, order.public_id))
     assert response.status_code == status.HTTP_200_OK
     body = response.json()
-    assert body["tracking_number"] == "TRK-123456"
-    assert body["carrier_status"]["message"] == "Ready to send"
+    assert body["tracking_number"] == ""
+    assert body["carrier_status"]["code"] == "DECLARED"
     assert "sendcloud_parcel" not in body
     assert "request_snapshot" not in body
 

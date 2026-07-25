@@ -96,7 +96,11 @@ from .views_staff_reviews import (
     StaffOrderUploadPreviewView,
     StaffOrderUploadReviewView,
 )
-from .views_staff_shipping import StaffOrderPanelShippingSyncView, StaffOrderPanelShippingView
+from .views_staff_shipping import (
+    StaffOrderPanelShippingSyncView,
+    StaffOrderPanelShippingView,
+    StaffOrderShipmentLabelDownloadView,
+)
 from .views_staff_uploads import (
     StaffOrderPanelDriveSyncView,
     StaffOrderPanelUploadsView,
@@ -490,6 +494,11 @@ urlpatterns = [
         "staff/orders/<uuid:order_public_id>/panels/shipping/sync/",
         StaffOrderPanelShippingSyncView.as_view(),
         name="staff-order-panel-shipping-sync",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/panels/shipping/label/",
+        StaffOrderShipmentLabelDownloadView.as_view(),
+        name="staff-order-shipment-label-download",
     ),
     path(
         "staff/orders/<uuid:order_public_id>/panels/shipping/",

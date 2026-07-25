@@ -15,7 +15,7 @@ Rapprocher le suivi colis de l’expérience e-commerce : état, multi-colis si 
 ## Hors périmètre
 - Transporteurs hors Sendcloud.
 - Étiquettes retour automatiques.
-- Webhooks Sendcloud signés (itération ultérieure).
+- ~~Webhooks Sendcloud signés (itération ultérieure).~~ → livré dans `sprint-17.1-sendcloud-webhooks-expedition.md`.
 
 ## Définition de done
 - [x] Service + Celery + tests mock / isolation client.

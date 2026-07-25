@@ -156,43 +156,37 @@ def order_htmx_tabs(context, variant):
                 ),
                 "group": 1,
             },
+            {
+                "slug": "shipping",
+                "label": "Expédition",
+                "url": reverse(
+                    "portal:client-order-panel-shipping",
+                    kwargs={
+                        "customer_public_id": cid,
+                        "order_public_id": oid,
+                    },
+                ),
+                "group": 1,
+            },
         ]
         if is_owner:
-            tabs.extend(
-                [
-                    {
-                        "slug": "shipping",
-                        "label": "Expédition",
-                        "url": reverse(
-                            "portal:client-order-panel-shipping",
-                            kwargs={
-                                "customer_public_id": cid,
-                                "order_public_id": oid,
-                            },
-                        ),
-                        "group": 1,
-                    },
-                    {
-                        "slug": "billing",
-                        "label": "Règlement",
-                        "url": reverse(
-                            "portal:client-order-panel-billing",
-                            kwargs={
-                                "customer_public_id": cid,
-                                "order_public_id": oid,
-                            },
-                        ),
-                        "group": 1,
-                    },
-                ]
+            tabs.append(
+                {
+                    "slug": "billing",
+                    "label": "Règlement",
+                    "url": reverse(
+                        "portal:client-order-panel-billing",
+                        kwargs={
+                            "customer_public_id": cid,
+                            "order_public_id": oid,
+                        },
+                    ),
+                    "group": 1,
+                }
             )
         tab_groups = [{"label": "", "tabs": tabs}]
         flat_tabs = _finalize_tab_state(tab_groups, panel_id, request)
-        if (
-            not is_owner
-            and request is not None
-            and request.GET.get("panel") in {"shipping", "billing"}
-        ):
+        if not is_owner and request is not None and request.GET.get("panel") == "billing":
             for tab in flat_tabs:
                 tab["active"] = tab.get("slug") == "uploads"
             if flat_tabs:

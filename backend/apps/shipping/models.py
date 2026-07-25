@@ -57,11 +57,16 @@ class Shipment(BaseModel):
         related_name="updated_shipments",
     )
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    sendcloud_order_id = models.CharField(max_length=255, blank=True)
     sendcloud_shipment_id = models.CharField(max_length=255, blank=True)
     sendcloud_parcel_id = models.CharField(max_length=255, blank=True)
     sendcloud_status_code = models.CharField(max_length=64, blank=True)
     sendcloud_status_message = models.CharField(max_length=255, blank=True)
-    shipping_option_code = models.CharField(max_length=128)
+    shipping_option_code = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Indication transporteur / service (optionnelle) ; l’étiquette est créée dans Sendcloud.",
+    )
     contract_id = models.PositiveIntegerField(null=True, blank=True)
     tracking_number = models.CharField(max_length=255, blank=True)
     tracking_url = models.CharField(max_length=2048, blank=True)
@@ -84,6 +89,7 @@ class Shipment(BaseModel):
         ]
         indexes = [
             models.Index(fields=("status", "updated_at")),
+            models.Index(fields=("sendcloud_order_id",)),
             models.Index(fields=("sendcloud_parcel_id",)),
             models.Index(fields=("order", "status")),
         ]

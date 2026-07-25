@@ -42,6 +42,35 @@
       <dt>Règlement</dt>
       <dd>{{ order.billing_mode|human_status }}</dd>
     </div>
+    {% if shipment and shipment.shipped_at %}
+    <div class="client-order-summary__fact client-order-summary__fact--shipping">
+      <dt>Expédition</dt>
+      <dd>
+        <span class="badge is-success">Expédiée</span>
+        {% if shipment.tracking_number %}
+        <span class="client-order-summary__tracking">{{ shipment.tracking_number }}</span>
+        {% endif %}
+      </dd>
+      {% if shipment.tracking_url %}
+      <dd class="client-order-summary__shipping-action">
+        <a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a>
+      </dd>
+      {% endif %}
+    </div>
+    {% elif shipment and shipment.tracking_number %}
+    <div class="client-order-summary__fact client-order-summary__fact--shipping">
+      <dt>Expédition</dt>
+      <dd>
+        <span class="badge is-info">Suivi prêt</span>
+        <span class="client-order-summary__tracking">{{ shipment.tracking_number }}</span>
+      </dd>
+      {% if shipment.tracking_url %}
+      <dd class="client-order-summary__shipping-action">
+        <a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a>
+      </dd>
+      {% endif %}
+    </div>
+    {% endif %}
   </dl>
   {% if order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
   <div class="client-order-summary__alert">

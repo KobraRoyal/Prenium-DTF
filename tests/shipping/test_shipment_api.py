@@ -7,7 +7,7 @@ from apps.shipping import views as shipping_views
 from apps.shipping.models import Shipment
 from apps.shipping.services.sendcloud import (
     SendcloudAPIError,
-    SendcloudShipmentResult,
+    SendcloudOrderResult,
     ShipmentService,
 )
 from django.contrib.auth import get_user_model
@@ -96,26 +96,23 @@ class FakeSendcloudGateway:
         self.should_fail = should_fail
         self.last_payload = None
 
-    def build_request_payload(self, *, order, shipment_request):
+    def build_order_payload(self, *, order, shipment_request):
         self.last_payload = {
             "order_public_id": str(order.public_id),
             "shipment_request": shipment_request,
         }
-        return self.last_payload
+        return [self.last_payload]
 
-    def create_shipment(self, *, payload):
+    def declare_order(self, *, payload):
         self.last_payload = payload
         if self.should_fail:
             raise SendcloudAPIError("Carrier unavailable.")
-        return SendcloudShipmentResult(
-            shipment_id="sc-shipment-123",
-            parcel_id="383707309",
-            status_code="READY_TO_SEND",
-            status_message="Ready to send",
-            tracking_number="3SYZXG8498635",
-            tracking_url="https://tracking.example.test/parcel/3SYZXG8498635",
-            label_content=b"%PDF-1.4 fake label",
-            label_mime_type="application/pdf",
+        return SendcloudOrderResult(
+            sendcloud_order_id="sc-order-123",
+            order_id="order-ext-1",
+            order_number="order-ext-1",
+            status_code="DECLARED",
+            status_message="Declared in Sendcloud — awaiting label",
         )
 
 
@@ -174,9 +171,10 @@ def test_staff_with_permissions_can_create_shipment(monkeypatch):
     payload = response.json()
     assert payload["order_public_id"] == str(order.public_id)
     assert payload["status"] == Shipment.Status.CREATED
-    assert payload["tracking_number"] == "3SYZXG8498635"
-    assert payload["tracking_url"] == "https://tracking.example.test/parcel/3SYZXG8498635"
-    assert payload["label"]["has_file"] is True
+    assert payload["sendcloud_order_id"] == "sc-order-123"
+    assert payload["tracking_number"] == ""
+    assert payload["tracking_url"] == ""
+    assert payload["label"]["has_file"] is False
 
 
 @pytest.mark.django_db
@@ -282,5 +280,6 @@ def test_staff_with_view_permission_can_consult_existing_shipment(monkeypatch):
 
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
-    assert payload["sendcloud_status"]["code"] == "READY_TO_SEND"
-    assert payload["label"]["has_file"] is True
+    assert payload["sendcloud_status"]["code"] == "DECLARED"
+    assert payload["label"]["has_file"] is False
+    assert payload["sendcloud_order_id"] == "sc-order-123"

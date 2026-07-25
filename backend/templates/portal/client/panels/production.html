@@ -10,7 +10,7 @@
   {% if status_history %}
   <ol class="client-status-timeline" aria-label="Historique des statuts de la commande">
     {% for event in status_history %}
-    <li class="client-status-timeline__item">
+    <li class="client-status-timeline__item{% if event.tracking_url %} client-status-timeline__item--tracking{% endif %}">
       <div class="client-status-timeline__marker" aria-hidden="true"></div>
       <div class="client-status-timeline__content">
         <div class="client-status-timeline__head">
@@ -19,6 +19,11 @@
         </div>
         {% if event.detail %}
         <p class="muted text-sm mb-0">{{ event.detail }}</p>
+        {% endif %}
+        {% if event.tracking_url %}
+        <p class="client-status-timeline__tracking mb-0">
+          <a class="ui-btn ui-btn-secondary" href="{{ event.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre mon colis</a>
+        </p>
         {% endif %}
       </div>
     </li>

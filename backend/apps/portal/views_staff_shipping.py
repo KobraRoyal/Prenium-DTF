@@ -9,6 +9,21 @@ from apps.portal.htmx import with_toast
 from apps.portal.views_common import badge_tone_for_status, shipment_service, status_label
 from apps.portal.views_staff import StaffOrderContextMixin
 from apps.production.models import ProductionJob
+from apps.shipping.views import build_label_download_response
+
+_FORM_KEYS = (
+    "recipient_name",
+    "recipient_company_name",
+    "recipient_email",
+    "recipient_phone_number",
+    "recipient_country_code",
+    "recipient_city",
+    "recipient_postal_code",
+    "recipient_address_line_1",
+    "recipient_address_line_2",
+    "recipient_house_number",
+    "parcel_weight_value",
+)
 
 
 class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
@@ -22,27 +37,8 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
     def _form_data(self, request):
         customer = self.order.customer
         if request.method == "POST":
-            return {
-                key: request.POST.get(key, "")
-                for key in (
-                    "shipping_option_code",
-                    "contract_id",
-                    "recipient_name",
-                    "recipient_company_name",
-                    "recipient_email",
-                    "recipient_phone_number",
-                    "recipient_country_code",
-                    "recipient_city",
-                    "recipient_postal_code",
-                    "recipient_address_line_1",
-                    "recipient_address_line_2",
-                    "recipient_house_number",
-                    "parcel_weight_value",
-                )
-            }
+            return {key: request.POST.get(key, "") for key in _FORM_KEYS}
         return {
-            "shipping_option_code": "",
-            "contract_id": "",
             "recipient_name": customer.name,
             "recipient_company_name": customer.name,
             "recipient_email": customer.billing_email,
@@ -66,8 +62,7 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
             "shipment": shipment,
             "production_job": production_job,
             "shipping_ready": bool(
-                production_job
-                and production_job.status == ProductionJob.Status.READY_TO_SHIP
+                production_job and production_job.status == ProductionJob.Status.READY_TO_SHIP
             ),
             "can_create_shipment": request.user.has_perm("shipping.create_shipment"),
             "form_data": self._form_data(request),
@@ -82,19 +77,13 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
             actor=request.user,
             source="staff_portal",
         )
-        return render(
-            request,
-            self.template_name,
-            self._panel_context(request, shipment=shipment),
-        )
+        return render(request, self.template_name, self._panel_context(request, shipment=shipment))
 
     def post(self, request, order_public_id):
         if not request.user.has_perm("shipping.create_shipment"):
             raise PermissionDenied
 
         payload = {
-            "shipping_option_code": request.POST.get("shipping_option_code", ""),
-            "contract_id": request.POST.get("contract_id") or None,
             "recipient": {
                 "name": request.POST.get("recipient_name", ""),
                 "address_line_1": request.POST.get("recipient_address_line_1", ""),
@@ -107,13 +96,7 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
                 "address_line_2": request.POST.get("recipient_address_line_2", ""),
                 "phone_number": request.POST.get("recipient_phone_number", ""),
             },
-            "parcel": {
-                "weight": {
-                    "value": request.POST.get("parcel_weight_value", ""),
-                    "unit": "kg",
-                }
-            },
-            "label_details": {"mime_type": "application/pdf", "dpi": 72},
+            "parcel": {"weight": {"value": request.POST.get("parcel_weight_value", ""), "unit": "kg"}},
         }
         form_error = ""
         try:
@@ -138,7 +121,7 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
         )
         if form_error:
             return with_toast(response, form_error, "error")
-        return with_toast(response, "Expedition creee.", "success")
+        return with_toast(response, "Commande declaree dans Sendcloud.", "success")
 
 
 class StaffOrderPanelShippingSyncView(StaffOrderContextMixin, View):
@@ -164,20 +147,35 @@ class StaffOrderPanelShippingSyncView(StaffOrderContextMixin, View):
                 actor=request.user,
                 source="staff_portal",
             )
-            form_error = "; ".join(exc.messages)
             response = render(
                 request,
                 self.template_name,
-                panel._panel_context(request, shipment=shipment, form_error=form_error),
+                panel._panel_context(request, shipment=shipment, form_error="; ".join(exc.messages)),
             )
-            return with_toast(response, form_error, "error")
+            return with_toast(response, "; ".join(exc.messages), "error")
 
         if _order is None or shipment is None:
             raise Http404
-
         response = render(
             request,
             self.template_name,
             panel._panel_context(request, shipment=shipment),
         )
         return with_toast(response, "Suivi Sendcloud actualise.", "success")
+
+
+class StaffOrderShipmentLabelDownloadView(StaffOrderContextMixin, View):
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm("shipping.view_shipment"):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, order_public_id):
+        _order, shipment = shipment_service.download_staff_shipment_label(
+            order_public_id=self.order.public_id,
+            actor=request.user,
+            source="staff_portal",
+        )
+        if shipment is None:
+            raise Http404
+        return build_label_download_response(shipment)

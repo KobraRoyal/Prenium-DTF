@@ -82,33 +82,30 @@ class FakeSendcloudGateway:
         self.fail_create = fail_create
         self.last_payload = None
 
-    def build_request_payload(self, *, order, shipment_request):
+    def build_order_payload(self, *, order, shipment_request):
         self.last_payload = {
             "order_public_id": str(order.public_id),
             "shipment_request": shipment_request,
         }
-        return self.last_payload
+        return [self.last_payload]
 
-    def create_shipment(self, *, payload):
+    def declare_order(self, *, payload):
         self.last_payload = payload
         if self.fail_create:
             raise SendcloudAPIError("Carrier unavailable.")
-        from apps.shipping.services.sendcloud import SendcloudShipmentResult
+        from apps.shipping.services.sendcloud import SendcloudOrderResult
 
-        return SendcloudShipmentResult(
-            shipment_id="shipment-123",
-            parcel_id="383707309",
-            status_code="READY_TO_SEND",
-            status_message="Ready to send",
-            tracking_number="3SYZXG8498635",
-            tracking_url="https://tracking.example.test/parcel/3SYZXG8498635",
-            label_content=b"%PDF-1.4 fake label",
-            label_mime_type="application/pdf",
+        return SendcloudOrderResult(
+            sendcloud_order_id="sc-order-123",
+            order_id="order-ext-1",
+            order_number="order-ext-1",
+            status_code="DECLARED",
+            status_message="Declared in Sendcloud — awaiting label",
         )
 
 
 @pytest.mark.django_db
-def test_create_shipment_stores_label_tracking_and_audit():
+def test_create_shipment_declares_order_without_label():
     staff_user = get_user_model().objects.create_user(
         email="staff@example.com",
         password="pass",
@@ -127,14 +124,12 @@ def test_create_shipment_stores_label_tracking_and_audit():
     )
 
     assert shipment.status == Shipment.Status.CREATED
-    assert shipment.sendcloud_shipment_id == "shipment-123"
-    assert shipment.sendcloud_parcel_id == "383707309"
-    assert shipment.tracking_number == "3SYZXG8498635"
-    assert shipment.tracking_url == "https://tracking.example.test/parcel/3SYZXG8498635"
-    assert shipment.label_file.name.endswith(".pdf")
-    assert shipment.label_mime_type == "application/pdf"
+    assert shipment.sendcloud_order_id == "sc-order-123"
+    assert shipment.sendcloud_parcel_id == ""
+    assert shipment.tracking_number == ""
+    assert not shipment.label_file
     assert shipment.last_error_message == ""
-    assert gateway.last_payload["order_public_id"] == str(order.public_id)
+    assert gateway.last_payload[0]["order_public_id"] == str(order.public_id)
     assert AuditLogEntry.objects.filter(
         action="shipping.shipment_created",
         target_public_id=shipment.public_id,

@@ -14,7 +14,7 @@
     {% elif production_job and production_job.status == "in_progress" %}
     Poursuivre l’atelier ; <strong>Scan atelier</strong> pour les changements de statut.
     {% elif production_job and production_job.status == "ready_to_ship" %}
-    Préparer l’<strong>Expédition</strong> (étiquette / envoi).
+    Préparer l’<strong>Expédition</strong> (déclarer dans Sendcloud).
     {% elif production_job and production_job.status == "blocked" %}
     Lever le blocage depuis <strong>Production</strong> avant la suite du flux.
     {% elif production_job and production_job.status == "completed" %}

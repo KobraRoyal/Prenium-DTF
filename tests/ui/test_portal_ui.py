@@ -403,6 +403,7 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert "Terminez la production avant de créer l’envoi" in shipping_html
     assert "Consultation seule" in shipping_html
     assert "Générer l’étiquette" not in shipping_html
+    assert "Déclarer dans Sendcloud" not in shipping_html
     assert scan_panel_response.status_code == 200
     scan_html = scan_panel_response.content.decode()
     assert "Scannez la référence OF" in scan_html
@@ -456,7 +457,7 @@ def test_shipping_panel_is_prefilled_only_when_workflow_and_permission_allow_cre
     assert 'value="logistique@example.com"' in html
     assert 'value="Rue des Imprimeurs"' in html
     assert 'value="59000"' in html
-    assert "Générer l’étiquette" in html
+    assert "Déclarer dans Sendcloud" in html
 
     invalid_response = client.post(
         panel_url,
@@ -468,7 +469,7 @@ def test_shipping_panel_is_prefilled_only_when_workflow_and_permission_allow_cre
             "recipient_city": "Lille",
             "recipient_postal_code": "59000",
             "recipient_address_line_1": "Rue des Imprimeurs",
-            "recipient_house_number": "12",
+            "recipient_house_number": "",
             "parcel_weight_value": "1.25",
         },
         HTTP_HX_REQUEST="true",

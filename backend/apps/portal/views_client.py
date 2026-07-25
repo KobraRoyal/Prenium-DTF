@@ -188,11 +188,17 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
 
     def get(self, request, customer_public_id, order_public_id):
         order = self.get_order_or_404(order_public_id)
+        shipment = None
+        try:
+            shipment = order.shipment
+        except ObjectDoesNotExist:
+            shipment = None
         return render(
             request,
             self.template_name,
             self.client_order_context(
                 order=order,
+                shipment=shipment,
                 active_panel=request.GET.get("panel", ""),
             )
             | {
@@ -265,7 +271,7 @@ class ClientOrderPanelProductionView(ClientOrderContextMixin, View):
         )
 
 
-class ClientOrderPanelShippingView(ClientOwnerRequiredMixin, ClientOrderContextMixin, View):
+class ClientOrderPanelShippingView(ClientOrderContextMixin, View):
     template_name = "portal/client/panels/shipping.html"
 
     def get(self, request, customer_public_id, order_public_id):

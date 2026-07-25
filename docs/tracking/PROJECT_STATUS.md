@@ -172,6 +172,7 @@
 - [x] Sprint 15 — Durcissement sécurité prod (`docs/sprints/sprint-15-durcissement-securite-prod.md`) — rate limit + audit/login + `SECURITY_BASELINE.md`
 - [x] Sprint 16 — PDF métiers facture + OF (`docs/sprints/sprint-16-pdf-documents-metier.md`) — ReportLab + lien staff panneau production
 - [x] Sprint 17 — Logistique Sendcloud avancée (`docs/sprints/sprint-17-logistique-sendcloud-avancee.md`) — sync tracking API + client + Celery
+- [x] Sprint 17.1 — Webhooks Sendcloud + notification expédition (`docs/sprints/sprint-17.1-sendcloud-webhooks-expedition.md`)
 - [x] Sprint 18 — Pricing & B2B avancé (`docs/sprints/sprint-18-pricing-b2b-avance.md`) — tests encours + email tarifé + doc
 
 ## Documentation produit & UX (suivi)
