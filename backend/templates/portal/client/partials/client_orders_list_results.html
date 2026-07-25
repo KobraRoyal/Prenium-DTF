@@ -34,7 +34,9 @@
   <p class="muted">Aucune commande ne correspond à « {{ search_query }} ».</p>
 </div>
 {% else %}
-{% if b2b_order_projects_globally_enabled %}
+{% if b2b_order_projects_globally_enabled and customer.default_billing_mode == "immediate" %}
+{% url 'portal:client-gang-sheet-list-create' customer_public_id=customer.public_id as create_order_url %}
+{% elif b2b_order_projects_globally_enabled %}
 {% url 'portal:client-order-project-create' customer_public_id=customer.public_id as create_order_url %}
 {% else %}
 {% url 'portal:client-checkout' customer_public_id=customer.public_id as create_order_url %}

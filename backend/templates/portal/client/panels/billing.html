@@ -1,54 +1,20 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="billing" %}
 <div class="panel client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}">
-  <header class="panel-head panel-head--compact client-billing-head">
-    <div>
-      <h3 class="font-display text-lg">Règlement</h3>
-      <p class="client-order-panel__lead">
-        {% if payment and payment.status == "captured" and invoice %}
-        Paiement confirmé. Téléchargez votre justificatif ; la facture fiscale sera émise via RCA.
-        {% elif show_pay_cta %}
-        Votre commande est tarifée. Réglez maintenant pour lancer la production.
-        {% elif order.billing_mode == "deferred" %}
-        Facturation différée selon votre encours. Aucun paiement en ligne ici.
-        {% elif order.billing_mode == "immediate" and order.pricing_status != "priced" %}
-        Paiement comptant après calcul du prix par l’atelier.
-        {% elif invoice %}
-        Justificatif de paiement disponible. La facture fiscale est gérée hors plateforme (RCA).
-        {% elif payment %}
-        Suivi du paiement en cours pour cette commande.
-        {% else %}
-        Le détail de règlement apparaîtra dès que l’atelier aura finalisé le tarif.
-        {% endif %}
-      </p>
-    </div>
-    <div class="client-billing-head__status">
-      <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
-      {% if payment and payment.status == "captured" %}
-      <span class="badge is-success">Payée</span>
-      {% elif order.pricing_status == "priced" %}
-      <span class="badge is-success">Tarifée</span>
-      {% elif order.pricing_status == "failed" %}
-      <span class="badge is-danger">Tarif en échec</span>
-      {% else %}
-      <span class="badge is-warning">Tarif en attente</span>
-      {% endif %}
-    </div>
-  </header>
-
   {% if payment and payment.status == "captured" and invoice %}
   <section class="client-billing-success" aria-labelledby="client-billing-success-title">
     <div class="client-billing-success__intro">
       <span class="client-billing-success__mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 6 9 17l-5-5" />
         </svg>
       </span>
       <div class="client-billing-success__copy">
-        <h4 id="client-billing-success-title">Paiement confirmé</h4>
+        <p class="client-billing-success__eyebrow">Paiement réussi</p>
+        <h3 id="client-billing-success-title">Merci, c’est confirmé</h3>
         <p>
-          {% if payment.provider == "paypal" %}PayPal{% elif payment.provider == "stripe" %}Carte bancaire{% else %}{{ payment.provider }}{% endif %}
-          · {{ payment.amount }} {{ payment.currency }}
+          {% if payment.provider == "paypal" %}PayPal{% elif payment.provider == "stripe" %}Carte bancaire{% else %}Paiement en ligne{% endif %}
+          · <strong>{{ payment.amount }}&nbsp;{{ payment.currency }}</strong>
           {% if payment.captured_at %}
           · {{ payment.captured_at|date:"d/m/Y · H:i" }}
           {% endif %}
@@ -56,17 +22,17 @@
       </div>
     </div>
 
-    <dl class="client-billing-success__meta" aria-label="Références de règlement">
+    <dl class="client-billing-success__meta" aria-label="Récapitulatif">
       <div>
-        <dt>Montant</dt>
-        <dd>{{ invoice.total_amount }} {{ invoice.currency }}</dd>
+        <dt>Montant réglé</dt>
+        <dd>{{ invoice.total_amount }}&nbsp;{{ invoice.currency }}</dd>
       </div>
       <div>
         <dt>Justificatif</dt>
         <dd><code>{{ invoice.invoice_number }}</code></dd>
       </div>
       <div>
-        <dt>Confirmé</dt>
+        <dt>Confirmé le</dt>
         <dd>{% if payment.captured_at %}{{ payment.captured_at|date:"d/m/Y" }}{% elif invoice.paid_at %}{{ invoice.paid_at|date:"d/m/Y" }}{% else %}—{% endif %}</dd>
       </div>
     </dl>
@@ -80,11 +46,11 @@
       </a>
       <a
         class="ui-btn ui-btn-secondary"
-        href="{% url 'portal:client-order-panel-production' customer_public_id=order.customer.public_id order_public_id=order.public_id %}"
+        href="{% url 'portal:client-order-detail' customer_public_id=order.customer.public_id order_public_id=order.public_id %}?panel=production"
         hx-get="{% url 'portal:client-order-panel-production' customer_public_id=order.customer.public_id order_public_id=order.public_id %}"
         hx-target="#client-order-panel"
         hx-swap="innerHTML"
-        hx-push-url="true"
+        hx-push-url="{% url 'portal:client-order-detail' customer_public_id=order.customer.public_id order_public_id=order.public_id %}?panel=production"
         hx-indicator="#portal-htmx-indicator"
       >
         Suivre la production
@@ -92,13 +58,44 @@
     </div>
 
     <p class="client-billing-success__next" role="status">
-      Prochaine étape : l’atelier peut lancer la fabrication.
-      La facture fiscale sera émise séparément via RCA.
+      L’atelier peut lancer la fabrication. La facture fiscale sera émise séparément via RCA.
     </p>
   </section>
   {% else %}
 
-  <section class="client-billing-overview" aria-label="Synthèse du règlement">
+  <header class="panel-head panel-head--compact client-billing-head">
+    <div>
+      <h3 class="font-display text-lg">Règlement</h3>
+      <p class="client-order-panel__lead">
+        {% if show_pay_cta %}
+        Votre commande est prête. Réglez pour lancer la production.
+        {% elif order.billing_mode == "deferred" %}
+        Facturation différée selon votre encours. Aucun paiement en ligne ici.
+        {% elif order.billing_mode == "immediate" and order.pricing_status != "priced" %}
+        Le paiement s’affichera dès que le prix sera calculé.
+        {% elif invoice %}
+        Justificatif disponible. La facture fiscale est gérée hors plateforme (RCA).
+        {% elif payment %}
+        Suivi du paiement en cours pour cette commande.
+        {% else %}
+        Le détail apparaîtra dès que le tarif sera disponible.
+        {% endif %}
+      </p>
+    </div>
+    <div class="client-billing-head__status">
+      {% if payment and payment.status == "captured" %}
+      <span class="badge is-success">Payée</span>
+      {% elif order.pricing_status == "priced" %}
+      <span class="badge is-success">Tarifée</span>
+      {% elif order.pricing_status == "failed" %}
+      <span class="badge is-danger">Tarif en échec</span>
+      {% else %}
+      <span class="badge is-warning">Tarif en attente</span>
+      {% endif %}
+    </div>
+  </header>
+
+  <section class="client-billing-overview" aria-label="Synthèse">
     <article>
       <span>Montant</span>
       <strong>
@@ -111,22 +108,11 @@
       <small>{{ order.pricing_status|human_status }}</small>
     </article>
     <article>
-      <span>Mode</span>
-      <strong>{{ order.billing_mode|human_status }}</strong>
-      <small>
-        {% if order.billing_mode == "deferred" %}
-        Cycle client / encours
-        {% else %}
-        Paiement en ligne après tarification
-        {% endif %}
-      </small>
-    </article>
-    <article>
       <span>Paiement</span>
       <strong>{% if payment %}{{ payment.status|human_status }}{% else %}Non démarré{% endif %}</strong>
       <small>
         {% if payment %}
-          {% if payment.provider == "stripe" %}Carte / Stripe{% elif payment.provider == "paypal" %}PayPal{% else %}{{ payment.provider }}{% endif %}
+          {% if payment.provider == "stripe" %}Carte bancaire{% elif payment.provider == "paypal" %}PayPal{% else %}{{ payment.provider }}{% endif %}
           · {{ payment.amount }} {{ payment.currency }}
         {% else %}
           Aucune transaction
@@ -142,7 +128,7 @@
         {% elif invoice %}
         {{ invoice.status|human_status }}
         {% elif order.billing_mode == "deferred" %}
-        Facture périodique (RCA / encours)
+        Facture périodique (RCA)
         {% else %}
         Après confirmation du paiement
         {% endif %}
@@ -166,7 +152,7 @@
   </div>
   {% elif order.billing_mode == "immediate" and order.pricing_status != "priced" %}
   <div class="alert alert--info client-billing-note" role="status">
-    <p class="m-0">Le bouton de paiement apparaîtra dès que l’atelier aura calculé le prix.</p>
+    <p class="m-0">Le bouton de paiement apparaîtra dès que le prix sera calculé.</p>
   </div>
   {% elif order.billing_mode != "deferred" and settlement_method == "wire_transfer" and not invoice and not show_pay_cta %}
   <div class="alert alert--info client-billing-note" role="status">
@@ -186,47 +172,85 @@
         <strong>{{ order.total_amount }} {{ order.currency }}</strong>
       </p>
     </div>
-
-    <form
-      method="post"
-      action="{% url 'portal:client-order-payment-initiate' customer_public_id=order.customer.public_id order_public_id=order.public_id %}"
-      class="ui-form-stack client-billing-pay__form"
-      data-submit-loading
-    >
-      {% csrf_token %}
-      <fieldset class="b2b-settlement-choice">
-        <legend>Moyen de paiement</legend>
-        <div class="b2b-settlement-choice__options" role="radiogroup" aria-label="Moyen de paiement">
-          {% for provider in payment_providers %}
-          <label class="b2b-settlement-choice__option">
-            <input
-              type="radio"
-              name="provider"
-              value="{{ provider.id }}"
-              {% if online_provider == provider.id or payment_providers|length == 1 %}checked{% endif %}
-              required
-            >
-            <span>
-              <strong>{{ provider.label }}</strong>
-              <small>
-                {% if provider.id == "stripe" %}
-                Paiement sécurisé par carte bancaire.
-                {% elif provider.id == "paypal" %}
-                Paiement sécurisé via votre compte PayPal.
-                {% else %}
-                Paiement en ligne sécurisé.
-                {% endif %}
-              </small>
-            </span>
-          </label>
-          {% endfor %}
-        </div>
-      </fieldset>
-      <div class="client-billing-pay__actions">
-        <button type="submit" class="ui-btn ui-btn-primary">Payer maintenant</button>
-      </div>
-    </form>
+    <div class="client-billing-pay__actions">
+      <button
+        type="button"
+        class="ui-btn ui-btn-primary"
+        data-dialog-open="pay-order-dialog-{{ order.public_id }}"
+        aria-haspopup="dialog"
+      >
+        Payer maintenant
+      </button>
+    </div>
   </section>
+
+  <dialog
+    class="b2b-confirm-dialog client-billing-pay-dialog"
+    id="pay-order-dialog-{{ order.public_id }}"
+    aria-labelledby="pay-order-title-{{ order.public_id }}"
+    {% if open_pay_dialog %}data-dialog-auto-open{% endif %}
+  >
+    <div class="b2b-confirm-dialog__shell client-billing-pay-dialog__shell">
+      <div class="b2b-confirm-dialog__content">
+        <p class="client-billing-pay-dialog__eyebrow">Paiement sécurisé</p>
+        <h2 id="pay-order-title-{{ order.public_id }}">Confirmer le règlement</h2>
+        <p class="b2b-confirm-dialog__lead">
+          Montant à régler :
+          <strong>{{ order.total_amount }}&nbsp;{{ order.currency }}</strong>
+        </p>
+        <p class="muted text-sm m-0">
+          Vous serez redirigé vers le prestataire de paiement, puis ramené ici une fois le règlement confirmé.
+        </p>
+      </div>
+      <form
+        method="post"
+        action="{% url 'portal:client-order-payment-initiate' customer_public_id=order.customer.public_id order_public_id=order.public_id %}"
+        class="ui-form-stack client-billing-pay__form"
+        data-submit-loading
+      >
+        {% csrf_token %}
+        {% if payment_providers|length > 1 %}
+        <fieldset class="b2b-settlement-choice">
+          <legend>Moyen de paiement</legend>
+          <div class="b2b-settlement-choice__options" role="radiogroup" aria-label="Moyen de paiement">
+            {% for provider in payment_providers %}
+            <label class="b2b-settlement-choice__option">
+              <input
+                type="radio"
+                name="provider"
+                value="{{ provider.id }}"
+                {% if online_provider == provider.id or payment_providers|length == 1 %}checked{% endif %}
+                required
+              >
+              <span>
+                <strong>{{ provider.label }}</strong>
+                <small>
+                  {% if provider.id == "stripe" %}
+                  Carte bancaire sécurisée.
+                  {% elif provider.id == "paypal" %}
+                  Compte PayPal sécurisé.
+                  {% else %}
+                  Paiement en ligne sécurisé.
+                  {% endif %}
+                </small>
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        {% else %}
+        <input type="hidden" name="provider" value="{{ payment_providers.0.id }}">
+        <p class="client-billing-pay-dialog__provider muted text-sm m-0">
+          Via {{ payment_providers.0.label }}.
+        </p>
+        {% endif %}
+        <div class="b2b-confirm-dialog__actions">
+          <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+          <button type="submit" class="ui-btn ui-btn-primary">Continuer vers le paiement</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
   {% endif %}
 
   {% if payment %}
@@ -241,9 +265,9 @@
         <dd>{{ payment.amount }} {{ payment.currency }}</dd>
       </div>
       <div>
-        <dt>Fournisseur</dt>
+        <dt>Canal</dt>
         <dd>
-          {% if payment.provider == "stripe" %}Carte / Stripe{% elif payment.provider == "paypal" %}PayPal{% else %}{{ payment.provider }}{% endif %}
+          {% if payment.provider == "stripe" %}Carte bancaire{% elif payment.provider == "paypal" %}PayPal{% else %}{{ payment.provider }}{% endif %}
         </dd>
       </div>
       {% if payment.captured_at %}

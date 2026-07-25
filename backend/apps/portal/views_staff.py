@@ -107,6 +107,12 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
             drive_folder.google_drive_folder_url() if drive_folder is not None else None
         )
         staff_order_focus = atelier_dashboard_service.build_order_focus(order=self.order)
+        latest_payment = (
+            self.order.payments.order_by("-created_at").only("status", "provider").first()
+        )
+        order_payment_captured = bool(
+            latest_payment is not None and latest_payment.status == "captured"
+        )
         return render(
             request,
             self.template_name,
@@ -115,6 +121,7 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
                 "production_job": production_job,
                 "order_drive_url": order_drive_url,
                 "staff_order_focus": staff_order_focus,
+                "order_payment_captured": order_payment_captured,
                 "can_price_order": can_price_order,
                 "can_delete_order": can_delete_order,
                 "can_delete_perm": can_delete_perm,

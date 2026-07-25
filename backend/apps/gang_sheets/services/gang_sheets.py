@@ -798,7 +798,7 @@ class GangSheetService:
         return locked
 
     @transaction.atomic
-    def create_order_project(self, *, sheet, actor, source="client_portal"):
+    def create_order_project(self, *, sheet, actor, source="client_portal", quantity=1):
         """Transforme une planche validée en un projet contenant uniquement son PDF final."""
         locked = GangSheet.objects.select_for_update().get(pk=sheet.pk)
         if locked.status != GangSheet.Status.VALIDATED or not locked.final_file:
@@ -806,6 +806,10 @@ class GangSheetService:
                 "VALIDATED_SHEET_REQUIRED",
                 "Validez la planche avant de préparer la commande.",
             )
+        sheet_quantity = self._bounded_positive_int(
+            quantity,
+            label="quantité d'exemplaires",
+        )
         transaction.on_commit(
             lambda: self.drive_sync.schedule_sync(
                 sheet=locked,
@@ -814,7 +818,16 @@ class GangSheetService:
             )
         )
         if locked.project_id:
-            return locked.project
+            project = locked.project
+            item = project.items.order_by("sort_order", "created_at").first()
+            if (
+                item is not None
+                and item.client_confirmed_asset_version_id is None
+                and item.quantity != sheet_quantity
+            ):
+                item.quantity = sheet_quantity
+                item.save(update_fields=["quantity", "updated_at"])
+            return project
 
         project = self.projects.create_project(
             customer=locked.customer,
@@ -835,7 +848,7 @@ class GangSheetService:
                 "name": f"{locked.name} — planche finale",
                 "width_mm": locked.width_mm,
                 "height_mm": locked.height_mm,
-                "quantity": 1,
+                "quantity": sheet_quantity,
                 "rotation_allowed": False,
                 "individual_cutting": False,
             },
@@ -877,6 +890,7 @@ class GangSheetService:
             metadata={
                 "project_public_id": str(project.public_id),
                 "asset_public_id": str(version.asset.public_id),
+                "quantity": sheet_quantity,
             },
         )
         return self.projects.get_customer_project(

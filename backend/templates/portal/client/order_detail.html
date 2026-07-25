@@ -10,6 +10,11 @@
 {% if request.GET.checkout == "success" %}
 <div class="dui-alert dui-alert-success mb-4" role="status">Commande transmise. Vos visuels sont en file de traitement.</div>
 {% endif %}
+{% if request.GET.paid == "1" %}
+<div class="dui-alert dui-alert-success mb-4" role="status">Paiement confirmé. Votre justificatif est disponible dans l’onglet Règlement.</div>
+{% elif request.GET.cancelled == "1" %}
+<div class="dui-alert dui-alert-info mb-4" role="status">Paiement annulé. Vous pouvez réessayer depuis l’onglet Règlement.</div>
+{% endif %}
 
 <section class="card client-order-summary" aria-label="Résumé de la commande">
   {% client_order_refs order %}

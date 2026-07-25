@@ -147,7 +147,7 @@ def test_checkout_of_validated_gang_sheet_keeps_the_generated_hd_pdf(settings):
     item.refresh_from_db()
     project.refresh_from_db()
     assert project.status == B2BOrderProject.Status.READY_TO_SUBMIT
-    assert item.quantity == 1
+    assert item.quantity == 99
     assert item.width_mm == sheet.width_mm
     assert item.height_mm == sheet.height_mm
 

@@ -2,7 +2,10 @@ from django import template
 from django.urls import reverse
 
 from apps.accounts.services.access import AccessScopeService
-from apps.b2b_order_projects.permissions import b2b_order_projects_enabled_for_customer
+from apps.b2b_order_projects.permissions import (
+    b2b_order_projects_enabled_for_customer,
+    customer_requires_gang_sheet_orders,
+)
 from apps.core.public_refs import short_public_ref
 from apps.orders.references import order_client_reference, project_client_reference
 
@@ -60,6 +63,7 @@ def portal_navigation_access(context) -> dict[str, object]:
         "customer_name": "",
         "customer_public_id": "",
         "project_creation_enabled": False,
+        "cash_checkout_requires_gang_sheet": False,
         "role_label": "",
     }
     request = context.get("request")
@@ -107,6 +111,9 @@ def portal_navigation_access(context) -> dict[str, object]:
         "customer_public_id": customer_public_id,
         "project_creation_enabled": bool(
             customer is not None and b2b_order_projects_enabled_for_customer(customer)
+        ),
+        "cash_checkout_requires_gang_sheet": bool(
+            customer is not None and customer_requires_gang_sheet_orders(customer)
         ),
         "role_label": role_label,
     }

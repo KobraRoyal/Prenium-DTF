@@ -182,6 +182,17 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
             preview_url_resolver=lambda version: self.preview_url(sheet=sheet, version=version),
         )
         gallery_context = self.asset_gallery_context(sheet=sheet)
+        prep_fee = "0.00"
+        try:
+            from apps.orders.services.pricing import OrderPricingService
+
+            prep_fee = str(
+                OrderPricingService().resolve_file_preparation_fee_per_file(
+                    customer=self.customer
+                )
+            )
+        except Exception:
+            prep_fee = "0.00"
         return render(
             request,
             self.template_name,
@@ -189,6 +200,7 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
                 gang_sheet_state=state,
                 **gallery_context,
                 can_create_order=sheet.status == GangSheet.Status.VALIDATED,
+                gang_sheet_prep_fee_eur=prep_fee,
                 nav_key="client-gang-sheets",
             ),
         )
@@ -486,6 +498,7 @@ class ClientGangSheetWorkflowActionView(ClientGangSheetMixin, View):
                 project = gang_sheet_service.create_order_project(
                     sheet=sheet,
                     actor=request.user,
+                    quantity=request.POST.get("quantity", 1),
                 )
                 return JsonResponse(
                     {

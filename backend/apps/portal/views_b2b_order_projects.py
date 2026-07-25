@@ -8,7 +8,11 @@ from django.urls import reverse
 from django.views import View
 
 from apps.b2b_order_projects.models import B2BOrderProject
-from apps.b2b_order_projects.permissions import b2b_order_projects_enabled_for_customer
+from apps.b2b_order_projects.permissions import (
+    b2b_order_projects_enabled_for_customer,
+    client_new_order_url,
+    customer_requires_gang_sheet_orders,
+)
 from apps.b2b_order_projects.services import (
     B2BOrderProjectCheckoutService,
     B2BOrderProjectConfiguratorService,
@@ -16,7 +20,9 @@ from apps.b2b_order_projects.services import (
     ProjectDomainError,
 )
 from apps.gang_sheets.models import GangSheet
+from apps.orders.models import Order
 from apps.orders.references import project_client_reference
+from apps.orders.services.pricing import OrderPricingService
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
     StaffDomainPermissionMixin,
@@ -29,6 +35,34 @@ project_service = B2BOrderProjectService()
 checkout_service = B2BOrderProjectCheckoutService()
 asset_service = AssetService()
 configurator_service = B2BOrderProjectConfiguratorService()
+order_pricing_service = OrderPricingService()
+
+
+def build_gang_sheet_project_quote(*, project, customer):
+    """Devis HT pour un projet planche HD, avant transmission."""
+    if project is None:
+        return None
+    if project.order_mode != B2BOrderProject.OrderMode.READY_GANG_SHEET:
+        return None
+    sheet = (
+        GangSheet.objects.filter(project_id=project.pk)
+        .order_by("-created_at")
+        .only("surface_sqm")
+        .first()
+    )
+    if sheet is None or sheet.surface_sqm is None or sheet.surface_sqm <= 0:
+        return None
+    item = project.items.order_by("sort_order", "created_at").only("quantity").first()
+    quantity = item.quantity if item is not None else 1
+    try:
+        return order_pricing_service.estimate_gang_sheet_quote(
+            customer=customer,
+            surface_sqm=sheet.surface_sqm,
+            quantity=quantity,
+            file_count=1,
+        )
+    except ValidationError:
+        return None
 
 
 class ClientProjectFeatureMixin(LoginRequiredMixin):
@@ -117,6 +151,16 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
         }
         if project is not None:
             ctx["project_client_label"] = project_client_reference(project)
+            quote = extra.get("gang_sheet_quote")
+            if quote is None and "gang_sheet_quote" not in extra:
+                quote = build_gang_sheet_project_quote(
+                    project=project,
+                    customer=self.customer,
+                )
+            ctx["gang_sheet_quote"] = quote
+            ctx["cash_checkout_requires_gang_sheet"] = customer_requires_gang_sheet_orders(
+                self.customer
+            )
         return ctx
 
 
@@ -140,6 +184,8 @@ class ClientOrderProjectCreateView(ClientProjectFeatureMixin, View):
     template_name = "portal/client/order_project_form.html"
 
     def get(self, request, customer_public_id):
+        if customer_requires_gang_sheet_orders(self.customer):
+            return HttpResponseRedirect(client_new_order_url(customer=self.customer))
         return render(
             request,
             self.template_name,
@@ -147,6 +193,8 @@ class ClientOrderProjectCreateView(ClientProjectFeatureMixin, View):
         )
 
     def post(self, request, customer_public_id):
+        if customer_requires_gang_sheet_orders(self.customer):
+            return HttpResponseRedirect(client_new_order_url(customer=self.customer))
         try:
             project = project_service.create_project(
                 customer=self.customer,
@@ -544,6 +592,57 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
 
             return HttpResponseRedirect(
                 f"{detail}?submit_error=validation&submit_message={quote(messages)}"
+            )
+        if (
+            order.billing_mode == Order.BillingMode.IMMEDIATE
+            and order.pricing_status == Order.PricingStatus.PRICED
+        ):
+            from apps.portal.views_payments import available_payment_providers
+            from apps.portal.views_common import billing_service
+
+            providers = available_payment_providers()
+            if len(providers) == 1:
+                provider = providers[0]["id"]
+                success_path = reverse(
+                    "portal:client-order-payment-return",
+                    kwargs={
+                        "customer_public_id": self.customer.public_id,
+                        "order_public_id": order.public_id,
+                    },
+                )
+                from django.conf import settings as dj_settings
+
+                base = dj_settings.PUBLIC_BASE_URL.rstrip("/")
+                if provider == "stripe":
+                    success_url = (
+                        f"{base}{success_path}?status=success&session_id={{CHECKOUT_SESSION_ID}}"
+                    )
+                else:
+                    success_url = f"{base}{success_path}?status=success"
+                cancel_url = f"{base}{success_path}?status=cancel"
+                try:
+                    _order, payment = billing_service.initiate_payment_for_customer_order(
+                        customer=self.customer,
+                        order_public_id=order.public_id,
+                        actor=request.user,
+                        provider=provider,
+                        success_url=success_url,
+                        cancel_url=cancel_url,
+                        source="client_portal.b2b_checkout_pay",
+                    )
+                    if payment is not None and payment.approval_url:
+                        return HttpResponseRedirect(payment.approval_url)
+                except ValidationError:
+                    pass
+            return HttpResponseRedirect(
+                reverse(
+                    "portal:client-order-detail",
+                    kwargs={
+                        "customer_public_id": self.customer.public_id,
+                        "order_public_id": order.public_id,
+                    },
+                )
+                + "?panel=billing&checkout=success&pay=1"
             )
         return HttpResponseRedirect(
             reverse(

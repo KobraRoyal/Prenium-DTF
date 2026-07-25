@@ -14,6 +14,36 @@ def b2b_order_projects_enabled_for_customer(customer) -> bool:
     )
 
 
+def customer_requires_gang_sheet_orders(customer) -> bool:
+    """Comptant CB : commande uniquement via Gang Sheet (métrage / prix auto)."""
+    from apps.customers.models import Customer
+
+    return bool(
+        customer is not None
+        and getattr(customer, "default_billing_mode", None) == Customer.DefaultBillingMode.IMMEDIATE
+    )
+
+
+def client_new_order_url(*, customer) -> str:
+    """URL d’entrée « Nouvelle commande » selon feature projets et mode compte."""
+    from django.urls import reverse
+
+    if not b2b_order_projects_enabled_for_customer(customer):
+        return reverse(
+            "portal:client-checkout",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+    if customer_requires_gang_sheet_orders(customer):
+        return reverse(
+            "portal:client-gang-sheet-list-create",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+    return reverse(
+        "portal:client-order-project-create",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+
+
 class HasB2BOrderProjectFeatureAccess(BasePermission):
     message = "La fonctionnalité de projets de commande B2B n'est pas activée."
 

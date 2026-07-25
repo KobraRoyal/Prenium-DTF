@@ -8,29 +8,44 @@
 
 <section class="staff-order-detail-stack" aria-label="Synthèse commande Atelier">
 <section class="card staff-order-focus" aria-labelledby="staff-order-title">
-  <div class="staff-order-focus__identity">
-    <p class="staff-order-focus__eyebrow">Commande {{ staff_order_focus.order_reference }}</p>
-    <h1 id="staff-order-title">{{ order.customer.name }}</h1>
-    <div class="staff-order-focus__statuses" aria-label="État de la commande">
-      <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-      <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
-      <span class="badge {{ staff_order_focus.review_tone }}">{{ staff_order_focus.review_label }}</span>
-      <span class="badge {{ staff_order_focus.production_status|badge_tone }}">{{ staff_order_focus.production_label }}</span>
+  <header class="staff-order-focus__header">
+    <div class="staff-order-focus__identity">
+      <p class="staff-order-focus__eyebrow">
+        Commande Atelier
+        <code class="staff-order-focus__ref">{{ staff_order_focus.order_reference }}</code>
+      </p>
+      <h1 id="staff-order-title">
+        {% if production_job %}
+        <code class="staff-order-focus__of">{{ production_job.manufacturing_order_number }}</code>
+        {% else %}
+        OF à générer
+        {% endif %}
+      </h1>
+      <div class="staff-order-focus__statuses" aria-label="État de la commande">
+        <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
+        <span class="badge {{ staff_order_focus.review_tone }}">{{ staff_order_focus.review_label }}</span>
+        <span class="badge {{ staff_order_focus.production_status|badge_tone }}">{{ staff_order_focus.production_label }}</span>
+        {% if order_payment_captured %}
+        <span class="badge is-success">Payée</span>
+        {% elif order.billing_mode == "immediate" %}
+        <span class="badge is-warning" title="{{ order.billing_mode|human_status }}">À encaisser</span>
+        {% else %}
+        <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
+        {% endif %}
+      </div>
     </div>
-  </div>
+  </header>
 
-  <dl class="staff-order-focus__facts">
+  <dl class="staff-order-focus__facts" aria-label="Repères atelier">
     <div>
-      <dt>Ordre de fabrication</dt>
-      <dd>{% if production_job %}<code>{{ production_job.manufacturing_order_number }}</code>{% else %}À générer{% endif %}</dd>
+      <dt>Client</dt>
+      <dd>
+        <a class="staff-order-focus__client" href="{% url 'portal:staff-customer-detail' customer_public_id=order.customer.public_id %}">{{ order.customer.name }}</a>
+      </dd>
     </div>
     <div>
-      <dt>Tarification</dt>
-      <dd>{% if order.pricing_status == "priced" %}{{ order.total_amount }} {{ order.currency }}{% else %}{{ order.pricing_status|human_status }}{% endif %}</dd>
-    </div>
-    <div>
-      <dt>Mode de facturation</dt>
-      <dd>{{ order.billing_mode|human_status }}</dd>
+      <dt>Tarif</dt>
+      <dd>{% if order.pricing_status == "priced" %}{{ order.total_amount }}&nbsp;{{ order.currency }}{% else %}{{ order.pricing_status|human_status }}{% endif %}</dd>
     </div>
     <div>
       <dt>Créée le</dt>
@@ -39,11 +54,11 @@
   </dl>
 
   <div class="staff-order-focus__next">
-    <div>
+    <div class="staff-order-focus__next-copy">
       <p class="staff-order-focus__next-label">Prochaine action</p>
       <p class="staff-order-focus__next-message">{{ staff_order_focus.action_message }}</p>
     </div>
-    <div class="staff-order-focus__actions">
+    <div class="staff-order-focus__primary">
       <a class="ui-btn ui-btn-primary" href="{{ request.path }}?panel={{ staff_order_focus.next_panel }}">{{ staff_order_focus.action_label }}</a>
       {% if can_price_order and order.pricing_status != "priced" %}
       <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}" data-submit-loading>
@@ -51,12 +66,15 @@
         <button type="submit" class="ui-btn ui-btn-secondary">Calculer le prix</button>
       </form>
       {% endif %}
-      {% include "portal/staff/partials/order_delete_button.html" %}
-      {% if order_drive_url %}
-      <a class="ui-btn ui-btn-secondary" href="{{ order_drive_url }}" target="_blank" rel="noopener noreferrer">Ouvrir le dossier Drive</a>
-      {% endif %}
-      <a class="ui-link staff-order-focus__back" href="{% url 'portal:staff-dashboard' %}">Retour à la file Atelier</a>
     </div>
+  </div>
+
+  <div class="staff-order-focus__tools" aria-label="Actions secondaires">
+    {% if order_drive_url %}
+    <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{{ order_drive_url }}" target="_blank" rel="noopener noreferrer">Dossier Drive</a>
+    {% endif %}
+    {% include "portal/staff/partials/order_delete_button.html" %}
+    <a class="ui-link staff-order-focus__back" href="{% url 'portal:staff-dashboard' %}">Retour à la file</a>
   </div>
 </section>
 

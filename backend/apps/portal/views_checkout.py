@@ -8,7 +8,10 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
-from apps.b2b_order_projects.permissions import b2b_order_projects_enabled_for_customer
+from apps.b2b_order_projects.permissions import (
+    b2b_order_projects_enabled_for_customer,
+    client_new_order_url,
+)
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
     ScopedCustomerMixin,
@@ -58,10 +61,7 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
         return HttpResponseRedirect(f"{checkout_url}?order={order.public_id}")
 
     def _asynchronous_order_url(self):
-        return reverse(
-            "portal:client-order-project-create",
-            kwargs={"customer_public_id": self.customer.public_id},
-        )
+        return client_new_order_url(customer=self.customer)
 
     def _resolve_order(self, request):
         raw_order_public_id = str(request.GET.get("order", "")).strip()

@@ -211,9 +211,24 @@ def order_htmx_tabs(context, variant):
         "tab_groups": tab_groups,
         "panel_id": panel_id,
         "hx_target": f"#{panel_id}",
-        "initial_url": active_tab["url"] if active_tab else None,
+        "initial_url": _initial_panel_url(active_tab, request) if active_tab else None,
         "active_tab_id": active_tab["dom_id"] if active_tab else None,
         "empty_message": (
             "Aucun panneau disponible avec vos permissions actuelles." if not flat_tabs else None
         ),
     }
+
+
+def _initial_panel_url(active_tab: dict, request) -> str:
+    url = active_tab["url"]
+    if request is None:
+        return url
+    # Transmettre les flags post-paiement / CTA à l’hydratation HTMX du panneau.
+    forwarded = []
+    for key in ("pay", "paid", "cancelled"):
+        if str(request.GET.get(key, "")).strip() == "1":
+            forwarded.append(f"{key}=1")
+    if not forwarded:
+        return url
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}{'&'.join(forwarded)}"

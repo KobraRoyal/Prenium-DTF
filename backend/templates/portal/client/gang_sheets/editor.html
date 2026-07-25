@@ -19,6 +19,7 @@
   data-order-project-url="{% url 'portal:client-gang-sheet-workflow-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id action='create-order-project' %}"
   data-can-edit="{{ can_edit|yesno:'true,false' }}"
   data-has-project="{{ sheet.project_id|yesno:'true,false' }}"
+  data-prep-fee-eur="{{ gang_sheet_prep_fee_eur }}"
 >
   <input type="hidden" data-csrf value="{{ csrf_token }}">
 
@@ -401,6 +402,25 @@
             {% include "portal/client/gang_sheets/partials/icon.html" with name="check" size="16" %}
             Valider la planche
           </button>
+          <label class="dui-form-control gang-sheet-quantity" data-sheet-quantity-field hidden>
+            <span class="product-form-label">Exemplaires de planche</span>
+            <input
+              class="dui-input dui-input-bordered"
+              type="number"
+              min="1"
+              max="200"
+              step="1"
+              value="1"
+              inputmode="numeric"
+              data-sheet-quantity
+              aria-label="Nombre d’exemplaires de la planche"
+            >
+          </label>
+          <aside class="gang-sheet-order-quote" data-sheet-order-quote hidden aria-live="polite">
+            <p class="gang-sheet-order-quote__eyebrow">Total estimé HT</p>
+            <p class="gang-sheet-order-quote__total"><strong data-sheet-order-quote-total>—</strong></p>
+            <p class="gang-sheet-order-quote__detail muted text-sm" data-sheet-order-quote-detail></p>
+          </aside>
           {% if sheet.project %}
           <a class="ui-btn ui-btn-primary" data-open-order-project href="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=sheet.project.public_id %}">Continuer vers la commande →</a>
           {% else %}

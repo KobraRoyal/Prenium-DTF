@@ -1167,6 +1167,25 @@
   .gang-inspector-panel--validation li.is-error { background: color-mix(in srgb, var(--product-danger, #ff5470) 30%, #fff); }
   .gang-validation-actions { display: grid; gap: 0.45rem; }
   .gang-validation-actions > * { width: 100%; }
+  .gang-sheet-order-quote {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.7rem 0.8rem;
+    border: 2px solid var(--product-line, #0b0b0b);
+    background: color-mix(in srgb, var(--product-accent, #dcff1a) 28%, #fff);
+  }
+  .gang-sheet-order-quote__eyebrow {
+    margin: 0;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .gang-sheet-order-quote__total {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+  .gang-sheet-order-quote__detail { margin: 0; }
   .gang-inspector-note { padding: 0.65rem; border-left: 5px solid var(--product-accent, #dcff1a); background: var(--product-panel-strong, #f3ead6); font-size: 0.67rem !important; }
   .gang-inspector-note strong { display: block; margin-bottom: 0.15rem; color: var(--product-ink, #0b0b0b); }
 

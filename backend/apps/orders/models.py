@@ -138,9 +138,11 @@ class Order(BaseModel):
         return short_public_ref(self.public_id)
 
     def uses_atelier_pricing(self) -> bool:
-        """Prix calculé atelier après dépôt (encours ou comptant CB).
+        """Prix calculé sur métrage (encours ou comptant CB portail).
 
-        Exclut le flux catalogue / API déjà tarifé à la création (lignes figées).
+        Exclut le flux catalogue / API déjà tarifé à la création.
+        Les dépôts portail restent en tarification métrage même après création
+        des lignes (self-service Gang Sheet ou calcul atelier).
         """
         if self.billing_mode == self.BillingMode.DEFERRED:
             return True
@@ -148,9 +150,9 @@ class Order(BaseModel):
             return False
         if self.source in {"client_api", "api"}:
             return False
-        # create_order catalogue : lignes présentes dès la création.
-        # create_b2b_* : dépôt fichiers sans lignes catalogue.
-        if self.items.exists():
+        # create_order catalogue : lignes présentes dès la création, sans dépôt.
+        # Gang Sheet / projet : fichiers d’abord, lignes ensuite → reste métrage.
+        if self.items.exists() and not self.uploads.exists():
             return False
         return True
 

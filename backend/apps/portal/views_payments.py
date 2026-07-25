@@ -23,6 +23,60 @@ def _absolute_portal_url(path: str) -> str:
     return f"{settings.PUBLIC_BASE_URL.rstrip('/')}{path}"
 
 
+def client_order_billing_landing_url(
+    *,
+    customer_public_id,
+    order_public_id,
+    paid: bool = False,
+    cancelled: bool = False,
+    pay: bool = False,
+    checkout_success: bool = False,
+) -> str:
+    """URL fiche commande complète (shell) avec onglet règlement.
+
+    Les endpoints ``panels/billing/`` sont des partiels HTMX : un redirect
+    provider ne doit jamais y aboutir en navigation pleine page.
+    """
+    path = reverse(
+        "portal:client-order-detail",
+        kwargs={
+            "customer_public_id": customer_public_id,
+            "order_public_id": order_public_id,
+        },
+    )
+    params: list[str] = ["panel=billing"]
+    if paid:
+        params.append("paid=1")
+    if cancelled:
+        params.append("cancelled=1")
+    if pay:
+        params.append("pay=1")
+    if checkout_success:
+        params.append("checkout=success")
+    return f"{path}?{'&'.join(params)}"
+
+
+def redirect_full_page_billing_panel_to_shell(
+    request,
+    *,
+    customer_public_id,
+    order_public_id,
+):
+    """Si navigation pleine page, renvoyer vers la fiche shell (pas le partiel HTMX)."""
+    if request.headers.get("HX-Request"):
+        return None
+    return HttpResponseRedirect(
+        client_order_billing_landing_url(
+            customer_public_id=customer_public_id,
+            order_public_id=order_public_id,
+            paid=str(request.GET.get("paid", "")).strip() == "1",
+            cancelled=str(request.GET.get("cancelled", "")).strip() == "1",
+            pay=str(request.GET.get("pay", "")).strip() == "1",
+            checkout_success=str(request.GET.get("checkout", "")).strip() == "success",
+        )
+    )
+
+
 class _ClientOrderLookupMixin(ScopedCustomerMixin):
     def get_order_or_404(self, order_public_id):
         order = order_service.get_customer_order(
@@ -44,38 +98,22 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
 
         provider = str(request.POST.get("provider", "")).strip().lower() or None
         available_ids = {item["id"] for item in available_payment_providers()}
+        billing_url = client_order_billing_landing_url(
+            customer_public_id=customer_public_id,
+            order_public_id=order_public_id,
+            pay=True,
+        )
         if not available_ids:
             messages.error(request, "Aucun moyen de paiement en ligne n'est configuré.")
-            billing_url = reverse(
-                "portal:client-order-panel-billing",
-                kwargs={
-                    "customer_public_id": customer_public_id,
-                    "order_public_id": order_public_id,
-                },
-            )
             return HttpResponseRedirect(billing_url)
         if provider and provider not in available_ids:
             messages.error(request, "Moyen de paiement non disponible.")
-            billing_url = reverse(
-                "portal:client-order-panel-billing",
-                kwargs={
-                    "customer_public_id": customer_public_id,
-                    "order_public_id": order_public_id,
-                },
-            )
             return HttpResponseRedirect(billing_url)
         if not provider:
             if len(available_ids) == 1:
                 provider = next(iter(available_ids))
             else:
                 messages.error(request, "Choisissez un moyen de paiement.")
-                billing_url = reverse(
-                    "portal:client-order-panel-billing",
-                    kwargs={
-                        "customer_public_id": customer_public_id,
-                        "order_public_id": order_public_id,
-                    },
-                )
                 return HttpResponseRedirect(billing_url)
         success_path = reverse(
             "portal:client-order-payment-return",
@@ -106,13 +144,6 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
         except DjangoValidationError as error:
             message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
             messages.error(request, message)
-            billing_url = reverse(
-                "portal:client-order-panel-billing",
-                kwargs={
-                    "customer_public_id": customer_public_id,
-                    "order_public_id": order_public_id,
-                },
-            )
             response = HttpResponseRedirect(billing_url)
             return with_toast(response, message=message, variant="error")
 
@@ -122,22 +153,26 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
 
 
 class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupMixin, View):
-    """Retour provider : capture/confirm + redirection panneau facture."""
+    """Retour provider : capture/confirm + redirection fiche commande (onglet règlement)."""
 
     def get(self, request, customer_public_id, order_public_id):
         order = self.get_order_or_404(order_public_id)
         status = str(request.GET.get("status", "")).strip().lower()
-        billing_url = reverse(
-            "portal:client-order-panel-billing",
-            kwargs={
-                "customer_public_id": customer_public_id,
-                "order_public_id": order_public_id,
-            },
+        billing_url = client_order_billing_landing_url(
+            customer_public_id=customer_public_id,
+            order_public_id=order_public_id,
         )
 
         if status == "cancel":
             messages.info(request, "Paiement annulé. Vous pouvez réessayer quand vous voulez.")
-            return HttpResponseRedirect(billing_url)
+            return HttpResponseRedirect(
+                client_order_billing_landing_url(
+                    customer_public_id=customer_public_id,
+                    order_public_id=order_public_id,
+                    cancelled=True,
+                    pay=True,
+                )
+            )
 
         paypal_token = str(request.GET.get("token", "")).strip()
         session_id = str(request.GET.get("session_id", "")).strip()
@@ -180,8 +215,14 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
                 request,
                 "Paiement confirmé. Votre justificatif de paiement est disponible.",
             )
-        else:
-            messages.info(request, "Paiement en cours de confirmation.")
+            return HttpResponseRedirect(
+                client_order_billing_landing_url(
+                    customer_public_id=customer_public_id,
+                    order_public_id=order_public_id,
+                    paid=True,
+                )
+            )
+        messages.info(request, "Paiement en cours de confirmation.")
         return HttpResponseRedirect(billing_url)
 
 
@@ -191,7 +232,7 @@ def available_payment_providers() -> list[dict[str, str]]:
 
     labels = {
         Payment.Provider.PAYPAL: "PayPal",
-        Payment.Provider.STRIPE: "Carte bancaire (Stripe)",
+        Payment.Provider.STRIPE: "Carte bancaire",
     }
     return [
         {"id": provider, "label": labels.get(provider, provider)}

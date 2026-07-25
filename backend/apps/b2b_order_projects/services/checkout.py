@@ -11,7 +11,9 @@ from apps.gang_sheets.services.drive import (
     GangSheetDriveSyncRequired,
     GangSheetDriveSyncService,
 )
+from apps.orders.models import Order
 from apps.orders.services.orders import OrderService
+from apps.orders.services.pricing import OrderPricingService
 from apps.uploads.services.drive import OrderDriveFolderService
 from apps.uploads.services.uploads import OrderUploadService
 
@@ -173,6 +175,16 @@ class B2BOrderProjectCheckoutService:
             source=source,
         )
 
+        if (
+            order.billing_mode == Order.BillingMode.IMMEDIATE
+            and locked.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET
+        ):
+            order = OrderPricingService().apply_gang_sheet_self_service_pricing(
+                order=order,
+                actor=actor,
+                source=f"{source}.gang_sheet_self_service",
+            )
+
         record_event(
             action="b2b_order_project.converted",
             actor=actor if getattr(actor, "is_authenticated", False) else None,
@@ -182,6 +194,8 @@ class B2BOrderProjectCheckoutService:
                 "project_public_id": str(locked.public_id),
                 "order_public_id": str(order.public_id),
                 "item_count": len(items),
+                "billing_mode": order.billing_mode,
+                "pricing_status": order.pricing_status,
                 "source": source,
             },
         )

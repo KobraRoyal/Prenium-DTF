@@ -10,7 +10,10 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
-from apps.b2b_order_projects.permissions import b2b_order_projects_enabled_for_customer
+from apps.b2b_order_projects.permissions import (
+    b2b_order_projects_enabled_for_customer,
+    client_new_order_url,
+)
 from apps.b2b_order_projects.services import (
     B2BOrderProjectService,
     B2BOrderReorderService,
@@ -65,10 +68,7 @@ class ClientDashboardView(LoginRequiredMixin, View):
                     recent_projects = project_service.attach_can_delete(list(projects_qs[:5]))
                     projects_in_progress_count = projects_qs.count()
                 if project_feature_enabled:
-                    new_order_url = reverse(
-                        "portal:client-order-project-create",
-                        kwargs={"customer_public_id": customer.public_id},
-                    )
+                    new_order_url = client_new_order_url(customer=customer)
                 else:
                     new_order_url = reverse(
                         "portal:client-checkout",
@@ -290,7 +290,16 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
             available_payment_providers,
             can_pay_online,
             default_online_provider,
+            redirect_full_page_billing_panel_to_shell,
         )
+
+        shell_redirect = redirect_full_page_billing_panel_to_shell(
+            request,
+            customer_public_id=customer_public_id,
+            order_public_id=order_public_id,
+        )
+        if shell_redirect is not None:
+            return shell_redirect
 
         order, payment, invoice = billing_service.get_customer_billing(
             customer=self.customer,
@@ -320,6 +329,7 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
                 payment_providers=providers,
                 online_provider=default_online_provider(order.customer) if show_pay_cta else "",
                 settlement_method=settlement,
+                open_pay_dialog=show_pay_cta and str(request.GET.get("pay", "")).strip() == "1",
             ),
         )
 

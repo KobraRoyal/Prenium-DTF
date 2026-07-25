@@ -67,6 +67,13 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
         reverse(
             "portal:client-order-panel-billing",
             kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
+        ),
+        HTTP_HX_REQUEST="true",
+    )
+    billing_full_page = client.get(
+        reverse(
+            "portal:client-order-panel-billing",
+            kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
         )
     )
 
@@ -98,6 +105,9 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     assert production_panel_response.status_code == 200
     assert shipping_panel_response.status_code == 200
     assert billing_panel_response.status_code == 200
+    assert billing_full_page.status_code == 302
+    assert "panel=billing" in billing_full_page["Location"]
+    assert "/panels/billing/" not in billing_full_page["Location"]
 
 
 @pytest.mark.django_db
@@ -377,7 +387,7 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert "/panels/inspection/" in detail_html
     assert "Valider les fichiers" in detail_html
     assert "Tracer l&#x27;avancement" in detail_html
-    assert "Retour à la file Atelier" in detail_html
+    assert "Retour à la file" in detail_html
     assert production_panel_response.status_code == 200
     production_html = production_panel_response.content.decode()
     assert "data-submit-loading" in production_html

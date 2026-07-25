@@ -10,17 +10,20 @@
 
   .staff-order-focus {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, auto);
-    gap: 1rem 2rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
     overflow: hidden;
     padding: 0;
     border-color: var(--ui-line-strong);
   }
 
+  .staff-order-focus__header {
+    padding: clamp(1rem, 2.4vw, 1.45rem) clamp(1rem, 2.4vw, 1.5rem) 1rem;
+  }
+
   .staff-order-focus__identity {
     min-width: 0;
-    padding: clamp(1rem, 2.4vw, 1.5rem);
-    padding-bottom: 0.5rem;
+    padding: 0;
   }
 
   .staff-order-focus__eyebrow,
@@ -33,12 +36,80 @@
     text-transform: uppercase;
   }
 
+  .staff-order-focus__eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.65rem;
+  }
+
+  .staff-order-focus__ref {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.55rem;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--product-line, var(--ui-line-strong));
+    background: color-mix(in srgb, var(--product-accent, #c8f000) 22%, transparent);
+    color: var(--product-ink, var(--ui-text-strong));
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
   .staff-order-focus__identity h1 {
-    margin: 0.35rem 0 0.65rem;
+    margin: 0.4rem 0 0.35rem;
     font-family: var(--ui-font-display);
-    font-size: clamp(1.55rem, 3vw, 2.35rem);
-    line-height: 1.05;
+    font-size: clamp(1.55rem, 2.6vw, 2.15rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
     overflow-wrap: anywhere;
+  }
+
+  .staff-order-focus__of {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+  }
+
+  .staff-order-focus__client {
+    color: var(--product-ink, var(--ui-text-strong));
+    font-weight: 750;
+    text-decoration: underline;
+    text-underline-offset: 0.12em;
+  }
+
+  .staff-order-focus__client:hover,
+  .staff-order-focus__client:focus-visible {
+    color: var(--brand);
+  }
+
+  .staff-order-focus__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.55rem;
+    margin: 0 0 0.75rem;
+    color: var(--ui-text-muted);
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
+  .staff-order-focus__meta a {
+    color: var(--product-ink, var(--ui-text-strong));
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.12em;
+  }
+
+  .staff-order-focus__meta a:hover,
+  .staff-order-focus__meta a:focus-visible {
+    color: var(--brand);
   }
 
   .staff-order-focus__statuses {
@@ -49,11 +120,10 @@
 
   .staff-order-focus__facts {
     display: grid;
-    grid-template-columns: repeat(2, minmax(8.5rem, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0;
-    align-self: stretch;
     margin: 0;
-    border-left: 1px solid var(--ui-line-strong);
+    border-top: 1px solid var(--ui-line-strong);
   }
 
   .staff-order-focus__facts > div {
@@ -61,7 +131,7 @@
     align-content: center;
     gap: 0.3rem;
     min-width: 0;
-    padding: 1rem;
+    padding: 0.9rem 1.1rem;
   }
 
   .staff-order-focus__facts > div + div {
@@ -86,7 +156,6 @@
 
   .staff-order-focus__next {
     display: flex;
-    grid-column: 1 / -1;
     align-items: center;
     justify-content: space-between;
     gap: 1rem 1.5rem;
@@ -95,15 +164,21 @@
     background: color-mix(in srgb, var(--brand) 7%, white);
   }
 
+  .staff-order-focus__next-copy {
+    min-width: 0;
+    flex: 1 1 16rem;
+  }
+
   .staff-order-focus__next-message {
-    max-width: 56rem;
+    max-width: 42rem;
     margin: 0.25rem 0 0;
     color: var(--ui-text-strong);
     font-weight: 700;
     line-height: 1.45;
+    text-wrap: pretty;
   }
 
-  .staff-order-focus__actions {
+  .staff-order-focus__primary {
     display: flex;
     flex: 0 0 auto;
     flex-wrap: wrap;
@@ -111,8 +186,23 @@
     gap: 0.55rem;
   }
 
-  .staff-order-focus__actions form {
+  .staff-order-focus__primary form {
     margin: 0;
+  }
+
+  .staff-order-focus__tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem 0.85rem;
+    padding: 0.75rem clamp(1rem, 2.4vw, 1.5rem) 0.95rem;
+    border-top: 1px dashed color-mix(in srgb, var(--ui-line-strong) 70%, transparent);
+    background: color-mix(in srgb, var(--product-panel, #fff) 92%, var(--product-ink, #0b0b0b) 3%);
+  }
+
+  .staff-order-focus__delete-hint {
+    margin: 0;
+    font-size: 0.78rem;
   }
 
   .ui-staff-overview-grid {
@@ -523,17 +613,13 @@
   }
 
   @media (max-width: 767px) {
-    .staff-order-focus {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .staff-order-focus__identity {
-      padding-bottom: 0;
-    }
-
     .staff-order-focus__facts {
-      border-top: 1px solid var(--ui-line-soft);
+      grid-template-columns: 1fr;
+    }
+
+    .staff-order-focus__facts > div + div {
       border-left: 0;
+      border-top: 1px solid var(--ui-line-soft);
     }
 
     .staff-order-focus__next {
@@ -541,14 +627,24 @@
       flex-direction: column;
     }
 
-    .staff-order-focus__actions,
-    .staff-order-focus__actions form,
-    .staff-order-focus__actions .ui-btn {
+    .staff-order-focus__primary,
+    .staff-order-focus__primary form,
+    .staff-order-focus__primary .ui-btn {
       width: 100%;
     }
 
-    .staff-order-focus__actions {
+    .staff-order-focus__primary {
       display: grid;
+    }
+
+    .staff-order-focus__tools {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .staff-order-focus__tools .ui-btn {
+      width: 100%;
+      justify-content: center;
     }
 
     .order-command-bar {
@@ -581,21 +677,28 @@
 /* Console Atelier 2026 — parcours commande, production, scan, logistique et clôture. */
 @layer components {
   body.product-shell .staff-order-focus__facts {
-    grid-template-columns: repeat(2, minmax(9rem, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  body.product-shell .staff-order-focus__facts > div:nth-child(odd) {
+  body.product-shell .staff-order-focus__facts > div:first-child {
     border-left: 0;
   }
 
-  body.product-shell .staff-order-focus__facts > div:nth-child(n + 3) {
-    border-top: 1px solid var(--product-line, #0b0b0b);
+  body.product-shell .staff-order-focus__tools {
+    border-color: color-mix(in srgb, var(--product-line, #0b0b0b) 55%, transparent);
+    background: color-mix(in srgb, var(--product-panel, #fff) 90%, var(--product-ink, #0b0b0b) 4%);
+  }
+
+  body.product-shell .staff-order-focus__ref {
+    border-color: var(--product-line, #0b0b0b);
+    background: color-mix(in srgb, var(--product-accent, #c8f000) 28%, transparent);
   }
 
   body.product-shell .staff-order-focus__back {
     display: inline-flex;
     align-items: center;
-    min-height: 2.75rem;
+    min-height: 2.35rem;
+    margin-left: auto;
     padding-inline: 0.35rem;
     color: var(--product-ink-soft, #5d554d);
     font-size: 0.78rem;
@@ -1138,6 +1241,8 @@
   @media (max-width: 640px) {
     body.product-shell .staff-order-focus__facts { grid-template-columns: minmax(0, 1fr); }
     body.product-shell .staff-order-focus__facts > div { border-left: 0 !important; border-top: 1px solid var(--product-line, #0b0b0b); }
+    body.product-shell .staff-order-focus__facts > div:first-child { border-top: 0; }
+    body.product-shell .staff-order-focus__back { margin-left: 0; }
     body.product-shell .workflow-progress { grid-template-columns: minmax(0, 1fr); }
     body.product-shell .workflow-progress .ui-tab-chip { min-height: 3.7rem; border-right: 0; }
     body.product-shell .workflow-progress .ui-tab-chip:last-child { border-bottom: 0; }

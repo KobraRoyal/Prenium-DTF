@@ -105,6 +105,39 @@ class OrderPricingService:
         service = self.get_default_file_preparation_service()
         return service.base_price.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
+    def estimate_gang_sheet_quote(
+        self,
+        *,
+        customer,
+        surface_sqm: Decimal | str | float,
+        quantity: int = 1,
+        file_count: int = 1,
+    ) -> dict[str, object]:
+        """Devis HT avant transmission : surface × exemplaires × tarif + forfait fichier."""
+        unit_price = self.resolve_unit_price_per_sqm(customer=customer)
+        prep_fee = self.resolve_file_preparation_fee_per_file(customer=customer)
+        qty = max(int(quantity or 1), 1)
+        files = max(int(file_count or 1), 1)
+        surface = Decimal(str(surface_sqm)).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        if surface <= 0:
+            raise ValidationError("La surface de la Gang Sheet est invalide.")
+        billable = (surface * Decimal(qty)).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        dtf_amount = (billable * unit_price).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        prep_amount = (prep_fee * Decimal(files)).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        total = (dtf_amount + prep_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        return {
+            "surface_sqm": surface,
+            "quantity": qty,
+            "file_count": files,
+            "billable_sqm": billable,
+            "unit_price_eur": unit_price,
+            "dtf_amount_eur": dtf_amount,
+            "prep_fee_eur": prep_fee,
+            "prep_amount_eur": prep_amount,
+            "total_eur": total,
+            "currency": "EUR",
+        }
+
     def estimate_meterage_from_inspection(self, *, upload) -> Decimal | None:
         """Surface m² dérivée du contrôle technique (pixels + DPI), sans saisie opérateur.
 
@@ -166,6 +199,99 @@ class OrderPricingService:
                 return None
             return override.quantize(FOURPLACES, rounding=ROUND_HALF_UP)
         return self.estimate_meterage_from_inspection(upload=upload)
+
+    def apply_gang_sheet_self_service_pricing(
+        self,
+        *,
+        order: Order,
+        actor,
+        source: str,
+    ) -> Order:
+        """Fige le métrage depuis la géométrie Gang Sheet puis calcule le prix.
+
+        Réservé aux commandes comptant CB portail (paiement immédiat sans
+        attente du retour atelier).
+        """
+        from apps.gang_sheets.models import GangSheet
+
+        if order.billing_mode != Order.BillingMode.IMMEDIATE:
+            raise ValidationError(
+                "Le tarif automatique Gang Sheet s’applique aux commandes comptant CB."
+            )
+        if not order.uses_atelier_pricing():
+            raise ValidationError(
+                "Le calcul automatique s'applique aux commandes atelier (encours ou comptant CB)."
+            )
+
+        sheets = list(
+            GangSheet.objects.filter(
+                order_id=order.pk,
+                status=GangSheet.Status.VALIDATED,
+            ).order_by("created_at")
+        )
+        if not sheets:
+            raise ValidationError(
+                "Aucune Gang Sheet validée liée à cette commande : impossible de calculer le prix."
+            )
+
+        total_sqm = sum((sheet.surface_sqm for sheet in sheets), Decimal("0.00")).quantize(
+            FOURPLACES,
+            rounding=ROUND_HALF_UP,
+        )
+        if total_sqm <= 0:
+            raise ValidationError("La surface de la Gang Sheet est invalide.")
+
+        uploads = list(order.uploads.all().order_by("sort_order", "created_at"))
+        if not uploads:
+            raise ValidationError("Aucun fichier à tarifer.")
+
+        if len(uploads) == 1:
+            qty = Decimal(max(int(uploads[0].quantity or 1), 1))
+            shares = [
+                (total_sqm * qty).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+            ]
+        else:
+            share = (total_sqm / Decimal(len(uploads))).quantize(
+                FOURPLACES,
+                rounding=ROUND_HALF_UP,
+            )
+            shares = []
+            for upload in uploads:
+                qty = Decimal(max(int(upload.quantity or 1), 1))
+                shares.append(
+                    (share * qty).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+                )
+
+        for upload, share in zip(uploads, shares, strict=True):
+            upload.meterage_override_sqm = max(share, Decimal("0.0001"))
+            upload.meterage_override_linear_m = None
+            upload.save(
+                update_fields=[
+                    "meterage_override_sqm",
+                    "meterage_override_linear_m",
+                    "updated_at",
+                ]
+            )
+
+        record_event(
+            action="order.gang_sheet_meterage_applied",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=order,
+            metadata={
+                "order_public_id": str(order.public_id),
+                "customer_public_id": str(order.customer.public_id),
+                "surface_sqm": f"{total_sqm:.4f}",
+                "billable_sqm": f"{sum(shares, Decimal('0.00')):.4f}",
+                "sheet_count": len(sheets),
+                "upload_quantities": [int(u.quantity or 1) for u in uploads],
+                "source": source,
+            },
+        )
+        return self.compute_and_persist_order_pricing(
+            order=order,
+            actor=actor,
+            source=source,
+        )
 
     def open_balance_for_customer_excluding_order(self, *, customer, exclude_order: Order | None):
         qs = Order.objects.filter(

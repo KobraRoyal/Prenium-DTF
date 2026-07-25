@@ -34,6 +34,7 @@
       data-submit-loading
     >
       {% csrf_token %}
+      {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Exemplaires de planche" %}
       {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
       <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié le fichier HD, les détails fins, les semi-transparences et la couleur du support.</span></label>
       <div class="b2b-dialog-actions">

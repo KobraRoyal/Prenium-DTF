@@ -341,7 +341,7 @@ if (root) {
     q("[data-metric-items]").textContent = state.items.length;
     q("[data-metric-usage]").textContent = `${round(usage, 1)} %`;
     q("[data-metric-surface]").textContent = `${Number(state.surface_sqm).toFixed(4)} m²`;
-    q("[data-metric-price]").textContent = `${Number(state.estimated_price_eur).toFixed(2)} €`;
+    updateOrderQuoteUi();
     q("[data-canvas-format]").textContent = `${round(state.width_mm / 10, 1)} × ${round(state.height_mm / 10, 1)} cm`;
     q("[data-mobile-issue-count]").textContent = state.issues.length;
   }
@@ -548,6 +548,46 @@ if (root) {
     q("[data-render-sheet]").disabled = !canEdit || state.items.length === 0 || state.issues.length > 0 || locked;
     if (q("[data-create-order-project]")) {
       q("[data-create-order-project]").disabled = !canEdit || state.status !== "validated";
+    }
+    const quantityField = q("[data-sheet-quantity-field]");
+    const quantityInput = q("[data-sheet-quantity]");
+    if (quantityField) {
+      const showQuantity = state.status === "validated";
+      quantityField.hidden = !showQuantity;
+      if (quantityInput) {
+        quantityInput.disabled = !canEdit || !showQuantity;
+      }
+    }
+    updateOrderQuoteUi();
+  }
+
+  function sheetOrderQuote() {
+    const qtyRaw = Number(q("[data-sheet-quantity]")?.value || 1);
+    const qty = Number.isFinite(qtyRaw) && qtyRaw >= 1 ? Math.floor(qtyRaw) : 1;
+    const surface = Number(state.surface_sqm || 0);
+    const unit = Number(state.unit_price_eur || 0);
+    const prep = Number(root.dataset.prepFeeEur || 0);
+    const billable = round(surface * qty, 4);
+    const dtf = round(billable * unit, 2);
+    const total = round(dtf + prep, 2);
+    return { qty, surface, billable, unit, prep, dtf, total };
+  }
+
+  function updateOrderQuoteUi() {
+    const quote = sheetOrderQuote();
+    const quoteBox = q("[data-sheet-order-quote]");
+    const detail = q("[data-sheet-order-quote-detail]");
+    const totalEl = q("[data-sheet-order-quote-total]");
+    const showQuote = state.status === "validated";
+    if (quoteBox) quoteBox.hidden = !showQuote;
+    if (totalEl) totalEl.textContent = `${quote.total.toFixed(2)} €`;
+    if (detail) {
+      detail.textContent = `${quote.surface.toFixed(4)} m² × ${quote.qty} ex. = ${quote.billable.toFixed(4)} m² · DTF ${quote.dtf.toFixed(2)} € + préparation ${quote.prep.toFixed(2)} €`;
+    }
+    if (showQuote) {
+      q("[data-metric-price]").textContent = `${quote.total.toFixed(2)} €`;
+    } else {
+      q("[data-metric-price]").textContent = `${Number(state.estimated_price_eur).toFixed(2)} €`;
     }
   }
 
@@ -1492,7 +1532,14 @@ if (root) {
   });
   q("[data-render-sheet]").addEventListener("click", () => runAction("render", { saveFirst: true }));
   q("[data-validate-sheet]").addEventListener("click", () => runAction("validate"));
-  q("[data-create-order-project]")?.addEventListener("click", () => runAction("create-order-project"));
+  q("[data-create-order-project]")?.addEventListener("click", () => {
+    const quantity = Number(q("[data-sheet-quantity]")?.value || 1);
+    const body = new FormData();
+    body.set("quantity", String(Number.isFinite(quantity) && quantity >= 1 ? Math.floor(quantity) : 1));
+    runAction("create-order-project", { body });
+  });
+  q("[data-sheet-quantity]")?.addEventListener("input", () => updateOrderQuoteUi());
+  q("[data-sheet-quantity]")?.addEventListener("change", () => updateOrderQuoteUi());
   function rotateSelected() {
     const item = selected();
     if (item && canEdit && !busy && !["rendering", "validated"].includes(state.status)) {

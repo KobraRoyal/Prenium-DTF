@@ -92,6 +92,18 @@ class B2BOrderProjectService:
         if order_mode not in B2BOrderProject.OrderMode.values:
             raise ProjectDomainError("INVALID_ORDER_MODE", "Le mode de commande est invalide.")
 
+        from apps.b2b_order_projects.permissions import customer_requires_gang_sheet_orders
+
+        if (
+            customer_requires_gang_sheet_orders(customer)
+            and order_mode == B2BOrderProject.OrderMode.INDIVIDUAL_DESIGNS
+        ):
+            raise ProjectDomainError(
+                "GANG_SHEET_REQUIRED_FOR_CASH",
+                "Ce compte est en règlement comptant carte bancaire : "
+                "créez une Gang Sheet pour déterminer le métrage et payer immédiatement.",
+            )
+
         project = B2BOrderProject.objects.create(
             customer=customer,
             created_by=actor,
@@ -241,7 +253,9 @@ class B2BOrderProjectService:
             values = self._normalize_item_data(payload, require_all=False)
             if production_item:
                 values = {
-                    field: value for field, value in values.items() if field == "support_color_hex"
+                    field: value
+                    for field, value in values.items()
+                    if field in {"support_color_hex", "quantity"}
                 }
             for field, value in values.items():
                 if getattr(item, field) != value:
@@ -281,6 +295,7 @@ class B2BOrderProjectService:
                 "item_public_id": str(item.public_id),
                 "asset_version_public_id": str(version.public_id),
                 "support_color_hex": item.support_color_hex,
+                "quantity": item.quantity,
             },
         )
         self._refresh_completeness(locked)
