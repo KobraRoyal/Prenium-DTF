@@ -2,12 +2,12 @@
 <div class="workflow-panel workflow-panel--operator">
   <header class="workflow-panel__hero operator-panel-hero">
     <div>
-      <p class="operator-panel-hero__eyebrow">Pilotage de fabrication</p>
       <h3 class="workflow-panel__title">Production</h3>
       <p class="workflow-panel__meta">Une vue unique pour préparer l’OF, avancer la fabrication et conserver la trace des décisions Atelier.</p>
     </div>
     <div class="operator-panel-hero__actions">
       <span class="badge {{ job.status|badge_tone }}">{{ job.status|human_status }}</span>
+      <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
       <a class="ui-btn ui-btn-secondary" href="{% url 'production:staff-manufacturing-order-pdf' order_public_id=order.public_id %}" target="_blank" rel="noopener noreferrer">Ouvrir l’OF PDF</a>
     </div>
   </header>
@@ -30,7 +30,6 @@
   <section class="production-track" aria-labelledby="production-track-title">
     <div class="operator-section-head">
       <div>
-        <p class="operator-section-head__eyebrow">Flux Atelier</p>
         <h4 id="production-track-title">Avancement de l’OF</h4>
       </div>
       {% if job.status == "blocked" %}<span class="operator-state-note operator-state-note--danger">Intervention requise · OF bloqué</span>{% endif %}
@@ -47,7 +46,6 @@
   <section class="operator-subpanel" aria-labelledby="gang-sheets-production-title">
     <div class="operator-section-head">
       <div>
-        <p class="operator-section-head__eyebrow">Fichiers imposés au workflow</p>
         <h4 id="gang-sheets-production-title">Gang Sheets validées</h4>
       </div>
     </div>
@@ -55,17 +53,23 @@
       {% for sheet in gang_sheets %}
       <article>
         <div><strong>{{ sheet.name }}</strong><small>{{ sheet.width_mm }} × {{ sheet.height_mm }} mm · {{ sheet.surface_sqm }} m²</small></div>
-        {% if can_download_gang_sheet_final %}<a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-gang-sheet-final-download' sheet_public_id=sheet.public_id %}">Télécharger le PDF HD</a>{% else %}<span class="badge badge--muted">Accès HD restreint</span>{% endif %}
+        {% if can_download_gang_sheet_final %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-gang-sheet-final-download' sheet_public_id=sheet.public_id %}">Télécharger le PDF HD</a>{% else %}<span class="badge badge--muted">Accès HD restreint</span>{% endif %}
       </article>
       {% endfor %}
     </div>
   </section>
   {% endif %}
 
-  {% if order.billing_mode == "deferred" %}
+  {% if order.uses_atelier_pricing %}
   <section id="staff-order-meterage-slot-production" class="staff-meterage-slot operator-subpanel" aria-label="Métrage de production">
     {% include "components/portal/staff_meterage_section.html" %}
   </section>
+  {% endif %}
+
+  {% if production_payment_blocked %}
+  <div class="alert alert--warning workflow-panel__feedback" role="status">
+    <p class="m-0"><strong>Production en attente de paiement.</strong> {{ production_payment_block_reason }}{% if awaits_client_payment %} Le client a reçu (ou recevra) l’e-mail « paiement carte à effectuer ».{% endif %}</p>
+  </div>
   {% endif %}
 
   {% if transition_error %}
@@ -75,9 +79,8 @@
   <div class="operator-two-column">
     <section class="workflow-form-card operator-action-card" aria-labelledby="staff-production-transition-heading">
       <div class="workflow-form-card__head">
-        <p class="operator-section-head__eyebrow">Action principale</p>
         <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0">Faire avancer la production</h4>
-        <p class="muted text-sm m-0">Seules les transitions réellement autorisées depuis <strong>{{ job.status|human_status }}</strong> sont proposées.</p>
+        <p class="muted text-sm m-0">Seules les transitions réellement autorisées depuis <strong>{{ job.status|human_status }}</strong> sont proposées.{% if production_payment_blocked %} Le lancement « En production » reste indisponible tant que le paiement n’est pas confirmé.{% endif %}</p>
       </div>
 
       {% if can_transition and allowed_statuses %}
@@ -93,6 +96,8 @@
         {% include "components/forms/field_group.html" with id="reason" name="reason" label="Commentaire de traçabilité (optionnel)" type="text" placeholder="Ex. contrôle qualité validé, matière indisponible…" help_text="Ce commentaire reste visible dans l’historique Atelier." show_label=1 %}
         {% include "components/forms/form_actions.html" with primary_label="Confirmer la transition" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
       </form>
+      {% elif can_transition and production_payment_blocked %}
+      <div class="operator-empty-inline"><strong>Lancement bloqué</strong><p>Contrôlez les fichiers et calculez le métrage. Aucune autre transition n’est disponible pour le moment.</p></div>
       {% elif not can_transition %}
       <div class="operator-empty-inline"><strong>Consultation seule</strong><p>Votre rôle permet de suivre l’OF, mais pas de modifier son statut.</p></div>
       {% else %}
@@ -102,7 +107,7 @@
 
     <section class="operator-history" aria-labelledby="production-history-title">
       <div class="operator-section-head">
-        <div><p class="operator-section-head__eyebrow">Traçabilité</p><h4 id="production-history-title">Dernières transitions</h4></div>
+        <div><h4 id="production-history-title">Dernières transitions</h4></div>
       </div>
       <ol class="operator-history__list">
         {% for transition in job.transitions.all|slice:":5" %}

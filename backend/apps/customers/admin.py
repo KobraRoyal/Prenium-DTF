@@ -19,8 +19,8 @@ class CustomerAdmin(AdminAuditMixin, admin.ModelAdmin):
         "name",
         "billing_email",
         "is_active",
-        "b2b_order_projects_enabled",
         "default_shipping_mode",
+        "default_billing_mode",
         "preferred_settlement_method",
         "negotiated_file_preparation_fee_eur",
         "billing_city",
@@ -29,12 +29,12 @@ class CustomerAdmin(AdminAuditMixin, admin.ModelAdmin):
     list_display = (
         "name",
         "billing_email",
+        "default_billing_mode",
         "default_shipping_mode",
         "preferred_settlement_method",
         "is_active",
-        "b2b_order_projects_enabled",
     )
-    readonly_fields = ("public_id", "created_at", "updated_at")
+    readonly_fields = ("public_id", "created_at", "updated_at", "b2b_order_projects_enabled")
     search_fields = ("name", "billing_email", "billing_city", "shipping_city")
     inlines = (CustomerBillingProfileInline,)
     fieldsets = (
@@ -45,9 +45,19 @@ class CustomerAdmin(AdminAuditMixin, admin.ModelAdmin):
                     "name",
                     "billing_email",
                     "is_active",
-                    "b2b_order_projects_enabled",
                     "notes",
                 )
+            },
+        ),
+        (
+            "Historique (lecture seule)",
+            {
+                "classes": ("collapse",),
+                "fields": ("b2b_order_projects_enabled",),
+                "description": (
+                    "Le parcours projet B2B est le flux standard pour tous les clients "
+                    "actifs. Ce champ n’est plus un interrupteur métier."
+                ),
             },
         ),
         (
@@ -91,10 +101,10 @@ class CustomerAdmin(AdminAuditMixin, admin.ModelAdmin):
         (
             "Règlement",
             {
-                "fields": ("preferred_settlement_method",),
+                "fields": ("default_billing_mode", "preferred_settlement_method"),
                 "description": (
-                    "PayPal (flux en ligne) ou virement — indique comment le client "
-                    "règle habituellement ses factures."
+                    "Mode par défaut (encours ou comptant CB) à la transmission, "
+                    "et canal préféré (Stripe / PayPal / virement)."
                 ),
             },
         ),

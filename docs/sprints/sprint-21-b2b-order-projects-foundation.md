@@ -38,7 +38,8 @@ STAFF_B2B_ORDER_PROJECT_LIST_PAGE_SIZE=25
 ```
 
 Quand le flag global est actif, le parcours est disponible pour tout client actif disposant d'un
-membership actif. `b2b_order_projects_enabled` est conservé uniquement pour compatibilité.
+membership actif. `b2b_order_projects_enabled` est un champ historique ; le parcours projet
+est le flux standard pour tous les clients actifs (coupe-circuit global uniquement).
 
 ## Validation
 

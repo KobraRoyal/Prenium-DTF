@@ -46,6 +46,9 @@ def test_staff_can_list_and_open_customer_detail():
     )
     assert detail_response.status_code == 200
     assert b"Conditions tarifaires" in detail_response.content
+    assert b"staff-customer-focus" in detail_response.content
+    assert b"Encours" in detail_response.content
+    assert b'name="default_billing_mode"' not in detail_response.content
 
 
 @pytest.mark.django_db
@@ -137,6 +140,9 @@ def test_staff_can_update_account_and_memberships_are_visible():
     )
     assert detail.status_code == 200
     assert b"owner@example.com" in detail.content
+    assert b'name="default_billing_mode"' in detail.content
+    assert b"Comptant" in detail.content
+    assert b"Encours" in detail.content
 
     response = client.post(
         reverse(
@@ -149,6 +155,7 @@ def test_staff_can_update_account_and_memberships_are_visible():
             "siren": "",
             "vat_number": "",
             "is_active": "on",
+            "default_billing_mode": Customer.DefaultBillingMode.IMMEDIATE,
             "preferred_settlement_method": Customer.PreferredSettlementMethod.PAYPAL,
             "default_shipping_mode": Customer.DefaultShippingMode.CARRIER,
             "billing_address_line1": "",
@@ -168,8 +175,29 @@ def test_staff_can_update_account_and_memberships_are_visible():
     customer.refresh_from_db()
     assert customer.name == "Nouveau Nom"
     assert customer.billing_email == "new@example.com"
+    assert customer.default_billing_mode == Customer.DefaultBillingMode.IMMEDIATE
     assert customer.preferred_settlement_method == Customer.PreferredSettlementMethod.PAYPAL
     assert AuditLogEntry.objects.filter(action="customer.account_updated").exists()
+
+
+@pytest.mark.django_db
+def test_create_b2b_order_uses_customer_default_billing_mode():
+    from apps.orders.models import Order
+    from apps.orders.services.orders import OrderService
+
+    user = get_user_model().objects.create_user(email="cb-default@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Default CB",
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    order = OrderService().create_b2b_deferred_order(
+        customer=customer,
+        actor=user,
+        source="client_portal",
+    )
+    assert order.billing_mode == Order.BillingMode.IMMEDIATE
+    assert order.uses_atelier_pricing() is True
 
 
 @pytest.mark.django_db

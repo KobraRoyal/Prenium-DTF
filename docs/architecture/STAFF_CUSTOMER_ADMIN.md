@@ -14,7 +14,8 @@ et de définir leurs **conditions tarifaires** sans passer par Django Admin.
 | Éditer tarifs / encours / cycle | `customers.manage_customer_pricing` |
 | Prérequis portail | `accounts.access_staff_portal` + `is_staff` |
 
-Navigation : **Comptes** (primaire) + entrée **Comptes clients** dans Outils Atelier.
+Navigation : **Comptes** dans la nav primaire Atelier uniquement (pas de doublon dans Outils).
+Liste responsive : table desktop, cartes cliquables sous 1024px.
 
 ## URLs
 

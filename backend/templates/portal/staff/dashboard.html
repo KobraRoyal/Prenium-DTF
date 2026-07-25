@@ -36,26 +36,25 @@
   {% csrf_token %}
   <header class="atelier-worklist__toolbar">
     <div>
-      <p class="atelier-worklist__eyebrow">12 dernières commandes soumises</p>
       <h2>Commandes Atelier</h2>
       <p>Filtrez la file, contrôlez les visuels puis imprimez les OF validés.</p>
     </div>
     <div class="atelier-worklist__batch-actions">
       <button
-        class="ui-btn ui-btn-ghost ui-btn-sm"
+        class="ui-btn ui-btn-ghost"
         type="button"
         {% if not printable_count %}disabled{% endif %}
         @click="selected = Array.from($el.closest('form').querySelectorAll('input[name=order_public_ids]:not(:disabled)')).map((input) => input.value)"
       >Tout sélectionner</button>
       <button
-        class="ui-btn ui-btn-secondary ui-btn-sm"
+        class="ui-btn ui-btn-secondary"
         type="submit"
         name="batch_mode"
         value="latest_ready"
         {% if not ready_to_print_count %}disabled{% endif %}
       >Imprimer les 5 derniers OF prêts</button>
       <button
-        class="ui-btn ui-btn-primary ui-btn-sm"
+        class="ui-btn ui-btn-primary"
         type="submit"
         name="batch_mode"
         value="selected"
@@ -67,13 +66,11 @@
     </div>
   </header>
 
-  <nav class="atelier-worklist__tabs" aria-label="Filtrer la file Atelier" role="tablist">
+  <nav class="atelier-worklist__tabs" aria-label="Filtrer la file Atelier">
     {% for tab in worklist_tabs %}
     <a
       class="atelier-worklist__tab{% if tab.is_active %} is-active{% endif %}"
       href="{% url 'portal:staff-dashboard' %}?queue={{ tab.key }}"
-      role="tab"
-      aria-selected="{% if tab.is_active %}true{% else %}false{% endif %}"
       {% if tab.is_active %}aria-current="page"{% endif %}
     >
       <span>{{ tab.label }}</span>
@@ -95,16 +92,19 @@
     {% for row in worklist_rows %}
     <li class="atelier-order-row {% if row.ready_to_print %}is-ready{% elif row.review_status == 'changes_requested' or row.review_status == 'missing_files' %}has-issue{% endif %}">
       <div class="atelier-order-row__select">
-        <label title="{% if row.print_eligible %}Ajouter cet OF au lot d’impression{% else %}Tous les fichiers doivent être approuvés avant impression{% endif %}">
+        <label>
           <span class="sr-only">Sélectionner l’OF {{ row.of_number }}</span>
           <input
             type="checkbox"
             name="order_public_ids"
             value="{{ row.order.public_id }}"
             x-model="selected"
-            {% if not row.print_eligible %}disabled{% endif %}
+            {% if not row.print_eligible %}disabled aria-describedby="of-print-hint-{{ row.order.public_id }}"{% endif %}
           >
         </label>
+        {% if not row.print_eligible %}
+        <p class="atelier-order-row__select-hint" id="of-print-hint-{{ row.order.public_id }}">Fichiers non approuvés</p>
+        {% endif %}
       </div>
 
       <div class="atelier-order-row__identity">
@@ -137,7 +137,7 @@
 
       <div class="atelier-order-row__action">
         <a
-          class="ui-btn ui-btn-secondary ui-btn-sm"
+          class="ui-btn ui-btn-secondary"
           href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel={{ row.next_panel }}"
         >{{ row.next_action }}</a>
       </div>

@@ -24,6 +24,7 @@ def create_order(*, customer, actor, status=Order.Status.SUBMITTED):
         customer=customer,
         created_by=actor,
         status=status,
+        billing_mode=Order.BillingMode.DEFERRED,
         currency="EUR",
         subtotal_amount="0.00",
         total_amount="0.00",

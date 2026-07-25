@@ -17,13 +17,18 @@ lectures client combinent `customer` et `public_id` UUID.
 
 ## Activation
 
-Deux conditions cumulatives sont requises :
+Le parcours projet avant commande est le **flux standard** pour tous les clients actifs.
 
-- `B2B_DTF_ORDER_PROJECT_ENABLED=True` ;
-- un `Customer` actif accessible par un membership actif.
+Condition unique côté plateforme :
+
+- `B2B_DTF_ORDER_PROJECT_ENABLED=True` (défaut applicatif : activé).
 
 Le champ historique `Customer.b2b_order_projects_enabled` est conservé pour compatibilité de
-schéma mais ne masque plus le parcours. Le flag global coupe la feature pour tous les clients.
+schéma uniquement ; il ne masque plus le parcours et n’est plus exposé dans l’admin Atelier.
+Le flag global reste le coupe-circuit pour désactiver la feature pour tous les clients
+(repli éventuel vers le checkout classique).
+
+Le checkout classique fichier → commande n’est plus le parcours retenu.
 
 ## Frontières après Sprint 22
 

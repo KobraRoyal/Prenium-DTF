@@ -205,11 +205,16 @@ class OrderService:
         customer_note: str = "",
         customer_membership=None,
         source: str = "client_portal",
+        billing_mode: str | None = None,
     ) -> Order:
         validated_membership = self._validate_customer_actor_scope(
             customer=customer,
             actor=actor,
             customer_membership=customer_membership,
+        )
+        resolved_mode = self._resolve_b2b_billing_mode_for_customer(
+            customer=customer,
+            billing_mode=billing_mode,
         )
 
         with transaction.atomic():
@@ -222,7 +227,7 @@ class OrderService:
                 total_amount=Decimal("0.00"),
                 customer_note=customer_note.strip(),
                 source=source,
-                billing_mode=Order.BillingMode.DEFERRED,
+                billing_mode=resolved_mode,
                 pricing_status=Order.PricingStatus.PENDING,
                 credit_hold_status=Order.CreditHoldStatus.NONE,
             )
@@ -235,6 +240,7 @@ class OrderService:
                     "customer_public_id": str(customer.public_id),
                     "customer_membership_public_id": str(validated_membership.public_id),
                     "source": source,
+                    "billing_mode": resolved_mode,
                 },
             )
 
@@ -248,6 +254,7 @@ class OrderService:
         order_public_id,
         customer_membership=None,
         source: str = "client_portal",
+        billing_mode: str | None = None,
     ) -> Order:
         validated_membership = self._validate_customer_actor_scope(
             customer=customer,
@@ -257,17 +264,26 @@ class OrderService:
         order = self.get_customer_order(customer, order_public_id)
         if order is None:
             raise ValidationError("Commande introuvable.")
-        if order.billing_mode != Order.BillingMode.DEFERRED:
-            raise ValidationError("Cette commande n'est pas en facturation différée.")
+        if not order.uses_atelier_pricing():
+            raise ValidationError("Cette commande n'est pas un dépôt atelier B2B.")
         if order.status != Order.Status.DRAFT:
             raise ValidationError("La commande a déjà été soumise.")
         if not order.uploads.exists():
             raise ValidationError("Ajoutez au moins un fichier avant de soumettre.")
 
+        resolved_mode = self._resolve_b2b_billing_mode_for_customer(
+            customer=customer,
+            billing_mode=billing_mode if billing_mode is not None else order.billing_mode,
+        )
+
         with transaction.atomic():
             order_locked = Order.objects.select_for_update().get(pk=order.pk)
             order_locked.status = Order.Status.SUBMITTED
-            order_locked.save(update_fields=["status", "updated_at"])
+            update_fields = ["status", "updated_at"]
+            if order_locked.billing_mode != resolved_mode:
+                order_locked.billing_mode = resolved_mode
+                update_fields.append("billing_mode")
+            order_locked.save(update_fields=update_fields)
 
             from apps.production.services.workflow import ProductionWorkflowService
 
@@ -281,6 +297,7 @@ class OrderService:
                     "customer_public_id": str(customer.public_id),
                     "customer_membership_public_id": str(validated_membership.public_id),
                     "source": source,
+                    "billing_mode": order_locked.billing_mode,
                 },
             )
 
@@ -289,6 +306,43 @@ class OrderService:
             schedule_order_created_email(order_public_id=order_locked.public_id)
 
         return self.get_customer_order(customer, order_locked.public_id)
+
+    @classmethod
+    def _resolve_b2b_billing_mode_for_customer(
+        cls,
+        *,
+        customer,
+        billing_mode: str | None,
+    ) -> str:
+        """Applique le verrou compte : comptant CB interdit l'encours."""
+        account_default = getattr(
+            customer,
+            "default_billing_mode",
+            Order.BillingMode.DEFERRED,
+        )
+        if account_default == Order.BillingMode.IMMEDIATE:
+            if billing_mode is not None:
+                requested = cls._normalize_b2b_billing_mode(billing_mode)
+                if requested != Order.BillingMode.IMMEDIATE:
+                    raise ValidationError(
+                        "Ce compte est en règlement comptant carte bancaire : "
+                        "l’encours n’est pas disponible."
+                    )
+            return Order.BillingMode.IMMEDIATE
+        if billing_mode is None:
+            return cls._normalize_b2b_billing_mode(account_default)
+        return cls._normalize_b2b_billing_mode(billing_mode)
+
+    @staticmethod
+    def _normalize_b2b_billing_mode(billing_mode: str) -> str:
+        value = str(billing_mode or "").strip().lower()
+        if value in {Order.BillingMode.DEFERRED, "encours", "deferred_credit"}:
+            return Order.BillingMode.DEFERRED
+        if value in {Order.BillingMode.IMMEDIATE, "card", "carte", "cb", "stripe"}:
+            return Order.BillingMode.IMMEDIATE
+        raise ValidationError(
+            "Choisissez un mode de règlement : encours ou paiement comptant par carte bancaire."
+        )
 
     def _validate_customer_actor_scope(
         self,

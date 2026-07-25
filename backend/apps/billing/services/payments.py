@@ -48,10 +48,14 @@ class PaymentService:
         if order.total_amount <= 0:
             raise ValidationError("Montant de commande invalide pour un paiement.")
 
-        resolved_provider = resolve_online_provider(
-            customer=customer,
-            requested_provider=provider,
-        )
+        injected_provider = getattr(self.gateway, "provider", None) if self.gateway else None
+        if injected_provider and (not provider or provider == injected_provider):
+            resolved_provider = injected_provider
+        else:
+            resolved_provider = resolve_online_provider(
+                customer=customer,
+                requested_provider=provider,
+            )
         gateway = self._get_gateway(provider=resolved_provider)
         payment = Payment.objects.create(
             order=order,
@@ -368,7 +372,30 @@ class PaymentService:
         from apps.notifications.services.transactional import schedule_payment_captured_email
 
         schedule_payment_captured_email(order_public_id=payment.order.public_id)
+        self._release_production_after_payment(order=payment.order, actor=actor, source=source)
         return payment.order, payment, invoice
+
+    def _release_production_after_payment(self, *, order, actor, source: str) -> None:
+        """Après capture CB atelier : s'assure qu'un OF existe et journalise le déblocage."""
+        if order.billing_mode != Order.BillingMode.IMMEDIATE:
+            return
+        if not order.uses_atelier_pricing():
+            return
+        from apps.production.services.workflow import ProductionWorkflowService
+
+        job = ProductionWorkflowService().get_or_create_for_order(order=order)
+        record_event(
+            action="production.unlocked_after_payment",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=job,
+            metadata={
+                "order_public_id": str(order.public_id),
+                "customer_public_id": str(order.customer.public_id),
+                "production_job_public_id": str(job.public_id),
+                "production_status": job.status,
+                "source": source,
+            },
+        )
 
     def _get_customer_order(self, *, customer, order_public_id):
         return (

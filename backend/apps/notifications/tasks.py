@@ -9,6 +9,7 @@ from apps.notifications.services.transactional import (
     send_account_activated_email,
     send_customer_invitation_email,
     send_file_correction_requested_email,
+    send_order_awaiting_payment_email,
     send_order_created_email,
     send_order_priced_email,
     send_order_processing_email,
@@ -188,6 +189,18 @@ def send_order_shipped_email_task(order_public_id: str) -> None:
 def send_order_priced_email_task(order_public_id: str) -> None:
     if order := _get_order(order_public_id):
         send_order_priced_email(order=order)
+
+
+@shared_task(
+    name="notifications.send_order_awaiting_payment_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_order_awaiting_payment_email_task(order_public_id: str) -> None:
+    if order := _get_order(order_public_id):
+        send_order_awaiting_payment_email(order=order)
 
 
 @shared_task(

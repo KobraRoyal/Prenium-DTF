@@ -14,7 +14,7 @@
     </div>
     <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-[color:var(--muted)]">
       <span>{% if template.is_customized %}Personnalisé · version {{ template.version }}{% else %}Modèle par défaut{% endif %}</span>
-      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-email-template-edit' event=template.event audience=template.audience %}">{% if can_edit_email_templates %}Modifier{% else %}Consulter{% endif %}</a>
+      <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-email-template-edit' event=template.event audience=template.audience %}">{% if can_edit_email_templates %}Modifier{% else %}Consulter{% endif %}</a>
     </div>
   </div>
 </article>

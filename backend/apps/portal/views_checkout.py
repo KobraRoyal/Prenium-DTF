@@ -226,6 +226,10 @@ class ClientCheckoutSubmitView(ScopedCustomerMixin, View):
                 customer_membership=self.customer_membership,
                 order_public_id=order_public_id,
                 source="client_checkout",
+                billing_mode=str(
+                    request.POST.get("billing_mode")
+                    or getattr(self.customer, "default_billing_mode", "deferred")
+                ).strip(),
             )
         except ValidationError:
             query = f"{checkout_url}?order={order_public_id}&submit_error=validation"

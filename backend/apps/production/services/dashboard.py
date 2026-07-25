@@ -4,6 +4,10 @@ from collections import Counter
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from apps.billing.services.production_payment_gate import (
+    order_awaits_client_payment,
+    production_start_blocked_reason,
+)
 from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
@@ -118,15 +122,19 @@ class AtelierDashboardService:
             all_approved
             and production_job is not None
             and production_status == ProductionJob.Status.QUEUED
+            and not order_awaits_client_payment(order)
+            and production_start_blocked_reason(order) is None
         )
         print_eligible = bool(
             all_approved
             and production_job is not None
             and production_status != ProductionJob.Status.COMPLETED
+            and production_start_blocked_reason(order) is None
         )
         next_action, next_panel = self._next_action(
             review_status=review_status,
             production_status=production_status,
+            order=order,
         )
 
         return {
@@ -166,9 +174,19 @@ class AtelierDashboardService:
             return "pending", f"{pending} à contrôler", "is-warning"
         return "approved", f"{upload_count}/{upload_count} approuvés", "is-success"
 
-    def _next_action(self, *, review_status: str, production_status: str) -> tuple[str, str]:
+    def _next_action(
+        self,
+        *,
+        review_status: str,
+        production_status: str,
+        order: Order,
+    ) -> tuple[str, str]:
         if review_status in {"missing_files", "changes_requested", "pending"}:
             return "Contrôler", "inspection"
+        if order_awaits_client_payment(order):
+            return "Attendre paiement", "billing"
+        if production_start_blocked_reason(order) is not None:
+            return "Tarifer", "production"
         if production_status == ProductionJob.Status.READY_TO_SHIP:
             return "Expédier", "shipping"
         if production_status == ProductionJob.Status.COMPLETED:

@@ -80,7 +80,7 @@ class OrderUploadService:
         if order is None:
             raise ValidationError("Order not found.")
 
-        if order.billing_mode == Order.BillingMode.DEFERRED and order.status != Order.Status.DRAFT:
+        if order.status != Order.Status.DRAFT and order.uses_atelier_pricing():
             raise ValidationError(
                 "Cette commande est verrouillée : les fichiers ne peuvent plus être modifiés.",
             )
@@ -433,9 +433,9 @@ class OrderUploadService:
         """Saisie opérateur : mètres linéaires pour toute la commande
         (laize × linéaire = m² total réparti par fichier).
         """
-        if order.billing_mode != Order.BillingMode.DEFERRED:
+        if not order.uses_atelier_pricing():
             raise ValidationError(
-                "La saisie manuelle du métrage concerne les commandes en facturation différée."
+                "La saisie manuelle du métrage concerne les commandes atelier (encours ou comptant CB)."
             )
         if order.status not in (Order.Status.DRAFT, Order.Status.SUBMITTED):
             raise ValidationError("Statut de commande incompatible avec la saisie du métrage.")
@@ -509,9 +509,9 @@ class OrderUploadService:
         order_upload = self.get_order_upload(order=order, upload_public_id=upload_public_id)
         if order_upload is None:
             raise ValidationError("Fichier introuvable pour cette commande.")
-        if order.billing_mode != Order.BillingMode.DEFERRED:
+        if not order.uses_atelier_pricing():
             raise ValidationError(
-                "La saisie manuelle du métrage concerne les commandes en facturation différée."
+                "La saisie manuelle du métrage concerne les commandes atelier (encours ou comptant CB)."
             )
         if order.status not in (Order.Status.DRAFT, Order.Status.SUBMITTED):
             raise ValidationError("Statut de commande incompatible avec la saisie du métrage.")

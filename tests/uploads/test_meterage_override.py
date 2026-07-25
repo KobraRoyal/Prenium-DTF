@@ -113,7 +113,7 @@ def test_set_staff_order_meterage_linear_override_resets_priced_order():
 
 
 @pytest.mark.django_db
-def test_set_staff_meterage_override_rejects_immediate_even_when_submitted():
+def test_set_staff_meterage_override_rejects_catalog_immediate():
     user = get_user_model().objects.create_user(email="s2@example.com", password="pass")
     customer = Customer.objects.create(name="C2")
     CustomerMembership.objects.create(customer=customer, user=user)
@@ -121,8 +121,9 @@ def test_set_staff_meterage_override_rejects_immediate_even_when_submitted():
         customer=customer,
         created_by=user,
         status=Order.Status.SUBMITTED,
+        source="client_api",
         billing_mode=Order.BillingMode.IMMEDIATE,
-        pricing_status=Order.PricingStatus.PENDING,
+        pricing_status=Order.PricingStatus.PRICED,
         currency="EUR",
         subtotal_amount="0",
         total_amount="0",
@@ -136,7 +137,7 @@ def test_set_staff_meterage_override_rejects_immediate_even_when_submitted():
     )
     upload.file.save("b.png", ContentFile(b"x"), save=True)
     svc = OrderUploadService()
-    with pytest.raises(ValidationError, match="différée"):
+    with pytest.raises(ValidationError, match="atelier"):
         svc.set_staff_meterage_override(
             order=order,
             upload_public_id=upload.public_id,

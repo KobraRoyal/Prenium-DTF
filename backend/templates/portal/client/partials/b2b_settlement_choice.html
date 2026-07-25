@@ -1,0 +1,37 @@
+{# Choix / verrou mode de règlement B2B selon Customer.default_billing_mode #}
+{% if customer.default_billing_mode == "immediate" %}
+<input type="hidden" name="billing_mode" value="immediate">
+<div class="b2b-settlement-choice b2b-settlement-choice--locked" role="group" aria-label="Mode de règlement">
+  <p class="b2b-settlement-choice__legend">Mode de règlement</p>
+  <p class="muted text-sm m-0">{{ locked_hint|default:"Compte en règlement comptant carte bancaire." }}</p>
+  <div class="b2b-settlement-choice__options">
+    <div class="b2b-settlement-choice__option is-selected" aria-current="true">
+      <span>
+        <strong>Comptant — carte bancaire</strong>
+        <small>{{ locked_detail|default:"Après calcul du prix par l’atelier, réglez par carte (Stripe) depuis votre espace commande." }}</small>
+      </span>
+    </div>
+  </div>
+</div>
+{% else %}
+<fieldset class="b2b-settlement-choice">
+  <legend>Mode de règlement</legend>
+  <p class="muted text-sm m-0">{{ choice_hint|default:"Choisissez comment cette commande sera réglée après contrôle et tarification atelier." }}</p>
+  <div class="b2b-settlement-choice__options">
+    <label class="b2b-settlement-choice__option">
+      <input type="radio" name="billing_mode" value="deferred" checked>
+      <span>
+        <strong>Encours</strong>
+        <small>{{ deferred_detail|default:"Facturation différée selon votre cycle client. Aucun paiement en ligne à cette étape." }}</small>
+      </span>
+    </label>
+    <label class="b2b-settlement-choice__option">
+      <input type="radio" name="billing_mode" value="immediate">
+      <span>
+        <strong>Comptant — carte bancaire</strong>
+        <small>{{ immediate_detail|default:"Après calcul du prix par l’atelier, réglez par carte (Stripe) depuis votre espace commande." }}</small>
+      </span>
+    </label>
+  </div>
+</fieldset>
+{% endif %}

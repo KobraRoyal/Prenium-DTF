@@ -51,15 +51,22 @@ class Customer(BaseModel):
         STRIPE = "stripe", "Stripe (carte)"
         WIRE_TRANSFER = "wire_transfer", "Virement bancaire"
 
+    class DefaultBillingMode(models.TextChoices):
+        DEFERRED = "deferred", "Encours / facturation différée"
+        IMMEDIATE = "immediate", "Paiement comptant (carte bancaire)"
+
     name = models.CharField(max_length=255)
     billing_email = models.EmailField(blank=True)
     siren = models.CharField(max_length=9, blank=True)
     vat_number = models.CharField(max_length=32, blank=True)
     is_active = models.BooleanField(default=True)
     b2b_order_projects_enabled = models.BooleanField(
-        "Projets de commande B2B activés",
-        default=False,
-        help_text="Activation IDS explicite du parcours projet avant commande.",
+        "Projets de commande B2B activés (historique)",
+        default=True,
+        help_text=(
+            "Champ historique. Le parcours projet est le flux standard pour tous les "
+            "clients actifs lorsque B2B_DTF_ORDER_PROJECT_ENABLED est actif."
+        ),
     )
     notes = models.TextField(blank=True)
 
@@ -138,8 +145,21 @@ class Customer(BaseModel):
         choices=PreferredSettlementMethod.choices,
         default=PreferredSettlementMethod.WIRE_TRANSFER,
         help_text=(
-            "PayPal / Stripe (paiement en ligne immédiat) ou virement — "
-            "hors facturation mensuelle différée."
+            "Préférence affichée côté Atelier. "
+            "Pour une commande en paiement immédiat, le client choisit "
+            "parmi les moyens installés (PayPal, carte / Stripe)."
+        ),
+    )
+    default_billing_mode = models.CharField(
+        "Mode de règlement par défaut",
+        max_length=16,
+        choices=DefaultBillingMode.choices,
+        default=DefaultBillingMode.DEFERRED,
+        help_text=(
+            "Mode de règlement du compte B2B : encours (facturation différée) "
+            "ou comptant carte bancaire. En comptant, l’encours n’est plus "
+            "proposé à la transmission. En encours, le client peut encore "
+            "passer une commande en comptant CB."
         ),
     )
 

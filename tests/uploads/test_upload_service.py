@@ -38,7 +38,10 @@ def create_order(customer, actor):
     return Order.objects.create(
         customer=customer,
         created_by=actor,
-        status=Order.Status.SUBMITTED,
+        status=Order.Status.DRAFT,
+        source="client_api",
+        billing_mode=Order.BillingMode.IMMEDIATE,
+        pricing_status=Order.PricingStatus.PRICED,
         currency="EUR",
         subtotal_amount="0.00",
         total_amount="0.00",

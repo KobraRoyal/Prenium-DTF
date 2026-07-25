@@ -16,7 +16,7 @@ class StaffCustomerAccountForm(forms.ModelForm):
             "siren",
             "vat_number",
             "is_active",
-            "b2b_order_projects_enabled",
+            "default_billing_mode",
             "preferred_settlement_method",
             "default_shipping_mode",
             "billing_address_line1",
@@ -37,10 +37,21 @@ class StaffCustomerAccountForm(forms.ModelForm):
             "siren": "SIREN",
             "vat_number": "N° TVA",
             "is_active": "Compte actif",
-            "b2b_order_projects_enabled": "Projets B2B activés",
-            "preferred_settlement_method": "Mode de règlement",
+            "default_billing_mode": "Mode de règlement",
+            "preferred_settlement_method": "Canal de paiement préféré",
             "default_shipping_mode": "Acheminement par défaut",
             "notes": "Notes internes",
+        }
+        help_texts = {
+            "default_billing_mode": (
+                "En comptant CB, l’encours n’est plus proposé au client. "
+                "En encours, il peut encore choisir le comptant CB "
+                "commande par commande."
+            ),
+            "preferred_settlement_method": (
+                "Utile surtout en comptant CB (préférence Stripe / PayPal) "
+                "ou pour le rapprochement virement en encours."
+            ),
         }
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3, "class": "ui-input"}),
@@ -48,6 +59,7 @@ class StaffCustomerAccountForm(forms.ModelForm):
             "billing_email": forms.EmailInput(attrs={"class": "ui-input"}),
             "siren": forms.TextInput(attrs={"class": "ui-input"}),
             "vat_number": forms.TextInput(attrs={"class": "ui-input"}),
+            "default_billing_mode": forms.RadioSelect,
             "preferred_settlement_method": forms.Select(attrs={"class": "ui-input"}),
             "default_shipping_mode": forms.Select(attrs={"class": "ui-input"}),
             "billing_address_line1": forms.TextInput(attrs={"class": "ui-input"}),
@@ -80,13 +92,14 @@ class StaffCustomerPricingForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         widget=forms.NumberInput(attrs={"class": "ui-input", "step": "0.01", "min": "0"}),
-        help_text="Vide = prix catalogue DTF. Utilisé pour la tarification différée.",
+        help_text="Vide = prix catalogue DTF. Utilisé pour la tarification atelier.",
     )
     billing_cycle = forms.ChoiceField(
         label="Cycle de facturation",
         choices=CustomerBillingProfile.BillingCycle.choices,
         initial=CustomerBillingProfile.BillingCycle.MONTHLY,
         widget=forms.Select(attrs={"class": "ui-input"}),
+        help_text="Applicable lorsque le client commande en encours.",
     )
     credit_limit_eur = forms.DecimalField(
         label="Plafond d’encours (EUR)",
@@ -95,7 +108,7 @@ class StaffCustomerPricingForm(forms.Form):
         max_digits=12,
         decimal_places=2,
         widget=forms.NumberInput(attrs={"class": "ui-input", "step": "0.01", "min": "0"}),
-        help_text="Optionnel. Vide = pas de plafond.",
+        help_text="Optionnel. Vide = pas de plafond. Pertinent en mode encours.",
     )
     enforce_credit_block = forms.BooleanField(
         label="Bloquer les commandes en dépassement d’encours",

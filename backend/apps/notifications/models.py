@@ -14,6 +14,10 @@ class EmailTemplate(BaseModel):
         ORDER_READY_TO_SHIP = "order_ready_to_ship", "Commande traitée"
         ORDER_SHIPPED = "order_shipped", "Commande expédiée"
         ORDER_PRICED = "order_priced", "Commande tarifée"
+        ORDER_AWAITING_PAYMENT = (
+            "order_awaiting_payment",
+            "Paiement carte à effectuer",
+        )
         FILE_CORRECTION_REQUESTED = (
             "file_correction_requested",
             "Correction fichier demandée",

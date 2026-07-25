@@ -38,6 +38,7 @@ class B2BOrderProjectCheckoutService:
         actor,
         customer_membership,
         source: str = "client_portal.b2b_checkout",
+        billing_mode: str | None = None,
     ):
         locked = self.project_service._lock(project)
         self.project_service._refresh_completeness(locked)
@@ -114,6 +115,7 @@ class B2BOrderProjectCheckoutService:
             customer_note=self._build_order_note(locked),
             customer_membership=customer_membership,
             source=source,
+            billing_mode=billing_mode,
         )
 
         for item in items:
@@ -144,6 +146,7 @@ class B2BOrderProjectCheckoutService:
             customer_membership=customer_membership,
             order_public_id=order.public_id,
             source=source,
+            billing_mode=billing_mode,
         )
 
         now = timezone.now()

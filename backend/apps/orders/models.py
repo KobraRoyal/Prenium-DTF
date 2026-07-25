@@ -34,8 +34,8 @@ class Order(BaseModel):
         SUBMITTED = "submitted", "Submitted"
 
     class BillingMode(models.TextChoices):
-        IMMEDIATE = "immediate", "Paiement à la commande"
-        DEFERRED = "deferred", "Facturation différée"
+        IMMEDIATE = "immediate", "Paiement comptant (carte bancaire)"
+        DEFERRED = "deferred", "Encours / facturation différée"
 
     class PricingStatus(models.TextChoices):
         PENDING = "pending", "Prix en attente"
@@ -123,6 +123,23 @@ class Order(BaseModel):
     @property
     def short_ref(self) -> str:
         return short_public_ref(self.public_id)
+
+    def uses_atelier_pricing(self) -> bool:
+        """Prix calculé atelier après dépôt (encours ou comptant CB).
+
+        Exclut le flux catalogue / API déjà tarifé à la création (lignes figées).
+        """
+        if self.billing_mode == self.BillingMode.DEFERRED:
+            return True
+        if self.billing_mode != self.BillingMode.IMMEDIATE:
+            return False
+        if self.source in {"client_api", "api"}:
+            return False
+        # create_order catalogue : lignes présentes dès la création.
+        # create_b2b_* : dépôt fichiers sans lignes catalogue.
+        if self.items.exists():
+            return False
+        return True
 
 
 class OrderLine(BaseModel):

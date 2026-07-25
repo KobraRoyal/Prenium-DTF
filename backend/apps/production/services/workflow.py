@@ -45,10 +45,22 @@ class ProductionWorkflowService:
         ProductionJob.Status.COMPLETED: set(),
     }
 
-    def allowed_target_statuses(self, *, current_status: str) -> list[str]:
+    def allowed_target_statuses(self, *, current_status: str, order: Order | None = None) -> list[str]:
         """Retourne les cibles autorisées dans l'ordre métier affiché par l'UI."""
         allowed = self.allowed_transitions.get(current_status, set())
-        return [status for status in ProductionJob.Status.values if status in allowed]
+        statuses = [status for status in ProductionJob.Status.values if status in allowed]
+        if order is not None:
+            from apps.billing.services.production_payment_gate import (
+                production_start_blocked_reason,
+            )
+
+            if production_start_blocked_reason(order) is not None:
+                statuses = [
+                    status
+                    for status in statuses
+                    if status != ProductionJob.Status.IN_PROGRESS
+                ]
+        return statuses
 
     def get_or_create_for_order(self, *, order: Order) -> ProductionJob:
         mo_number = self.build_manufacturing_order_number(order=order)
@@ -364,6 +376,16 @@ class ProductionWorkflowService:
                     f"Transition from {from_status} to {normalized_status} is not allowed."
                 )
             else:
+                if normalized_status == ProductionJob.Status.IN_PROGRESS:
+                    from apps.billing.services.production_payment_gate import (
+                        production_start_blocked_reason,
+                    )
+
+                    payment_block = production_start_blocked_reason(locked_job.order)
+                    if payment_block is not None:
+                        rejection_message = payment_block
+
+            if rejection_message is None:
                 is_first_processing = (
                     normalized_status == ProductionJob.Status.IN_PROGRESS
                     and locked_job.started_at is None
@@ -433,8 +455,7 @@ class ProductionWorkflowService:
                 message=rejection_message,
                 requested_status=normalized_status,
             )
-            raise ValidationError("Transition not allowed from the current status.")
-
+            raise ValidationError(rejection_message)
         if notification_event == "processing":
             from apps.notifications.services.transactional import (
                 schedule_order_processing_email,

@@ -213,6 +213,8 @@ def test_template_catalog_uses_order_lifecycle_without_redundant_b2b_event():
         EmailTemplate.Event.ORDER_PROCESSING,
         EmailTemplate.Event.ORDER_READY_TO_SHIP,
         EmailTemplate.Event.ORDER_SHIPPED,
+        EmailTemplate.Event.ORDER_PRICED,
+        EmailTemplate.Event.ORDER_AWAITING_PAYMENT,
     }.issubset(events)
 
 

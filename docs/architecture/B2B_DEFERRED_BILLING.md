@@ -36,7 +36,8 @@ Voir **[CUSTOMER_PRICING_AND_LOGISTICS.md](./CUSTOMER_PRICING_AND_LOGISTICS.md)*
 
 | Champ | Rôle |
 |-------|------|
-| `billing_mode` | `immediate` (API / ancien flux prix à la création) \| `deferred` (portail B2B actuel) |
+| `billing_mode` | `immediate` (paiement comptant CB après tarification atelier, choisi à la commande) \| `deferred` (encours / facturation différée, choisi à la commande) |
+| `Customer.default_billing_mode` | Mode compte : **comptant CB** verrouille la transmission (pas d’option encours) ; **encours** laisse encore choisir le comptant CB commande par commande |
 | `pricing_status` | `pending` \| `priced` \| `failed` |
 | `credit_hold_status` | `none` \| `clear` \| `warning` \| `blocked` |
 | `billing_statement` | FK optionnelle vers `BillingStatement` (rattachement période de facturation) |
@@ -135,6 +136,18 @@ cd backend && python3 -m pytest ../tests -q
 - Métrage affiné (PDF, profils DPI par fichier, saisie manuelle staff).
 - Report systématique des adresses client sur `Order` / `Shipment` au moment de l’expédition.
 
+## Flux production vs paiement (comptant CB)
+
+1. Transmission → OF créé (`queued`) pour contrôle fichiers / métrage.
+2. Atelier contrôle + calcule le tarif → email `order_awaiting_payment`.
+3. **Production (`in_progress`) refusée** tant qu’aucun `Payment` `captured`.
+4. Capture Stripe/PayPal → audit `production.unlocked_after_payment` ; lancement autorisé.
+
+L’encours (`deferred`) n’est pas soumis à cette gate.
+
 ## Notifications (livré)
 
-- Après `OrderPricingService.compute_and_persist_order_pricing`, un email transactionnel **« commande tarifée »** est planifié (`schedule_order_priced_email`) pour les commandes `billing_mode = deferred`, avec mention optionnelle du statut d’encours (`blocked` / `warning`).
+- Après `OrderPricingService.compute_and_persist_order_pricing` :
+  - **encours** (`billing_mode = deferred`) → email **« commande tarifée »** (`schedule_order_priced_email`), avec mention optionnelle du statut d’encours (`blocked` / `warning`) ;
+  - **comptant CB** (`billing_mode = immediate`) → email **« paiement carte à effectuer »** (`schedule_order_awaiting_payment_email`), avec lien vers le panneau Facture client (CTA Stripe après tarification).
+- Éditable dans Atelier → Modèles d’e-mails (`order_priced` / `order_awaiting_payment`).

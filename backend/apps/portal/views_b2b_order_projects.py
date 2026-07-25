@@ -502,6 +502,10 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                 actor=request.user,
                 customer_membership=self.customer_membership,
                 source="client_portal.b2b_checkout",
+                billing_mode=str(
+                    request.POST.get("billing_mode")
+                    or getattr(self.customer, "default_billing_mode", "deferred")
+                ).strip(),
             )
         except ProjectDomainError as error:
             project.refresh_from_db()

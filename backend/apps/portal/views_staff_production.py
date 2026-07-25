@@ -26,15 +26,25 @@ class StaffOrderPanelProductionView(StaffOrderContextMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def _production_panel_context(self, request, job, transition_error: str = ""):
+        from apps.billing.services.production_payment_gate import (
+            order_awaits_client_payment,
+            production_start_blocked_reason,
+        )
+
         meterage = meterage_context_for_order(request, self.order, "")
+        payment_block = production_start_blocked_reason(self.order)
         return {
             "order": self.order,
             "job": job,
             "allowed_statuses": production_workflow_service.allowed_target_statuses(
-                current_status=job.status
+                current_status=job.status,
+                order=self.order,
             ),
             "can_transition": request.user.has_perm("production.transition_productionjob"),
             "transition_error": transition_error,
+            "production_payment_blocked": payment_block is not None,
+            "production_payment_block_reason": payment_block or "",
+            "awaits_client_payment": order_awaits_client_payment(self.order),
             "meterage_hx_target": "#staff-order-meterage-slot-production",
             "gang_sheets": GangSheet.objects.for_order(self.order).filter(
                 status=GangSheet.Status.VALIDATED

@@ -1,5 +1,5 @@
 {# Métrage linéaire commande — facturation différée. Panneau Production (slot #staff-order-meterage-slot-production). #}
-{% if order.billing_mode == "deferred" %}
+{% if order.uses_atelier_pricing %}
 <section class="staff-meterage-section" aria-labelledby="staff-meterage-heading">
   <h4 id="staff-meterage-heading" class="staff-meterage-section__title">Métrage linéaire (commande)</h4>
   <p class="staff-meterage-section__lead muted">

@@ -19,11 +19,12 @@ def create_customer_scope(email: str, customer_name: str):
     return user, customer, membership
 
 
-def create_order(customer, actor):
+def create_order(customer, actor, *, billing_mode=Order.BillingMode.DEFERRED):
     return Order.objects.create(
         customer=customer,
         created_by=actor,
         status=Order.Status.SUBMITTED,
+        billing_mode=billing_mode,
         currency="EUR",
         subtotal_amount="0.00",
         total_amount="0.00",
@@ -147,7 +148,7 @@ def test_invalid_transition_is_refused_and_failure_audited():
     order = create_order(customer, actor)
     job = service.get_or_create_for_order(order=order)
 
-    with pytest.raises(ValidationError, match="Transition not allowed from the current status."):
+    with pytest.raises(ValidationError, match="not allowed"):
         service.transition_job(
             order_public_id=order.public_id,
             to_status=ProductionJob.Status.COMPLETED,
@@ -186,7 +187,7 @@ def test_transition_existing_job_reloads_state_under_lock_before_validation():
     )
 
     assert updated_job.status == ProductionJob.Status.IN_PROGRESS
-    with pytest.raises(ValidationError, match="Transition not allowed from the current status."):
+    with pytest.raises(ValidationError, match="not allowed"):
         service.transition_existing_job(
             production_job=stale_job,
             actor=staff_user,
@@ -332,7 +333,7 @@ def test_scan_transition_invalid_status_is_refused_and_logged():
     order = create_order(customer, actor)
     job = workflow_service.get_or_create_for_order(order=order)
 
-    with pytest.raises(ValidationError, match="Transition not allowed from the current status."):
+    with pytest.raises(ValidationError, match="not allowed"):
         scan_service.transition_by_scan(
             scan_identifier=job.scan_identifier,
             to_status=ProductionJob.Status.COMPLETED,
@@ -346,3 +347,79 @@ def test_scan_transition_invalid_status_is_refused_and_logged():
         outcome=ProductionJobScanLog.Outcome.REJECTED,
         requested_status=ProductionJob.Status.COMPLETED,
     ).exists()
+
+
+@pytest.mark.django_db
+def test_immediate_atelier_order_cannot_start_production_before_payment():
+    service = ProductionWorkflowService()
+    actor, customer, _membership = create_customer_scope("cb@example.com", "CB Co")
+    staff_user = get_user_model().objects.create_user(
+        email="staff-cb@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    order = create_order(
+        customer,
+        actor,
+        billing_mode=Order.BillingMode.IMMEDIATE,
+    )
+    order.pricing_status = Order.PricingStatus.PRICED
+    order.total_amount = "42.00"
+    order.source = "client_portal.b2b_checkout"
+    order.save(
+        update_fields=["pricing_status", "total_amount", "source", "updated_at"]
+    )
+    service.get_or_create_for_order(order=order)
+
+    assert service.allowed_target_statuses(
+        current_status=ProductionJob.Status.QUEUED,
+        order=order,
+    ) == [ProductionJob.Status.BLOCKED]
+
+    with pytest.raises(ValidationError, match="paiement"):
+        service.transition_job(
+            order_public_id=order.public_id,
+            to_status=ProductionJob.Status.IN_PROGRESS,
+            actor=staff_user,
+            source="test",
+        )
+
+
+@pytest.mark.django_db
+def test_immediate_atelier_order_can_start_production_after_captured_payment():
+    from apps.billing.models import Payment
+
+    service = ProductionWorkflowService()
+    actor, customer, _membership = create_customer_scope("paid@example.com", "Paid Co")
+    staff_user = get_user_model().objects.create_user(
+        email="staff-paid@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    order = create_order(
+        customer,
+        actor,
+        billing_mode=Order.BillingMode.IMMEDIATE,
+    )
+    order.pricing_status = Order.PricingStatus.PRICED
+    order.total_amount = "42.00"
+    order.source = "client_portal.b2b_checkout"
+    order.save(
+        update_fields=["pricing_status", "total_amount", "source", "updated_at"]
+    )
+    Payment.objects.create(
+        order=order,
+        amount="42.00",
+        currency="EUR",
+        status=Payment.Status.CAPTURED,
+        provider=Payment.Provider.STRIPE,
+    )
+    service.get_or_create_for_order(order=order)
+
+    _order, updated_job, _transition = service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.IN_PROGRESS,
+        actor=staff_user,
+        source="test",
+    )
+    assert updated_job.status == ProductionJob.Status.IN_PROGRESS

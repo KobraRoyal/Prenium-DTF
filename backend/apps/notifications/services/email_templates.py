@@ -262,7 +262,8 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "Bonjour,\n\n"
             "Votre paiement pour la commande {{ order.reference }} "
             "({{ customer.name }}) a bien été enregistré.\n\n"
-            "Votre facture est disponible dans votre espace client.\n\n"
+            "Votre justificatif de paiement est disponible dans votre espace client. "
+            "La facture fiscale sera émise séparément (outil RCA).\n\n"
             "Cordialement,\nL’équipe {{ site.name }}"
         ),
     ),
@@ -373,7 +374,7 @@ EMAIL_TEMPLATE_DEFINITIONS = (
         EmailTemplate.Audience.CLIENT,
         event_label="Commande tarifée",
         audience_label="Client",
-        description="Information envoyée après calcul du tarif B2B.",
+        description="Information envoyée après calcul du tarif B2B (encours / facturation différée).",
         subject="Votre commande est tarifée — {{ customer.name }}",
         body=(
             "Bonjour,\n\n"
@@ -390,7 +391,7 @@ EMAIL_TEMPLATE_DEFINITIONS = (
         EmailTemplate.Audience.INTERNAL,
         event_label="Commande tarifée",
         audience_label="Équipe interne",
-        description="Alerte interne après calcul du tarif B2B.",
+        description="Alerte interne après calcul du tarif B2B (encours).",
         subject="[Commercial] Commande tarifée — {{ order.reference }}",
         body=(
             "Le tarif d’une commande B2B a été calculé.\n\n"
@@ -398,6 +399,45 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "Référence : {{ order.reference }}\n"
             "Total TTC : {{ order.total_amount }} {{ order.currency }}\n"
             "{{ order.credit_status_message }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.ORDER_AWAITING_PAYMENT,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Paiement carte à effectuer",
+        audience_label="Client",
+        description=(
+            "Envoyé après tarification atelier pour une commande en "
+            "paiement comptant carte bancaire, avec lien vers l’espace Facture."
+        ),
+        subject="Votre commande est prête à payer — {{ order.reference }}",
+        body=(
+            "Bonjour,\n\n"
+            "Le montant de votre commande {{ order.reference }} ({{ customer.name }}) "
+            "a été calculé après contrôle technique.\n\n"
+            "Total TTC : {{ order.total_amount }} {{ order.currency }}\n"
+            "Mode : {{ order.billing_mode }}\n\n"
+            "Réglez par carte bancaire depuis votre espace commande :\n"
+            "{{ action.url }}\n\n"
+            "La production démarre après confirmation du paiement.\n\n"
+            "Cordialement,\nL’équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.ORDER_AWAITING_PAYMENT,
+        EmailTemplate.Audience.INTERNAL,
+        event_label="Paiement carte à effectuer",
+        audience_label="Équipe interne",
+        description="Alerte interne : commande comptant CB tarifée, en attente de paiement carte.",
+        subject="[Compta] Paiement carte attendu — {{ order.reference }}",
+        body=(
+            "Une commande en paiement comptant carte bancaire est tarifée "
+            "et attend le règlement client.\n\n"
+            "Client : {{ customer.name }}\n"
+            "Référence : {{ order.reference }}\n"
+            "Total TTC : {{ order.total_amount }} {{ order.currency }}\n"
+            "Mode : {{ order.billing_mode }}\n"
+            "Lien client : {{ action.url }}"
         ),
     ),
     _definition(

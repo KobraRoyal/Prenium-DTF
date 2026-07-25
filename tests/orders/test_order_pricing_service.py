@@ -451,9 +451,9 @@ def test_compute_uses_staff_meterage_override_when_set():
 
 
 @pytest.mark.django_db
-def test_compute_rejects_non_deferred_order():
+def test_compute_rejects_api_catalog_immediate_order():
     user = get_user_model().objects.create_user(email="inj@example.com", password="pass")
-    customer = Customer.objects.create(name="Immediate")
+    customer = Customer.objects.create(name="Immediate API")
     _seed_catalog_dtf_and_file_prep(dtf_price="10.00", prep_price="10.00")
     order = Order.objects.create(
         customer=customer,
@@ -461,13 +461,76 @@ def test_compute_rejects_non_deferred_order():
         status=Order.Status.SUBMITTED,
         billing_mode=Order.BillingMode.IMMEDIATE,
         pricing_status=Order.PricingStatus.PRICED,
+        source="client_api",
         currency="EUR",
         subtotal_amount=Decimal("1.00"),
         total_amount=Decimal("1.00"),
     )
-    with pytest.raises(ValidationError, match="facturation différée"):
+    with pytest.raises(ValidationError, match="atelier"):
         OrderPricingService().compute_and_persist_order_pricing(
             order=order,
             actor=user,
             source="test",
         )
+
+
+@pytest.mark.django_db
+def test_compute_and_persist_sends_awaiting_payment_email_for_immediate():
+    user = get_user_model().objects.create_user(email="cb@example.com", password="pass")
+    customer = Customer.objects.create(name="Comptant", billing_email="cb@example.com")
+    CustomerMembership.objects.create(customer=customer, user=user)
+    _seed_catalog_dtf_and_file_prep(dtf_price="10.00", prep_price="10.00")
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.IMMEDIATE,
+        pricing_status=Order.PricingStatus.PENDING,
+        source="client_portal.b2b_checkout",
+        currency="EUR",
+        subtotal_amount=Decimal("0"),
+        total_amount=Decimal("0"),
+    )
+    upload = OrderUpload(
+        order=order,
+        uploaded_by=user,
+        original_filename="f.png",
+        mime_type="image/png",
+        size_bytes=8,
+        quantity=1,
+    )
+    upload.file.save("f.png", ContentFile(b"fakebytes"), save=True)
+    OrderUploadInspection.objects.create(
+        order_upload=upload,
+        status=OrderUploadInspection.Status.OK,
+        image_width=3000,
+        image_height=1500,
+    )
+
+    from django.core import mail
+
+    mail.outbox.clear()
+    with patch(
+        "apps.notifications.tasks.send_order_awaiting_payment_email_task.delay"
+    ) as task_delay:
+        with patch("apps.notifications.tasks.send_order_priced_email_task.delay") as priced_delay:
+            with TestCase.captureOnCommitCallbacks(execute=True):
+                OrderPricingService().compute_and_persist_order_pricing(
+                    order=order,
+                    actor=user,
+                    source="test",
+                )
+
+    order.refresh_from_db()
+    assert order.pricing_status == Order.PricingStatus.PRICED
+    assert order.total_amount > Decimal("0")
+    task_delay.assert_called_once_with(str(order.public_id))
+    priced_delay.assert_not_called()
+
+    from apps.notifications.tasks import send_order_awaiting_payment_email_task
+
+    send_order_awaiting_payment_email_task.run(str(order.public_id))
+    assert len(mail.outbox) == 1
+    assert "payer" in mail.outbox[0].subject.lower()
+    assert "/panels/billing/" in mail.outbox[0].body
+    assert str(order.public_id) in mail.outbox[0].body

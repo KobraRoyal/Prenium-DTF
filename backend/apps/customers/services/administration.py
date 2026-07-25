@@ -60,7 +60,7 @@ class CustomerAdministrationService:
             "siren",
             "vat_number",
             "is_active",
-            "b2b_order_projects_enabled",
+            "default_billing_mode",
             "preferred_settlement_method",
             "default_shipping_mode",
             "billing_address_line1",

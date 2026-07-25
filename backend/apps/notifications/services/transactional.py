@@ -444,6 +444,44 @@ def schedule_order_priced_email(*, order_public_id) -> None:
     transaction.on_commit(lambda: send_order_priced_email_task.delay(str(order_public_id)))
 
 
+def _client_order_billing_url(order: Order) -> str:
+    return _absolute_url(
+        reverse(
+            "portal:client-order-panel-billing",
+            kwargs={
+                "customer_public_id": order.customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+    )
+
+
+def send_order_awaiting_payment_email(*, order: Order) -> None:
+    if not getattr(settings, "TRANSACTIONAL_EMAILS_ENABLED", True):
+        return
+    if order.billing_mode != Order.BillingMode.IMMEDIATE:
+        return
+    if order.pricing_status != Order.PricingStatus.PRICED:
+        return
+    if order.total_amount is None or order.total_amount <= 0:
+        return
+    _send_event_email(
+        event=EmailTemplate.Event.ORDER_AWAITING_PAYMENT,
+        order=order,
+        context_overrides={"action.url": _client_order_billing_url(order)},
+    )
+
+
+def schedule_order_awaiting_payment_email(*, order_public_id) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_order_awaiting_payment_email_task
+
+    transaction.on_commit(
+        lambda: send_order_awaiting_payment_email_task.delay(str(order_public_id))
+    )
+
+
 def send_file_correction_requested_email(*, review) -> bool:
     if not getattr(settings, "TRANSACTIONAL_EMAILS_ENABLED", True):
         return False

@@ -208,7 +208,7 @@ class OrderPricingService:
         """Efface lignes et montants persistés pour permettre une nouvelle
         saisie métrage puis « Calculer le prix ».
         """
-        if order.billing_mode != Order.BillingMode.DEFERRED:
+        if not order.uses_atelier_pricing():
             return
         if order.pricing_status not in (
             Order.PricingStatus.PRICED,
@@ -261,9 +261,9 @@ class OrderPricingService:
         actor,
         source: str,
     ) -> Order:
-        if order.billing_mode != Order.BillingMode.DEFERRED:
+        if not order.uses_atelier_pricing():
             raise ValidationError(
-                "Le calcul automatique s'applique aux commandes en facturation différée."
+                "Le calcul automatique s'applique aux commandes atelier (encours ou comptant CB)."
             )
         if order.status != Order.Status.SUBMITTED:
             raise ValidationError("La commande doit être soumise par le client avant tarification.")
@@ -379,7 +379,14 @@ class OrderPricingService:
         )
 
         refreshed = Order.objects.get(pk=order.pk)
-        from apps.notifications.services.transactional import schedule_order_priced_email
+        if refreshed.billing_mode == Order.BillingMode.DEFERRED:
+            from apps.notifications.services.transactional import schedule_order_priced_email
 
-        schedule_order_priced_email(order_public_id=refreshed.public_id)
+            schedule_order_priced_email(order_public_id=refreshed.public_id)
+        elif refreshed.billing_mode == Order.BillingMode.IMMEDIATE:
+            from apps.notifications.services.transactional import (
+                schedule_order_awaiting_payment_email,
+            )
+
+            schedule_order_awaiting_payment_email(order_public_id=refreshed.public_id)
         return refreshed

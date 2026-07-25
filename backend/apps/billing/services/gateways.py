@@ -51,31 +51,43 @@ class PaymentGateway(Protocol):
     def confirm_checkout(self, *, provider_payment_id: str) -> CheckoutConfirmResult: ...
 
 
-def resolve_online_provider(*, customer, requested_provider: str | None = None) -> str:
-    """Choisit PayPal ou Stripe pour un paiement immédiat (hors facturation mensuelle)."""
-    preferred = getattr(customer, "preferred_settlement_method", "") or ""
-    requested = (requested_provider or "").strip().lower()
+def configured_online_providers() -> list[str]:
+    """Providers réellement installés (credentials présents)."""
+    providers: list[str] = []
+    if settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET:
+        providers.append(Payment.Provider.PAYPAL)
+    if settings.STRIPE_SECRET_KEY:
+        providers.append(Payment.Provider.STRIPE)
+    return providers
 
+
+def resolve_online_provider(*, customer, requested_provider: str | None = None) -> str:
+    """
+    Résout le provider pour un paiement immédiat.
+
+    Le client choisit parmi les moyens installés sur le projet.
+    `preferred_settlement_method` sert seulement de pré-sélection, pas de verrou.
+    """
+    available = configured_online_providers()
+    if not available:
+        raise ValidationError("Aucun moyen de paiement en ligne n'est configuré.")
+
+    requested = (requested_provider or "").strip().lower()
     if requested:
         if requested not in {Payment.Provider.PAYPAL, Payment.Provider.STRIPE}:
             raise ValidationError("Moyen de paiement en ligne non supporté.")
+        if requested not in available:
+            raise ValidationError(
+                "Ce moyen de paiement n'est pas disponible sur cette plateforme."
+            )
         return requested
 
-    if preferred == customer.PreferredSettlementMethod.STRIPE:
-        return Payment.Provider.STRIPE
-    if preferred == customer.PreferredSettlementMethod.PAYPAL:
-        return Payment.Provider.PAYPAL
-    if preferred == customer.PreferredSettlementMethod.WIRE_TRANSFER:
-        raise ValidationError(
-            "Ce compte est configuré en virement bancaire : pas de paiement en ligne."
-        )
-
-    # Défaut technique : PayPal si credentials, sinon Stripe.
-    if settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET:
-        return Payment.Provider.PAYPAL
-    if settings.STRIPE_SECRET_KEY:
-        return Payment.Provider.STRIPE
-    raise ValidationError("Aucun moyen de paiement en ligne n'est configuré.")
+    preferred = getattr(customer, "preferred_settlement_method", "") or ""
+    if preferred in available:
+        return preferred
+    if len(available) == 1:
+        return available[0]
+    raise ValidationError("Choisissez un moyen de paiement (PayPal ou carte / Stripe).")
 
 
 def get_payment_gateway(provider: str) -> PaymentGateway:
