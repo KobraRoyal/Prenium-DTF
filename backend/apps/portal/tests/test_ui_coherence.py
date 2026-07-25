@@ -151,7 +151,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("conversion-kicker", partials)
         self.assertNotIn("conversion-transform__index", partials)
         self.assertIn("min-height: 2.75rem", conversion_css)
-        self.assertIn("app.css' %}?v=20260724-account-team-1", base)
+        self.assertIn("app.css' %}?v=20260725-client-billing-2", base)
         self.assertIn("app.js' %}?v=20260723-modal-focus-1", base)
         self.assertIn("ui-brand-lockup__home", logo)
         self.assertEqual(logo.count("<a "), 1)
@@ -177,6 +177,13 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Informations transmises", detail)
         self.assertIn('subtitle_prefix="Votre référence"', detail)
         self.assertIn("client-order-panel", panels)
+        self.assertIn("client-billing-overview", panels)
+        self.assertIn("client-billing-pay", panels)
+        self.assertIn("client-billing-success", panels)
+        self.assertIn("Paiement confirmé", panels)
+        self.assertIn("Télécharger le justificatif", panels)
+        self.assertIn("b2b-settlement-choice__option", panels)
+        self.assertIn("Payer maintenant", panels)
         self.assertIn("ui-breadcrumb__item--order-ref", breadcrumb)
         self.assertIn(".client-order-detail .workflow-panel", product_css)
         self.assertIn("box-shadow: none !important", product_css)
@@ -296,11 +303,32 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('class="card staff-order-focus"', source)
         self.assertIn("Prochaine action", source)
         self.assertIn("Ordre de fabrication", source)
+        self.assertIn("settlement_badge", source)
+        self.assertIn("order.billing_mode|badge_tone", source)
         self.assertNotIn("staff_customer_snapshot.html", source)
         self.assertNotIn("staff_order_workflow_summary.html", source)
         self.assertNotIn("order-command-bar", source)
         self.assertNotIn("▸", source)
         self.assertNotIn("<svg", source)
+
+    def test_staff_orders_table_shows_settlement_badge(self) -> None:
+        orders = template_source("components/tables/orders_table.html")
+        production = template_source("portal/staff/panels/production.html")
+
+        self.assertIn("settlement_badge", orders)
+        self.assertIn('variant == "staff"', orders)
+        self.assertIn("settlement_badge", production)
+
+    def test_staff_customer_detail_exposes_settlement_mode_choice(self) -> None:
+        source = template_source("portal/staff/customers/detail.html")
+        listing = template_source("portal/staff/customers/list.html")
+
+        self.assertIn("staff-customer-focus", source)
+        self.assertIn("default_billing_mode", source)
+        self.assertIn("b2b-settlement-choice__option", source)
+        self.assertIn("Comptant — carte bancaire", source)
+        self.assertIn("settlement_badge", listing)
+        self.assertIn("default_billing_mode", listing)
 
     def test_deep_product_views_keep_sequential_heading_levels(self) -> None:
         checkout = template_source("portal/client/checkout.html")
@@ -376,12 +404,17 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("product-nav__brand", header)
         self.assertIn("product-nav__account", header)
         self.assertIn("product-profile__trigger", profile)
+        self.assertIn("product-nav__chevron", profile)
         self.assertIn("product-profile__menu", profile)
         self.assertIn("Mon compte", profile)
         self.assertIn("Mes informations", profile)
         self.assertIn("Se déconnecter", profile)
         self.assertNotIn("Voir le site", profile)
         self.assertNotIn("product-profile__trigger-copy", profile)
+        product_css = static_source("css/components/product-shell.css")
+        self.assertIn("body.product-shell .product-nav__chevron", product_css)
+        self.assertIn("flex: 0 0 auto", product_css)
+        self.assertNotIn("max-width: 9.5rem", product_css)
         self.assertIn("{% csrf_token %}", profile)
         self.assertIn("request.user.is_staff and perms.accounts.access_staff_portal", profile)
         self.assertIn("portal:client-team", profile)
@@ -619,16 +652,29 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("md:!hidden", header)
         self.assertNotIn("md:flex", header)
         self.assertIn("@media (max-width: 959px)", product_css)
-        self.assertIn(".ui-orders-table-desktop", product_css)
-        self.assertIn(".ui-orders-list-mobile", product_css)
         self.assertIn("body.product-shell .ui-data-table thead th", product_css)
         self.assertIn("top: 0", product_css)
+        # Visibilité table/cartes : Tailwind + règles product-shell (960px).
+        self.assertIn(".ui-orders-table-desktop", product_css)
+        self.assertIn(".ui-orders-list-mobile", product_css)
+        self.assertIn("display: none !important", product_css)
+        self.assertIn(
+            "body.product-shell .ui-orders-table-desktop .ui-order-primary__label",
+            product_css,
+        )
         self.assertIn("ui-orders-table-desktop", orders)
         self.assertIn("ui-orders-list-mobile", orders)
+        self.assertIn("min-[960px]:block", orders)
+        self.assertIn("min-[960px]:hidden", orders)
         self.assertIn("ui_order_projects_table", projects)
         projects_table = template_source("components/tables/order_projects_table.html")
         self.assertIn("ui-orders-table-desktop", projects_table)
         self.assertIn("ui-orders-list-mobile", projects_table)
+        self.assertIn("min-[960px]:block", projects_table)
+        self.assertIn("min-[960px]:hidden", projects_table)
+        customers = template_source("portal/staff/customers/list.html")
+        self.assertIn("min-[960px]:block", customers)
+        self.assertIn("min-[960px]:hidden", customers)
 
     def test_auth_login_uses_dedicated_minimal_header(self) -> None:
         source = template_source("portal/login.html")
@@ -678,8 +724,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('kicker="Pilotage Atelier"', source)
         self.assertIn('title="File Atelier"', source)
         self.assertIn("Commandes Atelier", source)
-        self.assertIn('role="tablist"', source)
+        self.assertIn('aria-label="Filtrer la file Atelier"', source)
+        self.assertNotIn('role="tablist"', source)
         self.assertIn("{{ tab.label }}", source)
+        self.assertIn("Fichiers non approuvés", source)
         self.assertNotIn("<svg", source)
         dashboard_css = static_source("css/components/product-shell.css")
         self.assertNotIn("--product-paper", dashboard_css)
@@ -688,6 +736,58 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Accès commandes autorisé", source)
         self.assertNotIn("Accueil staff", source)
         self.assertNotIn("Backoffice staff", source)
+
+    def test_staff_navigation_keeps_accounts_in_primary_only(self) -> None:
+        staff_nav = template_source("components/nav/portal_staff_navigation.html")
+
+        self.assertIn(">Comptes</a>", staff_nav)
+        self.assertEqual(staff_nav.count("portal:staff-customer-list"), 1)
+        self.assertNotIn("Comptes clients", staff_nav)
+
+    def test_staff_inspection_uses_compact_summary_without_nested_metric_cards(self) -> None:
+        source = template_source("portal/staff/panels/inspection.html")
+
+        self.assertIn("atelier-inspection__summary", source)
+        self.assertIn("Analyse automatique", source)
+        self.assertIn("Décision Atelier", source)
+        self.assertNotIn("font-display text-2xl", source)
+        self.assertNotIn("uppercase tracking-wide", source)
+
+    def test_staff_order_detail_flattens_nested_workflow_borders(self) -> None:
+        product_css = static_source("css/components/product-shell.css")
+        detail = template_source("portal/staff/order_detail.html")
+
+        self.assertIn("staff-order-detail-stack", detail)
+        self.assertIn(
+            "body.product-shell .staff-order-detail-stack .ui-workflow-shell",
+            product_css,
+        )
+        self.assertIn(
+            "body.product-shell .staff-order-detail-stack .ui-panel-shell",
+            product_css,
+        )
+        self.assertIn(
+            "body.product-shell .staff-order-detail-stack .workflow-panel-target",
+            product_css,
+        )
+        self.assertIn(
+            "body.product-shell .staff-order-detail-stack .workflow-panel-target",
+            product_css,
+        )
+        # Surfaces internes plates (pas de re-pile d’ombres dures).
+        self.assertGreaterEqual(
+            product_css.count(
+                "body.product-shell .staff-order-detail-stack .ui-panel-shell"
+            ),
+            1,
+        )
+        self.assertIn(
+            ".staff-order-detail-stack .workflow-panel-target,\n"
+            "  body.product-shell .staff-order-detail-stack .workflow-panel,\n"
+            "  body.product-shell .staff-order-detail-stack .workflow-form-card",
+            product_css,
+        )
+        self.assertIn("box-shadow: none !important", product_css)
 
     def test_saas_button_system_is_imported_with_interaction_tokens(self) -> None:
         input_css = static_source("css/input.css")
@@ -743,6 +843,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         staff_source = template_source("portal/staff/orders_list.html")
 
         self.assertIn("Créer une commande", client_results)
+        self.assertIn("portal:client-order-project-create", client_results)
+        self.assertIn("b2b_order_projects_globally_enabled", client_results)
         self.assertIn("portal:client-checkout", client_results)
         self.assertIn("client-orders-list-results", client_source)
         self.assertIn('hx-trigger="input changed delay:300ms, search"', client_source)
@@ -832,6 +934,16 @@ class PortalUiCoherenceTests(SimpleTestCase):
         staff_navigation = template_source("components/nav/portal_staff_navigation.html")
 
         summary = template_source("portal/client/partials/order_project_summary.html")
+        settlement = template_source("portal/client/partials/b2b_settlement_choice.html")
+        checkout_summary = template_source(
+            "portal/client/partials/checkout_summary.html"
+        )
+
+        self.assertIn("b2b_settlement_choice.html", summary)
+        self.assertIn("b2b_settlement_choice.html", checkout_summary)
+        self.assertIn('default_billing_mode == "immediate"', settlement)
+        self.assertIn('value="deferred"', settlement)
+        self.assertIn("b2b-settlement-choice--locked", settlement)
 
         self.assertIn('title="Finaliser la commande"', detail)
         self.assertIn("b2b-project-header", detail)

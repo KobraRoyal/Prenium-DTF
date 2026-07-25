@@ -11,9 +11,9 @@ mensuel / bi-mensuel (`deferred` + `BillingStatement`) sans paiement en ligne.
 | Situation | Comportement |
 |-----------|--------------|
 | `billing_mode = deferred` | Paiement en ligne **refusé** |
-| `preferred_settlement_method = wire_transfer` | Pas de CTA portail ; rapprochement manuel facture |
-| `preferred_settlement_method = paypal` | Checkout PayPal |
-| `preferred_settlement_method = stripe` | Checkout Stripe (carte / méthodes dynamiques Dashboard) |
+| Commande `immediate` | Le **client choisit** parmi les providers **installés** (credentials présents) |
+| Providers affichés | PayPal si `PAYPAL_*` configuré ; carte / Stripe si `STRIPE_SECRET_KEY` configuré |
+| `preferred_settlement_method` | Pré-sélection / indication atelier uniquement, **pas un verrou** |
 | Montant ≤ 0 | Refus |
 
 ## Architecture
@@ -57,6 +57,13 @@ Voir `.env.example` :
 Webhook Stripe à enregistrer : `checkout.session.completed` →  
 `{PUBLIC_BASE_URL}/api/backend/stripe/webhook/`
 
+## Documents post-paiement
+
+Après capture PayPal/Stripe, Prenium génère un **justificatif de paiement** (PDF, préfixe `JP-`).
+Ce document atteste l’encaissement ; il **n’est pas** la facture fiscale.
+
+La **facture fiscale / comptable** est émise hors plateforme via l’outil **RCA**.
+
 ## Checklist validation
 
 - [ ] Client immédiat + PayPal : CTA → redirect → return → facture PDF
@@ -67,13 +74,25 @@ Webhook Stripe à enregistrer : `checkout.session.completed` →
 - [ ] Capture PayPal / Stripe idempotente (pas de double facture)
 - [ ] Staff voit provider + refs PayPal/Stripe dans panneau facturation
 
+## Notification post-tarification
+
+Après calcul atelier d’une commande `billing_mode = immediate`, l’événement
+`order_awaiting_payment` envoie un e-mail client (et copie interne) avec le lien
+vers le panneau Facture (`action.url`), où le CTA Stripe/PayPal apparaît.
+L’événement `order_priced` reste réservé à l’encours (`deferred`).
+
+La production atelier (`in_progress`) est **bloquée** jusqu’à capture du paiement
+(`apps.billing.services.production_payment_gate`).
+
 ## Fichiers clés
 
 - `backend/apps/billing/services/gateways.py`
 - `backend/apps/billing/services/paypal.py`
 - `backend/apps/billing/services/stripe_gateway.py`
 - `backend/apps/billing/services/payments.py`
+- `backend/apps/billing/services/production_payment_gate.py`
 - `backend/apps/billing/views.py`
 - `backend/apps/portal/views_payments.py`
+- `backend/apps/notifications/services/transactional.py`
 - `tests/billing/test_billing_api.py`
 - `tests/billing/test_stripe_payments.py`

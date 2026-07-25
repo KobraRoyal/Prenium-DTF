@@ -15,6 +15,10 @@ from apps.orders.models import Order
 
 
 def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment) -> bytes:
+    """PDF de justificatif de paiement (preuve d’encaissement).
+
+    La facture fiscale / comptable est émise hors plateforme (outil RCA).
+    """
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -46,9 +50,27 @@ def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment
         textColor=colors.grey,
     )
 
+    provider_label = payment.get_provider_display()
+    if payment.provider == Payment.Provider.PAYPAL:
+        provider_ref = str(payment.paypal_capture_id or payment.paypal_order_id or "—")
+        provider_ref_label = "Réf. PayPal"
+    elif payment.provider == Payment.Provider.STRIPE:
+        provider_ref = str(
+            payment.stripe_payment_intent_id or payment.stripe_checkout_session_id or "—"
+        )
+        provider_ref_label = "Réf. Stripe"
+    else:
+        provider_ref = "—"
+        provider_ref_label = "Réf. paiement"
+
     story: list = []
-    story.append(Paragraph(f"Facture <b>{escape(invoice.invoice_number)}</b>", title_style))
-    story.append(Paragraph("Prenium DTF", small))
+    story.append(
+        Paragraph(
+            f"Justificatif de paiement <b>{escape(invoice.invoice_number)}</b>",
+            title_style,
+        )
+    )
+    story.append(Paragraph("Prenium DTF — preuve d’encaissement", small))
     story.append(Spacer(1, 0.4 * cm))
 
     rows = [
@@ -60,15 +82,16 @@ def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment
         ],
         ["Devise", escape(order.currency)],
         ["Sous-total", f"{order.subtotal_amount:.2f} {order.currency}"],
-        ["Total", f"{order.total_amount:.2f} {order.currency}"],
-        ["Paiement", escape(payment.get_provider_display())],
+        ["Total réglé", f"{order.total_amount:.2f} {order.currency}"],
+        ["Moyen de paiement", escape(provider_label)],
+        [provider_ref_label, escape(provider_ref)],
         [
-            "Réf. PayPal",
-            escape(str(payment.paypal_capture_id or payment.paypal_order_id or "—")),
-        ],
-        [
-            "Date d'émission",
-            escape(invoice.issued_at.isoformat() if invoice.issued_at else "—"),
+            "Confirmé le",
+            escape(
+                payment.captured_at.isoformat()
+                if payment.captured_at
+                else (invoice.issued_at.isoformat() if invoice.issued_at else "—")
+            ),
         ],
     ]
     table = Table(rows, colWidths=[5.5 * cm, 10 * cm])
@@ -86,7 +109,8 @@ def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment
     story.append(Spacer(1, 0.6 * cm))
     story.append(
         Paragraph(
-            "Document généré automatiquement — merci de conserver ce PDF pour votre comptabilité.",
+            "Ce document atteste du règlement en ligne. "
+            "La facture fiscale est émise séparément via l’outil comptable RCA.",
             normal,
         )
     )

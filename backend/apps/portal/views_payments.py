@@ -43,6 +43,40 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
             raise Http404
 
         provider = str(request.POST.get("provider", "")).strip().lower() or None
+        available_ids = {item["id"] for item in available_payment_providers()}
+        if not available_ids:
+            messages.error(request, "Aucun moyen de paiement en ligne n'est configuré.")
+            billing_url = reverse(
+                "portal:client-order-panel-billing",
+                kwargs={
+                    "customer_public_id": customer_public_id,
+                    "order_public_id": order_public_id,
+                },
+            )
+            return HttpResponseRedirect(billing_url)
+        if provider and provider not in available_ids:
+            messages.error(request, "Moyen de paiement non disponible.")
+            billing_url = reverse(
+                "portal:client-order-panel-billing",
+                kwargs={
+                    "customer_public_id": customer_public_id,
+                    "order_public_id": order_public_id,
+                },
+            )
+            return HttpResponseRedirect(billing_url)
+        if not provider:
+            if len(available_ids) == 1:
+                provider = next(iter(available_ids))
+            else:
+                messages.error(request, "Choisissez un moyen de paiement.")
+                billing_url = reverse(
+                    "portal:client-order-panel-billing",
+                    kwargs={
+                        "customer_public_id": customer_public_id,
+                        "order_public_id": order_public_id,
+                    },
+                )
+                return HttpResponseRedirect(billing_url)
         success_path = reverse(
             "portal:client-order-payment-return",
             kwargs={
@@ -50,9 +84,13 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
                 "order_public_id": order_public_id,
             },
         )
-        success_url = _absolute_portal_url(
-            f"{success_path}?status=success&session_id={{CHECKOUT_SESSION_ID}}"
-        )
+        # Stripe Checkout remplace {{CHECKOUT_SESSION_ID}} ; PayPal refuse `{` `}` dans return_url.
+        if provider == Payment.Provider.STRIPE:
+            success_url = _absolute_portal_url(
+                f"{success_path}?status=success&session_id={{CHECKOUT_SESSION_ID}}"
+            )
+        else:
+            success_url = _absolute_portal_url(f"{success_path}?status=success")
         cancel_url = _absolute_portal_url(f"{success_path}?status=cancel")
 
         try:
@@ -138,31 +176,40 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
         if payment is None:
             raise Http404
         if payment.status == Payment.Status.CAPTURED:
-            messages.success(request, "Paiement confirmé. Votre facture est disponible.")
+            messages.success(
+                request,
+                "Paiement confirmé. Votre justificatif de paiement est disponible.",
+            )
         else:
             messages.info(request, "Paiement en cours de confirmation.")
         return HttpResponseRedirect(billing_url)
 
 
-def can_pay_online(customer: Customer) -> bool:
-    method = customer.preferred_settlement_method
-    if method == Customer.PreferredSettlementMethod.WIRE_TRANSFER:
-        return False
-    if method == Customer.PreferredSettlementMethod.STRIPE:
-        return bool(settings.STRIPE_SECRET_KEY)
-    if method == Customer.PreferredSettlementMethod.PAYPAL:
-        return bool(settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET)
-    return bool(
-        (settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET) or settings.STRIPE_SECRET_KEY
-    )
+def available_payment_providers() -> list[dict[str, str]]:
+    """Options de paiement proposées au client, selon la config projet."""
+    from apps.billing.services.gateways import configured_online_providers
+
+    labels = {
+        Payment.Provider.PAYPAL: "PayPal",
+        Payment.Provider.STRIPE: "Carte bancaire (Stripe)",
+    }
+    return [
+        {"id": provider, "label": labels.get(provider, provider)}
+        for provider in configured_online_providers()
+    ]
+
+
+def can_pay_online(customer: Customer | None = None) -> bool:
+    """Paiement en ligne possible si au moins un provider est installé."""
+    _ = customer  # conservé pour compatibilité d’appel
+    return bool(available_payment_providers())
 
 
 def default_online_provider(customer: Customer) -> str:
-    method = customer.preferred_settlement_method
-    if method == Customer.PreferredSettlementMethod.STRIPE:
-        return Payment.Provider.STRIPE
-    if method == Customer.PreferredSettlementMethod.PAYPAL:
-        return Payment.Provider.PAYPAL
-    if settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET:
-        return Payment.Provider.PAYPAL
-    return Payment.Provider.STRIPE
+    providers = [item["id"] for item in available_payment_providers()]
+    if not providers:
+        return ""
+    preferred = customer.preferred_settlement_method
+    if preferred in providers:
+        return preferred
+    return providers[0]

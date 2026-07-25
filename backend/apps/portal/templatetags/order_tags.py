@@ -174,7 +174,7 @@ def order_htmx_tabs(context, variant):
                     },
                     {
                         "slug": "billing",
-                        "label": "Facture",
+                        "label": "Règlement",
                         "url": reverse(
                             "portal:client-order-panel-billing",
                             kwargs={

@@ -286,7 +286,11 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
     template_name = "portal/client/panels/billing.html"
 
     def get(self, request, customer_public_id, order_public_id):
-        from apps.portal.views_payments import can_pay_online, default_online_provider
+        from apps.portal.views_payments import (
+            available_payment_providers,
+            can_pay_online,
+            default_online_provider,
+        )
 
         order, payment, invoice = billing_service.get_customer_billing(
             customer=self.customer,
@@ -295,13 +299,14 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
         if order is None:
             raise Http404
         settlement = order.customer.preferred_settlement_method
+        providers = available_payment_providers()
         show_pay_cta = (
             order.billing_mode != order.BillingMode.DEFERRED
+            and order.pricing_status == order.PricingStatus.PRICED
             and order.total_amount > 0
             and invoice is None
             and (payment is None or payment.status in {"failed", "cancelled"})
             and can_pay_online(order.customer)
-            and settlement != "wire_transfer"
         )
         return render(
             request,
@@ -312,6 +317,7 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
                 invoice=invoice,
                 active_panel="billing",
                 show_pay_cta=show_pay_cta,
+                payment_providers=providers,
                 online_provider=default_online_provider(order.customer) if show_pay_cta else "",
                 settlement_method=settlement,
             ),

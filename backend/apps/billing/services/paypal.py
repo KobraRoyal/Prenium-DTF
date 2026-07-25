@@ -94,17 +94,21 @@ class PayPalGateway:
             "user_action": "PAY_NOW",
         }
         if return_url:
-            application_context["return_url"] = return_url
+            application_context["return_url"] = self._sanitize_redirect_url(return_url)
         if cancel_url:
-            application_context["cancel_url"] = cancel_url
+            application_context["cancel_url"] = self._sanitize_redirect_url(cancel_url)
+        # PayPal limite reference_id / custom_id ; UUID complet + tirets OK, mais
+        # on reste sur une ref courte stable pour les rapports.
+        unit_reference = str(order.public_id).replace("-", "")[:32]
         payload = {
             "intent": "CAPTURE",
             "purchase_units": [
                 {
-                    "custom_id": str(order.public_id),
-                    "reference_id": str(order.public_id),
+                    "custom_id": unit_reference,
+                    "reference_id": unit_reference,
+                    "description": f"Commande {order.short_ref}",
                     "amount": {
-                        "currency_code": order.currency,
+                        "currency_code": str(order.currency or "EUR").upper(),
                         "value": f"{Decimal(order.total_amount):.2f}",
                     },
                 }
@@ -152,6 +156,27 @@ class PayPalGateway:
             status=str(response_payload.get("status", "")).strip(),
             payload=response_payload,
         )
+
+    @staticmethod
+    def _sanitize_redirect_url(url: str) -> str:
+        """Retire les placeholders Stripe Checkout (invalides pour PayPal)."""
+        cleaned = (
+            str(url or "")
+            .replace("{{CHECKOUT_SESSION_ID}}", "")
+            .replace("%7B%7BCHECKOUT_SESSION_ID%7D%7D", "")
+        )
+        # Nettoie session_id vide laissé par le placeholder.
+        cleaned = cleaned.replace("session_id=&", "").replace("?session_id=", "?")
+        if cleaned.endswith("&session_id="):
+            cleaned = cleaned[: -len("&session_id=")]
+        if cleaned.endswith("?session_id="):
+            cleaned = cleaned[: -len("?session_id=")]
+        cleaned = cleaned.replace("&&", "&")
+        if cleaned.endswith("&"):
+            cleaned = cleaned[:-1]
+        if cleaned.endswith("?"):
+            cleaned = cleaned[:-1]
+        return cleaned
 
     def _get_access_token(self) -> str:
         encoded_credentials = base64.b64encode(

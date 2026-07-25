@@ -120,8 +120,11 @@ class InvoiceService:
                 "currency": order.currency,
                 "issued_at": issued_at.isoformat(),
                 "document_format": "application/pdf",
+                "document_kind": "payment_receipt",
+                "fiscal_invoice_source": "rca",
             },
         }
 
     def _build_invoice_number(self, *, order: Order) -> str:
-        return f"INV-{order.public_id.hex.upper()}"
+        # Préfixe JP = justificatif de paiement (facture fiscale = RCA).
+        return f"JP-{order.public_id.hex.upper()}"

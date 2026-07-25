@@ -2,23 +2,22 @@
 <div class="workflow-panel workflow-panel--operator billing-station">
   <header class="workflow-panel__hero operator-panel-hero">
     <div>
-      <p class="operator-panel-hero__eyebrow">Clôture comptable</p>
-      <h3 class="workflow-panel__title">Facturation</h3>
-      <p class="workflow-panel__meta">Vérifiez le montant, le règlement et la facture sans perdre le contexte de la commande.</p>
+      <h3 class="workflow-panel__title">Règlement</h3>
+      <p class="workflow-panel__meta">Vérifiez le montant, le paiement et le justificatif. La facture fiscale est émise via RCA.</p>
     </div>
-    {% if invoice and invoice.paid_at %}<span class="badge is-success">Facture payée</span>{% elif invoice %}<span class="badge is-warning">Règlement attendu</span>{% else %}<span class="badge">Facture à générer</span>{% endif %}
+    {% if invoice and invoice.paid_at %}<span class="badge is-success">Payé</span>{% elif payment and payment.status == "captured" %}<span class="badge is-success">Paiement capturé</span>{% elif invoice %}<span class="badge is-warning">Règlement attendu</span>{% else %}<span class="badge">Justificatif à émettre</span>{% endif %}
   </header>
 
   <section class="billing-overview" aria-label="Synthèse de facturation">
     <article><span>Montant commande</span><strong>{{ order.total_amount }} {{ order.currency }}</strong><small>{{ order.pricing_status|human_status }}</small></article>
-    <article><span>Mode</span><strong>{{ order.billing_mode|human_status }}</strong><small>{% if order.customer.preferred_settlement_method == "paypal" %}Règlement PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Règlement Stripe{% else %}Virement bancaire{% endif %}</small></article>
+    <article><span>Mode</span><strong><span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span></strong><small>{% if order.billing_mode == "immediate" %}Paiement carte après tarification atelier{% elif order.customer.preferred_settlement_method == "paypal" %}Préférence client PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Préférence client Stripe{% else %}Préférence client virement{% endif %}</small></article>
     <article><span>Paiement</span><strong>{% if payment %}{{ payment.status|human_status }}{% else %}Non enregistré{% endif %}</strong><small>{% if payment %}{{ payment.amount }} {{ payment.currency }}{% else %}Aucune transaction liée{% endif %}</small></article>
-    <article><span>Facture</span><strong>{% if invoice %}{{ invoice.invoice_number }}{% else %}Non générée{% endif %}</strong><small>{% if invoice and invoice.paid_at %}Payée le {{ invoice.paid_at|date:"d/m/Y" }}{% elif invoice %}{{ invoice.status|human_status }}{% else %}En attente du flux comptable{% endif %}</small></article>
+    <article><span>Justificatif</span><strong>{% if invoice %}{{ invoice.invoice_number }}{% else %}Non généré{% endif %}</strong><small>{% if invoice and invoice.paid_at %}Confirmé le {{ invoice.paid_at|date:"d/m/Y" }}{% elif invoice %}{{ invoice.status|human_status }}{% else %}Après encaissement / flux RCA{% endif %}</small></article>
   </section>
 
   <div class="billing-grid">
     <section class="billing-card" aria-labelledby="billing-payment-title">
-      <div class="billing-card__head"><div><p class="operator-section-head__eyebrow">01 · Règlement</p><h4 id="billing-payment-title">État du paiement</h4></div>{% if payment %}<span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>{% endif %}</div>
+      <div class="billing-card__head"><div><h4 id="billing-payment-title">État du paiement</h4></div>{% if payment %}<span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>{% endif %}</div>
       {% if payment %}
       <dl class="billing-detail-list">
         <div><dt>Montant</dt><dd>{{ payment.amount }} {{ payment.currency }}</dd></div>
@@ -35,14 +34,15 @@
     </section>
 
     <section class="billing-card" aria-labelledby="billing-invoice-title">
-      <div class="billing-card__head"><div><p class="operator-section-head__eyebrow">02 · Facture</p><h4 id="billing-invoice-title">Document comptable</h4></div>{% if invoice %}<span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>{% endif %}</div>
+      <div class="billing-card__head"><div><h4 id="billing-invoice-title">Justificatif de paiement</h4></div>{% if invoice %}<span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>{% endif %}</div>
       {% if invoice %}
       <dl class="billing-detail-list">
         <div><dt>Numéro</dt><dd><code>{{ invoice.invoice_number }}</code></dd></div>
         <div><dt>Total</dt><dd>{{ invoice.total_amount }} {{ invoice.currency }}</dd></div>
         <div><dt>Email</dt><dd>{{ invoice.billing_email|default:"Non renseigné" }}</dd></div>
-        <div><dt>Règlement</dt><dd>{% if invoice.paid_at %}<span class="billing-paid-signal">Payée · {{ invoice.paid_at|date:"d/m/Y · H:i" }}</span>{% else %}En attente{% endif %}</dd></div>
+        <div><dt>Règlement</dt><dd>{% if invoice.paid_at %}<span class="billing-paid-signal">Confirmé · {{ invoice.paid_at|date:"d/m/Y · H:i" }}</span>{% else %}En attente{% endif %}</dd></div>
       </dl>
+      <p class="muted text-sm">Facture fiscale : outil RCA (hors plateforme).</p>
       {% if can_mark_invoice_paid %}
       <form class="billing-confirm-payment" method="post" action="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}" hx-post="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
         {% csrf_token %}
@@ -51,7 +51,7 @@
       </form>
       {% endif %}
       {% else %}
-      <div class="operator-empty-inline"><strong>Aucune facture générée</strong><p>{% if order.pricing_status != "priced" %}Le prix doit être calculé avant l’émission de la facture.{% elif order.billing_mode == "deferred" %}La facture sera rattachée au cycle de facturation différée du client.{% else %}La facture sera créée par le flux de paiement.{% endif %}</p></div>
+      <div class="operator-empty-inline"><strong>Aucun justificatif</strong><p>{% if order.pricing_status != "priced" %}Le prix doit être calculé avant l’encaissement.{% elif order.billing_mode == "deferred" %}Facture périodique gérée via RCA / encours.{% else %}Le justificatif sera créé après capture du paiement en ligne.{% endif %}</p></div>
       {% if order.pricing_status != "priced" %}<a class="ui-btn ui-btn-secondary billing-card__action" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Vérifier le métrage</a>{% endif %}
       {% endif %}
     </section>

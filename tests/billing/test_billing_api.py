@@ -307,7 +307,7 @@ def test_client_can_read_invoice_after_valid_capture(monkeypatch):
     assert invoice_response.status_code == status.HTTP_200_OK
     invoice_payload = invoice_response.json()
     assert invoice_payload["status"] == Invoice.Status.ISSUED
-    assert invoice_payload["invoice_number"].startswith("INV-")
+    assert invoice_payload["invoice_number"].startswith("JP-")
     assert invoice_payload["file"]["mime_type"] == "application/pdf"
 
     download = client.get(client_invoice_download_route(customer.public_id, order.public_id))

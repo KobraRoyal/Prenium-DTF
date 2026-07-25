@@ -146,7 +146,9 @@ class ClientOnlinePaymentInitiateView(APIView):
             customer_public_id=customer_public_id,
             order_public_id=order_public_id,
         )
-        success_url = f"{success_url}&session_id={{CHECKOUT_SESSION_ID}}"
+        # Stripe Checkout remplace {{CHECKOUT_SESSION_ID}} ; PayPal refuse `{` `}`.
+        if provider in (Payment.Provider.STRIPE, "stripe"):
+            success_url = f"{success_url}&session_id={{CHECKOUT_SESSION_ID}}"
         try:
             _order, payment = payment_service.initiate_payment_for_customer_order(
                 customer=self.customer,

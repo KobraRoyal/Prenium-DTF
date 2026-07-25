@@ -12,30 +12,36 @@ access_scope_service = AccessScopeService()
 STATUS_LABELS = {
     "draft": "Brouillon",
     "submitted": "Soumise",
-    "immediate": "Paiement immédiat",
-    "deferred": "Facturation différée",
+    "immediate": "Paiement comptant (carte bancaire)",
+    "deferred": "Encours / facturation différée",
     "pending": "En attente",
     "priced": "Prix calculé",
-    "failed": "Échec calcul",
+    "failed": "Échec",
     "none": "N/A",
     "clear": "Encours OK",
-    "approved": "Approuvee",
-    "captured": "Capturee",
-    "cancelled": "Annulee",
+    "cancelled": "Annulée",
+    "approved": "Approuvée",
+    "captured": "Capturée",
+    "issued": "Émise",
+    "void": "Annulée",
+    "ok": "Valide",
+    "warning": "À vérifier",
+    "error": "Erreur",
+    "synced": "Synchronisé",
     "queued": "En file atelier",
     "in_progress": "En production",
-    "ready_to_ship": "Prete a expedier",
-    "completed": "Terminee",
-    "blocked": "Bloquee",
+    "ready_to_ship": "Prête à expédier",
+    "completed": "Terminée",
+    "blocked": "Bloquée",
     "resolve": "Lecture OF",
     "transition": "Transition OF",
-    "created": "Creee",
-    "issued": "Emise",
-    "void": "Annulee",
-    "ok": "Valide",
-    "warning": "A verifier",
-    "error": "Erreur",
-    "synced": "Synchronise",
+    "created": "Créée",
+}
+
+# Libellés courts pour badges Atelier (file + fiche).
+SETTLEMENT_BADGE_LABELS = {
+    "immediate": "Comptant CB",
+    "deferred": "Encours",
 }
 
 
@@ -100,9 +106,7 @@ def portal_navigation_access(context) -> dict[str, object]:
         "customer_name": customer_name,
         "customer_public_id": customer_public_id,
         "project_creation_enabled": bool(
-            customer is not None
-            and b2b_order_projects_enabled_for_customer(customer)
-            and customer.b2b_order_projects_enabled
+            customer is not None and b2b_order_projects_enabled_for_customer(customer)
         ),
         "role_label": role_label,
     }
@@ -123,6 +127,7 @@ def badge_tone(status):
         "ready_to_submit",
         "confirmed",
         "converted",
+        "deferred",
     }
     warning = {
         "warning",
@@ -135,6 +140,7 @@ def badge_tone(status):
         "changes_requested",
         "price_confirmation_required",
         "under_review",
+        "immediate",
     }
     negative = {"error", "failed", "blocked", "draft"}
     if status in positive:
@@ -150,6 +156,13 @@ def badge_tone(status):
 def human_status(status):
     value = str(status)
     return STATUS_LABELS.get(value, value.replace("_", " ").capitalize())
+
+
+@register.filter
+def settlement_badge(billing_mode):
+    """Libellé court Atelier : Comptant CB / Encours."""
+    value = str(billing_mode or "").strip().lower()
+    return SETTLEMENT_BADGE_LABELS.get(value, human_status(value))
 
 
 @register.filter
@@ -171,7 +184,7 @@ CLIENT_ORDER_PANEL_LABELS = {
     "uploads": "Visuels",
     "production": "Avancement",
     "shipping": "Expédition",
-    "billing": "Facture",
+    "billing": "Règlement",
 }
 
 
