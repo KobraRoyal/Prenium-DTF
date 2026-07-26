@@ -151,7 +151,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("conversion-kicker", partials)
         self.assertNotIn("conversion-transform__index", partials)
         self.assertIn("min-height: 2.75rem", conversion_css)
-        self.assertIn("app.css' %}?v=20260725-client-shipment-tracking-1", base)
+        self.assertIn("app.css' %}?v=20260726-prod-css-sync-4", base)
         self.assertIn("app.js' %}?v=20260725-support-modal-3", base)
         self.assertIn("ui-brand-lockup__home", logo)
         self.assertEqual(logo.count("<a "), 1)

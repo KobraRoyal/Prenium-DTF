@@ -1,5 +1,8 @@
+import os
+
+from django.conf import settings
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views import View
 
 from apps.catalog.services.catalog import CatalogQueryService
@@ -7,6 +10,21 @@ from apps.catalog.services.catalog import CatalogQueryService
 from .services.health import HealthcheckService
 
 catalog_query_service = CatalogQueryService()
+
+
+def marketing_home_redirects_to_login() -> bool:
+    """Prod only by default; override via MARKETING_HOME_REDIRECT_TO_LOGIN."""
+    explicit = os.environ.get("MARKETING_HOME_REDIRECT_TO_LOGIN", "").strip().lower()
+    if explicit in {"1", "true", "yes", "on"}:
+        return True
+    if explicit in {"0", "false", "no", "off"}:
+        return False
+    module = (
+        getattr(settings, "SETTINGS_MODULE", "")
+        or os.environ.get("DJANGO_SETTINGS_MODULE", "")
+        or ""
+    )
+    return module.endswith(".prod")
 
 
 class HealthcheckView(View):
@@ -24,6 +42,8 @@ class MarketingHomeView(View):
     template_name = "shop/home.html"
 
     def get(self, request, *args, **kwargs):
+        if marketing_home_redirects_to_login():
+            return redirect("portal:login")
         services = list(catalog_query_service.list_active_services()[:2])
         return render(
             request,

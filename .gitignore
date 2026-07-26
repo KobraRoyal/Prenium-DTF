@@ -48,3 +48,7 @@ htmlcov/
 # Build
 *.egg-info/
 build/
+
+# Collected static on NAS/deploy
+data/static/
+infra/nginx/prenium-static/

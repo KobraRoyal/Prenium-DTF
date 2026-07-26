@@ -27,6 +27,7 @@ def test_marketing_pages_are_accessible_for_anonymous():
     prospect_url = reverse("prospects:step1")
     login_url = reverse("portal:login")
 
+    # Local / tests : landing marketing intacte.
     assert home.status_code == 200
     assert "Prenium DTF" in home_html
     assert "production DTF B2B" in home_html
@@ -72,6 +73,15 @@ def test_marketing_pages_are_accessible_for_anonymous():
     assert "TIFF avec canal alpha" in services_html
     assert "js/marketing.js" in services_html
     assert "vendor/htmx-1.9.12.min.js" not in services_html
+
+
+@pytest.mark.django_db
+def test_marketing_home_redirects_to_login_in_prod(monkeypatch):
+    monkeypatch.setenv("MARKETING_HOME_REDIRECT_TO_LOGIN", "true")
+    client = Client()
+    response = client.get(reverse("home"))
+    assert response.status_code == 302
+    assert response["Location"] == reverse("portal:login")
 
 
 @pytest.mark.django_db

@@ -1,4 +1,6 @@
-from django.urls import include, path
+from django.conf import settings
+from django.urls import include, path, re_path
+from django.views.static import serve
 
 from .admin import restricted_admin_site
 
@@ -22,3 +24,15 @@ urlpatterns = [
     path("", include(("apps.shipping.urls", "shipping"), namespace="shipping")),
     path("", include(("apps.uploads.urls", "uploads"), namespace="uploads")),
 ]
+
+# Prod NAS: serve static from static_src when the shared volume is empty/out of sync.
+# Prefer nginx alias when available; this is the Django fallback.
+_static_root = settings.BASE_DIR / "static_src"
+if _static_root.is_dir():
+    urlpatterns += [
+        re_path(
+            r"^static/(?P<path>.*)$",
+            serve,
+            {"document_root": str(_static_root), "show_indexes": False},
+        ),
+    ]
