@@ -364,9 +364,11 @@ def sync_gang_sheet_to_drive(*, sheet_public_id: str, actor=None, source: str = 
     if sheet is None:
         raise GangSheet.DoesNotExist(f"GangSheet {sheet_public_id} not found.")
     with transaction.atomic():
+        # Ne pas select_related les FK nullables (order, drive_sync) sous
+        # SELECT FOR UPDATE : PostgreSQL refuse FOR UPDATE sur un OUTER JOIN.
         locked = (
             GangSheet.objects.select_for_update()
-            .select_related("customer", "order")
+            .select_related("customer")
             .get(pk=sheet.pk)
         )
         return GangSheetDriveSyncService().sync_sheet(

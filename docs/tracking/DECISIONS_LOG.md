@@ -2,6 +2,8 @@
 
 | Date | Décision | Motif | Impact |
 |---|---|---|---|
+| 2026-07-26 | Sync Drive Gang Sheet : `select_for_update` sans FK nullables (`order`) | PostgreSQL refuse FOR UPDATE sur OUTER JOIN → sync restait `pending` et bloquait le paiement | Message UI dédié `gang_sheet_drive_sync_required` + retry schedule au checkout |
+| 2026-07-26 | Après validation AJAX d’une Gang Sheet, le CTA « Créer le projet de commande » retire `aria-disabled` / `href="#"` / `is-disabled` | Sinon CSS `pointer-events:none` laisse le bouton inactif pour les clients comptant | `syncCreateOrderProjectControl()` dans `gang-sheet-editor.js` + tests cash CTA |
 | 2026-07-26 | Conversion Gang Sheet validée → projet : même parcours que `order-projects/new/` (nom, date, commentaire) | Harmoniser l’UX de prise de commande | Page `.../gang-sheets/<id>/create-order/` + exemplaires ; API create-order-project accepte les mêmes champs |
 | 2026-07-26 | Si détails &lt; 0,5 mm : Multicolore **ou** couleur hex obligatoire (plus d’exigence d’uni exact) | Permettre d’optimiser la base blanche pour le toucher, y compris en multi-support | Règle unique fichier + Gang Sheet ; message UX aligné |
 | 2026-07-26 | En **prod** uniquement, `/` redirige vers `/login/` (landing conservée en local/dev) | Landing marketing non finalisée en prod beta | `SETTINGS_MODULE` `.prod` ou `MARKETING_HOME_REDIRECT_TO_LOGIN` ; local inchangé |

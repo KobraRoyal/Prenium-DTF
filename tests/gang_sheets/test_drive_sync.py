@@ -295,3 +295,45 @@ def test_client_editor_never_exposes_google_drive_identifiers(client):
     assert response.status_code == 200
     assert b"secret-drive-folder-id" not in response.content
     assert b"secret-drive-file-id" not in response.content
+
+
+@override_settings(GOOGLE_DRIVE_SYNC_ENABLED=True)
+def test_sync_gang_sheet_to_drive_locks_sheet_without_nullable_order_join(monkeypatch):
+    """Régression : SELECT FOR UPDATE + select_related(order) casse sous PostgreSQL."""
+    from apps.gang_sheets.services import drive as drive_module
+
+    user, _customer, _project, sheet, content = create_hd_sheet(
+        email="gang-drive-lock@example.com"
+    )
+    assert sheet.order_id is None
+    gateway = FakeDriveGateway()
+
+    monkeypatch.setattr(
+        drive_module.GangSheetDriveSyncService,
+        "_get_gateway",
+        lambda self: gateway,
+    )
+
+    sync = drive_module.sync_gang_sheet_to_drive(
+        sheet_public_id=str(sheet.public_id),
+        actor=user,
+        source="test.lock",
+    )
+
+    assert sync.status == GangSheetDriveSync.Status.SYNCED
+    assert sync.sha256 == hashlib.sha256(content).hexdigest()
+    assert len(gateway.uploads) == 1
+
+
+def test_order_project_detail_shows_drive_sync_message_not_visuals_fallback():
+    from pathlib import Path
+
+    from django.conf import settings
+
+    template = (
+        Path(settings.BASE_DIR) / "templates/portal/client/order_project_detail.html"
+    ).read_text(encoding="utf-8")
+    assert 'submit_error == "gang_sheet_drive_sync_required"' in template
+    assert "sauvegarde sécurisée du PDF HD" in template
+    drive_branch = template.split('submit_error == "gang_sheet_drive_sync_required"', 1)[1]
+    assert "Complétez et validez tous les visuels" not in drive_branch.split("{% elif", 1)[0]

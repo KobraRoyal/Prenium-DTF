@@ -22,6 +22,8 @@
       L’analyse technique est encore en cours. Patientez quelques instants puis réessayez.
     {% elif request.GET.submit_error == "project_item_not_confirmed" %}
       Un ou plusieurs visuels ne sont pas validés. Ouvrez chaque visuel et cochez la confirmation.
+    {% elif request.GET.submit_error == "gang_sheet_drive_sync_required" %}
+      {{ request.GET.submit_message|default:"La sauvegarde sécurisée du PDF HD est encore en cours. Patientez quelques secondes puis réessayez le paiement." }}
     {% elif request.GET.submit_error == "validation" %}
       {{ request.GET.submit_message|default:"Impossible de finaliser la commande. Réessayez ou contactez le support." }}
     {% elif request.GET.submit_error == "submitted" %}

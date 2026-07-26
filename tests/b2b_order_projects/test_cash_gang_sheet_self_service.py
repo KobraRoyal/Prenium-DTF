@@ -186,6 +186,87 @@ def test_gang_sheet_quote_is_available_before_transmit():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_validated_sheet_editor_enables_create_order_cta_for_cash_client():
+    """Planche validée + PDF final : le CTA ne doit pas rester aria-disabled / href=#."""
+    user = get_user_model().objects.create_user(email="cash-cta@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Cash CTA Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche CTA")
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% cta\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="cash-cta@example.com", password="pass")
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+    assert response.status_code == 200
+    assert response.context["can_create_order"] is True
+    content = response.content.decode()
+    create_url = reverse(
+        "portal:client-gang-sheet-create-order-project",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    cta_chunk = content.split("data-create-order-project", 1)[1].split("</a>", 1)[0]
+    assert create_url in cta_chunk
+    assert 'href="#"' not in cta_chunk
+    assert 'aria-disabled="true"' not in cta_chunk
+    assert f'data-create-order-form-url="{create_url}"' in content
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_draft_sheet_editor_keeps_create_order_cta_disabled():
+    user = get_user_model().objects.create_user(email="draft-cta@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Draft CTA Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche draft")
+
+    client = Client()
+    assert client.login(email="draft-cta@example.com", password="pass")
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+    assert response.status_code == 200
+    assert response.context["can_create_order"] is False
+    content = response.content.decode()
+    cta_chunk = content.split("data-create-order-project", 1)[1].split("</a>", 1)[0]
+    assert 'href="#"' in cta_chunk
+    assert 'aria-disabled="true"' in cta_chunk
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
 def test_create_order_project_accepts_sheet_quantity():
     _seed_catalog()
     user = get_user_model().objects.create_user(email="qty@example.com", password="pass")

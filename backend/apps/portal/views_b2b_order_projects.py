@@ -609,6 +609,25 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                     "project_public_id": project.public_id,
                 },
             )
+            if error.code == "GANG_SHEET_DRIVE_SYNC_REQUIRED":
+                from urllib.parse import quote
+
+                from apps.gang_sheets.services.drive import GangSheetDriveSyncService
+
+                drive_service = GangSheetDriveSyncService()
+                for sheet in GangSheet.objects.for_project(project).filter(
+                    status=GangSheet.Status.VALIDATED
+                ):
+                    if sheet.final_file:
+                        drive_service.schedule_sync(
+                            sheet=sheet,
+                            actor=request.user,
+                            source="client_portal.checkout_retry",
+                        )
+                message = quote(error.message or "")
+                return HttpResponseRedirect(
+                    f"{detail}?submit_error={submit_error}&submit_message={message}"
+                )
             return HttpResponseRedirect(f"{detail}?submit_error={submit_error}")
         except ValidationError as error:
             project.refresh_from_db()

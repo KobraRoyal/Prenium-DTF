@@ -5,7 +5,7 @@ import "./product-shell.js?v=20260721g";
 import "./product-date-picker.js?v=20260712a";
 import "./b2b-configurator.js?v=20260726-js-runtime-fix";
 import "./email-template-editor.js?v=20260714c";
-import "./gang-sheet-editor.js?v=20260726-create-order-form";
+import "./gang-sheet-editor.js?v=20260726-create-order-enable";
 
 window.preniumToast = function (message, variant = "info") {
   window.dispatchEvent(

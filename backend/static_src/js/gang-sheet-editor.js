@@ -546,9 +546,7 @@ if (root) {
     q("[data-download-preview]").hidden = !["ready", "validated"].includes(state.status);
     q("[data-validate-sheet]").disabled = !canEdit || state.status !== "ready" || state.issues.length > 0;
     q("[data-render-sheet]").disabled = !canEdit || state.items.length === 0 || state.issues.length > 0 || locked;
-    if (q("[data-create-order-project]")) {
-      q("[data-create-order-project]").disabled = !canEdit || state.status !== "validated";
-    }
+    syncCreateOrderProjectControl();
     const quantityField = q("[data-sheet-quantity-field]");
     const quantityInput = q("[data-sheet-quantity]");
     if (quantityField) {
@@ -588,6 +586,27 @@ if (root) {
       q("[data-metric-price]").textContent = `${quote.total.toFixed(2)} €`;
     } else {
       q("[data-metric-price]").textContent = `${Number(state.estimated_price_eur).toFixed(2)} €`;
+    }
+  }
+
+  function syncCreateOrderProjectControl() {
+    const link = q("[data-create-order-project]");
+    if (!(link instanceof HTMLAnchorElement)) return;
+    // Après validation AJAX, retirer aria-disabled / href="#" / is-disabled :
+    // sinon pointer-events:none laisse le CTA « Créer le projet » inactif.
+    const canCreate = canEdit && state.status === "validated";
+    link.classList.toggle("is-disabled", !canCreate);
+    if (canCreate) {
+      link.removeAttribute("aria-disabled");
+      link.removeAttribute("tabindex");
+      const formUrl = root.dataset.createOrderFormUrl;
+      if (formUrl) {
+        link.setAttribute("href", formUrl);
+      }
+    } else {
+      link.setAttribute("aria-disabled", "true");
+      link.setAttribute("tabindex", "-1");
+      link.setAttribute("href", "#");
     }
   }
 
@@ -1537,13 +1556,18 @@ if (root) {
     if (!(link instanceof HTMLAnchorElement)) {
       return;
     }
-    if (link.getAttribute("aria-disabled") === "true" || link.getAttribute("href") === "#") {
+    const canCreate = canEdit && state.status === "validated";
+    if (!canCreate || link.getAttribute("aria-disabled") === "true") {
       event.preventDefault();
       return;
     }
     const quantity = Number(q("[data-sheet-quantity]")?.value || 1);
     const safeQuantity = Number.isFinite(quantity) && quantity >= 1 ? Math.floor(quantity) : 1;
-    const baseUrl = root.dataset.createOrderFormUrl || link.href;
+    const baseUrl = root.dataset.createOrderFormUrl || link.getAttribute("href") || "";
+    if (!baseUrl || baseUrl === "#") {
+      event.preventDefault();
+      return;
+    }
     try {
       const url = new URL(baseUrl, window.location.origin);
       url.searchParams.set("quantity", String(safeQuantity));
