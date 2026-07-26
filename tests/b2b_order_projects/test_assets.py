@@ -282,10 +282,14 @@ def test_pure_vector_pdf_edges_are_not_reported_as_semi_transparency():
     assert analyzed.analysis.metadata["is_pure_vector"] is True
     assert analyzed.analysis.metadata["semi_transparency"] == {
         "detected": False,
-        "min_alpha": 33,
+        "min_alpha": 16,
         "max_alpha": 250,
+        "min_pixels": 48,
+        "min_coverage_percent": 0.02,
         "pixel_count": 0,
         "coverage_percent": 0.0,
+        "alpha_channel_present": None,
+        "analysis_mode": "skipped",
         "skipped": True,
         "skip_reason": "pure_vector_source",
     }
@@ -422,6 +426,7 @@ def test_pdf_auto_size_uses_artboard_for_illustrator_mixed_documents():
     assert analyzed.analysis.dpi_x == pytest.approx(300.0, rel=0.02)
     assert analyzed.analysis.metadata["is_pure_vector"] is False
     assert analyzed.analysis.metadata["semi_transparency"]["skipped"] is False
+    assert analyzed.analysis.metadata["semi_transparency"]["detected"] is False
     review = AssetService().technical_review_for_item(item=item)
     assert review["level"] == "good"
     assert review["resolution_display"] == "300 DPI"

@@ -176,13 +176,19 @@ class AssetAnalysisService:
                 metadata=rendered.metadata,
                 probable_white_background=white_background,
             )
-            semi_transparency_result = self.semi_transparency_analyzer.analyze(
+            semi_transparency_result = self._analyze_semi_transparency(
+                version=version,
+                rendered=rendered,
                 image=image,
-                source_is_pure_vector=bool(rendered.metadata.get("is_pure_vector")),
             )
             warnings = list(rendered.warnings)
             if not has_alpha:
                 warnings.append("Aucune transparence détectée.")
+                if rendered.metadata.get("is_pure_vector") is not True:
+                    warnings.append(
+                        "Contrôle semi-transparence limité : fichier sans canal alpha "
+                        "(ex. JPEG/RGB aplati)."
+                    )
             if white_background:
                 warnings.append("Fond blanc probable détecté.")
             if dpi_x is None or dpi_y is None:
@@ -290,6 +296,31 @@ class AssetAnalysisService:
             asset__current_version=version,
         ).update(width_mm=width_mm, height_mm=height_mm)
         return {"width": str(width_mm), "height": str(height_mm)}
+
+    def _analyze_semi_transparency(self, *, version, rendered, image):
+        metadata = rendered.metadata or {}
+        is_pure_vector = bool(metadata.get("is_pure_vector"))
+        has_source_opacity = bool(metadata.get("has_source_opacity"))
+        format_name = rendered.format_name or ""
+
+        if format_name in {"PDF", "AI compatible PDF"}:
+            content = self.preview_renderer._read_content(version)
+            return self.semi_transparency_analyzer.analyze_pdf_document(
+                content=content,
+                preview_image=image,
+                page_width_points=metadata.get("page_width_points"),
+                page_height_points=metadata.get("page_height_points"),
+                is_pure_vector=is_pure_vector,
+                has_source_opacity=has_source_opacity,
+            )
+
+        return self.semi_transparency_analyzer.analyze(
+            image=image,
+            source_is_pure_vector=is_pure_vector,
+            source_has_opacity=has_source_opacity,
+            erode_render_antialias=metadata.get("renderer") == "ghostscript"
+            or metadata.get("render_dpi") is not None,
+        )
 
     def _probable_white_background(self, image) -> bool:
         sample = image.convert("RGB")

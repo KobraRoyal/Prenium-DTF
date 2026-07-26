@@ -323,6 +323,39 @@ def pdf_page_has_vector_artwork(page) -> bool:
         return False
 
 
+def pdf_document_has_source_opacity(document, *, is_pure_vector: bool = False) -> bool:
+    """True when the PDF declares real opacity usable for DTF warnings.
+
+    ExtGState fill/stroke alpha < 1 always counts. Soft masks count only on
+    pure-vector documents: on mixed files, image SMask soft-masks are inspected
+    via embedded image extraction instead of the anti-aliased page pixmap.
+    """
+    try:
+        xref_count = document.xref_length()
+    except (AttributeError, RuntimeError, ValueError):
+        return False
+
+    opacity_pattern = re.compile(r"/(?:ca|CA)\s+([0-9.]+)")
+    has_soft_mask = False
+    for xref in range(1, xref_count):
+        try:
+            obj = document.xref_object(xref)
+        except (RuntimeError, ValueError):
+            continue
+        if not obj:
+            continue
+        if "/SMask" in obj:
+            has_soft_mask = True
+        for match in opacity_pattern.finditer(obj):
+            try:
+                value = float(match.group(1))
+            except ValueError:
+                continue
+            if value < 1.0 - 1e-6:
+                return True
+    return bool(is_pure_vector and has_soft_mask)
+
+
 def should_use_pdf_artboard_dimensions(page, source_metrics: SourceMetrics) -> bool:
     """Prefer MediaBox/artboard for print layout size.
 

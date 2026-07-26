@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
@@ -15,6 +16,7 @@ from apps.uploads.services.asset_dpi import (
     extract_pillow_source_metrics,
     extract_psd_source_metrics,
     parse_eps_page_size_inches,
+    pdf_document_has_source_opacity,
     pdf_page_has_vector_artwork,
 )
 
@@ -170,6 +172,11 @@ class AssetPreviewRenderer:
                 label = "AI compatible PDF" if extension == ".ai" else "PDF"
                 has_vector_artwork = pdf_page_has_vector_artwork(page)
                 has_raster_artwork = bool(page.get_image_info(xrefs=True))
+                is_pure_vector = has_vector_artwork and not has_raster_artwork
+                has_source_opacity = pdf_document_has_source_opacity(
+                    document,
+                    is_pure_vector=is_pure_vector,
+                )
                 warnings = [f"Aperçu généré depuis la première page du {label}."]
                 if source_metrics.dpi_x is None or source_metrics.dpi_y is None:
                     warnings.append(
@@ -200,7 +207,8 @@ class AssetPreviewRenderer:
                         "uses_artboard_dimensions": source_metrics.uses_artboard_dimensions,
                         "has_vector_artwork": has_vector_artwork,
                         "has_raster_artwork": has_raster_artwork,
-                        "is_pure_vector": has_vector_artwork and not has_raster_artwork,
+                        "is_pure_vector": is_pure_vector,
+                        "has_source_opacity": has_source_opacity,
                         "dpi_source": source_metrics.dpi_source,
                         "render_dpi": render_dpi,
                         "dimension_basis": source_metrics.dimension_basis,
@@ -216,6 +224,7 @@ class AssetPreviewRenderer:
     def _render_postscript(self, *, content: bytes, extension: str) -> RenderedAssetPreview:
         page_size = parse_eps_page_size_inches(content)
         has_raster_artwork = self._postscript_has_raster_artwork(content)
+        has_source_opacity = self._postscript_has_source_opacity(content)
         with tempfile.TemporaryDirectory(prefix="prenium-preview-") as directory:
             directory_path = Path(directory)
             source_path = directory_path / f"source{extension or '.eps'}"
@@ -279,6 +288,7 @@ class AssetPreviewRenderer:
                 "has_vector_artwork": True,
                 "has_raster_artwork": has_raster_artwork,
                 "is_pure_vector": not has_raster_artwork,
+                "has_source_opacity": has_source_opacity,
                 "page_width_in": page_width_in,
                 "page_height_in": page_height_in,
                 "dimension_basis": "page" if page_size is not None else "preview",
@@ -292,10 +302,27 @@ class AssetPreviewRenderer:
             b"/imagetype",
             b" colorimage",
             b" imagemask",
+            b" false imagemask",
             b"%ai5_beginraster",
             b"%ai7_beginraster",
+            b"%ai9_beginraster",
+            b"beginimage",
         )
         return any(marker in sample for marker in raster_markers)
+
+    @staticmethod
+    def _postscript_has_source_opacity(content: bytes) -> bool:
+        sample = content
+        lowered = content.lower()
+        if b"/smask" in lowered or b"/opacity" in lowered:
+            return True
+        for match in re.finditer(rb"/(?:ca|CA)\s+([0-9.]+)", sample):
+            try:
+                if float(match.group(1)) < 1.0 - 1e-6:
+                    return True
+            except ValueError:
+                continue
+        return False
 
     @staticmethod
     def _ghostscript_limits() -> None:
