@@ -36,7 +36,12 @@
   <div class="client-dashboard-section__head">
     <div>
       <h2 class="font-display text-lg" id="client-dashboard-orders">Commandes transmises</h2>
-      <p class="muted mt-1 text-sm">{% if orders_count %}{{ orders_count }} commande{{ orders_count|pluralize }}{% else %}Aucune commande pour le moment{% endif %}</p>
+      <p class="muted mt-1 text-sm">
+        {% if orders_count %}{{ orders_count }} commande{{ orders_count|pluralize }}{% else %}Aucune commande pour le moment{% endif %}
+        {% if awaits_payment_count %}
+        · <span class="ui-inline-flag">{{ awaits_payment_count }} paiement{{ awaits_payment_count|pluralize }} non finalisé{{ awaits_payment_count|pluralize }}</span>
+        {% endif %}
+      </p>
     </div>
     {% if orders_count > recent_orders|length %}
     <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Tout voir</a>

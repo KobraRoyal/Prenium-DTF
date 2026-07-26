@@ -186,6 +186,15 @@ class B2BOrderProjectCheckoutService:
                 actor=actor,
                 source=f"{source}.gang_sheet_self_service",
             )
+        elif (
+            order.billing_mode == Order.BillingMode.IMMEDIATE
+            and locked.order_mode == B2BOrderProject.OrderMode.REORDER
+        ):
+            order = OrderPricingService().apply_declared_size_self_service_pricing(
+                order=order,
+                actor=actor,
+                source=f"{source}.reorder_self_service",
+            )
 
         record_event(
             action="b2b_order_project.converted",

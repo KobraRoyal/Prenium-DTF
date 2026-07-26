@@ -21,13 +21,13 @@
       <div class="b2b-project-quote__head">
         <div class="b2b-project-quote__title">
           <p class="b2b-project-quote__eyebrow">{% if gang_sheet_quote.tax_amount_eur %}Total TTC{% else %}Total HT{% endif %}</p>
-          <p class="b2b-project-quote__lead">Calculé depuis votre Gang Sheet</p>
+          <p class="b2b-project-quote__lead">{% if project.order_mode == "reorder" %}Calculé depuis vos dimensions de réassort{% else %}Calculé depuis votre Gang Sheet{% endif %}</p>
         </div>
         <p class="b2b-project-quote__total"><strong>{{ gang_sheet_quote.total_eur }}&nbsp;{{ gang_sheet_quote.currency }}</strong></p>
       </div>
       <div class="b2b-project-quote__rows" role="list">
         <div class="b2b-project-quote__row" role="listitem">
-          <span class="b2b-project-quote__label">Planche</span>
+          <span class="b2b-project-quote__label">{% if project.order_mode == "reorder" %}Visuels{% else %}Planche{% endif %}</span>
           <span class="b2b-project-quote__value">
             <span class="b2b-project-quote__formula">{% localize on %}{{ gang_sheet_quote.surface_sqm }}{% endlocalize %}&nbsp;m² × {{ gang_sheet_quote.quantity }}&nbsp;ex.&nbsp;=&nbsp;{% localize on %}{{ gang_sheet_quote.billable_sqm }}{% endlocalize %}&nbsp;m²</span>
           </span>

@@ -67,8 +67,8 @@
     <div>
       <h3 class="font-display text-lg">Règlement</h3>
       <p class="client-order-panel__lead">
-        {% if show_pay_cta %}
-        Votre commande est prête. Réglez pour lancer la production.
+        {% if awaits_client_payment or show_pay_cta %}
+        Paiement non finalisé — réglez pour confirmer la commande et lancer la production.
         {% elif order.billing_mode == "deferred" %}
         Facturation différée selon votre encours. Aucun paiement en ligne ici.
         {% elif order.billing_mode == "immediate" and order.pricing_status != "priced" %}
@@ -85,6 +85,8 @@
     <div class="client-billing-head__status">
       {% if payment and payment.status == "captured" %}
       <span class="badge is-success">Payée</span>
+      {% elif awaits_client_payment %}
+      <span class="badge is-warning">Paiement non finalisé</span>
       {% elif order.pricing_status == "priced" %}
       <span class="badge is-success">Tarifée</span>
       {% elif order.pricing_status == "failed" %}
@@ -170,8 +172,8 @@
   <section class="client-billing-pay" aria-labelledby="client-billing-pay-title">
     <div class="client-billing-pay__head">
       <div>
-        <h4 id="client-billing-pay-title">Payer cette commande</h4>
-        <p class="muted text-sm m-0">La production démarre après confirmation du paiement.</p>
+        <h4 id="client-billing-pay-title">Paiement non finalisé</h4>
+        <p class="muted text-sm m-0">Sans paiement validé, la commande n’est pas confirmée et la production ne démarre pas.</p>
       </div>
       <p class="client-billing-pay__amount" aria-label="Montant à régler">
         <span>À régler</span>
@@ -288,7 +290,7 @@
     {% endif %}
     {% if payment.status != "captured" and payment.approval_url and not show_pay_cta %}
     <p class="client-billing-block__action mb-0">
-      <a class="ui-btn ui-btn-secondary" href="{{ payment.approval_url }}">Reprendre le paiement</a>
+      <a class="ui-btn ui-btn-primary" href="{{ payment.approval_url }}">Payer maintenant</a>
     </p>
     {% endif %}
   </section>

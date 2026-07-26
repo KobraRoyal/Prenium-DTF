@@ -20,7 +20,7 @@
     </thead>
     <tbody>
       {% for order in orders %}
-      <tr class="{% if order.credit_hold_status == 'blocked' or order.status == 'cancelled' %}ui-row-anomaly{% elif order.credit_hold_status == 'warning' or order.pricing_status != 'priced' %}ui-row-warning{% endif %}">
+      <tr class="{% if order.credit_hold_status == 'blocked' or order.status == 'cancelled' %}ui-row-anomaly{% elif order.awaits_client_payment or order.credit_hold_status == 'warning' or order.pricing_status != 'priced' %}ui-row-warning{% endif %}">
         {% if variant == "staff" %}
         <td>
           <div class="ui-order-secondary">
@@ -53,6 +53,7 @@
             {% if variant == "staff" %}
             <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
             {% endif %}
+            {% if order.awaits_client_payment %}<span class="ui-inline-flag">Paiement non finalisé</span>{% endif %}
             {% if order.pricing_status != 'priced' %}<span class="ui-inline-flag">Tarif à confirmer</span>{% endif %}
           </div>
         </td>
@@ -79,6 +80,8 @@
           <div class="ui-table-actions">
             {% if variant == "staff" %}
             <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
+            {% elif order.awaits_client_payment %}
+            <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}?panel=billing&amp;pay=1">Payer</a>
             {% else %}
             <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
             {% endif %}
@@ -92,7 +95,7 @@
 
 <div class="ui-orders-list-mobile grid gap-3 min-[960px]:hidden" aria-label="Liste des commandes">
   {% for order in orders %}
-  <article class="ui-mobile-order-card {% if order.credit_hold_status == 'blocked' or order.status == 'cancelled' %}ui-card-anomaly{% elif order.credit_hold_status == 'warning' or order.pricing_status != 'priced' %}ui-card-warning{% endif %}">
+  <article class="ui-mobile-order-card {% if order.credit_hold_status == 'blocked' or order.status == 'cancelled' %}ui-card-anomaly{% elif order.awaits_client_payment or order.credit_hold_status == 'warning' or order.pricing_status != 'priced' %}ui-card-warning{% endif %}">
     <div class="flex flex-wrap items-start justify-between gap-2">
       <div>
         <p class="muted text-xs">N° IDS</p>
@@ -115,6 +118,9 @@
       {% if variant == "staff" %}
       <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
       {% endif %}
+      {% if order.awaits_client_payment %}
+      <span class="ui-inline-flag">Paiement non finalisé</span>
+      {% endif %}
       {% if order.pricing_status != "priced" %}
       <span class="ui-inline-flag">Tarif à confirmer</span>
       {% endif %}
@@ -128,6 +134,8 @@
     <div class="mt-4 flex flex-wrap gap-2">
       {% if variant == "staff" %}
       <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
+      {% elif order.awaits_client_payment %}
+      <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}?panel=billing&amp;pay=1">Payer</a>
       {% else %}
       <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
       {% endif %}

@@ -8,12 +8,31 @@
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" title="Commande" title_code=order_short_ref subtitle=order_client_label subtitle_prefix="Votre référence" %}
 
 {% if request.GET.checkout == "success" %}
+{% if awaits_client_payment %}
+<div class="dui-alert dui-alert-warning mb-4" role="status">
+  Commande enregistrée — paiement non finalisé.
+  <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
+  pour lancer la production.
+</div>
+{% else %}
 <div class="dui-alert dui-alert-success mb-4" role="status">Commande transmise. Vos visuels sont en file de traitement.</div>
+{% endif %}
 {% endif %}
 {% if request.GET.paid == "1" %}
 <div class="dui-alert dui-alert-success mb-4" role="status">Paiement confirmé. Votre justificatif est disponible dans l’onglet Règlement.</div>
 {% elif request.GET.cancelled == "1" %}
-<div class="dui-alert dui-alert-info mb-4" role="status">Paiement annulé. Vous pouvez réessayer depuis l’onglet Règlement.</div>
+<div class="dui-alert dui-alert-warning mb-4" role="status">
+  Paiement non finalisé.
+  <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
+  pour confirmer votre commande.
+</div>
+{% endif %}
+
+{% if awaits_client_payment and request.GET.checkout != "success" and request.GET.cancelled != "1" and request.GET.paid != "1" %}
+<div class="dui-alert dui-alert-warning mb-4" role="status">
+  Cette commande attend votre paiement.
+  <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
+</div>
 {% endif %}
 
 <section class="card client-order-summary" aria-label="Résumé de la commande">
@@ -40,7 +59,13 @@
     {% endif %}
     <div class="client-order-summary__fact">
       <dt>Règlement</dt>
-      <dd>{{ order.billing_mode|human_status }}</dd>
+      <dd>
+        {% if awaits_client_payment %}
+        <span class="badge is-warning">Paiement en attente</span>
+        {% else %}
+        {{ order.billing_mode|human_status }}
+        {% endif %}
+      </dd>
     </div>
     {% if shipment and shipment.shipped_at %}
     <div class="client-order-summary__fact client-order-summary__fact--shipping">

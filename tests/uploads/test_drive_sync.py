@@ -90,12 +90,41 @@ class FakeDriveGateway:
         self.root_folder_id = "root-folder-id"
         self.folders = {}
         self.uploads = []
+        self.file_meta = {}
+        self.trashed_ids = set()
+        self._seq = 0
 
     def ensure_folder(self, *, parent_id: str, name: str) -> str:
         key = (parent_id, name)
-        if key not in self.folders:
-            self.folders[key] = f"{parent_id}/{name}"
-        return self.folders[key]
+        existing = self.folders.get(key)
+        if existing and existing not in self.trashed_ids:
+            return existing
+        self._seq += 1
+        folder_id = f"{parent_id}/{name}#{self._seq}"
+        self.folders[key] = folder_id
+        self.file_meta[folder_id] = {
+            "id": folder_id,
+            "name": name,
+            "trashed": False,
+            "mimeType": "application/vnd.google-apps.folder",
+        }
+        return folder_id
+
+    def get_file_metadata(self, file_id: str) -> dict | None:
+        if not file_id:
+            return None
+        if file_id in self.trashed_ids:
+            meta = dict(self.file_meta.get(file_id) or {"id": file_id, "name": file_id})
+            meta["trashed"] = True
+            meta.setdefault("mimeType", "application/vnd.google-apps.folder")
+            return meta
+        return self.file_meta.get(file_id)
+
+    def is_active_folder(self, file_id: str) -> bool:
+        meta = self.get_file_metadata(file_id)
+        if meta is None or meta.get("trashed"):
+            return False
+        return meta.get("mimeType") == "application/vnd.google-apps.folder"
 
     def upload_file(
         self,
@@ -115,7 +144,14 @@ class FakeDriveGateway:
                 "size": len(content),
             }
         )
-        return f"drive-file-{name}"
+        file_id = f"drive-file-{name}"
+        self.file_meta[file_id] = {
+            "id": file_id,
+            "name": name,
+            "trashed": False,
+            "mimeType": mime_type,
+        }
+        return file_id
 
 
 @pytest.mark.django_db
@@ -202,6 +238,16 @@ def test_ensure_order_folder_creates_only_source_and_production_subfolders():
     }
     drive_folder.folder_ids.pop(ORDER_DRIVE_PRODUCTION_FOLDER, None)
     drive_folder.save(update_fields=["folder_ids"])
+    for legacy_id, legacy_name in (
+        ("legacy-controle-id", "01_controle"),
+        ("legacy-archive-id", "05_archive"),
+    ):
+        gateway.file_meta[legacy_id] = {
+            "id": legacy_id,
+            "name": legacy_name,
+            "trashed": False,
+            "mimeType": "application/vnd.google-apps.folder",
+        }
 
     gateway.folders.clear()
     refreshed = OrderDriveFolderService(gateway=gateway).ensure_order_folder(
@@ -216,6 +262,47 @@ def test_ensure_order_folder_creates_only_source_and_production_subfolders():
     assert refreshed.folder_ids[ORDER_DRIVE_SOURCE_FOLDER]
     assert refreshed.folder_ids[ORDER_DRIVE_PRODUCTION_FOLDER]
     assert refreshed.folder_ids["01_controle"] == "legacy-controle-id"
+
+
+@pytest.mark.django_db
+def test_ensure_order_folder_recreates_when_remote_folder_is_trashed():
+    from apps.uploads.services.drive import OrderDriveFolderService
+
+    user, customer, _membership = create_customer_scope("drive-trash@example.com", "Acme")
+    order = create_order(customer, user)
+    gateway = FakeDriveGateway()
+    service = OrderDriveFolderService(gateway=gateway)
+    first = service.ensure_order_folder(order=order, actor=user, source="test")
+    old_order_folder_id = first.order_folder_id
+    gateway.trashed_ids.add(old_order_folder_id)
+
+    gateway.folders.clear()
+    repaired = service.ensure_order_folder(order=order, actor=user, source="test.repair")
+
+    assert repaired.order_folder_id != old_order_folder_id
+    assert gateway.is_active_folder(repaired.order_folder_id)
+    assert "00_source_Client" in repaired.folder_ids
+    assert "01_Production" in repaired.folder_ids
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
+def test_sync_upload_reuploads_when_drive_file_is_trashed():
+    user, customer, _membership = create_customer_scope("drive-file-trash@example.com", "Acme")
+    order = create_order(customer, user)
+    upload = create_stored_order_upload(order=order, actor=user)
+    gateway = FakeDriveGateway()
+    service = OrderUploadDriveSyncService(gateway=gateway)
+    sync = service.sync_upload(order_upload=upload, actor=user, source="test")
+    assert sync.status == OrderUploadDriveSync.Status.SYNCED
+    gateway.trashed_ids.add(sync.drive_file_id)
+
+    again = service.sync_upload(order_upload=upload, actor=user, source="test.repair")
+    assert again.status == OrderUploadDriveSync.Status.SYNCED
+    assert len(gateway.uploads) == 2
 
 
 @pytest.mark.django_db

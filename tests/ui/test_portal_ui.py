@@ -801,3 +801,62 @@ def test_orders_table_shows_pending_label_when_not_priced():
     )
     assert list_response.status_code == 200
     assert "En attente" in list_response.content.decode()
+
+
+@pytest.mark.django_db
+def test_orders_table_and_dashboard_show_unpaid_payment_flag():
+    from decimal import Decimal
+
+    from django.core.files.base import ContentFile
+
+    from apps.uploads.models import OrderUpload, OrderUploadInspection
+
+    user = get_user_model().objects.create_user(email="unpaid-flag@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Client Unpaid",
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.IMMEDIATE,
+        pricing_status=Order.PricingStatus.PRICED,
+        source="client_portal.b2b_checkout",
+        currency="EUR",
+        subtotal_amount=Decimal("40.00"),
+        total_amount=Decimal("40.00"),
+    )
+    upload = OrderUpload(
+        order=order,
+        uploaded_by=user,
+        original_filename="u.png",
+        mime_type="image/png",
+        size_bytes=4,
+        quantity=1,
+    )
+    upload.file.save("u.png", ContentFile(b"data"), save=True)
+    OrderUploadInspection.objects.create(
+        order_upload=upload,
+        status=OrderUploadInspection.Status.OK,
+        image_width=100,
+        image_height=100,
+    )
+
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+    list_response = client.get(
+        reverse("portal:client-order-list", kwargs={"customer_public_id": customer.public_id})
+    )
+    assert list_response.status_code == 200
+    list_body = list_response.content.decode()
+    assert "Paiement non finalisé" in list_body
+    assert "Payer" in list_body
+    assert f"panel=billing&amp;pay=1" in list_body or "panel=billing&pay=1" in list_body
+
+    dash_response = client.get(reverse("portal:client-dashboard"))
+    assert dash_response.status_code == 200
+    dash_body = dash_response.content.decode()
+    assert "Paiement non finalisé" in dash_body
+    assert "paiement non finalisé" in dash_body.lower() or "Paiements à finaliser" in dash_body

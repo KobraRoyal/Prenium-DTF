@@ -48,6 +48,12 @@ class PaymentService:
         if order.total_amount <= 0:
             raise ValidationError("Montant de commande invalide pour un paiement.")
 
+        # Abandonne les tentatives ouvertes pour permettre une reprise propre.
+        Payment.objects.filter(
+            order_id=order.pk,
+            status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
+        ).update(status=Payment.Status.CANCELLED)
+
         injected_provider = getattr(self.gateway, "provider", None) if self.gateway else None
         if injected_provider and (not provider or provider == injected_provider):
             resolved_provider = injected_provider
@@ -370,8 +376,15 @@ class PaymentService:
             metadata=metadata,
         )
         from apps.notifications.services.transactional import schedule_payment_captured_email
+        from apps.billing.services.production_payment_gate import (
+            should_defer_order_created_until_payment,
+        )
 
         schedule_payment_captured_email(order_public_id=payment.order.public_id)
+        if should_defer_order_created_until_payment(payment.order):
+            from apps.notifications.services.transactional import schedule_order_created_email
+
+            schedule_order_created_email(order_public_id=payment.order.public_id)
         self._release_production_after_payment(order=payment.order, actor=actor, source=source)
         return payment.order, payment, invoice
 

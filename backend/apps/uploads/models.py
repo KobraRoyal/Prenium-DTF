@@ -300,12 +300,12 @@ class OrderUpload(BaseModel):
         on_delete=models.SET_NULL,
         related_name="order_uploads",
     )
-    asset_version = models.OneToOneField(
+    asset_version = models.ForeignKey(
         AssetVersion,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="legacy_order_upload",
+        related_name="order_uploads",
     )
     file = models.FileField(upload_to=order_upload_path, max_length=500)
     original_filename = models.CharField(max_length=255)

@@ -32,7 +32,7 @@ class OrderService:
         return (
             Order.objects.for_customer(customer)
             .select_related("customer", "created_by", "source_b2b_order_project")
-            .prefetch_related("items", "items__service")
+            .prefetch_related("items", "items__service", "uploads")
             .order_by("-created_at")
         )
 
@@ -472,8 +472,12 @@ class OrderService:
             )
 
             from apps.notifications.services.transactional import schedule_order_created_email
+            from apps.billing.services.production_payment_gate import (
+                should_defer_order_created_until_payment,
+            )
 
-            schedule_order_created_email(order_public_id=order_locked.public_id)
+            if not should_defer_order_created_until_payment(order_locked):
+                schedule_order_created_email(order_public_id=order_locked.public_id)
 
         return self.get_customer_order(customer, order_locked.public_id)
 

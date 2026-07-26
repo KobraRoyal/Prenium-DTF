@@ -227,6 +227,73 @@ class OrderPricingService:
             "currency": "EUR",
         }
 
+    def estimate_reorder_quote(
+        self,
+        *,
+        customer,
+        items: list[dict],
+        shipping_method_code: str | None = None,
+        billing_mode: str | None = None,
+    ) -> dict[str, object]:
+        """Devis réassort : somme des surfaces déclarées (mm) × quantités."""
+        if not items:
+            raise ValidationError("Aucun visuel à tarifer pour le réassort.")
+        laize_cm = Decimal(int(getattr(settings, "DTF_LAIZE_CM", 55)))
+        laize_m = (laize_cm / Decimal("100")).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        mode = str(getattr(settings, "DTF_METERAGE_AREA_MODE", "laize_fit") or "laize_fit")
+        billable = Decimal("0.0000")
+        for item in items:
+            width_mm = Decimal(str(item["width_mm"]))
+            height_mm = Decimal(str(item["height_mm"]))
+            qty = max(int(item.get("quantity") or 1), 1)
+            if width_mm <= 0 or height_mm <= 0:
+                raise ValidationError("Dimensions de réassort invalides.")
+            width_m = (width_mm / Decimal("1000")).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+            height_m = (height_mm / Decimal("1000")).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+            area = billable_sqm_from_physical_size(
+                width_m=width_m,
+                height_m=height_m,
+                laize_m=laize_m,
+                mode=mode,
+            )
+            billable += (area * Decimal(qty)).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        billable = max(billable, Decimal("0.0001"))
+        return self.estimate_gang_sheet_quote(
+            customer=customer,
+            surface_sqm=billable,
+            quantity=1,
+            file_count=len(items),
+            shipping_method_code=shipping_method_code,
+            billing_mode=billing_mode,
+        )
+
+    def estimate_meterage_from_declared_mm(self, *, upload) -> Decimal | None:
+        """Surface m² depuis ``width_mm`` / ``height_mm`` saisis (réassort, config)."""
+        width_mm = getattr(upload, "width_mm", None)
+        height_mm = getattr(upload, "height_mm", None)
+        if width_mm is None or height_mm is None:
+            return None
+        if width_mm <= 0 or height_mm <= 0:
+            return None
+        width_m = (Decimal(width_mm) / Decimal("1000")).quantize(
+            FOURPLACES, rounding=ROUND_HALF_UP
+        )
+        height_m = (Decimal(height_mm) / Decimal("1000")).quantize(
+            FOURPLACES, rounding=ROUND_HALF_UP
+        )
+        laize_cm = Decimal(int(getattr(settings, "DTF_LAIZE_CM", 55)))
+        laize_m = (laize_cm / Decimal("100")).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        mode = str(getattr(settings, "DTF_METERAGE_AREA_MODE", "laize_fit") or "laize_fit")
+        area = billable_sqm_from_physical_size(
+            width_m=width_m,
+            height_m=height_m,
+            laize_m=laize_m,
+            mode=mode,
+        )
+        qty = Decimal(max(int(upload.quantity or 1), 1))
+        total = (area * qty).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        return max(total, Decimal("0.0001"))
+
     def estimate_meterage_from_inspection(self, *, upload) -> Decimal | None:
         """Surface m² dérivée du contrôle technique (pixels + DPI), sans saisie opérateur.
 
@@ -287,7 +354,67 @@ class OrderPricingService:
             if override <= 0:
                 return None
             return override.quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        declared = self.estimate_meterage_from_declared_mm(upload=upload)
+        if declared is not None:
+            return declared
         return self.estimate_meterage_from_inspection(upload=upload)
+
+    def apply_declared_size_self_service_pricing(
+        self,
+        *,
+        order: Order,
+        actor,
+        source: str,
+    ) -> Order:
+        """Fige le métrage depuis les dimensions déclarées (réassort comptant) puis prix."""
+        if order.billing_mode != Order.BillingMode.IMMEDIATE:
+            raise ValidationError(
+                "Le tarif automatique dimensions s’applique aux commandes comptant CB."
+            )
+        if not order.uses_atelier_pricing():
+            raise ValidationError(
+                "Le calcul automatique s'applique aux commandes atelier (encours ou comptant CB)."
+            )
+
+        uploads = list(order.uploads.all().order_by("sort_order", "created_at"))
+        if not uploads:
+            raise ValidationError("Aucun fichier à tarifer.")
+
+        for upload in uploads:
+            meterage = self.estimate_meterage_from_declared_mm(upload=upload)
+            if meterage is None:
+                meterage = self.estimate_meterage_from_inspection(upload=upload)
+            if meterage is None:
+                raise ValidationError(
+                    f"Dimensions manquantes pour le fichier « {upload.original_filename} » "
+                    ": impossible de calculer le prix du réassort."
+                )
+            upload.meterage_override_sqm = meterage
+            upload.meterage_override_linear_m = None
+            upload.save(
+                update_fields=[
+                    "meterage_override_sqm",
+                    "meterage_override_linear_m",
+                    "updated_at",
+                ]
+            )
+
+        record_event(
+            action="order.declared_size_meterage_applied",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=order,
+            metadata={
+                "order_public_id": str(order.public_id),
+                "customer_public_id": str(order.customer.public_id),
+                "upload_count": len(uploads),
+                "source": source,
+            },
+        )
+        return self.compute_and_persist_order_pricing(
+            order=order,
+            actor=actor,
+            source=source,
+        )
 
     def apply_gang_sheet_self_service_pricing(
         self,

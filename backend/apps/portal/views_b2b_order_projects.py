@@ -45,9 +45,36 @@ def build_gang_sheet_project_quote(
     shipping_method_code: str | None = None,
     billing_mode: str | None = None,
 ):
-    """Devis produit + port + TVA (si comptant) pour un projet planche HD."""
+    """Devis produit + port + TVA (si comptant) pour Gang Sheet ou réassort."""
     if project is None:
         return None
+    resolved_billing = billing_mode or getattr(
+        customer, "default_billing_mode", Order.BillingMode.DEFERRED
+    )
+    if project.order_mode == B2BOrderProject.OrderMode.REORDER:
+        items = list(
+            project.items.order_by("sort_order", "created_at").only(
+                "width_mm", "height_mm", "quantity"
+            )
+        )
+        if not items:
+            return None
+        try:
+            return order_pricing_service.estimate_reorder_quote(
+                customer=customer,
+                items=[
+                    {
+                        "width_mm": item.width_mm,
+                        "height_mm": item.height_mm,
+                        "quantity": item.quantity,
+                    }
+                    for item in items
+                ],
+                shipping_method_code=shipping_method_code,
+                billing_mode=resolved_billing,
+            )
+        except ValidationError:
+            return None
     if project.order_mode != B2BOrderProject.OrderMode.READY_GANG_SHEET:
         return None
     sheet = (
@@ -67,8 +94,7 @@ def build_gang_sheet_project_quote(
             quantity=quantity,
             file_count=1,
             shipping_method_code=shipping_method_code,
-            billing_mode=billing_mode
-            or getattr(customer, "default_billing_mode", Order.BillingMode.DEFERRED),
+            billing_mode=resolved_billing,
         )
     except ValidationError:
         return None

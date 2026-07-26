@@ -43,6 +43,11 @@ class ClientDashboardView(LoginRequiredMixin, View):
     template_name = "portal/client/dashboard.html"
 
     def get(self, request):
+        from apps.billing.services.production_payment_gate import (
+            attach_awaits_client_payment,
+            count_orders_awaiting_client_payment,
+        )
+
         scope = access_scope_service.get_user_scope(request.user)
         memberships = list(scope.memberships)
         selected_membership = memberships[0] if memberships else None
@@ -50,6 +55,8 @@ class ClientDashboardView(LoginRequiredMixin, View):
         recent_orders = []
         recent_projects = []
         project_feature_enabled = False
+        orders_count = projects_in_progress_count = awaits_payment_count = 0
+        new_order_url = ""
         if selected_membership is not None:
             customer = (
                 access_scope_service.get_customer_queryset(request.user)
@@ -58,74 +65,41 @@ class ClientDashboardView(LoginRequiredMixin, View):
             )
             if customer is not None:
                 orders_qs = order_service.list_customer_orders(customer)
-                recent_orders = list(orders_qs[:5])
+                recent_orders = attach_awaits_client_payment(list(orders_qs[:5]))
                 orders_count = orders_qs.count()
+                awaits_payment_count = count_orders_awaiting_client_payment(customer)
                 project_feature_enabled = b2b_order_projects_enabled_for_customer(customer)
-                projects_in_progress_count = 0
-                recent_projects = []
                 if project_feature_enabled:
                     projects_qs = project_service.list_customer_projects_in_progress(customer)
                     recent_projects = project_service.attach_can_delete(list(projects_qs[:5]))
                     projects_in_progress_count = projects_qs.count()
-                if project_feature_enabled:
                     new_order_url = client_new_order_url(customer=customer)
                 else:
                     new_order_url = reverse(
                         "portal:client-checkout",
                         kwargs={"customer_public_id": customer.public_id},
                     )
-            else:
-                orders_count = 0
-                projects_in_progress_count = 0
-                new_order_url = ""
-        else:
-            orders_count = 0
-            projects_in_progress_count = 0
-            new_order_url = ""
-        kpi_rows = []
-        if selected_membership is not None:
-            kpi_rows = [
-                {
-                    "label": "Compte client",
-                    "value": selected_membership.customer_name,
-                    "hint": f"Role : {status_label(str(selected_membership.role))}",
-                },
-                {
-                    "label": "Commandes",
-                    "value": str(orders_count if customer is not None else 0),
-                    "hint": None,
-                },
-            ]
-            if project_feature_enabled:
-                kpi_rows.append(
-                    {
-                        "label": "Commandes à finaliser",
-                        "value": str(
-                            projects_in_progress_count if customer is not None else 0
-                        ),
-                        "hint": None,
-                    }
-                )
-        context = {
-            "scope": scope,
-            "memberships": memberships,
-            "selected_membership": selected_membership,
-            "customer": customer,
-            "recent_orders": recent_orders,
-            "recent_projects": recent_projects,
-            "orders_count": orders_count if selected_membership is not None else 0,
-            "projects_in_progress_count": (
-                projects_in_progress_count if selected_membership is not None else 0
-            ),
-            "new_order_url": new_order_url if selected_membership is not None else "",
-            "project_feature_enabled": project_feature_enabled,
-            "kpi_rows": kpi_rows,
-            "nav_mode": "client",
-            "nav_key": "client-dashboard",
-            "badge_tone_for_status": badge_tone_for_status,
-            "status_label": status_label,
-        }
-        return render(request, self.template_name, context)
+        return render(
+            request,
+            self.template_name,
+            {
+                "scope": scope,
+                "memberships": memberships,
+                "selected_membership": selected_membership,
+                "customer": customer,
+                "recent_orders": recent_orders,
+                "recent_projects": recent_projects,
+                "orders_count": orders_count,
+                "awaits_payment_count": awaits_payment_count,
+                "projects_in_progress_count": projects_in_progress_count,
+                "new_order_url": new_order_url,
+                "project_feature_enabled": project_feature_enabled,
+                "nav_mode": "client",
+                "nav_key": "client-dashboard",
+                "badge_tone_for_status": badge_tone_for_status,
+                "status_label": status_label,
+            },
+        )
 
 
 class ClientOrderListView(ScopedCustomerMixin, View):
@@ -139,6 +113,8 @@ class ClientOrderListView(ScopedCustomerMixin, View):
         return render(request, self.template_name, context)
 
     def _build_context(self, request):
+        from apps.billing.services.production_payment_gate import attach_awaits_client_payment
+
         search_query = request.GET.get("q", "").strip()
         orders_qs = order_service.list_customer_orders(self.customer)
         if search_query:
@@ -148,9 +124,10 @@ class ClientOrderListView(ScopedCustomerMixin, View):
             page_number=request.GET.get("page"),
             page_size=settings.ORDER_LIST_PAGE_SIZE,
         )
+        orders = attach_awaits_client_payment(list(page_obj.object_list))
         return {
             "customer": self.customer,
-            "orders": page_obj.object_list,
+            "orders": orders,
             "page_obj": page_obj,
             "search_query": search_query,
             "nav_mode": "client",
@@ -187,6 +164,8 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
     template_name = "portal/client/order_detail.html"
 
     def get(self, request, customer_public_id, order_public_id):
+        from apps.billing.services.production_payment_gate import order_awaits_client_payment
+
         order = self.get_order_or_404(order_public_id)
         shipment = None
         try:
@@ -200,6 +179,7 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
                 order=order,
                 shipment=shipment,
                 active_panel=request.GET.get("panel", ""),
+                awaits_client_payment=order_awaits_client_payment(order),
             )
             | {
                 "order_client_label": order_client_reference(order),
@@ -315,13 +295,24 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
             raise Http404
         settlement = order.customer.preferred_settlement_method
         providers = available_payment_providers()
+        from apps.billing.models import Payment
+        from apps.billing.services.production_payment_gate import order_awaits_client_payment
+
+        awaits_payment = order_awaits_client_payment(order)
         show_pay_cta = (
-            order.billing_mode != order.BillingMode.DEFERRED
-            and order.pricing_status == order.PricingStatus.PRICED
-            and order.total_amount > 0
+            awaits_payment
             and invoice is None
-            and (payment is None or payment.status in {"failed", "cancelled"})
             and can_pay_online(order.customer)
+            and (
+                payment is None
+                or payment.status
+                in {
+                    Payment.Status.FAILED,
+                    Payment.Status.CANCELLED,
+                    Payment.Status.PENDING,
+                    Payment.Status.APPROVED,
+                }
+            )
         )
         return render(
             request,
@@ -332,6 +323,7 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
                 invoice=invoice,
                 active_panel="billing",
                 show_pay_cta=show_pay_cta,
+                awaits_client_payment=awaits_payment,
                 payment_providers=providers,
                 online_provider=default_online_provider(order.customer) if show_pay_cta else "",
                 settlement_method=settlement,

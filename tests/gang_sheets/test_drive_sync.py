@@ -22,12 +22,41 @@ class FakeDriveGateway:
         self.root_folder_id = "root-folder-id"
         self.folders = {}
         self.uploads = []
+        self.file_meta = {}
+        self.trashed_ids = set()
+        self._seq = 0
 
     def ensure_folder(self, *, parent_id, name):
         key = (parent_id, name)
-        if key not in self.folders:
-            self.folders[key] = f"{parent_id}/{name}"
-        return self.folders[key]
+        existing = self.folders.get(key)
+        if existing and existing not in self.trashed_ids:
+            return existing
+        self._seq += 1
+        folder_id = f"{parent_id}/{name}#{self._seq}"
+        self.folders[key] = folder_id
+        self.file_meta[folder_id] = {
+            "id": folder_id,
+            "name": name,
+            "trashed": False,
+            "mimeType": "application/vnd.google-apps.folder",
+        }
+        return folder_id
+
+    def get_file_metadata(self, file_id):
+        if not file_id:
+            return None
+        if file_id in self.trashed_ids:
+            meta = dict(self.file_meta.get(file_id) or {"id": file_id, "name": file_id})
+            meta["trashed"] = True
+            meta.setdefault("mimeType", "application/vnd.google-apps.folder")
+            return meta
+        return self.file_meta.get(file_id)
+
+    def is_active_folder(self, file_id):
+        meta = self.get_file_metadata(file_id)
+        if meta is None or meta.get("trashed"):
+            return False
+        return meta.get("mimeType") == "application/vnd.google-apps.folder"
 
     def upload_file(self, *, parent_id, name, mime_type, content):
         if self.fail_upload:
@@ -40,7 +69,14 @@ class FakeDriveGateway:
                 "content": content,
             }
         )
-        return f"drive-file-{name}"
+        file_id = f"drive-file-{name}"
+        self.file_meta[file_id] = {
+            "id": file_id,
+            "name": name,
+            "trashed": False,
+            "mimeType": mime_type,
+        }
+        return file_id
 
 
 def create_hd_sheet(*, email="gang-drive@example.com", project=None):
@@ -79,8 +115,8 @@ def test_drive_sync_uploads_exact_hd_bytes_and_is_idempotent():
     assert len(gateway.uploads) == 1
     assert gateway.uploads[0]["content"] == content
     assert gateway.uploads[0]["mime_type"] == "application/pdf"
-    assert gateway.uploads[0]["parent_id"].endswith("/01_Production")
-    assert "/Gang Sheets/" in gateway.uploads[0]["parent_id"]
+    assert "/01_Production" in gateway.uploads[0]["parent_id"]
+    assert "Gang Sheets" in gateway.uploads[0]["parent_id"]
     assert GangSheetDriveSync.objects.for_customer(customer).get() == sync
     assert AuditLogEntry.objects.filter(
         action="gang_sheet.drive_synced",

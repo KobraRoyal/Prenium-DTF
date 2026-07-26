@@ -96,7 +96,14 @@ class GangSheetDriveSyncService:
             sync_gang_sheet_to_drive_task.delay(str(sheet.public_id), source=source)
         return sync
 
-    def force_resync(self, *, sheet: GangSheet, actor=None, source: str) -> GangSheetDriveSync:
+    def force_resync(
+        self,
+        *,
+        sheet: GangSheet,
+        actor=None,
+        source: str,
+        queue: bool = True,
+    ) -> GangSheetDriveSync:
         """Réinitialise le sync (ex. après rattachement commande) puis refile la tâche."""
         sync = self.ensure_sync_record(sheet=sheet)
         sync.status = GangSheetDriveSync.Status.PENDING
@@ -116,7 +123,9 @@ class GangSheetDriveSyncService:
                 "updated_at",
             ]
         )
-        return self.schedule_sync(sheet=sheet, actor=actor, source=source)
+        if queue:
+            return self.schedule_sync(sheet=sheet, actor=actor, source=source)
+        return sync
 
     def sync_sheet(self, *, sheet: GangSheet, actor=None, source: str = "system"):
         sync = self.ensure_sync_record(sheet=sheet)

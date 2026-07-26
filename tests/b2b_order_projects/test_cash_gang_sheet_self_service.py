@@ -441,3 +441,64 @@ def test_deferred_checkout_still_waits_for_atelier_pricing():
     assert order.billing_mode == Order.BillingMode.DEFERRED
     assert order.pricing_status == Order.PricingStatus.PENDING
     assert order.total_amount == Decimal("0.00")
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_immediate_account_reorder_checkout_auto_prices_and_awaits_payment():
+    from apps.b2b_order_projects.services import B2BOrderReorderService
+    from apps.shipping.services.methods import ShippingMethodService
+
+    _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(email="cash-reorder@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Cash Reorder Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
+    )
+    membership = CustomerMembership.objects.create(customer=customer, user=user)
+
+    source_project, _sheet = _prepare_gang_sheet_project(customer=customer, user=user)
+    source_order = B2BOrderProjectCheckoutService().checkout_project(
+        project=source_project,
+        actor=user,
+        customer_membership=membership,
+        source="test",
+        billing_mode="immediate",
+        shipping_method_code="pickup",
+    )
+    assert source_order.pricing_status == Order.PricingStatus.PRICED
+
+    reorder_project = B2BOrderReorderService().create_reorder_from_order(
+        customer=customer,
+        order=source_order,
+        actor=user,
+        source="test",
+    )
+    assert reorder_project.order_mode == B2BOrderProject.OrderMode.REORDER
+    assert reorder_project.status == B2BOrderProject.Status.READY_TO_SUBMIT
+    reorder_item = reorder_project.items.get()
+    assert reorder_item.width_mm > 0
+    assert reorder_item.height_mm > 0
+
+    reorder_order = B2BOrderProjectCheckoutService().checkout_project(
+        project=reorder_project,
+        actor=user,
+        customer_membership=membership,
+        source="test",
+        billing_mode="immediate",
+        shipping_method_code="pickup",
+    )
+
+    assert reorder_order.billing_mode == Order.BillingMode.IMMEDIATE
+    assert reorder_order.pricing_status == Order.PricingStatus.PRICED
+    assert reorder_order.total_amount > Decimal("0.00")
+    assert reorder_order.tax_amount > Decimal("0.00")
+    assert requires_captured_payment_before_production(reorder_order) is True
+    assert order_awaits_client_payment(reorder_order) is True
+    upload = reorder_order.uploads.get()
+    assert upload.width_mm == reorder_item.width_mm
+    assert upload.height_mm == reorder_item.height_mm
+    assert upload.meterage_override_sqm is not None

@@ -164,7 +164,11 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
         )
 
         if status == "cancel":
-            messages.info(request, "Paiement annulé. Vous pouvez réessayer quand vous voulez.")
+            Payment.objects.filter(
+                order_id=order.pk,
+                status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
+            ).update(status=Payment.Status.CANCELLED)
+            messages.info(request, "Paiement non validé. Vous pouvez reprendre le règlement.")
             return HttpResponseRedirect(
                 client_order_billing_landing_url(
                     customer_public_id=customer_public_id,

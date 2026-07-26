@@ -84,6 +84,13 @@ L’événement `order_priced` reste réservé à l’encours (`deferred`).
 La production atelier (`in_progress`) est **bloquée** jusqu’à capture du paiement
 (`apps.billing.services.production_payment_gate`).
 
+### UX portail client (comptant CB)
+
+- Un seul CTA **Payer maintenant** (dialogue d’initiation) — pas de boutons
+  « Reprendre » / « Relancer » en parallèle.
+- Dashboard + liste commandes : pastille **Paiement non finalisé** + action **Payer**
+  vers `?panel=billing&pay=1` (`attach_awaits_client_payment`).
+
 ## Fichiers clés
 
 - `backend/apps/billing/services/gateways.py`

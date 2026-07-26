@@ -164,8 +164,10 @@ class OrderUploadService:
             raise ValidationError("Commande introuvable.")
         if asset_version.customer_id != customer.id:
             raise ValidationError("Fichier introuvable.")
-        if OrderUpload.objects.filter(asset_version=asset_version).exists():
-            raise ValidationError("Ce fichier est déjà rattaché à une commande.")
+        # Un même asset peut servir plusieurs commandes (réassort), mais pas deux
+        # fois dans la même commande.
+        if OrderUpload.objects.filter(order=order, asset_version=asset_version).exists():
+            raise ValidationError("Ce fichier est déjà rattaché à cette commande.")
 
         validated_membership = self._validate_customer_actor_scope(
             customer=customer,

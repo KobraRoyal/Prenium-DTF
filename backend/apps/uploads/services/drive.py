@@ -133,6 +133,42 @@ class GoogleDriveGateway:
     def find_file_by_name(self, *, parent_id: str, name: str) -> DriveRemoteFile | None:
         return self._find_item(parent_id=parent_id, name=name)
 
+    def get_file_metadata(self, file_id: str) -> dict | None:
+        """Retourne les métadonnées Drive, ou None si absent / inaccessible."""
+        if not str(file_id or "").strip():
+            return None
+        try:
+            from googleapiclient.errors import HttpError
+        except ImportError as error:
+            raise GoogleDriveConfigurationError(
+                "Google Drive dependencies are not installed."
+            ) from error
+        try:
+            return (
+                self.service.files()
+                .get(
+                    fileId=file_id,
+                    fields="id,name,trashed,mimeType,parents",
+                    supportsAllDrives=True,
+                )
+                .execute()
+            )
+        except HttpError as error:
+            status = int(getattr(error.resp, "status", 0) or 0)
+            if status in {403, 404}:
+                return None
+            raise GoogleDriveSyncError(
+                f"Unable to read Drive item '{file_id}'."
+            ) from error
+
+    def is_active_folder(self, file_id: str) -> bool:
+        meta = self.get_file_metadata(file_id)
+        if meta is None:
+            return False
+        if meta.get("trashed"):
+            return False
+        return meta.get("mimeType") == self.folder_mime_type
+
     def upload_file(self, *, parent_id: str, name: str, mime_type: str, content: bytes) -> str:
         existing = self.find_file_by_name(parent_id=parent_id, name=name)
         if existing is not None:
@@ -209,11 +245,24 @@ class OrderDriveFolderService:
         with transaction.atomic():
             locked_order = Order.objects.select_for_update().get(pk=order.pk)
             existing = OrderDriveFolder.objects.filter(order_id=locked_order.pk).first()
+            gateway = self._get_gateway()
             if existing is not None and existing.order_folder_id and existing.folder_ids:
                 if set(ORDER_DRIVE_SUBFOLDERS).issubset(existing.folder_ids.keys()):
-                    return existing
+                    if self._remote_order_tree_is_active(gateway=gateway, drive_folder=existing):
+                        return existing
+                    # Dossier distant trashé / manquant : invalider pour recréer.
+                    existing.order_folder_id = ""
+                    existing.folder_ids = {}
+                    existing.relative_path = ""
+                    existing.save(
+                        update_fields=[
+                            "order_folder_id",
+                            "folder_ids",
+                            "relative_path",
+                            "updated_at",
+                        ]
+                    )
 
-            gateway = self._get_gateway()
             commands_folder_id = gateway.ensure_folder(
                 parent_id=gateway.root_folder_id,
                 name=ORDER_DRIVE_ROOT_FOLDER_NAME,
@@ -232,12 +281,14 @@ class OrderDriveFolderService:
                 name=order_folder_name,
             )
 
-            # Préserver les IDs legacy déjà connus (aliases lecture), sans les recréer.
+            # Préserver les IDs legacy encore actifs (aliases lecture), sans les recréer.
             previous_ids = dict(getattr(existing, "folder_ids", None) or {})
             folder_ids = {
                 name: folder_id
                 for name, folder_id in previous_ids.items()
-                if name in ORDER_DRIVE_LEGACY_SUBFOLDERS and folder_id
+                if name in ORDER_DRIVE_LEGACY_SUBFOLDERS
+                and folder_id
+                and gateway.is_active_folder(folder_id)
             }
             for folder_name in ORDER_DRIVE_SUBFOLDERS:
                 folder_ids[folder_name] = gateway.ensure_folder(
@@ -274,6 +325,16 @@ class OrderDriveFolderService:
                 },
             )
         return drive_folder
+
+    def _remote_order_tree_is_active(self, *, gateway: GoogleDriveGateway, drive_folder) -> bool:
+        if not gateway.is_active_folder(drive_folder.order_folder_id):
+            return False
+        folder_ids = drive_folder.folder_ids or {}
+        for name in ORDER_DRIVE_SUBFOLDERS:
+            sub_id = str(folder_ids.get(name) or "").strip()
+            if not sub_id or not gateway.is_active_folder(sub_id):
+                return False
+        return True
 
     def _get_gateway(self) -> GoogleDriveGateway:
         if self.gateway is None:
@@ -330,10 +391,56 @@ class OrderUploadDriveSyncService:
 
             sync_order_upload_to_drive_task.delay(str(order_upload.public_id), source=source)
 
+    def force_resync(
+        self,
+        *,
+        order_upload: OrderUpload,
+        actor=None,
+        source: str,
+        queue: bool = True,
+    ) -> OrderUploadDriveSync:
+        """Réinitialise le sync (ex. dossier Drive trashé) puis refile / resync."""
+        sync = self.ensure_sync_record(order_upload=order_upload)
+        sync.status = OrderUploadDriveSync.Status.PENDING
+        sync.drive_file_id = ""
+        sync.remote_folder_id = ""
+        sync.last_error = ""
+        sync.synced_at = None
+        sync.save(
+            update_fields=[
+                "status",
+                "drive_file_id",
+                "remote_folder_id",
+                "last_error",
+                "synced_at",
+                "updated_at",
+            ]
+        )
+        if queue and settings.GOOGLE_DRIVE_SYNC_ENABLED:
+            self.schedule_upload_sync(order_upload=order_upload, actor=actor, source=source)
+        return sync
+
     def sync_upload(self, *, order_upload: OrderUpload, actor=None, source: str = "system"):
         sync = self.ensure_sync_record(order_upload=order_upload)
         if sync.status == OrderUploadDriveSync.Status.SYNCED and sync.drive_file_id:
-            return sync
+            meta = self._get_gateway().get_file_metadata(sync.drive_file_id)
+            if meta is not None and not meta.get("trashed"):
+                return sync
+            sync.status = OrderUploadDriveSync.Status.PENDING
+            sync.drive_file_id = ""
+            sync.remote_folder_id = ""
+            sync.last_error = ""
+            sync.synced_at = None
+            sync.save(
+                update_fields=[
+                    "status",
+                    "drive_file_id",
+                    "remote_folder_id",
+                    "last_error",
+                    "synced_at",
+                    "updated_at",
+                ]
+            )
 
         try:
             drive_folder = self._get_folder_service().ensure_order_folder(
@@ -582,3 +689,72 @@ def sync_order_upload_to_drive(*, order_upload_public_id: str, actor=None, sourc
             actor=actor,
             source=source,
         )
+
+
+def repair_order_drive_sync(*, order, actor=None, source: str = "drive.repair") -> dict:
+    """Recrée le dossier commande si trashé/manquant, puis re-sync uploads + gang sheets."""
+    from apps.gang_sheets.models import GangSheet
+    from apps.gang_sheets.services.drive import GangSheetDriveSyncService
+
+    folder_service = OrderDriveFolderService()
+    upload_sync_service = OrderUploadDriveSyncService(gateway=folder_service._get_gateway())
+    drive_folder = folder_service.ensure_order_folder(order=order, actor=actor, source=source)
+
+    upload_results = []
+    for order_upload in OrderUpload.objects.filter(order=order).select_related("drive_sync"):
+        upload_sync_service.force_resync(
+            order_upload=order_upload,
+            actor=actor,
+            source=source,
+            queue=False,
+        )
+        sync = upload_sync_service.sync_upload(
+            order_upload=order_upload,
+            actor=actor,
+            source=source,
+        )
+        upload_results.append(
+            {
+                "order_upload_public_id": str(order_upload.public_id),
+                "status": sync.status,
+                "drive_file_id": sync.drive_file_id,
+                "last_error": sync.last_error,
+            }
+        )
+
+    gang_results = []
+    gang_service = GangSheetDriveSyncService(gateway=folder_service._get_gateway())
+    for sheet in GangSheet.objects.filter(order=order).select_related("drive_sync"):
+        if not sheet.final_file:
+            continue
+        gang_service.force_resync(sheet=sheet, actor=actor, source=source, queue=False)
+        sync = gang_service.sync_sheet(sheet=sheet, actor=actor, source=source)
+        gang_results.append(
+            {
+                "gang_sheet_public_id": str(sheet.public_id),
+                "status": sync.status,
+                "drive_file_id": sync.drive_file_id,
+                "last_error": sync.last_error,
+            }
+        )
+
+    record_event(
+        action="order_drive_folder.repaired",
+        actor=actor if getattr(actor, "is_authenticated", False) else None,
+        target=drive_folder,
+        metadata={
+            "order_public_id": str(order.public_id),
+            "customer_public_id": str(order.customer.public_id),
+            "relative_path": drive_folder.relative_path,
+            "upload_count": len(upload_results),
+            "gang_sheet_count": len(gang_results),
+            "source": source,
+        },
+    )
+    return {
+        "order_public_id": str(order.public_id),
+        "relative_path": drive_folder.relative_path,
+        "order_folder_id": drive_folder.order_folder_id,
+        "uploads": upload_results,
+        "gang_sheets": gang_results,
+    }
