@@ -214,8 +214,32 @@ class B2BOrderProjectService:
                 source=source,
                 metadata={"item_public_id": str(item.public_id), "fields": changed},
             )
+            if {"width_mm", "height_mm"}.intersection(changed):
+                self._reschedule_thin_zone_analysis(item)
         self._refresh_completeness(locked)
         return item
+
+    def _reschedule_thin_zone_analysis(self, item) -> None:
+        """Recompute overlays after print-size changes (0.5 mm depends on placement)."""
+        version = getattr(getattr(item, "asset", None), "current_version", None)
+        if version is None:
+            return
+        from apps.uploads.models import AssetVersion
+        from apps.uploads.services.assets import AssetService
+
+        version_pk = version.pk
+
+        def _enqueue() -> None:
+            AssetVersion.objects.filter(pk=version_pk).update(
+                analysis_status=AssetVersion.AnalysisStatus.PENDING,
+                analysis_error="",
+                auto_size_requested=False,
+            )
+            AssetService().schedule_analysis(
+                version=AssetVersion.objects.get(pk=version_pk),
+            )
+
+        transaction.on_commit(_enqueue)
 
     @transaction.atomic
     def confirm_item_analysis(

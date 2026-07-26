@@ -248,6 +248,7 @@
 - [x] Contrôle des détails fins : zoom 100–400 % dans l'aperçu ; Multicolore **ou** couleur hex obligatoire pour optimiser la base blanche / toucher
 - [x] Faux positifs de semi-transparence supprimés sur les fichiers 100 % vectoriels : l'anticrénelage du rendu d'aperçu n'est plus confondu avec une transparence source, tandis que les documents mixtes restent contrôlés
 - [x] Semi-transparences fiabilisées (2026-07-26) : PDF mixtes via alphas embarqués, opacité vectorielle ExtGState, érosion AA Ghostscript, seuil relatif + early-exit corrigé ; warning si fichier sans canal alpha
+- [x] Finesse < 0,5 mm fiabilisée (2026-07-26) : échelle sur taille posée, min pixels/couverture, skip aperçu insuffisant, re-analyse Celery au resize item
 - [x] Validation du correctif vectoriel : 123 tests `uploads` + projets B2B passés, lint/formatage OK, check Django OK et aucune migration requise
 - [x] Couleur support à la validation : état `None` par défaut, choix obligatoire Multicouleur/HEX, retour à vide sans faux blanc et consigne transmise au contrôle Atelier
 - [x] Validation globale du correctif couleur support et analyse vectorielle : 417 tests passés, Ruff/Django/migrations/JavaScript conformes et recette navigateur desktop/mobile sans erreur console

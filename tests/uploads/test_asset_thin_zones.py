@@ -63,3 +63,66 @@ def test_uses_page_dimensions_for_vector_preview_scale():
     assert result.detected is True
     assert result.metadata["scale_basis"] == "page_dimensions"
     assert result.metadata["threshold_pixels"] == 1.42
+
+
+def test_prefers_item_placement_dimensions_over_embedded_dpi():
+    image = Image.new("RGBA", (200, 80), (0, 0, 0, 0))
+    # 3 px bar: thin at 300 DPI (~0.25 mm) but thick enough at 50 mm placement (~0.75 mm)
+    ImageDraw.Draw(image).rectangle((10, 40, 190, 42), fill=(0, 0, 0, 255))
+
+    native = AssetThinZoneAnalyzer().analyze(
+        image=image,
+        dpi_x=300,
+        dpi_y=300,
+        metadata={},
+        probable_white_background=False,
+    )
+    placed = AssetThinZoneAnalyzer().analyze(
+        image=image,
+        dpi_x=300,
+        dpi_y=300,
+        metadata={"placement_width_mm": 50, "placement_height_mm": 20},
+        probable_white_background=False,
+    )
+    image.close()
+
+    assert native.detected is True
+    assert native.metadata["scale_basis"] == "embedded_dpi"
+    assert placed.detected is False
+    assert placed.metadata["scale_basis"] == "item_placement"
+
+
+def test_ignores_sparse_noise_below_min_pixels_and_coverage():
+    image = Image.new("RGBA", (500, 500), (0, 0, 0, 0))
+    for index in range(4):
+        image.putpixel((10 + index * 20, 10), (0, 0, 0, 255))
+
+    result = AssetThinZoneAnalyzer().analyze(
+        image=image,
+        dpi_x=300,
+        dpi_y=300,
+        metadata={},
+        probable_white_background=False,
+    )
+    image.close()
+
+    assert result.detected is False
+    assert result.metadata["pixel_count"] == 4
+
+
+def test_skips_when_preview_cannot_resolve_half_millimeter():
+    image = Image.new("RGBA", (40, 20), (0, 0, 0, 0))
+    ImageDraw.Draw(image).line((2, 10, 38, 10), fill=(0, 0, 0, 255), width=1)
+
+    result = AssetThinZoneAnalyzer().analyze(
+        image=image,
+        dpi_x=None,
+        dpi_y=None,
+        metadata={"page_width_in": 20, "page_height_in": 10},
+        probable_white_background=False,
+    )
+    image.close()
+
+    assert result.detected is False
+    assert result.metadata["resolution_limited"] is True
+    assert result.metadata["skip_reason"] == "insufficient_preview_resolution"

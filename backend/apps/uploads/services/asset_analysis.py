@@ -169,11 +169,16 @@ class AssetAnalysisService:
             dpi_y = rendered.dpi_y
             has_alpha = image.mode in {"RGBA", "LA"} or "transparency" in image.info
             white_background = self._probable_white_background(image)
+            analysis_metadata = dict(rendered.metadata or {})
+            placement = self._resolve_thin_zone_placement_mm(version=version)
+            if placement is not None:
+                analysis_metadata["placement_width_mm"] = placement[0]
+                analysis_metadata["placement_height_mm"] = placement[1]
             thin_zone_result = self.thin_zone_analyzer.analyze(
                 image=image,
                 dpi_x=dpi_x,
                 dpi_y=dpi_y,
-                metadata=rendered.metadata,
+                metadata=analysis_metadata,
                 probable_white_background=white_background,
             )
             semi_transparency_result = self._analyze_semi_transparency(
@@ -182,6 +187,11 @@ class AssetAnalysisService:
                 image=image,
             )
             warnings = list(rendered.warnings)
+            if thin_zone_result.metadata.get("resolution_limited"):
+                warnings.append(
+                    "Contrôle des détails < 0,5 mm limité : résolution d’aperçu insuffisante "
+                    "pour mesurer ce seuil de façon fiable."
+                )
             if not has_alpha:
                 warnings.append("Aucune transparence détectée.")
                 if rendered.metadata.get("is_pure_vector") is not True:
@@ -208,7 +218,7 @@ class AssetAnalysisService:
                 "probable_white_background": white_background,
                 "warnings": warnings,
                 "metadata": {
-                    **rendered.metadata,
+                    **analysis_metadata,
                     "mode": image.mode,
                     "format": rendered.format_name,
                     "mime_type": version.mime_type,
@@ -223,6 +233,19 @@ class AssetAnalysisService:
             }
         finally:
             image.close()
+
+    def _resolve_thin_zone_placement_mm(self, version) -> tuple[float, float] | None:
+        """Use the client print size when it is already a real placement (≥ 5 mm)."""
+        items = list(version.asset.b2b_order_project_items.all()[:5])
+        for item in items:
+            try:
+                width = float(item.width_mm)
+                height = float(item.height_mm)
+            except (TypeError, ValueError):
+                continue
+            if width >= 5.0 and height >= 5.0:
+                return width, height
+        return None
 
     def _apply_auto_size(self, *, version, result):
         if not version.auto_size_requested:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from io import BytesIO
 
@@ -23,6 +22,10 @@ class AssetThinZoneAnalyzer:
     white_background_threshold = 245
     max_overlay_side = 480
     max_kernel_size = 51
+    min_thin_pixels = 16
+    min_coverage_percent = 0.05
+    # Below one preview pixel, 0.5 mm cannot be measured on the raster.
+    min_reliable_threshold_pixels = 1.0
 
     def analyze(
         self,
@@ -39,7 +42,8 @@ class AssetThinZoneAnalyzer:
             dpi_y=dpi_y,
             metadata=metadata,
         )
-        threshold_pixels = max(pixels_per_mm * self.threshold_mm, 1.0)
+        threshold_pixels = max(pixels_per_mm * self.threshold_mm, 0.0)
+        resolution_limited = threshold_pixels < self.min_reliable_threshold_pixels
         kernel_size = self._opening_kernel_size(threshold_pixels)
         foreground, mask_basis = self._foreground_mask(
             image=image,
@@ -53,6 +57,17 @@ class AssetThinZoneAnalyzer:
                     kernel_size=kernel_size,
                     scale_basis=scale_basis,
                     mask_basis=mask_basis,
+                    resolution_limited=resolution_limited,
+                )
+
+            if resolution_limited:
+                return self._empty_result(
+                    threshold_pixels=threshold_pixels,
+                    kernel_size=kernel_size,
+                    scale_basis=scale_basis,
+                    mask_basis=mask_basis,
+                    resolution_limited=True,
+                    skip_reason="insufficient_preview_resolution",
                 )
 
             opened = foreground.filter(ImageFilter.MinFilter(kernel_size)).filter(
@@ -63,8 +78,11 @@ class AssetThinZoneAnalyzer:
                 try:
                     thin_mask = thin_mask.point(lambda value: 255 if value >= 128 else 0)
                     thin_pixels = self._count_mask_pixels(thin_mask)
-                    detected = thin_pixels >= 4
-                    coverage_percent = round((thin_pixels / foreground_pixels) * 100, 2)
+                    coverage_percent = round((thin_pixels / foreground_pixels) * 100, 4)
+                    detected = (
+                        thin_pixels >= self.min_thin_pixels
+                        and coverage_percent >= self.min_coverage_percent
+                    )
                     overlay = self._build_overlay(thin_mask) if detected else None
                 finally:
                     thin_mask.close()
@@ -81,9 +99,14 @@ class AssetThinZoneAnalyzer:
                 "threshold_mm": self.threshold_mm,
                 "threshold_pixels": round(threshold_pixels, 2),
                 "kernel_size": kernel_size,
+                "min_thin_pixels": self.min_thin_pixels,
+                "min_coverage_percent": self.min_coverage_percent,
+                "pixel_count": thin_pixels,
                 "coverage_percent": coverage_percent,
                 "scale_basis": scale_basis,
                 "mask_basis": mask_basis,
+                "resolution_limited": False,
+                "skip_reason": None,
             },
         )
 
@@ -95,6 +118,17 @@ class AssetThinZoneAnalyzer:
         dpi_y: float | None,
         metadata: dict[str, object],
     ) -> tuple[float, str]:
+        placement_width_mm = self._positive_float(metadata.get("placement_width_mm"))
+        placement_height_mm = self._positive_float(metadata.get("placement_height_mm"))
+        if placement_width_mm and placement_height_mm:
+            return (
+                min(
+                    image.width / placement_width_mm,
+                    image.height / placement_height_mm,
+                ),
+                "item_placement",
+            )
+
         artboard_width_mm = self._positive_float(metadata.get("artboard_width_mm"))
         artboard_height_mm = self._positive_float(metadata.get("artboard_height_mm"))
         if metadata.get("uses_artboard_dimensions") and artboard_width_mm and artboard_height_mm:
@@ -188,6 +222,8 @@ class AssetThinZoneAnalyzer:
         kernel_size: int,
         scale_basis: str,
         mask_basis: str,
+        resolution_limited: bool = False,
+        skip_reason: str | None = None,
     ) -> ThinZoneAnalysisResult:
         return ThinZoneAnalysisResult(
             detected=False,
@@ -197,14 +233,27 @@ class AssetThinZoneAnalyzer:
                 "threshold_mm": self.threshold_mm,
                 "threshold_pixels": round(threshold_pixels, 2),
                 "kernel_size": kernel_size,
+                "min_thin_pixels": self.min_thin_pixels,
+                "min_coverage_percent": self.min_coverage_percent,
+                "pixel_count": 0,
                 "coverage_percent": 0.0,
                 "scale_basis": scale_basis,
                 "mask_basis": mask_basis,
+                "resolution_limited": resolution_limited,
+                "skip_reason": skip_reason,
             },
         )
 
     def _opening_kernel_size(self, threshold_pixels: float) -> int:
-        size = max(3, math.ceil(threshold_pixels))
+        """Kernel ≈ 0.5 mm in preview pixels (odd, clamped).
+
+        Morphological opening removes structures thinner than the SE. Using
+        round(threshold_pixels) keeps the physical threshold closer than ceil(),
+        which previously over-flagged (~0.59 mm at 300 DPI).
+        """
+        if threshold_pixels <= 0:
+            return 3
+        size = max(3, int(round(threshold_pixels)))
         odd_size = size if size % 2 else size + 1
         return min(odd_size, self.max_kernel_size)
 
