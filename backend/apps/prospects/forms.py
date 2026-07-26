@@ -139,7 +139,7 @@ class ProspectApprovalForm(forms.Form):
         label="Note interne",
         required=False,
         max_length=2000,
-        widget=forms.Textarea(attrs={"rows": 3}),
+        widget=forms.Textarea(attrs={"rows": 3, "class": "ui-input"}),
     )
 
 
@@ -147,5 +147,5 @@ class ProspectRejectionForm(ProspectApprovalForm):
     rejection_reason = forms.CharField(
         label="Motif communiqué au prospect",
         max_length=1000,
-        widget=forms.Textarea(attrs={"rows": 3}),
+        widget=forms.Textarea(attrs={"rows": 3, "class": "ui-input", "required": True}),
     )

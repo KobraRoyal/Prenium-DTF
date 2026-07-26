@@ -1,9 +1,202 @@
 {% extends "portal/layout.html" %}
+{% load portal_tags %}
+
 {% block title %}{{ profile.company }} — Demande d’accès{% endblock %}
+
 {% block portal_content %}
-{% include "components/portal/page_head.html" with kicker="Demande d’accès" title=profile.company subtitle=profile.get_status_display %}
-{% if messages %}{% for message in messages %}<div class="dui-alert {% if message.tags == 'success' %}dui-alert-success{% else %}dui-alert-error{% endif %}" role="status">{{ message }}</div>{% endfor %}{% endif %}
-<div class="access-review-grid"><section class="card"><h2>Entreprise</h2><dl class="detail-grid"><div><dt>Contact</dt><dd>{{ profile.first_name }} {{ profile.last_name }}</dd></div><div><dt>E-mail vérifié</dt><dd>{{ profile.email }}</dd></div><div><dt>Téléphone</dt><dd>{{ profile.phone }}</dd></div><div><dt>Pays</dt><dd>{{ profile.country }}</dd></div><div><dt>SIREN</dt><dd>{{ profile.siren|default:"—" }}</dd></div><div><dt>TVA / fiscal</dt><dd>{{ profile.vat_number|default:"—" }}</dd></div><div><dt>Activité</dt><dd>{{ profile.get_activity_type_display }}</dd></div><div><dt>Volume</dt><dd>{{ profile.get_monthly_volume_display }}</dd></div></dl></section>
-<section class="card"><h2>Projet</h2><p><strong>Service :</strong> {{ profile.get_service_interest_display }}</p><p><strong>Calendrier :</strong> {{ profile.get_project_timing_display }}</p><p><strong>Fréquence :</strong> {{ profile.get_order_frequency_display }}</p><p><strong>Objectif :</strong> {{ profile.main_goal|default:"Non précisé" }}</p></section></div>
-{% if can_review and profile.status == 'pending_review' %}<div class="access-review-actions"><form class="card ui-form-stack" method="post" action="{% url 'portal:staff-access-request-approve' profile_public_id=profile.public_id %}">{% csrf_token %}<h2>Valider l’accès</h2><label class="ui-label" for="approve_note">Note interne</label><textarea class="ui-input" id="approve_note" name="review_note" rows="3"></textarea><button class="ui-btn ui-btn-primary" type="submit">Valider et envoyer l’activation</button></form><form class="card ui-form-stack" method="post" action="{% url 'portal:staff-access-request-reject' profile_public_id=profile.public_id %}">{% csrf_token %}<h2>Refuser la demande</h2><label class="ui-label" for="rejection_reason">Motif communiqué</label><textarea class="ui-input" id="rejection_reason" name="rejection_reason" rows="3" required></textarea><label class="ui-label" for="reject_note">Note interne</label><textarea class="ui-input" id="reject_note" name="review_note" rows="2"></textarea><button class="ui-btn ui-btn-danger" type="submit">Refuser et notifier</button></form></div>{% endif %}
+{% include "components/portal/breadcrumbs/staff_access_request_detail.html" %}
+
+<section class="staff-access-detail" aria-label="Fiche demande d’accès">
+  <header class="card staff-access-focus" aria-labelledby="staff-access-title">
+    <div class="staff-access-focus__identity">
+      <p class="staff-access-focus__eyebrow">Demande d’accès</p>
+      <h1 id="staff-access-title">{{ profile.company }}</h1>
+      <div class="staff-access-focus__statuses" aria-label="État de la demande">
+        <span class="badge {{ profile.status|badge_tone }}">{{ profile.get_status_display }}</span>
+        <span class="badge is-neutral">{{ profile.get_activity_type_display }}</span>
+        <span class="badge is-neutral">{{ profile.get_urgency_display }}</span>
+      </div>
+    </div>
+    <dl class="staff-access-focus__facts">
+      <div>
+        <dt>Contact</dt>
+        <dd>{{ profile.first_name }} {{ profile.last_name }}</dd>
+      </div>
+      <div>
+        <dt>E-mail</dt>
+        <dd>{{ profile.email }}</dd>
+      </div>
+      <div>
+        <dt>Identifiant</dt>
+        <dd>{% if profile.country == "FR" %}SIREN {{ profile.siren|default:"—" }}{% else %}{{ profile.vat_number|default:"—" }}{% endif %}</dd>
+      </div>
+      <div>
+        <dt>Soumise</dt>
+        <dd>{% if profile.submitted_at %}{{ profile.submitted_at|date:"d/m/Y H:i" }}{% else %}{{ profile.created_at|date:"d/m/Y H:i" }}{% endif %}</dd>
+      </div>
+    </dl>
+  </header>
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert {% if message.tags == 'success' %}alert--success{% else %}alert--danger{% endif %} workflow-panel__feedback" role="status">
+    <p class="m-0">{{ message }}</p>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="access-review-grid">
+    <section class="card staff-access-panel" aria-labelledby="access-company-heading">
+      <div class="staff-access-panel__head">
+        <div>
+          <h2 id="access-company-heading">Entreprise</h2>
+          <p class="muted text-sm m-0">Identité et coordonnées fournies lors de la demande.</p>
+        </div>
+      </div>
+      <dl class="detail-grid">
+        <div>
+          <dt>Téléphone</dt>
+          <dd>{{ profile.phone }}</dd>
+        </div>
+        <div>
+          <dt>Pays</dt>
+          <dd>{{ profile.country }}</dd>
+        </div>
+        <div>
+          <dt>SIREN</dt>
+          <dd>{{ profile.siren|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>TVA / fiscal</dt>
+          <dd>{{ profile.vat_number|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>Activité</dt>
+          <dd>{{ profile.get_activity_type_display }}</dd>
+        </div>
+        <div>
+          <dt>Volume mensuel</dt>
+          <dd>{{ profile.get_monthly_volume_display }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="card staff-access-panel" aria-labelledby="access-project-heading">
+      <div class="staff-access-panel__head">
+        <div>
+          <h2 id="access-project-heading">Projet</h2>
+          <p class="muted text-sm m-0">Intention commerciale à valider avant activation.</p>
+        </div>
+      </div>
+      <dl class="detail-grid">
+        <div>
+          <dt>Service</dt>
+          <dd>{{ profile.get_service_interest_display }}</dd>
+        </div>
+        <div>
+          <dt>Calendrier</dt>
+          <dd>{{ profile.get_project_timing_display }}</dd>
+        </div>
+        <div>
+          <dt>Fréquence</dt>
+          <dd>{{ profile.get_order_frequency_display }}</dd>
+        </div>
+        <div>
+          <dt>Urgence</dt>
+          <dd>{{ profile.get_urgency_display }}</dd>
+        </div>
+        <div class="detail-grid__span">
+          <dt>Objectif</dt>
+          <dd>{% if profile.main_goal %}{{ profile.main_goal }}{% else %}<span class="muted">Non précisé</span>{% endif %}</dd>
+        </div>
+      </dl>
+    </section>
+  </div>
+
+  {% if profile.status != "pending_review" or profile.reviewed_at %}
+  <section class="card staff-access-panel" aria-labelledby="access-decision-heading">
+    <div class="staff-access-panel__head">
+      <div>
+        <h2 id="access-decision-heading">Décision</h2>
+        <p class="muted text-sm m-0">Historique de validation ou de refus.</p>
+      </div>
+    </div>
+    <dl class="detail-grid">
+      <div>
+        <dt>Statut</dt>
+        <dd><span class="badge {{ profile.status|badge_tone }}">{{ profile.get_status_display }}</span></dd>
+      </div>
+      <div>
+        <dt>Revue le</dt>
+        <dd>{% if profile.reviewed_at %}{{ profile.reviewed_at|date:"d/m/Y H:i" }}{% else %}<span class="muted">—</span>{% endif %}</dd>
+      </div>
+      <div>
+        <dt>Par</dt>
+        <dd>{% if profile.reviewed_by %}{{ profile.reviewed_by.get_full_name|default:profile.reviewed_by.email }}{% else %}<span class="muted">—</span>{% endif %}</dd>
+      </div>
+      {% if profile.customer %}
+      <div>
+        <dt>Compte lié</dt>
+        <dd><a href="{% url 'portal:staff-customer-detail' customer_public_id=profile.customer.public_id %}">{{ profile.customer.name }}</a></dd>
+      </div>
+      {% endif %}
+      {% if profile.rejection_reason %}
+      <div class="detail-grid__span">
+        <dt>Motif communiqué</dt>
+        <dd>{{ profile.rejection_reason }}</dd>
+      </div>
+      {% endif %}
+      {% if profile.review_note %}
+      <div class="detail-grid__span">
+        <dt>Note interne</dt>
+        <dd>{{ profile.review_note }}</dd>
+      </div>
+      {% endif %}
+    </dl>
+  </section>
+  {% endif %}
+
+  {% if can_review and profile.status == "pending_review" %}
+  <div class="access-review-actions">
+    <form
+      class="card staff-access-panel ui-form-stack"
+      method="post"
+      action="{% url 'portal:staff-access-request-approve' profile_public_id=profile.public_id %}"
+      data-submit-loading
+      aria-labelledby="access-approve-heading"
+    >
+      {% csrf_token %}
+      <div class="staff-access-panel__head">
+        <div>
+          <h2 id="access-approve-heading">Valider l’accès</h2>
+          <p class="muted text-sm m-0">Crée le compte et envoie l’e-mail d’activation au contact.</p>
+        </div>
+      </div>
+      {% include "portal/staff/customers/_field.html" with field=approval_form.review_note %}
+      {% include "components/forms/form_actions.html" with primary_label="Valider et envoyer l’activation" %}
+    </form>
+
+    <form
+      class="card staff-access-panel ui-form-stack"
+      method="post"
+      action="{% url 'portal:staff-access-request-reject' profile_public_id=profile.public_id %}"
+      data-submit-loading
+      aria-labelledby="access-reject-heading"
+    >
+      {% csrf_token %}
+      <div class="staff-access-panel__head">
+        <div>
+          <h2 id="access-reject-heading">Refuser la demande</h2>
+          <p class="muted text-sm m-0">Le motif est envoyé au prospect ; la note reste interne.</p>
+        </div>
+      </div>
+      {% include "portal/staff/customers/_field.html" with field=rejection_form.rejection_reason %}
+      {% include "portal/staff/customers/_field.html" with field=rejection_form.review_note %}
+      <div class="ui-form-actions">
+        <button class="ui-btn ui-btn-danger" type="submit">Refuser et notifier</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+</section>
 {% endblock %}

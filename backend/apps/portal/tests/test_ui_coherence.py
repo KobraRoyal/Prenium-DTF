@@ -352,6 +352,36 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("settlement_badge", listing)
         self.assertIn("default_billing_mode", listing)
 
+    def test_staff_access_requests_match_staff_entity_patterns(self) -> None:
+        listing = template_source("portal/staff/access_requests/list.html")
+        detail = template_source("portal/staff/access_requests/detail.html")
+        list_crumb = template_source(
+            "components/portal/breadcrumbs/staff_access_requests_list.html"
+        )
+        detail_crumb = template_source(
+            "components/portal/breadcrumbs/staff_access_request_detail.html"
+        )
+
+        self.assertIn(
+            "components/portal/breadcrumbs/staff_access_requests_list.html",
+            listing,
+        )
+        self.assertIn("staff-data-list", listing)
+        self.assertIn("profile.status|badge_tone", listing)
+        self.assertIn("prospect-filter-bar", listing)
+        self.assertIn("aria-current", listing)
+
+        self.assertIn("staff-access-focus", detail)
+        self.assertIn("staff-access-panel", detail)
+        self.assertIn("approval_form.review_note", detail)
+        self.assertIn("rejection_form.rejection_reason", detail)
+        self.assertIn("Valider et envoyer l’activation", detail)
+        self.assertIn("Refuser et notifier", detail)
+        self.assertIn("workflow-panel__feedback", detail)
+        self.assertIn("portal:staff-access-request-list", detail_crumb)
+        self.assertIn("Demandes d’accès", list_crumb)
+        self.assertNotIn("dui-alert", detail)
+
     def test_deep_product_views_keep_sequential_heading_levels(self) -> None:
         checkout = template_source("portal/client/checkout.html")
         staff_snapshot = template_source("components/portal/staff_customer_snapshot.html")

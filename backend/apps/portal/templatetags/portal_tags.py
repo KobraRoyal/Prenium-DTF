@@ -135,6 +135,8 @@ def badge_tone(status):
         "confirmed",
         "converted",
         "deferred",
+        "active",
+        "approved_pending_activation",
     }
     warning = {
         "warning",
@@ -148,8 +150,19 @@ def badge_tone(status):
         "price_confirmation_required",
         "under_review",
         "immediate",
+        "pending_review",
+        "pending_email_verification",
+        "needs_information",
     }
-    negative = {"error", "failed", "blocked", "draft", "cancelled"}
+    negative = {
+        "error",
+        "failed",
+        "blocked",
+        "draft",
+        "cancelled",
+        "rejected",
+        "expired",
+    }
     if status in positive:
         return "is-success"
     if status in warning:

@@ -1,8 +1,19 @@
 {% extends "portal/layout.html" %}
+{% load portal_tags %}
+
 {% block title %}Demandes d’accès — Prenium DTF{% endblock %}
 {% block portal_content %}
-{% include "components/portal/page_head.html" with title="Demandes d’accès" subtitle="Vérifiez les entreprises avant toute création de compte." %}
-<nav class="prospect-filter-bar" aria-label="Filtrer par statut">{% for value, label in status_choices %}<a class="chip{% if active_status == value %} is-active{% endif %}" href="?status={{ value }}">{{ label }}</a>{% endfor %}</nav>
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_access_requests_list.html" title="Demandes d’accès" subtitle="Vérifiez les entreprises avant toute création de compte." %}
+
+<nav class="prospect-filter-bar" aria-label="Filtrer par statut">
+  {% for value, label in status_choices %}
+  <a
+    class="chip{% if active_status == value %} is-active{% endif %}"
+    href="?status={{ value }}"
+    {% if active_status == value %}aria-current="page"{% endif %}
+  >{{ label }}</a>
+  {% endfor %}
+</nav>
 
 <section class="card staff-data-list" aria-label="Liste des demandes d’accès">
   <div class="staff-data-list__desktop table-wrap hidden min-[960px]:block">
@@ -12,6 +23,7 @@
           <th>Entreprise</th>
           <th>Contact</th>
           <th>Identifiant</th>
+          <th>Statut</th>
           <th>Soumise</th>
           <th><span class="sr-only">Actions</span></th>
         </tr>
@@ -21,13 +33,16 @@
         <tr>
           <td>
             <strong>{{ profile.company }}</strong><br>
-            <span class="muted">{{ profile.get_status_display }}</span>
+            <span class="muted">{{ profile.get_activity_type_display }}</span>
           </td>
           <td>
             {{ profile.first_name }} {{ profile.last_name }}<br>
             <span class="muted">{{ profile.email }}</span>
           </td>
-          <td>{% if profile.country == 'FR' %}SIREN {{ profile.siren }}{% else %}{{ profile.vat_number }}{% endif %}</td>
+          <td>{% if profile.country == 'FR' %}SIREN {{ profile.siren }}{% else %}{{ profile.vat_number|default:"—" }}{% endif %}</td>
+          <td>
+            <span class="badge {{ profile.status|badge_tone }}">{{ profile.get_status_display }}</span>
+          </td>
           <td>{{ profile.created_at|date:"d/m/Y H:i" }}</td>
           <td>
             <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-access-request-detail' profile_public_id=profile.public_id %}">Examiner</a>
@@ -35,8 +50,8 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5">
-            {% include "components/ui/empty_state.html" with title="Aucune demande" message="Aucune demande pour ce statut." %}
+          <td colspan="6">
+            {% include "components/ui/empty_state.html" with title="Aucune demande" message="Aucune demande pour ce statut. Changez le filtre pour voir d’autres dossiers." %}
           </td>
         </tr>
         {% endfor %}
@@ -49,13 +64,13 @@
     <a class="staff-data-card" href="{% url 'portal:staff-access-request-detail' profile_public_id=profile.public_id %}">
       <div class="staff-data-card__head">
         <strong>{{ profile.company }}</strong>
-        <span class="badge is-neutral">{{ profile.get_status_display }}</span>
+        <span class="badge {{ profile.status|badge_tone }}">{{ profile.get_status_display }}</span>
       </div>
       <p class="muted m-0">{{ profile.first_name }} {{ profile.last_name }} · {{ profile.email }}</p>
       <dl class="staff-data-card__facts">
         <div>
           <dt>Identifiant</dt>
-          <dd>{% if profile.country == 'FR' %}SIREN {{ profile.siren }}{% else %}{{ profile.vat_number }}{% endif %}</dd>
+          <dd>{% if profile.country == 'FR' %}SIREN {{ profile.siren }}{% else %}{{ profile.vat_number|default:"—" }}{% endif %}</dd>
         </div>
         <div>
           <dt>Soumise</dt>
@@ -65,7 +80,7 @@
       <span class="staff-data-card__cta">Examiner</span>
     </a>
     {% empty %}
-    {% include "components/ui/empty_state.html" with title="Aucune demande" message="Aucune demande pour ce statut." %}
+    {% include "components/ui/empty_state.html" with title="Aucune demande" message="Aucune demande pour ce statut. Changez le filtre pour voir d’autres dossiers." %}
     {% endfor %}
   </div>
 </section>

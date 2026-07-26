@@ -143,18 +143,47 @@ body.prospect-tunnel-page {
 .detail-grid dt {
   color: var(--muted);
   font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .detail-grid dd {
   margin: 0.15rem 0 0;
   font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.detail-grid > .detail-grid__span {
+  grid-column: 1 / -1;
 }
 
 .prospect-filter-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin: 0 0 1rem;
+}
+
+body.product-shell .staff-access-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--product-line, var(--line));
+}
+
+body.product-shell .staff-access-panel__head p {
+  max-width: 42ch;
+}
+
+body.product-shell .staff-access-panel .detail-grid {
+  margin: 0;
+}
+
+body.product-shell .access-review-actions .ui-form-actions {
+  margin-top: 0.25rem;
 }
 
 .team-layout {
