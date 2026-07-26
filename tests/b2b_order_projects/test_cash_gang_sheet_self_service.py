@@ -211,8 +211,72 @@ def test_create_order_project_accepts_sheet_quantity():
         actor=user,
         source="test",
         quantity=4,
+        name="Commande planche qty",
+        requested_date="2026-08-15",
+        customer_comment="Livraison prioritaire",
     )
     assert project.items.get().quantity == 4
+    assert project.name == "Commande planche qty"
+    assert str(project.requested_date) == "2026-08-15"
+    assert project.customer_comment == "Livraison prioritaire"
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_create_order_project_form_collects_name_date_and_comment():
+    _seed_catalog()
+    user = get_user_model().objects.create_user(email="form-gs@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Form GS Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche form")
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% form\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "final_file", "updated_at"])
+    client = Client()
+    assert client.login(email="form-gs@example.com", password="pass")
+    form_url = reverse(
+        "portal:client-gang-sheet-create-order-project",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    get_response = client.get(form_url, {"quantity": "3"})
+    assert get_response.status_code == 200
+    content = get_response.content.decode()
+    assert "Nom de la commande" in content
+    assert 'name="requested_date"' in content
+    assert 'name="customer_comment"' in content
+    assert 'name="quantity"' in content
+    assert 'value="3"' in content
+
+    post_response = client.post(
+        form_url,
+        {
+            "name": "Commande depuis planche",
+            "requested_date": "2026-09-01",
+            "customer_comment": "Commentaire atelier",
+            "quantity": "3",
+        },
+    )
+    assert post_response.status_code == 302
+    sheet.refresh_from_db()
+    project = sheet.project
+    assert project is not None
+    assert project.name == "Commande depuis planche"
+    assert str(project.requested_date) == "2026-09-01"
+    assert project.customer_comment == "Commentaire atelier"
+    assert project.items.get().quantity == 3
+    assert str(project.public_id) in post_response["Location"]
 
 
 @pytest.mark.django_db

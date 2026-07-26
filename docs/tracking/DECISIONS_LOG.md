@@ -2,7 +2,9 @@
 
 | Date | Décision | Motif | Impact |
 |---|---|---|---|
+| 2026-07-26 | Conversion Gang Sheet validée → projet : même parcours que `order-projects/new/` (nom, date, commentaire) | Harmoniser l’UX de prise de commande | Page `.../gang-sheets/<id>/create-order/` + exemplaires ; API create-order-project accepte les mêmes champs |
 | 2026-07-26 | Si détails &lt; 0,5 mm : Multicolore **ou** couleur hex obligatoire (plus d’exigence d’uni exact) | Permettre d’optimiser la base blanche pour le toucher, y compris en multi-support | Règle unique fichier + Gang Sheet ; message UX aligné |
+| 2026-07-26 | En **prod** uniquement, `/` redirige vers `/login/` (landing conservée en local/dev) | Landing marketing non finalisée en prod beta | `SETTINGS_MODULE` `.prod` ou `MARKETING_HOME_REDIRECT_TO_LOGIN` ; local inchangé |
 | 2026-04-18 | Le lot 1 de refonte frontend pose des fondations UI transverses (tokens, shell, navigation, formulaires, feedback, tableaux, tabs) sans changement métier ni permissionnel | Préparer une refonte premium cohérente écran par écran sans déplacer la logique backend | Les lots suivants peuvent refondre landing, tunnel prospect, checkout et portails sur une base visuelle commune et testable |
 | 2026-04-01 | UI initiale conservée dans Django avec templates + HTMX + Alpine + Tailwind | Réduire le coût de fondation tout en gardant une UX moderne et dynamique | Le Sprint 00 reste monorepo et ne crée pas de front séparé |
 | 2026-04-01 | Settings séparés `base` / `dev` / `test` / `prod` avec configuration sensible uniquement via variables d’environnement | Poser une base sûre, testable et portable entre local, CI et conteneurs | Aucun secret hardcodé, CI et Docker utilisent la même structure de configuration |

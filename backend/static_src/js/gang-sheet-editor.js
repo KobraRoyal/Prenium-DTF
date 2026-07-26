@@ -1532,11 +1532,26 @@ if (root) {
   });
   q("[data-render-sheet]").addEventListener("click", () => runAction("render", { saveFirst: true }));
   q("[data-validate-sheet]").addEventListener("click", () => runAction("validate"));
-  q("[data-create-order-project]")?.addEventListener("click", () => {
+  q("[data-create-order-project]")?.addEventListener("click", (event) => {
+    const link = event.currentTarget;
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+    if (link.getAttribute("aria-disabled") === "true" || link.getAttribute("href") === "#") {
+      event.preventDefault();
+      return;
+    }
     const quantity = Number(q("[data-sheet-quantity]")?.value || 1);
-    const body = new FormData();
-    body.set("quantity", String(Number.isFinite(quantity) && quantity >= 1 ? Math.floor(quantity) : 1));
-    runAction("create-order-project", { body });
+    const safeQuantity = Number.isFinite(quantity) && quantity >= 1 ? Math.floor(quantity) : 1;
+    const baseUrl = root.dataset.createOrderFormUrl || link.href;
+    try {
+      const url = new URL(baseUrl, window.location.origin);
+      url.searchParams.set("quantity", String(safeQuantity));
+      event.preventDefault();
+      window.location.assign(url.toString());
+    } catch (_error) {
+      // Fallback: navigate to the bare form URL.
+    }
   });
   q("[data-sheet-quantity]")?.addEventListener("input", () => updateOrderQuoteUi());
   q("[data-sheet-quantity]")?.addEventListener("change", () => updateOrderQuoteUi());

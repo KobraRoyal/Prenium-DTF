@@ -17,6 +17,7 @@
   data-item-url-template="{% url 'portal:client-gang-sheet-item-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id item_public_id='00000000-0000-0000-0000-000000000000' action='ACTION' %}"
   data-preview-url="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-order-project-url="{% url 'portal:client-gang-sheet-workflow-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id action='create-order-project' %}"
+  data-create-order-form-url="{{ create_order_project_url }}"
   data-can-edit="{{ can_edit|yesno:'true,false' }}"
   data-has-project="{{ sheet.project_id|yesno:'true,false' }}"
   data-prep-fee-eur="{{ gang_sheet_prep_fee_eur }}"
@@ -424,7 +425,12 @@
           {% if sheet.project %}
           <a class="ui-btn ui-btn-primary" data-open-order-project href="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=sheet.project.public_id %}">Continuer vers la commande →</a>
           {% else %}
-          <button type="button" class="ui-btn ui-btn-primary" data-create-order-project {% if not can_create_order or not can_edit %}disabled{% endif %}>Créer le projet de commande →</button>
+          <a
+            class="ui-btn ui-btn-primary{% if not can_create_order or not can_edit %} is-disabled{% endif %}"
+            data-create-order-project
+            href="{% if can_create_order and can_edit %}{{ create_order_project_url }}{% else %}#{% endif %}"
+            {% if not can_create_order or not can_edit %}aria-disabled="true" tabindex="-1"{% endif %}
+          >Créer le projet de commande →</a>
           {% endif %}
           <a class="ui-btn ui-btn-ghost" data-download-preview href="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}" hidden>
             {% include "portal/client/gang_sheets/partials/icon.html" with name="download" size="16" %}

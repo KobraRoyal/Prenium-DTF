@@ -199,7 +199,14 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
             self.context(
                 gang_sheet_state=state,
                 **gallery_context,
-                can_create_order=sheet.status == GangSheet.Status.VALIDATED,
+                can_create_order=sheet.status == GangSheet.Status.VALIDATED and bool(sheet.final_file),
+                create_order_project_url=reverse(
+                    "portal:client-gang-sheet-create-order-project",
+                    kwargs={
+                        "customer_public_id": self.customer.public_id,
+                        "sheet_public_id": sheet.public_id,
+                    },
+                ),
                 gang_sheet_prep_fee_eur=prep_fee,
                 nav_key="client-gang-sheets",
             ),
@@ -499,6 +506,9 @@ class ClientGangSheetWorkflowActionView(ClientGangSheetMixin, View):
                     sheet=sheet,
                     actor=request.user,
                     quantity=request.POST.get("quantity", 1),
+                    name=request.POST.get("name"),
+                    requested_date=request.POST.get("requested_date"),
+                    customer_comment=request.POST.get("customer_comment"),
                 )
                 return JsonResponse(
                     {
@@ -518,6 +528,81 @@ class ClientGangSheetWorkflowActionView(ClientGangSheetMixin, View):
         except GangSheetDomainError as error:
             return _json_error(error)
         return JsonResponse({"ok": True, "message": message})
+
+
+class ClientGangSheetCreateOrderProjectView(ClientGangSheetMixin, View):
+    """Parcours aligné sur order-projects/new : nom, date, commentaire (+ exemplaires)."""
+
+    template_name = "portal/client/gang_sheets/create_order_project.html"
+
+    def get(self, request, customer_public_id, sheet_public_id):
+        self.require_write_access()
+        sheet = self.get_sheet_or_404(sheet_public_id)
+        if sheet.project_id:
+            return HttpResponseRedirect(
+                reverse(
+                    "portal:client-order-project-detail",
+                    kwargs={
+                        "customer_public_id": self.customer.public_id,
+                        "project_public_id": sheet.project.public_id,
+                    },
+                )
+            )
+        if sheet.status != GangSheet.Status.VALIDATED or not sheet.final_file:
+            return HttpResponseRedirect(
+                reverse(
+                    "portal:client-gang-sheet-editor",
+                    kwargs={
+                        "customer_public_id": self.customer.public_id,
+                        "sheet_public_id": sheet.public_id,
+                    },
+                )
+            )
+        initial_quantity = request.GET.get("quantity") or "1"
+        return render(
+            request,
+            self.template_name,
+            self.context(
+                sheet=sheet,
+                form_error="",
+                submitted={},
+                initial_quantity=initial_quantity,
+            ),
+        )
+
+    def post(self, request, customer_public_id, sheet_public_id):
+        self.require_write_access()
+        sheet = self.get_sheet_or_404(sheet_public_id)
+        try:
+            project = gang_sheet_service.create_order_project(
+                sheet=sheet,
+                actor=request.user,
+                quantity=request.POST.get("quantity", 1),
+                name=request.POST.get("name"),
+                requested_date=request.POST.get("requested_date"),
+                customer_comment=request.POST.get("customer_comment"),
+            )
+        except GangSheetDomainError as error:
+            return render(
+                request,
+                self.template_name,
+                self.context(
+                    sheet=sheet,
+                    form_error=error.message,
+                    submitted=request.POST,
+                    initial_quantity=request.POST.get("quantity") or "1",
+                ),
+                status=400,
+            )
+        return HttpResponseRedirect(
+            reverse(
+                "portal:client-order-project-detail",
+                kwargs={
+                    "customer_public_id": self.customer.public_id,
+                    "project_public_id": project.public_id,
+                },
+            )
+        )
 
 
 class ClientGangSheetAssetPreviewView(ClientGangSheetMixin, View):

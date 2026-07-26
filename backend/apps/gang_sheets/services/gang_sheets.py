@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from django.utils import timezone
 
 from apps.auditlog.services import record_event
 from apps.b2b_order_projects.models import B2BOrderProject
-from apps.b2b_order_projects.services.projects import B2BOrderProjectService
+from apps.b2b_order_projects.services.projects import B2BOrderProjectService, ProjectDomainError
 from apps.gang_sheets.models import (
     GangSheet,
     GangSheetItem,
@@ -798,7 +799,17 @@ class GangSheetService:
         return locked
 
     @transaction.atomic
-    def create_order_project(self, *, sheet, actor, source="client_portal", quantity=1):
+    def create_order_project(
+        self,
+        *,
+        sheet,
+        actor,
+        source="client_portal",
+        quantity=1,
+        name: str | None = None,
+        requested_date=None,
+        customer_comment: str | None = None,
+    ):
         """Transforme une planche validée en un projet contenant uniquement son PDF final."""
         locked = GangSheet.objects.select_for_update().get(pk=sheet.pk)
         if locked.status != GangSheet.Status.VALIDATED or not locked.final_file:
@@ -810,6 +821,13 @@ class GangSheetService:
             quantity,
             label="quantité d'exemplaires",
         )
+        project_name = str(name or "").strip() or locked.name
+        project_comment = (
+            str(customer_comment).strip()
+            if customer_comment is not None
+            else ""
+        )
+        project_date = self._normalize_optional_date(requested_date)
         transaction.on_commit(
             lambda: self.drive_sync.schedule_sync(
                 sheet=locked,
@@ -829,18 +847,20 @@ class GangSheetService:
                 item.save(update_fields=["quantity", "updated_at"])
             return project
 
-        project = self.projects.create_project(
-            customer=locked.customer,
-            actor=actor,
-            data={
-                "name": locked.name,
-                "order_mode": B2BOrderProject.OrderMode.READY_GANG_SHEET,
-                "customer_comment": (
-                    "Projet généré automatiquement depuis une Gang Sheet validée."
-                ),
-            },
-            source=source,
-        )
+        try:
+            project = self.projects.create_project(
+                customer=locked.customer,
+                actor=actor,
+                data={
+                    "name": project_name,
+                    "order_mode": B2BOrderProject.OrderMode.READY_GANG_SHEET,
+                    "requested_date": project_date,
+                    "customer_comment": project_comment,
+                },
+                source=source,
+            )
+        except ProjectDomainError as error:
+            raise GangSheetDomainError(error.code, error.message, error.details) from error
         item = self.projects.add_item(
             project=project,
             actor=actor,
@@ -891,6 +911,8 @@ class GangSheetService:
                 "project_public_id": str(project.public_id),
                 "asset_public_id": str(version.asset.public_id),
                 "quantity": sheet_quantity,
+                "name": project_name,
+                "requested_date": project_date.isoformat() if project_date else None,
             },
         )
         return self.projects.get_customer_project(
@@ -1093,6 +1115,25 @@ class GangSheetService:
                 "L’espacement doit être compris entre 0 et 100 mm.",
             )
         return number
+
+    @staticmethod
+    def _normalize_optional_date(value):
+        if value in (None, ""):
+            return None
+        if isinstance(value, date) and not isinstance(value, datetime):
+            return value
+        if isinstance(value, datetime):
+            return value.date()
+        raw = str(value).strip()
+        if not raw:
+            return None
+        try:
+            return date.fromisoformat(raw[:10])
+        except ValueError as error:
+            raise GangSheetDomainError(
+                "INVALID_REQUESTED_DATE",
+                "La date souhaitée est invalide.",
+            ) from error
 
     @staticmethod
     def _bounded_positive_int(value, *, label):
