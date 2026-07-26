@@ -79,11 +79,7 @@
       <span class="badge{% if item.is_production_gang_sheet_asset and not item.analysis_pending %} is-success{% endif %}">{% if item.is_production_gang_sheet_asset and not item.analysis_pending %}PDF HD{% elif item.asset and item.asset.current_version %}{{ item.asset.current_version.get_analysis_status_display }}{% else %}Fichier requis{% endif %}</span>
       <div class="ui-table-actions b2b-visual-list-item__actions">
         <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-dialog-open="visual-dialog-{{ item.public_id }}">Ouvrir</button>
-        {% if not item.is_production_gang_sheet_asset %}
-        {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
-        <button class="ui-btn ui-btn-danger ui-btn-sm" type="button" hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='delete' %}" hx-target="#order-project-items" hx-swap="outerHTML">Supprimer</button>
-        {% endif %}
-        {% endif %}
+        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True %}
       </div>
     </article>
     {% endfor %}

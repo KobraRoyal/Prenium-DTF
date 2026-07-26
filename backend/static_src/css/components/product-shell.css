@@ -3876,9 +3876,11 @@
     body.product-shell .b2b-add-visual-validation .b2b-preview-stage {
       flex: 1 1 auto;
       width: 100%;
+      /* Hauteur bornée : sinon height:auto fait grandir le stage au zoom
+         au lieu d’activer overflow:auto (défilement dans l’aperçu). */
       min-height: 24rem;
-      height: auto;
-      max-height: none;
+      height: min(32rem, 58vh);
+      max-height: min(32rem, 58vh);
     }
 
     body.product-shell .b2b-dialog-editor .b2b-preview-chrome,
@@ -4132,7 +4134,14 @@
     justify-content: flex-start;
     overflow: auto;
     overscroll-behavior: contain;
+    cursor: grab;
+    touch-action: none;
     scrollbar-color: var(--product-blue) rgba(11, 11, 11, 0.14);
+  }
+
+  body.product-shell .b2b-preview-stage.is-zoomed.is-panning {
+    cursor: grabbing;
+    user-select: none;
   }
 
   body.product-shell .b2b-preview-stage.is-zoomed .b2b-preview-bounds {
@@ -5057,8 +5066,9 @@
   @media (min-width: 960px) {
     body.product-shell .b2b-configurator-dialog .b2b-preview-stage {
       min-height: 24rem;
-      height: auto;
-      max-height: none;
+      /* Doit rester borné : height:auto fait grandir le damier au zoom. */
+      height: min(32rem, 58vh);
+      max-height: min(32rem, 58vh);
     }
   }
 

@@ -213,28 +213,60 @@ class ClientOrderProjectCreateView(ClientProjectFeatureMixin, View):
                 ),
                 status=400,
             )
-        return HttpResponseRedirect(
-            reverse(
-                "portal:client-order-project-detail",
-                kwargs={
-                    "customer_public_id": self.customer.public_id,
-                    "project_public_id": project.public_id,
-                },
-            )
-        )
+
+        detail_kwargs = {
+            "customer_public_id": self.customer.public_id,
+            "project_public_id": project.public_id,
+        }
+        detail_url = reverse("portal:client-order-project-detail", kwargs=detail_kwargs)
+        uploaded_file = request.FILES.get("file")
+        if uploaded_file is not None:
+            try:
+                item, _version = configurator_service.add_visual(
+                    project=project,
+                    actor=request.user,
+                    data={
+                        "name": request.POST.get("visual_name") or "",
+                        "quantity": request.POST.get("quantity") or "1",
+                    },
+                    uploaded_file=uploaded_file,
+                    source="client_portal.create_first_visual",
+                )
+            except (ProjectDomainError, AssetDomainError) as error:
+                return render(
+                    request,
+                    self.template_name,
+                    self.context(
+                        order_modes=B2BOrderProject.OrderMode.choices,
+                        form_error=error.message,
+                        submitted=request.POST,
+                    ),
+                    status=400,
+                )
+            detail_url = f"{detail_url}?validate={item.public_id}"
+        return HttpResponseRedirect(detail_url)
 
 
 class ClientOrderProjectDetailView(ClientProjectFeatureMixin, View):
     template_name = "portal/client/order_project_detail.html"
 
     def get(self, request, customer_public_id, project_public_id):
+        project = self.get_project_or_404(project_public_id)
+        active_validation_item = None
+        validate_id = (request.GET.get("validate") or "").strip()
+        if validate_id:
+            active_validation_item = next(
+                (item for item in project.items.all() if str(item.public_id) == validate_id),
+                None,
+            )
         return render(
             request,
             self.template_name,
             self.context(
-                project=self.get_project_or_404(project_public_id),
+                project=project,
                 order_modes=B2BOrderProject.OrderMode.choices,
                 form_error="",
+                active_validation_item=active_validation_item,
             ),
         )
 

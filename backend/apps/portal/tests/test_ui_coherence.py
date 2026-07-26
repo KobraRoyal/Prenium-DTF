@@ -152,7 +152,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("conversion-transform__index", partials)
         self.assertIn("min-height: 2.75rem", conversion_css)
         self.assertIn("app.css' %}?v=20260726-prod-css-sync-4", base)
-        self.assertIn("app.js' %}?v=20260725-support-modal-3", base)
+        self.assertIn("app.js' %}?v=20260726-js-runtime-fix", base)
         self.assertIn("ui-brand-lockup__home", logo)
         self.assertEqual(logo.count("<a "), 1)
 
@@ -958,6 +958,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         validation_panel = template_source(
             "portal/client/partials/order_project_add_visual_validation_panel.html"
         )
+        item_delete = template_source(
+            "portal/client/partials/order_project_item_delete_button.html"
+        )
         support_color = template_source(
             "portal/client/partials/order_project_support_color_field.html"
         )
@@ -1017,7 +1020,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("dialog[open][id^='visual-dialog-']", configurator_script)
         self.assertNotIn("Largeur (mm)", editor)
         self.assertIn('type="hidden" name="width_mm"', editor)
-        self.assertIn("ui-btn ui-btn-danger", editor)
+        self.assertIn("ui-btn ui-btn-danger", item_delete)
         validation_dimensions = template_source(
             "portal/client/partials/order_project_validation_dimensions_row.html"
         )
@@ -1037,6 +1040,18 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("order_project_quality_review.html", items)
         self.assertIn("order_project_preview_stage.html", validation_panel)
         self.assertIn("order_project_rotation_hidden.html", validation_panel)
+        self.assertIn("order_project_item_delete_button.html", validation_panel)
+        self.assertIn("order_project_item_delete_button.html", editor)
+        self.assertIn("order_project_item_delete_button.html", items)
+        self.assertIn("action='delete'", item_delete)
+        self.assertIn("Supprimer", item_delete)
+        self.assertIn("b2b-confirm-dialog", item_delete)
+        self.assertIn("data-dialog-open", item_delete)
+        self.assertIn("Supprimer ce visuel ?", item_delete)
+        self.assertIn("Supprimer définitivement", item_delete)
+        self.assertIn("{% csrf_token %}", item_delete)
+        self.assertIn("hx-post", item_delete)
+        self.assertNotIn("hx-confirm", item_delete)
         self.assertNotIn("Rotation autorisée", validation_panel)
         self.assertNotIn("Rotation autorisée", editor)
         self.assertNotIn("Rotation autorisée", add_form)
@@ -1056,6 +1071,20 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("data-preview-zoom-in", preview_stage)
         self.assertIn("data-preview-zoom-out", preview_stage)
         self.assertIn("data-preview-zoom-reset", preview_stage)
+        self.assertIn("b2b-preview-zoom--solo", preview_stage)
+        self.assertIn("b2b-preview-chrome", preview_stage)
+        self.assertIn("min(32rem, 58vh)", product_shell)
+        self.assertIn(".b2b-preview-stage.is-zoomed", product_shell)
+        self.assertIn("cursor: grab", product_shell)
+        self.assertIn(".b2b-preview-stage.is-zoomed.is-panning", product_shell)
+        dialog_stage_block = product_shell.split(
+            "body.product-shell .b2b-configurator-dialog .b2b-preview-stage {"
+        )
+        self.assertGreaterEqual(len(dialog_stage_block), 2)
+        for chunk in dialog_stage_block[1:]:
+            block = chunk.split("}", 1)[0]
+            self.assertNotIn("height: auto", block)
+            self.assertNotIn("max-height: none", block)
         self.assertIn("order_project_analysis_loader.html", preview_stage)
         self.assertIn("is-analyzing", preview_stage)
         self.assertIn("is-analysis-pending", validation_panel)
@@ -1088,7 +1117,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         hex_swatch = template_source("portal/client/partials/b2b_hex_color_swatch.html")
         self.assertIn("b2b-swatch-btn--custom", hex_swatch)
         self.assertIn("Ouvrir", items)
-        self.assertIn("Supprimer", items)
+        self.assertIn("order_project_item_delete_button.html", items)
+        self.assertIn("Supprimer", item_delete)
         self.assertNotIn("data-awaiting-validation", items)
         self.assertNotIn("Valider ces informations", items)
         self.assertIn("confirm-analysis", editor)
@@ -1108,7 +1138,17 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn('applySupportColorPickerValue(fieldset, "#ffffff")', configurator_runtime)
         self.assertIn("applyPreviewZoom", configurator_runtime)
         self.assertIn("data-preview-zoom-in", configurator_runtime)
+        self.assertIn("bindPreviewPanDrag", configurator_runtime)
+        self.assertIn("is-panning", configurator_runtime)
+        self.assertIn("[data-configurator-stage].is-zoomed", configurator_runtime)
         self.assertIn("dialog.showModal()", configurator_runtime)
+        self.assertIn("openAutoOpenDialogs", configurator_runtime)
+        self.assertIn("dismissAutoOpenDialog", configurator_runtime)
+        self.assertIn("clearOrderProjectValidateQuery", configurator_runtime)
+        self.assertIn("autoOpenedDialogs", configurator_runtime)
+        self.assertIn("new DataTransfer()", configurator_runtime)
+        self.assertIn("[data-add-visual-form]", configurator_runtime)
+        self.assertNotIn("instanceof ParentNode", configurator_runtime)
         self.assertIn("openFilePickerBeforeDialog", configurator_runtime)
         self.assertIn('document.createElement("input")', configurator_runtime)
         self.assertIn('targetInput.dispatchEvent(new Event("change"', configurator_runtime)
@@ -1167,6 +1207,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn('name="order_mode"', start_form)
         self.assertIn("Étape 1 sur 2", start_form)
         self.assertIn("Ajouter mes visuels", start_form)
+        self.assertIn('enctype="multipart/form-data"', start_form)
+        self.assertIn("data-order-start-form", start_form)
+        self.assertIn("data-order-start-pick-visual", start_form)
+        self.assertIn("data-order-start-file", start_form)
+        self.assertIn('name="file"', start_form)
         self.assertIn('name="requested_date"', start_form)
         self.assertIn("components/forms/product_date_field.html", start_form)
         self.assertNotIn('type="date"', start_form)
@@ -1174,3 +1219,5 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("data-product-date-picker", date_field)
         self.assertIn("Date souhaitée", start_form)
         self.assertIn('name="customer_comment"', start_form)
+        self.assertIn("bindOrderStartPickVisual", configurator_runtime)
+        self.assertIn("data-order-start-pick-visual", configurator_runtime)

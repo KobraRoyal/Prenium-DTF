@@ -30,6 +30,16 @@ Le flag global reste le coupe-circuit pour désactiver la feature pour tous les 
 
 Le checkout classique fichier → commande n’est plus le parcours retenu.
 
+## UX création client (premier visuel)
+
+Sur `/client/.../order-projects/new/`, le CTA « Ajouter mes visuels » ouvre le sélecteur de
+fichier dans le même geste utilisateur, puis crée le projet avec le premier fichier en
+`multipart/form-data`. La redirection détail inclut `?validate=<item_public_id>` pour ouvrir
+immédiatement la modale de validation technique, sans étape intermédiaire sur une fiche vide.
+
+La création sans fichier reste acceptée côté serveur (POST sans `file`) pour compatibilité et
+tests ; le parcours UI standard exige la sélection d’un fichier.
+
 ## Frontières après Sprint 22
 
 - Le projet ne crée aucun `Order` ni `ProductionJob`.

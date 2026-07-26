@@ -34,40 +34,50 @@
   {% endif %}
 </div>
 {% if version and not item.analysis_pending %}
-{% if item.technical_review.thin_zone.detected or item.technical_review.semi_transparency.detected %}
-<div class="b2b-quality-overlays" role="group" aria-label="Contrôles de l’aperçu qualité">
-  <div class="b2b-quality-overlays__actions">
-    {% if item.technical_review.thin_zone.detected %}
-    <button class="ui-btn ui-btn-secondary ui-btn-sm is-active" type="button" aria-pressed="true" data-thin-zone-toggle>
-      <span class="b2b-thin-zone-swatch" aria-hidden="true"></span>
-      <span data-thin-zone-toggle-label>Zones sous 0,5 mm affichées</span>
-    </button>
-    {% endif %}
-    {% if item.technical_review.semi_transparency.detected %}
-    <button class="ui-btn ui-btn-secondary ui-btn-sm is-active" type="button" aria-pressed="true" data-semi-transparency-toggle>
-      <span class="b2b-semi-transparency-swatch" aria-hidden="true"></span>
-      <span data-semi-transparency-toggle-label>Semi-transparences affichées</span>
-    </button>
-    {% endif %}
-    <div class="b2b-preview-zoom" role="group" aria-label="Zoom sur l’aperçu">
-      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Dézoomer" data-preview-zoom-out disabled>−</button>
-      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Réinitialiser le zoom" data-preview-zoom-reset><span data-preview-zoom-label>100 %</span></button>
-      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Zoomer" data-preview-zoom-in>+</button>
+{% with has_thin=item.technical_review.thin_zone.detected has_semi=item.technical_review.semi_transparency.detected %}
+<div class="b2b-preview-chrome">
+  {% if has_thin or has_semi %}
+  <div class="b2b-quality-overlays" role="group" aria-label="Contrôles de l’aperçu qualité">
+    <div class="b2b-quality-overlays__actions">
+      {% if has_thin %}
+      <button class="ui-btn ui-btn-secondary ui-btn-sm is-active" type="button" aria-pressed="true" data-thin-zone-toggle>
+        <span class="b2b-thin-zone-swatch" aria-hidden="true"></span>
+        <span data-thin-zone-toggle-label>Zones sous 0,5 mm affichées</span>
+      </button>
+      {% endif %}
+      {% if has_semi %}
+      <button class="ui-btn ui-btn-secondary ui-btn-sm is-active" type="button" aria-pressed="true" data-semi-transparency-toggle>
+        <span class="b2b-semi-transparency-swatch" aria-hidden="true"></span>
+        <span data-semi-transparency-toggle-label>Semi-transparences affichées</span>
+      </button>
+      {% endif %}
+      <div class="b2b-preview-zoom" role="group" aria-label="Zoom sur l’aperçu">
+        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Dézoomer" data-preview-zoom-out disabled>−</button>
+        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Réinitialiser le zoom" data-preview-zoom-reset><span data-preview-zoom-label>100 %</span></button>
+        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Zoomer" data-preview-zoom-in>+</button>
+      </div>
     </div>
+    {% if has_thin %}
+    {% if item.support_color_hex and not item.support_color_is_multicolor %}
+    <p class="muted">Contour atelier prévu pour la couleur support {{ item.support_color_hex|upper }}.</p>
+    {% else %}
+    <p><strong>Couleur du support obligatoire.</strong></p>
+    {% endif %}
+    {% endif %}
   </div>
-  {% if item.technical_review.thin_zone.detected %}
-  {% if item.support_color_hex and not item.support_color_is_multicolor %}
-  <p class="muted">Contour atelier prévu pour la couleur support {{ item.support_color_hex|upper }}.</p>
   {% else %}
-  <p><strong>Couleur du support obligatoire.</strong></p>
+  <div class="b2b-preview-zoom b2b-preview-zoom--solo" role="group" aria-label="Zoom sur l’aperçu">
+    <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Dézoomer" data-preview-zoom-out disabled>−</button>
+    <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Réinitialiser le zoom" data-preview-zoom-reset><span data-preview-zoom-label>100 %</span></button>
+    <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Zoomer" data-preview-zoom-in>+</button>
+  </div>
   {% endif %}
-  {% endif %}
+  <div class="b2b-background-tools" aria-label="Fond de l’aperçu">
+    <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-configurator-bg="checker" aria-label="Damier" aria-pressed="true" title="Damier"></button>
+    <button type="button" class="b2b-swatch-btn b2b-swatch-btn--white b2b-bg-button is-white" data-configurator-bg="#ffffff" aria-label="Blanc" aria-pressed="false" title="Blanc"></button>
+    <button type="button" class="b2b-swatch-btn b2b-swatch-btn--black b2b-bg-button is-black" data-configurator-bg="#111111" aria-label="Noir" aria-pressed="false" title="Noir"></button>
+    {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="preview-hex-"|add:item.public_id preview_mode=True initial_color="#ffffff" %}
+  </div>
 </div>
-{% endif %}
-<div class="b2b-background-tools" aria-label="Fond de l’aperçu">
-  <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-configurator-bg="checker" aria-label="Damier" aria-pressed="true" title="Damier"></button>
-  <button type="button" class="b2b-swatch-btn b2b-swatch-btn--white b2b-bg-button is-white" data-configurator-bg="#ffffff" aria-label="Blanc" aria-pressed="false" title="Blanc"></button>
-  <button type="button" class="b2b-swatch-btn b2b-swatch-btn--black b2b-bg-button is-black" data-configurator-bg="#111111" aria-label="Noir" aria-pressed="false" title="Noir"></button>
-  {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="preview-hex-"|add:item.public_id preview_mode=True initial_color="#ffffff" %}
-</div>
+{% endwith %}
 {% endif %}

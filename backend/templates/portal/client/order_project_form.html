@@ -4,18 +4,24 @@
 
 {% block portal_content %}
 <div class="b2b-order-start-page">
-{% include "components/portal/page_head.html" with title="Nouvelle commande" subtitle="Identifiez votre demande avant d’ajouter les visuels." %}
+{% include "components/portal/page_head.html" with title="Nouvelle commande" subtitle="Identifiez votre demande, puis choisissez le premier visuel." %}
 
 <section class="card b2b-order-start-card">
   <div class="b2b-order-start-card__intro">
     <span class="product-step-badge">Étape 1 sur 2</span>
     <div>
       <h2>Informations de commande</h2>
-      <p>Nom, date souhaitée et commentaire pour l’atelier. Vous ajouterez vos visuels à l’étape suivante.</p>
+      <p>Nom, date souhaitée et commentaire pour l’atelier. Au clic suivant, vous sélectionnez directement votre premier fichier.</p>
     </div>
   </div>
   {% if form_error %}<div class="dui-alert dui-alert-error mb-4" role="alert">{{ form_error }}</div>{% endif %}
-  <form method="post" class="ui-form-stack b2b-order-start-form" data-submit-loading>
+  <form
+    method="post"
+    class="ui-form-stack b2b-order-start-form"
+    enctype="multipart/form-data"
+    data-submit-loading
+    data-order-start-form
+  >
     {% csrf_token %}
     <div class="b2b-order-start-form__row">
       <div class="dui-form-control">
@@ -31,9 +37,25 @@
       <label class="product-form-label" for="id-comment">Commentaire <span class="muted">(facultatif)</span></label>
       <textarea class="dui-textarea dui-textarea-bordered w-full" id="id-comment" name="customer_comment" rows="3" placeholder="Délai, conditionnement, consignes utiles pour l’atelier…">{{ submitted.customer_comment|default:'' }}</textarea>
     </div>
+    <input
+      class="ui-sr-only"
+      type="file"
+      name="file"
+      accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf"
+      data-order-start-file
+      tabindex="-1"
+      aria-hidden="true"
+    >
+    <p class="muted text-sm" data-order-start-file-hint hidden></p>
     <div class="b2b-order-start-card__action">
-      <span>Étape suivante : ajout et validation des visuels.</span>
-      {% include "components/forms/form_actions.html" with primary_label="Ajouter mes visuels" primary_class_full="ui-btn ui-btn-primary ui-btn-wide" %}
+      <span>Étape suivante : sélection du premier fichier (PNG, JPG, PDF, PSD, TIFF, EPS, AI).</span>
+      <div class="ui-form-actions">
+        <button
+          class="ui-btn ui-btn-primary ui-btn-wide"
+          type="button"
+          data-order-start-pick-visual
+        >Ajouter mes visuels</button>
+      </div>
     </div>
   </form>
 </section>

@@ -27,6 +27,111 @@ def portal_scope(*, owner=True):
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_client_create_with_first_visual_opens_validation_modal():
+    _user, customer, client = portal_scope()
+    create_url = reverse(
+        "portal:client-order-project-create",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+
+    create_page = client.get(create_url)
+    assert create_page.status_code == 200
+    html = create_page.content.decode()
+    assert 'enctype="multipart/form-data"' in html
+    assert "data-order-start-pick-visual" in html
+    assert 'name="file"' in html
+
+    response = client.post(
+        create_url,
+        {
+            "name": "Commande premier visuel",
+            "order_mode": "individual_designs",
+            "file": png_upload("premier.png"),
+        },
+    )
+    assert response.status_code == 302
+    project = B2BOrderProject.objects.get(customer=customer)
+    item = project.items.get()
+    assert item.name == "premier"
+    assert f"validate={item.public_id}" in response.url
+
+    detail = client.get(response.url)
+    assert detail.status_code == 200
+    detail_html = detail.content.decode()
+    assert "data-dialog-auto-open" in detail_html
+    assert "Valider le visuel" in detail_html
+    assert str(item.public_id) in detail_html
+    assert "Supprimer" in detail_html
+    assert f"action='delete'" in detail_html or "/delete/" in detail_html or "action=delete" in detail_html
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_client_can_delete_visual_from_validation_modal_flow():
+    _user, customer, client = portal_scope()
+    create_url = reverse(
+        "portal:client-order-project-create",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+    response = client.post(
+        create_url,
+        {
+            "name": "Commande à corriger",
+            "order_mode": "individual_designs",
+            "file": png_upload("mauvais.png"),
+        },
+    )
+    assert response.status_code == 302
+    project = B2BOrderProject.objects.get(customer=customer)
+    item = project.items.get()
+
+    detail = client.get(response.url)
+    assert detail.status_code == 200
+    assert "Supprimer" in detail.content.decode()
+
+    delete_response = client.post(
+        reverse(
+            "portal:client-order-project-item-action",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+                "item_public_id": item.public_id,
+                "action": "delete",
+            },
+        ),
+        HTTP_HX_REQUEST="true",
+    )
+    assert delete_response.status_code == 200
+    project.refresh_from_db()
+    assert project.items.count() == 0
+    assert "Aucun visuel" in delete_response.content.decode()
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_client_create_without_file_still_lands_on_empty_detail():
+    _user, customer, client = portal_scope()
+    create_url = reverse(
+        "portal:client-order-project-create",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+
+    response = client.post(
+        create_url,
+        {"name": "Projet sans fichier", "order_mode": "individual_designs"},
+    )
+    assert response.status_code == 302
+    project = B2BOrderProject.objects.get(customer=customer)
+    assert project.items.count() == 0
+    assert "validate=" not in response.url
+
+    detail = client.get(response.url)
+    assert detail.status_code == 200
+    assert "Finaliser la commande" in detail.content.decode()
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
 def test_client_portal_project_flow_is_functional():
     user, customer, client = portal_scope()
     create_url = reverse(

@@ -1,6 +1,8 @@
 const previewObjectUrls = new WeakMap();
 const previewRenderTokens = new WeakMap();
 const previewFitObservers = new WeakMap();
+/** Dialogs already auto-opened (or dismissed) — avoid htmx:load reopen loops. */
+const autoOpenedDialogs = new WeakSet();
 const previewZoomMin = 1;
 const previewZoomMax = 4;
 const previewZoomStep = 0.5;
@@ -245,6 +247,7 @@ function applyPreviewZoom(root, requestedScale, { preserveCenter = true } = {}) 
   const displayHeight = Math.round(baseHeight * scale);
 
   root.dataset.previewZoom = String(scale);
+  media.classList.add("is-preview-fitted");
   media.style.width = `${displayWidth}px`;
   media.style.height = `${displayHeight}px`;
   bounds.style.width = `${displayWidth}px`;
@@ -1195,17 +1198,55 @@ function initConfigurator(root, { force = false } = {}) {
   setPreviewBackground(root, "checker", root.querySelector('[data-configurator-bg="checker"]'));
 }
 
+function clearOrderProjectValidateQuery() {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("validate")) {
+      return;
+    }
+    url.searchParams.delete("validate");
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, "", next);
+  } catch (_error) {
+    /* ignore URL API failures */
+  }
+}
+
+function dismissAutoOpenDialog(dialog) {
+  if (!(dialog instanceof HTMLDialogElement)) {
+    return;
+  }
+  autoOpenedDialogs.add(dialog);
+  dialog.removeAttribute("data-dialog-auto-open");
+  if (dialog.id === "add-visual-dialog" || dialog.hasAttribute("data-add-visual-dialog")) {
+    clearOrderProjectValidateQuery();
+  }
+}
+
+function openAutoOpenDialogs(scope = document) {
+  if (!scope || typeof scope.querySelectorAll !== "function") {
+    return;
+  }
+  scope.querySelectorAll("dialog[data-dialog-auto-open]").forEach((dialog) => {
+    if (!(dialog instanceof HTMLDialogElement) || dialog.open) {
+      return;
+    }
+    // Same DOM node: open once. Fresh HTMX nodes are new objects → reopen OK.
+    if (autoOpenedDialogs.has(dialog)) {
+      return;
+    }
+    autoOpenedDialogs.add(dialog);
+    dialog.showModal();
+    initB2BConfigurators(dialog, { force: true });
+  });
+}
+
 function initB2BConfigurators(scope = document, { force = false } = {}) {
   scope.querySelectorAll("[data-b2b-configurator]").forEach((root) => {
     initConfigurator(root, { force });
   });
   initSupportColorFields(scope, { force });
-  scope.querySelectorAll("dialog[data-dialog-auto-open]").forEach((dialog) => {
-    if (dialog instanceof HTMLDialogElement && !dialog.open) {
-      dialog.showModal();
-      initB2BConfigurators(dialog, { force: true });
-    }
-  });
+  openAutoOpenDialogs(scope);
 }
 
 function openConfiguratorDialog(dialog) {
@@ -1253,8 +1294,14 @@ function openFilePickerBeforeDialog(opener) {
       if (!picker.files?.length) {
         return;
       }
-      targetInput.closest("form")?.reset();
-      targetInput.files = picker.files;
+      const form = targetInput.closest("form");
+      if (form instanceof HTMLFormElement) {
+        form.reset();
+      }
+      // FileList d’un autre input : assigner via DataTransfer (reset vide sinon le fichier).
+      const transfer = new DataTransfer();
+      Array.from(picker.files).forEach((file) => transfer.items.add(file));
+      targetInput.files = transfer.files;
       openConfiguratorDialog(dialog);
       targetInput.dispatchEvent(new Event("change", { bubbles: true }));
     },
@@ -1263,11 +1310,142 @@ function openFilePickerBeforeDialog(opener) {
   picker.click();
 }
 
+function bindOrderStartPickVisual() {
+  document.body.addEventListener("click", (event) => {
+    const trigger = event.target;
+    if (!(trigger instanceof Element)) {
+      return;
+    }
+    const button = trigger.closest("[data-order-start-pick-visual]");
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+    event.preventDefault();
+    const form = button.closest("form[data-order-start-form]");
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+    const nameInput = form.querySelector("#id-name, [name='name']");
+    if (nameInput instanceof HTMLInputElement && !nameInput.value.trim()) {
+      nameInput.reportValidity();
+      nameInput.focus();
+      return;
+    }
+    if (typeof form.reportValidity === "function" && !form.reportValidity()) {
+      return;
+    }
+    const fileInput = form.querySelector("[data-order-start-file]");
+    if (!(fileInput instanceof HTMLInputElement)) {
+      form.requestSubmit?.() || form.submit();
+      return;
+    }
+    const hint = form.querySelector("[data-order-start-file-hint]");
+    const accept = fileInput.accept || "";
+    const picker = document.createElement("input");
+    picker.type = "file";
+    picker.accept = accept;
+    picker.addEventListener(
+      "change",
+      () => {
+        if (!picker.files?.length) {
+          if (hint instanceof HTMLElement) {
+            hint.hidden = false;
+            hint.textContent = "Sélectionnez un fichier pour continuer.";
+          }
+          return;
+        }
+        const transfer = new DataTransfer();
+        Array.from(picker.files).forEach((file) => transfer.items.add(file));
+        fileInput.files = transfer.files;
+        if (hint instanceof HTMLElement) {
+          hint.hidden = false;
+          hint.textContent = `Fichier sélectionné : ${picker.files[0].name}`;
+        }
+        button.disabled = true;
+        form.requestSubmit?.() || form.submit();
+      },
+      { once: true }
+    );
+    picker.click();
+  });
+}
+
+function bindPreviewPanDrag() {
+  let activeStage = null;
+  let pointerId = null;
+  let originX = 0;
+  let originY = 0;
+  let originScrollLeft = 0;
+  let originScrollTop = 0;
+
+  const endPan = (event) => {
+    if (!(activeStage instanceof HTMLElement)) {
+      return;
+    }
+    if (pointerId !== null && event?.pointerId !== undefined && event.pointerId !== pointerId) {
+      return;
+    }
+    try {
+      if (pointerId !== null && activeStage.hasPointerCapture?.(pointerId)) {
+        activeStage.releasePointerCapture(pointerId);
+      }
+    } catch (_error) {
+      /* ignore capture release races */
+    }
+    activeStage.classList.remove("is-panning");
+    activeStage = null;
+    pointerId = null;
+  };
+
+  document.body.addEventListener("pointerdown", (event) => {
+    if (!(event.target instanceof Element) || event.button !== 0) {
+      return;
+    }
+    if (event.target.closest("button, a, input, label, [data-preview-zoom-in], [data-preview-zoom-out], [data-preview-zoom-reset]")) {
+      return;
+    }
+    const stage = event.target.closest("[data-configurator-stage].is-zoomed");
+    if (!(stage instanceof HTMLElement)) {
+      return;
+    }
+    if (stage.scrollWidth <= stage.clientWidth + 1 && stage.scrollHeight <= stage.clientHeight + 1) {
+      return;
+    }
+    activeStage = stage;
+    pointerId = event.pointerId;
+    originX = event.clientX;
+    originY = event.clientY;
+    originScrollLeft = stage.scrollLeft;
+    originScrollTop = stage.scrollTop;
+    stage.classList.add("is-panning");
+    try {
+      stage.setPointerCapture(pointerId);
+    } catch (_error) {
+      /* pointer capture optional */
+    }
+    event.preventDefault();
+  });
+
+  document.body.addEventListener("pointermove", (event) => {
+    if (!(activeStage instanceof HTMLElement) || event.pointerId !== pointerId) {
+      return;
+    }
+    activeStage.scrollLeft = originScrollLeft - (event.clientX - originX);
+    activeStage.scrollTop = originScrollTop - (event.clientY - originY);
+  });
+
+  document.body.addEventListener("pointerup", endPan);
+  document.body.addEventListener("pointercancel", endPan);
+  document.body.addEventListener("lostpointercapture", endPan);
+}
+
 function bindConfiguratorEvents() {
   if (configuratorEventsBound) {
     return;
   }
   configuratorEventsBound = true;
+  bindOrderStartPickVisual();
+  bindPreviewPanDrag();
 
   document.body.addEventListener("change", (event) => {
     const input = event.target;
@@ -1310,6 +1488,14 @@ function bindConfiguratorEvents() {
     if (zoomControl instanceof HTMLButtonElement) {
       const root = findConfiguratorRoot(zoomControl);
       if (root) {
+        const bounds = findActivePreviewBounds(root);
+        if (
+          !(bounds instanceof HTMLElement)
+          || !bounds.dataset.previewBaseWidth
+          || !bounds.dataset.previewBaseHeight
+        ) {
+          fitPreviewMedia(root);
+        }
         const current = readPreviewZoom(root);
         const next = zoomControl.hasAttribute("data-preview-zoom-in")
           ? current + previewZoomStep
@@ -1376,14 +1562,23 @@ function bindConfiguratorEvents() {
     if (closer instanceof HTMLElement) {
       const dialog = closer.closest("dialog");
       if (dialog instanceof HTMLDialogElement) {
+        dismissAutoOpenDialog(dialog);
         dialog.close();
       }
       return;
     }
     if (target instanceof HTMLDialogElement) {
+      dismissAutoOpenDialog(target);
       target.close();
     }
   });
+
+  document.body.addEventListener("close", (event) => {
+    const dialog = event.target;
+    if (dialog instanceof HTMLDialogElement) {
+      dismissAutoOpenDialog(dialog);
+    }
+  }, true);
 
   document.addEventListener(
     "toggle",
@@ -1398,8 +1593,12 @@ function bindConfiguratorEvents() {
 }
 
 function mountConfigurator(scope = document) {
-  bindConfiguratorEvents();
-  initB2BConfigurators(scope);
+  try {
+    bindConfiguratorEvents();
+    initB2BConfigurators(scope);
+  } catch (error) {
+    console.error("[b2b-configurator] mount failed", error);
+  }
 }
 
 if (document.readyState === "loading") {
@@ -1408,95 +1607,13 @@ if (document.readyState === "loading") {
   mountConfigurator();
 }
 
-document.body.addEventListener("htmx:afterSwap", (event) => {
-  const target = event.detail?.target;
-  closeAllHexColorPopovers();
-  if (target instanceof HTMLElement) {
-    initB2BConfigurators(target, { force: true });
+function onBodyReady(callback) {
+  if (document.body) {
+    callback();
     return;
   }
-  initB2BConfigurators(document, { force: true });
-});
-
-document.body.addEventListener("htmx:beforeRequest", (event) => {
-  const elt = event.detail?.elt;
-  if (!(elt instanceof HTMLElement)) {
-    return;
-  }
-  const dialog = elt.closest("dialog[id^='visual-dialog-']");
-  if (!(dialog instanceof HTMLDialogElement) || !dialog.open) {
-    return;
-  }
-  const confirmForm =
-    elt.matches("form[data-visual-confirm], form[data-add-visual-confirm]")
-      ? elt
-      : elt.closest("form[data-visual-confirm], form[data-add-visual-confirm]");
-  if (confirmForm instanceof HTMLFormElement) {
-    // Validation / enregistrement support : fermer la modal après succès.
-    projectDialogCloseOnSuccess = dialog.id;
-    projectDialogToRestore = "";
-    return;
-  }
-  // Autres actions HTMX dans la modal (remplacer fichier…) : la rouvrir après swap.
-  projectDialogToRestore = dialog.id;
-});
-
-document.body.addEventListener("htmx:afterSettle", () => {
-  // Pendant un confirm support, ne jamais rouvrir ici (afterOnLoad gère succès / erreur).
-  if (projectDialogCloseOnSuccess) {
-    return;
-  }
-  if (!projectDialogToRestore) {
-    return;
-  }
-  const dialog = document.getElementById(projectDialogToRestore);
-  projectDialogToRestore = "";
-  if (dialog instanceof HTMLDialogElement && !dialog.open) {
-    dialog.showModal();
-    initB2BConfigurators(dialog, { force: true });
-  }
-});
-
-document.body.addEventListener("htmx:afterOnLoad", (event) => {
-  const elt = event.detail?.elt;
-  const xhr = event.detail?.xhr;
-  const successful = Boolean(event.detail?.successful);
-  const status = Number(xhr?.status || 0);
-  const ok = successful || (status >= 200 && status < 300);
-
-  if (
-    ok
-    && elt instanceof HTMLFormElement
-    && elt.matches("[data-add-visual-confirm]")
-  ) {
-    document.getElementById("add-visual-dialog")?.close();
-  }
-
-  if (!projectDialogCloseOnSuccess) {
-    return;
-  }
-
-  const dialogId = projectDialogCloseOnSuccess;
-  projectDialogCloseOnSuccess = "";
-  projectDialogToRestore = "";
-
-  if (ok) {
-    // Succès : modal reste fermée.
-    return;
-  }
-
-  // Erreur : rouvrir immédiatement (afterSettle a déjà eu lieu).
-  const dialog = document.getElementById(dialogId);
-  if (dialog instanceof HTMLDialogElement && !dialog.open) {
-    dialog.showModal();
-    initB2BConfigurators(dialog, { force: true });
-  }
-});
-
-document.body.addEventListener("htmx:load", (event) => {
-  const element = event.detail?.elt;
-  mountConfigurator(element instanceof HTMLElement ? element : document);
-});
+  document.addEventListener("DOMContentLoaded", callback, { once: true });
+}
 
 function findOpenVisualDialog(root) {
   if (!(root instanceof HTMLElement)) {
@@ -1518,38 +1635,153 @@ function findOpenVisualDialog(root) {
   return null;
 }
 
-document.body.addEventListener("htmx:beforeCleanupElement", (event) => {
-  const cleanupRoot = event.detail?.elt;
-  if (!(cleanupRoot instanceof HTMLElement)) {
-    return;
-  }
-  // Ne pas forcer la réouverture si on ferme volontairement après confirm.
-  if (!projectDialogCloseOnSuccess) {
-    const openProjectDialog = findOpenVisualDialog(cleanupRoot);
-    if (openProjectDialog instanceof HTMLDialogElement) {
-      projectDialogToRestore = openProjectDialog.id;
+onBodyReady(() => {
+  document.body.addEventListener("htmx:afterSwap", (event) => {
+    const target = event.detail?.target;
+    closeAllHexColorPopovers();
+    if (target instanceof HTMLElement) {
+      initB2BConfigurators(target, { force: true });
+      return;
     }
-  }
-  closeAllHexColorPopovers();
-  cleanupRoot.querySelectorAll("[data-hex-color-control]").forEach((control) => {
-    if (control instanceof HTMLElement) {
-      delete control.dataset.hexColorReady;
-      delete control._hexPopoverAnchor;
-      delete control._hexPopoverMount;
-      delete control._hexPopoverEl;
-      delete control._hexPopoverInput;
-      delete control._hexNativePicker;
+    initB2BConfigurators(document, { force: true });
+  });
+
+  document.body.addEventListener("htmx:beforeRequest", (event) => {
+    const elt = event.detail?.elt;
+    if (!(elt instanceof HTMLElement)) {
+      return;
+    }
+    const dialog = elt.closest("dialog[id^='visual-dialog-']");
+    if (!(dialog instanceof HTMLDialogElement) || !dialog.open) {
+      return;
+    }
+    const confirmForm =
+      elt.matches("form[data-visual-confirm], form[data-add-visual-confirm]")
+        ? elt
+        : elt.closest("form[data-visual-confirm], form[data-add-visual-confirm]");
+    if (confirmForm instanceof HTMLFormElement) {
+      // Validation / enregistrement support : fermer la modal après succès.
+      projectDialogCloseOnSuccess = dialog.id;
+      projectDialogToRestore = "";
+      return;
+    }
+    // Autres actions HTMX dans la modal (remplacer fichier…) : la rouvrir après swap.
+    projectDialogToRestore = dialog.id;
+  });
+
+  document.body.addEventListener("htmx:afterSettle", () => {
+    // Pendant un confirm support, ne jamais rouvrir ici (afterOnLoad gère succès / erreur).
+    if (projectDialogCloseOnSuccess) {
+      return;
+    }
+    if (!projectDialogToRestore) {
+      return;
+    }
+    const dialog = document.getElementById(projectDialogToRestore);
+    projectDialogToRestore = "";
+    if (dialog instanceof HTMLDialogElement && !dialog.open) {
+      dialog.showModal();
+      initB2BConfigurators(dialog, { force: true });
     }
   });
-  const configurators = cleanupRoot.matches("[data-b2b-configurator]")
-    ? [cleanupRoot]
-    : cleanupRoot.querySelectorAll("[data-b2b-configurator]");
-  configurators.forEach((configurator) => {
-    const objectUrl = previewObjectUrls.get(configurator);
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      previewObjectUrls.delete(configurator);
+
+  document.body.addEventListener("htmx:afterOnLoad", (event) => {
+    const elt = event.detail?.elt;
+    const xhr = event.detail?.xhr;
+    const successful = Boolean(event.detail?.successful);
+    const status = Number(xhr?.status || 0);
+    const ok = successful || (status >= 200 && status < 300);
+
+    if (
+      ok
+      && elt instanceof HTMLFormElement
+      && elt.matches("[data-add-visual-confirm]")
+    ) {
+      const addDialog = document.getElementById("add-visual-dialog");
+      if (addDialog instanceof HTMLDialogElement) {
+        dismissAutoOpenDialog(addDialog);
+        addDialog.close();
+      }
     }
-    delete configurator.dataset.configuratorReady;
+
+    if (
+      ok
+      && elt instanceof HTMLFormElement
+      && elt.matches("[data-add-visual-form]")
+    ) {
+      // Après envoi : ouvrir la modale d’analyse (nouveau nœud HTMX).
+      requestAnimationFrame(() => {
+        openAutoOpenDialogs(document);
+        const addDialog = document.getElementById("add-visual-dialog");
+        if (
+          addDialog instanceof HTMLDialogElement
+          && !addDialog.open
+          && addDialog.querySelector("#add-visual-validation-panel")
+        ) {
+          openConfiguratorDialog(addDialog);
+        }
+      });
+    }
+
+    if (!projectDialogCloseOnSuccess) {
+      return;
+    }
+
+    const dialogId = projectDialogCloseOnSuccess;
+    projectDialogCloseOnSuccess = "";
+    projectDialogToRestore = "";
+
+    if (ok) {
+      // Succès : modal reste fermée.
+      return;
+    }
+
+    // Erreur : rouvrir immédiatement (afterSettle a déjà eu lieu).
+    const dialog = document.getElementById(dialogId);
+    if (dialog instanceof HTMLDialogElement && !dialog.open) {
+      dialog.showModal();
+      initB2BConfigurators(dialog, { force: true });
+    }
+  });
+
+  document.body.addEventListener("htmx:load", (event) => {
+    const element = event.detail?.elt;
+    mountConfigurator(element instanceof HTMLElement ? element : document);
+  });
+
+  document.body.addEventListener("htmx:beforeCleanupElement", (event) => {
+    const cleanupRoot = event.detail?.elt;
+    if (!(cleanupRoot instanceof HTMLElement)) {
+      return;
+    }
+    // Ne pas forcer la réouverture si on ferme volontairement après confirm.
+    if (!projectDialogCloseOnSuccess) {
+      const openProjectDialog = findOpenVisualDialog(cleanupRoot);
+      if (openProjectDialog instanceof HTMLDialogElement) {
+        projectDialogToRestore = openProjectDialog.id;
+      }
+    }
+    closeAllHexColorPopovers();
+    cleanupRoot.querySelectorAll("[data-hex-color-control]").forEach((control) => {
+      if (control instanceof HTMLElement) {
+        delete control.dataset.hexColorReady;
+        delete control._hexPopoverAnchor;
+        delete control._hexPopoverMount;
+        delete control._hexPopoverEl;
+        delete control._hexPopoverInput;
+        delete control._hexNativePicker;
+      }
+    });
+    const configurators = cleanupRoot.matches("[data-b2b-configurator]")
+      ? [cleanupRoot]
+      : cleanupRoot.querySelectorAll("[data-b2b-configurator]");
+    configurators.forEach((configurator) => {
+      const objectUrl = previewObjectUrls.get(configurator);
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        previewObjectUrls.delete(configurator);
+      }
+      delete configurator.dataset.configuratorReady;
+    });
   });
 });

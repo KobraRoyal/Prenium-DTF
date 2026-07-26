@@ -65,7 +65,7 @@
       <div class="b2b-dialog-actions">
         <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer{% else %}Valider ce visuel{% endif %}</button>
         <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-project-item-asset-download' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>
-        <button class="ui-btn ui-btn-danger ui-btn-sm" type="button" hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='delete' %}" hx-target="#order-project-items" hx-swap="outerHTML">Supprimer</button>
+        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True dialog_prefix="editor-" %}
       </div>
     </form>
     {% else %}
