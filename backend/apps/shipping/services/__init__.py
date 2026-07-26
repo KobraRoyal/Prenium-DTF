@@ -1,3 +1,4 @@
+from .methods import ShippingMethodService
 from .sendcloud import (
     SendcloudAPIError,
     SendcloudConfigurationError,
@@ -10,4 +11,5 @@ __all__ = [
     "SendcloudConfigurationError",
     "SendcloudGateway",
     "ShipmentService",
+    "ShippingMethodService",
 ]

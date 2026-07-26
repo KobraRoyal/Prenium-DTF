@@ -100,6 +100,7 @@ def test_immediate_account_checkout_auto_prices_from_gang_sheet():
         name="Cash Co",
         b2b_order_projects_enabled=True,
         default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
     )
     membership = CustomerMembership.objects.create(customer=customer, user=user)
     assert customer_requires_gang_sheet_orders(customer) is True
@@ -116,12 +117,17 @@ def test_immediate_account_checkout_auto_prices_from_gang_sheet():
         customer_membership=membership,
         source="test",
         billing_mode="immediate",
+        shipping_method_code="pickup",
     )
 
     assert order.billing_mode == Order.BillingMode.IMMEDIATE
     assert order.pricing_status == Order.PricingStatus.PRICED
-    # 1.1 m² × 3 ex. × 25 € + 5 € préparation fichier
-    assert order.total_amount == Decimal("87.50")
+    # 1.1 m² × 3 ex. × 25 € + 5 € préparation = 87.50 HT ; retrait ; TVA 20 % → 105.00 TTC
+    assert order.subtotal_amount == Decimal("87.50")
+    assert order.shipping_amount == Decimal("0.00")
+    assert order.tax_amount == Decimal("17.50")
+    assert order.total_amount == Decimal("105.00")
+    assert order.shipping_method_code == "pickup"
     assert order.uses_atelier_pricing() is True
     assert requires_captured_payment_before_production(order) is True
     assert order_awaits_client_payment(order) is True
@@ -141,6 +147,7 @@ def test_gang_sheet_quote_is_available_before_transmit():
         name="Quote Co",
         b2b_order_projects_enabled=True,
         default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
     )
     CustomerMembership.objects.create(customer=customer, user=user)
     project, _sheet = _prepare_gang_sheet_project(
@@ -158,9 +165,14 @@ def test_gang_sheet_quote_is_available_before_transmit():
         customer=customer,
         surface_sqm="1.1000",
         quantity=2,
+        shipping_method_code="pickup",
+        billing_mode="immediate",
     )
     assert quote["billable_sqm"] == Decimal("2.2000")
-    assert quote["total_eur"] == Decimal("60.00")  # 2.2×25 + 5
+    assert quote["subtotal_eur"] == Decimal("60.00")  # 2.2×25 + 5
+    assert quote["shipping_amount_eur"] == Decimal("0.00")
+    assert quote["tax_amount_eur"] == Decimal("12.00")
+    assert quote["total_eur"] == Decimal("72.00")
 
     client = Client()
     assert client.login(email="quote@example.com", password="pass")
@@ -177,11 +189,13 @@ def test_gang_sheet_quote_is_available_before_transmit():
     body = response.content.decode()
     page_quote = response.context["gang_sheet_quote"]
     assert page_quote is not None
-    assert page_quote["total_eur"] == Decimal("60.00")
-    assert "Total HT" in body
+    assert page_quote["total_eur"] == Decimal("72.00")
+    assert "Total TTC" in body
+    assert "TVA" in body
     assert "Confirmer et payer" in body
     assert "Mode de règlement" not in body
-    assert "60,00" in body or "60.00" in body
+    assert "Retrait atelier" in body
+    assert "72,00" in body or "72.00" in body
 
 
 @pytest.mark.django_db

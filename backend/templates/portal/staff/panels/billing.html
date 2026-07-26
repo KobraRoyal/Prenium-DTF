@@ -9,8 +9,11 @@
   </header>
 
   <section class="billing-overview" aria-label="Synthèse de facturation">
-    <article><span>Montant commande</span><strong>{{ order.total_amount }} {{ order.currency }}</strong><small>{{ order.pricing_status|human_status }}</small></article>
-    <article><span>Mode</span><strong><span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span></strong><small>{% if order.billing_mode == "immediate" %}Paiement carte après tarification atelier{% elif order.customer.preferred_settlement_method == "paypal" %}Préférence client PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Préférence client Stripe{% else %}Préférence client virement{% endif %}</small></article>
+    <article><span>Sous-total HT</span><strong>{{ order.subtotal_amount }} {{ order.currency }}</strong><small>Impression + préparation</small></article>
+    <article><span>Livraison</span><strong>{{ order.shipping_amount }} {{ order.currency }}</strong><small>{% if order.shipping_method_name %}{{ order.shipping_method_name }}{% else %}Non renseignée{% endif %}</small></article>
+    <article><span>TVA</span><strong>{{ order.tax_amount }} {{ order.currency }}</strong><small>{% if order.tax_rate %}Taux {{ order.tax_rate }}{% else %}—{% endif %}</small></article>
+    <article><span>Total</span><strong>{{ order.total_amount }} {{ order.currency }}</strong><small>{{ order.pricing_status|human_status }}</small></article>
+    <article><span>Mode</span><strong><span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span></strong><small>{% if order.billing_mode == "immediate" %}Paiement carte après tarification{% elif order.customer.preferred_settlement_method == "paypal" %}Préférence client PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Préférence client Stripe{% else %}Préférence client virement{% endif %}</small></article>
     <article><span>Paiement</span><strong>{% if payment %}{{ payment.status|human_status }}{% else %}Non enregistré{% endif %}</strong><small>{% if payment %}{{ payment.amount }} {{ payment.currency }}{% else %}Aucune transaction liée{% endif %}</small></article>
     <article><span>Justificatif</span><strong>{% if invoice %}{{ invoice.invoice_number }}{% else %}Non généré{% endif %}</strong><small>{% if invoice and invoice.paid_at %}Confirmé le {{ invoice.paid_at|date:"d/m/Y" }}{% elif invoice %}{{ invoice.status|human_status }}{% else %}Après encaissement / flux RCA{% endif %}</small></article>
   </section>

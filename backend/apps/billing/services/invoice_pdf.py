@@ -81,7 +81,19 @@ def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment
             escape(order.customer.billing_email or "—"),
         ],
         ["Devise", escape(order.currency)],
-        ["Sous-total", f"{order.subtotal_amount:.2f} {order.currency}"],
+        ["Sous-total HT", f"{order.subtotal_amount:.2f} {order.currency}"],
+        [
+            "Livraison",
+            (
+                f"{getattr(order, 'shipping_amount', 0):.2f} {order.currency}"
+                + (
+                    f" ({order.shipping_method_name})"
+                    if getattr(order, "shipping_method_name", "")
+                    else ""
+                )
+            ),
+        ],
+        ["TVA", f"{getattr(order, 'tax_amount', 0):.2f} {order.currency}"],
         ["Total réglé", f"{order.total_amount:.2f} {order.currency}"],
         ["Moyen de paiement", escape(provider_label)],
         [provider_ref_label, escape(provider_ref)],

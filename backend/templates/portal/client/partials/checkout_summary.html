@@ -32,6 +32,8 @@
 
       {% include "portal/client/partials/b2b_settlement_choice.html" with choice_hint="Définissez le règlement de cette commande après contrôle et tarification atelier." deferred_detail="Facturation différée selon votre cycle client." immediate_detail="Paiement Stripe une fois le prix calculé par l’atelier." locked_detail="Paiement Stripe une fois le prix calculé par l’atelier." %}
 
+      {% include "portal/client/partials/b2b_shipping_choice.html" %}
+
       <label class="dui-label cursor-pointer flex items-start gap-3">
         <input id="id_confirm_checkout" type="checkbox" name="confirm_checkout" class="dui-checkbox dui-checkbox-primary mt-0.5">
         <span class="dui-label-text text-left text-sm leading-snug">Je confirme l'envoi de la demande à l'atelier pour contrôle technique et traitement.</span>

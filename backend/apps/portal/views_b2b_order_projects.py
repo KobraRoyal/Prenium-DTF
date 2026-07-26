@@ -38,8 +38,14 @@ configurator_service = B2BOrderProjectConfiguratorService()
 order_pricing_service = OrderPricingService()
 
 
-def build_gang_sheet_project_quote(*, project, customer):
-    """Devis HT pour un projet planche HD, avant transmission."""
+def build_gang_sheet_project_quote(
+    *,
+    project,
+    customer,
+    shipping_method_code: str | None = None,
+    billing_mode: str | None = None,
+):
+    """Devis produit + port + TVA (si comptant) pour un projet planche HD."""
     if project is None:
         return None
     if project.order_mode != B2BOrderProject.OrderMode.READY_GANG_SHEET:
@@ -60,6 +66,9 @@ def build_gang_sheet_project_quote(*, project, customer):
             surface_sqm=sheet.surface_sqm,
             quantity=quantity,
             file_count=1,
+            shipping_method_code=shipping_method_code,
+            billing_mode=billing_mode
+            or getattr(customer, "default_billing_mode", Order.BillingMode.DEFERRED),
         )
     except ValidationError:
         return None
@@ -151,13 +160,63 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
         }
         if project is not None:
             ctx["project_client_label"] = project_client_reference(project)
+            shipping_method_code = extra.get("shipping_method_code")
+            billing_mode = extra.get(
+                "billing_mode",
+                getattr(self.customer, "default_billing_mode", Order.BillingMode.DEFERRED),
+            )
             quote = extra.get("gang_sheet_quote")
             if quote is None and "gang_sheet_quote" not in extra:
                 quote = build_gang_sheet_project_quote(
                     project=project,
                     customer=self.customer,
+                    shipping_method_code=shipping_method_code,
+                    billing_mode=billing_mode,
                 )
             ctx["gang_sheet_quote"] = quote
+            from apps.shipping.services.methods import ShippingMethodService
+
+            shipping_service = ShippingMethodService()
+            shipping_service.ensure_default_methods()
+            locks_pickup = shipping_service.customer_locks_shipping_to_pickup(self.customer)
+            if locks_pickup:
+                selected_shipping_code = "pickup"
+                show_shipping_choice = False
+                shipping_choice_widget = "hidden"
+            else:
+                if shipping_method_code:
+                    selected_shipping_code = str(shipping_method_code).strip().lower()
+                else:
+                    selected_shipping_code = shipping_service.resolve_default_code_for_customer(
+                        self.customer
+                    )
+                # Encours + réassort : menu déroulant ; comptant CB : radios.
+                is_reorder = (
+                    getattr(project, "order_mode", None) == B2BOrderProject.OrderMode.REORDER
+                )
+                is_deferred = str(billing_mode).strip().lower() == Order.BillingMode.DEFERRED
+                if is_deferred or is_reorder:
+                    shipping_choice_widget = "select"
+                else:
+                    shipping_choice_widget = "radios"
+                show_shipping_choice = True
+            # Recalcule le devis avec le code réellement applicable (ex. verrou retrait).
+            if quote is not None and (
+                locks_pickup
+                or str(quote.get("shipping_method_code") or "") != selected_shipping_code
+            ):
+                quote = build_gang_sheet_project_quote(
+                    project=project,
+                    customer=self.customer,
+                    shipping_method_code=selected_shipping_code,
+                    billing_mode=billing_mode,
+                )
+                ctx["gang_sheet_quote"] = quote
+            ctx["shipping_methods"] = shipping_service.list_active_methods()
+            ctx["selected_shipping_method_code"] = selected_shipping_code
+            ctx["show_shipping_choice"] = show_shipping_choice
+            ctx["shipping_choice_widget"] = shipping_choice_widget
+            ctx["shipping_locked_to_pickup"] = locks_pickup
             ctx["cash_checkout_requires_gang_sheet"] = customer_requires_gang_sheet_orders(
                 self.customer
             )
@@ -267,6 +326,12 @@ class ClientOrderProjectDetailView(ClientProjectFeatureMixin, View):
                 order_modes=B2BOrderProject.OrderMode.choices,
                 form_error="",
                 active_validation_item=active_validation_item,
+                shipping_method_code=(
+                    request.GET.get("shipping_method")
+                    or request.GET.get("shipping_method_code")
+                    or ""
+                ).strip()
+                or None,
             ),
         )
 
@@ -586,6 +651,10 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                     request.POST.get("billing_mode")
                     or getattr(self.customer, "default_billing_mode", "deferred")
                 ).strip(),
+                shipping_method_code=(
+                    request.POST.get("shipping_method_code") or ""
+                ).strip()
+                or None,
             )
         except ProjectDomainError as error:
             project.refresh_from_db()

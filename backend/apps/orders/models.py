@@ -64,12 +64,45 @@ class Order(BaseModel):
         decimal_places=2,
         default=ZERO_AMOUNT,
         validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Sous-total HT lignes produit (DTF + préparation fichier).",
+    )
+    shipping_method_code = models.SlugField(
+        max_length=64,
+        blank=True,
+        help_text="Snapshot code option livraison (pickup / standard / express).",
+    )
+    shipping_method_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Snapshot libellé option livraison au moment du choix.",
+    )
+    shipping_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Frais d’expédition HT figés (0 si retrait atelier).",
+    )
+    tax_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Taux TVA appliqué (ex. 0.2000 = 20 %). 0 si encours / hors TVA.",
+    )
+    tax_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Montant TVA (comptant CB : 20 % sur sous-total HT + port).",
     )
     total_amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=ZERO_AMOUNT,
         validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Total dû / encaissé : subtotal + shipping + tax.",
     )
     customer_note = models.TextField(blank=True)
     source = models.CharField(max_length=32, default="client_portal")

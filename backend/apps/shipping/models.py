@@ -1,12 +1,70 @@
 import os
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.files.utils import validate_file_name
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.text import get_valid_filename
 
 from apps.core.models import BaseModel
 from apps.orders.models import Order
+
+ZERO_AMOUNT = Decimal("0.00")
+
+
+class ShippingMethodQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(is_active=True)
+
+
+class ShippingMethod(BaseModel):
+    """Option de livraison commerciale (retrait / standard / express).
+
+    Les montants sont HT. Le snapshot commande fige code, libellé et prix
+    au moment du choix client pour éviter les dérives tarifaires.
+    """
+
+    code = models.SlugField(max_length=64, unique=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    base_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Frais d’expédition HT (EUR). Forcé à 0 si retrait atelier.",
+    )
+    currency = models.CharField(max_length=3, default="EUR")
+    is_pickup = models.BooleanField(
+        default=False,
+        help_text="Retrait atelier : aucun frais d’expédition.",
+    )
+    eta_label = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Indication délai affichée au client (ex. 48–72 h).",
+    )
+    display_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    objects = ShippingMethodQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("display_order", "name")
+        indexes = [
+            models.Index(fields=("is_active", "display_order")),
+            models.Index(fields=("is_pickup", "is_active")),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+    @property
+    def resolved_price(self) -> Decimal:
+        if self.is_pickup:
+            return ZERO_AMOUNT
+        return (self.base_price or ZERO_AMOUNT).quantize(Decimal("0.01"))
 
 
 def normalize_label_filename(filename: str) -> str:

@@ -1,0 +1,64 @@
+{# Choix option de livraison — masqué si fiche client = retrait atelier. #}
+{% if shipping_locked_to_pickup or not show_shipping_choice %}
+<input type="hidden" name="shipping_method_code" value="pickup">
+{% if shipping_locked_to_pickup %}
+<p class="muted text-sm m-0 b2b-shipping-locked">Retrait atelier (défini sur votre compte) — aucun frais d’expédition.</p>
+{% endif %}
+{% elif shipping_methods %}
+  {% if shipping_choice_widget == "select" %}
+  <div class="b2b-shipping-choice b2b-shipping-choice--select">
+    <label class="ui-label" for="id_shipping_method_code">Type de livraison</label>
+    <select
+      class="ui-input"
+      id="id_shipping_method_code"
+      name="shipping_method_code"
+      {% if gang_sheet_quote and project %}
+      hx-get="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=project.public_id %}"
+      hx-select="#order-project-summary"
+      hx-target="#order-project-summary"
+      hx-swap="outerHTML"
+      hx-include="this"
+      hx-trigger="change"
+      {% endif %}
+    >
+      {% for method in shipping_methods %}
+      <option
+        value="{{ method.code }}"
+        {% if selected_shipping_method_code == method.code %}selected{% endif %}
+      >
+        {{ method.name }}{% if method.resolved_price %} — {{ method.resolved_price }} € HT{% else %} — gratuit{% endif %}
+      </option>
+      {% endfor %}
+    </select>
+    <p class="muted text-sm m-0">Les frais sont recalculés côté serveur selon l’option choisie.</p>
+  </div>
+  {% else %}
+  <fieldset class="b2b-settlement-choice b2b-shipping-choice">
+    <legend>Livraison</legend>
+    <p class="muted text-sm m-0">Choisissez le mode d’acheminement pour cette commande. Les frais sont calculés côté serveur.</p>
+    <div class="b2b-settlement-choice__options">
+      {% for method in shipping_methods %}
+      <label class="b2b-settlement-choice__option{% if selected_shipping_method_code == method.code %} is-selected{% endif %}">
+        <input
+          type="radio"
+          name="shipping_method_code"
+          value="{{ method.code }}"
+          {% if selected_shipping_method_code == method.code %}checked{% endif %}
+          {% if gang_sheet_quote and project %}
+          hx-get="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=project.public_id %}?shipping_method={{ method.code }}"
+          hx-select="#order-project-summary"
+          hx-target="#order-project-summary"
+          hx-swap="outerHTML"
+          hx-include="none"
+          {% endif %}
+        >
+        <span>
+          <strong>{{ method.name }}{% if method.resolved_price %} — {{ method.resolved_price }}&nbsp;€ HT{% else %} — gratuit{% endif %}</strong>
+          <small>{% if method.eta_label %}{{ method.eta_label }}. {% endif %}{{ method.description }}</small>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  {% endif %}
+{% endif %}

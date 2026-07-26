@@ -20,7 +20,7 @@
     <aside class="b2b-project-quote" aria-label="Montant à régler">
       <div class="b2b-project-quote__head">
         <div class="b2b-project-quote__title">
-          <p class="b2b-project-quote__eyebrow">Total HT</p>
+          <p class="b2b-project-quote__eyebrow">{% if gang_sheet_quote.tax_amount_eur %}Total TTC{% else %}Total HT{% endif %}</p>
           <p class="b2b-project-quote__lead">Calculé depuis votre Gang Sheet</p>
         </div>
         <p class="b2b-project-quote__total"><strong>{{ gang_sheet_quote.total_eur }}&nbsp;{{ gang_sheet_quote.currency }}</strong></p>
@@ -45,6 +45,20 @@
             <span class="b2b-project-quote__amount">{% localize on %}{{ gang_sheet_quote.prep_amount_eur }}{% endlocalize %}&nbsp;{{ gang_sheet_quote.currency }}</span>
           </span>
         </div>
+        <div class="b2b-project-quote__row" role="listitem">
+          <span class="b2b-project-quote__label">{{ gang_sheet_quote.shipping_method_name|default:"Livraison" }}</span>
+          <span class="b2b-project-quote__value">
+            <span class="b2b-project-quote__amount">{% if gang_sheet_quote.shipping_amount_eur %}{% localize on %}{{ gang_sheet_quote.shipping_amount_eur }}{% endlocalize %}&nbsp;{{ gang_sheet_quote.currency }}{% else %}0,00&nbsp;{{ gang_sheet_quote.currency }}{% endif %}</span>
+          </span>
+        </div>
+        {% if gang_sheet_quote.tax_amount_eur %}
+        <div class="b2b-project-quote__row" role="listitem">
+          <span class="b2b-project-quote__label">TVA (20&nbsp;%)</span>
+          <span class="b2b-project-quote__value">
+            <span class="b2b-project-quote__amount">{% localize on %}{{ gang_sheet_quote.tax_amount_eur }}{% endlocalize %}&nbsp;{{ gang_sheet_quote.currency }}</span>
+          </span>
+        </div>
+        {% endif %}
       </div>
     </aside>
     {% endif %}
@@ -54,6 +68,7 @@
         <form class="b2b-project-submit-form" method="post" action="{% url 'portal:client-order-project-submit' customer_public_id=customer.public_id project_public_id=project.public_id %}" data-submit-loading>
           {% csrf_token %}
           <input type="hidden" name="billing_mode" value="{{ customer.default_billing_mode|default:'deferred' }}">
+          {% include "portal/client/partials/b2b_shipping_choice.html" %}
           {% if gang_sheet_quote and customer.default_billing_mode == "immediate" %}
           <button class="ui-btn ui-btn-primary b2b-project-checkout-cta" type="submit">
             {% if project.status == "submitted" %}Finaliser et payer {{ gang_sheet_quote.total_eur }} €{% else %}Confirmer et payer {{ gang_sheet_quote.total_eur }} €{% endif %}

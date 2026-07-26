@@ -41,6 +41,7 @@ class B2BOrderProjectCheckoutService:
         customer_membership,
         source: str = "client_portal.b2b_checkout",
         billing_mode: str | None = None,
+        shipping_method_code: str | None = None,
     ):
         locked = self.project_service._lock(project)
         self.project_service._refresh_completeness(locked)
@@ -118,6 +119,7 @@ class B2BOrderProjectCheckoutService:
             customer_membership=customer_membership,
             source=source,
             billing_mode=billing_mode,
+            shipping_method_code=shipping_method_code,
         )
 
         for item in items:
@@ -196,6 +198,10 @@ class B2BOrderProjectCheckoutService:
                 "item_count": len(items),
                 "billing_mode": order.billing_mode,
                 "pricing_status": order.pricing_status,
+                "shipping_method_code": order.shipping_method_code,
+                "shipping_amount": f"{order.shipping_amount:.2f}",
+                "tax_amount": f"{order.tax_amount:.2f}",
+                "total_amount": f"{order.total_amount:.2f}",
                 "source": source,
             },
         )

@@ -85,6 +85,13 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
                 order_public_id=order.public_id,
             )
             uploads = list(uploads_qs)
+        from apps.shipping.services.methods import ShippingMethodService
+
+        shipping_ctx = ShippingMethodService().checkout_ui_context(
+            customer=self.customer,
+            order=order,
+            widget="select",
+        )
         return {
             "customer": self.customer,
             "selected_order": order,
@@ -95,6 +102,7 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
             "nav_key": "client-checkout",
             "badge_tone_for_status": badge_tone_for_status,
             "status_label": status_label,
+            **shipping_ctx,
         }
 
 
@@ -230,6 +238,10 @@ class ClientCheckoutSubmitView(ScopedCustomerMixin, View):
                     request.POST.get("billing_mode")
                     or getattr(self.customer, "default_billing_mode", "deferred")
                 ).strip(),
+                shipping_method_code=(
+                    request.POST.get("shipping_method_code") or ""
+                ).strip()
+                or None,
             )
         except ValidationError:
             query = f"{checkout_url}?order={order_public_id}&submit_error=validation"

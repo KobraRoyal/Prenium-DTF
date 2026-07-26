@@ -1,6 +1,23 @@
 from django.contrib import admin
 
-from .models import Shipment
+from .models import Shipment, ShippingMethod
+
+
+@admin.register(ShippingMethod)
+class ShippingMethodAdmin(admin.ModelAdmin):
+    list_display = (
+        "code",
+        "name",
+        "base_price",
+        "currency",
+        "is_pickup",
+        "is_active",
+        "display_order",
+    )
+    list_filter = ("is_active", "is_pickup")
+    search_fields = ("code", "name")
+    ordering = ("display_order", "name")
+    prepopulated_fields = {"code": ("name",)}
 
 
 @admin.register(Shipment)

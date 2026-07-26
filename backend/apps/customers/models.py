@@ -127,6 +127,18 @@ class Customer(BaseModel):
         choices=DefaultShippingMode.choices,
         default=DefaultShippingMode.CARRIER,
     )
+    default_shipping_method = models.ForeignKey(
+        "shipping.ShippingMethod",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="default_for_customers",
+        verbose_name="Option de livraison préférée",
+        help_text=(
+            "Préselection client à la transmission (retrait / standard / express). "
+            "Si vide : dérivée du mode d’acheminement par défaut."
+        ),
+    )
     negotiated_file_preparation_fee_eur = models.DecimalField(
         "Forfait préparation fichier négocié (EUR / fichier)",
         max_digits=10,

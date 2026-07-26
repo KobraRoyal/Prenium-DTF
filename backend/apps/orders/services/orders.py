@@ -337,6 +337,7 @@ class OrderService:
         customer_membership=None,
         source: str = "client_portal",
         billing_mode: str | None = None,
+        shipping_method_code: str | None = None,
     ) -> Order:
         validated_membership = self._validate_customer_actor_scope(
             customer=customer,
@@ -347,6 +348,14 @@ class OrderService:
             customer=customer,
             billing_mode=billing_mode,
         )
+        from apps.shipping.services.methods import ShippingMethodService
+
+        shipping_service = ShippingMethodService()
+        shipping_method = shipping_service.resolve_method_for_customer(
+            customer=customer,
+            shipping_method_code=shipping_method_code,
+        )
+        shipping_snap = shipping_service.snapshot_dict(shipping_method)
 
         with transaction.atomic():
             order = Order.objects.create(
@@ -355,6 +364,11 @@ class OrderService:
                 status=Order.Status.DRAFT,
                 currency="EUR",
                 subtotal_amount=Decimal("0.00"),
+                shipping_method_code=str(shipping_snap["shipping_method_code"]),
+                shipping_method_name=str(shipping_snap["shipping_method_name"]),
+                shipping_amount=shipping_snap["shipping_amount"],
+                tax_rate=Decimal("0.00"),
+                tax_amount=Decimal("0.00"),
                 total_amount=Decimal("0.00"),
                 customer_note=customer_note.strip(),
                 source=source,
@@ -372,6 +386,8 @@ class OrderService:
                     "customer_membership_public_id": str(validated_membership.public_id),
                     "source": source,
                     "billing_mode": resolved_mode,
+                    "shipping_method_code": order.shipping_method_code,
+                    "shipping_amount": f"{order.shipping_amount:.2f}",
                 },
             )
 
@@ -386,6 +402,7 @@ class OrderService:
         customer_membership=None,
         source: str = "client_portal",
         billing_mode: str | None = None,
+        shipping_method_code: str | None = None,
     ) -> Order:
         validated_membership = self._validate_customer_actor_scope(
             customer=customer,
@@ -407,6 +424,16 @@ class OrderService:
             billing_mode=billing_mode if billing_mode is not None else order.billing_mode,
         )
 
+        shipping_snap = None
+        if shipping_method_code is not None:
+            from apps.shipping.services.methods import ShippingMethodService
+
+            method = ShippingMethodService().resolve_method_for_customer(
+                customer=customer,
+                shipping_method_code=shipping_method_code,
+            )
+            shipping_snap = ShippingMethodService().snapshot_dict(method)
+
         with transaction.atomic():
             order_locked = Order.objects.select_for_update().get(pk=order.pk)
             order_locked.status = Order.Status.SUBMITTED
@@ -414,6 +441,17 @@ class OrderService:
             if order_locked.billing_mode != resolved_mode:
                 order_locked.billing_mode = resolved_mode
                 update_fields.append("billing_mode")
+            if shipping_snap is not None:
+                order_locked.shipping_method_code = str(shipping_snap["shipping_method_code"])
+                order_locked.shipping_method_name = str(shipping_snap["shipping_method_name"])
+                order_locked.shipping_amount = shipping_snap["shipping_amount"]
+                update_fields.extend(
+                    [
+                        "shipping_method_code",
+                        "shipping_method_name",
+                        "shipping_amount",
+                    ]
+                )
             order_locked.save(update_fields=update_fields)
 
             from apps.production.services.workflow import ProductionWorkflowService
@@ -429,6 +467,7 @@ class OrderService:
                     "customer_membership_public_id": str(validated_membership.public_id),
                     "source": source,
                     "billing_mode": order_locked.billing_mode,
+                    "shipping_method_code": order_locked.shipping_method_code,
                 },
             )
 

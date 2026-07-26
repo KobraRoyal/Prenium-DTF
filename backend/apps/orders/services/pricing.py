@@ -11,6 +11,7 @@ from apps.auditlog.services import record_event
 from apps.catalog.models import CatalogService
 from apps.customers.models import CustomerBillingProfile
 from apps.orders.models import ZERO_AMOUNT, Order, OrderLine
+from apps.shipping.services.methods import ShippingMethodService
 
 TWOPLACES = Decimal("0.01")
 FOURPLACES = Decimal("0.0001")
@@ -49,37 +50,68 @@ class OrderPricingService:
     (DTF au m², préparation fichier au forfait). Les enregistrements `OrderLine` référencent
     toujours les services catalogue pour l’intitulé / traçabilité ; les montants utilisent les
     montants résolus ci-dessous.
+
+    Ventilation persistée :
+    - ``subtotal_amount`` = HT produit (DTF + préparation)
+    - ``shipping_amount`` = HT port (0 si retrait / sans option)
+    - ``tax_amount`` = TVA 20 % si ``billing_mode=immediate`` (sur HT + port), sinon 0
+      (encours : facturation TVA externalisée mensuelle / bimensuelle)
+    - ``total_amount`` = subtotal + shipping + tax
+      (comptant = TTC Stripe ; encours = HT + port)
     """
 
-    def get_default_dtf_service(self) -> CatalogService:
-        service = (
-            CatalogService.objects.active()
-            .filter(
-                service_type=CatalogService.ServiceType.DTF_TRANSFER,
-                unit=CatalogService.Unit.LINEAR_METER,
-            )
-            .order_by("display_order", "name")
-            .first()
-        )
+    def __init__(self, *, shipping_methods: ShippingMethodService | None = None):
+        self.shipping_methods = shipping_methods or ShippingMethodService()
+
+    def _pick_preferred_catalog_service(
+        self,
+        *,
+        queryset,
+        preferred_codes: list[str],
+        missing_message: str,
+        prefer_seed_fallback: bool = False,
+    ) -> CatalogService:
+        """Choisit un service actif : code préféré (settings) puis ordre catalogue."""
+        active = queryset.order_by("display_order", "name", "code")
+        codes = [str(c).strip() for c in preferred_codes if str(c).strip()]
+        for code in codes:
+            service = active.filter(code=code).first()
+            if service is not None:
+                return service
+        if prefer_seed_fallback:
+            seed = active.filter(code__startswith="seed-").first()
+            if seed is not None:
+                return seed
+        service = active.first()
         if service is None:
-            raise ValidationError("Aucun service DTF au mètre actif dans le catalogue.")
+            raise ValidationError(missing_message)
         return service
 
+    def get_default_dtf_service(self) -> CatalogService:
+        return self._pick_preferred_catalog_service(
+            queryset=CatalogService.objects.active().filter(
+                service_type=CatalogService.ServiceType.DTF_TRANSFER,
+                unit=CatalogService.Unit.LINEAR_METER,
+            ),
+            preferred_codes=list(getattr(settings, "CATALOG_PREFERRED_DTF_CODES", []) or []),
+            missing_message="Aucun service DTF au mètre actif dans le catalogue.",
+            prefer_seed_fallback=False,
+        )
+
     def get_default_file_preparation_service(self) -> CatalogService:
-        service = (
-            CatalogService.objects.active()
-            .filter(
+        return self._pick_preferred_catalog_service(
+            queryset=CatalogService.objects.active().filter(
                 service_type=CatalogService.ServiceType.FILE_PREPARATION,
                 unit=CatalogService.Unit.FIXED,
-            )
-            .order_by("display_order", "name")
-            .first()
-        )
-        if service is None:
-            raise ValidationError(
+            ),
+            preferred_codes=list(
+                getattr(settings, "CATALOG_PREFERRED_FILE_PREP_CODES", []) or []
+            ),
+            missing_message=(
                 "Aucun service « Préparation fichier » (forfait) actif dans le catalogue."
-            )
-        return service
+            ),
+            prefer_seed_fallback=True,
+        )
 
     def resolve_unit_price_per_sqm(self, *, customer) -> Decimal:
         """Prix au m² DTF.
@@ -105,6 +137,33 @@ class OrderPricingService:
         service = self.get_default_file_preparation_service()
         return service.base_price.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
+    def resolve_vat_rate(self, *, billing_mode: str) -> Decimal:
+        if billing_mode == Order.BillingMode.IMMEDIATE:
+            rate = getattr(settings, "ORDER_VAT_RATE_IMMEDIATE", Decimal("0.20"))
+            return Decimal(str(rate)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+        return ZERO_AMOUNT
+
+    def compose_order_totals(
+        self,
+        *,
+        subtotal_ht: Decimal,
+        shipping_ht: Decimal,
+        billing_mode: str,
+    ) -> dict[str, Decimal]:
+        subtotal = subtotal_ht.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        shipping = shipping_ht.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        tax_rate = self.resolve_vat_rate(billing_mode=billing_mode)
+        taxable = (subtotal + shipping).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        tax_amount = (taxable * tax_rate).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        total = (taxable + tax_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        return {
+            "subtotal_amount": subtotal,
+            "shipping_amount": shipping,
+            "tax_rate": tax_rate,
+            "tax_amount": tax_amount,
+            "total_amount": total,
+        }
+
     def estimate_gang_sheet_quote(
         self,
         *,
@@ -112,8 +171,10 @@ class OrderPricingService:
         surface_sqm: Decimal | str | float,
         quantity: int = 1,
         file_count: int = 1,
+        shipping_method_code: str | None = None,
+        billing_mode: str | None = None,
     ) -> dict[str, object]:
-        """Devis HT avant transmission : surface × exemplaires × tarif + forfait fichier."""
+        """Devis avant transmission : produit HT + port + TVA (si comptant)."""
         unit_price = self.resolve_unit_price_per_sqm(customer=customer)
         prep_fee = self.resolve_file_preparation_fee_per_file(customer=customer)
         qty = max(int(quantity or 1), 1)
@@ -124,7 +185,27 @@ class OrderPricingService:
         billable = (surface * Decimal(qty)).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
         dtf_amount = (billable * unit_price).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         prep_amount = (prep_fee * Decimal(files)).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
-        total = (dtf_amount + prep_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        subtotal = (dtf_amount + prep_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+
+        method = self.shipping_methods.resolve_method_for_customer(
+            customer=customer,
+            shipping_method_code=shipping_method_code,
+        )
+        shipping_snap = self.shipping_methods.snapshot_dict(method)
+        resolved_billing = (
+            str(billing_mode).strip().lower()
+            if billing_mode
+            else str(
+                getattr(customer, "default_billing_mode", Order.BillingMode.DEFERRED)
+            )
+            .strip()
+            .lower()
+        )
+        totals = self.compose_order_totals(
+            subtotal_ht=subtotal,
+            shipping_ht=Decimal(str(shipping_snap["shipping_amount"])),
+            billing_mode=resolved_billing,
+        )
         return {
             "surface_sqm": surface,
             "quantity": qty,
@@ -134,7 +215,15 @@ class OrderPricingService:
             "dtf_amount_eur": dtf_amount,
             "prep_fee_eur": prep_fee,
             "prep_amount_eur": prep_amount,
-            "total_eur": total,
+            "subtotal_eur": totals["subtotal_amount"],
+            "shipping_method_code": shipping_snap["shipping_method_code"],
+            "shipping_method_name": shipping_snap["shipping_method_name"],
+            "shipping_amount_eur": totals["shipping_amount"],
+            "shipping_is_pickup": shipping_snap["shipping_is_pickup"],
+            "tax_rate": totals["tax_rate"],
+            "tax_amount_eur": totals["tax_amount"],
+            "total_eur": totals["total_amount"],
+            "billing_mode": resolved_billing,
             "currency": "EUR",
         }
 
@@ -247,9 +336,7 @@ class OrderPricingService:
 
         if len(uploads) == 1:
             qty = Decimal(max(int(uploads[0].quantity or 1), 1))
-            shares = [
-                (total_sqm * qty).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
-            ]
+            shares = [(total_sqm * qty).quantize(FOURPLACES, rounding=ROUND_HALF_UP)]
         else:
             share = (total_sqm / Decimal(len(uploads))).quantize(
                 FOURPLACES,
@@ -258,9 +345,7 @@ class OrderPricingService:
             shares = []
             for upload in uploads:
                 qty = Decimal(max(int(upload.quantity or 1), 1))
-                shares.append(
-                    (share * qty).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
-                )
+                shares.append((share * qty).quantize(FOURPLACES, rounding=ROUND_HALF_UP))
 
         for upload, share in zip(uploads, shares, strict=True):
             upload.meterage_override_sqm = max(share, Decimal("0.0001"))
@@ -355,12 +440,18 @@ class OrderPricingService:
                 line_total_eur=None,
             )
             locked.subtotal_amount = ZERO_AMOUNT
+            locked.shipping_amount = ZERO_AMOUNT
+            locked.tax_rate = ZERO_AMOUNT
+            locked.tax_amount = ZERO_AMOUNT
             locked.total_amount = ZERO_AMOUNT
             locked.pricing_status = Order.PricingStatus.PENDING
             locked.credit_hold_status = Order.CreditHoldStatus.NONE
             locked.save(
                 update_fields=[
                     "subtotal_amount",
+                    "shipping_amount",
+                    "tax_rate",
+                    "tax_amount",
                     "total_amount",
                     "pricing_status",
                     "credit_hold_status",
@@ -424,7 +515,16 @@ class OrderPricingService:
             rounding=ROUND_HALF_UP,
         )
         subtotal = (dtf_subtotal + prep_line_total).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
-        credit_hold = self.evaluate_credit_hold(order=order, priced_total=subtotal)
+        shipping_ht = self.shipping_methods.resolve_shipping_amount_for_order(order)
+        totals = self.compose_order_totals(
+            subtotal_ht=subtotal,
+            shipping_ht=shipping_ht,
+            billing_mode=order.billing_mode,
+        )
+        credit_hold = self.evaluate_credit_hold(
+            order=order,
+            priced_total=totals["total_amount"],
+        )
 
         with transaction.atomic():
             order_locked = Order.objects.select_for_update().get(pk=order.pk)
@@ -469,14 +569,20 @@ class OrderPricingService:
                 line_total=prep_line_total,
             )
 
-            order_locked.subtotal_amount = subtotal
-            order_locked.total_amount = subtotal
+            order_locked.subtotal_amount = totals["subtotal_amount"]
+            order_locked.shipping_amount = totals["shipping_amount"]
+            order_locked.tax_rate = totals["tax_rate"]
+            order_locked.tax_amount = totals["tax_amount"]
+            order_locked.total_amount = totals["total_amount"]
             order_locked.currency = dtf_service.currency
             order_locked.pricing_status = Order.PricingStatus.PRICED
             order_locked.credit_hold_status = credit_hold
             order_locked.save(
                 update_fields=[
                     "subtotal_amount",
+                    "shipping_amount",
+                    "tax_rate",
+                    "tax_amount",
                     "total_amount",
                     "currency",
                     "pricing_status",
@@ -495,7 +601,12 @@ class OrderPricingService:
             metadata={
                 "order_public_id": str(order.public_id),
                 "customer_public_id": str(order.customer.public_id),
-                "subtotal": f"{subtotal:.2f}",
+                "subtotal": f"{totals['subtotal_amount']:.2f}",
+                "shipping_amount": f"{totals['shipping_amount']:.2f}",
+                "shipping_method_code": order.shipping_method_code or "",
+                "tax_rate": f"{totals['tax_rate']:.4f}",
+                "tax_amount": f"{totals['tax_amount']:.2f}",
+                "total": f"{totals['total_amount']:.2f}",
                 "dtf_subtotal": f"{dtf_subtotal:.2f}",
                 "file_preparation_line_total": f"{prep_line_total:.2f}",
                 "file_preparation_fee_per_file": f"{prep_fee_per_file:.2f}",

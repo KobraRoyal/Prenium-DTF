@@ -105,7 +105,13 @@
         —
         {% endif %}
       </strong>
-      <small>{{ order.pricing_status|human_status }}</small>
+      <small>
+        {% if order.pricing_status == "priced" %}
+          HT {{ order.subtotal_amount }}{% if order.shipping_amount %} · Port {{ order.shipping_amount }}{% endif %}{% if order.tax_amount %} · TVA {{ order.tax_amount }}{% endif %}
+        {% else %}
+          {{ order.pricing_status|human_status }}
+        {% endif %}
+      </small>
     </article>
     <article>
       <span>Paiement</span>
