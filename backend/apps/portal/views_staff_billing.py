@@ -89,7 +89,10 @@ class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
             response = render(request, "components/portal/staff_meterage_section.html", ctx)
         else:
             response = render(request, self.template_name, self._billing_context(request))
-        return with_toast(response, "Métrage linéaire commande enregistré.", "success")
+        toast_msg = "Métrage enregistré."
+        if self.order.pricing_status == "priced":
+            toast_msg = "Métrage enregistré — tarif recalculé et visible côté client."
+        return with_toast(response, toast_msg, "success")
 
     def _meterage_partial_context(self, request, *, form_error: str, hx_target_id: str):
         """Contexte pour le fragment métrage (HTMX) : cible du formulaire

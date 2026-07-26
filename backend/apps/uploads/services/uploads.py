@@ -491,6 +491,12 @@ class OrderUploadService:
             },
         )
         order.refresh_from_db()
+        if order.status == Order.Status.SUBMITTED and order.uploads.exists():
+            return self.pricing_service.compute_and_persist_order_pricing(
+                order=order,
+                actor=actor,
+                source="staff_portal.order_meterage_linear_auto",
+            )
         return order
 
     def set_staff_meterage_override(

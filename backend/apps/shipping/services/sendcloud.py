@@ -66,7 +66,9 @@ class SendcloudConfigurationError(Exception):
 
 
 class SendcloudAPIError(Exception):
-    pass
+    def __init__(self, message: str, *, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def get_sendcloud_webhook_secret() -> str:
@@ -333,7 +335,10 @@ class SendcloudGateway:
                     return {"data": parsed}
                 raise SendcloudAPIError("Unexpected Sendcloud response payload.")
         except error.HTTPError as exc:
-            raise SendcloudAPIError(self._build_api_error_message(exc)) from exc
+            raise SendcloudAPIError(
+                self._build_api_error_message(exc),
+                status_code=int(exc.code),
+            ) from exc
         except error.URLError as exc:
             raise SendcloudAPIError("Unable to reach Sendcloud.") from exc
 
@@ -551,30 +556,12 @@ class ShipmentService:
             )
 
         gateway = self._get_gateway()
-        parcel_id = str(shipment.sendcloud_parcel_id or "").strip()
         try:
-            if parcel_id:
-                parcel_payload = gateway.fetch_parcel(parcel_id=parcel_id)
-            else:
-                parcels = gateway.find_parcels_for_order_number(
-                    order_number=short_public_ref(order.public_id),
-                )
-                if not parcels:
-                    parcels = gateway.find_parcels_for_order_number(
-                        order_number=str(order.public_id),
-                    )
-                if not parcels:
-                    raise ValidationError(
-                        "Aucun colis Sendcloud pour cette commande. "
-                        "Générez d'abord l'étiquette dans le panneau Sendcloud."
-                    )
-                parcel_payload = parcels[0]
-                linked_parcel_id = str(parcel_payload.get("id", "")).strip()
-                if linked_parcel_id:
-                    with transaction.atomic():
-                        shipment = Shipment.objects.select_for_update().get(pk=shipment.pk)
-                        shipment.sendcloud_parcel_id = linked_parcel_id
-                        shipment.save(update_fields=["sendcloud_parcel_id", "updated_at"])
+            shipment, parcel_payload = self._resolve_parcel_for_tracking_sync(
+                gateway=gateway,
+                order=order,
+                shipment=shipment,
+            )
         except (SendcloudAPIError, SendcloudConfigurationError) as exc:
             raise ValidationError(self._sanitize_error_message(str(exc))) from exc
 
@@ -585,6 +572,43 @@ class ShipmentService:
             source=source,
             audit_action="shipping.shipment_tracking_synced",
         )
+
+    def _resolve_parcel_for_tracking_sync(self, *, gateway, order, shipment):
+        """Résout le payload colis Sendcloud pour un refresh de suivi.
+
+        Priorité : GET /parcels/{id} si un parcel_id est connu. En cas de 404
+        (id obsolète / id commande stocké par erreur), retombe sur la recherche
+        par order_number puis religue le bon parcel_id.
+        """
+        parcel_id = str(shipment.sendcloud_parcel_id or "").strip()
+        if parcel_id:
+            try:
+                return shipment, gateway.fetch_parcel(parcel_id=parcel_id)
+            except SendcloudAPIError as exc:
+                if getattr(exc, "status_code", None) != 404:
+                    raise
+
+        parcels = gateway.find_parcels_for_order_number(
+            order_number=short_public_ref(order.public_id),
+        )
+        if not parcels:
+            parcels = gateway.find_parcels_for_order_number(
+                order_number=str(order.public_id),
+            )
+        if not parcels:
+            raise ValidationError(
+                "Aucun colis Sendcloud pour cette commande. "
+                "Générez d'abord l'étiquette dans le panneau Sendcloud."
+            )
+
+        parcel_payload = parcels[0]
+        linked_parcel_id = str(parcel_payload.get("id", "")).strip()
+        if linked_parcel_id and linked_parcel_id != parcel_id:
+            with transaction.atomic():
+                shipment = Shipment.objects.select_for_update().get(pk=shipment.pk)
+                shipment.sendcloud_parcel_id = linked_parcel_id
+                shipment.save(update_fields=["sendcloud_parcel_id", "updated_at"])
+        return shipment, parcel_payload
 
     def apply_parcel_status_webhook(
         self,
@@ -843,8 +867,28 @@ class ShipmentService:
         )
         if became_shipped:
             from apps.notifications.services.transactional import schedule_order_shipped_email
+            from apps.production.models import ProductionJob
 
             schedule_order_shipped_email(order_public_id=order.public_id)
+            try:
+                production_job = order.production_job
+            except ProductionJob.DoesNotExist:
+                production_job = None
+            if (
+                production_job is not None
+                and production_job.status == ProductionJob.Status.READY_TO_SHIP
+            ):
+                try:
+                    self.production_workflow_service.transition_job(
+                        order_public_id=order.public_id,
+                        to_status=ProductionJob.Status.COMPLETED,
+                        actor=actor,
+                        source=source,
+                        reason="Expédition Sendcloud confirmée (remise transporteur).",
+                    )
+                except ValidationError:
+                    # Ne bloque pas le sync suivi si la transition atelier est refusée.
+                    pass
         return order, shipment
 
     def _extract_order_refs_from_parcel(self, parcel: dict[str, object]) -> list[str]:

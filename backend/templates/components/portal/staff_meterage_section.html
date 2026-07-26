@@ -12,7 +12,7 @@
   {% endif %}
   {% if order.pricing_status == "priced" %}
   <div class="alert alert--info staff-meterage-section__alert text-sm" role="status">
-    <p class="m-0">Un nouveau métrage annule le tarif en cours — relancez <strong>Calculer le prix</strong> en tête de fiche.</p>
+    <p class="m-0">Un nouveau métrage recalcule automatiquement le tarif affiché au client.</p>
   </div>
   {% endif %}
   {% if can_set_meterage_override %}

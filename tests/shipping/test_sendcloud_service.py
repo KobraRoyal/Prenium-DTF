@@ -88,8 +88,16 @@ def build_shipment_payload():
 
 
 class FakeSendcloudGateway:
-    def __init__(self, *, should_fail: bool = False):
+    def __init__(
+        self,
+        *,
+        should_fail: bool = False,
+        fetch_parcel_error: SendcloudAPIError | None = None,
+        parcels_by_order_number: dict | None = None,
+    ):
         self.should_fail = should_fail
+        self.fetch_parcel_error = fetch_parcel_error
+        self.parcels_by_order_number = parcels_by_order_number or {}
         self.last_payload = None
 
     def build_order_payload(self, *, order, shipment_request):
@@ -112,9 +120,11 @@ class FakeSendcloudGateway:
         )
 
     def find_parcels_for_order_number(self, *, order_number: str):
-        return []
+        return list(self.parcels_by_order_number.get(str(order_number), []))
 
     def fetch_parcel(self, *, parcel_id: str):
+        if self.fetch_parcel_error is not None:
+            raise self.fetch_parcel_error
         return {
             "id": parcel_id,
             "tracking_number": "TRK-UPDATED",
@@ -201,6 +211,94 @@ def test_sync_shipment_tracking_updates_carrier_fields():
         action="shipping.shipment_tracking_synced",
         target_public_id=shipment.public_id,
     ).exists()
+    from apps.production.models import ProductionJob
+
+    assert ProductionJob.objects.get(order=order).status == ProductionJob.Status.COMPLETED
+
+
+@pytest.mark.django_db
+def test_sync_tracking_falls_back_when_stored_parcel_id_is_404():
+    from apps.core.public_refs import short_public_ref
+
+    actor, customer, _membership = create_customer_scope("sync-404@example.com", "Acme")
+    staff_user = get_user_model().objects.create_user(
+        email="staff-sync-404@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    order = create_order(customer, actor)
+    mark_order_ready_to_ship(order)
+    short_ref = short_public_ref(order.public_id)
+    gateway = FakeSendcloudGateway(
+        fetch_parcel_error=SendcloudAPIError(
+            "Sendcloud request failed with HTTP 404.",
+            status_code=404,
+        ),
+        parcels_by_order_number={
+            short_ref: [
+                {
+                    "id": "parcel-real-999",
+                    "tracking_number": "TRK-FALLBACK",
+                    "tracking_url": "https://tracking.example.test/TRK-FALLBACK",
+                    "status": {"code": "EN_ROUTE", "message": "En transit"},
+                }
+            ]
+        },
+    )
+    service = ShipmentService(gateway=gateway)
+    _order, shipment = service.create_shipment(
+        order_public_id=order.public_id,
+        actor=staff_user,
+        source="test",
+        payload=build_shipment_payload(),
+    )
+    shipment.sendcloud_parcel_id = "stale-or-order-id"
+    shipment.save(update_fields=["sendcloud_parcel_id", "updated_at"])
+
+    _order, shipment = service.sync_shipment_tracking_from_sendcloud(
+        order_public_id=order.public_id,
+        actor=staff_user,
+        source="test",
+    )
+
+    assert shipment is not None
+    assert shipment.sendcloud_parcel_id == "parcel-real-999"
+    assert shipment.tracking_number == "TRK-FALLBACK"
+    assert shipment.sendcloud_status_code == "EN_ROUTE"
+
+
+@pytest.mark.django_db
+def test_sync_tracking_still_raises_non_404_fetch_errors():
+    actor, customer, _membership = create_customer_scope("sync-500@example.com", "Acme")
+    staff_user = get_user_model().objects.create_user(
+        email="staff-sync-500@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    order = create_order(customer, actor)
+    mark_order_ready_to_ship(order)
+    gateway = FakeSendcloudGateway(
+        fetch_parcel_error=SendcloudAPIError(
+            "Sendcloud request failed with HTTP 500.",
+            status_code=500,
+        ),
+    )
+    service = ShipmentService(gateway=gateway)
+    _order, shipment = service.create_shipment(
+        order_public_id=order.public_id,
+        actor=staff_user,
+        source="test",
+        payload=build_shipment_payload(),
+    )
+    shipment.sendcloud_parcel_id = "any-id"
+    shipment.save(update_fields=["sendcloud_parcel_id", "updated_at"])
+
+    with pytest.raises(ValidationError, match="HTTP 500"):
+        service.sync_shipment_tracking_from_sendcloud(
+            order_public_id=order.public_id,
+            actor=staff_user,
+            source="test",
+        )
 
 
 @pytest.mark.django_db

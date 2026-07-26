@@ -170,6 +170,11 @@ def test_sendcloud_webhook_updates_tracking_and_notifies_once():
         action="shipping.shipment_tracking_synced",
         target_public_id=shipment.public_id,
     ).exists()
+    from apps.production.models import ProductionJob
+
+    job = ProductionJob.objects.get(order=order)
+    assert job.status == ProductionJob.Status.COMPLETED
+    assert job.completed_at is not None
 
 
 @pytest.mark.django_db
