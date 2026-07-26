@@ -1,5 +1,5 @@
 {% load l10n %}
-<fieldset class="b2b-support-color{% if exact_color_required %} is-exact-required{% endif %}" data-support-color-field data-support-color-required{% if exact_color_required %} data-support-color-exact-required{% endif %}>
+<fieldset class="b2b-support-color{% if exact_color_required %} is-exact-required{% endif %}" data-support-color-field data-support-color-required{% if exact_color_required %} data-support-color-thin-alert{% endif %}>
   <legend class="product-form-label">
     Couleur du support <span class="b2b-support-color__badge">Obligatoire</span>
   </legend>
@@ -7,27 +7,22 @@
   {% if exact_color_required %}
   <p class="b2b-support-color__alert">
     <strong>Détails sous 0,5 mm détectés.</strong>
-    Indiquez la couleur unie exacte du textile : l’atelier ajoutera un contour assorti pour préserver ces zones rouges.
+    Sélectionnez Multicouleur ou la couleur du textile : cela permet d’optimiser la base blanche pour améliorer le toucher.
   </p>
-  <p class="b2b-support-color__required-hint">Le contour peut être légèrement visible si la couleur du textile n’est pas correctement sélectionnée.</p>
+  <p class="b2b-support-color__required-hint">Sans cette indication, l’atelier ne peut pas ajuster correctement la sous-couche blanche sur les zones fines.</p>
   {% endif %}
   <div class="b2b-support-color__choices">
     <button
       type="button"
-      class="b2b-swatch-btn b2b-swatch-btn--rainbow b2b-support-color-rainbow{% if item and item.support_color_is_multicolor and not exact_color_required %} is-active{% endif %}"
+      class="b2b-swatch-btn b2b-swatch-btn--rainbow b2b-support-color-rainbow{% if item and item.support_color_is_multicolor %} is-active{% endif %}"
       data-support-color-multicolor
-      aria-pressed="{% if item and item.support_color_is_multicolor and not exact_color_required %}true{% else %}false{% endif %}"
+      aria-pressed="{% if item and item.support_color_is_multicolor %}true{% else %}false{% endif %}"
       aria-label="Support multicolore"
       title="Multicolore"
-      {% if exact_color_required %}disabled{% endif %}
     ></button>
     {% if item %}
       {% if item.support_color_is_multicolor %}
-        {% if exact_color_required %}
-          {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color="#ffffff" %}
-        {% else %}
-          {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color="#ffffff" disabled=1 %}
-        {% endif %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color="#ffffff" disabled=1 %}
       {% elif item.support_color_hex %}
         {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color=item.support_color_hex selected=1 %}
       {% else %}
@@ -51,12 +46,12 @@
         value="{% if item and item.support_color_hex and not item.support_color_is_multicolor %}{{ item.support_color_hex|upper }}{% endif %}"
         pattern="#[0-9A-Fa-f]{6}"
         required aria-required="true"
-        {% if item and item.support_color_is_multicolor and not exact_color_required %}readonly{% endif %}
+        {% if item and item.support_color_is_multicolor %}readonly{% endif %}
       >
     </label>
   </div>
   <p class="b2b-support-color__status" data-support-color-status aria-live="polite">
-    {% if item and item.support_color_is_multicolor and not exact_color_required %}
+    {% if item and item.support_color_is_multicolor %}
       Multicouleur sélectionné
     {% elif item and item.support_color_hex and not item.support_color_is_multicolor %}
       Couleur {{ item.support_color_hex|upper }} sélectionnée
@@ -67,7 +62,7 @@
   <input
     type="hidden"
     name="support_color_multicolor"
-    value="{% if item and item.support_color_is_multicolor and not exact_color_required %}on{% endif %}"
+    value="{% if item and item.support_color_is_multicolor %}on{% endif %}"
     data-support-color-multicolor-input
   >
 </fieldset>

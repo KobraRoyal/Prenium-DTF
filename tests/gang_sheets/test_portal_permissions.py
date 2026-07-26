@@ -1144,12 +1144,30 @@ def test_client_cannot_download_generated_production_asset_from_order_project(cl
             "action": "confirm-analysis",
         },
     )
-    invalid_confirmation_response = client.post(
+    multicolor_confirmation_response = client.post(
         confirmation_url,
         {
             "confirm_analysis": "on",
             "support_color_hex": "#multicolor",
         },
+    )
+    item.refresh_from_db()
+    assert multicolor_confirmation_response.status_code == 200
+    assert item.support_color_hex == "#multicolor"
+    assert item.client_confirmed_asset_version == version
+
+    item.client_confirmed_asset_version = None
+    item.client_confirmed_at = None
+    item.client_confirmed_by = None
+    item.support_color_hex = ""
+    item.save(
+        update_fields=[
+            "client_confirmed_asset_version",
+            "client_confirmed_at",
+            "client_confirmed_by",
+            "support_color_hex",
+            "updated_at",
+        ]
     )
     confirmation_response = client.post(
         confirmation_url,
@@ -1191,13 +1209,10 @@ def test_client_cannot_download_generated_production_asset_from_order_project(cl
     assert "Zones sous 0,5 mm affichées" in detail_content
     assert "Semi-transparences affichées" in detail_content
     assert "Couleur du support obligatoire" in detail_content
-    assert "Indiquez la couleur unie exacte du textile" in detail_content
+    assert "optimiser la base blanche" in detail_content
+    assert "améliorer le toucher" in detail_content
+    assert "Indiquez la couleur unie exacte du textile" not in detail_content
     assert "Valider pour commander" in detail_content
-    assert invalid_confirmation_response.status_code == 400
-    assert (
-        "Indiquez la couleur unie exacte du support"
-        in invalid_confirmation_response.content.decode()
-    )
     assert confirmation_response.status_code == 200
     assert item.support_color_hex == "#112233"
     assert item.client_confirmed_asset_version == version

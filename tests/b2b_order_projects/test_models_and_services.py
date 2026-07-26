@@ -216,7 +216,7 @@ def test_analysis_confirmation_requires_an_explicit_support_color_choice():
 
 
 @pytest.mark.django_db
-def test_thin_details_require_an_exact_solid_support_color_before_confirmation():
+def test_thin_details_accept_multicolor_or_exact_support_color_before_confirmation():
     user, customer, _membership = customer_scope("thin-color@example.com")
     service = B2BOrderProjectService()
     project = service.create_project(
@@ -244,17 +244,34 @@ def test_thin_details_require_an_exact_solid_support_color_before_confirmation()
             actor=user,
             source="test",
         )
-    assert missing.value.code == "SUPPORT_COLOR_REQUIRED_FOR_THIN_DETAILS"
+    assert missing.value.code == "SUPPORT_COLOR_REQUIRED"
+    assert "base blanche" in missing.value.message.lower() or "toucher" in missing.value.message.lower() or "Multicouleur" in missing.value.message
 
-    with pytest.raises(ProjectDomainError) as multicolor:
-        service.confirm_item_analysis(
-            project=project,
-            item_public_id=item.public_id,
-            actor=user,
-            data={"support_color_multicolor": "on"},
-            source="test",
-        )
-    assert multicolor.value.code == "SUPPORT_COLOR_REQUIRED_FOR_THIN_DETAILS"
+    confirmed_multicolor = service.confirm_item_analysis(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        data={"support_color_multicolor": "on"},
+        source="test",
+    )
+    assert confirmed_multicolor.support_color_hex == "#multicolor"
+    assert confirmed_multicolor.client_confirmed_asset_version == version
+
+    # Reset confirmation to also validate solid hex path.
+    item.refresh_from_db()
+    item.client_confirmed_asset_version = None
+    item.client_confirmed_at = None
+    item.client_confirmed_by = None
+    item.support_color_hex = ""
+    item.save(
+        update_fields=[
+            "client_confirmed_asset_version",
+            "client_confirmed_at",
+            "client_confirmed_by",
+            "support_color_hex",
+            "updated_at",
+        ]
+    )
 
     confirmed = service.confirm_item_analysis(
         project=project,

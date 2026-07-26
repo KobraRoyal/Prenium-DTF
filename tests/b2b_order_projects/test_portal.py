@@ -300,7 +300,10 @@ def test_visual_validation_starts_without_support_color_and_requires_a_choice():
     missing = client.post(confirm_url, payload, HTTP_HX_REQUEST="true")
     assert missing.status_code == 400
     assert json.loads(missing.headers["X-Prenium-Toast"]) == {
-        "message": "Sélectionnez Multicouleur ou choisissez la couleur du support.",
+        "message": (
+            "Sélectionnez Multicouleur ou la couleur du support "
+            "(utile pour optimiser la base blanche et le toucher)."
+        ),
         "variant": "error",
     }
 
@@ -375,13 +378,16 @@ def test_thin_zone_overlay_is_visible_and_tenant_scoped_in_validation_modal():
     assert "Zones sous 0,5 mm affichées" in content
     assert "data-thin-zone-overlay" in content
     assert "Couleur du support obligatoire" in content
-    assert "légèrement visible si la couleur du textile" in content
+    assert "optimiser la base blanche" in content
+    assert "améliorer le toucher" in content
+    assert "légèrement visible si la couleur du textile" not in content
     assert "Sans cette couleur" not in content
     assert "data-preview-zoom-in" in content
     assert "data-preview-zoom-out" in content
     assert "data-preview-zoom-reset" in content
     assert "data-support-color-required" in content
-    assert "data-support-color-exact-required" in content
+    assert "data-support-color-thin-alert" in content
+    assert "data-support-color-exact-required" not in content
     assert 'name="support_color_hex"' in content
     assert 'required aria-required="true"' in content
     assert overlay_url in content
@@ -409,10 +415,39 @@ def test_thin_zone_overlay_is_visible_and_tenant_scoped_in_validation_modal():
     )
     assert missing_color.status_code == 400
     toast = json.loads(missing_color.headers["X-Prenium-Toast"])
-    assert toast == {
-        "message": "Indiquez la couleur unie exacte du support pour préserver les détails fins.",
-        "variant": "error",
-    }
+    assert toast["variant"] == "error"
+    assert "Multicouleur" in toast["message"] or "base blanche" in toast["message"]
+
+    confirmed_multicolor = client.post(
+        confirm_url,
+        {
+            "confirm_analysis": "on",
+            "name": item.name,
+            "width_mm": str(item.width_mm),
+            "height_mm": str(item.height_mm),
+            "quantity": str(item.quantity),
+            "support_color_multicolor": "on",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert confirmed_multicolor.status_code == 200
+    item.refresh_from_db()
+    assert item.support_color_hex == "#multicolor"
+
+    # Reset confirmation to also cover solid hex.
+    item.client_confirmed_asset_version = None
+    item.client_confirmed_at = None
+    item.client_confirmed_by = None
+    item.support_color_hex = ""
+    item.save(
+        update_fields=[
+            "client_confirmed_asset_version",
+            "client_confirmed_at",
+            "client_confirmed_by",
+            "support_color_hex",
+            "updated_at",
+        ]
+    )
 
     confirmed = client.post(
         confirm_url,

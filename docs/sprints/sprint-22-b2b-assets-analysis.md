@@ -67,8 +67,8 @@ perdre l'historique et d'obtenir une analyse technique avant transmission à IDS
   stockage exposé, avec test d'accès croisé entre clients.
 - [x] zoom de l'aperçu de 100 à 400 %, avec conservation de la zone observée, défilement dans le
   cadre et remise à zéro accessible sur desktop comme sur mobile ;
-- [x] couleur unie exacte du support obligatoire côté service lorsqu'un détail sous 0,5 mm est
-  détecté ; le choix multicolore est refusé et la règle est expliquée avant confirmation.
+- [x] Multicolore **ou** couleur hex obligatoire côté service lorsqu'un détail sous 0,5 mm est
+  détecté ; message UX sur l’optimisation de la base blanche / toucher (fichier + Gang Sheet).
 - [x] remplacement du fichier limité à l'état `pending` : l'action reste disponible avant le
   démarrage de l'analyse, puis disparaît dès que l'analyse commence et le service refuse toute
   tentative directe ultérieure ; la modale ouverte est conservée pendant le polling HTMX.
@@ -106,9 +106,9 @@ blanc identifiable, le document complet est traité comme surface imprimée. Le 
 calculé depuis les dimensions de page/artboard, les DPI intégrés ou, à défaut, la même base 300 DPI
 que le dimensionnement automatique.
 
-Lorsqu'une zone fine est détectée, l'atelier doit pouvoir ajouter un contour assorti au support
-pour préserver le détail au pressage. La confirmation exige donc une couleur unie explicite au
-format HEX ; une valeur absente, multicolore ou invalide est refusée côté serveur.
+Lorsqu'une zone fine est détectée, la confirmation exige un choix explicite entre `Multicouleur`
+et une couleur unie HEX : l’indication sert à optimiser la base blanche pour le toucher. Une
+valeur absente ou invalide est refusée côté serveur.
 
 Pour tous les autres visuels, la couleur support démarre sans sélection. La confirmation exige
 ensuite un choix explicite entre `Multicouleur` et une couleur unie saisie au color picker. Revenir

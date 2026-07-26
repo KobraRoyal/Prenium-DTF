@@ -245,7 +245,7 @@
 - [x] UX `Nouvelle commande` allégée : mode masqué, aperçu PDF local transparent et non rogné via PDF.js, actualisation HTMX ciblée des miniatures sans rechargement de page
 - [x] Validation technique client : dimensions et DPI asynchrones, diagnostic résolution 300/200 DPI, alertes visibles et confirmation versionnée obligatoire avant transmission
 - [x] Contrôle DTF des détails fins : zones imprimées sous 0,5 mm détectées en tâche asynchrone, surlignées en rouge dans la modale et servies par overlay privé tenant-scoped
-- [x] Contrôle des détails fins renforcé : zoom 100–400 % dans l'aperçu et couleur unie exacte du support obligatoire avant validation afin de préparer le contour atelier
+- [x] Contrôle des détails fins : zoom 100–400 % dans l'aperçu ; Multicolore **ou** couleur hex obligatoire pour optimiser la base blanche / toucher
 - [x] Faux positifs de semi-transparence supprimés sur les fichiers 100 % vectoriels : l'anticrénelage du rendu d'aperçu n'est plus confondu avec une transparence source, tandis que les documents mixtes restent contrôlés
 - [x] Validation du correctif vectoriel : 123 tests `uploads` + projets B2B passés, lint/formatage OK, check Django OK et aucune migration requise
 - [x] Couleur support à la validation : état `None` par défaut, choix obligatoire Multicouleur/HEX, retour à vide sans faux blanc et consigne transmise au contrôle Atelier

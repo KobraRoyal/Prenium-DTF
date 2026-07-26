@@ -262,17 +262,13 @@ class B2BOrderProjectService:
                     setattr(item, field, value)
                     changed.append(field)
 
-        if self._has_thin_details(version) and (
-            not item.support_color_hex or item.support_color_is_multicolor
-        ):
-            raise ProjectDomainError(
-                "SUPPORT_COLOR_REQUIRED_FOR_THIN_DETAILS",
-                "Indiquez la couleur unie exacte du support pour préserver les détails fins.",
-            )
+        # Détails < 0,5 mm : Multicolore OU couleur hex restent acceptés.
+        # La sélection sert à optimiser la base blanche (toucher), pas à forcer un uni.
         if not item.support_color_hex:
             raise ProjectDomainError(
                 "SUPPORT_COLOR_REQUIRED",
-                "Sélectionnez Multicouleur ou choisissez la couleur du support.",
+                "Sélectionnez Multicouleur ou la couleur du support "
+                "(utile pour optimiser la base blanche et le toucher).",
             )
 
         item.client_confirmed_asset_version = version
@@ -300,12 +296,6 @@ class B2BOrderProjectService:
         )
         self._refresh_completeness(locked)
         return item
-
-    @staticmethod
-    def _has_thin_details(version) -> bool:
-        analysis = getattr(version, "analysis", None)
-        metadata = (analysis.metadata or {}) if analysis is not None else {}
-        return bool((metadata.get("thin_zone") or {}).get("detected"))
 
     @transaction.atomic
     def delete_item(self, *, project, item_public_id, actor, source: str) -> None:
