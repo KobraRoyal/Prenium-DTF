@@ -197,7 +197,7 @@ Chaque rôle doit avoir :
 - [ ] secrets hors repo
 - [ ] fichiers protégés par backend ou URLs signées
 - [ ] logs d’audit sur actions critiques
-- [ ] stratégie de sauvegarde documentée
+- [x] stratégie de sauvegarde documentée
 - [ ] politique de rétention définie
 - [ ] revue sécurité avant mise en production
 
@@ -747,7 +747,7 @@ Aucune donnée sensible ne doit être accessible sans vérification explicite de
 - [ ] choix du design system
 - [ ] méthode exacte d’authentification staff renforcée
 - [ ] hébergement cible
-- [ ] stratégie de sauvegarde
+- [x] stratégie de sauvegarde
 - [ ] stratégie antivirus fichiers
 - [ ] méthode exacte de génération OF
 - [ ] politiques de rétention des fichiers

@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     restart: unless-stopped
     env_file:
       - .env
@@ -14,7 +14,7 @@ services:
       start_period: 10s
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
     restart: unless-stopped
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     healthcheck:
@@ -26,10 +26,14 @@ services:
 
   web:
     container_name: preniumdtf-web
+    image: prenium-dtf-backend-prod:${APP_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: infra/docker/backend/Dockerfile
       target: prod
+      args:
+        APP_REVISION: ${APP_REVISION:-unknown}
+        APP_VERSION: ${APP_IMAGE_TAG:-local}
     restart: unless-stopped
     env_file:
       - .env
@@ -37,15 +41,13 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.prod
       DJANGO_STATIC_ROOT: ${DJANGO_STATIC_ROOT:-/var/app/static}
       DJANGO_MEDIA_ROOT: ${DJANGO_MEDIA_ROOT:-/var/app/media}
+      DJANGO_SECURE_SSL_REDIRECT: "True"
+      DJANGO_SESSION_COOKIE_SECURE: "True"
+      DJANGO_CSRF_COOKIE_SECURE: "True"
     command: ["sh", "infra/scripts/web-entrypoint.sh"]
     volumes:
       - django_static:/var/app/static
       - django_media:/var/app/media
-      - ./backend/static_src:/app/backend/static_src:ro
-      - ./backend/templates:/app/backend/templates:ro
-      - ./infra/scripts/web-entrypoint.sh:/app/infra/scripts/web-entrypoint.sh:ro
-      - ./backend/config/urls.py:/app/backend/config/urls.py:ro
-      - ./backend/apps/core/views.py:/app/backend/apps/core/views.py:ro
     depends_on:
       db:
         condition: service_healthy
@@ -62,10 +64,7 @@ services:
       start_period: 120s
 
   worker:
-    build:
-      context: .
-      dockerfile: infra/docker/backend/Dockerfile
-      target: prod
+    image: prenium-dtf-backend-prod:${APP_IMAGE_TAG:-local}
     restart: unless-stopped
     env_file:
       - .env
@@ -93,10 +92,7 @@ services:
       start_period: 30s
 
   beat:
-    build:
-      context: .
-      dockerfile: infra/docker/backend/Dockerfile
-      target: prod
+    image: prenium-dtf-backend-prod:${APP_IMAGE_TAG:-local}
     restart: unless-stopped
     env_file:
       - .env
@@ -123,10 +119,9 @@ services:
     restart: unless-stopped
     depends_on:
       web:
-        condition: service_started
+        condition: service_healthy
     volumes:
-      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./infra/nginx/prenium-static:/usr/share/nginx/prenium-static:ro
+      - django_static:/usr/share/nginx/prenium-static:ro
     ports:
       - "${NGINX_PORT:-8080}:80"
     healthcheck:

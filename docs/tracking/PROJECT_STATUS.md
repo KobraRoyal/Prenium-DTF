@@ -337,3 +337,18 @@
 - [x] Validateur autonome, tests contractuels, hook pre-commit et étape CI intégrés
 - [x] Runtime Goose existant conservé sans modification
 - [x] Validation complète : contrats, Django, migrations et 478 tests passés
+
+## Sprint 34 — Audit et fiabilité production (2026-08-11)
+
+- [x] Celery Beat fiabilisé contre les PID périmés
+- [x] Runtime production immuable et image backend unique traçable par SHA
+- [x] Données, sauvegardes, secrets et sorties locales exclus des images
+- [x] Séparation localhost/prod corrigée pour hôtes, CSRF, URL publique et schéma proxy
+- [x] Images de base figées par digest multi-architecture
+- [x] CI migrée vers Node 24 avec CodeQL, Dependabot et seuil de couverture 79 %
+- [x] Sauvegardes PostgreSQL/médias automatisées, vérifiées et documentées
+- [x] Restauration PostgreSQL 16 isolée validée sur un dump réel
+- [x] Suite complète SQLite : 627 tests et 80,04 % de couverture
+- [x] Suite complète PostgreSQL 16 : 627 tests
+- [x] Ruff, Django, migrations, pip-audit, npm audit, builds et smokes Docker conformes
+- [ ] Actions cible : rotation secrets, planification DSM, CI obligatoire et recette API réelle

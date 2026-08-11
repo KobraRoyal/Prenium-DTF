@@ -49,8 +49,14 @@ htmlcov/
 *.egg-info/
 build/
 
+# Local agent and browser audit artifacts
+.impeccable/
+.playwright-cli/
+output/
+
 # Collected static on NAS/deploy
 data/static/
+data/backups/
 infra/nginx/prenium-static/
 
 # Graphify local/runtime artifacts (portable graph and report stay trackable)

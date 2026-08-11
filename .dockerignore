@@ -1,8 +1,11 @@
 .git
 .github
 .agents
+.codex
 .codex-tmp
 .goose
+.impeccable
+.playwright-cli
 .venv
 .DS_Store
 agents
@@ -21,8 +24,10 @@ htmlcov
 backend/staticfiles
 backend/var
 docs
+data
 frontend
 output
+graphify-out
 scripts
 tests
 **/tests
