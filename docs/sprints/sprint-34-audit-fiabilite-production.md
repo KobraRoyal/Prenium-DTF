@@ -74,7 +74,7 @@ modifié.
 Ces actions ne peuvent pas être réalisées depuis le dépôt seul :
 
 - [ ] faire tourner tous les secrets qui ont pu être affichés ou copiés pendant l'audit ;
-- [ ] pousser la branche et vérifier le premier run GitHub Actions/CodeQL ;
+- [x] pousser la branche et vérifier GitHub Actions/CodeQL sur le correctif CI ;
 - [ ] rendre les checks CI obligatoires sur `main` ;
 - [ ] planifier les deux scripts de sauvegarde dans DSM et activer la réplication hors NAS ;
 - [ ] exécuter la recette avec les vraies API SMTP, Drive, Sendcloud, PayPal et Stripe ;
