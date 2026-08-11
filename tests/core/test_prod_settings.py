@@ -22,9 +22,12 @@ def _prod_env(**overrides: str) -> dict[str, str]:
     return env
 
 
-def _load_prod_settings(**overrides: str) -> subprocess.CompletedProcess[str]:
+def _load_prod_settings(
+    expression: str = "settings.DEBUG",
+    **overrides: str,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, "-c", "from django.conf import settings; print(settings.DEBUG)"],
+        [sys.executable, "-c", f"from django.conf import settings; print({expression})"],
         cwd=ROOT_DIR,
         env=_prod_env(**overrides),
         check=False,
@@ -38,6 +41,16 @@ def test_prod_settings_accept_complete_secure_configuration():
 
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "False"
+
+
+def test_prod_settings_keep_https_enabled_despite_environment_override():
+    result = _load_prod_settings(
+        "settings.SECURE_SSL_REDIRECT",
+        DJANGO_SECURE_SSL_REDIRECT="False",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "True"
 
 
 def test_prod_settings_reject_weak_secret_key():

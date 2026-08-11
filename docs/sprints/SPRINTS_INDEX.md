@@ -40,6 +40,7 @@
 - [Sprint 31 — Gang Sheet Generator Pro](sprint-31-gang-sheet-generator-pro.md)
 - [Sprint 32 — Orchestration Codex des sous-agents](sprint-32-codex-agent-orchestration.md)
 - [Sprint 33 — Navigation SaaS client et Atelier](sprint-33-navigation-portails-saas.md)
+- [Sprint 34 — Audit et fiabilité production](sprint-34-audit-fiabilite-production.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

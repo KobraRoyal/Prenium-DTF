@@ -14,6 +14,7 @@ Document de revue pour chaque release. Cocher explicitement les points vérifié
 ## 3. Secrets et configuration
 - [ ] Aucun secret dans le dépôt ; variables d’environnement documentées pour le déploiement
 - [ ] `DJANGO_SECRET_KEY` et mots de passe base uniques par environnement
+- [ ] Tout secret affiché, partagé ou présent dans une ancienne image a été révoqué côté fournisseur
 
 ## 4. Transport et cookies (Django)
 Réglages de référence : `backend/config/settings/base.py` ; durcissement prod : `backend/config/settings/prod.py`.
@@ -47,6 +48,8 @@ Réglages de référence : `backend/config/settings/base.py` ; durcissement prod
 
 ## 7. Exploitation
 - [ ] Sauvegardes base et médias (runbook déploiement)
+- [ ] Checksum, alerte d'absence, copie hors NAS et restauration isolée mensuelle vérifiés
+- [ ] Image taguée par SHA, `check --deploy` et checks CI/CodeQL obligatoires avant release
 - [ ] Politique de rétention des logs et des données personnelles alignée avec le métier
 - [ ] MFA staff : prévu hors périmètre actuel ; à réévaluer avant exposition large
 

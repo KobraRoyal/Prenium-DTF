@@ -17,9 +17,9 @@ if TRANSACTIONAL_EMAILS_ENABLED and EMAIL_HOST in {"", "localhost"}:  # noqa: F4
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-# Keep True by default; set DJANGO_SECURE_SSL_REDIRECT=False only for emergency
-# debug behind a misconfigured TLS terminator. Prefer fixing X-Forwarded-Proto.
-SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)  # noqa: F405
+# Production is HTTPS-only. Fix the reverse-proxy forwarding configuration
+# instead of weakening this setting through a shared development .env file.
+SECURE_SSL_REDIRECT = True
 SECURE_REDIRECT_EXEMPT = [r"^healthz/"]
 SECURE_HSTS_SECONDS = env_int("DJANGO_SECURE_HSTS_SECONDS", 31536000)  # noqa: F405
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(  # noqa: F405
