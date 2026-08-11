@@ -57,3 +57,11 @@ def test_nginx_preserves_direct_http_scheme_without_proxy_header():
 
     assert '""      $scheme;' in nginx
     assert '""      https;' not in nginx
+
+
+def test_ci_installs_ghostscript_for_both_backend_test_jobs():
+    workflow = (ROOT_DIR / ".github" / "workflows" / "ci.yml").read_text()
+
+    install_command = "sudo apt-get install --yes --no-install-recommends ghostscript"
+
+    assert workflow.count(install_command) == 2

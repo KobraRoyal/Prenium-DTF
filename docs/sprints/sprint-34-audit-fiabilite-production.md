@@ -40,6 +40,8 @@ modifié.
 - actions GitHub migrées vers leurs runtimes Node 24 (`checkout`, `setup-python`, `setup-node`) ;
 - permissions minimales et annulation des runs obsolètes ;
 - validation des deux fichiers Compose et contrôle Django production en CI ;
+- installation explicite de Ghostscript dans les deux jobs backend pour aligner les runners GitHub
+  avec l'image applicative et couvrir les formats EPS/AI ;
 - couverture applicative mesurée avec seuil anti-régression de 79 % ;
 - CodeQL Python et JavaScript/TypeScript ;
 - Dependabot hebdomadaire pour Python, npm, Docker et GitHub Actions ;
