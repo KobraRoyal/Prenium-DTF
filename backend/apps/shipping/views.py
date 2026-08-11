@@ -2,7 +2,8 @@ import logging
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import FileResponse, Http404
-from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,9 +16,11 @@ from apps.shipping.services.sendcloud import (
     SendcloudAPIError,
     SendcloudConfigurationError,
     ShipmentService,
+    build_sendcloud_webhook_identity,
     extract_parcel_from_webhook_payload,
     verify_sendcloud_webhook_signature,
 )
+from apps.shipping.tasks import process_sendcloud_parcel_status_webhook_task
 
 logger = logging.getLogger(__name__)
 shipment_service = ShipmentService()
@@ -180,7 +183,6 @@ class BackendSendcloudWebhookView(APIView):
         signature = request.headers.get("Sendcloud-Signature", "")
         try:
             verify_sendcloud_webhook_signature(payload=payload, signature_header=signature)
-            parcel = extract_parcel_from_webhook_payload(payload)
         except (SendcloudAPIError, SendcloudConfigurationError) as exc:
             logger.warning("sendcloud_webhook_rejected", extra={"reason": str(exc)})
             record_event(
@@ -192,23 +194,40 @@ class BackendSendcloudWebhookView(APIView):
             raise PermissionDenied("Invalid Sendcloud webhook.") from exc
 
         try:
-            order, shipment = shipment_service.apply_parcel_status_webhook(
-                parcel=parcel,
-                source="sendcloud_webhook",
+            parcel = extract_parcel_from_webhook_payload(payload)
+            event_identity = build_sendcloud_webhook_identity(payload)
+        except SendcloudAPIError as exc:
+            record_event(
+                action="shipping.sendcloud_webhook_invalid_payload",
+                status=AuditLogEntry.Status.FAILURE,
+                message=str(exc)[:255],
+                metadata={"path": request.path},
             )
-        except DjangoValidationError as error:
-            raise_api_validation_error(error)
+            raise DRFValidationError({"detail": str(exc)}) from exc
 
-        if shipment is None:
-            return Response({"received": True, "matched": False}, status=202)
+        try:
+            process_sendcloud_parcel_status_webhook_task.delay(
+                parcel=parcel,
+                event_key=event_identity.event_key,
+                payload_hash=event_identity.payload_hash,
+                provider_event_id=event_identity.provider_event_id,
+            )
+        except Exception as exc:  # noqa: BLE001 - broker failures must trigger a provider retry
+            logger.error(
+                "sendcloud_webhook_queue_failed",
+                extra={"error_type": type(exc).__name__},
+            )
+            record_event(
+                action="shipping.sendcloud_webhook_queue_failed",
+                status=AuditLogEntry.Status.FAILURE,
+                message="Sendcloud webhook could not be queued.",
+                metadata={
+                    "error_type": type(exc).__name__,
+                    "provider_event_id": event_identity.provider_event_id,
+                    "payload_hash": event_identity.payload_hash,
+                    "path": request.path,
+                },
+            )
+            return Response({"received": False, "queued": False}, status=503)
 
-        return Response(
-            {
-                "received": True,
-                "matched": True,
-                "order_public_id": str(order.public_id) if order else None,
-                "shipment_public_id": str(shipment.public_id),
-                "sendcloud_status_code": shipment.sendcloud_status_code,
-                "shipped_at": shipment.shipped_at.isoformat() if shipment.shipped_at else None,
-            }
-        )
+        return Response({"received": True, "queued": True}, status=202)

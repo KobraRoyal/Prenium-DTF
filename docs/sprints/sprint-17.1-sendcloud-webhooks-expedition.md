@@ -12,12 +12,18 @@ Remonter automatiquement le statut colis Sendcloud dans Prenium DTF dès qu’un
 
 ## Périmètre livré
 - Endpoint `POST /api/backend/sendcloud/webhook/`
-  - vérification HMAC (`SENDCLOUD_WEBHOOK_SECRET` ou fallback `SENDCLOUD_SECRET_KEY`)
-  - traitement synchrone (comme Stripe) pour ACK fiable côté Sendcloud
-  - tâche Celery `shipping.process_sendcloud_parcel_status_webhook` disponible pour rejeu
+  - vérification HMAC stricte avec `SENDCLOUD_WEBHOOK_SECRET` sur le body brut
+  - validation rapide puis mise en file Celery avec réponse HTTP 202
+  - tâche Celery `shipping.process_sendcloud_parcel_status_webhook` avec retry exponentiel
+  - idempotence persistante par client via `SendcloudWebhookEvent`
+  - clé de déduplication : identifiant fournisseur, sinon hash SHA-256 du JSON canonique
+  - aucun payload brut conservé ou journalisé
+  - parsing du format officiel `action` + `data.parcel`
   - ignore des événements périmés (timestamp < `last_api_sync_at`)
-  - colis inconnu → 202 + audit (pas de retry infini)
+  - colis inconnu → audit dans la tâche sans retry infini
   - signature invalide → 403 + audit sécurité
+  - payload signé mais invalide → 400 + audit
+  - timestamp ISO ou Unix millisecondes et blocage des régressions après handoff
 - Factorisation `_apply_tracking_update` partagée sync manuelle / polling / webhook
 - Premier statut « handoff transporteur » → `shipped_at` + email unique `order_shipped` (tracking + lien)
 - Staff portail : bouton **Déclarer dans Sendcloud** (pas « Générer l’étiquette »)
@@ -27,7 +33,7 @@ Remonter automatiquement le statut colis Sendcloud dans Prenium DTF dès qu’un
 Voir `.env.example` :
 - `SENDCLOUD_PUBLIC_KEY` / `SENDCLOUD_SECRET_KEY`
 - `SENDCLOUD_INTEGRATION_ID` (intégration API, ex. PreniumDTF)
-- `SENDCLOUD_WEBHOOK_SECRET` (recommandé ; sinon secret API)
+- `SENDCLOUD_WEBHOOK_SECRET` obligatoire ; aucun fallback implicite sur le secret API
 - L’adresse **expéditeur** est gérée dans Sendcloud (pas dans Prenium)
 - Dans Sendcloud : Settings → Integrations → webhook URL = `https://<domaine>/api/backend/sendcloud/webhook/`
 
@@ -40,14 +46,22 @@ Voir `.env.example` :
 ## Tests
 - `tests/shipping/test_sendcloud_webhook.py`
   - signature invalide → 403 + audit
+  - secret API refusé comme fallback HMAC
+  - payload officiel `action` + `data.parcel`
+  - payload invalide → 400 + audit
   - webhook IN_TRANSIT → tracking + email une seule fois
+  - même événement reçu deux fois → un seul traitement métier
+  - même clé d’événement autorisée pour deux clients différents
   - matching par `order_number` si `parcel_id` local absent
   - colis inconnu → 202 + audit
   - événement stale ignoré
+  - statut post-handoff ne revenant pas à `READY_TO_SEND`
 - `tests/shipping/test_sendcloud_service.py` / `test_shipment_*` : déclaration sans label
 
 ## Checklist de validation
 - [ ] Clés + `SENDCLOUD_INTEGRATION_ID` + adresse expéditeur renseignés dans `.env`
+- [ ] `SENDCLOUD_WEBHOOK_SECRET` renseigné et distinctement géré
+- [ ] Worker Celery actif et connecté au broker Redis
 - [ ] Webhook URL configurée sur l’intégration API PreniumDTF
 - [ ] Déclarer une commande `READY_TO_SHIP` depuis le panneau staff
 - [ ] Vérifier l’apparition de la commande Incoming dans Sendcloud

@@ -62,7 +62,11 @@ def test_client_create_with_first_visual_opens_validation_modal():
     assert "Valider le visuel" in detail_html
     assert str(item.public_id) in detail_html
     assert "Supprimer" in detail_html
-    assert f"action='delete'" in detail_html or "/delete/" in detail_html or "action=delete" in detail_html
+    assert (
+        "action='delete'" in detail_html
+        or "/delete/" in detail_html
+        or "action=delete" in detail_html
+    )
 
 
 @pytest.mark.django_db

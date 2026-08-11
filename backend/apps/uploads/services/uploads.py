@@ -437,7 +437,8 @@ class OrderUploadService:
         """
         if not order.uses_atelier_pricing():
             raise ValidationError(
-                "La saisie manuelle du métrage concerne les commandes atelier (encours ou comptant CB)."
+                "La saisie manuelle du métrage concerne les commandes atelier "
+                "(encours ou comptant CB)."
             )
         if order.status not in (Order.Status.DRAFT, Order.Status.SUBMITTED):
             raise ValidationError("Statut de commande incompatible avec la saisie du métrage.")
@@ -519,7 +520,8 @@ class OrderUploadService:
             raise ValidationError("Fichier introuvable pour cette commande.")
         if not order.uses_atelier_pricing():
             raise ValidationError(
-                "La saisie manuelle du métrage concerne les commandes atelier (encours ou comptant CB)."
+                "La saisie manuelle du métrage concerne les commandes atelier "
+                "(encours ou comptant CB)."
             )
         if order.status not in (Order.Status.DRAFT, Order.Status.SUBMITTED):
             raise ValidationError("Statut de commande incompatible avec la saisie du métrage.")

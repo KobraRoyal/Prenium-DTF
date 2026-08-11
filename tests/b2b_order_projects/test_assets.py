@@ -343,9 +343,7 @@ def test_pdf_auto_size_uses_mediabox_for_full_page_raster_with_mismatched_embedd
     user, _customer, project, item = project_scope("pdf-fullpage-dpi@example.com")
     # Intrinsic tag says 20×20 in (508 mm) but the image fills an ~205×217 mm page.
     image_buffer = BytesIO()
-    Image.new("RGB", (6000, 6000), (20, 80, 160)).save(
-        image_buffer, format="JPEG", dpi=(300, 300)
-    )
+    Image.new("RGB", (6000, 6000), (20, 80, 160)).save(image_buffer, format="JPEG", dpi=(300, 300))
     document = pymupdf.open()
     page = document.new_page(width=583, height=616)
     page.insert_image(page.rect, stream=image_buffer.getvalue())

@@ -37,6 +37,9 @@ jobs:
       - name: Run Django checks
         run: python backend/manage.py check --settings=config.settings.test
 
+      - name: Check for pending migrations
+        run: python backend/manage.py makemigrations --check --dry-run --settings=config.settings.test
+
       - name: Run Ruff
         run: |
           ruff check .
@@ -44,6 +47,23 @@ jobs:
 
       - name: Run pip-audit
         run: pip-audit -r backend/requirements/prod.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Audit and build frontend assets
+        working-directory: backend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+          npm run build:assets
+
+      - name: Verify generated frontend assets
+        run: git diff --exit-code -- backend/static_src
 
       - name: Run Pytest
         run: pytest

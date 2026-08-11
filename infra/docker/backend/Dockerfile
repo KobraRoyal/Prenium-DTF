@@ -1,5 +1,5 @@
 # Étape CSS : Tailwind compile input.css (+ legacy) vers app.css servi par Django / collectstatic
-FROM node:20-alpine AS css
+FROM node:22-alpine AS css
 WORKDIR /build
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci

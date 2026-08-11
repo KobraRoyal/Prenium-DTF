@@ -204,15 +204,14 @@ def test_transition_existing_job_reloads_state_under_lock_before_validation():
 def test_allowed_target_statuses_match_central_workflow_order():
     service = ProductionWorkflowService()
 
-    assert service.allowed_target_statuses(
-        current_status=ProductionJob.Status.QUEUED
-    ) == [ProductionJob.Status.IN_PROGRESS, ProductionJob.Status.BLOCKED]
-    assert service.allowed_target_statuses(
-        current_status=ProductionJob.Status.READY_TO_SHIP
-    ) == [ProductionJob.Status.COMPLETED]
-    assert service.allowed_target_statuses(
-        current_status=ProductionJob.Status.COMPLETED
-    ) == []
+    assert service.allowed_target_statuses(current_status=ProductionJob.Status.QUEUED) == [
+        ProductionJob.Status.IN_PROGRESS,
+        ProductionJob.Status.BLOCKED,
+    ]
+    assert service.allowed_target_statuses(current_status=ProductionJob.Status.READY_TO_SHIP) == [
+        ProductionJob.Status.COMPLETED
+    ]
+    assert service.allowed_target_statuses(current_status=ProductionJob.Status.COMPLETED) == []
 
 
 @pytest.mark.django_db
@@ -366,9 +365,7 @@ def test_immediate_atelier_order_cannot_start_production_before_payment():
     order.pricing_status = Order.PricingStatus.PRICED
     order.total_amount = "42.00"
     order.source = "client_portal.b2b_checkout"
-    order.save(
-        update_fields=["pricing_status", "total_amount", "source", "updated_at"]
-    )
+    order.save(update_fields=["pricing_status", "total_amount", "source", "updated_at"])
     service.get_or_create_for_order(order=order)
 
     assert service.allowed_target_statuses(
@@ -404,9 +401,7 @@ def test_immediate_atelier_order_can_start_production_after_captured_payment():
     order.pricing_status = Order.PricingStatus.PRICED
     order.total_amount = "42.00"
     order.source = "client_portal.b2b_checkout"
-    order.save(
-        update_fields=["pricing_status", "total_amount", "source", "updated_at"]
-    )
+    order.save(update_fields=["pricing_status", "total_amount", "source", "updated_at"])
     Payment.objects.create(
         order=order,
         amount="42.00",

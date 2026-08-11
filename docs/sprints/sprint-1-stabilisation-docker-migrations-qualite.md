@@ -357,3 +357,33 @@ curl --fail http://localhost:8080/healthz/
 ```text
 ci: add python dependency audit
 ```
+
+## Ticket SPRINT-1.6 — Remédiation audit sécurité et reproductibilité
+
+## Objectif
+
+Remettre les barrières de livraison au vert après l’audit du 11 août 2026 :
+dépendances corrigées, migrations stables, qualité Ruff et assets frontend reproductibles.
+
+## Résumé technique
+
+- Django passe sur la série LTS 5.2 corrigée, avec DRF 3.16 compatible.
+- PDF.js est corrigé et son scripting est explicitement désactivé pour les PDF clients.
+- L'étape frontend de l'image Docker utilise Node 22, requis par PDF.js 6.
+- `npm audit` ne signale plus de vulnérabilité haute.
+- Les noms des index shipping existants sont explicités pour éviter les renommages implicites.
+- La migration `shipping.0005` ajoute la déduplication persistante des webhooks Sendcloud.
+- La CI vérifie désormais les migrations, `pip-audit`, `npm audit` et la reproductibilité des assets.
+- Ruff et son contrôle de formatage sont remis au vert sur l’ensemble du dépôt.
+
+## Checklist de validation
+
+- [x] `manage.py makemigrations --check --dry-run`
+- [x] `ruff check .`
+- [x] `ruff format --check .`
+- [x] `pip-audit -r backend/requirements/prod.txt`
+- [x] `npm audit --audit-level=high`
+- [x] `npm run build:assets`
+- [x] Suite pytest SQLite complète : 617 tests
+- [x] Migrations et suite pytest PostgreSQL complète : 617 tests
+- [x] Build Docker de production et contrôle Django `--deploy`

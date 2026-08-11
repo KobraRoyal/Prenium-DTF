@@ -411,10 +411,13 @@ def test_immediate_account_create_view_redirects_to_gang_sheets():
         )
     )
     assert response.status_code == 302
-    assert reverse(
-        "portal:client-gang-sheet-list-create",
-        kwargs={"customer_public_id": customer.public_id},
-    ) in response["Location"]
+    assert (
+        reverse(
+            "portal:client-gang-sheet-list-create",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+        in response["Location"]
+    )
 
 
 @pytest.mark.django_db

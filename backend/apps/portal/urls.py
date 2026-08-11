@@ -13,12 +13,6 @@ from .views_access_management import (
     StaffAccessRequestListView,
     StaffAccessRequestRejectView,
 )
-from .views_staff_customers import (
-    StaffCustomerAccountUpdateView,
-    StaffCustomerDetailView,
-    StaffCustomerListView,
-    StaffCustomerPricingUpdateView,
-)
 from .views_auth import PortalLoginView, PortalLogoutView
 from .views_b2b_order_projects import (
     ClientOrderProjectAutosaveView,
@@ -44,7 +38,6 @@ from .views_checkout import (
     ClientCheckoutUploadPartialView,
     ClientCheckoutView,
 )
-from .views_payments import ClientOrderPaymentInitiateView, ClientOrderPaymentReturnView
 from .views_client import (
     ClientDashboardView,
     ClientOrderDetailView,
@@ -77,6 +70,7 @@ from .views_gang_sheets import (
     StaffGangSheetFinalDownloadView,
     StaffGangSheetSettingsView,
 )
+from .views_payments import ClientOrderPaymentInitiateView, ClientOrderPaymentReturnView
 from .views_profile import PortalProfileView
 from .views_staff import (
     StaffOrderDeleteView,
@@ -85,6 +79,12 @@ from .views_staff import (
     StaffOrderPriceView,
 )
 from .views_staff_billing import StaffInvoiceMarkPaidView, StaffOrderPanelBillingView
+from .views_staff_customers import (
+    StaffCustomerAccountUpdateView,
+    StaffCustomerDetailView,
+    StaffCustomerListView,
+    StaffCustomerPricingUpdateView,
+)
 from .views_staff_dashboard import StaffDashboardView
 from .views_staff_documents import StaffManufacturingOrderBatchPdfView
 from .views_staff_notifications import (

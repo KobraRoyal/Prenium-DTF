@@ -1,4 +1,4 @@
-.PHONY: help up health agents-check check migrations-plan test test-ui test-orders test-b2b lint format audit shell logs-web logs-worker sync-frontend
+.PHONY: help up health agents-check check migrations-plan test test-ui test-orders test-b2b lint format audit audit-js frontend-check shell logs-web logs-worker sync-frontend
 
 help:
 	@printf '%s\n' \
@@ -16,6 +16,8 @@ help:
 		'  make lint            Run ruff check in Docker' \
 		'  make format          Run ruff format --check in Docker' \
 		'  make audit           Run pip-audit in Docker' \
+		'  make audit-js        Run npm audit for high vulnerabilities' \
+		'  make frontend-check  Install, audit and rebuild frontend assets' \
 		'  make shell           Open Django shell in Docker' \
 		'  make logs-web        Tail web container logs' \
 		'  make logs-worker     Tail worker container logs'
@@ -36,16 +38,16 @@ migrations-plan:
 	docker compose exec web sh -lc 'cd /app/backend && python manage.py makemigrations --check --dry-run'
 
 test:
-	docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest'
+	docker compose run --rm -e DJANGO_SETTINGS_MODULE=config.settings.test --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest'
 
 test-ui:
-	docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/ui'
+	docker compose run --rm -e DJANGO_SETTINGS_MODULE=config.settings.test --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/ui'
 
 test-orders:
-	docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/orders tests/uploads'
+	docker compose run --rm -e DJANGO_SETTINGS_MODULE=config.settings.test --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/orders tests/uploads'
 
 test-b2b:
-	docker compose run --rm --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/b2b_order_projects backend/apps/portal/tests/test_ui_coherence.py'
+	docker compose run --rm -e DJANGO_SETTINGS_MODULE=config.settings.test --entrypoint sh web -lc 'cd /app && PYTHONPATH=/app/backend pytest tests/b2b_order_projects backend/apps/portal/tests/test_ui_coherence.py'
 
 lint:
 	docker compose run --rm --entrypoint sh web -lc 'cd /app && ruff check .'
@@ -55,6 +57,13 @@ format:
 
 audit:
 	docker compose run --rm --entrypoint sh web -lc 'cd /app/backend && pip-audit -r requirements/prod.txt'
+
+audit-js:
+	cd backend && npm audit --audit-level=high
+
+frontend-check:
+	cd backend && npm ci && npm audit --audit-level=high && npm run build:assets
+	git diff --exit-code -- backend/static_src
 
 shell:
 	docker compose exec web sh -lc 'cd /app/backend && python manage.py shell'
@@ -66,6 +75,6 @@ logs-worker:
 	docker compose logs --tail=200 worker
 
 sync-frontend:
-	cd backend && npm run build:css
+	cd backend && npm run build:assets
 	docker compose exec -T web sh -lc 'cd /app/backend && python manage.py collectstatic --noinput'
 	docker compose restart web

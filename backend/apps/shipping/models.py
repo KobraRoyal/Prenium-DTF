@@ -53,8 +53,14 @@ class ShippingMethod(BaseModel):
     class Meta:
         ordering = ("display_order", "name")
         indexes = [
-            models.Index(fields=("is_active", "display_order")),
-            models.Index(fields=("is_pickup", "is_active")),
+            models.Index(
+                fields=("is_active", "display_order"),
+                name="shipping_sh_is_acti_7cf301_idx",
+            ),
+            models.Index(
+                fields=("is_pickup", "is_active"),
+                name="shipping_sh_is_pick_e4f587_idx",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -123,7 +129,10 @@ class Shipment(BaseModel):
     shipping_option_code = models.CharField(
         max_length=128,
         blank=True,
-        help_text="Indication transporteur / service (optionnelle) ; l’étiquette est créée dans Sendcloud.",
+        help_text=(
+            "Indication transporteur / service (optionnelle) ; "
+            "l’étiquette est créée dans Sendcloud."
+        ),
     )
     contract_id = models.PositiveIntegerField(null=True, blank=True)
     tracking_number = models.CharField(max_length=255, blank=True)
@@ -146,11 +155,73 @@ class Shipment(BaseModel):
             ("create_shipment", "Can create shipment"),
         ]
         indexes = [
-            models.Index(fields=("status", "updated_at")),
-            models.Index(fields=("sendcloud_order_id",)),
-            models.Index(fields=("sendcloud_parcel_id",)),
-            models.Index(fields=("order", "status")),
+            models.Index(
+                fields=("status", "updated_at"),
+                name="shipping_sh_status_755ce0_idx",
+            ),
+            models.Index(
+                fields=("sendcloud_order_id",),
+                name="shipping_sh_sendclo_6f3a91_idx",
+            ),
+            models.Index(
+                fields=("sendcloud_parcel_id",),
+                name="shipping_sh_sendclo_26eb4a_idx",
+            ),
+            models.Index(
+                fields=("order", "status"),
+                name="shipping_sh_order_i_242975_idx",
+            ),
         ]
 
     def __str__(self) -> str:
         return f"{self.order.public_id} - {self.status}"
+
+
+class SendcloudWebhookEventQuerySet(models.QuerySet):
+    def for_customer(self, customer):
+        return self.filter(customer=customer)
+
+
+class SendcloudWebhookEvent(BaseModel):
+    """Trace d'idempotence d'un webhook Sendcloud, sans conserver son payload."""
+
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.PROTECT,
+        related_name="sendcloud_webhook_events",
+    )
+    shipment = models.ForeignKey(
+        Shipment,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="webhook_events",
+    )
+    event_key = models.CharField(max_length=80)
+    provider_event_id = models.CharField(max_length=255, blank=True)
+    payload_hash = models.CharField(max_length=64)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    objects = SendcloudWebhookEventQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("customer", "event_key"),
+                name="shipping_sc_event_key_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("customer", "created_at"),
+                name="ship_sc_cust_created_idx",
+            ),
+            models.Index(
+                fields=("shipment", "created_at"),
+                name="ship_sc_ship_created_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.customer.public_id} - {self.event_key}"

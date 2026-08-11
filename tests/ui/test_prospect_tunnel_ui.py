@@ -14,14 +14,15 @@ def test_prospect_steps_share_premium_structure_and_ctas():
     assert "product-shell--prospect" in step1_html
     assert "prospect-journey-page" in step1_html
     assert "prospect-journey__rail" in step1_html
-    assert "prospect-journey__utility" in step1_html
     assert "prospect-shell__aside-card" in step1_html
+    assert "prospect-journey__utility" not in step1_html
+    assert "prospect-step1__proofs" not in step1_html
     assert "data-submit-loading" in step1_html
     assert "ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary" in step1_html
-    assert "prospect-step1__proofs" in step1_html
     assert "prospect-step1__activity-grid" in step1_html
     assert 'role="radiogroup"' in step1_html
-    assert "Environ 2 minutes" in step1_html
+    assert "Votre entreprise" in step1_html
+    assert "Continuer" in step1_html
 
     session = client.session
     session[SESSION_KEY] = {
@@ -70,12 +71,11 @@ def test_prospect_steps_share_premium_structure_and_ctas():
 
     assert "prospect-tunnel__title" in step3_html
     assert "prospect-review__grid" in step3_html
-    assert "prospect-review__notice" in step3_html
-    assert "prospect-next-steps__heading" in step3_html
+    assert "prospect-review__notice" not in step3_html
+    assert "prospect-next-steps__heading" not in step3_html
     assert "Volume" in step3_html
     assert "Calendrier" in step3_html
     assert "data-submit-loading" in step3_html
-    assert "Aucun compte ni mot de passe" in step3_html
     assert "Envoyer ma demande" in step3_html
     assert "France" in step3_html
     assert "DTF au mètre" in step3_html

@@ -123,11 +123,7 @@ class OrderService:
     ) -> Order:
         """Retire la commande de la file Atelier (soft-cancel), sans hard-delete."""
         cleaned_reason = str(reason or "").strip()[:255]
-        order = (
-            Order.objects.select_related("customer")
-            .filter(public_id=order_public_id)
-            .first()
-        )
+        order = Order.objects.select_related("customer").filter(public_id=order_public_id).first()
         if order is None:
             raise ValidationError("Commande introuvable.")
 
@@ -160,8 +156,9 @@ class OrderService:
             if block_reason is not None:
                 raise ValidationError(block_reason)
 
-            from apps.billing.models import Payment
             from django.utils import timezone
+
+            from apps.billing.models import Payment
 
             now = timezone.now()
             previous_status = order.status
@@ -471,10 +468,10 @@ class OrderService:
                 },
             )
 
-            from apps.notifications.services.transactional import schedule_order_created_email
             from apps.billing.services.production_payment_gate import (
                 should_defer_order_created_until_payment,
             )
+            from apps.notifications.services.transactional import schedule_order_created_email
 
             if not should_defer_order_created_until_payment(order_locked):
                 schedule_order_created_email(order_public_id=order_locked.public_id)

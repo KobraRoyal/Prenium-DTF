@@ -1,4 +1,3 @@
-
 import pytest
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer

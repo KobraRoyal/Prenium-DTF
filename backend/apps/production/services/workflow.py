@@ -46,7 +46,9 @@ class ProductionWorkflowService:
         ProductionJob.Status.COMPLETED: set(),
     }
 
-    def allowed_target_statuses(self, *, current_status: str, order: Order | None = None) -> list[str]:
+    def allowed_target_statuses(
+        self, *, current_status: str, order: Order | None = None
+    ) -> list[str]:
         """Retourne les cibles autorisées dans l'ordre métier affiché par l'UI."""
         allowed = self.allowed_transitions.get(current_status, set())
         statuses = [status for status in ProductionJob.Status.values if status in allowed]
@@ -57,9 +59,7 @@ class ProductionWorkflowService:
 
             if production_start_blocked_reason(order) is not None:
                 statuses = [
-                    status
-                    for status in statuses
-                    if status != ProductionJob.Status.IN_PROGRESS
+                    status for status in statuses if status != ProductionJob.Status.IN_PROGRESS
                 ]
         return statuses
 

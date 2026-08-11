@@ -37,14 +37,10 @@ class StaffEmailTemplateListView(StaffDomainPermissionMixin, View):
             self.template_name,
             {
                 "client_templates": [
-                    row
-                    for row in templates
-                    if row.audience == EmailTemplate.Audience.CLIENT
+                    row for row in templates if row.audience == EmailTemplate.Audience.CLIENT
                 ],
                 "internal_templates": [
-                    row
-                    for row in templates
-                    if row.audience == EmailTemplate.Audience.INTERNAL
+                    row for row in templates if row.audience == EmailTemplate.Audience.INTERNAL
                 ],
                 "internal_recipient_count": len(
                     getattr(settings, "INTERNAL_NOTIFICATION_EMAILS", [])
@@ -136,9 +132,7 @@ class StaffEmailTemplateEditView(StaffDomainPermissionMixin, View):
         preview_body = ""
         if form.is_valid():
             context = sample_context()
-            preview_subject = render_template_text(
-                form.cleaned_data["subject_template"], context
-            )
+            preview_subject = render_template_text(form.cleaned_data["subject_template"], context)
             preview_body = render_template_text(form.cleaned_data["body_template"], context)
             if request.POST.get("action") == "preview":
                 return self._render(

@@ -15,15 +15,15 @@
     <aside class="prospect-shell__aside prospect-journey__rail">
       <div class="prospect-shell__aside-card prospect-journey__rail-inner">
         <div class="prospect-journey__rail-heading">
-          <p class="prospect-shell__eyebrow"><span>Accès professionnel</span><span aria-hidden="true">IDS / 01</span></p>
-          <h1 id="prospect-shell-heading" class="prospect-shell__title">De votre idée à la production, sans friction.</h1>
-          <p class="prospect-shell__lead">Un dossier court, étudié par une personne de l’équipe IDS pour ouvrir un espace réellement adapté à votre activité.</p>
+          <p class="prospect-shell__eyebrow">Accès professionnel</p>
+          <h1 id="prospect-shell-heading" class="prospect-shell__title">Demande d’accès</h1>
+          <p class="prospect-shell__lead">Trois étapes. Réponse humaine sous 1 à 2 jours ouvrés.</p>
         </div>
         {% if step and total_steps %}
         <div class="prospect-tunnel__progress-panel prospect-journey__progress">
           <div class="prospect-journey__progress-copy">
-            <p class="prospect-tunnel__step-meta">Progression du dossier</p>
-            <p class="prospect-journey__progress-number"><strong>0{{ step }}</strong><span>/ 0{{ total_steps }}</span></p>
+            <p class="prospect-tunnel__step-meta">Étape {{ step }} sur {{ total_steps }}</p>
+            <p class="prospect-journey__progress-number"><strong>{{ step }}</strong><span>/{{ total_steps }}</span></p>
           </div>
           <div
             class="prospect-tunnel__track"
@@ -33,26 +33,14 @@
             aria-valuenow="{{ step }}"
             aria-label="Progression du formulaire"
           >
-            <div class="prospect-tunnel__track-fill" style="width: {% widthratio step total_steps 100 %}%"></div>
+            <div class="prospect-tunnel__track-fill" style="--progress: {% widthratio step total_steps 100 %}"></div>
           </div>
         </div>
         {% endif %}
         {% include "prospects/partials/stepper.html" %}
-        <div class="prospect-journey__promise">
-          <p>Engagement IDS</p>
-          <strong>Une réponse humaine, généralement sous 1 à 2 jours ouvrés.</strong>
-          <ul class="prospect-shell__trust" aria-label="Engagements">
-            <li>Traitement confidentiel</li>
-            <li>Aucun justificatif immédiat</li>
-          </ul>
-        </div>
       </div>
     </aside>
     <main class="prospect-shell__main prospect-journey__main" id="main-content">
-      <div class="prospect-journey__utility" aria-label="Informations du dossier">
-        <span><i aria-hidden="true"></i>Dossier sécurisé</span>
-        {% if step and total_steps %}<strong>Étape {{ step }} sur {{ total_steps }}</strong>{% endif %}
-      </div>
       <div class="prospect-panel prospect-journey__panel">
         {% block prospect_section_head %}{% endblock %}
         {% block prospect_inner %}{% endblock %}

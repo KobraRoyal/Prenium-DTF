@@ -118,9 +118,7 @@ def extract_pdf_source_metrics(document, page) -> SourceMetrics:
     page_width_in = float(page.rect.width) / 72.0
     page_height_in = float(page.rect.height) / 72.0
     info_by_xref = {
-        int(info["xref"]): info
-        for info in page.get_image_info(xrefs=True)
-        if info.get("xref")
+        int(info["xref"]): info for info in page.get_image_info(xrefs=True) if info.get("xref")
     }
 
     best: SourceMetrics | None = None

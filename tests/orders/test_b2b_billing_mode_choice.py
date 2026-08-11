@@ -1,12 +1,11 @@
 import pytest
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
-from django.core.files.base import ContentFile
-
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.orders.services.orders import OrderService
 from apps.uploads.models import OrderUpload
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 
 
 def _attach_dummy_upload(order: Order) -> None:

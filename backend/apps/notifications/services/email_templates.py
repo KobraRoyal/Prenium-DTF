@@ -374,7 +374,9 @@ EMAIL_TEMPLATE_DEFINITIONS = (
         EmailTemplate.Audience.CLIENT,
         event_label="Commande tarifée",
         audience_label="Client",
-        description="Information envoyée après calcul du tarif B2B (encours / facturation différée).",
+        description=(
+            "Information envoyée après calcul du tarif B2B (encours / facturation différée)."
+        ),
         subject="Votre commande est tarifée — {{ customer.name }}",
         body=(
             "Bonjour,\n\n"

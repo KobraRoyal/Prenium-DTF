@@ -18,3 +18,41 @@
 - dossier `sprints/` pour lot par lot
 - mise à jour systématique des plans et sous-plans après chaque lot
 - configuration native `.codex/` et politique dans `docs/architecture/CODEX_AGENT_ORCHESTRATION.md`
+
+## Navigation économe avec Graphify
+
+Graphify est installé au niveau utilisateur pour être disponible dans les tâches
+Codex actuelles et futures. La règle globale n'interroge Graphify que lorsqu'un
+projet possède déjà `graphify-out/graph.json`; elle ne déclenche jamais seule une
+indexation sémantique payante.
+
+Dans IDS Hub, le graphe initial est construit en mode code uniquement : extraction
+AST locale, communautés sans nommage LLM et visualisation HTML désactivée. Le
+fichier `.graphifyignore` exclut notamment les secrets, dépendances, bibliothèques
+vendorielles, caches, sorties UI et médias.
+
+Baseline mesurée le 2026-08-11 : 4 897 nœuds, 11 424 relations et une réduction
+moyenne estimée à 12,8× par rapport à la lecture naïve du corpus. Ce chiffre est un
+benchmark Graphify indicatif et doit être réévalué lorsque le dépôt évolue.
+
+Commandes courantes :
+
+```bash
+graphify query "show the permission flow" --budget 1000
+graphify path "Customer" "Order"
+graphify explain "AssetService"
+graphify update .
+graphify benchmark graphify-out/graph.json
+```
+
+Pour reconstruire sans consommer de tokens de modèle :
+
+```bash
+graphify extract . --code-only --no-cluster --max-workers 4 --out .
+graphify cluster-only . --no-label --no-viz
+```
+
+Le graphe sert uniquement à orienter la lecture. Pour l'isolation multi-tenant, les
+permissions, les fichiers, les secrets et l'audit, Codex doit toujours relire le
+code et les tests faisant autorité. Le graphe global inter-projets n'est pas activé,
+afin d'éviter tout mélange implicite de contextes entre clients ou dépôts.

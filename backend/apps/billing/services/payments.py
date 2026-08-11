@@ -375,10 +375,10 @@ class PaymentService:
             target=payment,
             metadata=metadata,
         )
-        from apps.notifications.services.transactional import schedule_payment_captured_email
         from apps.billing.services.production_payment_gate import (
             should_defer_order_created_until_payment,
         )
+        from apps.notifications.services.transactional import schedule_payment_captured_email
 
         schedule_payment_captured_email(order_public_id=payment.order.public_id)
         if should_defer_order_created_until_payment(payment.order):

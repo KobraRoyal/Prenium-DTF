@@ -77,9 +77,7 @@ def resolve_online_provider(*, customer, requested_provider: str | None = None) 
         if requested not in {Payment.Provider.PAYPAL, Payment.Provider.STRIPE}:
             raise ValidationError("Moyen de paiement en ligne non supporté.")
         if requested not in available:
-            raise ValidationError(
-                "Ce moyen de paiement n'est pas disponible sur cette plateforme."
-            )
+            raise ValidationError("Ce moyen de paiement n'est pas disponible sur cette plateforme.")
         return requested
 
     preferred = getattr(customer, "preferred_settlement_method", "") or ""

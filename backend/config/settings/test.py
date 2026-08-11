@@ -25,6 +25,8 @@ PASSWORD_HASHERS = [
 ]
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+# Isoler les tests du .env local (sinon emails internes en double).
+INTERNAL_NOTIFICATION_EMAILS = []
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 GOOGLE_DRIVE_SYNC_ENABLED = False

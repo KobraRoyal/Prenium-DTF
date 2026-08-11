@@ -187,9 +187,7 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
             from apps.orders.services.pricing import OrderPricingService
 
             prep_fee = str(
-                OrderPricingService().resolve_file_preparation_fee_per_file(
-                    customer=self.customer
-                )
+                OrderPricingService().resolve_file_preparation_fee_per_file(customer=self.customer)
             )
         except Exception:
             prep_fee = "0.00"
@@ -199,7 +197,8 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
             self.context(
                 gang_sheet_state=state,
                 **gallery_context,
-                can_create_order=sheet.status == GangSheet.Status.VALIDATED and bool(sheet.final_file),
+                can_create_order=sheet.status == GangSheet.Status.VALIDATED
+                and bool(sheet.final_file),
                 create_order_project_url=reverse(
                     "portal:client-gang-sheet-create-order-project",
                     kwargs={

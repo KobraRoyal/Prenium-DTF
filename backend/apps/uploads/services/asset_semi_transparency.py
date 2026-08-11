@@ -118,17 +118,13 @@ class AssetSemiTransparencyAnalyzer:
         )
         try:
             if erode_render_antialias:
-                eroded = semi_mask.filter(
-                    ImageFilter.MinFilter(self.render_antialias_filter)
-                )
+                eroded = semi_mask.filter(ImageFilter.MinFilter(self.render_antialias_filter))
                 semi_mask.close()
                 semi_mask = eroded
             return self._result_from_mask(
                 semi_mask,
                 alpha_channel_present=alpha_channel_present,
-                analysis_mode=(
-                    "render_eroded" if erode_render_antialias else "native_alpha"
-                ),
+                analysis_mode=("render_eroded" if erode_render_antialias else "native_alpha"),
             )
         finally:
             semi_mask.close()
@@ -143,10 +139,7 @@ class AssetSemiTransparencyAnalyzer:
         semi_pixels = self._count_mask_pixels(semi_mask)
         total_pixels = max(semi_mask.width * semi_mask.height, 1)
         coverage_percent = round((semi_pixels / total_pixels) * 100, 4)
-        detected = (
-            semi_pixels >= self.min_pixels
-            and coverage_percent >= self.min_coverage_percent
-        )
+        detected = semi_pixels >= self.min_pixels and coverage_percent >= self.min_coverage_percent
         overlay = self._build_overlay(semi_mask) if detected else None
         return SemiTransparencyAnalysisResult(
             detected=detected,
@@ -199,9 +192,7 @@ class AssetSemiTransparencyAnalyzer:
                     if alpha_max < self.min_alpha or alpha_min >= 255:
                         continue
                     local_mask = alpha.point(
-                        lambda value: (
-                            255 if self.min_alpha <= value <= self.max_alpha else 0
-                        )
+                        lambda value: (255 if self.min_alpha <= value <= self.max_alpha else 0)
                     )
                     try:
                         if self._count_mask_pixels(local_mask) < 1:
@@ -249,9 +240,7 @@ class AssetSemiTransparencyAnalyzer:
                     lambda value: 255 if self.min_alpha <= value <= self.max_alpha else 0
                 )
                 try:
-                    eroded = semi_mask.filter(
-                        ImageFilter.MinFilter(self.render_antialias_filter)
-                    )
+                    eroded = semi_mask.filter(ImageFilter.MinFilter(self.render_antialias_filter))
                     try:
                         if eroded.size != page_mask.size:
                             resized = eroded.resize(

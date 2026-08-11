@@ -203,9 +203,9 @@ def test_client_navigation_falls_back_to_classic_checkout_when_projects_disabled
     assert "Créer une commande" in html
     assert "À partir de fichiers" not in html
     assert "Générer une Gang Sheet" not in html
-    assert reverse(
-        "portal:client-checkout", kwargs={"customer_public_id": customer.public_id}
-    ) in html
+    assert (
+        reverse("portal:client-checkout", kwargs={"customer_public_id": customer.public_id}) in html
+    )
 
 
 @pytest.mark.django_db
@@ -807,9 +807,8 @@ def test_orders_table_shows_pending_label_when_not_priced():
 def test_orders_table_and_dashboard_show_unpaid_payment_flag():
     from decimal import Decimal
 
-    from django.core.files.base import ContentFile
-
     from apps.uploads.models import OrderUpload, OrderUploadInspection
+    from django.core.files.base import ContentFile
 
     user = get_user_model().objects.create_user(email="unpaid-flag@example.com", password="pass")
     customer = Customer.objects.create(
@@ -853,7 +852,7 @@ def test_orders_table_and_dashboard_show_unpaid_payment_flag():
     list_body = list_response.content.decode()
     assert "Paiement non finalisé" in list_body
     assert "Payer" in list_body
-    assert f"panel=billing&amp;pay=1" in list_body or "panel=billing&pay=1" in list_body
+    assert "panel=billing&amp;pay=1" in list_body or "panel=billing&pay=1" in list_body
 
     dash_response = client.get(reverse("portal:client-dashboard"))
     assert dash_response.status_code == 200

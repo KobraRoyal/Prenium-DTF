@@ -96,7 +96,9 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
                 "address_line_2": request.POST.get("recipient_address_line_2", ""),
                 "phone_number": request.POST.get("recipient_phone_number", ""),
             },
-            "parcel": {"weight": {"value": request.POST.get("parcel_weight_value", ""), "unit": "kg"}},
+            "parcel": {
+                "weight": {"value": request.POST.get("parcel_weight_value", ""), "unit": "kg"}
+            },
         }
         form_error = ""
         try:
@@ -150,7 +152,9 @@ class StaffOrderPanelShippingSyncView(StaffOrderContextMixin, View):
             response = render(
                 request,
                 self.template_name,
-                panel._panel_context(request, shipment=shipment, form_error="; ".join(exc.messages)),
+                panel._panel_context(
+                    request, shipment=shipment, form_error="; ".join(exc.messages)
+                ),
             )
             return with_toast(response, "; ".join(exc.messages), "error")
 

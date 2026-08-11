@@ -111,7 +111,7 @@ def test_extract_pdf_artboard_size_mm_rejects_xmp_that_disagrees_with_mediabox()
         "<stDim:h>507.95</stDim:h>"
         "<stDim:unit>Millimeters</stDim:unit>"
         "</xmpTPg:MaxPageSize>"
-        "</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end=\"w\"?>"
+        '</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'
     )
     width_mm, height_mm = extract_pdf_artboard_size_mm(document, page)
     document.close()
@@ -135,7 +135,7 @@ def test_extract_pdf_artboard_size_mm_converts_xmp_inches_when_aligned_with_medi
         "<stDim:h>8</stDim:h>"
         "<stDim:unit>Inches</stDim:unit>"
         "</xmpTPg:MaxPageSize>"
-        "</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end=\"w\"?>"
+        '</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'
     )
     width_mm, height_mm = extract_pdf_artboard_size_mm(document, page)
     document.close()

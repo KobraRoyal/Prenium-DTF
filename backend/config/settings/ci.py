@@ -15,5 +15,7 @@ PASSWORD_HASHERS = [
 ]
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+# Isoler les tests CI du .env / secrets injectés (sinon emails internes en double).
+INTERNAL_NOTIFICATION_EMAILS = []
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True

@@ -10,10 +10,7 @@ from apps.orders.models import Order
 
 def requires_captured_payment_before_production(order: Order) -> bool:
     """True pour les dépôts atelier en paiement comptant CB."""
-    return (
-        order.billing_mode == Order.BillingMode.IMMEDIATE
-        and order.uses_atelier_pricing()
-    )
+    return order.billing_mode == Order.BillingMode.IMMEDIATE and order.uses_atelier_pricing()
 
 
 def order_has_captured_payment(order: Order) -> bool:

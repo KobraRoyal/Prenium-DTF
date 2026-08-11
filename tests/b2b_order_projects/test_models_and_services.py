@@ -245,7 +245,11 @@ def test_thin_details_accept_multicolor_or_exact_support_color_before_confirmati
             source="test",
         )
     assert missing.value.code == "SUPPORT_COLOR_REQUIRED"
-    assert "base blanche" in missing.value.message.lower() or "toucher" in missing.value.message.lower() or "Multicouleur" in missing.value.message
+    assert (
+        "base blanche" in missing.value.message.lower()
+        or "toucher" in missing.value.message.lower()
+        or "Multicouleur" in missing.value.message
+    )
 
     confirmed_multicolor = service.confirm_item_analysis(
         project=project,

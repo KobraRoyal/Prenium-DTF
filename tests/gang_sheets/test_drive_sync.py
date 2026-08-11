@@ -128,9 +128,7 @@ def test_drive_sync_uploads_source_assets_and_pdf_into_order_folders():
     from apps.orders.models import Order
     from apps.uploads.models import OrderDriveFolder
 
-    user, customer, _project, sheet, content = create_hd_sheet(
-        email="gang-drive-order@example.com"
-    )
+    user, customer, _project, sheet, content = create_hd_sheet(email="gang-drive-order@example.com")
     asset, version = attach_png_asset(customer=customer, project=_project, user=user)
     GangSheetSourceAsset.objects.create(
         customer=customer,
@@ -338,9 +336,7 @@ def test_sync_gang_sheet_to_drive_locks_sheet_without_nullable_order_join(monkey
     """Régression : SELECT FOR UPDATE + select_related(order) casse sous PostgreSQL."""
     from apps.gang_sheets.services import drive as drive_module
 
-    user, _customer, _project, sheet, content = create_hd_sheet(
-        email="gang-drive-lock@example.com"
-    )
+    user, _customer, _project, sheet, content = create_hd_sheet(email="gang-drive-lock@example.com")
     assert sheet.order_id is None
     gateway = FakeDriveGateway()
 

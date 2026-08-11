@@ -62,7 +62,12 @@ class Command(BaseCommand):
         for order in orders:
             try:
                 result = repair_order_drive_sync(order=order, source="mgmt.repair_order_drive")
-            except (GoogleDriveSyncError, GoogleDriveConfigurationError, OSError, KeyError) as error:
+            except (
+                GoogleDriveSyncError,
+                GoogleDriveConfigurationError,
+                OSError,
+                KeyError,
+            ) as error:
                 failures += 1
                 self.stderr.write(f"FAIL {order.short_ref}: {error}")
                 continue
@@ -84,8 +89,7 @@ class Command(BaseCommand):
             for row in result["gang_sheets"]:
                 if row["status"] != "synced":
                     self.stderr.write(
-                        f"  gang {row['gang_sheet_public_id']}: "
-                        f"{row['status']} {row['last_error']}"
+                        f"  gang {row['gang_sheet_public_id']}: {row['status']} {row['last_error']}"
                     )
                     failures += 1
 

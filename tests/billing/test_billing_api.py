@@ -151,7 +151,11 @@ class FakeStripeGateway:
                 "provider_payment_id": session_id,
                 "status": "open",
                 "checkout_url": f"https://checkout.stripe.test/pay/{session_id}",
-                "payload": {"id": session_id, "status": "open", "url": f"https://checkout.stripe.test/pay/{session_id}"},
+                "payload": {
+                    "id": session_id,
+                    "status": "open",
+                    "url": f"https://checkout.stripe.test/pay/{session_id}",
+                },
                 "provider_capture_id": f"pi_{order.public_id.hex[:8]}",
             },
         )()

@@ -163,8 +163,8 @@ def test_production_transition_blocked_when_order_cancelled():
 @pytest.mark.django_db
 def test_staff_order_delete_view_requires_permission():
     order, _owner = _create_submitted_order()
-    viewer = _create_staff(email="viewer@example.com", permissions=["view_order"])
-    deleter = _create_staff(
+    _create_staff(email="viewer@example.com", permissions=["view_order"])
+    _create_staff(
         email="deleter@example.com",
         permissions=["view_order", "delete_atelier_order"],
     )

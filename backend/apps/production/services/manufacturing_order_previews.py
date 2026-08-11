@@ -35,9 +35,7 @@ class ManufacturingOrderPreviewService:
                 Image.Resampling.LANCZOS,
             )
             canvas = Image.new("RGB", image.size, "white")
-            if image.mode in {"RGBA", "LA"} or (
-                image.mode == "P" and "transparency" in image.info
-            ):
+            if image.mode in {"RGBA", "LA"} or (image.mode == "P" and "transparency" in image.info):
                 alpha_image = image.convert("RGBA")
                 canvas.paste(alpha_image, mask=alpha_image.getchannel("A"))
             else:

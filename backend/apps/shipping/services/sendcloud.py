@@ -23,7 +23,7 @@ from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
 from apps.production.services.workflow import ProductionWorkflowService
-from apps.shipping.models import Shipment
+from apps.shipping.models import SendcloudWebhookEvent, Shipment
 
 CARRIER_HANDOFF_STATUS_CODES = frozenset(
     {
@@ -71,18 +71,24 @@ class SendcloudAPIError(Exception):
         self.status_code = status_code
 
 
+@dataclass(frozen=True)
+class SendcloudWebhookIdentity:
+    """Identité stable d'un webhook, sans persister son payload brut."""
+
+    event_key: str
+    payload_hash: str
+    provider_event_id: str = ""
+
+
 def get_sendcloud_webhook_secret() -> str:
-    return str(
-        getattr(settings, "SENDCLOUD_WEBHOOK_SECRET", "") or settings.SENDCLOUD_SECRET_KEY or ""
-    ).strip()
+    return str(getattr(settings, "SENDCLOUD_WEBHOOK_SECRET", "") or "").strip()
 
 
 def verify_sendcloud_webhook_signature(*, payload: bytes, signature_header: str) -> None:
     secret = get_sendcloud_webhook_secret()
     if not secret:
         raise SendcloudConfigurationError(
-            "Sendcloud webhook secret must be configured via SENDCLOUD_WEBHOOK_SECRET "
-            "or SENDCLOUD_SECRET_KEY."
+            "Sendcloud webhook secret must be configured via SENDCLOUD_WEBHOOK_SECRET."
         )
     provided = str(signature_header or "").strip()
     if not provided:
@@ -93,20 +99,57 @@ def verify_sendcloud_webhook_signature(*, payload: bytes, signature_header: str)
 
 
 def extract_parcel_from_webhook_payload(payload: bytes) -> dict[str, object]:
+    data = _decode_sendcloud_webhook_payload(payload)
+
+    for key in ("parcel", "data", "msg"):
+        nested = data.get(key)
+        if not isinstance(nested, dict):
+            continue
+        if _looks_like_parcel(nested):
+            return _with_webhook_event_metadata(parcel=nested, envelope=data)
+        nested_parcel = nested.get("parcel")
+        if isinstance(nested_parcel, dict) and _looks_like_parcel(nested_parcel):
+            return _with_webhook_event_metadata(parcel=nested_parcel, envelope=data)
+    if _looks_like_parcel(data):
+        return _with_webhook_event_metadata(parcel=data, envelope=data)
+    raise SendcloudAPIError("Sendcloud webhook payload did not include a parcel.")
+
+
+def build_sendcloud_webhook_identity(payload: bytes) -> SendcloudWebhookIdentity:
+    data = _decode_sendcloud_webhook_payload(payload)
+    canonical_payload = json.dumps(
+        data,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    payload_hash = hashlib.sha256(canonical_payload).hexdigest()
+    provider_event_id = ""
+    for key in ("event_id", "webhook_id", "uuid"):
+        value = str(data.get(key, "") or "").strip()
+        if value:
+            provider_event_id = value[:255]
+            break
+    if provider_event_id:
+        event_id_hash = hashlib.sha256(provider_event_id.encode("utf-8")).hexdigest()
+        event_key = f"event:{event_id_hash}"
+    else:
+        event_key = f"payload:{payload_hash}"
+    return SendcloudWebhookIdentity(
+        event_key=event_key,
+        payload_hash=payload_hash,
+        provider_event_id=provider_event_id,
+    )
+
+
+def _decode_sendcloud_webhook_payload(payload: bytes) -> dict[str, object]:
     try:
         data = json.loads(payload.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise SendcloudAPIError("Invalid Sendcloud webhook payload.") from exc
     if not isinstance(data, dict):
         raise SendcloudAPIError("Sendcloud webhook payload must be a JSON object.")
-
-    for key in ("parcel", "data", "msg"):
-        nested = data.get(key)
-        if isinstance(nested, dict) and _looks_like_parcel(nested):
-            return nested
-    if _looks_like_parcel(data):
-        return data
-    raise SendcloudAPIError("Sendcloud webhook payload did not include a parcel.")
+    return data
 
 
 def _looks_like_parcel(value: dict[str, object]) -> bool:
@@ -118,14 +161,32 @@ def _looks_like_parcel(value: dict[str, object]) -> bool:
     )
 
 
+def _with_webhook_event_metadata(
+    *,
+    parcel: dict[str, object],
+    envelope: dict[str, object],
+) -> dict[str, object]:
+    normalized = dict(parcel)
+    for key in ("timestamp", "date_updated", "updated_at", "modified"):
+        if key not in normalized and envelope.get(key) not in (None, ""):
+            normalized[key] = envelope[key]
+    return normalized
+
+
 def parse_sendcloud_event_timestamp(value) -> datetime | None:
     if value is None or value == "":
         return None
     if isinstance(value, datetime):
         return value if timezone.is_aware(value) else timezone.make_aware(value)
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         try:
-            return datetime.fromtimestamp(float(value), tz=timezone.get_current_timezone())
+            numeric_value = float(value)
+            if abs(numeric_value) >= 10_000_000_000:
+                numeric_value /= 1000
+            return datetime.fromtimestamp(
+                numeric_value,
+                tz=timezone.get_current_timezone(),
+            )
         except (OverflowError, OSError, ValueError):
             return None
     raw = str(value).strip()
@@ -195,16 +256,23 @@ class SendcloudGateway:
         shipment_request: dict[str, object],
     ) -> list[dict[str, object]]:
         recipient = shipment_request["recipient"]
-        parcel = shipment_request.get("parcel") if isinstance(shipment_request.get("parcel"), dict) else {}
+        parcel = (
+            shipment_request.get("parcel")
+            if isinstance(shipment_request.get("parcel"), dict)
+            else {}
+        )
         weight = parcel.get("weight") if isinstance(parcel.get("weight"), dict) else {}
         weight_value = float(str(weight.get("value") or "1"))
         weight_unit = str(weight.get("unit") or "kg")
         order_id = str(order.public_id)
         order_number = short_public_ref(order.public_id)
-        # Date de déclaration (pas Order.created_at) pour apparaître dans les filtres Sendcloud « 7 derniers jours ».
+        # Date de déclaration (pas Order.created_at) pour apparaître dans les
+        # filtres Sendcloud « 7 derniers jours ».
         created_at = timezone.now().isoformat()
         total_value = float(order.total_amount)
-        order_items = self._build_order_items(order=order, weight_value=weight_value, weight_unit=weight_unit)
+        order_items = self._build_order_items(
+            order=order, weight_value=weight_value, weight_unit=weight_unit
+        )
 
         return [
             {
@@ -274,7 +342,9 @@ class SendcloudGateway:
         for line in lines:
             # Sendcloud Orders API exige une quantité entière (>= 1).
             raw_quantity = float(line.quantity)
-            quantity_payload = max(1, int(raw_quantity) if raw_quantity.is_integer() else int(raw_quantity) + 1)
+            quantity_payload = max(
+                1, int(raw_quantity) if raw_quantity.is_integer() else int(raw_quantity) + 1
+            )
             item: dict[str, object] = {
                 "name": str(line.service_name or line.service_code or "Article DTF").strip(),
                 "quantity": quantity_payload,
@@ -614,6 +684,7 @@ class ShipmentService:
         self,
         *,
         parcel: dict[str, object],
+        event_identity: SendcloudWebhookIdentity,
         source: str = "sendcloud_webhook",
     ):
         if not isinstance(parcel, dict):
@@ -657,12 +728,6 @@ class ShipmentService:
                     if short_public_ref(candidate.order.public_id).lower() in short_refs:
                         shipment = candidate
                         break
-            if shipment is not None and parcel_id and not shipment.sendcloud_parcel_id:
-                with transaction.atomic():
-                    shipment = Shipment.objects.select_for_update().get(pk=shipment.pk)
-                    shipment.sendcloud_parcel_id = parcel_id
-                    shipment.save(update_fields=["sendcloud_parcel_id", "updated_at"])
-
         if shipment is None:
             record_event(
                 action="shipping.sendcloud_webhook_unknown_parcel",
@@ -674,7 +739,7 @@ class ShipmentService:
                     "source": source,
                 },
             )
-            return None, None
+            return None, None, False
 
         event_at = None
         for key in ("timestamp", "date_updated", "updated_at", "modified"):
@@ -682,14 +747,51 @@ class ShipmentService:
             if event_at is not None:
                 break
 
-        return self._apply_tracking_update(
-            shipment=shipment,
-            parcel=parcel,
-            actor=None,
-            source=source,
-            audit_action="shipping.shipment_tracking_synced",
-            event_at=event_at,
-        )
+        with transaction.atomic():
+            shipment = (
+                Shipment.objects.select_for_update()
+                .select_related("order", "order__customer")
+                .get(pk=shipment.pk)
+            )
+            webhook_event, created = SendcloudWebhookEvent.objects.get_or_create(
+                customer=shipment.order.customer,
+                event_key=event_identity.event_key,
+                defaults={
+                    "shipment": shipment,
+                    "provider_event_id": event_identity.provider_event_id,
+                    "payload_hash": event_identity.payload_hash,
+                },
+            )
+            if not created:
+                record_event(
+                    action="shipping.sendcloud_webhook_duplicate_ignored",
+                    target=shipment,
+                    metadata={
+                        "customer_public_id": str(shipment.order.customer.public_id),
+                        "shipment_public_id": str(shipment.public_id),
+                        "provider_event_id": event_identity.provider_event_id,
+                        "payload_hash": event_identity.payload_hash,
+                        "source": source,
+                    },
+                )
+                return shipment.order, shipment, True
+
+            if parcel_id and not shipment.sendcloud_parcel_id:
+                shipment.sendcloud_parcel_id = parcel_id
+                shipment.save(update_fields=["sendcloud_parcel_id", "updated_at"])
+
+            order, shipment = self._apply_tracking_update(
+                shipment=shipment,
+                parcel=parcel,
+                actor=None,
+                source=source,
+                audit_action="shipping.shipment_tracking_synced",
+                event_at=event_at,
+            )
+            webhook_event.shipment = shipment
+            webhook_event.processed_at = timezone.now()
+            webhook_event.save(update_fields=["shipment", "processed_at", "updated_at"])
+            return order, shipment, False
 
     def download_staff_shipment_label(self, *, order_public_id, actor, source: str):
         order = self._get_staff_order(order_public_id=order_public_id)
@@ -697,9 +799,7 @@ class ShipmentService:
             return None, None
 
         shipment = (
-            Shipment.objects.select_related("order", "order__customer")
-            .filter(order=order)
-            .first()
+            Shipment.objects.select_related("order", "order__customer").filter(order=order).first()
         )
         if shipment is None or not shipment.label_file:
             return order, None
@@ -798,6 +898,7 @@ class ShipmentService:
         now = timezone.now()
         became_shipped = False
         skipped_stale = False
+        skipped_regressive = False
 
         with transaction.atomic():
             shipment = (
@@ -811,6 +912,12 @@ class ShipmentService:
                 and event_at < shipment.last_api_sync_at
             ):
                 skipped_stale = True
+            elif (
+                shipment.shipped_at is not None
+                and fields["sendcloud_status_code"]
+                and not is_carrier_handoff_status(fields["sendcloud_status_code"])
+            ):
+                skipped_regressive = True
             else:
                 shipment.sendcloud_status_code = fields["sendcloud_status_code"]
                 shipment.sendcloud_status_message = fields["sendcloud_status_message"]
@@ -848,6 +955,22 @@ class ShipmentService:
                     "customer_public_id": str(order.customer.public_id),
                     "shipment_public_id": str(shipment.public_id),
                     "sendcloud_status_code": fields["sendcloud_status_code"],
+                    "source": source,
+                },
+            )
+            return order, shipment
+
+        if skipped_regressive:
+            record_event(
+                action="shipping.shipment_tracking_sync_skipped_regressive",
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=shipment,
+                metadata={
+                    "order_public_id": str(order.public_id),
+                    "customer_public_id": str(order.customer.public_id),
+                    "shipment_public_id": str(shipment.public_id),
+                    "current_sendcloud_status_code": shipment.sendcloud_status_code,
+                    "incoming_sendcloud_status_code": fields["sendcloud_status_code"],
                     "source": source,
                 },
             )

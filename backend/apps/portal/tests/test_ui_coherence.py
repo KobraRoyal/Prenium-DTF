@@ -86,6 +86,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("htmx", marketing_script.lower())
         self.assertNotIn("alpine", marketing_script.lower())
 
+        landing_motion = static_source("js/landing-motion.js")
+        self.assertIn("initLandingHeaderState", landing_motion)
+        self.assertIn("initLandingBoardTilt", landing_motion)
+        self.assertIn("initLandingSmoothAnchors", landing_motion)
+        self.assertIn('header.classList.toggle("is-scrolled"', landing_motion)
+        self.assertIn("IntersectionObserver", landing_motion)
+        self.assertIn("prefers-reduced-motion", landing_motion)
+
     def test_landing_mobile_performance_contract_is_explicit(self) -> None:
         landing_css = static_source("css/components/landing.css")
         conversion_css = static_source("css/components/landing-conversion.css")
@@ -116,6 +124,23 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("<form", hero + process + final_cta)
         self.assertNotIn("{% url 'services' %}", final_cta)
 
+    def test_audit_followups_remove_gated_reveal_side_tab_and_width_motion(self) -> None:
+        conversion_css = static_source("css/components/landing-conversion.css")
+        tunnel_css = static_source("css/components/prospect-tunnel.css")
+        journey_css = static_source("css/components/prospect-journey.css")
+        tunnel_base = template_source("prospects/base_tunnel.html")
+        design_md = (Path(settings.BASE_DIR).parent / "DESIGN.md").read_text(encoding="utf-8")
+
+        self.assertIn("Contenu toujours lisible", conversion_css)
+        self.assertNotIn("filter: blur(5px)", conversion_css)
+        self.assertNotIn("border-left: 4px solid var(--success)", tunnel_css)
+        self.assertIn("transform: scaleX(calc(var(--progress, 0) / 100))", tunnel_css)
+        self.assertIn("transition: transform 280ms", journey_css)
+        self.assertIn('style="--progress:', tunnel_base)
+        self.assertNotIn('style="width:', tunnel_base)
+        self.assertIn("name: Prenium DTF", design_md)
+        self.assertIn("## Do's and Don'ts", design_md)
+
     def test_landing_impeccable_accessibility_and_visual_contracts(self) -> None:
         landing_css = static_source("css/components/landing.css")
         conversion_css = static_source("css/components/landing-conversion.css")
@@ -144,6 +169,22 @@ class PortalUiCoherenceTests(SimpleTestCase):
         )
         self.assertIn("font-size: clamp(3.6rem, 6.2vw, 6rem)", conversion_css)
         self.assertIn("letter-spacing: -0.035em", conversion_css)
+        self.assertIn("@keyframes conversion-hero-title-in", conversion_css)
+        self.assertIn("@keyframes conversion-status-pulse", conversion_css)
+        self.assertIn("@keyframes conversion-scroll-progress", conversion_css)
+        self.assertIn("animation-timeline: scroll(root block)", conversion_css)
+        self.assertIn("prefers-reduced-motion: reduce", conversion_css)
+        self.assertIn(".agency-header .agency-nav__link:hover", conversion_css)
+        self.assertIn('.agency-menu-toggle[aria-expanded="true"]', conversion_css)
+        self.assertIn(
+            ".conversion-button.conversion-button--ghost:hover",
+            conversion_css,
+        )
+        self.assertIn(
+            ".conversion-final .conversion-button--primary:hover",
+            conversion_css,
+        )
+        self.assertIn("-webkit-text-fill-color: var(--conversion-ink) !important", conversion_css)
         self.assertNotIn("7.4rem", conversion_css)
         self.assertNotIn("letter-spacing: -0.055em", conversion_css)
         self.assertNotIn("background-size: 54px 54px", conversion_css)
@@ -151,9 +192,21 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("conversion-kicker", partials)
         self.assertNotIn("conversion-transform__index", partials)
         self.assertIn("min-height: 2.75rem", conversion_css)
-        self.assertIn("app.css' %}?v=20260726-prod-css-sync-4", base)
+        self.assertIn("app.css' %}?v=20260731-kinetic-motion-1", base)
         self.assertIn("app.js' %}?v=20260726-js-runtime-fix", base)
         self.assertIn("ui-brand-lockup__home", logo)
+        self.assertIn("Contenu toujours lisible", conversion_css)
+        self.assertIn("transform: translate3d(0, 1.1rem, 0)", conversion_css)
+        self.assertNotIn("filter: blur(5px)", conversion_css)
+        self.assertIn("@keyframes conversion-accent-draw", conversion_css)
+        self.assertIn("@keyframes conversion-board-step-in", conversion_css)
+        self.assertIn("@keyframes conversion-em-underline", conversion_css)
+        self.assertIn("scroll-behavior: smooth", conversion_css)
+        self.assertIn(
+            'include "shop/partials/landing_footer.html"', template_source("shop/home.html")
+        )
+        self.assertIn("conversion-footer", template_source("shop/partials/landing_footer.html"))
+        self.assertIn('role="contentinfo"', template_source("shop/partials/landing_footer.html"))
         self.assertEqual(logo.count("<a "), 1)
 
     def test_client_order_detail_polish_keeps_one_surface_and_mobile_contracts(self) -> None:
@@ -843,9 +896,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         )
         # Surfaces internes plates (pas de re-pile d’ombres dures).
         self.assertGreaterEqual(
-            product_css.count(
-                "body.product-shell .staff-order-detail-stack .ui-panel-shell"
-            ),
+            product_css.count("body.product-shell .staff-order-detail-stack .ui-panel-shell"),
             1,
         )
         self.assertIn(
@@ -1007,9 +1058,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         summary = template_source("portal/client/partials/order_project_summary.html")
         settlement = template_source("portal/client/partials/b2b_settlement_choice.html")
-        checkout_summary = template_source(
-            "portal/client/partials/checkout_summary.html"
-        )
+        checkout_summary = template_source("portal/client/partials/checkout_summary.html")
 
         self.assertNotIn("b2b_settlement_choice.html", summary)
         self.assertIn('name="billing_mode"', summary)
@@ -1051,7 +1100,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('document.body.addEventListener("htmx:afterSettle"', configurator_script)
         self.assertIn('document.body.addEventListener("htmx:beforeRequest"', configurator_script)
         self.assertIn("findOpenVisualDialog", configurator_script)
-        self.assertIn("removeAttribute(\"required\")", configurator_script)
+        self.assertIn('removeAttribute("required")', configurator_script)
         self.assertIn("data-visual-confirm", editor)
         self.assertIn("dialog[id^='visual-dialog-']", configurator_script)
         self.assertNotIn("dialog[open][id^='visual-dialog-']", configurator_script)
@@ -1149,7 +1198,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('required aria-required="true"', support_color)
         self.assertIn("b2b-swatch-btn", support_color)
         self.assertIn("b2b-swatch-btn--rainbow", support_color)
-        self.assertNotIn("disabled", support_color.split("data-support-color-multicolor", 1)[1].split(">", 1)[0])
+        self.assertNotIn(
+            "disabled", support_color.split("data-support-color-multicolor", 1)[1].split(">", 1)[0]
+        )
         self.assertIn("b2b_hex_color_swatch.html", support_color)
         hex_swatch = template_source("portal/client/partials/b2b_hex_color_swatch.html")
         self.assertIn("b2b-swatch-btn--custom", hex_swatch)

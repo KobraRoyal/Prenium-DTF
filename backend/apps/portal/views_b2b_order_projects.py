@@ -677,9 +677,7 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                     request.POST.get("billing_mode")
                     or getattr(self.customer, "default_billing_mode", "deferred")
                 ).strip(),
-                shipping_method_code=(
-                    request.POST.get("shipping_method_code") or ""
-                ).strip()
+                shipping_method_code=(request.POST.get("shipping_method_code") or "").strip()
                 or None,
             )
         except ProjectDomainError as error:
@@ -743,8 +741,8 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
             order.billing_mode == Order.BillingMode.IMMEDIATE
             and order.pricing_status == Order.PricingStatus.PRICED
         ):
-            from apps.portal.views_payments import available_payment_providers
             from apps.portal.views_common import billing_service
+            from apps.portal.views_payments import available_payment_providers
 
             providers = available_payment_providers()
             if len(providers) == 1:

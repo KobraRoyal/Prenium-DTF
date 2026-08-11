@@ -50,9 +50,7 @@ def _inspection_context(request, *, order, form_error: str = "", error_upload_id
         "automatic_attention_count": automatic_attention_count,
         "pending_review_count": review_counter[OrderUploadReview.Status.PENDING],
         "approved_review_count": review_counter[OrderUploadReview.Status.APPROVED],
-        "changes_requested_count": review_counter[
-            OrderUploadReview.Status.CHANGES_REQUESTED
-        ],
+        "changes_requested_count": review_counter[OrderUploadReview.Status.CHANGES_REQUESTED],
         "all_uploads_approved": bool(uploads)
         and review_counter[OrderUploadReview.Status.APPROVED] == len(uploads),
         "review_reasons": OrderUploadReview.Reason.choices,

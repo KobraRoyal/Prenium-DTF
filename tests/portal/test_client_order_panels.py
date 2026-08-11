@@ -109,9 +109,8 @@ def test_production_panel_shows_status_history():
 
 @pytest.mark.django_db
 def test_owner_shipping_panel_and_order_summary_show_tracking():
-    from django.utils import timezone
-
     from apps.shipping.models import Shipment
+    from django.utils import timezone
 
     user = get_user_model().objects.create_user(email="ship-owner@example.com", password="pass")
     customer = Customer.objects.create(name="Ship Owner")

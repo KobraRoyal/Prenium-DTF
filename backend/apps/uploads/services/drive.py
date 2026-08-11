@@ -157,9 +157,7 @@ class GoogleDriveGateway:
             status = int(getattr(error.resp, "status", 0) or 0)
             if status in {403, 404}:
                 return None
-            raise GoogleDriveSyncError(
-                f"Unable to read Drive item '{file_id}'."
-            ) from error
+            raise GoogleDriveSyncError(f"Unable to read Drive item '{file_id}'.") from error
 
     def is_active_folder(self, file_id: str) -> bool:
         meta = self.get_file_metadata(file_id)

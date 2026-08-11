@@ -5,24 +5,18 @@
 
 {% block prospect_section_head %}
 <div class="landing-section-head prospect-tunnel__intro prospect-journey__intro">
-  <div class="prospect-journey__intro-line">
-    <p class="landing-kicker landing-kicker--pill">Dernière vérification</p>
-    <span>Avant envoi</span>
-  </div>
-  <h2 class="prospect-tunnel__title">Votre dossier<br>est prêt.</h2>
-  <p class="landing-auth-lead prospect-tunnel__lead">Relisez l’essentiel. Après confirmation de votre e-mail, une personne de l’équipe IDS étudiera votre demande.</p>
+  <h2 class="prospect-tunnel__title">Vérification</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Relisez l’essentiel, puis envoyez. Un e-mail de confirmation suivra.</p>
 </div>
 {% endblock %}
 
 {% block prospect_inner %}
 <section class="prospect-summary prospect-summary--premium prospect-review" aria-labelledby="review-title">
   <div class="prospect-summary__header prospect-review__header">
-    <span class="prospect-summary__check" aria-hidden="true">✓</span>
     <div>
-      <p>Récapitulatif</p>
-      <h3 id="review-title" class="prospect-summary__title">Les informations essentielles</h3>
+      <h3 id="review-title" class="prospect-summary__title">Récapitulatif</h3>
     </div>
-    <a href="{% url 'prospects:step1' %}">Modifier l’entreprise</a>
+    <a href="{% url 'prospects:step1' %}">Modifier</a>
   </div>
 
   <dl class="prospect-summary__dl prospect-review__grid">
@@ -35,11 +29,6 @@
     <div class="prospect-review__item"><dt>Volume</dt><dd>{{ summary.volume }}</dd></div>
     <div class="prospect-review__item"><dt>Calendrier</dt><dd>{{ summary.timing }}</dd></div>
   </dl>
-
-  <div class="prospect-review__notice">
-    <span aria-hidden="true">i</span>
-    <p><strong>Aucun compte ni mot de passe n’est créé maintenant.</strong> L’activation intervient uniquement après validation de votre demande.</p>
-  </div>
 </section>
 
 <form method="post" class="ui-form-stack prospect-form prospect-review-form text-left" novalidate data-submit-loading>
@@ -47,13 +36,7 @@
   {% if messages %}{% for message in messages %}<div class="dui-alert dui-alert-error" role="alert">{{ message }}</div>{% endfor %}{% endif %}
 
   <section class="prospect-review-confirm" aria-labelledby="confirm-title">
-    <div class="prospect-project-section__head">
-      <span aria-hidden="true">03</span>
-      <div>
-        <h3 id="confirm-title">Confirmer et envoyer</h3>
-        <p>Une dernière validation avant l’étude du dossier.</p>
-      </div>
-    </div>
+    <h3 id="confirm-title" class="prospect-form__section-title">Confirmer et envoyer</h3>
     <label class="prospect-consent-card{% if form.terms_accepted.errors %} is-error{% endif %}">
       <input type="checkbox" name="terms_accepted" required {% if form.terms_accepted.value %}checked{% endif %}>
       <span class="prospect-consent-card__control" aria-hidden="true">✓</span>
@@ -62,16 +45,8 @@
     {% if form.terms_accepted.errors %}<p class="error-text" role="alert">{{ form.terms_accepted.errors.0 }}</p>{% endif %}
   </section>
 
-  <div class="prospect-next-steps" aria-label="Étapes suivantes">
-    <div class="prospect-next-steps__heading"><span>Après l’envoi</span><strong>Vous gardez la visibilité sur chaque étape.</strong></div>
-    <span><b>01</b><span><strong>Vérification e-mail</strong><small>Lien valable 48 heures</small></span></span>
-    <span><b>02</b><span><strong>Validation IDS</strong><small>Lecture humaine du dossier</small></span></span>
-    <span><b>03</b><span><strong>Activation sécurisée</strong><small>Création de votre mot de passe</small></span></span>
-  </div>
-
   <div class="prospect-form__footer prospect-journey__footer">
     <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'prospects:step2' %}">Retour</a>
-    <p><span>Délai habituel</span><strong>1 à 2 jours ouvrés</strong></p>
     <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Envoyer ma demande <span aria-hidden="true">→</span></button>
   </div>
 </form>

@@ -104,9 +104,7 @@ class OrderPricingService:
                 service_type=CatalogService.ServiceType.FILE_PREPARATION,
                 unit=CatalogService.Unit.FIXED,
             ),
-            preferred_codes=list(
-                getattr(settings, "CATALOG_PREFERRED_FILE_PREP_CODES", []) or []
-            ),
+            preferred_codes=list(getattr(settings, "CATALOG_PREFERRED_FILE_PREP_CODES", []) or []),
             missing_message=(
                 "Aucun service « Préparation fichier » (forfait) actif dans le catalogue."
             ),
@@ -195,9 +193,7 @@ class OrderPricingService:
         resolved_billing = (
             str(billing_mode).strip().lower()
             if billing_mode
-            else str(
-                getattr(customer, "default_billing_mode", Order.BillingMode.DEFERRED)
-            )
+            else str(getattr(customer, "default_billing_mode", Order.BillingMode.DEFERRED))
             .strip()
             .lower()
         )
@@ -275,9 +271,7 @@ class OrderPricingService:
             return None
         if width_mm <= 0 or height_mm <= 0:
             return None
-        width_m = (Decimal(width_mm) / Decimal("1000")).quantize(
-            FOURPLACES, rounding=ROUND_HALF_UP
-        )
+        width_m = (Decimal(width_mm) / Decimal("1000")).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
         height_m = (Decimal(height_mm) / Decimal("1000")).quantize(
             FOURPLACES, rounding=ROUND_HALF_UP
         )

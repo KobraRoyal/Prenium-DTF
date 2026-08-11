@@ -1,4 +1,25 @@
 {% extends "prospects/base_tunnel.html" %}
 {% block title %}Demande reçue — Prenium DTF{% endblock %}
-{% block prospect_section_head %}<div class="landing-section-head prospect-tunnel__intro"><p class="landing-kicker landing-kicker--pill">Demande enregistrée</p>{% if profile.status == 'pending_email_verification' %}<h2 class="prospect-tunnel__title">Consultez votre boîte e-mail</h2><p class="landing-auth-lead prospect-tunnel__lead">Nous venons d’envoyer un lien de vérification{% if profile %} à {{ profile.email }}{% endif %}. Il reste valable 48 heures.</p>{% else %}<h2 class="prospect-tunnel__title">Votre demande est déjà en cours</h2><p class="landing-auth-lead prospect-tunnel__lead">Notre équipe dispose déjà d’une demande active pour cette adresse professionnelle.</p>{% endif %}</div>{% endblock %}
-{% block prospect_inner %}<div class="prospect-success-card"><span class="prospect-success-card__icon" aria-hidden="true">✉</span>{% if profile.status == 'pending_email_verification' %}<h3>Une dernière action avant l’examen IDS</h3><p>Cliquez sur le lien reçu. Votre demande rejoindra ensuite la file de validation de notre équipe.</p>{% else %}<h3>Aucune nouvelle action nécessaire</h3><p>Vous serez informé par e-mail dès que votre demande évoluera.</p>{% endif %}<a class="ui-btn ui-btn-secondary" href="{% url 'home' %}">Retour au site</a></div>{% endblock %}
+{% block prospect_section_head %}
+<div class="landing-section-head prospect-tunnel__intro">
+  {% if profile.status == 'pending_email_verification' %}
+  <h2 class="prospect-tunnel__title">Consultez votre e-mail</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Lien de vérification envoyé{% if profile %} à {{ profile.email }}{% endif %}. Valable 48 heures.</p>
+  {% else %}
+  <h2 class="prospect-tunnel__title">Demande déjà en cours</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Une demande active existe déjà pour cette adresse. Vous serez informé par e-mail.</p>
+  {% endif %}
+</div>
+{% endblock %}
+{% block prospect_inner %}
+<div class="prospect-success-card">
+  {% if profile.status == 'pending_email_verification' %}
+  <h3>Prochaine étape</h3>
+  <p>Ouvrez le lien reçu pour transmettre votre dossier à l’équipe IDS.</p>
+  {% else %}
+  <h3>Aucune action requise</h3>
+  <p>Nous vous écrirons dès que votre demande évoluera.</p>
+  {% endif %}
+  <a class="ui-btn ui-btn-secondary" href="{% url 'home' %}">Retour au site</a>
+</div>
+{% endblock %}

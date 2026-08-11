@@ -330,9 +330,7 @@ def test_drive_sync_service_uses_single_order_folder_for_multiple_uploads():
     assert all(sync.drive_folder_id == syncs[0].drive_folder_id for sync in syncs)
     assert len(gateway.uploads) == 3
     assert {upload["parent_id"] for upload in gateway.uploads} == {source_folder_id}
-    order_folder_names = {
-        name for (_parent, name) in gateway.folders if name == order.short_ref
-    }
+    order_folder_names = {name for (_parent, name) in gateway.folders if name == order.short_ref}
     assert len(order_folder_names) == 1
 
 

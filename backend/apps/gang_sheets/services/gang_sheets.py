@@ -822,11 +822,7 @@ class GangSheetService:
             label="quantité d'exemplaires",
         )
         project_name = str(name or "").strip() or locked.name
-        project_comment = (
-            str(customer_comment).strip()
-            if customer_comment is not None
-            else ""
-        )
+        project_comment = str(customer_comment).strip() if customer_comment is not None else ""
         project_date = self._normalize_optional_date(requested_date)
         transaction.on_commit(
             lambda: self.drive_sync.schedule_sync(

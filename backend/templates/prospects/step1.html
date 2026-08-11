@@ -5,17 +5,8 @@
 
 {% block prospect_section_head %}
 <div class="landing-section-head prospect-tunnel__intro prospect-step1__intro">
-  <div class="prospect-step1__intro-topline">
-    <p class="landing-kicker landing-kicker--pill">Ouverture de compte professionnel</p>
-    <span class="prospect-step1__time">Environ 2 minutes</span>
-  </div>
-  <h2 class="prospect-tunnel__title">Votre entreprise,<br>simplement.</h2>
-  <p class="landing-auth-lead prospect-tunnel__lead">Présentez-nous votre activité. Aucun document à transmettre aujourd’hui.</p>
-  <ul class="prospect-step1__proofs" aria-label="Garanties du parcours">
-    <li><span aria-hidden="true">✓</span> Validation humaine</li>
-    <li><span aria-hidden="true">✓</span> Données protégées</li>
-    <li><span aria-hidden="true">✓</span> Sans engagement</li>
-  </ul>
+  <h2 class="prospect-tunnel__title">Votre entreprise</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Identité et contact. Aucun document à transmettre.</p>
 </div>
 {% endblock %}
 
@@ -27,14 +18,7 @@
   {% endif %}
 
   <section class="prospect-form__section prospect-step1__section" aria-labelledby="contact-heading">
-    <div class="prospect-step1__section-head">
-      <span class="prospect-form__section-index" aria-hidden="true">01</span>
-      <div>
-        <h3 id="contact-heading" class="prospect-form__section-title">Vos coordonnées</h3>
-        <p class="prospect-step1__section-help">La personne qui pilotera le compte après validation IDS.</p>
-      </div>
-      <span class="prospect-step1__section-meta">4 champs</span>
-    </div>
+    <h3 id="contact-heading" class="prospect-form__section-title">Vos coordonnées</h3>
     <div class="prospect-form__panel prospect-step1__surface prospect-step1__contact-grid">
       <div class="dui-form-control prospect-step1__field">
         <label class="product-form-label" for="id_first_name">{{ form.first_name.label }}</label>
@@ -60,14 +44,7 @@
   </section>
 
   <section class="prospect-form__section prospect-step1__section" aria-labelledby="company-heading">
-    <div class="prospect-step1__section-head">
-      <span class="prospect-form__section-index" aria-hidden="true">02</span>
-      <div>
-        <h3 id="company-heading" class="prospect-form__section-title">Votre structure</h3>
-        <p class="prospect-step1__section-help">Ces informations nous permettent de vérifier votre activité professionnelle.</p>
-      </div>
-      <span class="prospect-step1__section-meta">Aucun justificatif</span>
-    </div>
+    <h3 id="company-heading" class="prospect-form__section-title">Votre structure</h3>
     <div class="prospect-form__panel prospect-step1__surface prospect-step1__company-grid">
       <div class="dui-form-control prospect-step1__field prospect-step1__field--full">
         <label class="product-form-label" for="id_company">{{ form.company.label }}</label>
@@ -82,9 +59,8 @@
         {% if form.country.errors %}<p class="error-text" role="alert">{{ form.country.errors.0 }}</p>{% endif %}
       </div>
       <div class="dui-form-control prospect-step1__field" x-show="country === 'FR'" x-cloak>
-        <label class="product-form-label" for="id_siren">Numéro SIREN <span class="prospect-step1__label-hint">9 chiffres</span></label>
-        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.siren.errors %} border-error/60{% endif %}" id="id_siren" name="siren" value="{{ form.siren.value|default:'' }}" inputmode="numeric" maxlength="14" :required="country === 'FR'" aria-describedby="siren-help" placeholder="123 456 789">
-        <p class="prospect-step1__field-help" id="siren-help">Présent sur votre extrait INSEE ou Kbis.</p>
+        <label class="product-form-label" for="id_siren">Numéro SIREN</label>
+        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.siren.errors %} border-error/60{% endif %}" id="id_siren" name="siren" value="{{ form.siren.value|default:'' }}" inputmode="numeric" maxlength="14" :required="country === 'FR'" placeholder="123 456 789">
         {% if form.siren.errors %}<p class="error-text" role="alert">{{ form.siren.errors.0 }}</p>{% endif %}
       </div>
       <div class="dui-form-control prospect-step1__field" x-show="country !== 'FR'" x-cloak>
@@ -95,15 +71,13 @@
 
       <fieldset class="prospect-step1__activity prospect-step1__field--full">
         <legend>{{ form.activity_type.label }}</legend>
-        <p id="activity-help">Choisissez le profil le plus proche de votre activité.</p>
-        <div class="prospect-step1__activity-grid" role="radiogroup" aria-describedby="activity-help">
+        <div class="prospect-step1__activity-grid" role="radiogroup">
           {% for value, label in form.activity_type.field.choices %}
           {% if value %}
           <label class="prospect-step1__activity-card">
             <input type="radio" name="activity_type" value="{{ value }}" {% if form.activity_type.value == value %}checked{% endif %} required>
             <span class="prospect-step1__activity-copy">
               <strong>{{ label }}</strong>
-              <small>{% if value == 'brand' %}Collection &amp; retail{% elif value == 'printer' %}Production &amp; revente{% elif value == 'workshop' %}Flocage &amp; finition{% elif value == 'creator' %}Studio &amp; petites séries{% else %}Profil hybride{% endif %}</small>
             </span>
             <span class="prospect-step1__activity-check" aria-hidden="true">✓</span>
           </label>
@@ -117,8 +91,7 @@
 
   <div class="prospect-form__footer prospect-step1__footer">
     <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'home' %}">Retour au site</a>
-    <p><span>Étape suivante</span><strong>Votre besoin &amp; vos volumes</strong></p>
-    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Continuer vers mon projet <span aria-hidden="true">→</span></button>
+    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Continuer <span aria-hidden="true">→</span></button>
   </div>
 </form>
 {% endblock %}

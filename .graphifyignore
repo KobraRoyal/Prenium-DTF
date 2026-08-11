@@ -1,0 +1,65 @@
+# Graphify output (avoid indexing the index itself)
+graphify-out/
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Version control, agent state, and local tooling
+.git/
+.agents/
+.codex/
+.codex-tmp/
+.goose/
+.impeccable/
+.playwright-cli/
+
+# Python and test caches
+.venv/
+venv/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.pyc
+
+# JavaScript dependencies and build artifacts
+node_modules/
+backend/static_src/vendor/
+.next/
+dist/
+build/
+coverage/
+htmlcov/
+*.map
+*.min.js
+*.min.css
+
+# Runtime, generated, and collected assets
+output/
+tmp/
+media/
+staticfiles/
+backend/staticfiles/
+backend/var/
+data/static/
+infra/nginx/prenium-static/
+
+# Large binary or multimodal inputs are opt-in to avoid semantic token cost
+formation_goose_complete.pdf
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.mp4
+*.mov
+*.mp3
+*.wav
+
+# Operating-system noise
+.DS_Store
+Thumbs.db

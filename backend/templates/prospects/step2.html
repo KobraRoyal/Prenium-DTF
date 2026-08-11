@@ -5,12 +5,8 @@
 
 {% block prospect_section_head %}
 <div class="landing-section-head prospect-tunnel__intro prospect-journey__intro">
-  <div class="prospect-journey__intro-line">
-    <p class="landing-kicker landing-kicker--pill">Votre projet de production</p>
-    <span>5 choix rapides</span>
-  </div>
-  <h2 class="prospect-tunnel__title">Donnons la bonne<br>échelle à votre projet.</h2>
-  <p class="landing-auth-lead prospect-tunnel__lead">Quelques repères suffisent pour que notre équipe prépare une réponse utile, des volumes au bon rythme.</p>
+  <h2 class="prospect-tunnel__title">Votre projet</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Besoin, volumes et rythme. Des estimations suffisent.</p>
 </div>
 {% endblock %}
 
@@ -20,26 +16,16 @@
   {% if form.non_field_errors %}<div class="dui-alert dui-alert-error" role="alert">{{ form.non_field_errors.0 }}</div>{% endif %}
 
   <section class="prospect-project-section" aria-labelledby="project-scope-title">
-    <div class="prospect-project-section__head">
-      <span aria-hidden="true">01</span>
-      <div>
-        <h3 id="project-scope-title">Le besoin</h3>
-        <p>Ce que vous souhaitez produire et à quel horizon.</p>
-      </div>
-    </div>
+    <h3 id="project-scope-title" class="prospect-form__section-title">Le besoin</h3>
 
     <fieldset class="prospect-project-fieldset">
       <legend>{{ form.service_interest.label }}</legend>
-      <p class="prospect-project-fieldset__help">Sélectionnez la réponse la plus proche de votre besoin actuel.</p>
       <div class="prospect-project-options prospect-project-options--services">
         {% for value, label in form.service_interest.field.choices %}{% if value %}
         <label class="prospect-project-option">
           <input type="radio" name="service_interest" value="{{ value }}" {% if form.service_interest.value == value %}checked{% endif %} required>
           <span class="prospect-project-option__marker" aria-hidden="true"></span>
-          <span class="prospect-project-option__copy">
-            <strong>{{ label }}</strong>
-            <small>{% if value == 'dtf_meter' %}Impression prête à presser{% elif value == 'file_prep' %}Fichiers contrôlés et optimisés{% elif value == 'both' %}Préparation + impression{% else %}L’équipe vous orientera{% endif %}</small>
-          </span>
+          <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
           <span class="prospect-project-option__check" aria-hidden="true">✓</span>
         </label>
         {% endif %}{% endfor %}
@@ -64,13 +50,7 @@
   </section>
 
   <section class="prospect-project-section" aria-labelledby="project-rhythm-title">
-    <div class="prospect-project-section__head">
-      <span aria-hidden="true">02</span>
-      <div>
-        <h3 id="project-rhythm-title">Le rythme</h3>
-        <p>Des estimations suffisent, vous pourrez les ajuster ensuite.</p>
-      </div>
-    </div>
+    <h3 id="project-rhythm-title" class="prospect-form__section-title">Le rythme</h3>
 
     <div class="prospect-project-metrics">
       <fieldset class="prospect-project-fieldset">
@@ -118,18 +98,13 @@
     </fieldset>
 
     <div class="dui-form-control prospect-project-goal">
-      <div class="prospect-project-goal__label">
-        <label class="product-form-label" for="id_main_goal">Objectif principal</label>
-        <span>Optionnel · 500 caractères</span>
-      </div>
+      <label class="product-form-label" for="id_main_goal">Objectif principal <span class="prospect-project-goal__optional">(optionnel)</span></label>
       <textarea class="dui-textarea dui-textarea-bordered w-full checkout-dui-input" id="id_main_goal" name="main_goal" rows="3" maxlength="500" placeholder="Ex. lancer une capsule de 100 pièces le mois prochain">{{ form.main_goal.value|default:'' }}</textarea>
-      <p>Une phrase suffit pour nous donner le contexte.</p>
     </div>
   </section>
 
   <div class="prospect-form__footer prospect-journey__footer">
     <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'prospects:step1' %}">Retour</a>
-    <p><span>Étape suivante</span><strong>Vérifier votre demande</strong></p>
     <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Voir le récapitulatif <span aria-hidden="true">→</span></button>
   </div>
 </form>

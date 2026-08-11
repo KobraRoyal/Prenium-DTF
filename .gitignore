@@ -52,3 +52,13 @@ build/
 # Collected static on NAS/deploy
 data/static/
 infra/nginx/prenium-static/
+
+# Graphify local/runtime artifacts (portable graph and report stay trackable)
+graphify-out/cache/
+graphify-out/cost.json
+graphify-out/graph.html
+graphify-out/20??-??-??/
+graphify-out/.graphify_root
+graphify-out/.graphify_python
+graphify-out/.graphify.lock
+graphify-out/.graphify_update_status.json

@@ -479,7 +479,10 @@ async function renderPdfPreview(root, file, canvas, placeholder, renderToken) {
     if (previewRenderTokens.get(root) !== renderToken) {
       return;
     }
-    loadingTask = pdfJs.getDocument({ data: new Uint8Array(fileBuffer) });
+    loadingTask = pdfJs.getDocument({
+      data: new Uint8Array(fileBuffer),
+      enableScripting: false,
+    });
     pdfDocument = await loadingTask.promise;
     const page = await pdfDocument.getPage(1);
     const baseViewport = page.getViewport({ scale: 1 });

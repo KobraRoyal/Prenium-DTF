@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 import base64
 import json
 import os
@@ -9,15 +11,14 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 django.setup()
 
-from django.conf import settings as s
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ObjectDoesNotExist
-
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.shipping.services.sendcloud import ShipmentService
+from django.conf import settings as s
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 
 auth = base64.b64encode(f"{s.SENDCLOUD_PUBLIC_KEY}:{s.SENDCLOUD_SECRET_KEY}".encode()).decode()
 
@@ -86,13 +87,19 @@ order = (
 User = get_user_model()
 staff = User.objects.filter(is_staff=True).order_by("id").first()
 if staff is None:
-    staff = User.objects.create_user(email="sendcloud-test@ids.supply", password="pass", is_staff=True)
+    staff = User.objects.create_user(
+        email="sendcloud-test@ids.supply", password="pass", is_staff=True
+    )
 
 if order is None:
     customer = Customer.objects.order_by("id").first()
     if customer is None:
-        customer = Customer.objects.create(name="Sendcloud Test Customer", billing_email="test@example.com")
-        CustomerMembership.objects.create(customer=customer, user=staff, role=CustomerMembership.Role.OWNER)
+        customer = Customer.objects.create(
+            name="Sendcloud Test Customer", billing_email="test@example.com"
+        )
+        CustomerMembership.objects.create(
+            customer=customer, user=staff, role=CustomerMembership.Role.OWNER
+        )
     order = Order.objects.create(
         customer=customer,
         created_by=staff,

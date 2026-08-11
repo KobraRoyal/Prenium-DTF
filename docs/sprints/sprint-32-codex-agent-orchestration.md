@@ -42,3 +42,14 @@ cross-tenant pour les rôles backend, architecture et sécurité.
 
 Réserve hors lot : `ruff format --check .` signale dix fichiers applicatifs antérieurs
 non formatés. Aucun de ces fichiers n’a été modifié dans ce sprint.
+
+## Extension Graphify — 2026-08-11
+
+- [x] CLI Graphify installé au niveau utilisateur et accessible aux futurs projets
+- [x] Skill Codex Graphify installé globalement
+- [x] Activation globale conditionnée à la présence d'un graphe local
+- [x] Index IDS Hub construit en AST local, sans appel LLM
+- [x] Secrets, dépendances, caches, médias et sorties générées exclus
+- [x] Hooks de mise à jour post-commit et post-checkout installés
+- [x] Requête ciblée, diagnostic du graphe et benchmark de tokens validés
+- [x] Aucun changement Django, permission, migration ou donnée métier

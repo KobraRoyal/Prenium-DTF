@@ -238,9 +238,7 @@ class ClientCheckoutSubmitView(ScopedCustomerMixin, View):
                     request.POST.get("billing_mode")
                     or getattr(self.customer, "default_billing_mode", "deferred")
                 ).strip(),
-                shipping_method_code=(
-                    request.POST.get("shipping_method_code") or ""
-                ).strip()
+                shipping_method_code=(request.POST.get("shipping_method_code") or "").strip()
                 or None,
             )
         except ValidationError:
