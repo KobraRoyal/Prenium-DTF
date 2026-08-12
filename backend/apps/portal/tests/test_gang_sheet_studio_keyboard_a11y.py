@@ -9,12 +9,10 @@ STATIC_SRC_DIR = Path(settings.BASE_DIR) / "static_src"
 
 class GangSheetStudioKeyboardAccessibilityTests(SimpleTestCase):
     def test_mobile_sections_follow_the_aria_tabs_contract(self) -> None:
-        editor = (
-            TEMPLATES_DIR / "portal/client/gang_sheets/editor.html"
-        ).read_text(encoding="utf-8")
-        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(
+        editor = (TEMPLATES_DIR / "portal/client/gang_sheets/editor.html").read_text(
             encoding="utf-8"
         )
+        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(encoding="utf-8")
 
         self.assertIn('role="tablist"', editor)
         self.assertEqual(editor.count('role="tab"'), 3)
@@ -29,12 +27,10 @@ class GangSheetStudioKeyboardAccessibilityTests(SimpleTestCase):
         self.assertIn('panel.removeAttribute("role")', runtime)
 
     def test_canvas_shortcuts_are_scoped_and_discoverable(self) -> None:
-        editor = (
-            TEMPLATES_DIR / "portal/client/gang_sheets/editor.html"
-        ).read_text(encoding="utf-8")
-        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(
+        editor = (TEMPLATES_DIR / "portal/client/gang_sheets/editor.html").read_text(
             encoding="utf-8"
         )
+        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(encoding="utf-8")
 
         self.assertNotIn('role="application"', editor)
         self.assertIn('data-sheet-canvas role="region" tabindex="0"', editor)
@@ -47,21 +43,17 @@ class GangSheetStudioKeyboardAccessibilityTests(SimpleTestCase):
         self.assertIn("return true;", runtime)
 
     def test_resize_rendering_is_throttled_by_animation_frame(self) -> None:
-        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(
-            encoding="utf-8"
-        )
+        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(encoding="utf-8")
 
         self.assertIn("let resizeFrame = null", runtime)
         self.assertIn("if (resizeFrame !== null) return", runtime)
         self.assertIn("resizeFrame = window.requestAnimationFrame", runtime)
 
     def test_workflow_reflects_real_studio_state_and_navigates_panels(self) -> None:
-        editor = (
-            TEMPLATES_DIR / "portal/client/gang_sheets/editor.html"
-        ).read_text(encoding="utf-8")
-        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(
+        editor = (TEMPLATES_DIR / "portal/client/gang_sheets/editor.html").read_text(
             encoding="utf-8"
         )
+        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(encoding="utf-8")
 
         for step in ["import", "compose", "control", "validate"]:
             self.assertIn(f'data-workflow-step="{step}"', editor)
@@ -75,12 +67,10 @@ class GangSheetStudioKeyboardAccessibilityTests(SimpleTestCase):
         self.assertIn("setMobilePanel(panelName", runtime)
 
     def test_advanced_composition_tools_use_native_disclosure(self) -> None:
-        editor = (
-            TEMPLATES_DIR / "portal/client/gang_sheets/editor.html"
-        ).read_text(encoding="utf-8")
-        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(
+        editor = (TEMPLATES_DIR / "portal/client/gang_sheets/editor.html").read_text(
             encoding="utf-8"
         )
+        runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(encoding="utf-8")
 
         self.assertIn("data-advanced-selection-tools", editor)
         self.assertIn("data-advanced-spacing-tools", editor)
