@@ -1,0 +1,7 @@
+/* Pages publiques : direction landing, chargée après le socle commun. */
+@import "../components/landing.css";
+@import "../components/landing-conversion.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

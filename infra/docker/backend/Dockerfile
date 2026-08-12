@@ -1,4 +1,4 @@
-# Étape CSS : Tailwind compile input.css (+ legacy) vers app.css servi par Django / collectstatic
+# Étape CSS : socle Tailwind commun puis bundles marketing, portail et Studio.
 FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS css
 WORKDIR /build
 COPY backend/package.json backend/package-lock.json ./
@@ -34,6 +34,9 @@ RUN pip install --upgrade pip && pip install -r /tmp/requirements/prod.txt
 
 COPY . /app
 COPY --from=css /build/static_src/css/app.css /app/backend/static_src/css/app.css
+COPY --from=css /build/static_src/css/marketing.css /app/backend/static_src/css/marketing.css
+COPY --from=css /build/static_src/css/portal.css /app/backend/static_src/css/portal.css
+COPY --from=css /build/static_src/css/studio.css /app/backend/static_src/css/studio.css
 COPY --from=css /build/static_src/vendor /app/backend/static_src/vendor
 
 RUN chmod +x infra/scripts/*.sh && \

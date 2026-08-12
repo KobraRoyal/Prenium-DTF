@@ -6,10 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Prenium DTF{% endblock %}</title>
     <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
-    {# Incrémenter ?v= après changement CSS/JS pour contourner le cache navigateur / nginx (expires 1d sur /static/). #}
     <link rel="preload" href="{% static 'vendor/fonts/space-grotesk-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{% static 'vendor/fonts/dm-sans-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260731-kinetic-motion-1">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    {% block surface_styles %}
+    {# Login est la seule surface produit qui étend directement base.html. #}
+    <link rel="stylesheet" href="{% static 'css/portal.css' %}">
+    {% endblock %}
     {% block extra_head %}{% endblock %}
   </head>
   <body class="{% block body_class %}{% endblock %}">
@@ -20,7 +23,7 @@
       <script src="{% static 'vendor/htmx-1.9.12.min.js' %}"></script>
       <script src="{% static 'js/alpine/toast-boot.js' %}?v=20260405a"></script>
       <script defer src="{% static 'vendor/alpinejs-3.14.3.min.js' %}"></script>
-      <script type="module" src="{% static 'js/app.js' %}?v=20260726-js-runtime-fix"></script>
+      <script type="module" src="{% static 'js/app.js' %}"></script>
     {% endblock %}
     {% block extra_scripts %}{% endblock %}
   </body>

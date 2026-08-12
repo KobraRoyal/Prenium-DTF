@@ -3,7 +3,7 @@ import "./htmx/feedback.js?v=20260710b";
 import "./landing-motion.js?v=20260710b";
 import "./product-shell.js?v=20260721g";
 import "./product-date-picker.js?v=20260712a";
-import "./b2b-configurator.js?v=20260726-js-runtime-fix";
+import "./b2b-configurator.js?v=20260812-gang-upload-limit";
 import "./email-template-editor.js?v=20260714c";
 import "./gang-sheet-editor.js?v=20260726-create-order-enable";
 

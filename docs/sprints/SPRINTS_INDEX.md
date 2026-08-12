@@ -41,6 +41,8 @@
 - [Sprint 32 — Orchestration Codex des sous-agents](sprint-32-codex-agent-orchestration.md)
 - [Sprint 33 — Navigation SaaS client et Atelier](sprint-33-navigation-portails-saas.md)
 - [Sprint 34 — Audit et fiabilité production](sprint-34-audit-fiabilite-production.md)
+- [Sprint 35 — Durcissement frontend Impeccable](sprint-35-durcissement-frontend-impeccable.md)
+- [Sprint 36 — Correctif de schéma des imports visuels](sprint-36-correctif-schema-imports-visuels.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

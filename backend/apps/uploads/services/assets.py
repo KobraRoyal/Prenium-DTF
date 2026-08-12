@@ -46,31 +46,37 @@ class AssetService:
     ) -> AssetVersion:
         """Crée un asset client sans le coupler à un projet de commande."""
         cleaned_name = str(name or getattr(uploaded_file, "name", "Visuel")).strip()
-        asset = Asset.objects.create(
-            customer=customer,
-            created_by=actor if getattr(actor, "is_authenticated", False) else None,
-            name=(cleaned_name or "Visuel")[:255],
-        )
-        version = self._create_version(
-            asset=asset,
-            actor=actor,
-            uploaded_file=uploaded_file,
-            replaced_version=None,
-            auto_size_requested=auto_size_requested,
-        )
-        asset.current_version = version
-        asset.save(update_fields=["current_version", "updated_at"])
-        self._audit(
-            "created",
-            asset=asset,
-            version=version,
-            actor=actor,
-            source=source,
-            metadata=metadata,
-        )
-        if schedule_analysis:
-            transaction.on_commit(lambda: self.schedule_analysis(version=version))
-        return version
+        version = None
+        try:
+            asset = Asset.objects.create(
+                customer=customer,
+                created_by=actor if getattr(actor, "is_authenticated", False) else None,
+                name=(cleaned_name or "Visuel")[:255],
+            )
+            version = self._create_version(
+                asset=asset,
+                actor=actor,
+                uploaded_file=uploaded_file,
+                replaced_version=None,
+                auto_size_requested=auto_size_requested,
+            )
+            asset.current_version = version
+            asset.save(update_fields=["current_version", "updated_at"])
+            self._audit(
+                "created",
+                asset=asset,
+                version=version,
+                actor=actor,
+                source=source,
+                metadata=metadata,
+            )
+            if schedule_analysis:
+                transaction.on_commit(lambda: self.schedule_analysis(version=version))
+            return version
+        except Exception:
+            if version is not None and version.file.name:
+                version.file.storage.delete(version.file.name)
+            raise
 
     @transaction.atomic
     def create_production_asset(
@@ -702,12 +708,17 @@ class AssetService:
             sha256=sha256,
             auto_size_requested=auto_size_requested,
         )
-        version.file.save(
-            validated.original_filename,
-            validated.uploaded_file,
-            save=False,
-        )
-        version.save()
+        try:
+            version.file.save(
+                validated.original_filename,
+                validated.uploaded_file,
+                save=False,
+            )
+            version.save()
+        except Exception:
+            if version.file.name:
+                version.file.storage.delete(version.file.name)
+            raise
         return version
 
     def _sha256(self, uploaded_file) -> str:

@@ -87,6 +87,7 @@ def test_atelier_dashboard_focuses_on_submitted_orders_and_review_state():
     assert rows_by_id[pending_order.public_id]["print_eligible"] is False
     assert dashboard["metrics"]["ready_to_print"] == 1
     assert dashboard["metrics"]["pending_review"] == 1
+    assert dashboard["metrics"]["blocked"] == 0
 
 
 @pytest.mark.django_db

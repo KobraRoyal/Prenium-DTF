@@ -94,7 +94,14 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
     [
         ("views_auth", {"apps.portal.views_common"}),
         ("views_profile", {"apps.portal.views_common"}),
-        ("views_client", {"apps.portal.views_common", "apps.portal.views_payments"}),
+        (
+            "views_client",
+            {
+                "apps.portal.dashboard_focus",
+                "apps.portal.views_common",
+                "apps.portal.views_payments",
+            },
+        ),
         ("views_checkout", {"apps.portal.htmx", "apps.portal.views_common"}),
         ("views_staff", {"apps.portal.views_common"}),
         ("views_staff_dashboard", {"apps.portal.views_common"}),

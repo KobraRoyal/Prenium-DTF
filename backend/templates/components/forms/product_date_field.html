@@ -24,13 +24,24 @@
   >
     <div class="product-date-picker__head">
       <button type="button" class="product-date-picker__nav" data-date-prev aria-label="Mois précédent">‹</button>
-      <p class="product-date-picker__month" data-date-month></p>
+      <p
+        class="product-date-picker__month"
+        id="{{ id }}-month"
+        data-date-month
+        aria-live="polite"
+      ></p>
       <button type="button" class="product-date-picker__nav" data-date-next aria-label="Mois suivant">›</button>
     </div>
     <div class="product-date-picker__weekdays" aria-hidden="true">
       <span>Lu</span><span>Ma</span><span>Me</span><span>Je</span><span>Ve</span><span>Sa</span><span>Di</span>
     </div>
-    <div class="product-date-picker__grid" data-date-grid role="grid"></div>
+    <div
+      class="product-date-picker__grid"
+      data-date-grid
+      role="grid"
+      aria-colcount="7"
+      aria-labelledby="{{ id }}-month"
+    ></div>
     <div class="product-date-picker__footer">
       <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-date-clear>Effacer</button>
     </div>

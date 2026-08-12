@@ -45,6 +45,81 @@ function setPlaceholder(placeholder, title, detail) {
   placeholder.hidden = false;
 }
 
+function formatUploadSize(sizeBytes) {
+  const bytes = Math.max(0, Number(sizeBytes) || 0);
+  const units = [
+    { size: 1024 * 1024, suffix: "Mo" },
+    { size: 1024, suffix: "Ko" },
+  ];
+  const unit = units.find(({ size }) => bytes >= size);
+  if (!unit) {
+    return `${bytes} octet${bytes > 1 ? "s" : ""}`;
+  }
+  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(bytes / unit.size)} ${unit.suffix}`;
+}
+
+function clearConfiguratorPreview(root, title, detail) {
+  previewRenderTokens.set(root, Symbol("preview-cleared"));
+  const previousUrl = previewObjectUrls.get(root);
+  if (previousUrl) {
+    URL.revokeObjectURL(previousUrl);
+    previewObjectUrls.delete(root);
+  }
+  root.querySelectorAll("[data-configurator-preview]").forEach((preview) => {
+    if (preview instanceof HTMLImageElement) {
+      preview.removeAttribute("src");
+      setPreviewMediaVisible(preview, false);
+    }
+  });
+  root.querySelectorAll("[data-configurator-document-preview]").forEach((preview) => {
+    if (preview instanceof HTMLCanvasElement) {
+      const context = preview.getContext("2d", { alpha: true });
+      context?.clearRect(0, 0, preview.width, preview.height);
+      preview.width = 0;
+      preview.height = 0;
+      setPreviewMediaVisible(preview, false);
+    }
+  });
+  setPlaceholder(root.querySelector("[data-configurator-placeholder]"), title, detail);
+  resetPreviewMediaSizing(root);
+}
+
+function validateConfiguratorFiles(root, input) {
+  const files = Array.from(input.files || []);
+  const maxFiles = Number.parseInt(input.dataset.maxFiles || "0", 10);
+  const maxFileBytes = Number.parseInt(input.dataset.maxFileBytes || "0", 10);
+  const maxTotalBytes = Number.parseInt(input.dataset.maxTotalBytes || "0", 10);
+  let message = "";
+
+  if (maxFiles > 0 && files.length > maxFiles) {
+    message = `Sélectionnez au maximum ${maxFiles} fichiers à la fois.`;
+  } else if (maxTotalBytes > 0 && files.reduce((total, file) => total + file.size, 0) > maxTotalBytes) {
+    message = `La sélection dépasse ${formatUploadSize(maxTotalBytes)}. Réduisez le nombre de fichiers.`;
+  } else if (maxFileBytes > 0) {
+    const oversizedFile = files.find((file) => file.size > maxFileBytes);
+    if (oversizedFile) {
+      message = `« ${oversizedFile.name} » pèse ${formatUploadSize(oversizedFile.size)}. La limite est de ${formatUploadSize(maxFileBytes)} par fichier.`;
+    }
+  }
+
+  input.setCustomValidity(message);
+  if (message) {
+    input.setAttribute("aria-invalid", "true");
+  } else {
+    input.removeAttribute("aria-invalid");
+  }
+  const error = root.querySelector("[data-configurator-file-error]");
+  if (error instanceof HTMLElement) {
+    error.textContent = message;
+    error.hidden = !message;
+  }
+  const submit = root.closest("form")?.querySelector("[data-configurator-submit]");
+  if (submit instanceof HTMLButtonElement) {
+    submit.disabled = Boolean(message);
+  }
+  return message;
+}
+
 function notifyPreviewState(root, eventName, file, media = null) {
   root.dispatchEvent(
     new CustomEvent(eventName, {
@@ -1460,6 +1535,12 @@ function bindConfiguratorEvents() {
       return;
     }
     updateSelectedFilesSummary(root, input);
+    const validationMessage = validateConfiguratorFiles(root, input);
+    if (validationMessage) {
+      clearConfiguratorPreview(root, "Import impossible", validationMessage);
+      window.preniumToast?.(validationMessage, "error");
+      return;
+    }
     const file = input.files?.[0];
     if (file) {
       previewSelectedFile(root, file);

@@ -31,7 +31,7 @@ class OrderService:
     def list_customer_orders(self, customer):
         return (
             Order.objects.for_customer(customer)
-            .select_related("customer", "created_by", "source_b2b_order_project")
+            .select_related("customer", "created_by", "source_b2b_order_project", "shipment")
             .prefetch_related("items", "items__service", "uploads")
             .order_by("-created_at")
         )

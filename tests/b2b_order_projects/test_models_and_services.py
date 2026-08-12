@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
-from apps.b2b_order_projects.models import B2BOrderProject
+from apps.b2b_order_projects.models import B2BOrderProject, B2BOrderProjectItem
 from apps.b2b_order_projects.services import B2BOrderProjectService, ProjectDomainError
 from apps.customers.models import Customer, CustomerMembership
 from apps.uploads.services.asset_analysis import AssetAnalysisService
@@ -170,6 +170,42 @@ def test_support_color_multicolor_is_normalized_on_item_update():
     )
     assert item.support_color_hex == "#multicolor"
     assert item.support_color_label == "Multicolore"
+
+
+@pytest.mark.django_db
+def test_duplicate_item_preserves_non_default_crop():
+    user, customer, _membership = customer_scope("duplicate-crop@example.com")
+    service = B2BOrderProjectService()
+    project = service.create_project(
+        customer=customer,
+        actor=user,
+        data={"name": "Duplication crop"},
+        source="test",
+    )
+    item = service.add_item(
+        project=project,
+        actor=user,
+        data={"name": "Logo", "width_mm": 100, "height_mm": 50, "quantity": 1},
+        source="test",
+    )
+    B2BOrderProjectItem.objects.filter(pk=item.pk).update(
+        crop_mode=B2BOrderProjectItem.CropMode.AUTO,
+        crop_x=Decimal("0.100000"),
+        crop_y=Decimal("0.200000"),
+        crop_width=Decimal("0.700000"),
+        crop_height=Decimal("0.600000"),
+    )
+    item.refresh_from_db()
+
+    duplicate = service.duplicate_item(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        source="test",
+    )
+
+    assert duplicate.crop_mode == B2BOrderProjectItem.CropMode.AUTO
+    assert duplicate.crop_metadata == item.crop_metadata
 
 
 @pytest.mark.django_db

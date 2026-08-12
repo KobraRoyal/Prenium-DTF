@@ -1,0 +1,6 @@
+/* Studio : couche éditeur uniquement, après app.css puis portal.css. */
+@import "../components/gang-sheet-studio.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

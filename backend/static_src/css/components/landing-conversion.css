@@ -1649,6 +1649,10 @@
 }
 
 @media (max-width: 767px) {
+  body.landing-conversion-page .conversion-section {
+    padding-block: 3rem;
+  }
+
   body.landing-conversion-page .agency-nav,
   body.landing-conversion-page .landing-shell {
     width: min(100vw - 1rem, 1240px);
@@ -1668,8 +1672,8 @@
   }
 
   body.landing-conversion-page .conversion-hero__grid {
-    gap: 2.5rem;
-    padding-block: 2.6rem 3.5rem;
+    gap: 2rem;
+    padding-block: 2.25rem 3rem;
   }
 
   body.landing-conversion-page .conversion-hero__copy {
@@ -1753,10 +1757,6 @@
 
   body.landing-conversion-page .conversion-proofbar p:last-child {
     border-bottom: 0;
-  }
-
-  body.landing-conversion-page .conversion-section {
-    padding-block: 4.25rem;
   }
 
   body.landing-conversion-page .conversion-section__head {
@@ -1861,7 +1861,7 @@
   }
 
   body.landing-conversion-page .conversion-final {
-    padding-block: 4.5rem;
+    padding-block: 3.5rem;
   }
 }
 

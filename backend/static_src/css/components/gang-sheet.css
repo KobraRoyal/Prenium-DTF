@@ -865,8 +865,10 @@
     display: grid;
     gap: 0.25rem;
     padding: 0.75rem;
-    border-left: 5px solid var(--product-accent, #dcff1a);
-    background: var(--product-panel-strong, #f3ead6);
+    border: 1px solid var(--product-line, #0b0b0b);
+    background:
+      linear-gradient(var(--product-accent, #dcff1a), var(--product-accent, #dcff1a)) top / 100% 4px no-repeat,
+      var(--product-panel-strong, #f3ead6);
   }
 
   .gang-asset-modal-form__notice strong {
@@ -1186,7 +1188,14 @@
     font-size: 1.15rem;
   }
   .gang-sheet-order-quote__detail { margin: 0; }
-  .gang-inspector-note { padding: 0.65rem; border-left: 5px solid var(--product-accent, #dcff1a); background: var(--product-panel-strong, #f3ead6); font-size: 0.67rem !important; }
+  .gang-inspector-note {
+    padding: 0.65rem;
+    border: 1px solid var(--product-line, #0b0b0b);
+    background:
+      linear-gradient(var(--product-accent, #dcff1a), var(--product-accent, #dcff1a)) top / 100% 4px no-repeat,
+      var(--product-panel-strong, #f3ead6);
+    font-size: 0.75rem !important;
+  }
   .gang-inspector-note strong { display: block; margin-bottom: 0.15rem; color: var(--product-ink, #0b0b0b); }
 
   /* Vues staff existantes */

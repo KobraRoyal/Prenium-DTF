@@ -176,6 +176,10 @@ class B2BOrderProjectItem(BaseModel):
         READY = "ready", "Prêt"
         ACTION_REQUIRED = "action_required", "Action requise"
 
+    class CropMode(models.TextChoices):
+        MANUAL = "manual", "Manuel"
+        AUTO = "auto", "Automatique"
+
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
@@ -221,6 +225,15 @@ class B2BOrderProjectItem(BaseModel):
         decimal_places=2,
         validators=[MinValueValidator(MIN_DIMENSION_MM)],
     )
+    crop_mode = models.CharField(
+        max_length=16,
+        choices=CropMode.choices,
+        default=CropMode.MANUAL,
+    )
+    crop_x = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("0"))
+    crop_y = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("0"))
+    crop_width = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("1"))
+    crop_height = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("1"))
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     rotation_allowed = models.BooleanField(default=True)
     individual_cutting = models.BooleanField(default=False)
@@ -247,6 +260,30 @@ class B2BOrderProjectItem(BaseModel):
             ),
             models.CheckConstraint(
                 condition=models.Q(quantity__gt=0), name="b2b_item_quantity_gt_zero"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(crop_x__gte=0, crop_x__lte=1),
+                name="b2b_item_crop_x_unit",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(crop_y__gte=0, crop_y__lte=1),
+                name="b2b_item_crop_y_unit",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(crop_width__gte=Decimal("0.01"), crop_width__lte=1),
+                name="b2b_item_crop_width_unit",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(crop_height__gte=Decimal("0.01"), crop_height__lte=1),
+                name="b2b_item_crop_height_unit",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(crop_x__lte=Decimal("1") - models.F("crop_width")),
+                name="b2b_item_crop_x_extent",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(crop_y__lte=Decimal("1") - models.F("crop_height")),
+                name="b2b_item_crop_y_extent",
             ),
             models.UniqueConstraint(
                 fields=("customer", "project", "sort_order"),
@@ -286,8 +323,39 @@ class B2BOrderProjectItem(BaseModel):
             return "Multicolore"
         return self.support_color_hex.upper()
 
+    @property
+    def has_crop(self) -> bool:
+        return any(
+            (
+                self.crop_x != Decimal("0"),
+                self.crop_y != Decimal("0"),
+                self.crop_width != Decimal("1"),
+                self.crop_height != Decimal("1"),
+            )
+        )
+
+    @property
+    def crop_metadata(self) -> dict[str, str]:
+        return {
+            "x": str(self.crop_x),
+            "y": str(self.crop_y),
+            "width": str(self.crop_width),
+            "height": str(self.crop_height),
+        }
+
     def clean(self):
         super().clean()
+        from apps.gang_sheets.services.cropping import CropBox, CropValidationError
+
+        try:
+            CropBox.from_values(
+                x=self.crop_x,
+                y=self.crop_y,
+                width=self.crop_width,
+                height=self.crop_height,
+            )
+        except CropValidationError as error:
+            raise ValidationError({"crop_width": str(error)}) from error
         if self.customer_id and self.project_id and self.customer_id != self.project.customer_id:
             raise ValidationError(
                 {"customer": "La ligne et le projet doivent appartenir au même client."}

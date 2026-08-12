@@ -59,6 +59,13 @@ def test_nginx_preserves_direct_http_scheme_without_proxy_header():
     assert '""      https;' not in nginx
 
 
+def test_nginx_allows_django_to_reject_oversized_source_files_cleanly():
+    nginx = (ROOT_DIR / "infra" / "nginx" / "default.conf").read_text()
+
+    assert "client_max_body_size 64m;" in nginx
+    assert "limite applicative reste 20 MiB par fichier" in nginx
+
+
 def test_ci_installs_ghostscript_for_both_backend_test_jobs():
     workflow = (ROOT_DIR / ".github" / "workflows" / "ci.yml").read_text()
 

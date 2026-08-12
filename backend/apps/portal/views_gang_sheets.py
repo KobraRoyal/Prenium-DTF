@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from io import BytesIO
+from pathlib import Path
 
+from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.http import FileResponse, Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
@@ -29,6 +33,48 @@ from apps.uploads.services.asset_preview import AssetPreviewError, AssetPreviewR
 
 gang_sheet_service = GangSheetService()
 asset_preview_renderer = AssetPreviewRenderer()
+logger = logging.getLogger(__name__)
+
+GANG_SHEET_MAX_FILES_PER_UPLOAD = 20
+GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES = 60 * 1024 * 1024
+
+
+def _format_upload_size(size_bytes: int) -> str:
+    size_bytes = max(0, int(size_bytes or 0))
+    mebibyte = 1024 * 1024
+    kibibyte = 1024
+    if size_bytes >= mebibyte:
+        value = size_bytes / mebibyte
+        label = f"{value:.1f}".rstrip("0").rstrip(".").replace(".", ",")
+        return f"{label} Mo"
+    if size_bytes >= kibibyte:
+        value = size_bytes / kibibyte
+        label = f"{value:.1f}".rstrip("0").rstrip(".").replace(".", ",")
+        return f"{label} Ko"
+    return f"{size_bytes} octet{'s' if size_bytes != 1 else ''}"
+
+
+def _upload_display_name(uploaded_file) -> str:
+    name = Path(str(getattr(uploaded_file, "name", "Visuel") or "Visuel")).name
+    return name.replace("\r", " ").replace("\n", " ")[:120] or "Visuel"
+
+
+def _gang_sheet_upload_rate_limited(*, customer, actor) -> bool:
+    customer_id = str(customer.public_id)
+    actor_id = str(getattr(actor, "pk", "anonymous"))
+    key = f"gang-sheet-upload:{customer_id}:{actor_id}"
+    window = int(settings.GANG_SHEET_UPLOAD_RATE_LIMIT_WINDOW_SECONDS)
+    maximum = int(settings.GANG_SHEET_UPLOAD_RATE_LIMIT_MAX_REQUESTS)
+    if maximum <= 0:
+        return False
+    if cache.add(key, 1, timeout=window):
+        return False
+    try:
+        attempts = cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=window)
+        return False
+    return attempts > maximum
 
 
 def _json_error(error: GangSheetDomainError, *, status=400):
@@ -207,6 +253,15 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
                     },
                 ),
                 gang_sheet_prep_fee_eur=prep_fee,
+                gang_sheet_upload_max_bytes=settings.ORDER_UPLOAD_MAX_BYTES,
+                gang_sheet_upload_max_size_label=_format_upload_size(
+                    settings.ORDER_UPLOAD_MAX_BYTES
+                ),
+                gang_sheet_upload_max_files=GANG_SHEET_MAX_FILES_PER_UPLOAD,
+                gang_sheet_upload_max_total_bytes=GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES,
+                gang_sheet_upload_max_total_size_label=_format_upload_size(
+                    GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES
+                ),
                 nav_key="client-gang-sheets",
             ),
         )
@@ -305,11 +360,20 @@ class ClientGangSheetDeleteView(ClientGangSheetMixin, View):
 
 
 class ClientGangSheetAssetUploadView(ClientGangSheetMixin, View):
-    max_files_per_request = 20
+    max_files_per_request = GANG_SHEET_MAX_FILES_PER_UPLOAD
 
     def post(self, request, customer_public_id, sheet_public_id):
         self.require_write_access()
         sheet = self.get_sheet_or_404(sheet_public_id)
+        if _gang_sheet_upload_rate_limited(customer=self.customer, actor=request.user):
+            response = with_toast(
+                HttpResponseRedirect(self._editor_url(sheet)),
+                "Trop d’imports ont été lancés. Patientez avant de réessayer.",
+                "error",
+            )
+            response.status_code = 429
+            response["Retry-After"] = str(settings.GANG_SHEET_UPLOAD_RATE_LIMIT_WINDOW_SECONDS)
+            return response
         uploaded_files = request.FILES.getlist("files")
         if not uploaded_files:
             return with_toast(
@@ -323,6 +387,47 @@ class ClientGangSheetAssetUploadView(ClientGangSheetMixin, View):
                 f"Importez au maximum {self.max_files_per_request} fichiers à la fois.",
                 "error",
             )
+        total_size_bytes = sum(
+            int(getattr(uploaded_file, "size", 0) or 0) for uploaded_file in uploaded_files
+        )
+        if total_size_bytes > GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES:
+            return with_toast(
+                HttpResponseRedirect(self._editor_url(sheet)),
+                (
+                    "La sélection dépasse la limite de "
+                    f"{_format_upload_size(GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES)} par import. "
+                    "Réduisez le nombre de fichiers puis réessayez."
+                ),
+                "error",
+            )
+        oversized_file = next(
+            (
+                uploaded_file
+                for uploaded_file in uploaded_files
+                if int(getattr(uploaded_file, "size", 0) or 0) > settings.ORDER_UPLOAD_MAX_BYTES
+            ),
+            None,
+        )
+        if oversized_file is not None:
+            display_name = _upload_display_name(oversized_file)
+            logger.warning(
+                "Gang Sheet source upload rejected before asset creation: file too large",
+                extra={
+                    "customer_public_id": str(self.customer.public_id),
+                    "gang_sheet_public_id": str(sheet.public_id),
+                    "upload_size_bytes": int(getattr(oversized_file, "size", 0) or 0),
+                    "upload_max_bytes": settings.ORDER_UPLOAD_MAX_BYTES,
+                },
+            )
+            return with_toast(
+                HttpResponseRedirect(self._editor_url(sheet)),
+                (
+                    f"{display_name} dépasse la limite de "
+                    f"{_format_upload_size(settings.ORDER_UPLOAD_MAX_BYTES)} par fichier. "
+                    "Réduisez ou compressez le visuel avant de réessayer."
+                ),
+                "error",
+            )
         try:
             crops = parse_crop_manifest(
                 request.POST.get("crop_manifest", ""),
@@ -334,29 +439,24 @@ class ClientGangSheetAssetUploadView(ClientGangSheetMixin, View):
                 str(error),
                 "error",
             )
-        imported = 0
-        errors = []
+        uploads = []
         for index, uploaded_file in enumerate(uploaded_files):
             instruction = crops.get(
                 index,
                 CropInstruction(mode=CROP_MODE_MANUAL, crop=CropBox.full()),
             )
-            try:
-                gang_sheet_service.upload_source_asset(
-                    sheet=sheet,
-                    actor=request.user,
-                    uploaded_file=uploaded_file,
-                    crop=instruction.crop,
-                    crop_mode=instruction.mode,
-                )
-                imported += 1
-            except GangSheetDomainError as error:
-                errors.append(f"{uploaded_file.name}: {error.message}")
-        if errors:
-            message = f"{imported} fichier(s) importé(s). " + " ".join(errors[:3])
-            level = "warning" if imported else "error"
+            uploads.append((uploaded_file, instruction.crop, instruction.mode))
+        try:
+            imported = gang_sheet_service.upload_source_assets(
+                sheet=sheet,
+                actor=request.user,
+                uploads=uploads,
+            )
+        except GangSheetDomainError as error:
+            message = error.message
+            level = "error"
         else:
-            message = f"{imported} fichier(s) importé(s). Analyse technique lancée."
+            message = f"{len(imported)} fichier(s) importé(s). Analyse technique lancée."
             level = "success"
         return with_toast(HttpResponseRedirect(self._editor_url(sheet)), message, level)
 

@@ -7,11 +7,16 @@ from apps.auditlog.models import AuditLogEntry
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import CustomerMembership
 from apps.gang_sheets.models import GangSheet, GangSheetSourceAsset
-from apps.gang_sheets.services import GangSheetRenderService, GangSheetService
+from apps.gang_sheets.services import (
+    GangSheetDomainError,
+    GangSheetRenderService,
+    GangSheetService,
+)
 from apps.orders.models import Order
-from apps.uploads.models import AssetAnalysis, AssetVersion
+from apps.uploads.models import Asset, AssetAnalysis, AssetVersion
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from PIL import Image, ImageDraw
@@ -132,7 +137,10 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert response.status_code == 200
     content = response.content.decode()
     assert 'aria-label="Progression de la planche"' in content
-    assert 'aria-current="step"' in content
+    assert 'data-workflow-step="import"' in content
+    assert 'data-workflow-step="compose"' in content
+    assert 'data-workflow-step="control"' in content
+    assert 'data-workflow-step="validate"' in content
     assert "Vos visuels" in content
     assert "Plan de travail" in content
     assert "Contrôle de production" in content
@@ -144,7 +152,7 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert "data-spacing-x" in content
     assert "data-spacing-y" in content
     assert "data-apply-spacing" in content
-    assert "Alignement" in content
+    assert "Outils avancés de sélection" in content
     assert 'value="selection" data-align-reference' in content
     assert 'value="sheet" data-align-reference' in content
     assert 'data-align="left"' in content
@@ -170,7 +178,15 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert "Créer la grille" not in content
     assert 'id="gang-asset-dialog"' in content
     assert 'data-file-picker-dialog="gang-asset-dialog"' in content
-    assert 'name="files" multiple' in content
+    assert 'name="files"' in content
+    assert "multiple" in content
+    assert 'data-max-file-bytes="20971520"' in content
+    assert 'data-max-files="20"' in content
+    assert 'data-max-total-bytes="62914560"' in content
+    assert 'aria-describedby="gang-asset-files-help gang-asset-files-error"' in content
+    assert "20 Mo maximum par fichier" in content
+    assert "60 Mo maximum par import" in content
+    assert "data-configurator-file-error" in content
     assert "Vérifier l’import" in content
     assert "Recadrage non destructif" in content
     assert 'name="crop_manifest"' in content
@@ -795,6 +811,223 @@ def test_owner_can_upload_multiple_visuals_with_independent_non_destructive_crop
     assert sources[0].crop_width == Decimal("0.500000")
     assert sources[1].crop_y == Decimal("0.100000")
     assert sources[1].crop_height == Decimal("0.800000")
+
+
+def test_oversized_gang_sheet_batch_is_rejected_before_any_asset_is_created(
+    client,
+    settings,
+):
+    user, customer, _project = create_customer_scope(email="oversized-gang@example.com")
+    sheet = GangSheetService().create_sheet(
+        customer=customer,
+        actor=user,
+        name="Import borné",
+    )
+    settings.ORDER_UPLOAD_MAX_BYTES = 64
+    client.force_login(user)
+    valid_file = SimpleUploadedFile(
+        "valid.png",
+        b"\x89PNG\r\n\x1a\n" + b"0" * 32,
+        content_type="image/png",
+    )
+    oversized_file = SimpleUploadedFile(
+        "too-large.png",
+        b"\x89PNG\r\n\x1a\n" + b"1" * 64,
+        content_type="image/png",
+    )
+
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {"files": [valid_file, oversized_file]},
+    )
+
+    toast = json.loads(response.headers["X-Prenium-Toast"])
+    assert response.status_code == 302
+    assert toast["variant"] == "error"
+    assert "too-large.png dépasse la limite de 64 octets" in toast["message"]
+    assert sheet.source_assets.count() == 0
+    assert AssetVersion.objects.filter(customer=customer).count() == 0
+
+
+def test_gang_sheet_batch_total_size_is_bounded_before_asset_creation(
+    client,
+    settings,
+    monkeypatch,
+):
+    user, customer, _project = create_customer_scope(email="bounded-batch@example.com")
+    sheet = GangSheetService().create_sheet(
+        customer=customer,
+        actor=user,
+        name="Lot borné",
+    )
+    settings.ORDER_UPLOAD_MAX_BYTES = 64
+    monkeypatch.setattr(
+        "apps.portal.views_gang_sheets.GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES",
+        80,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": [
+                SimpleUploadedFile(
+                    f"source-{index}.png",
+                    b"\x89PNG\r\n\x1a\n" + bytes([index]) * 40,
+                    content_type="image/png",
+                )
+                for index in range(2)
+            ]
+        },
+    )
+
+    toast = json.loads(response.headers["X-Prenium-Toast"])
+    assert response.status_code == 302
+    assert toast["variant"] == "error"
+    assert "limite de 80 octets par import" in toast["message"]
+    assert sheet.source_assets.count() == 0
+    assert AssetVersion.objects.filter(customer=customer).count() == 0
+
+
+def test_gang_sheet_upload_rolls_back_database_files_audits_and_jobs_on_mid_batch_error(
+    client,
+    settings,
+    monkeypatch,
+    tmp_path,
+    django_capture_on_commit_callbacks,
+):
+    user, customer, _project = create_customer_scope(email="atomic-batch@example.com")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Lot atomique")
+    settings.MEDIA_ROOT = tmp_path
+    original_upload = GangSheetService.upload_source_asset
+    attempts = 0
+    scheduled = []
+
+    def fail_second_upload(service, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 2:
+            raise GangSheetDomainError("TEST_FAILURE", "Échec technique simulé.")
+        return original_upload(service, **kwargs)
+
+    monkeypatch.setattr(GangSheetService, "upload_source_asset", fail_second_upload)
+    monkeypatch.setattr(
+        "apps.uploads.services.assets.AssetService.schedule_analysis",
+        lambda self, version: scheduled.append(version.public_id),
+    )
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(
+            reverse(
+                "portal:client-gang-sheet-asset-upload",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "sheet_public_id": sheet.public_id,
+                },
+            ),
+            {
+                "files": [
+                    SimpleUploadedFile(
+                        f"source-{index}.png",
+                        b"\x89PNG\r\n\x1a\n" + bytes([index]) * 64,
+                        content_type="image/png",
+                    )
+                    for index in range(2)
+                ]
+            },
+        )
+
+    toast = json.loads(response.headers["X-Prenium-Toast"])
+    assert response.status_code == 302
+    assert toast["variant"] == "error"
+    assert "source-1.png : Échec technique simulé" in toast["message"]
+    assert sheet.source_assets.count() == 0
+    assert Asset.objects.filter(customer=customer).count() == 0
+    assert AssetVersion.objects.filter(customer=customer).count() == 0
+    assert not AuditLogEntry.objects.filter(action="gang_sheet.source_uploaded").exists()
+    assert not AuditLogEntry.objects.filter(action="asset.created").exists()
+    assert list(path for path in tmp_path.rglob("*") if path.is_file()) == []
+    assert callbacks == []
+    assert scheduled == []
+
+
+def test_readonly_member_cannot_upload_a_gang_sheet_source(client):
+    user, customer, _project = create_customer_scope(
+        email="readonly-upload@example.com",
+        role=CustomerMembership.Role.READONLY,
+    )
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Lecture seule")
+    client.force_login(user)
+
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": SimpleUploadedFile(
+                "forbidden.png",
+                b"\x89PNG\r\n\x1a\n" + b"0" * 64,
+                content_type="image/png",
+            )
+        },
+    )
+
+    assert response.status_code == 403
+    assert sheet.source_assets.count() == 0
+    assert Asset.objects.filter(customer=customer).count() == 0
+    assert AssetVersion.objects.filter(customer=customer).count() == 0
+
+
+def test_gang_sheet_upload_rate_limit_is_scoped_by_actor_and_customer(
+    client,
+    settings,
+):
+    cache.clear()
+    settings.GANG_SHEET_UPLOAD_RATE_LIMIT_MAX_REQUESTS = 1
+    settings.GANG_SHEET_UPLOAD_RATE_LIMIT_WINDOW_SECONDS = 120
+    owner_a, customer_a, _project_a = create_customer_scope(email="rate-a@example.com")
+    owner_b, customer_b, _project_b = create_customer_scope(email="rate-b@example.com")
+    sheet_a = GangSheetService().create_sheet(customer=customer_a, actor=owner_a, name="A")
+    sheet_b = GangSheetService().create_sheet(customer=customer_b, actor=owner_b, name="B")
+
+    def upload_url(customer, sheet):
+        return reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+
+    client.force_login(owner_a)
+    first = client.post(upload_url(customer_a, sheet_a), {})
+    throttled = client.post(upload_url(customer_a, sheet_a), {})
+    client.force_login(owner_b)
+    isolated = client.post(upload_url(customer_b, sheet_b), {})
+
+    assert first.status_code == 302
+    assert throttled.status_code == 429
+    assert throttled.headers["Retry-After"] == "120"
+    assert json.loads(throttled.headers["X-Prenium-Toast"])["variant"] == "error"
+    assert isolated.status_code == 302
+    cache.clear()
 
 
 def test_auto_crop_upload_recomputes_visible_pixels_server_side(client, monkeypatch):

@@ -1,5 +1,10 @@
 /* Studio Gang Sheet v2 — surface de travail dense, responsive et orientée tâche. */
 
+  .gang-editor {
+    --gang-text-meta: 0.75rem;
+    --gang-text-action: 0.875rem;
+  }
+
   .gang-crop-box {
     position: absolute;
     z-index: 5;
@@ -299,8 +304,33 @@
 
   .gang-workflow--editor li {
     min-height: 3.3rem;
-    padding: 0.55rem 0.75rem;
+    padding: 0;
     background: transparent;
+  }
+
+  .gang-workflow--editor li > button {
+    display: flex;
+    width: 100%;
+    min-height: inherit;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 0.75rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+  }
+
+  .gang-workflow--editor li > button:focus-visible {
+    outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
+    outline-offset: -3px;
+  }
+
+  .gang-workflow--editor li > button > span:last-child {
+    display: grid;
+    min-width: 0;
   }
 
   .gang-workflow--editor li + li {
@@ -321,9 +351,12 @@
     height: 3px;
   }
 
-  .gang-workflow--editor li > span {
+  .gang-workflow--editor [data-workflow-marker] {
+    display: inline-grid;
+    flex: 0 0 auto;
     width: 1.65rem;
     height: 1.65rem;
+    place-items: center;
     border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
     border-radius: 50%;
     background: var(--product-panel, #fffdf8);
@@ -332,13 +365,13 @@
     font-weight: 800;
   }
 
-  .gang-workflow--editor li.is-complete > span {
+  .gang-workflow--editor li.is-complete [data-workflow-marker] {
     border-color: #18713b;
     background: #e5f7ea;
     color: #145c32;
   }
 
-  .gang-workflow--editor li[aria-current="step"] > span {
+  .gang-workflow--editor li[aria-current="step"] [data-workflow-marker] {
     border-color: var(--product-line, #0b0b0b);
     background: var(--product-accent, #dcff1a);
   }
@@ -814,8 +847,14 @@
     width: 700px;
     max-width: none;
     flex: 0 0 auto;
-    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 55%, transparent);
-    box-shadow: 0 5px 8px rgba(11, 11, 11, 0.2);
+    border: 2px solid var(--product-line, #0b0b0b);
+    background:
+      linear-gradient(rgba(72, 64, 59, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(72, 64, 59, 0.1) 1px, transparent 1px),
+      repeating-conic-gradient(#d9d5cc 0 25%, #faf8f3 0 50%) 50% / 20px 20px;
+    box-shadow:
+      0 0 0 3px var(--product-panel, #fffdf8),
+      0 7px 12px rgba(11, 11, 11, 0.28);
     touch-action: none;
   }
 
@@ -1122,6 +1161,68 @@
     margin: 0;
   }
 
+  .gang-advanced-tools > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .gang-advanced-tools > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .gang-advanced-tools > summary::after {
+    content: "+";
+    margin-left: auto;
+    color: var(--product-muted, #4c463b);
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .gang-advanced-tools[open] > summary::after {
+    content: "−";
+  }
+
+  .gang-advanced-tools > summary > span:nth-child(2) {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+  }
+
+  .gang-advanced-tools > summary strong {
+    color: var(--product-ink, #0b0b0b);
+    font-size: 0.75rem;
+  }
+
+  .gang-advanced-tools > summary small {
+    color: var(--product-muted, #4c463b);
+    font-size: 0.62rem;
+  }
+
+  .gang-advanced-tools > summary:focus-visible {
+    outline: 3px solid var(--focus-ring, rgba(218, 82, 23, 0.32));
+    outline-offset: 3px;
+  }
+
+  .gang-advanced-tools__content {
+    display: grid;
+    gap: 0.7rem;
+    padding-top: 0.75rem;
+  }
+
+  .gang-advanced-tools__content > p {
+    margin: 0;
+    color: var(--product-muted, #4c463b);
+    font-size: 0.66rem;
+    line-height: 1.4;
+  }
+
+  .gang-advanced-tools__content > .ui-btn {
+    width: 100%;
+  }
+
   .gang-distribution-tools,
   .gang-precise-gap {
     display: grid;
@@ -1396,12 +1497,12 @@
       font-size: 0.78rem;
     }
 
-    .gang-workflow--editor li {
+    .gang-workflow--editor li > button {
       min-height: 2.65rem;
       padding: 0.4rem 0.65rem;
     }
 
-    .gang-workflow--editor li > span {
+    .gang-workflow--editor [data-workflow-marker] {
       width: 1.4rem;
       height: 1.4rem;
       font-size: 0.65rem;
@@ -1684,32 +1785,53 @@
     }
 
     .gang-editor__metrics {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       min-width: 0;
-      overflow-x: auto;
-      scrollbar-width: thin;
+      overflow: visible;
     }
 
     .gang-editor__metrics > div {
-      min-width: 7.5rem;
-      flex: 0 0 auto;
+      min-width: 0;
+      padding: 0.65rem 0.75rem;
+      border-top: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 12%, transparent);
       border-left: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 12%, transparent);
     }
 
     .gang-editor__metrics > div:first-child {
-      min-width: 10rem;
+      grid-column: 1 / -1;
       border-left: 0;
     }
 
-    .gang-workflow--editor li {
+    .gang-editor__metrics > div:nth-child(2),
+    .gang-editor__metrics > div:first-child {
+      border-top: 0;
+    }
+
+    .gang-editor__metrics > div:nth-child(4) {
+      border-left: 0;
+    }
+
+    .gang-editor__metrics dt,
+    .gang-editor__metrics dd {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+    }
+
+    .gang-workflow--editor li > button {
       flex-direction: row;
       justify-content: center;
       min-height: 3rem;
       padding: 0.35rem;
     }
 
-    .gang-workflow--editor li > div {
+    .gang-workflow--editor li > button > span:last-child {
       display: none;
+    }
+
+    .gang-inspector-panel--validation {
+      scroll-margin-top: 8rem;
     }
 
     .gang-editor__status-copy small {
@@ -1796,4 +1918,53 @@
     .gang-editor__touch-multiselect {
       display: inline-block;
     }
+  }
+
+  /* Plancher de lisibilité : 12 px pour la métadonnée, 14 px pour l'action ou l'état. */
+  .gang-crop-controls__head span,
+  .gang-crop-controls > p,
+  .gang-crop-mode button span,
+  .gang-asset-card__crop-badge,
+  .gang-editor__metrics dt,
+  .gang-workflow--editor [data-workflow-marker],
+  .gang-workflow--editor small,
+  .gang-editor__status-copy small,
+  .gang-editor__issue-count,
+  .gang-editor__panel-label small,
+  .gang-editor__panel-head p,
+  .gang-inspector-panel p,
+  .gang-asset-launcher small,
+  .gang-editor__toolbar-meta span,
+  .gang-editor__toolbar kbd,
+  .gang-inspector-panel kbd,
+  .gang-inspector-panel__context,
+  .gang-alignment-reference legend,
+  .gang-alignment-reference span,
+  .gang-advanced-tools > summary small,
+  .gang-advanced-tools__content > p,
+  .gang-distribution-tools > span,
+  .gang-precise-gap__copy strong,
+  .gang-precise-gap__copy span,
+  .gang-spacing-panel__heading p,
+  .gang-spacing-grid label,
+  .gang-inspector-panel--validation li,
+  .gang-editor__mobile-count {
+    font-size: var(--gang-text-meta);
+  }
+
+  .gang-workflow--editor strong,
+  .gang-editor__status,
+  .gang-editor__panel-label strong,
+  .gang-asset-launcher strong,
+  .gang-asset-card__add .ui-btn,
+  .gang-editor__toolbar-meta strong,
+  .gang-tool-btn,
+  .gang-sheet-item-action,
+  .gang-action-chip,
+  .gang-distribution-tools button,
+  .gang-precise-gap button,
+  .gang-inspector-panel--validation li.is-error button,
+  body.product-shell .gang-editor__save,
+  .gang-editor__mobile-tabs button {
+    font-size: var(--gang-text-action);
   }

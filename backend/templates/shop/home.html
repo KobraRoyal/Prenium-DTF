@@ -9,6 +9,10 @@
 
 {% block body_class %}landing-saas ui-marketing-body landing-conversion-page{% endblock %}
 
+{% block surface_styles %}
+<link rel="stylesheet" href="{% static 'css/marketing.css' %}">
+{% endblock %}
+
 {% block content %}
 {% include "components/nav/landing_header.html" %}
 <main class="landing-main" id="main-content">
@@ -24,5 +28,5 @@
 {% endblock %}
 
 {% block runtime_scripts %}
-<script type="module" src="{% static 'js/marketing.js' %}?v=20260731-kinetic-motion-1"></script>
+<script type="module" src="{% static 'js/marketing.js' %}"></script>
 {% endblock %}

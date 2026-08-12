@@ -17,6 +17,16 @@
   <p class="muted">Votre utilisateur n'a pas encore de membership client actif.</p>
 </section>
 {% else %}
+{% if client_focus %}
+<section class="client-dashboard-focus {{ client_focus.tone }}" aria-labelledby="client-dashboard-focus-title">
+  <div>
+    <p>{{ client_focus.label }}</p>
+    <h2 id="client-dashboard-focus-title">{{ client_focus.title }}</h2>
+    <span>{{ client_focus.detail }}</span>
+  </div>
+  <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">{{ client_focus.action_label }}</a>
+</section>
+{% endif %}
 {% if project_feature_enabled and recent_projects %}
 <section class="card client-dashboard-section" aria-labelledby="client-dashboard-preparations">
   <div class="client-dashboard-section__head">

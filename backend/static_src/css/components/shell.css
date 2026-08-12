@@ -266,9 +266,9 @@
 
   body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-warning {
     border-color: var(--product-line, #0b0b0b);
-    border-left-width: 6px;
-    border-left-color: var(--product-accent, #dcff1a);
-    background: rgba(220, 255, 26, 0.12);
+    background:
+      linear-gradient(var(--product-accent, #dcff1a), var(--product-accent, #dcff1a)) top / 100% 4px no-repeat,
+      rgba(220, 255, 26, 0.12);
   }
 
   body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-anomaly {

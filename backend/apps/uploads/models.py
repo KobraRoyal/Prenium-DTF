@@ -50,6 +50,13 @@ def asset_thumbnail_path(instance, filename: str) -> str:
     )
 
 
+def asset_large_preview_path(instance, filename: str) -> str:
+    return (
+        f"assets/{instance.customer.public_id}/{instance.version.asset.public_id}/"
+        f"v{instance.version.version_number}/previews/{instance.public_id}.webp"
+    )
+
+
 def asset_thin_zone_overlay_path(instance, filename: str) -> str:
     return (
         f"assets/{instance.customer.public_id}/{instance.version.asset.public_id}/"
@@ -262,6 +269,11 @@ class AssetAnalysis(BaseModel):
     has_alpha = models.BooleanField(null=True, blank=True)
     probable_white_background = models.BooleanField(null=True, blank=True)
     thumbnail = models.FileField(upload_to=asset_thumbnail_path, max_length=500, blank=True)
+    large_preview = models.FileField(
+        upload_to=asset_large_preview_path,
+        max_length=500,
+        blank=True,
+    )
     thin_zone_overlay = models.FileField(
         upload_to=asset_thin_zone_overlay_path,
         max_length=500,

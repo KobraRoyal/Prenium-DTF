@@ -18,6 +18,7 @@
     --product-attention-muted: rgba(220, 255, 26, 0.1);
     --product-danger: #ff5470;
     --product-success: #4ade80;
+    --product-text-critical-xs: 0.75rem;
     min-height: 100vh;
     color: var(--product-ink);
     background: var(--product-bg);
@@ -446,7 +447,7 @@
   body.product-shell .product-profile__identity-copy strong {
     overflow: hidden;
     color: var(--product-ink);
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 750;
     line-height: 1.25;
     text-overflow: ellipsis;
@@ -534,7 +535,7 @@
 
   body.product-shell .product-profile__action small {
     color: var(--product-muted);
-    font-size: 0.68rem;
+    font-size: var(--product-text-critical-xs);
     line-height: 1.3;
   }
 
@@ -625,7 +626,7 @@
 
   body.product-shell .product-nav__more-link small {
     color: var(--product-muted);
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     line-height: 1.35;
   }
 
@@ -741,7 +742,7 @@
 
   body.product-shell .account-profile-identity small {
     color: var(--product-muted);
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     line-height: 1.4;
   }
 
@@ -876,7 +877,7 @@
     border: 1px solid color-mix(in srgb, var(--product-line) 40%, transparent);
     background: var(--product-panel);
     color: color-mix(in srgb, var(--product-ink) 78%, var(--product-muted));
-    font-size: 0.68rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 750;
     letter-spacing: 0.01em;
   }
@@ -968,7 +969,7 @@
     border: 1px solid color-mix(in srgb, var(--product-line) 40%, transparent);
     background: color-mix(in srgb, var(--product-panel-strong) 50%, var(--product-panel));
     color: color-mix(in srgb, var(--product-ink) 78%, var(--product-muted));
-    font-size: 0.68rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 750;
   }
 
@@ -1021,7 +1022,7 @@
     min-height: 1.5rem;
     padding: 0.15rem 0.45rem;
     border: 1px solid color-mix(in srgb, var(--product-line) 36%, transparent);
-    font-size: 0.66rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 750;
   }
 
@@ -1387,6 +1388,52 @@
     gap: 1rem;
   }
 
+  body.product-shell .client-dashboard-focus,
+  body.product-shell .atelier-next-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1rem 1.1rem;
+    border: 2px solid var(--product-line);
+    background: color-mix(in srgb, var(--product-accent) 12%, var(--product-panel));
+    box-shadow: 5px 5px 0 var(--product-line);
+  }
+
+  body.product-shell .client-dashboard-focus > div,
+  body.product-shell .atelier-next-action > div {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  body.product-shell .client-dashboard-focus p,
+  body.product-shell .atelier-next-action p {
+    margin: 0;
+    color: var(--product-muted);
+    font-size: var(--product-text-critical-xs);
+    font-weight: 850;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .client-dashboard-focus h2,
+  body.product-shell .client-dashboard-focus span,
+  body.product-shell .atelier-next-action strong,
+  body.product-shell .atelier-next-action span {
+    overflow-wrap: anywhere;
+  }
+
+  body.product-shell .client-dashboard-focus h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  body.product-shell .client-dashboard-focus.is-danger {
+    background: color-mix(in srgb, var(--product-danger) 12%, var(--product-panel));
+  }
+
   body.product-shell .client-dashboard-hero {
     display: grid;
     gap: 1rem;
@@ -1436,7 +1483,7 @@
 
   body.product-shell .client-dashboard-kpis dt {
     color: var(--product-muted);
-    font-size: 0.68rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 850;
     text-transform: uppercase;
   }
@@ -1536,7 +1583,7 @@
   body.product-shell .client-entity-refs__label {
     display: block;
     color: var(--product-muted);
-    font-size: 0.68rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 850;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1897,6 +1944,22 @@
     gap: 0.75rem;
   }
 
+  body.product-shell .ui-kpi-card__action {
+    color: var(--product-ink);
+    font-size: var(--product-text-critical-xs);
+    font-weight: 850;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  body.product-shell .ui-kpi-card.is-danger {
+    background: color-mix(in srgb, var(--product-danger) 12%, var(--product-panel));
+  }
+
+  body.product-shell .ui-kpi-card.is-ready {
+    background: color-mix(in srgb, var(--product-accent) 20%, var(--product-panel));
+  }
+
   body.product-shell .ui-kpi-card__index {
     display: inline-flex;
     align-items: center;
@@ -2034,8 +2097,10 @@
   }
 
   body.product-shell .ui-mobile-order-card.ui-card-warning {
-    border-left-width: 6px;
-    border-left-color: var(--product-accent);
+    border-color: var(--product-line);
+    background:
+      linear-gradient(var(--product-accent), var(--product-accent)) top / 100% 4px no-repeat,
+      var(--product-attention-soft) !important;
   }
 
   body.product-shell .ui-data-table tbody tr.ui-row-anomaly,
@@ -2103,7 +2168,7 @@
     border-radius: 0;
     background: rgba(220, 255, 26, 0.42);
     color: var(--product-ink);
-    font-size: 0.68rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 850;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -2470,9 +2535,9 @@
   body.product-shell .alert--warning,
   body.product-shell .dui-alert-warning {
     border: 2px solid var(--product-line);
-    border-left-width: 6px;
-    border-left-color: var(--product-accent);
-    background: var(--product-attention-muted);
+    background:
+      linear-gradient(var(--product-accent), var(--product-accent)) top / 100% 4px no-repeat,
+      var(--product-attention-muted);
     color: var(--product-ink);
   }
 
@@ -2531,20 +2596,29 @@
 
   /* « Étape suivante » : carte accent lisible plutôt que texte nu. */
   body.product-shell .workflow-next-action {
+    position: relative;
+    overflow: hidden;
     display: grid;
     gap: 0.3rem;
     margin: 0 0 1.2rem;
     padding: 0.9rem 1.05rem;
     border: 2px solid var(--product-line);
-    border-left: 8px solid var(--product-accent);
-    background: var(--product-panel);
+    background: color-mix(in srgb, var(--product-accent) 12%, var(--product-panel));
     box-shadow: 6px 6px 0 #0b0b0b;
+  }
+
+  body.product-shell .workflow-next-action::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: var(--product-accent);
   }
 
   body.product-shell .workflow-next-action__label {
     color: var(--product-ink);
     font-family: "Space Grotesk", system-ui, sans-serif;
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 900;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -2824,7 +2898,7 @@
   body.product-shell .product-date-picker__weekdays {
     margin-bottom: 0.35rem;
     color: var(--product-muted);
-    font-size: 0.68rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 850;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -2968,7 +3042,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
   }
 
   body.product-shell .b2b-project-toolbar__meta {
@@ -3005,7 +3079,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
   }
 
   body.product-shell .b2b-project-checkout-bar__meta {
@@ -3706,7 +3780,7 @@
 
   body.product-shell .b2b-visual-list-item__thumb span {
     padding: 0.35rem;
-    font-size: 0.66rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 800;
     text-align: center;
     text-transform: uppercase;
@@ -4681,7 +4755,7 @@
     border: 1px solid var(--product-danger);
     background: color-mix(in srgb, var(--product-danger) 14%, white);
     color: var(--product-danger);
-    font-size: 0.68rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 800;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -4719,7 +4793,7 @@
   body.product-shell .b2b-support-color__required-hint {
     margin: -0.15rem 0 0;
     color: var(--product-danger);
-    font-size: 0.74rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 700;
     line-height: 1.4;
   }
@@ -5013,7 +5087,7 @@
 
   body.product-shell .b2b-quality-metrics dt {
     color: var(--product-muted);
-    font-size: 0.66rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 850;
     text-transform: uppercase;
   }
@@ -5397,7 +5471,7 @@
   body.product-shell .b2b-replace-form label > span,
   body.product-shell .b2b-configurator__controls label > span {
     color: var(--product-muted);
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 800;
     text-transform: uppercase;
   }
@@ -5410,19 +5484,20 @@
   body.product-shell .b2b-analysis-error {
     margin: 0;
     border: 2px solid var(--product-line);
-    border-left-width: 6px;
     padding: 0.55rem 0.7rem;
     font-size: 0.82rem;
   }
 
   body.product-shell .b2b-analysis-warning {
-    border-left-color: var(--product-accent);
-    background: var(--product-attention-muted);
+    background:
+      linear-gradient(var(--product-accent), var(--product-accent)) top / 100% 4px no-repeat,
+      var(--product-attention-muted);
   }
 
   body.product-shell .b2b-analysis-error {
-    border-left-color: var(--product-danger);
-    background: rgba(255, 84, 112, 0.14);
+    background:
+      linear-gradient(var(--product-danger), var(--product-danger)) top / 100% 4px no-repeat,
+      rgba(255, 84, 112, 0.14);
   }
 
   body.product-shell .b2b-visual-edit {
@@ -5711,7 +5786,7 @@
       grid-column: 1 / -1;
       margin: 0 0 0.15rem;
       color: var(--product-soft);
-      font-size: 0.68rem;
+      font-size: var(--product-text-critical-xs);
       font-weight: 750;
       letter-spacing: 0.08em;
       line-height: 1.2;
@@ -5847,14 +5922,14 @@
       min-height: 3rem;
       gap: 0.35rem;
       padding: 0.5rem 0.4rem;
-      font-size: 0.68rem;
+      font-size: var(--product-text-critical-xs);
     }
 
     body.product-shell .product-checkout-step__index {
       width: 1.55rem;
       height: 1.55rem;
       flex: 0 0 auto;
-      font-size: 0.72rem;
+      font-size: var(--product-text-critical-xs);
     }
 
     body.product-shell .split-row {
@@ -6267,13 +6342,28 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.product-shell *,
-  body.product-shell *::before,
-  body.product-shell *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+  html:has(body.product-shell),
+  body.product-shell {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
+  }
+
+  body.product-shell .product-layout > *,
+  body.product-shell .product-command-grid > *,
+  body.product-shell .ui-kpi-grid > *,
+  body.product-shell .b2b-preview-stage.is-analyzing,
+  body.product-shell .client-billing-success,
+  body.product-shell .client-shipment-card--shipped {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  body.product-shell .btn,
+  body.product-shell .ui-btn,
+  body.product-shell .dui-btn-primary,
+  body.product-shell .product-menu-button__icon > span,
+  body.product-shell .product-nav__chevron {
+    transition: none;
   }
 }
 
@@ -6291,6 +6381,15 @@ body.product-shell .atelier-dashboard-head {
 body.product-shell .atelier-dashboard-head .page-head {
   margin: 0;
   max-width: 48rem;
+}
+
+/* Les onglets de la file ont leur propre scroll horizontal. Les trois enfants
+   directs du shell doivent donc pouvoir descendre sous leur min-content. */
+body.product-shell .atelier-dashboard-head,
+body.product-shell .atelier-dashboard-metrics,
+body.product-shell .atelier-worklist {
+  min-width: 0;
+  max-width: 100%;
 }
 
 body.product-shell .atelier-dashboard-head__actions,
@@ -6476,7 +6575,7 @@ body.product-shell .atelier-order-row__select-hint {
   margin: 0;
   max-width: 5.5rem;
   color: var(--product-soft);
-  font-size: 0.62rem;
+  font-size: var(--product-text-critical-xs);
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
@@ -6523,7 +6622,7 @@ body.product-shell .atelier-order-row__mobile-label {
   display: none;
   margin: 0;
   color: var(--product-soft);
-  font-size: 0.65rem;
+  font-size: var(--product-text-critical-xs);
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -6795,6 +6894,17 @@ body.product-shell .scan-result__label {
 }
 
 @media (max-width: 639px) {
+  body.product-shell .client-dashboard-focus,
+  body.product-shell .atelier-next-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.product-shell .client-dashboard-focus .ui-btn,
+  body.product-shell .atelier-next-action .ui-btn {
+    width: 100%;
+  }
+
   body.product-shell .atelier-dashboard-metrics .ui-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.65rem;
@@ -7068,7 +7178,7 @@ body.product-shell .scan-result__label {
 
   body.product-shell .client-billing-overview span {
     color: var(--product-muted);
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -7122,7 +7232,7 @@ body.product-shell .scan-result__label {
 
   body.product-shell .client-billing-pay__amount span {
     color: var(--product-muted);
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -7289,7 +7399,7 @@ body.product-shell .scan-result__label {
   body.product-shell .client-billing-success__meta dt {
     margin: 0;
     color: var(--product-muted);
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 800;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -7330,7 +7440,7 @@ body.product-shell .scan-result__label {
   body.product-shell .client-billing-pay-dialog__eyebrow {
     margin: 0 0 0.25rem;
     color: var(--product-muted);
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -7435,7 +7545,7 @@ body.product-shell .scan-result__label {
 
   body.product-shell .client-shipment-overview span {
     color: var(--product-muted);
-    font-size: 0.74rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -7542,7 +7652,7 @@ body.product-shell .scan-result__label {
 
   body.product-shell .client-shipment-card__fact dt {
     color: var(--product-muted);
-    font-size: 0.72rem;
+    font-size: var(--product-text-critical-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;

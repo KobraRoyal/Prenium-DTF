@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.shortcuts import render
+from django.urls import reverse
 from django.views import View
 
 from apps.portal.views_common import StaffPortalMixin
@@ -33,26 +34,39 @@ class StaffDashboardView(StaffPortalMixin, View):
             }
         )
         metrics = dashboard["metrics"]
+        dashboard_url = reverse("portal:staff-dashboard")
         kpi_rows = [
             {
                 "label": "À contrôler",
                 "value": str(metrics.get("pending_review", 0)),
                 "hint": "Validation Atelier requise",
+                "tone": "is-attention" if metrics.get("pending_review", 0) else "",
+                "action_url": f"{dashboard_url}?queue=to_review",
+                "action_label": "Contrôler",
             },
             {
                 "label": "Corrections client",
                 "value": str(metrics.get("changes_requested", 0)),
                 "hint": "Fichiers à remplacer",
+                "tone": "is-danger" if metrics.get("changes_requested", 0) else "",
+                "action_url": f"{dashboard_url}?queue=to_review",
+                "action_label": "Voir",
             },
             {
                 "label": "OF prêts",
                 "value": str(metrics.get("ready_to_print", 0)),
                 "hint": "Validés et en attente",
+                "tone": "is-ready" if metrics.get("ready_to_print", 0) else "",
+                "action_url": f"{dashboard_url}?queue=ready",
+                "action_label": "Imprimer",
             },
             {
-                "label": "En production",
-                "value": str(metrics.get("in_production", 0)),
-                "hint": "Travaux lancés ou bloqués",
+                "label": "Blocages à lever",
+                "value": str(metrics.get("blocked", 0)),
+                "hint": "Décision Atelier requise",
+                "tone": "is-danger" if metrics.get("blocked", 0) else "",
+                "action_url": f"{dashboard_url}?queue=production",
+                "action_label": "Suivre",
             },
         ]
         return render(

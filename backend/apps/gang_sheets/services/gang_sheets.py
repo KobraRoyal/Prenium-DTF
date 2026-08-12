@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
@@ -40,6 +41,7 @@ MAX_BATCH_OCCURRENCES = 200
 MAX_BATCH_DELETE_OCCURRENCES = 1000
 MAX_SOURCE_ASSETS = 100
 MAX_SPACING_MM = Decimal("100.00")
+logger = logging.getLogger(__name__)
 
 
 class GangSheetDomainError(ValueError):
@@ -248,32 +250,85 @@ class GangSheetService:
             )
         except AssetDomainError as error:
             raise GangSheetDomainError(error.code, error.message, error.details) from error
-        next_position = (locked.source_assets.aggregate(value=Max("sort_order"))["value"] or 0) + 1
-        source_asset = GangSheetSourceAsset.objects.create(
-            customer=locked.customer,
-            sheet=locked,
-            asset=version.asset,
-            added_by=actor if getattr(actor, "is_authenticated", False) else None,
-            crop_x=crop.x,
-            crop_y=crop.y,
-            crop_width=crop.width,
-            crop_height=crop.height,
-            sort_order=next_position,
-        )
-        self._audit(
-            "source_uploaded",
-            sheet=locked,
-            actor=actor,
-            source=source,
-            metadata={
-                "asset_public_id": str(version.asset.public_id),
-                "asset_version_public_id": str(version.public_id),
-                "crop_mode": crop_mode,
-                "crop": crop.to_metadata(),
-                "auto_crop": auto_crop_metadata,
-            },
-        )
+        try:
+            next_position = (
+                locked.source_assets.aggregate(value=Max("sort_order"))["value"] or 0
+            ) + 1
+            source_asset = GangSheetSourceAsset.objects.create(
+                customer=locked.customer,
+                sheet=locked,
+                asset=version.asset,
+                added_by=actor if getattr(actor, "is_authenticated", False) else None,
+                crop_x=crop.x,
+                crop_y=crop.y,
+                crop_width=crop.width,
+                crop_height=crop.height,
+                sort_order=next_position,
+            )
+            self._audit(
+                "source_uploaded",
+                sheet=locked,
+                actor=actor,
+                source=source,
+                metadata={
+                    "asset_public_id": str(version.asset.public_id),
+                    "asset_version_public_id": str(version.public_id),
+                    "crop_mode": crop_mode,
+                    "crop": crop.to_metadata(),
+                    "auto_crop": auto_crop_metadata,
+                },
+            )
+        except Exception:
+            if version.file.name:
+                self._delete_stored_files_safely([(version.file.storage, version.file.name)])
+            raise
         return source_asset, version
+
+    @transaction.atomic
+    def upload_source_assets(
+        self,
+        *,
+        sheet,
+        actor,
+        uploads,
+        source="client_portal",
+    ):
+        """Importe un lot de sources sans conserver de succès partiel."""
+        upload_rows = list(uploads)
+        locked = self._lock_editable(sheet)
+        if locked.source_assets.count() + len(upload_rows) > MAX_SOURCE_ASSETS:
+            raise GangSheetDomainError(
+                "SOURCE_ASSET_LIMIT",
+                f"Une galerie est limitée à {MAX_SOURCE_ASSETS} fichiers.",
+            )
+
+        imported = []
+        stored_files = []
+        try:
+            for uploaded_file, crop, crop_mode in upload_rows:
+                try:
+                    source_asset, version = self.upload_source_asset(
+                        sheet=locked,
+                        actor=actor,
+                        uploaded_file=uploaded_file,
+                        crop=crop,
+                        crop_mode=crop_mode,
+                        source=source,
+                    )
+                except GangSheetDomainError as error:
+                    filename = self._safe_upload_name(uploaded_file)
+                    raise GangSheetDomainError(
+                        error.code,
+                        f"{filename} : {error.message}",
+                        error.details,
+                    ) from error
+                imported.append((source_asset, version))
+                if version.file.name:
+                    stored_files.append((version.file.storage, version.file.name))
+        except Exception:
+            self._delete_stored_files_safely(stored_files)
+            raise
+        return imported
 
     @transaction.atomic
     def add_occurrence(self, *, sheet, asset_version_public_id, actor, source="client_portal"):
@@ -1082,6 +1137,19 @@ class GangSheetService:
     def _delete_stored_files(stored_files):
         for storage, name in stored_files:
             storage.delete(name)
+
+    @staticmethod
+    def _delete_stored_files_safely(stored_files):
+        for storage, name in stored_files:
+            try:
+                storage.delete(name)
+            except Exception:
+                logger.exception("Failed to clean a rolled-back Gang Sheet source file")
+
+    @staticmethod
+    def _safe_upload_name(uploaded_file) -> str:
+        name = Path(str(getattr(uploaded_file, "name", "Visuel") or "Visuel")).name
+        return name.replace("\r", " ").replace("\n", " ")[:120] or "Visuel"
 
     def _unit_price(self, customer):
         try:

@@ -3,7 +3,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 1000;
-  src: url("../vendor/fonts/dm-sans-latin-wght-normal.woff2") format("woff2-variations");
+  src: url("/static/vendor/fonts/dm-sans-latin-wght-normal.woff2") format("woff2-variations");
 }
 
 @font-face {
@@ -11,7 +11,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 300 700;
-  src: url("../vendor/fonts/space-grotesk-latin-wght-normal.woff2") format("woff2-variations");
+  src: url("/static/vendor/fonts/space-grotesk-latin-wght-normal.woff2") format("woff2-variations");
 }
 
 :root {

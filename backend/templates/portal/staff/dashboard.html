@@ -5,7 +5,7 @@
 
 {% block portal_content %}
 <section class="atelier-dashboard-head">
-  {% include "components/portal/page_head.html" with kicker="Pilotage Atelier" title="File Atelier" subtitle="Contrôlez les derniers fichiers reçus, puis imprimez uniquement les OF prêts pour la production." %}
+  {% include "components/portal/page_head.html" with kicker="Pilotage Atelier" title="File Atelier" subtitle="Décidez quoi traiter maintenant, puis imprimez uniquement les OF prêts pour la production." %}
   <nav class="atelier-dashboard-head__actions" aria-label="Accès rapides Atelier">
     {% if can_read_projects %}
     <a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-order-project-list' %}">Projets B2B</a>
@@ -26,6 +26,17 @@
 <div class="atelier-dashboard-metrics">
 {% ui_kpi_grid items=kpi_rows %}
 </div>
+
+{% if worklist_rows %}
+<aside class="atelier-next-action" aria-labelledby="atelier-next-action-title">
+  <div>
+    <p id="atelier-next-action-title">Prochain geste</p>
+    <strong>{{ worklist_rows.0.next_action }} la commande #{{ worklist_rows.0.order_reference }}</strong>
+    <span>{{ worklist_rows.0.order.customer.name }} · {{ worklist_rows.0.review_label }}</span>
+  </div>
+  <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-order-detail' order_public_id=worklist_rows.0.order.public_id %}?panel={{ worklist_rows.0.next_panel }}">{{ worklist_rows.0.next_action }}</a>
+</aside>
+{% endif %}
 
 <form
   class="atelier-worklist"

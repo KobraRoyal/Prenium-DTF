@@ -1,8 +1,13 @@
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 
 const vendorDirectory = new URL("../static_src/vendor/", import.meta.url);
 const fontDirectory = new URL("fonts/", vendorDirectory);
 const pdfJsDirectory = new URL("pdfjs/", vendorDirectory);
+
+async function copyPdfJsWithoutSourceMap(source, destination) {
+  const content = await readFile(source, "utf8");
+  await writeFile(destination, content.replace(/\n\/\/# sourceMappingURL=.*\s*$/, ""), "utf8");
+}
 
 await mkdir(vendorDirectory, { recursive: true });
 await mkdir(fontDirectory, { recursive: true });
@@ -30,11 +35,11 @@ await Promise.all([
     ),
     new URL("space-grotesk-latin-wght-normal.woff2", fontDirectory),
   ),
-  copyFile(
+  copyPdfJsWithoutSourceMap(
     new URL("../node_modules/pdfjs-dist/build/pdf.mjs", import.meta.url),
     new URL("pdf.js", pdfJsDirectory),
   ),
-  copyFile(
+  copyPdfJsWithoutSourceMap(
     new URL("../node_modules/pdfjs-dist/build/pdf.worker.mjs", import.meta.url),
     new URL("pdf.worker.js", pdfJsDirectory),
   ),

@@ -22,6 +22,7 @@ from apps.b2b_order_projects.services import (
 from apps.core.public_refs import short_public_ref
 from apps.orders.references import order_client_reference
 from apps.orders.services.client_timeline import build_client_order_status_history
+from apps.portal.dashboard_focus import build_client_dashboard_focus
 from apps.portal.views_common import (
     ClientOwnerRequiredMixin,
     ScopedCustomerMixin,
@@ -57,6 +58,7 @@ class ClientDashboardView(LoginRequiredMixin, View):
         project_feature_enabled = False
         orders_count = projects_in_progress_count = awaits_payment_count = 0
         new_order_url = ""
+        client_focus = None
         if selected_membership is not None:
             customer = (
                 access_scope_service.get_customer_queryset(request.user)
@@ -79,6 +81,12 @@ class ClientDashboardView(LoginRequiredMixin, View):
                         "portal:client-checkout",
                         kwargs={"customer_public_id": customer.public_id},
                     )
+                client_focus = build_client_dashboard_focus(
+                    customer=customer,
+                    recent_projects=recent_projects,
+                    recent_orders=recent_orders,
+                    new_order_url=new_order_url,
+                )
         return render(
             request,
             self.template_name,
@@ -94,6 +102,7 @@ class ClientDashboardView(LoginRequiredMixin, View):
                 "projects_in_progress_count": projects_in_progress_count,
                 "new_order_url": new_order_url,
                 "project_feature_enabled": project_feature_enabled,
+                "client_focus": client_focus,
                 "nav_mode": "client",
                 "nav_key": "client-dashboard",
                 "badge_tone_for_status": badge_tone_for_status,

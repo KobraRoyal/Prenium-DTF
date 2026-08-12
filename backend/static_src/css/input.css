@@ -1,19 +1,11 @@
-/* Tous les @import doivent précéder @tailwind (sinon shell/forms/prospect-tunnel
-    peuvent être ignorés par le pipeline et ne jamais figurer dans app.css). */
+/* Tous les imports du socle doivent précéder @tailwind, sinon les couches
+   shell/forms peuvent être ignorées et ne jamais figurer dans app.css. */
 @import "./tokens.css";
 @import "./legacy/app-legacy.css";
 @import "./components/shell.css";
 @import "./components/feedback.css";
 @import "./components/forms.css";
 @import "./components/buttons.css";
-@import "./components/prospect-tunnel.css";
-@import "./components/workflow.css";
-@import "./components/product-shell.css";
-@import "./components/landing.css";
-@import "./components/landing-conversion.css";
-@import "./components/prospect-journey.css";
-@import "./components/gang-sheet.css";
-@import "./components/gang-sheet-studio.css";
 
 @tailwind base;
 @tailwind components;

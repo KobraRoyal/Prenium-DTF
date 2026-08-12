@@ -18,6 +18,7 @@ if (root) {
   let dirty = false;
   let zoom = 1;
   let pollTimer = null;
+  let resizeFrame = null;
   let galleryWasPending = qPendingGallery();
   const canEdit = root.dataset.canEdit === "true";
   const canvas = root.querySelector("[data-sheet-canvas]");
@@ -125,16 +126,42 @@ if (root) {
     });
   }
 
-  function setMobilePanel(panelName) {
+  function setMobilePanel(panelName, { focusTab = false } = {}) {
+    const isMobile = window.matchMedia("(max-width: 980px)").matches;
     qa("[data-mobile-panel-tab]").forEach((tab) => {
       const active = tab.dataset.mobilePanelTab === panelName;
       tab.classList.toggle("is-active", active);
       tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+      if (active && focusTab) tab.focus();
     });
     qa("[data-editor-panel]").forEach((panel) => {
-      panel.classList.toggle("is-mobile-active", panel.dataset.editorPanel === panelName);
+      const active = panel.dataset.editorPanel === panelName;
+      panel.classList.toggle("is-mobile-active", active);
+      panel.hidden = isMobile && !active;
+      if (isMobile) {
+        panel.setAttribute("role", "tabpanel");
+        panel.setAttribute("aria-labelledby", `gang-editor-tab-${panel.dataset.editorPanel}`);
+      } else {
+        panel.removeAttribute("role");
+        panel.removeAttribute("aria-labelledby");
+      }
     });
     if (panelName === "canvas") window.requestAnimationFrame(renderZoom);
+  }
+
+  function handleMobileTabKeydown(event) {
+    if (!window.matchMedia("(max-width: 980px)").matches) return;
+    const tabs = qa("[data-mobile-panel-tab]");
+    const currentIndex = tabs.indexOf(event.currentTarget);
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setMobilePanel(tabs[nextIndex].dataset.mobilePanelTab, { focusTab: true });
   }
 
   function qPendingGallery() {
@@ -286,6 +313,8 @@ if (root) {
       node.style.height = `${(size.height / state.height_mm) * 100}%`;
       node.setAttribute("aria-label", `${item.asset_name}, ${round(item.width_mm / 10, 1)} par ${round(item.height_mm / 10, 1)} centimètres`);
       node.setAttribute("aria-pressed", String(isSelected));
+      node.setAttribute("aria-keyshortcuts", "R Delete Backspace Control+D Meta+D");
+      node.tabIndex = selectedId === item.public_id || (selectedId === null && state.items[0] === item) ? 0 : -1;
       const image = document.createElement("img");
       image.src = item.preview_url;
       image.alt = "";
@@ -363,6 +392,8 @@ if (root) {
     q("[data-empty-inspector]").hidden = selectionCount > 0;
     q("[data-item-inspector]").hidden = selectionCount !== 1 || !item;
     q("[data-alignment-panel]").hidden = selectionCount === 0;
+    const advancedSelectionTools = q("[data-advanced-selection-tools]");
+    if (advancedSelectionTools && selectionCount > 1) advancedSelectionTools.open = true;
     const selectionDelete = q("[data-delete-selected]");
     selectionDelete.hidden = selectionCount < 2;
     selectionDelete.textContent = selectionCount > 1
@@ -462,29 +493,55 @@ if (root) {
   }
 
   function renderWorkflow() {
-    const hasProject = root.dataset.hasProject === "true";
     const status = state.status;
+    const assetCount = qa("[data-asset-card]").length;
+    const itemCount = state.items.length;
+    const issueCount = state.issues.length;
+    const compositionComplete = itemCount > 0;
+    const controlComplete = compositionComplete && issueCount === 0;
     const steps = {
-      files: "complete",
-      composition: ["ready", "validated"].includes(status) ? "complete" : "active",
-      validation:
-        status === "validated"
-          ? "complete"
-          : ["rendering", "ready", "render_failed"].includes(status)
-            ? "active"
-            : "pending",
-      order: hasProject ? "complete" : status === "validated" ? "active" : "pending",
+      import: assetCount > 0 ? "complete" : "active",
+      compose: compositionComplete ? "complete" : assetCount > 0 ? "active" : "pending",
+      control: controlComplete ? "complete" : compositionComplete ? "active" : "pending",
+      validate: status === "validated" ? "complete" : controlComplete ? "active" : "pending",
     };
-    const stepNumbers = { files: "1", composition: "2", validation: "3", order: "4" };
+    const currentStep = assetCount === 0
+      ? "import"
+      : !compositionComplete
+        ? "compose"
+        : issueCount > 0
+          ? "control"
+          : "validate";
+    const stepNumbers = { import: "1", compose: "2", control: "3", validate: "4" };
+    const details = {
+      import: assetCount > 0 ? `${assetCount} source${assetCount > 1 ? "s" : ""} disponible${assetCount > 1 ? "s" : ""}` : "Ajouter vos fichiers",
+      compose: itemCount > 0 ? `${itemCount} visuel${itemCount > 1 ? "s" : ""} placé${itemCount > 1 ? "s" : ""}` : "Placer les visuels",
+      control: !compositionComplete
+        ? "Après composition"
+        : issueCount > 0
+          ? `${issueCount} anomalie${issueCount > 1 ? "s" : ""} à corriger`
+          : "Composition contrôlée",
+      validate:
+        status === "validated"
+          ? "Planche validée"
+          : status === "rendering"
+            ? "Rendu HD en cours"
+            : status === "ready"
+              ? "Rendu prêt à valider"
+              : status === "render_failed"
+                ? "Relancer le rendu HD"
+                : "Générer le rendu HD",
+    };
     qa("[data-workflow-step]").forEach((node) => {
       const step = node.dataset.workflowStep;
       const stepState = steps[step];
       node.classList.toggle("is-active", stepState === "active");
       node.classList.toggle("is-complete", stepState === "complete");
-      if (stepState === "active") node.setAttribute("aria-current", "step");
+      if (step === currentStep) node.setAttribute("aria-current", "step");
       else node.removeAttribute("aria-current");
-      node.querySelector(":scope > span").textContent =
+      node.querySelector("[data-workflow-marker]").textContent =
         stepState === "complete" ? "✓" : stepNumbers[step];
+      node.querySelector("[data-workflow-detail]").textContent = details[step];
     });
   }
 
@@ -1342,6 +1399,23 @@ if (root) {
 
   qa("[data-mobile-panel-tab]").forEach((tab) => {
     tab.addEventListener("click", () => setMobilePanel(tab.dataset.mobilePanelTab));
+    tab.addEventListener("keydown", handleMobileTabKeydown);
+  });
+
+  qa("[data-workflow-panel-target]").forEach((control) => {
+    control.addEventListener("click", () => {
+      const panelName = control.dataset.workflowPanelTarget;
+      if (window.matchMedia("(max-width: 980px)").matches) {
+        setMobilePanel(panelName, { focusTab: true });
+        if (control.closest("[data-workflow-step='validate']")) {
+          window.requestAnimationFrame(() => {
+            q(".gang-inspector-panel--validation")?.scrollIntoView({ block: "start", behavior: "smooth" });
+          });
+        }
+      } else {
+        q(`[data-editor-panel='${panelName}']`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    });
   });
 
   q("[data-zoom-out]").addEventListener("click", () => {
@@ -1670,8 +1744,15 @@ if (root) {
     });
   });
 
+  function shouldIgnoreStudioShortcut(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !root.contains(target)) return true;
+    if (canvas.contains(target)) return Boolean(target.closest("input, textarea, select, [contenteditable]"));
+    return true;
+  }
+
   window.addEventListener("keydown", (event) => {
-    if (event.target.closest("input, textarea, select")) return;
+    if (shouldIgnoreStudioShortcut(event)) return;
     const modifier = event.metaKey || event.ctrlKey;
     if (modifier && event.key.toLowerCase() === "y") {
       event.preventDefault();
@@ -1706,7 +1787,14 @@ if (root) {
     event.preventDefault();
     event.returnValue = "";
   });
-  window.addEventListener("resize", renderZoom);
+  window.addEventListener("resize", () => {
+    if (resizeFrame !== null) return;
+    resizeFrame = window.requestAnimationFrame(() => {
+      resizeFrame = null;
+      const activePanel = q("[data-mobile-panel-tab][aria-selected='true']")?.dataset.mobilePanelTab || "canvas";
+      setMobilePanel(activePanel);
+    });
+  });
   syncSpacingControls();
   setMobilePanel("canvas");
   render();

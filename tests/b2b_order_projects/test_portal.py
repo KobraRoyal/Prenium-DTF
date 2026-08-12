@@ -53,6 +53,13 @@ def test_client_create_with_first_visual_opens_validation_modal():
     project = B2BOrderProject.objects.get(customer=customer)
     item = project.items.get()
     assert item.name == "premier"
+    assert item.crop_mode == item.CropMode.MANUAL
+    assert item.crop_metadata == {
+        "x": "0.000000",
+        "y": "0.000000",
+        "width": "1.000000",
+        "height": "1.000000",
+    }
     assert f"validate={item.public_id}" in response.url
 
     detail = client.get(response.url)

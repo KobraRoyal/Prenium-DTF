@@ -83,6 +83,7 @@ def test_asset_versions_are_immutable_analyzed_and_audited():
     project.refresh_from_db()
     first.refresh_from_db()
     assert analyzed.analysis.image_width == 120
+    assert analyzed.analysis.large_preview.name == ""
     assert first.sha256 and len(first.sha256) == 64
     assert project.status == B2BOrderProject.Status.ACTION_REQUIRED
     B2BOrderProjectService().confirm_item_analysis(
@@ -107,6 +108,30 @@ def test_asset_versions_are_immutable_analyzed_and_audited():
         )
     assert replacement_closed.value.code == "ASSET_REPLACEMENT_CLOSED"
     assert AssetVersion.objects.filter(asset=first.asset).count() == 1
+
+
+@pytest.mark.django_db
+def test_pdf_analysis_persists_with_compatible_large_preview_column():
+    user, _customer, project, item = project_scope("pdf-analysis@example.com")
+    version = AssetService().attach_project_item_file(
+        project=project,
+        item_public_id=item.public_id,
+        actor=user,
+        uploaded_file=multi_format_upload("pdf"),
+        source="test",
+    )
+
+    analyzed = AssetAnalysisService().analyze(
+        version_public_id=version.public_id,
+        source="test.pdf",
+    )
+
+    assert analyzed.analysis_status in {
+        AssetVersion.AnalysisStatus.READY,
+        AssetVersion.AnalysisStatus.WARNING,
+    }
+    assert analyzed.analysis_error == ""
+    assert analyzed.analysis.version_id == version.id
 
 
 @pytest.mark.django_db

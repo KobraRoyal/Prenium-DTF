@@ -1,0 +1,10 @@
+/* Portail et tunnel prospect : couche produit partagée au-dessus du socle. */
+@import "../components/prospect-tunnel.css";
+@import "../components/workflow.css";
+@import "../components/product-shell.css";
+@import "../components/prospect-journey.css";
+@import "../components/gang-sheet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

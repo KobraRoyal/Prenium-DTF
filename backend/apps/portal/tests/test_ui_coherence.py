@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from django.conf import settings
@@ -97,7 +98,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
     def test_landing_mobile_performance_contract_is_explicit(self) -> None:
         landing_css = static_source("css/components/landing.css")
         conversion_css = static_source("css/components/landing-conversion.css")
-        css_entrypoint = static_source("css/input.css")
+        marketing_entrypoint = static_source("css/entries/marketing.css")
 
         self.assertIn("content-visibility: auto", landing_css)
         self.assertIn("contain-intrinsic-block-size: auto 900px", landing_css)
@@ -107,7 +108,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("content-visibility: auto", conversion_css)
         self.assertIn("contain-intrinsic-block-size: auto 900px", conversion_css)
         self.assertIn("@media (prefers-reduced-motion: reduce)", conversion_css)
-        self.assertIn('@import "./components/landing-conversion.css"', css_entrypoint)
+        self.assertIn('@import "../components/landing-conversion.css"', marketing_entrypoint)
 
     def test_landing_conversion_keeps_one_primary_funnel_and_no_duplicate_form(self) -> None:
         home = template_source("shop/home.html")
@@ -192,8 +193,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("conversion-kicker", partials)
         self.assertNotIn("conversion-transform__index", partials)
         self.assertIn("min-height: 2.75rem", conversion_css)
-        self.assertIn("app.css' %}?v=20260731-kinetic-motion-1", base)
-        self.assertIn("app.js' %}?v=20260726-js-runtime-fix", base)
+        self.assertIn("{% static 'css/app.css' %}", base)
+        self.assertIn("{% static 'js/app.js' %}", base)
+        self.assertNotIn("app.css' %}?v=", base)
+        self.assertNotIn("app.js' %}?v=", base)
         self.assertIn("ui-brand-lockup__home", logo)
         self.assertIn("Contenu toujours lisible", conversion_css)
         self.assertIn("transform: translate3d(0, 1.1rem, 0)", conversion_css)
@@ -273,6 +276,44 @@ class PortalUiCoherenceTests(SimpleTestCase):
             for marker in forbidden:
                 with self.subTest(path=path, marker=marker):
                     self.assertNotIn(marker, source)
+
+    def test_product_shell_reduced_motion_and_critical_microcopy_contracts(self) -> None:
+        product_css = static_source("css/components/product-shell.css")
+
+        self.assertIn("--product-text-critical-xs: 0.75rem", product_css)
+        self.assertIn("html:has(body.product-shell)", product_css)
+        self.assertIn("body.product-shell .product-layout > *", product_css)
+        self.assertIn("body.product-shell .b2b-preview-stage.is-analyzing", product_css)
+        self.assertIn("animation: none !important", product_css)
+        self.assertIn("scroll-behavior: auto !important", product_css)
+        self.assertNotIn("animation-duration: 0.01ms", product_css)
+        self.assertNotIn("transition-duration: 0.01ms", product_css)
+        self.assertNotIn("body.product-shell *::before", product_css)
+
+        workflow_block = product_css.split("body.product-shell .workflow-next-action {", 1)[
+            1
+        ].split("}", 1)[0]
+        self.assertNotIn("border-left", workflow_block)
+        self.assertIn("border: 2px solid var(--product-line)", workflow_block)
+        self.assertIn("body.product-shell .workflow-next-action::before", product_css)
+
+        critical_selectors = [
+            ".product-profile__action small",
+            ".account-team-status",
+            ".workflow-next-action__label",
+            ".product-date-picker__weekdays",
+            ".b2b-support-color__required-hint",
+            ".atelier-order-row__select-hint",
+            ".client-billing-pay__amount span",
+            ".client-shipment-card__fact dt",
+        ]
+        for selector in critical_selectors:
+            with self.subTest(selector=selector):
+                self.assertRegex(
+                    product_css,
+                    re.escape(selector)
+                    + r"[^{}]*\{[^}]*font-size: var\(--product-text-critical-xs\)",
+                )
 
     def test_checkout_and_prospect_mobile_layouts_are_compact(self) -> None:
         product_css = static_source("css/components/product-shell.css")
@@ -599,7 +640,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         canvas_css = static_source("css/components/gang-sheet.css")
         studio_css = static_source("css/components/gang-sheet-studio.css")
         runtime = static_source("js/gang-sheet-editor.js")
-        css_entrypoint = static_source("css/input.css")
+        studio_entrypoint = static_source("css/entries/studio.css")
 
         self.assertIn("gang-editor__progress-row", editor)
         self.assertIn('data-mobile-panel-tab="canvas"', editor)
@@ -632,7 +673,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('link.removeAttribute("aria-disabled")', runtime)
         self.assertIn("root.dataset.createOrderFormUrl", runtime)
         self.assertIn('state.status === "validated"', runtime)
-        self.assertIn('@import "./components/gang-sheet-studio.css"', css_entrypoint)
+        self.assertIn('@import "../components/gang-sheet-studio.css"', studio_entrypoint)
         self.assertIn("height: max(40rem, calc(100dvh - 6.5rem))", studio_css)
         self.assertNotIn("body.product-shell:has(.gang-editor) .app-main", studio_css)
         self.assertNotIn("width: min(96rem", studio_css)

@@ -3,9 +3,16 @@
   "private": true,
   "scripts": {
     "build:assets": "npm run copy:vendor && npm run build:css",
-    "build:css": "tailwindcss -i ./static_src/css/input.css -o ./static_src/css/app.css --minify",
+    "build:css": "npm run build:css:app && npm run build:css:marketing && npm run build:css:portal && npm run build:css:studio",
+    "build:css:app": "tailwindcss -i ./static_src/css/input.css -o ./static_src/css/app.css --minify",
+    "build:css:marketing": "tailwindcss -c ./static_src/css/entries/tailwind.surface.config.js -i ./static_src/css/entries/marketing.css -o ./static_src/css/marketing.css --minify",
+    "build:css:portal": "tailwindcss -c ./static_src/css/entries/tailwind.surface.config.js -i ./static_src/css/entries/portal.css -o ./static_src/css/portal.css --minify",
+    "build:css:studio": "tailwindcss -c ./static_src/css/entries/tailwind.surface.config.js -i ./static_src/css/entries/studio.css -o ./static_src/css/studio.css --minify",
     "copy:vendor": "node ./scripts/copy-vendor.mjs",
-    "watch:css": "tailwindcss -i ./static_src/css/input.css -o ./static_src/css/app.css --watch",
+    "watch:css": "npm run build:css && tailwindcss -i ./static_src/css/input.css -o ./static_src/css/app.css --watch",
+    "watch:css:marketing": "tailwindcss -c ./static_src/css/entries/tailwind.surface.config.js -i ./static_src/css/entries/marketing.css -o ./static_src/css/marketing.css --watch",
+    "watch:css:portal": "tailwindcss -c ./static_src/css/entries/tailwind.surface.config.js -i ./static_src/css/entries/portal.css -o ./static_src/css/portal.css --watch",
+    "watch:css:studio": "tailwindcss -c ./static_src/css/entries/tailwind.surface.config.js -i ./static_src/css/entries/studio.css -o ./static_src/css/studio.css --watch",
     "collectstatic:docker": "cd .. && docker compose exec -T web sh -c 'cd /app/backend && python manage.py collectstatic --noinput'",
     "build:css:docker": "npm run build:css && npm run collectstatic:docker"
   },

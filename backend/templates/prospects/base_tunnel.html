@@ -1,8 +1,14 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Ouverture de compte pro — Prenium DTF{% endblock %}
 
 {% block body_class %}landing-saas prospect-tunnel-page prospect-journey-page ui-marketing-body product-shell product-shell--prospect{% endblock %}
+
+{% block surface_styles %}
+{# Le tunnel réutilise le shell produit et charge le bundle portail documenté. #}
+<link rel="stylesheet" href="{% static 'css/portal.css' %}">
+{% endblock %}
 
 {% block extra_head %}
 <meta name="color-scheme" content="light">

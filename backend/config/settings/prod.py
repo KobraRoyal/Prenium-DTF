@@ -4,6 +4,18 @@ from .base import *  # noqa: F403
 
 DEBUG = False
 
+# Content-addressed asset names make deploys cache-safe without manual query strings.
+# The production entrypoint runs collectstatic before Gunicorn starts, so a missing
+# manifest fails the release early instead of serving a stale interface.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+    },
+}
+
 if not ALLOWED_HOSTS:  # noqa: F405
     raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must be configured in production.")
 if len(SECRET_KEY) < 50 or len(set(SECRET_KEY)) < 5:  # noqa: F405

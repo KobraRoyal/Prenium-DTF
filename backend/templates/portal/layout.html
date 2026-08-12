@@ -1,6 +1,14 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block body_class %}landing-saas portal-shell product-shell product-shell--portal{% endblock %}
+
+{% block surface_styles %}
+<link rel="stylesheet" href="{% static 'css/portal.css' %}">
+{% if request.resolver_match.view_name == "portal:client-gang-sheet-editor" %}
+<link rel="stylesheet" href="{% static 'css/studio.css' %}">
+{% endif %}
+{% endblock %}
 
 {% block extra_head %}
 <meta name="color-scheme" content="light">

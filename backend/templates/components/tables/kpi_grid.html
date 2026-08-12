@@ -1,9 +1,11 @@
 <section class="kpi-grid ui-kpi-grid">
   {% for item in items %}
-  <article class="card ui-card ui-card--metric ui-kpi-card">
+  <article class="card ui-card ui-card--metric ui-kpi-card{% if item.tone %} {{ item.tone }}{% endif %}">
     <div class="ui-kpi-card__top">
       <p class="muted text-sm">{{ item.label }}</p>
-      <span class="ui-kpi-card__index">0{{ forloop.counter }}</span>
+      {% if item.action_url %}
+      <a class="ui-kpi-card__action" href="{{ item.action_url }}" aria-label="{{ item.action_label|default:item.label }}">{{ item.action_label|default:"Ouvrir" }}</a>
+      {% endif %}
     </div>
     <p class="ui-kpi-card__value">{{ item.value }}</p>
     {% if item.hint %}

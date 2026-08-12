@@ -61,6 +61,9 @@ class AtelierDashboardService:
                     in {ProductionJob.Status.IN_PROGRESS, ProductionJob.Status.BLOCKED}
                     for row in all_rows
                 ),
+                "blocked": sum(
+                    row["production_status"] == ProductionJob.Status.BLOCKED for row in all_rows
+                ),
             },
             "printable_count": sum(row["print_eligible"] for row in rows),
         }
