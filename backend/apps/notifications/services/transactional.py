@@ -38,21 +38,16 @@ def _external_safe_recipients(
         return recipients
 
     safe_recipients: list[str] = []
-    blocked_domains: set[str] = set()
+    blocked_recipient = False
     for recipient in recipients:
         domain = recipient.strip().lower().rpartition("@")[2]
         if domain in _RESERVED_EMAIL_DOMAINS or domain.endswith(_RESERVED_EMAIL_SUFFIXES):
-            blocked_domains.add(domain or "missing-domain")
+            blocked_recipient = True
             continue
         safe_recipients.append(recipient)
 
-    if blocked_domains:
-        logger.warning(
-            "Blocked reserved QA recipient domain(s) for %s/%s: %s",
-            event,
-            audience,
-            ", ".join(sorted(blocked_domains)),
-        )
+    if blocked_recipient:
+        logger.warning("Blocked reserved QA recipient(s) before external email delivery.")
     return safe_recipients
 
 

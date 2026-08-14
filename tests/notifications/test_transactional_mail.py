@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import patch
 
 import pytest
@@ -5,6 +6,7 @@ from apps.billing.services.payments import PaymentService
 from apps.catalog.models import CatalogService
 from apps.customers.models import Customer, CustomerMembership
 from apps.notifications.services.transactional import (
+    _external_safe_recipients,
     schedule_order_created_email,
     send_order_created_email,
 )
@@ -74,6 +76,32 @@ def test_external_email_backend_blocks_reserved_qa_recipients():
         send_order_created_email(order=order)
 
     mocked_send_mail.assert_not_called()
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend")
+def test_external_email_backend_never_logs_recipient_data(caplog):
+    recipients = ["qa-support@example.com", "billing@example.test"]
+    caplog.set_level(
+        logging.WARNING,
+        logger="apps.notifications.services.transactional",
+    )
+
+    safe_recipients = _external_safe_recipients(
+        recipients,
+        event="order_created",
+        audience="client",
+    )
+
+    assert safe_recipients == []
+    assert "Blocked reserved QA recipient(s)" in caplog.text
+    for sensitive_value in (
+        *recipients,
+        "example.com",
+        "example.test",
+        "order_created",
+        "client",
+    ):
+        assert sensitive_value not in caplog.text
 
 
 @pytest.mark.django_db
