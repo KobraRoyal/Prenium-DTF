@@ -4,7 +4,12 @@ from decimal import Decimal, InvalidOperation
 
 from django import forms
 
-from apps.customers.models import Customer, CustomerBillingProfile
+from apps.customers.models import (
+    Customer,
+    CustomerBillingProfile,
+    CustomerVolumeDiscountTier,
+    DefaultCustomerVolumeDiscountTier,
+)
 
 
 class StaffCustomerAccountForm(forms.ModelForm):
@@ -152,3 +157,50 @@ class StaffCustomerPricingForm(forms.Form):
         if value < 0:
             raise forms.ValidationError("Le montant ne peut pas être négatif.")
         return value
+
+
+class StaffCustomerVolumeDiscountTierForm(forms.ModelForm):
+    class Meta:
+        model = CustomerVolumeDiscountTier
+        fields = (
+            "minimum_monthly_linear_m",
+            "discount_percent",
+            "is_active",
+        )
+        labels = {
+            "minimum_monthly_linear_m": "À partir de (m linéaires / mois)",
+            "discount_percent": "Remise sur tout le DTF du mois (%)",
+            "is_active": "Palier actif",
+        }
+        help_texts = {
+            "minimum_monthly_linear_m": (
+                "Le palier est atteint dès que le volume est supérieur ou égal au seuil."
+            ),
+            "discount_percent": (
+                "Le taux s’applique rétroactivement à tout le volume DTF éligible du mois."
+            ),
+        }
+        widgets = {
+            "minimum_monthly_linear_m": forms.NumberInput(
+                attrs={"class": "ui-input", "step": "0.0001", "min": "0.0001"}
+            ),
+            "discount_percent": forms.NumberInput(
+                attrs={"class": "ui-input", "step": "0.01", "min": "0.01", "max": "100"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk is None and not self.is_bound:
+            self.initial.setdefault("is_active", True)
+
+    def clean_minimum_monthly_linear_m(self):
+        return self.cleaned_data["minimum_monthly_linear_m"].quantize(Decimal("0.0001"))
+
+    def clean_discount_percent(self):
+        return self.cleaned_data["discount_percent"].quantize(Decimal("0.01"))
+
+
+class StaffDefaultCustomerVolumeDiscountTierForm(StaffCustomerVolumeDiscountTierForm):
+    class Meta(StaffCustomerVolumeDiscountTierForm.Meta):
+        model = DefaultCustomerVolumeDiscountTier

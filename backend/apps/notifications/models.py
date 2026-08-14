@@ -34,6 +34,10 @@ class EmailTemplate(BaseModel):
         ACCESS_REQUEST_REJECTED = "access_request_rejected", "Demande d'accès refusée"
         ACCOUNT_ACTIVATED = "account_activated", "Compte activé"
         CUSTOMER_MEMBER_INVITED = "customer_member_invited", "Collaborateur invité"
+        VOLUME_DISCOUNT_TIER_REACHED = (
+            "volume_discount_tier_reached",
+            "Palier de remise atteint",
+        )
 
     class Audience(models.TextChoices):
         CLIENT = "client", "Client"
@@ -82,3 +86,82 @@ class EmailTemplate(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.get_event_display()} — {self.get_audience_display()}"
+
+
+class VolumeDiscountTierNotification(BaseModel):
+    """Trace idempotente d'un palier mensuel notifié à un client."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "En attente"
+        SENDING = "sending", "En cours d’envoi"
+        SENT = "sent", "Envoyé"
+        SKIPPED = "skipped", "Ignoré"
+        FAILED = "failed", "Échec d’envoi"
+
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.CASCADE,
+        related_name="volume_discount_notifications",
+    )
+    month = models.DateField("Mois civil")
+    threshold_linear_m = models.DecimalField(
+        "Seuil atteint (m linéaires)",
+        max_digits=12,
+        decimal_places=4,
+    )
+    monthly_volume_linear_m = models.DecimalField(
+        "Volume mensuel (m linéaires)",
+        max_digits=12,
+        decimal_places=4,
+    )
+    discount_percent = models.DecimalField(
+        "Remise (%)",
+        max_digits=5,
+        decimal_places=2,
+    )
+    discount_amount = models.DecimalField(
+        "Remise cumulée HT (EUR)",
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    sent_at = models.DateTimeField(null=True, blank=True)
+    delivery_started_at = models.DateTimeField(null=True, blank=True)
+    attempt_count = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ("-month", "-threshold_linear_m", "-created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("customer", "month", "threshold_linear_m"),
+                name="uniq_customer_month_volume_tier_notification",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(threshold_linear_m__gt=0),
+                name="volume_tier_notification_threshold_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(monthly_volume_linear_m__gte=0),
+                name="volume_tier_notification_volume_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(discount_percent__gt=0) & models.Q(discount_percent__lte=100)),
+                name="volume_tier_notification_discount_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("customer", "month", "status"),
+                name="notif_customer_month_tier_idx",
+            ),
+        ]
+        verbose_name = "Notification de palier de remise"
+        verbose_name_plural = "Notifications de paliers de remise"
+
+    def __str__(self) -> str:
+        return f"{self.customer} — {self.month:%m/%Y} — {self.threshold_linear_m} m"

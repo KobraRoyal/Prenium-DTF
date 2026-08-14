@@ -1,6 +1,6 @@
-<div class="ui-field-group">
+<div class="ui-field-group{% if field_class %} {{ field_class }}{% endif %}">
   <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
   {{ field }}
-  {% if field.help_text %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
+  {% if field.help_text and not hide_help %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
   {% if field.errors %}<p class="error-text ui-error-text" role="alert">{{ field.errors|striptags }}</p>{% endif %}
 </div>

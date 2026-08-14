@@ -1,18 +1,145 @@
 from __future__ import annotations
 
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views import View
 
-from apps.customers.forms_staff import StaffCustomerAccountForm, StaffCustomerPricingForm
+from apps.billing.forms import BillingStatementMonthForm
+from apps.billing.services.statements import BillingStatementService
+from apps.customers.forms_staff import (
+    StaffCustomerAccountForm,
+    StaffCustomerPricingForm,
+    StaffCustomerVolumeDiscountTierForm,
+    StaffDefaultCustomerVolumeDiscountTierForm,
+)
+from apps.customers.models import (
+    CustomerVolumeDiscountTier,
+    DefaultCustomerVolumeDiscountTier,
+)
 from apps.customers.services.administration import CustomerAdministrationService
+from apps.customers.services.volume_discounts import (
+    CustomerVolumeDiscountTierService,
+    DefaultCustomerVolumeDiscountTierService,
+)
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import StaffDomainPermissionMixin
 
 customer_admin_service = CustomerAdministrationService()
+volume_discount_service = CustomerVolumeDiscountTierService()
+default_volume_discount_service = DefaultCustomerVolumeDiscountTierService()
+billing_statement_service = BillingStatementService()
+
+
+class StaffDefaultVolumeDiscountSettingsView(StaffDomainPermissionMixin, View):
+    required_permission = "customers.manage_customer_pricing"
+    template_name = "portal/staff/customers/default_volume_discounts.html"
+
+    def get(self, request):
+        return render(request, self.template_name, self._context())
+
+    def _context(
+        self,
+        *,
+        add_form=None,
+        update_form=None,
+        update_public_id=None,
+    ):
+        tiers = list(default_volume_discount_service.list_tiers())
+        rows = []
+        for position, tier in enumerate(tiers, start=1):
+            form = (
+                update_form
+                if update_form is not None and tier.public_id == update_public_id
+                else StaffDefaultCustomerVolumeDiscountTierForm(
+                    instance=tier,
+                    prefix=f"tier-{tier.public_id}",
+                )
+            )
+            rows.append({"tier": tier, "form": form, "position": position})
+        return {
+            "tier_rows": rows,
+            "active_tier_count": sum(tier.is_active for tier in tiers),
+            "add_form": add_form or StaffDefaultCustomerVolumeDiscountTierForm(prefix="new"),
+            "nav_mode": "staff",
+            "nav_key": "staff-default-volume-discounts",
+        }
+
+
+class StaffDefaultVolumeDiscountTierCreateView(StaffDomainPermissionMixin, View):
+    required_permission = "customers.manage_customer_pricing"
+
+    def post(self, request):
+        form = StaffDefaultCustomerVolumeDiscountTierForm(request.POST, prefix="new")
+        if form.is_valid():
+            try:
+                default_volume_discount_service.create_tier(
+                    cleaned_data=form.cleaned_data,
+                    actor=request.user,
+                    source="staff_portal",
+                )
+            except ValidationError as exc:
+                form.add_error(None, exc)
+        if not form.is_valid() or form.non_field_errors():
+            messages.error(request, "Corrigez les erreurs du palier par défaut.")
+            response = render(
+                request,
+                StaffDefaultVolumeDiscountSettingsView.template_name,
+                StaffDefaultVolumeDiscountSettingsView()._context(add_form=form),
+            )
+            return with_toast(response, message="Palier par défaut invalide.", variant="error")
+        messages.success(request, "Palier par défaut ajouté.")
+        return with_toast(
+            redirect("portal:staff-default-volume-discount-settings"),
+            message="Palier par défaut ajouté.",
+            variant="success",
+        )
+
+
+class StaffDefaultVolumeDiscountTierUpdateView(StaffDomainPermissionMixin, View):
+    required_permission = "customers.manage_customer_pricing"
+
+    def post(self, request, tier_public_id):
+        tier = default_volume_discount_service.get_tier(tier_public_id=tier_public_id)
+        if tier is None:
+            raise Http404
+        prefix = f"tier-{tier.public_id}"
+        form = StaffDefaultCustomerVolumeDiscountTierForm(
+            request.POST,
+            instance=tier,
+            prefix=prefix,
+        )
+        if form.is_valid():
+            try:
+                default_volume_discount_service.update_tier(
+                    tier_public_id=tier.public_id,
+                    cleaned_data=form.cleaned_data,
+                    actor=request.user,
+                    source="staff_portal",
+                )
+            except DefaultCustomerVolumeDiscountTier.DoesNotExist as exc:
+                raise Http404 from exc
+            except ValidationError as exc:
+                form.add_error(None, exc)
+        if not form.is_valid() or form.non_field_errors():
+            messages.error(request, "Corrigez les erreurs du palier par défaut.")
+            response = render(
+                request,
+                StaffDefaultVolumeDiscountSettingsView.template_name,
+                StaffDefaultVolumeDiscountSettingsView()._context(
+                    update_form=form,
+                    update_public_id=tier.public_id,
+                ),
+            )
+            return with_toast(response, message="Palier par défaut invalide.", variant="error")
+        messages.success(request, "Palier par défaut enregistré.")
+        return with_toast(
+            redirect("portal:staff-default-volume-discount-settings"),
+            message="Palier par défaut enregistré.",
+            variant="success",
+        )
 
 
 class StaffCustomerListView(StaffDomainPermissionMixin, View):
@@ -58,19 +185,124 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
             raise Http404
         return render(request, self.template_name, self._context(request, customer))
 
-    def _context(self, request, customer, *, account_form=None, pricing_form=None):
+    def _context(
+        self,
+        request,
+        customer,
+        *,
+        account_form=None,
+        pricing_form=None,
+        tier_add_form=None,
+        tier_update_form=None,
+        tier_update_public_id=None,
+        billing_statement_form=None,
+    ):
         can_edit_account = request.user.has_perm("customers.change_customer")
         can_edit_pricing = request.user.has_perm("customers.manage_customer_pricing")
+        can_view_billing_statements = request.user.has_perm("billing.view_billingstatement")
+        can_generate_billing_statements = can_view_billing_statements and request.user.has_perm(
+            "billing.add_billingstatement"
+        )
+        tiers = list(volume_discount_service.list_tiers(customer=customer))
+        summary = volume_discount_service.get_current_month_summary(customer=customer)
+        tier_rows = []
+        for position, tier in enumerate(tiers, start=1):
+            if tier_update_form is not None and tier.public_id == tier_update_public_id:
+                form = tier_update_form
+            else:
+                form = StaffCustomerVolumeDiscountTierForm(
+                    instance=tier,
+                    prefix=f"tier-{tier.public_id}",
+                )
+            state = "upcoming"
+            state_label = "À venir"
+            state_badge_class = "is-neutral"
+            if not tier.is_active:
+                state = "inactive"
+                state_label = ""
+            elif summary["current_tier"] and tier.pk == summary["current_tier"].pk:
+                state = "current"
+                state_label = "Palier atteint"
+                state_badge_class = "is-success"
+            elif tier.minimum_monthly_linear_m <= summary["monthly_volume_linear_m"]:
+                state = "reached"
+                state_label = "Franchi"
+                state_badge_class = "is-success"
+            elif summary["next_tier"] and tier.pk == summary["next_tier"].pk:
+                state = "next"
+                state_label = "Prochain objectif"
+                state_badge_class = "is-warning"
+            tier_rows.append(
+                {
+                    "tier": tier,
+                    "form": form,
+                    "position": position,
+                    "state": state,
+                    "state_label": state_label,
+                    "state_badge_class": state_badge_class,
+                }
+            )
+        resolved_account_form = account_form or (
+            StaffCustomerAccountForm(instance=customer) if can_edit_account else None
+        )
+        resolved_pricing_form = pricing_form or (
+            StaffCustomerPricingForm.from_customer(customer) if can_edit_pricing else None
+        )
+        resolved_tier_add_form = tier_add_form or StaffCustomerVolumeDiscountTierForm(prefix="new")
+        resolved_billing_statement_form = (
+            billing_statement_form or BillingStatementMonthForm(prefix="statement")
+            if can_generate_billing_statements
+            else None
+        )
+        address_fields = {
+            "billing_address_line1",
+            "billing_address_line2",
+            "billing_postal_code",
+            "billing_city",
+            "billing_country",
+            "shipping_address_line1",
+            "shipping_address_line2",
+            "shipping_postal_code",
+            "shipping_city",
+            "shipping_country",
+        }
         return {
             "customer": customer,
             "memberships": customer_admin_service.list_memberships(customer=customer),
             "billing_profile": getattr(customer, "billing_profile", None),
-            "account_form": account_form
-            or (StaffCustomerAccountForm(instance=customer) if can_edit_account else None),
-            "pricing_form": pricing_form
-            or (StaffCustomerPricingForm.from_customer(customer) if can_edit_pricing else None),
+            "account_form": resolved_account_form,
+            "account_address_has_errors": bool(
+                resolved_account_form
+                and any(field in resolved_account_form.errors for field in address_fields)
+            ),
+            "account_notes_has_errors": bool(
+                resolved_account_form and "notes" in resolved_account_form.errors
+            ),
+            "pricing_form": resolved_pricing_form,
             "can_edit_account": can_edit_account,
             "can_edit_pricing": can_edit_pricing,
+            "volume_discount_tiers": tiers,
+            "volume_discount_tier_rows": tier_rows,
+            "volume_discount_tier_add_form": resolved_tier_add_form,
+            "volume_discount_has_errors": bool(
+                resolved_tier_add_form.errors or any(row["form"].errors for row in tier_rows)
+            ),
+            "volume_discount_available": customer.default_billing_mode == "deferred",
+            "volume_discount_summary": summary,
+            "volume_discount_progress_value": f"{summary['monthly_volume_linear_m']:f}",
+            "volume_discount_progress_max": (
+                f"{summary['next_tier'].minimum_monthly_linear_m:f}"
+                if summary["next_tier"]
+                else None
+            ),
+            "can_view_billing_statements": can_view_billing_statements,
+            "can_generate_billing_statements": can_generate_billing_statements,
+            "billing_statements": (
+                list(billing_statement_service.list_for_customer(customer=customer))
+                if can_view_billing_statements
+                else []
+            ),
+            "billing_statement_form": resolved_billing_statement_form,
             "nav_mode": "staff",
             "nav_key": "staff-customers",
         }
@@ -148,3 +380,96 @@ class StaffCustomerPricingUpdateView(StaffDomainPermissionMixin, View):
             message="Conditions tarifaires enregistrées.",
             variant="success",
         )
+
+
+class StaffCustomerVolumeDiscountTierCreateView(StaffDomainPermissionMixin, View):
+    required_permission = "customers.manage_customer_pricing"
+
+    def post(self, request, customer_public_id):
+        customer = customer_admin_service.get_customer(customer_public_id=customer_public_id)
+        if customer is None:
+            raise Http404
+        form = StaffCustomerVolumeDiscountTierForm(request.POST, prefix="new")
+        detail_url = reverse(
+            "portal:staff-customer-detail",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+        if form.is_valid():
+            try:
+                _tier, summary = volume_discount_service.create_tier(
+                    customer=customer,
+                    cleaned_data=form.cleaned_data,
+                    actor=request.user,
+                    source="staff_portal",
+                )
+            except ValidationError as exc:
+                form.add_error(None, exc)
+        if not form.is_valid() or form.non_field_errors():
+            messages.error(request, "Corrigez les erreurs du nouveau palier.")
+            response = render(
+                request,
+                "portal/staff/customers/detail.html",
+                StaffCustomerDetailView()._context(
+                    request,
+                    customer,
+                    tier_add_form=form,
+                ),
+            )
+            return with_toast(response, message="Palier invalide.", variant="error")
+
+        count = summary["repriced_count"]
+        message = f"Palier ajouté. {count} commande(s) du mois recalculée(s)."
+        messages.success(request, message)
+        return with_toast(redirect(detail_url), message=message, variant="success")
+
+
+class StaffCustomerVolumeDiscountTierUpdateView(StaffDomainPermissionMixin, View):
+    required_permission = "customers.manage_customer_pricing"
+
+    def post(self, request, customer_public_id, tier_public_id):
+        customer = customer_admin_service.get_customer(customer_public_id=customer_public_id)
+        if customer is None:
+            raise Http404
+        tier = volume_discount_service.get_tier(
+            customer=customer,
+            tier_public_id=tier_public_id,
+        )
+        if tier is None:
+            raise Http404
+        prefix = f"tier-{tier.public_id}"
+        form = StaffCustomerVolumeDiscountTierForm(request.POST, instance=tier, prefix=prefix)
+        detail_url = reverse(
+            "portal:staff-customer-detail",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+        if form.is_valid():
+            try:
+                _tier, summary = volume_discount_service.update_tier(
+                    customer=customer,
+                    tier_public_id=tier.public_id,
+                    cleaned_data=form.cleaned_data,
+                    actor=request.user,
+                    source="staff_portal",
+                )
+            except CustomerVolumeDiscountTier.DoesNotExist as exc:
+                raise Http404 from exc
+            except ValidationError as exc:
+                form.add_error(None, exc)
+        if not form.is_valid() or form.non_field_errors():
+            messages.error(request, "Corrigez les erreurs du palier.")
+            response = render(
+                request,
+                "portal/staff/customers/detail.html",
+                StaffCustomerDetailView()._context(
+                    request,
+                    customer,
+                    tier_update_form=form,
+                    tier_update_public_id=tier.public_id,
+                ),
+            )
+            return with_toast(response, message="Palier invalide.", variant="error")
+
+        count = summary["repriced_count"]
+        message = f"Palier enregistré. {count} commande(s) du mois recalculée(s)."
+        messages.success(request, message)
+        return with_toast(redirect(detail_url), message=message, variant="success")

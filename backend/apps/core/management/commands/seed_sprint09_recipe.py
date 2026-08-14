@@ -216,6 +216,9 @@ class Command(BaseCommand):
             "notifications.view_emailtemplate",
             "notifications.change_emailtemplate",
             "catalog.view_catalogservice",
+            "customers.view_customer",
+            "customers.change_customer",
+            "customers.manage_customer_pricing",
             "orders.view_order",
             "orders.change_order",
             "orders.delete_atelier_order",
@@ -235,6 +238,8 @@ class Command(BaseCommand):
             "billing.view_payment",
             "billing.view_invoice",
             "billing.mark_invoice_paid",
+            "billing.view_billingstatement",
+            "billing.add_billingstatement",
         ]
 
     def _seed_customers_and_memberships(self, users: SeedUsers):

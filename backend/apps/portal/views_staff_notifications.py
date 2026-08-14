@@ -32,16 +32,21 @@ class StaffEmailTemplateListView(StaffDomainPermissionMixin, View):
 
     def get(self, request):
         templates = email_template_service.list_effective_templates()
+        client_templates = [
+            row for row in templates if row.audience == EmailTemplate.Audience.CLIENT
+        ]
+        internal_templates = [
+            row for row in templates if row.audience == EmailTemplate.Audience.INTERNAL
+        ]
         return render(
             request,
             self.template_name,
             {
-                "client_templates": [
-                    row for row in templates if row.audience == EmailTemplate.Audience.CLIENT
-                ],
-                "internal_templates": [
-                    row for row in templates if row.audience == EmailTemplate.Audience.INTERNAL
-                ],
+                "client_templates": client_templates,
+                "internal_templates": internal_templates,
+                "email_template_count": len(templates),
+                "active_email_template_count": sum(row.is_active for row in templates),
+                "customized_email_template_count": sum(row.is_customized for row in templates),
                 "internal_recipient_count": len(
                     getattr(settings, "INTERNAL_NOTIFICATION_EMAILS", [])
                 ),

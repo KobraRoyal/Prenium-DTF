@@ -44,11 +44,32 @@ class BillingStatement(BaseModel):
         validators=[MinValueValidator(ZERO_AMOUNT)],
     )
     currency = models.CharField(max_length=3, default="EUR")
+    snapshot = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Snapshot immuable des données exportées vers l’outil comptable.",
+    )
+    snapshot_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Empreinte SHA-256 du CSV canonique associé au snapshot.",
+    )
+    issued_at = models.DateTimeField(null=True, blank=True)
 
     objects = BillingStatementQuerySet.as_manager()
 
     class Meta:
         ordering = ("-period_end", "-created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("customer", "period_start"),
+                name="uniq_customer_billing_statement_month",
+            ),
+            models.CheckConstraint(
+                condition=Q(period_end__gte=models.F("period_start")),
+                name="billing_statement_period_valid",
+            ),
+        ]
         indexes = [
             models.Index(fields=("customer", "status", "period_end")),
         ]

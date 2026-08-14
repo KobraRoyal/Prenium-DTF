@@ -1,5 +1,5 @@
 <div id="staff-order-inspection-panel" class="workflow-panel atelier-inspection">
-  <div class="workflow-panel__hero max-sm:flex-col max-sm:items-stretch">
+  <div class="workflow-panel__hero atelier-inspection__hero">
     <div>
       <h3 class="workflow-panel__title">Validation des fichiers</h3>
       <p class="workflow-panel__meta">L’analyse automatique détecte les problèmes techniques. La décision Atelier autorise — ou bloque — la production.</p>
@@ -12,12 +12,24 @@
   </div>
 
   {% if uploads %}
-  <p class="atelier-inspection__summary" aria-label="Synthèse des validations">
-    <span><strong>{{ pending_review_count }}</strong> à contrôler</span>
-    <span><strong class="text-[color:var(--success)]">{{ approved_review_count }}</strong> prêts</span>
-    <span><strong class="text-[color:var(--danger)]">{{ changes_requested_count }}</strong> corrections</span>
-    <span><strong{% if automatic_attention_count %} class="text-[color:var(--warning)]"{% endif %}>{{ automatic_attention_count }}</strong> alertes auto</span>
-  </p>
+  <section class="atelier-inspection__queue" aria-labelledby="inspection-queue-title">
+    <div class="atelier-inspection__queue-copy">
+      <h4 id="inspection-queue-title">Priorité de contrôle</h4>
+      {% if pending_review_count %}
+      <p><strong>{% if pending_review_count == 1 %}1 fichier attend une décision.{% else %}{{ pending_review_count }} fichiers attendent une décision.{% endif %}</strong> Ouvrez l’aperçu, vérifiez le diagnostic, puis choisissez l’issue Atelier.</p>
+      {% elif all_uploads_approved %}
+      <p><strong>Contrôle terminé.</strong> Tous les fichiers peuvent partir en production.</p>
+      {% else %}
+      <p><strong>Aucune décision en attente.</strong> Les corrections déjà demandées restent visibles dans chaque fichier.</p>
+      {% endif %}
+    </div>
+    <ul class="atelier-inspection__summary" aria-label="Synthèse des validations">
+      <li class="is-pending"><strong>{{ pending_review_count }}</strong><span>À contrôler</span></li>
+      <li class="is-ready"><strong>{{ approved_review_count }}</strong><span>Prêts</span></li>
+      <li class="is-correction"><strong>{{ changes_requested_count }}</strong><span>Corrections</span></li>
+      <li{% if automatic_attention_count %} class="is-attention"{% endif %}><strong>{{ automatic_attention_count }}</strong><span>Alertes auto</span></li>
+    </ul>
+  </section>
 
   {% if all_uploads_approved %}
   <div class="alert alert--success mt-4" role="status"><p><strong>Commande prête :</strong> tous les fichiers sont approuvés pour production.</p></div>
@@ -25,7 +37,7 @@
   <div class="alert alert--info mt-4" role="status"><p>Vous pouvez consulter les contrôles, mais votre rôle ne permet pas de prendre une décision Atelier.</p></div>
   {% endif %}
 
-  <div class="mt-4 grid gap-4">
+  <div class="atelier-inspection__list">
     {% for upload in uploads %}
     {% with review=upload.atelier_review inspection=upload.inspection upload_id=upload.public_id|stringformat:"s" %}
     <article class="atelier-inspection__file">
@@ -37,6 +49,7 @@
         aria-label="Ouvrir l’aperçu de {{ upload.original_filename }}"
       >
         <img src="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
+        <span class="atelier-inspection__preview-label" aria-hidden="true">Ouvrir en grand</span>
       </a>
 
       <div class="atelier-inspection__body">
@@ -45,13 +58,16 @@
             <h4 class="m-0 break-words font-display text-lg font-bold">{{ upload.original_filename }}</h4>
             <p class="muted m-0 mt-1 text-xs">{{ upload.mime_type }} · {{ upload.size_bytes|filesizeformat }}</p>
           </div>
-          {% if review and review.status == 'approved' %}
-          <span class="badge is-success shrink-0">Prêt pour production</span>
-          {% elif review and review.status == 'changes_requested' %}
-          <span class="badge is-danger shrink-0">Correction demandée</span>
-          {% else %}
-          <span class="badge is-warning shrink-0">À contrôler</span>
-          {% endif %}
+          <div class="atelier-inspection__file-tools">
+            {% if review and review.status == 'approved' %}
+            <span class="badge is-success shrink-0">Prêt pour production</span>
+            {% elif review and review.status == 'changes_requested' %}
+            <span class="badge is-danger shrink-0">Correction demandée</span>
+            {% else %}
+            <span class="badge is-warning shrink-0">À contrôler</span>
+            {% endif %}
+            <a class="atelier-inspection__open-link" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>
+          </div>
         </div>
 
         <dl class="atelier-inspection__specs" aria-label="Consignes client pour {{ upload.original_filename }}">
@@ -74,10 +90,10 @@
           </div>
         </dl>
 
-        <div class="atelier-inspection__columns">
-          <section aria-label="Analyse automatique">
-            <h5 class="atelier-inspection__section-title">Analyse automatique</h5>
-            <div class="mt-2 flex flex-wrap items-center gap-2">
+        <div class="atelier-inspection__review-grid">
+          <section class="atelier-inspection__review-block atelier-inspection__review-block--automatic" aria-label="Analyse automatique">
+            <div class="atelier-inspection__review-head">
+              <h5 class="atelier-inspection__section-title">Analyse automatique</h5>
               {% if inspection and inspection.status == 'ok' %}
               <span class="badge is-neutral">Analyse réussie</span>
               {% elif inspection and inspection.status == 'warning' %}
@@ -87,65 +103,77 @@
               {% else %}
               <span class="badge is-neutral">Non analysé</span>
               {% endif %}
-              {% if inspection.image_width and inspection.image_height %}<span class="text-xs">{{ inspection.image_width }} × {{ inspection.image_height }} px</span>{% endif %}
             </div>
-            {% if inspection.summary_message %}<p class="muted m-0 mt-2 text-sm">{{ inspection.summary_message }}</p>{% endif %}
+            {% if inspection and inspection.status == 'ok' %}
+            <p class="atelier-inspection__review-copy">Contrôle technique terminé. Les métadonnées disponibles ont été extraites.</p>
+            {% elif inspection.summary_message %}
+            <p class="atelier-inspection__review-copy">{{ inspection.summary_message }}</p>
+            {% else %}
+            <p class="atelier-inspection__review-copy">Aucun diagnostic technique n’est disponible pour ce fichier.</p>
+            {% endif %}
+            {% if inspection.image_width and inspection.image_height %}<p class="atelier-inspection__pixel-size">Dimensions analysées : <strong>{{ inspection.image_width }} × {{ inspection.image_height }} px</strong></p>{% endif %}
           </section>
 
-          <section aria-label="Décision Atelier">
-            <h5 class="atelier-inspection__section-title">Décision Atelier</h5>
+          <section class="atelier-inspection__review-block atelier-inspection__review-block--decision" aria-label="Décision Atelier">
+            <div class="atelier-inspection__review-head">
+              <h5 class="atelier-inspection__section-title">Décision Atelier</h5>
+              {% if review and review.reviewed_at %}<span class="atelier-inspection__decision-state">Décision enregistrée</span>{% else %}<span class="atelier-inspection__decision-state is-pending">Action requise</span>{% endif %}
+            </div>
             {% if review and review.reviewed_at %}
-            <p class="m-0 mt-2 text-sm"><strong>{{ review.get_status_display }}</strong></p>
-            <p class="muted m-0 mt-1 text-xs">{{ review.reviewed_by.email|default:"Compte supprimé" }} · {{ review.reviewed_at|date:"d/m/Y H:i" }}</p>
-            {% if review.reason_code %}<p class="m-0 mt-2 text-sm">{{ review.get_reason_code_display }}</p>{% endif %}
-            {% if review.comment %}<p class="muted m-0 mt-1 whitespace-pre-line text-sm">{{ review.comment }}</p>{% endif %}
+            <p class="atelier-inspection__decision-result"><strong>{{ review.get_status_display }}</strong></p>
+            <p class="atelier-inspection__decision-meta">{{ review.reviewed_by.email|default:"Compte supprimé" }} · {{ review.reviewed_at|date:"d/m/Y H:i" }}</p>
+            {% if review.reason_code %}<p class="atelier-inspection__decision-reason">{{ review.get_reason_code_display }}</p>{% endif %}
+            {% if review.comment %}<p class="atelier-inspection__decision-comment">{{ review.comment }}</p>{% endif %}
             {% if review.status == 'changes_requested' %}
-            <p class="m-0 mt-2 text-xs{% if review.client_notified_at %} text-[color:var(--success)]{% else %} text-[color:var(--warning)]{% endif %}">
+            <p class="atelier-inspection__notification-state{% if review.client_notified_at %} is-sent{% else %} is-waiting{% endif %}">
               {% if review.client_notified_at %}Client notifié le {{ review.client_notified_at|date:"d/m/Y H:i" }}{% else %}Notification client en attente{% endif %}
             </p>
             {% endif %}
             {% else %}
-            <p class="muted m-0 mt-2 text-sm">Aucune décision humaine enregistrée.</p>
+            <p class="atelier-inspection__decision-result"><strong>Aucune décision humaine enregistrée.</strong></p>
+            <p class="atelier-inspection__decision-meta">L’analyse automatique vous informe, mais seule votre décision autorise la production.</p>
+            {% endif %}
+
+            {% if can_review_uploads and not review or can_review_uploads and review.status != 'approved' %}
+            <div class="atelier-inspection__decision-actions">
+              <form method="post" action="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-post="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-target="#staff-order-inspection-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="approved">
+                <button class="ui-btn ui-btn-primary" type="submit" data-htmx-disable>Approuver pour production</button>
+              </form>
+            </div>
+            {% endif %}
+
+            {% if can_review_uploads %}
+            <details class="atelier-inspection__correction"{% if error_upload_id == upload_id %} open{% endif %}>
+              <summary>
+                <span>Demander une correction au client</span>
+                <small>Le client sera notifié par e-mail</small>
+              </summary>
+              <form class="ui-form-stack" method="post" action="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-post="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-target="#staff-order-inspection-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="changes_requested">
+                {% if form_error and error_upload_id == upload_id %}<div class="alert alert--danger" role="alert"><p>{{ form_error }}</p></div>{% endif %}
+                <div class="ui-field-group">
+                  <label for="review-reason-{{ upload.public_id }}">Motif de la correction</label>
+                  <select class="dui-select dui-select-bordered w-full" id="review-reason-{{ upload.public_id }}" name="reason_code" required>
+                    <option value="">Sélectionner un motif</option>
+                    {% for value, label in review_reasons %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div class="ui-field-group">
+                  <label for="review-comment-{{ upload.public_id }}">Précision pour le client <span class="muted">(facultatif, sauf « Autre »)</span></label>
+                  <textarea class="dui-textarea dui-textarea-bordered min-h-24 w-full" id="review-comment-{{ upload.public_id }}" name="comment" maxlength="2000" rows="3" placeholder="Expliquez clairement ce qui doit être corrigé."></textarea>
+                </div>
+                <div class="atelier-inspection__correction-footer">
+                  <p>Le message utilisera le modèle d’e-mail client personnalisable.</p>
+                  <button class="ui-btn ui-btn-danger" type="submit" data-htmx-disable>Enregistrer et notifier</button>
+                </div>
+              </form>
+            </details>
             {% endif %}
           </section>
         </div>
-
-        <div class="atelier-inspection__actions">
-          <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>
-          {% if can_review_uploads and not review or can_review_uploads and review.status != 'approved' %}
-          <form method="post" action="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-post="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-target="#staff-order-inspection-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="approved">
-            <button class="ui-btn ui-btn-primary" type="submit" data-htmx-disable>Approuver pour production</button>
-          </form>
-          {% endif %}
-        </div>
-
-        {% if can_review_uploads %}
-        <details class="atelier-inspection__correction"{% if error_upload_id == upload_id %} open{% endif %}>
-          <summary>Demander une correction au client</summary>
-          <form class="ui-form-stack mt-3" method="post" action="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-post="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-target="#staff-order-inspection-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="changes_requested">
-            {% if form_error and error_upload_id == upload_id %}<div class="alert alert--danger" role="alert"><p>{{ form_error }}</p></div>{% endif %}
-            <div class="ui-field-group">
-              <label for="review-reason-{{ upload.public_id }}">Motif de la correction</label>
-              <select class="dui-select dui-select-bordered w-full" id="review-reason-{{ upload.public_id }}" name="reason_code" required>
-                <option value="">Sélectionner un motif</option>
-                {% for value, label in review_reasons %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="ui-field-group">
-              <label for="review-comment-{{ upload.public_id }}">Précision pour le client <span class="muted">(facultatif, sauf « Autre »)</span></label>
-              <textarea class="dui-textarea dui-textarea-bordered min-h-24 w-full" id="review-comment-{{ upload.public_id }}" name="comment" maxlength="2000" rows="3" placeholder="Expliquez clairement ce qui doit être corrigé."></textarea>
-            </div>
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <p class="muted m-0 text-xs">Le message utilisera le modèle d’e-mail client personnalisable.</p>
-              <button class="ui-btn ui-btn-danger" type="submit" data-htmx-disable>Enregistrer et notifier</button>
-            </div>
-          </form>
-        </details>
-        {% endif %}
       </div>
     </article>
     {% endwith %}

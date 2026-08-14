@@ -1,5 +1,5 @@
 {% extends "portal/layout.html" %}
-{% load portal_tags %}
+{% load portal_tags static %}
 
 {% block title %}{{ customer.name }} — Compte client{% endblock %}
 
@@ -9,7 +9,6 @@
 <section class="staff-customer-detail" aria-label="Fiche compte client">
   <header class="card staff-customer-focus" aria-labelledby="staff-customer-title">
     <div class="staff-customer-focus__identity">
-      <p class="staff-customer-focus__eyebrow">Compte client</p>
       <h1 id="staff-customer-title">{{ customer.name }}</h1>
       <div class="staff-customer-focus__statuses" aria-label="État du compte">
         {% if customer.is_active %}
@@ -41,14 +40,48 @@
     </dl>
   </header>
 
-  {% if can_edit_account and account_form %}
-  <section class="card staff-customer-panel" aria-labelledby="account-form-title">
-    <div class="staff-customer-panel__head">
-      <div>
-        <h2 id="account-form-title">Compte &amp; règlement</h2>
-        <p class="muted text-sm m-0">Identité, mode Encours / Comptant CB, adresses et notes internes.</p>
+  <div class="staff-customer-workspace" data-customer-workspace>
+    <nav class="staff-customer-workspace__nav" aria-label="Sections du compte client">
+      <div class="staff-customer-workspace__nav-head">
+        <strong>Gérer ce compte</strong>
+        <span>Accès direct</span>
       </div>
-    </div>
+      <a href="#customer-account" aria-current="location">
+        <span>Compte</span>
+        <small>{{ customer.default_billing_mode|settlement_badge }}</small>
+      </a>
+      <a href="#customer-pricing">
+        <span>Tarification</span>
+        <small>{% if customer.negotiated_file_preparation_fee_eur or billing_profile.price_per_sqm_eur %}Négociée{% else %}Catalogue{% endif %}</small>
+      </a>
+      <a href="#customer-volume">
+        <span>Remises volume</span>
+        <small>{{ volume_discount_tier_rows|length }} palier{{ volume_discount_tier_rows|length|pluralize }}</small>
+      </a>
+      {% if can_view_billing_statements %}
+      <a href="#billing-statements">
+        <span>Facturation</span>
+        <small>{{ billing_statements|length }} relevé{{ billing_statements|length|pluralize }}</small>
+      </a>
+      {% endif %}
+      <a href="#customer-access">
+        <span>Accès portail</span>
+        <small>{{ memberships|length }} utilisateur{{ memberships|length|pluralize }}</small>
+      </a>
+    </nav>
+
+    <div class="staff-customer-workspace__content">
+
+  {% if can_edit_account and account_form %}
+  <details id="customer-account" class="staff-customer-workspace__section" data-customer-section open>
+    <summary class="staff-customer-workspace__summary">
+      <span>
+        <h2 id="account-form-title">Compte &amp; règlement</h2>
+        <small>Identité, règlement, adresses et notes internes</small>
+      </span>
+      <span class="staff-customer-workspace__summary-meta">{{ customer.default_billing_mode|settlement_badge }}</span>
+    </summary>
+    <div class="staff-customer-workspace__body">
     <form class="ui-form-stack staff-customer-form" method="post" action="{% url 'portal:staff-customer-account-update' customer_public_id=customer.public_id %}" data-submit-loading>
       {% csrf_token %}
 
@@ -103,49 +136,74 @@
         </div>
       </fieldset>
 
-      <fieldset class="staff-customer-fieldset">
-        <legend>Adresses</legend>
+      <details class="staff-customer-subsection"{% if account_address_has_errors %} open{% endif %}>
+        <summary>
+          <span class="staff-customer-subsection__copy">
+            <strong>Adresses</strong>
+            <small>Facturation et livraison</small>
+          </span>
+        </summary>
+        <fieldset class="staff-customer-fieldset">
+        <legend class="ui-sr-only">Adresses</legend>
         <div class="staff-customer-address-grid">
-          <div>
+          <div class="staff-customer-address">
             <h3 class="staff-customer-subheading">Facturation</h3>
-            <div class="grid gap-3">
+            <div class="staff-customer-address__fields">
               {% include "portal/staff/customers/_field.html" with field=account_form.billing_address_line1 %}
               {% include "portal/staff/customers/_field.html" with field=account_form.billing_address_line2 %}
-              <div class="grid gap-3 sm:grid-cols-3">
-                {% include "portal/staff/customers/_field.html" with field=account_form.billing_postal_code %}
-                {% include "portal/staff/customers/_field.html" with field=account_form.billing_city %}
-                {% include "portal/staff/customers/_field.html" with field=account_form.billing_country %}
+              <div class="staff-customer-address__locality">
+                {% include "portal/staff/customers/_field.html" with field=account_form.billing_postal_code field_class="staff-customer-address__postal" %}
+                {% include "portal/staff/customers/_field.html" with field=account_form.billing_city field_class="staff-customer-address__city" %}
+                {% include "portal/staff/customers/_field.html" with field=account_form.billing_country field_class="staff-customer-address__country" %}
               </div>
             </div>
           </div>
-          <div>
+          <div class="staff-customer-address">
             <h3 class="staff-customer-subheading">Livraison</h3>
-            <div class="grid gap-3">
-              {% include "portal/staff/customers/_field.html" with field=account_form.shipping_address_line1 %}
+            <div class="staff-customer-address__fields">
+              {% include "portal/staff/customers/_field.html" with field=account_form.shipping_address_line1 hide_help=True %}
               {% include "portal/staff/customers/_field.html" with field=account_form.shipping_address_line2 %}
-              <div class="grid gap-3 sm:grid-cols-3">
-                {% include "portal/staff/customers/_field.html" with field=account_form.shipping_postal_code %}
-                {% include "portal/staff/customers/_field.html" with field=account_form.shipping_city %}
-                {% include "portal/staff/customers/_field.html" with field=account_form.shipping_country %}
+              <div class="staff-customer-address__locality">
+                {% include "portal/staff/customers/_field.html" with field=account_form.shipping_postal_code field_class="staff-customer-address__postal" %}
+                {% include "portal/staff/customers/_field.html" with field=account_form.shipping_city field_class="staff-customer-address__city" %}
+                {% include "portal/staff/customers/_field.html" with field=account_form.shipping_country field_class="staff-customer-address__country" %}
               </div>
             </div>
+            {% if account_form.shipping_address_line1.help_text %}<p class="staff-customer-address__hint">{{ account_form.shipping_address_line1.help_text }}</p>{% endif %}
           </div>
         </div>
-      </fieldset>
+        </fieldset>
+      </details>
 
-      <fieldset class="staff-customer-fieldset">
-        <legend>Notes</legend>
-        {% include "portal/staff/customers/_field.html" with field=account_form.notes %}
-      </fieldset>
+      <details class="staff-customer-subsection"{% if account_notes_has_errors %} open{% endif %}>
+        <summary>
+          <span class="staff-customer-subsection__copy">
+            <strong>Notes internes</strong>
+            <small>Informations visibles uniquement par l’atelier</small>
+          </span>
+        </summary>
+        <fieldset class="staff-customer-fieldset">
+          <legend class="ui-sr-only">Notes internes</legend>
+          {% include "portal/staff/customers/_field.html" with field=account_form.notes %}
+        </fieldset>
+      </details>
 
-      <div class="form-actions">
+      <div class="ui-form-actions staff-customer-form__actions">
         <button class="ui-btn ui-btn-primary" type="submit">Enregistrer le compte</button>
       </div>
     </form>
-  </section>
+    </div>
+  </details>
   {% else %}
-  <section class="card staff-customer-panel" aria-labelledby="account-readonly-title">
-    <h2 id="account-readonly-title" class="text-lg mb-3">Compte &amp; règlement</h2>
+  <details id="customer-account" class="staff-customer-workspace__section" data-customer-section open>
+    <summary class="staff-customer-workspace__summary">
+      <span>
+        <h2 id="account-readonly-title">Compte &amp; règlement</h2>
+        <small>Informations générales en lecture seule</small>
+      </span>
+      <span class="staff-customer-workspace__summary-meta">{{ customer.default_billing_mode|settlement_badge }}</span>
+    </summary>
+    <div class="staff-customer-workspace__body">
     <dl class="staff-customer-focus__facts staff-customer-focus__facts--embedded">
       <div>
         <dt>Mode</dt>
@@ -165,17 +223,20 @@
       </div>
     </dl>
     <p class="muted mt-3 mb-0">Lecture seule — permission <code>change_customer</code> requise pour modifier.</p>
-  </section>
+    </div>
+  </details>
   {% endif %}
 
   {% if can_edit_pricing and pricing_form %}
-  <section class="card staff-customer-panel" aria-labelledby="pricing-form-title">
-    <div class="staff-customer-panel__head">
-      <div>
+  <details id="customer-pricing" class="staff-customer-workspace__section" data-customer-section{% if pricing_form.errors %} open{% endif %}>
+    <summary class="staff-customer-workspace__summary">
+      <span>
         <h2 id="pricing-form-title">Conditions tarifaires</h2>
-        <p class="muted text-sm m-0">Tarifs négociés et règles d’encours pour les prochaines tarifications atelier.</p>
-      </div>
-    </div>
+        <small>Tarifs négociés et règles d’encours</small>
+      </span>
+      <span class="staff-customer-workspace__summary-meta">{% if customer.negotiated_file_preparation_fee_eur or billing_profile.price_per_sqm_eur %}Négociée{% else %}Catalogue{% endif %}</span>
+    </summary>
+    <div class="staff-customer-workspace__body">
     <form class="ui-form-stack" method="post" action="{% url 'portal:staff-customer-pricing-update' customer_public_id=customer.public_id %}" data-submit-loading>
       {% csrf_token %}
       <div class="grid gap-3 md:grid-cols-2">
@@ -199,10 +260,18 @@
         <button class="ui-btn ui-btn-primary" type="submit">Enregistrer les conditions</button>
       </div>
     </form>
-  </section>
+    </div>
+  </details>
   {% else %}
-  <section class="card staff-customer-panel" aria-labelledby="pricing-readonly-title">
-    <h2 id="pricing-readonly-title" class="text-lg mb-3">Conditions tarifaires</h2>
+  <details id="customer-pricing" class="staff-customer-workspace__section" data-customer-section>
+    <summary class="staff-customer-workspace__summary">
+      <span>
+        <h2 id="pricing-readonly-title">Conditions tarifaires</h2>
+        <small>Tarifs et règles d’encours en lecture seule</small>
+      </span>
+      <span class="staff-customer-workspace__summary-meta">{% if customer.negotiated_file_preparation_fee_eur or billing_profile.price_per_sqm_eur %}Négociée{% else %}Catalogue{% endif %}</span>
+    </summary>
+    <div class="staff-customer-workspace__body">
     <dl class="staff-customer-focus__facts staff-customer-focus__facts--embedded">
       <div><dt>Forfait fichier</dt><dd>{% if customer.negotiated_file_preparation_fee_eur %}{{ customer.negotiated_file_preparation_fee_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
       <div><dt>Prix m²</dt><dd>{% if billing_profile and billing_profile.price_per_sqm_eur %}{{ billing_profile.price_per_sqm_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
@@ -212,16 +281,185 @@
     {% if not can_edit_pricing %}
     <p class="muted mt-3 mb-0">Permission <code>manage_customer_pricing</code> requise pour modifier.</p>
     {% endif %}
-  </section>
+    </div>
+  </details>
   {% endif %}
 
-  <section class="card staff-customer-panel table-wrap overflow-x-auto" aria-labelledby="members-title">
-    <div class="staff-customer-panel__head">
-      <div>
-        <h2 id="members-title">Utilisateurs rattachés</h2>
-        <p class="muted text-sm m-0">Accès portail liés à ce compte entreprise.</p>
+  <details id="customer-volume" class="staff-customer-workspace__section" data-customer-section{% if volume_discount_has_errors %} open{% endif %}>
+    <summary class="staff-customer-workspace__summary">
+      <span>
+        <h2 id="volume-discount-title">Remise volume mensuelle</h2>
+        <small>Le meilleur palier s’applique à tout le DTF éligible du mois</small>
+      </span>
+      <span class="staff-customer-workspace__summary-meta">
+        {% if volume_discount_summary.current_tier %}−{{ volume_discount_summary.current_tier.discount_percent }} %{% else %}{{ volume_discount_tier_rows|length }} palier{{ volume_discount_tier_rows|length|pluralize }}{% endif %}
+      </span>
+    </summary>
+    <div class="staff-customer-workspace__body volume-discount-panel">
+      <div class="volume-discount-panel__tools">
+        {% if can_edit_pricing %}
+        <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-default-volume-discount-settings' %}">Voir la grille par défaut</a>
+        {% endif %}
+        {% if volume_discount_available %}
+        <span class="badge is-success">Encours éligible</span>
+        {% else %}
+        <span class="badge is-neutral">Non applicable</span>
+        {% endif %}
       </div>
+
+    {% if not volume_discount_available %}
+    <div class="alert alert--info" role="status">
+      <p class="m-0">Passez d’abord le compte en mode Encours pour activer et configurer les remises volume mensuelles.</p>
+      {% if volume_discount_tier_add_form.non_field_errors %}
+      <p class="error-text ui-error-text mt-2 mb-0" role="alert">{{ volume_discount_tier_add_form.non_field_errors|striptags }}</p>
+      {% endif %}
     </div>
+    {% else %}
+      <div
+        class="volume-discount-overview"
+        aria-label="Synthèse remise volume du mois"
+        data-testid="monthly-volume-discount-summary"
+      >
+        <div class="volume-discount-overview__progress">
+          <div class="volume-discount-overview__period">{{ volume_discount_summary.month|date:"F Y" }}</div>
+          <div class="volume-discount-overview__metric">
+            <strong>{{ volume_discount_summary.monthly_volume_linear_m }} m</strong>
+            <span>de DTF éligible</span>
+          </div>
+          {% if volume_discount_summary.next_tier %}
+          <label class="ui-sr-only" for="monthly-volume-tier-progress">Progression vers le prochain palier</label>
+          <progress
+            id="monthly-volume-tier-progress"
+            class="volume-discount-overview__bar"
+            value="{{ volume_discount_progress_value }}"
+            max="{{ volume_discount_progress_max }}"
+          ></progress>
+          <div class="volume-discount-overview__scale" aria-hidden="true">
+            <span>0 m</span>
+            <span>{{ volume_discount_summary.next_tier.minimum_monthly_linear_m }} m</span>
+          </div>
+          {% endif %}
+          <p>{{ volume_discount_summary.eligible_order_count }} commande{{ volume_discount_summary.eligible_order_count|pluralize }} non relevée{{ volume_discount_summary.eligible_order_count|pluralize }}</p>
+        </div>
+        <div class="volume-discount-overview__result{% if volume_discount_summary.current_tier %} is-reached{% endif %}">
+          {% if volume_discount_summary.next_tier %}
+          <span>Prochain objectif</span>
+          <strong>{{ volume_discount_summary.remaining_to_next_tier_linear_m }} m</strong>
+          <p>restants pour débloquer <b>−{{ volume_discount_summary.next_tier.discount_percent }} %</b></p>
+          {% elif volume_discount_summary.current_tier %}
+          <span>Objectif atteint</span>
+          <strong>−{{ volume_discount_summary.current_tier.discount_percent }} %</strong>
+          <p>Palier maximal appliqué au mois en cours.</p>
+          {% else %}
+          <span>Grille inactive</span>
+          <strong>Aucun palier</strong>
+          <p>Activez ou ajoutez un seuil pour ce client.</p>
+          {% endif %}
+        </div>
+        <dl class="volume-discount-overview__facts">
+          <div>
+            <dt>Remise appliquée</dt>
+            <dd>{% if volume_discount_summary.current_tier %}−{{ volume_discount_summary.current_tier.discount_percent }} %{% else %}0 %{% endif %}</dd>
+          </div>
+          <div>
+            <dt>Économie HT du mois</dt>
+            <dd>−{{ volume_discount_summary.discount_amount }} €</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="volume-tier-section-head">
+        <div>
+          <h3>Grille propre au client</h3>
+          <p>Préparation fichier et livraison sont exclues du volume et de la remise.</p>
+        </div>
+        <span>{{ volume_discount_tier_rows|length }} palier{{ volume_discount_tier_rows|length|pluralize }}</span>
+      </div>
+
+      {% if volume_discount_tier_rows %}
+      <ol class="volume-tier-list" aria-label="Paliers configurés">
+        {% if can_edit_pricing %}
+        {% for row in volume_discount_tier_rows %}
+          {% url 'portal:staff-customer-volume-discount-tier-update' customer_public_id=customer.public_id tier_public_id=row.tier.public_id as tier_update_url %}
+          {% include "portal/staff/customers/_volume_discount_tier_row.html" with action_url=tier_update_url tier=row.tier form=row.form position=row.position state=row.state state_label=row.state_label state_badge_class=row.state_badge_class %}
+        {% endfor %}
+        {% else %}
+        {% for row in volume_discount_tier_rows %}
+        <li class="volume-tier-item volume-tier-item--{{ row.state }}">
+          <div class="volume-tier-item__summary volume-tier-item__summary--readonly">
+            <span class="volume-tier-item__marker" aria-hidden="true">{{ row.position }}</span>
+            <span class="volume-tier-item__measure"><small>À partir de</small><strong>{{ row.tier.minimum_monthly_linear_m }} m</strong><span>par mois</span></span>
+            <span class="volume-tier-item__benefit"><small>Remise générale</small><strong>−{{ row.tier.discount_percent }} %</strong><span>sur tout le DTF éligible</span></span>
+            <span class="volume-tier-item__status">{% if row.state_label %}<span class="badge {{ row.state_badge_class }}">{{ row.state_label }}</span>{% endif %}{% if not row.tier.is_active %}<span class="badge is-neutral">Désactivé</span>{% endif %}</span>
+          </div>
+        </li>
+        {% endfor %}
+        {% endif %}
+      </ol>
+      {% else %}
+      <div class="volume-tier-empty">
+        <div class="volume-tier-empty__marker" aria-hidden="true">%</div>
+        <div><h3>Aucun palier configuré</h3><p>Le prix DTF négocié ou catalogue s’applique sans remise.</p></div>
+      </div>
+      {% endif %}
+
+      {% if can_edit_pricing %}
+      <form
+        class="volume-tier-create-inline"
+        method="post"
+        action="{% url 'portal:staff-customer-volume-discount-tier-create' customer_public_id=customer.public_id %}"
+        data-submit-loading
+      >
+        {% csrf_token %}
+        <details{% if volume_discount_tier_add_form.errors %} open{% endif %}>
+          <summary>
+            <span>Ajouter un palier</span>
+            <small>Créer un nouveau seuil pour ce client</small>
+          </summary>
+          <div class="volume-tier-create-inline__fields">
+            {% if volume_discount_tier_add_form.non_field_errors %}<p class="error-text ui-error-text volume-tier-item__error" role="alert">{{ volume_discount_tier_add_form.non_field_errors|striptags }}</p>{% endif %}
+            <div class="ui-field-group">
+              <label class="ui-label" for="{{ volume_discount_tier_add_form.minimum_monthly_linear_m.id_for_label }}">Seuil mensuel (m linéaires)</label>
+              {{ volume_discount_tier_add_form.minimum_monthly_linear_m }}
+              <p class="ui-help">Atteint dès que le volume du mois est supérieur ou égal au seuil.</p>
+              {% if volume_discount_tier_add_form.minimum_monthly_linear_m.errors %}<p class="error-text ui-error-text" role="alert">{{ volume_discount_tier_add_form.minimum_monthly_linear_m.errors|striptags }}</p>{% endif %}
+            </div>
+            <div class="ui-field-group">
+              <label class="ui-label" for="{{ volume_discount_tier_add_form.discount_percent.id_for_label }}">Remise générale (%)</label>
+              {{ volume_discount_tier_add_form.discount_percent }}
+              <p class="ui-help">Appliquée à tout le DTF éligible du mois.</p>
+              {% if volume_discount_tier_add_form.discount_percent.errors %}<p class="error-text ui-error-text" role="alert">{{ volume_discount_tier_add_form.discount_percent.errors|striptags }}</p>{% endif %}
+            </div>
+            <div class="volume-tier-create-inline__actions">
+              <label class="volume-tier-toggle" for="{{ volume_discount_tier_add_form.is_active.id_for_label }}">
+                {{ volume_discount_tier_add_form.is_active }}
+                <span>Palier actif</span>
+              </label>
+              <button class="ui-btn ui-btn-primary" type="submit">Ajouter à la grille</button>
+            </div>
+          </div>
+        </details>
+      </form>
+      {% elif not can_edit_pricing %}
+      <p class="muted mt-3 mb-0">Permission <code>manage_customer_pricing</code> requise pour modifier les paliers.</p>
+      {% endif %}
+    {% endif %}
+    </div>
+  </details>
+
+  {% if can_view_billing_statements %}
+  {% include "portal/staff/customers/_billing_statements.html" %}
+  {% endif %}
+
+  <details id="customer-access" class="staff-customer-workspace__section" data-customer-section>
+    <summary class="staff-customer-workspace__summary">
+      <span>
+        <h2 id="members-title">Utilisateurs rattachés</h2>
+        <small>Accès portail liés à ce compte entreprise</small>
+      </span>
+      <span class="staff-customer-workspace__summary-meta">{{ memberships|length }} accès</span>
+    </summary>
+    <div class="staff-customer-workspace__body table-wrap overflow-x-auto">
     <table class="table min-w-[28rem]">
       <thead>
         <tr>
@@ -242,6 +480,13 @@
         {% endfor %}
       </tbody>
     </table>
-  </section>
+    </div>
+  </details>
+    </div>
+  </div>
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="{% static 'js/customer-account-workspace.js' %}?v=20260814-workspace"></script>
 {% endblock %}

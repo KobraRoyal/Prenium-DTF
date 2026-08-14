@@ -2,6 +2,11 @@
 @import "../components/prospect-tunnel.css";
 @import "../components/workflow.css";
 @import "../components/product-shell.css";
+@import "../components/inspection-workbench.css";
+@import "../components/email-template-workbench.css";
+@import "../components/access-request-queue.css";
+@import "../components/billing-statement-panel.css";
+@import "../components/customer-account-workspace.css";
 @import "../components/prospect-journey.css";
 @import "../components/gang-sheet.css";
 

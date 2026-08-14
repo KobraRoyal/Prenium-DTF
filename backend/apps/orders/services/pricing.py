@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+from datetime import datetime, time
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 
 from apps.auditlog.services import record_event
 from apps.catalog.models import CatalogService
-from apps.customers.models import CustomerBillingProfile
+from apps.customers.models import (
+    Customer,
+    CustomerBillingProfile,
+    CustomerVolumeDiscountTier,
+)
 from apps.orders.models import ZERO_AMOUNT, Order, OrderLine
 from apps.shipping.services.methods import ShippingMethodService
 
@@ -530,6 +536,286 @@ class OrderPricingService:
             return Order.CreditHoldStatus.WARNING
         return Order.CreditHoldStatus.CLEAR
 
+    def _month_bounds(self, month) -> tuple[object, object, datetime, datetime]:
+        month_start = month.replace(day=1)
+        if month_start.month == 12:
+            next_month = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            next_month = month_start.replace(month=month_start.month + 1)
+        current_tz = timezone.get_current_timezone()
+        starts_at = timezone.make_aware(datetime.combine(month_start, time.min), current_tz)
+        ends_at = timezone.make_aware(datetime.combine(next_month, time.min), current_tz)
+        return month_start, next_month, starts_at, ends_at
+
+    def _base_unit_price_for_repricing(self, *, order: Order, dtf_lines: list[OrderLine]):
+        if order.volume_discount_base_unit_price_eur is not None:
+            return order.volume_discount_base_unit_price_eur.quantize(
+                TWOPLACES,
+                rounding=ROUND_HALF_UP,
+            )
+        if not dtf_lines:
+            raise ValidationError("Une commande tarifée ne contient aucune ligne DTF.")
+        current_unit_price = dtf_lines[0].unit_price
+        current_discount = order.volume_discount_percent or ZERO_AMOUNT
+        if current_discount > 0 and current_discount < Decimal("100.00"):
+            factor = (Decimal("100.00") - current_discount) / Decimal("100.00")
+            return (current_unit_price / factor).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        return current_unit_price.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+
+    def _recalculate_customer_credit_holds(self, *, customer: Customer) -> str:
+        open_orders = Order.objects.select_for_update().filter(
+            customer=customer,
+            billing_mode=Order.BillingMode.DEFERRED,
+            pricing_status=Order.PricingStatus.PRICED,
+            billing_statement__isnull=True,
+            status=Order.Status.SUBMITTED,
+        )
+        profile = CustomerBillingProfile.objects.filter(customer=customer).first()
+        if profile is None or profile.credit_limit_eur is None:
+            hold_status = Order.CreditHoldStatus.CLEAR
+        else:
+            open_total = open_orders.aggregate(total=Sum("total_amount"))["total"] or ZERO_AMOUNT
+            if open_total > profile.credit_limit_eur:
+                hold_status = (
+                    Order.CreditHoldStatus.BLOCKED
+                    if profile.enforce_credit_block
+                    else Order.CreditHoldStatus.WARNING
+                )
+            else:
+                hold_status = Order.CreditHoldStatus.CLEAR
+        open_orders.exclude(credit_hold_status=hold_status).update(
+            credit_hold_status=hold_status,
+            updated_at=timezone.now(),
+        )
+        return hold_status
+
+    @transaction.atomic
+    def reprice_deferred_month(
+        self,
+        *,
+        customer: Customer,
+        month,
+        actor,
+        source: str,
+    ) -> dict[str, object]:
+        """Applique le meilleur palier atteint à tout le DTF non relevé du mois.
+
+        Le verrou client sérialise les tarifications concurrentes. Les lignes de
+        préparation et le port restent inchangés ; seules les lignes DTF sont
+        recalculées depuis leur prix brut figé.
+        """
+        customer = Customer.objects.select_for_update().get(pk=customer.pk)
+        month_start, _next_month, starts_at, ends_at = self._month_bounds(month)
+        monthly_orders = list(
+            Order.objects.select_for_update()
+            .filter(
+                customer=customer,
+                billing_mode=Order.BillingMode.DEFERRED,
+                pricing_status=Order.PricingStatus.PRICED,
+                billing_statement__isnull=True,
+                status=Order.Status.SUBMITTED,
+                created_at__gte=starts_at,
+                created_at__lt=ends_at,
+            )
+            .prefetch_related("items", "uploads")
+            .order_by("created_at", "pk")
+        )
+        if not monthly_orders:
+            return {
+                "repriced_count": 0,
+                "monthly_volume_linear_m": ZERO_AMOUNT,
+                "discount_percent": ZERO_AMOUNT,
+                "threshold_linear_m": None,
+                "month": month_start,
+            }
+
+        dtf_type = CatalogService.ServiceType.DTF_TRANSFER
+        total_sqm = sum(
+            (
+                line.quantity
+                for monthly_order in monthly_orders
+                for line in monthly_order.items.all()
+                if line.service_type == dtf_type
+            ),
+            ZERO_AMOUNT,
+        )
+        laize_m = Decimal(int(getattr(settings, "DTF_LAIZE_CM", 55))) / Decimal("100")
+        if laize_m <= 0:
+            raise ValidationError("DTF_LAIZE_CM doit être strictement positif.")
+        monthly_volume = (total_sqm / laize_m).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        tier = (
+            CustomerVolumeDiscountTier.objects.active()
+            .filter(
+                customer=customer,
+                minimum_monthly_linear_m__lte=monthly_volume,
+            )
+            .order_by("-minimum_monthly_linear_m", "-created_at")
+            .first()
+        )
+        discount_percent = tier.discount_percent if tier is not None else ZERO_AMOUNT
+        discount_percent = discount_percent.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        factor = (Decimal("100.00") - discount_percent) / Decimal("100.00")
+        actor_or_none = actor if getattr(actor, "is_authenticated", False) else None
+        repriced_count = 0
+
+        for monthly_order in monthly_orders:
+            all_lines = list(monthly_order.items.all())
+            dtf_lines = [line for line in all_lines if line.service_type == dtf_type]
+            uploads = list(monthly_order.uploads.all())
+            if len(dtf_lines) != len(uploads):
+                raise ValidationError(
+                    "Le nombre de lignes DTF ne correspond pas au nombre de fichiers tarifés."
+                )
+            base_unit_price = self._base_unit_price_for_repricing(
+                order=monthly_order,
+                dtf_lines=dtf_lines,
+            )
+            effective_unit_price = (base_unit_price * factor).quantize(
+                TWOPLACES,
+                rounding=ROUND_HALF_UP,
+            )
+            gross_dtf_amount = ZERO_AMOUNT
+            discounted_dtf_amount = ZERO_AMOUNT
+
+            for line, upload in zip(dtf_lines, uploads, strict=True):
+                gross_line_total = (line.quantity * base_unit_price).quantize(
+                    TWOPLACES,
+                    rounding=ROUND_HALF_UP,
+                )
+                discounted_line_total = (gross_line_total * factor).quantize(
+                    TWOPLACES,
+                    rounding=ROUND_HALF_UP,
+                )
+                gross_dtf_amount += gross_line_total
+                discounted_dtf_amount += discounted_line_total
+                line.unit_price = effective_unit_price
+                line.line_total = discounted_line_total
+                line.save(update_fields=["unit_price", "line_total", "updated_at"])
+                upload.unit_price_eur = effective_unit_price
+                upload.line_total_eur = discounted_line_total
+                upload.save(update_fields=["unit_price_eur", "line_total_eur", "updated_at"])
+
+            subtotal = sum((line.line_total for line in all_lines), ZERO_AMOUNT).quantize(
+                TWOPLACES,
+                rounding=ROUND_HALF_UP,
+            )
+            totals = self.compose_order_totals(
+                subtotal_ht=subtotal,
+                shipping_ht=monthly_order.shipping_amount,
+                billing_mode=monthly_order.billing_mode,
+            )
+            discount_amount = (gross_dtf_amount - discounted_dtf_amount).quantize(
+                TWOPLACES,
+                rounding=ROUND_HALF_UP,
+            )
+            before = {
+                "total": monthly_order.total_amount,
+                "discount_percent": monthly_order.volume_discount_percent,
+                "discount_amount": monthly_order.volume_discount_amount,
+                "threshold": monthly_order.volume_discount_threshold_linear_m,
+                "monthly_volume": monthly_order.monthly_volume_linear_m,
+            }
+            monthly_order.subtotal_amount = totals["subtotal_amount"]
+            monthly_order.tax_rate = totals["tax_rate"]
+            monthly_order.tax_amount = totals["tax_amount"]
+            monthly_order.total_amount = totals["total_amount"]
+            monthly_order.volume_discount_month = month_start
+            monthly_order.monthly_volume_linear_m = monthly_volume
+            monthly_order.volume_discount_threshold_linear_m = (
+                tier.minimum_monthly_linear_m if tier is not None else None
+            )
+            monthly_order.volume_discount_percent = discount_percent
+            monthly_order.volume_discount_amount = discount_amount
+            monthly_order.volume_discount_base_unit_price_eur = base_unit_price
+            monthly_order.save(
+                update_fields=[
+                    "subtotal_amount",
+                    "tax_rate",
+                    "tax_amount",
+                    "total_amount",
+                    "volume_discount_month",
+                    "monthly_volume_linear_m",
+                    "volume_discount_threshold_linear_m",
+                    "volume_discount_percent",
+                    "volume_discount_amount",
+                    "volume_discount_base_unit_price_eur",
+                    "updated_at",
+                ]
+            )
+            changed = (
+                before["total"] != monthly_order.total_amount
+                or before["discount_percent"] != discount_percent
+                or before["threshold"] != monthly_order.volume_discount_threshold_linear_m
+                or before["monthly_volume"] != monthly_volume
+            )
+            if changed:
+                repriced_count += 1
+                record_event(
+                    action="order.monthly_volume_discount_repriced",
+                    actor=actor_or_none,
+                    target=monthly_order,
+                    metadata={
+                        "order_public_id": str(monthly_order.public_id),
+                        "customer_public_id": str(customer.public_id),
+                        "month": month_start.isoformat(),
+                        "monthly_volume_linear_m": f"{monthly_volume:.4f}",
+                        "threshold_linear_m": (
+                            f"{tier.minimum_monthly_linear_m:.4f}" if tier is not None else None
+                        ),
+                        "discount_percent": f"{discount_percent:.2f}",
+                        "discount_amount": f"{discount_amount:.2f}",
+                        "total_before": f"{before['total']:.2f}",
+                        "total_after": f"{monthly_order.total_amount:.2f}",
+                        "source": source,
+                    },
+                )
+
+        credit_hold_status = self._recalculate_customer_credit_holds(customer=customer)
+        record_event(
+            action="customer.monthly_volume_discount_applied",
+            actor=actor_or_none,
+            target=customer,
+            metadata={
+                "customer_public_id": str(customer.public_id),
+                "month": month_start.isoformat(),
+                "eligible_order_count": len(monthly_orders),
+                "repriced_order_count": repriced_count,
+                "monthly_volume_linear_m": f"{monthly_volume:.4f}",
+                "threshold_linear_m": (
+                    f"{tier.minimum_monthly_linear_m:.4f}" if tier is not None else None
+                ),
+                "discount_percent": f"{discount_percent:.2f}",
+                "credit_hold_status": credit_hold_status,
+                "source": source,
+            },
+        )
+        if tier is not None and month_start == timezone.localdate().replace(day=1):
+            from apps.notifications.services.transactional import (
+                schedule_volume_discount_tier_reached_email,
+            )
+
+            total_discount_amount = sum(
+                (monthly_order.volume_discount_amount for monthly_order in monthly_orders),
+                ZERO_AMOUNT,
+            ).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+            schedule_volume_discount_tier_reached_email(
+                customer=customer,
+                month=month_start,
+                threshold_linear_m=tier.minimum_monthly_linear_m,
+                monthly_volume_linear_m=monthly_volume,
+                discount_percent=discount_percent,
+                discount_amount=total_discount_amount,
+                actor=actor,
+                source=source,
+            )
+        return {
+            "repriced_count": repriced_count,
+            "monthly_volume_linear_m": monthly_volume,
+            "discount_percent": discount_percent,
+            "threshold_linear_m": (tier.minimum_monthly_linear_m if tier is not None else None),
+            "month": month_start,
+        }
+
     def invalidate_deferred_pricing_after_meterage_change(
         self,
         *,
@@ -540,6 +826,11 @@ class OrderPricingService:
         """Efface lignes et montants persistés pour permettre une nouvelle
         saisie métrage puis « Calculer le prix ».
         """
+        if order.billing_statement_id is not None:
+            raise ValidationError(
+                "La tarification est figée car la commande appartient à un "
+                "récapitulatif de facturation."
+            )
         if not order.uses_atelier_pricing():
             return
         if order.pricing_status not in (
@@ -549,6 +840,11 @@ class OrderPricingService:
             return
         with transaction.atomic():
             locked = Order.objects.select_for_update().get(pk=order.pk)
+            if locked.billing_statement_id is not None:
+                raise ValidationError(
+                    "La tarification est figée car la commande appartient à un "
+                    "récapitulatif de facturation."
+                )
             if locked.pricing_status not in (
                 Order.PricingStatus.PRICED,
                 Order.PricingStatus.FAILED,
@@ -567,6 +863,12 @@ class OrderPricingService:
             locked.total_amount = ZERO_AMOUNT
             locked.pricing_status = Order.PricingStatus.PENDING
             locked.credit_hold_status = Order.CreditHoldStatus.NONE
+            locked.volume_discount_month = None
+            locked.monthly_volume_linear_m = None
+            locked.volume_discount_threshold_linear_m = None
+            locked.volume_discount_percent = ZERO_AMOUNT
+            locked.volume_discount_amount = ZERO_AMOUNT
+            locked.volume_discount_base_unit_price_eur = None
             locked.save(
                 update_fields=[
                     "subtotal_amount",
@@ -576,8 +878,21 @@ class OrderPricingService:
                     "total_amount",
                     "pricing_status",
                     "credit_hold_status",
+                    "volume_discount_month",
+                    "monthly_volume_linear_m",
+                    "volume_discount_threshold_linear_m",
+                    "volume_discount_percent",
+                    "volume_discount_amount",
+                    "volume_discount_base_unit_price_eur",
                     "updated_at",
                 ]
+            )
+        if order.billing_mode == Order.BillingMode.DEFERRED:
+            self.reprice_deferred_month(
+                customer=order.customer,
+                month=timezone.localtime(order.created_at).date(),
+                actor=actor,
+                source=f"{source}.meterage_invalidated",
             )
         pricing_actor = (
             actor if actor is not None and getattr(actor, "is_authenticated", False) else None
@@ -592,6 +907,7 @@ class OrderPricingService:
             },
         )
 
+    @transaction.atomic
     def compute_and_persist_order_pricing(
         self,
         *,
@@ -599,6 +915,13 @@ class OrderPricingService:
         actor,
         source: str,
     ) -> Order:
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().select_related("customer").get(pk=order.pk)
+        if order.billing_statement_id is not None:
+            raise ValidationError(
+                "La tarification est figée car la commande appartient à un "
+                "récapitulatif de facturation."
+            )
         if not order.uses_atelier_pricing():
             raise ValidationError(
                 "Le calcul automatique s'applique aux commandes atelier (encours ou comptant CB)."
@@ -649,6 +972,11 @@ class OrderPricingService:
 
         with transaction.atomic():
             order_locked = Order.objects.select_for_update().get(pk=order.pk)
+            if order_locked.billing_statement_id is not None:
+                raise ValidationError(
+                    "La tarification est figée car la commande appartient à un "
+                    "récapitulatif de facturation."
+                )
             order_locked.items.all().delete()
 
             for position, (upload, meterage, line_total) in enumerate(priced_lines, start=1):
@@ -698,6 +1026,12 @@ class OrderPricingService:
             order_locked.currency = dtf_service.currency
             order_locked.pricing_status = Order.PricingStatus.PRICED
             order_locked.credit_hold_status = credit_hold
+            order_locked.volume_discount_month = None
+            order_locked.monthly_volume_linear_m = None
+            order_locked.volume_discount_threshold_linear_m = None
+            order_locked.volume_discount_percent = ZERO_AMOUNT
+            order_locked.volume_discount_amount = ZERO_AMOUNT
+            order_locked.volume_discount_base_unit_price_eur = unit_price
             order_locked.save(
                 update_fields=[
                     "subtotal_amount",
@@ -708,9 +1042,25 @@ class OrderPricingService:
                     "currency",
                     "pricing_status",
                     "credit_hold_status",
+                    "volume_discount_month",
+                    "monthly_volume_linear_m",
+                    "volume_discount_threshold_linear_m",
+                    "volume_discount_percent",
+                    "volume_discount_amount",
+                    "volume_discount_base_unit_price_eur",
                     "updated_at",
                 ]
             )
+
+        if order.billing_mode == Order.BillingMode.DEFERRED:
+            self.reprice_deferred_month(
+                customer=order.customer,
+                month=timezone.localtime(order.created_at).date(),
+                actor=actor,
+                source=f"{source}.pricing_computed",
+            )
+
+        refreshed = Order.objects.get(pk=order.pk)
 
         pricing_actor = (
             actor if actor is not None and getattr(actor, "is_authenticated", False) else None
@@ -722,21 +1072,27 @@ class OrderPricingService:
             metadata={
                 "order_public_id": str(order.public_id),
                 "customer_public_id": str(order.customer.public_id),
-                "subtotal": f"{totals['subtotal_amount']:.2f}",
-                "shipping_amount": f"{totals['shipping_amount']:.2f}",
+                "subtotal": f"{refreshed.subtotal_amount:.2f}",
+                "shipping_amount": f"{refreshed.shipping_amount:.2f}",
                 "shipping_method_code": order.shipping_method_code or "",
-                "tax_rate": f"{totals['tax_rate']:.4f}",
-                "tax_amount": f"{totals['tax_amount']:.2f}",
-                "total": f"{totals['total_amount']:.2f}",
-                "dtf_subtotal": f"{dtf_subtotal:.2f}",
+                "tax_rate": f"{refreshed.tax_rate:.4f}",
+                "tax_amount": f"{refreshed.tax_amount:.2f}",
+                "total": f"{refreshed.total_amount:.2f}",
+                "dtf_gross_subtotal": f"{dtf_subtotal:.2f}",
+                "monthly_volume_linear_m": (
+                    f"{refreshed.monthly_volume_linear_m:.4f}"
+                    if refreshed.monthly_volume_linear_m is not None
+                    else None
+                ),
+                "volume_discount_percent": f"{refreshed.volume_discount_percent:.2f}",
+                "volume_discount_amount": f"{refreshed.volume_discount_amount:.2f}",
                 "file_preparation_line_total": f"{prep_line_total:.2f}",
                 "file_preparation_fee_per_file": f"{prep_fee_per_file:.2f}",
-                "credit_hold_status": credit_hold,
+                "credit_hold_status": refreshed.credit_hold_status,
                 "source": source,
             },
         )
 
-        refreshed = Order.objects.get(pk=order.pk)
         if refreshed.billing_mode == Order.BillingMode.DEFERRED:
             from apps.notifications.services.transactional import schedule_order_priced_email
 

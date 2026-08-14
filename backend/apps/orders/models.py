@@ -104,6 +104,49 @@ class Order(BaseModel):
         validators=[MinValueValidator(ZERO_AMOUNT)],
         help_text="Total dû / encaissé : subtotal + shipping + tax.",
     )
+    volume_discount_month = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Premier jour du mois civil utilisé pour la remise volume.",
+    )
+    monthly_volume_linear_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Volume linéaire mensuel éligible au dernier calcul.",
+    )
+    volume_discount_threshold_linear_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Seuil du palier mensuel appliqué, si un palier est atteint.",
+    )
+    volume_discount_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Pourcentage de remise rétroactive appliqué au DTF de la commande.",
+    )
+    volume_discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Montant HT de remise volume appliqué au DTF de la commande.",
+    )
+    volume_discount_base_unit_price_eur = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Prix DTF brut au m² conservé avant remise volume.",
+    )
     customer_note = models.TextField(blank=True)
     source = models.CharField(max_length=32, default="client_portal")
     billing_mode = models.CharField(
@@ -125,7 +168,7 @@ class Order(BaseModel):
         "billing.BillingStatement",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="orders",
     )
     meterage_override_linear_m = models.DecimalField(
@@ -158,13 +201,46 @@ class Order(BaseModel):
             models.Index(fields=("status", "created_at")),
             models.Index(fields=("customer", "billing_mode", "pricing_status")),
             models.Index(fields=("billing_statement", "created_at")),
+            models.Index(
+                fields=("customer", "created_at"),
+                name="order_billable_month_idx",
+                condition=models.Q(
+                    status="submitted",
+                    billing_mode="deferred",
+                    pricing_status="priced",
+                    billing_statement__isnull=True,
+                ),
+            ),
         ]
         permissions = [
             ("delete_atelier_order", "Peut supprimer une commande Atelier"),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(volume_discount_percent__gte=0)
+                & models.Q(volume_discount_percent__lte=100),
+                name="order_volume_discount_percent_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(volume_discount_amount__gte=0),
+                name="order_volume_discount_amount_nonnegative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.customer.name} - {self.public_id}"
+
+    def clean(self):
+        super().clean()
+        if (
+            self.billing_statement_id is not None
+            and self.billing_statement.customer_id != self.customer_id
+        ):
+            from django.core.exceptions import ValidationError
+
+            raise ValidationError(
+                {"billing_statement": "Le relevé doit appartenir au même client que la commande."}
+            )
 
     @property
     def short_ref(self) -> str:

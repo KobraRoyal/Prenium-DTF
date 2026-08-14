@@ -310,6 +310,7 @@ def test_custom_client_and_internal_templates_are_sent_to_separate_audiences():
 
 
 @pytest.mark.django_db
+@override_settings(INTERNAL_NOTIFICATION_EMAILS=[])
 def test_order_lifecycle_templates_render_processing_ready_and_shipping_details():
     actor, order = create_order()
     Shipment.objects.create(
@@ -422,6 +423,10 @@ def test_authorised_staff_can_preview_and_save_from_frontend(client):
     list_html = list_response.content.decode()
     assert "Messages clients" in list_html
     assert "Messages équipe" in list_html
+    assert "Palier de remise atteint" in list_html
+    assert 'data-testid="email-template-overview"' in list_html
+    assert list_html.count('data-testid="email-template-row"') >= 2
+    assert "Contenu sécurisé" in list_html
     assert "data-email-template-token" not in list_html
 
     preview_response = client.post(
@@ -437,6 +442,9 @@ def test_authorised_staff_can_preview_and_save_from_frontend(client):
     preview_html = preview_response.content.decode()
     assert "Commande a1b2c3d4e5f6" in preview_html
     assert "data-email-template-token" in preview_html
+    assert "data-email-token-search" in preview_html
+    assert "data-email-subject-counter" in preview_html
+    assert 'data-testid="email-template-preview"' in preview_html
     assert EmailTemplate.objects.count() == 0
 
     save_response = client.post(

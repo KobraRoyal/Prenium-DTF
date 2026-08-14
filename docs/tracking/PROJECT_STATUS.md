@@ -34,6 +34,10 @@
 - [x] Sprint 28 — Fiche commande Atelier orientée action, sans redondance ni icônes
 - [x] Sprint 29 — Couleur support et dimensions client visibles dans Contrôle et l’OF
 - [x] Sprint 33 — Navigation SaaS client et Atelier, centre `Mon compte`, bibliothèque et studio Gang Sheets premium avec recette multi-écran/Docker validée
+- [x] Sprint 37 — Paliers mensuels par client, valeurs par défaut, notification e-mail idempotente,
+  progression client, recalcul rétroactif et audit financier
+- [x] Sprint 38 — Clôture mensuelle par client, snapshot CSV signé pour facturation externe,
+  gel comptable des commandes, permissions croisées et audit des exports
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement
@@ -61,6 +65,10 @@
 - [x] Lot 11.11 — Audit global UI/UX orchestré par sous-agents, corrections header/tabs/empty states/shipping et documentation livrées
 - [x] Lot 33 — Navigation SaaS partagée, centre de compte Owner, bibliothèque filtrable et studio Gang Sheets responsive livrés sans changement de permissions objet
 - [x] Administration staff comptes clients + conditions tarifaires (Atelier)
+- [x] Tarification dégressive mensuelle par client : grille Atelier, snapshots commande et gel des relevés
+- [x] Paliers par défaut des nouveaux comptes en encours, e-mail de franchissement personnalisable
+  et progression visible sur le dashboard client
+- [x] Récapitulatifs mensuels par client en encours exportables vers l’outil comptable externe
 
 ## Derniers chantiers transverses
 

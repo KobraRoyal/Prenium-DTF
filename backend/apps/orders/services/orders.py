@@ -73,6 +73,11 @@ class OrderService:
         """Motif métier empêchant la suppression Atelier, ou None si autorisée."""
         if order.status == Order.Status.CANCELLED:
             return "Cette commande est déjà supprimée de la file Atelier."
+        if order.billing_statement_id is not None:
+            return (
+                "Impossible de supprimer : la commande appartient déjà à un "
+                "récapitulatif de facturation."
+            )
 
         from apps.billing.models import Invoice, Payment
         from apps.production.models import ProductionJob
@@ -191,6 +196,19 @@ class OrderService:
                     "source": source,
                     "previous_status": previous_status,
                 },
+            )
+
+        if (
+            order.billing_mode == Order.BillingMode.DEFERRED
+            and order.pricing_status == Order.PricingStatus.PRICED
+        ):
+            from apps.orders.services.pricing import OrderPricingService
+
+            OrderPricingService().reprice_deferred_month(
+                customer=order.customer,
+                month=timezone.localtime(order.created_at).date(),
+                actor=actor,
+                source=f"{source}.order_cancelled",
             )
 
         return self.get_staff_order(order_public_id)

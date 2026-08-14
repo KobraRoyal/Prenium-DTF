@@ -19,8 +19,30 @@ class BillingStatementAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "currency")
     search_fields = ("customer__name", "label")
-    readonly_fields = ("public_id", "created_at", "updated_at")
-    autocomplete_fields = ("customer",)
+    readonly_fields = (
+        "public_id",
+        "customer",
+        "label",
+        "period_start",
+        "period_end",
+        "status",
+        "total_amount",
+        "currency",
+        "snapshot",
+        "snapshot_sha256",
+        "issued_at",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Payment)

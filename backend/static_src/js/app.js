@@ -4,7 +4,7 @@ import "./landing-motion.js?v=20260710b";
 import "./product-shell.js?v=20260721g";
 import "./product-date-picker.js?v=20260712a";
 import "./b2b-configurator.js?v=20260812-gang-upload-limit";
-import "./email-template-editor.js?v=20260714c";
+import "./email-template-editor.js?v=20260813-email-workbench";
 import "./gang-sheet-editor.js?v=20260726-create-order-enable";
 
 window.preniumToast = function (message, variant = "info") {

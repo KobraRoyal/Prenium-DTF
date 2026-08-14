@@ -167,6 +167,60 @@ def test_email_verification_moves_request_to_staff_queue_and_is_idempotent(clien
 
 
 @pytest.mark.django_db
+def test_staff_access_request_queue_exposes_counts_and_scoped_search(client):
+    first = submit_request(client, email="first@example.com")
+    first.company = "Atelier Premier"
+    first.status = ProspectProfile.Status.PENDING_REVIEW
+    first.urgency = ProspectProfile.Urgency.HIGH
+    first.save(update_fields=("company", "status", "urgency", "updated_at"))
+
+    second = submit_request(client, email="second@example.com")
+    second.company = "Studio Nord"
+    second.status = ProspectProfile.Status.PENDING_REVIEW
+    second.save(update_fields=("company", "status", "updated_at"))
+
+    rejected = submit_request(client, email="rejected@example.com")
+    rejected.status = ProspectProfile.Status.REJECTED
+    rejected.save(update_fields=("status", "updated_at"))
+
+    staff = User.objects.create_user(
+        email="access-viewer@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    staff.user_permissions.add(
+        Permission.objects.get(codename="access_staff_portal"),
+        Permission.objects.get(codename="view_prospectprofile"),
+    )
+    client.force_login(staff)
+    list_url = reverse("portal:staff-access-request-list")
+
+    response = client.get(list_url)
+    assert response.status_code == 200
+    assert response.context["active_status"] == ProspectProfile.Status.PENDING_REVIEW
+    assert response.context["pending_review_count"] == 2
+    assert response.context["high_urgency_pending_count"] == 1
+    assert response.context["page_obj"].paginator.count == 2
+    html = response.content.decode()
+    assert 'data-testid="access-request-queue"' in html
+    assert "Atelier Premier" in html
+    assert "Studio Nord" in html
+    assert "Urgence élevée" in html
+
+    response = client.get(list_url, {"status": "pending_review", "q": "Studio Nord"})
+    assert response.status_code == 200
+    assert response.context["search_query"] == "Studio Nord"
+    assert response.context["page_obj"].paginator.count == 1
+    html = response.content.decode()
+    assert "Studio Nord" in html
+    assert "Atelier Premier" not in html
+
+    response = client.get(list_url, {"status": "unknown"})
+    assert response.status_code == 200
+    assert response.context["active_status"] == ProspectProfile.Status.PENDING_REVIEW
+
+
+@pytest.mark.django_db
 def test_only_reviewer_can_approve_and_approval_keeps_org_inactive(client):
     profile = submit_request(client)
     profile.status = ProspectProfile.Status.PENDING_REVIEW

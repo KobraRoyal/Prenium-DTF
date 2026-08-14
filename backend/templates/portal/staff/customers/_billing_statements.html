@@ -1,0 +1,90 @@
+{% load portal_tags %}
+<details
+  id="billing-statements"
+  class="staff-customer-workspace__section"
+  aria-labelledby="billing-statements-title"
+  data-customer-section
+  data-testid="customer-billing-statements"
+  {% if billing_statement_form.errors %}open{% endif %}
+>
+  <summary class="staff-customer-workspace__summary">
+    <span>
+      <h2 id="billing-statements-title">Récapitulatifs de facturation</h2>
+      <small>Clôture mensuelle et exports pour l’outil comptable</small>
+    </span>
+    <span class="staff-customer-workspace__summary-meta">{{ billing_statements|length }} relevé{{ billing_statements|length|pluralize }}</span>
+  </summary>
+  <div class="staff-customer-workspace__body billing-statement-panel">
+
+  {% if can_generate_billing_statements and billing_statement_form %}
+  <form
+    class="billing-statement-create"
+    method="post"
+    action="{% url 'portal:staff-customer-billing-statement-create' customer_public_id=customer.public_id %}"
+    data-submit-loading
+  >
+    {% csrf_token %}
+    <div class="billing-statement-create__copy">
+      <strong>Générer un récapitulatif mensuel</strong>
+      <span>Seuls les mois terminés peuvent être clôturés. Cette action fige les montants rattachés.</span>
+    </div>
+    <div class="ui-field-group billing-statement-create__field">
+      <label class="ui-label" for="{{ billing_statement_form.month.id_for_label }}">Mois à clôturer</label>
+      {{ billing_statement_form.month }}
+      {% if billing_statement_form.month.errors %}
+      <p class="error-text ui-error-text" role="alert">{{ billing_statement_form.month.errors|striptags }}</p>
+      {% endif %}
+    </div>
+    <button class="ui-btn ui-btn-primary" type="submit">Générer le récapitulatif</button>
+    {% if billing_statement_form.non_field_errors %}
+    <p class="error-text ui-error-text billing-statement-create__error" role="alert">
+      {{ billing_statement_form.non_field_errors|striptags }}
+    </p>
+    {% endif %}
+  </form>
+  {% endif %}
+
+  {% if billing_statements %}
+  <div class="billing-statement-list" role="list" aria-label="Récapitulatifs générés">
+    {% for statement in billing_statements %}
+    <article class="billing-statement-row" role="listitem">
+      <div class="billing-statement-row__identity">
+        <strong>{{ statement.label }}</strong>
+        <span><code>{{ statement.public_id|short_ref }}</code> · généré le {{ statement.created_at|date:"d/m/Y" }}</span>
+      </div>
+      <dl class="billing-statement-row__facts">
+        <div>
+          <dt>Période</dt>
+          <dd><time datetime="{{ statement.period_start|date:'Y-m-d' }}">{{ statement.period_start|date:"d/m/Y" }}</time> – <time datetime="{{ statement.period_end|date:'Y-m-d' }}">{{ statement.period_end|date:"d/m/Y" }}</time></dd>
+        </div>
+        <div>
+          <dt>Commandes</dt>
+          <dd>{{ statement.order_count }}</dd>
+        </div>
+        <div>
+          <dt>Total à facturer HT</dt>
+          <dd>{{ statement.total_amount }} {{ statement.currency }}</dd>
+        </div>
+      </dl>
+      <div class="billing-statement-row__action">
+        <span class="badge {{ statement.status|badge_tone }}">{{ statement.get_status_display }}</span>
+        <a
+          class="ui-btn ui-btn-secondary ui-btn-sm"
+          href="{% url 'portal:staff-customer-billing-statement-export' customer_public_id=customer.public_id statement_public_id=statement.public_id %}"
+          download
+        >Exporter CSV</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="billing-statement-empty">
+    <div class="billing-statement-empty__marker" aria-hidden="true">CSV</div>
+    <div>
+      <strong>Aucun récapitulatif généré</strong>
+      <p>Le premier relevé apparaîtra ici après la clôture d’un mois contenant des commandes en encours tarifées.</p>
+    </div>
+  </div>
+  {% endif %}
+  </div>
+</details>

@@ -191,6 +191,15 @@ class ProspectReviewService:
             vat_number=profile.vat_number,
             is_active=False,
         )
+        from apps.customers.services.volume_discounts import (
+            DefaultCustomerVolumeDiscountTierService,
+        )
+
+        DefaultCustomerVolumeDiscountTierService().apply_to_customer(
+            customer=customer,
+            actor=actor,
+            source="prospect_approval",
+        )
         from apps.customers.services.invitations import CustomerInvitationService
 
         CustomerInvitationService().create_owner_activation(

@@ -3,6 +3,7 @@ from django.contrib import admin
 from apps.auditlog.admin import AdminAuditMixin
 
 from .models import Customer, CustomerBillingProfile, CustomerMembership
+from .services.volume_discounts import DefaultCustomerVolumeDiscountTierService
 
 
 class CustomerBillingProfileInline(admin.StackedInline):
@@ -109,6 +110,15 @@ class CustomerAdmin(AdminAuditMixin, admin.ModelAdmin):
             },
         ),
     )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change:
+            DefaultCustomerVolumeDiscountTierService().apply_to_customer(
+                customer=obj,
+                actor=request.user,
+                source="django_admin",
+            )
 
 
 @admin.register(CustomerMembership)
