@@ -18,6 +18,17 @@ ACTIONABLE_PROJECT_STATUSES = {
 }
 
 
+def build_client_volume_discount_summary(*, customer):
+    if customer.default_billing_mode != customer.DefaultBillingMode.DEFERRED:
+        return None
+    from apps.customers.services.volume_discounts import CustomerVolumeDiscountTierService
+
+    summary = CustomerVolumeDiscountTierService().get_current_month_summary(customer=customer)
+    return (
+        summary if summary["current_tier"] is not None or summary["next_tier"] is not None else None
+    )
+
+
 def _project_focus(*, customer, project) -> dict[str, str]:
     item_count = len(project.items.all())
     return {

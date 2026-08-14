@@ -43,6 +43,8 @@
 - [Sprint 34 — Audit et fiabilité production](sprint-34-audit-fiabilite-production.md)
 - [Sprint 35 — Durcissement frontend Impeccable](sprint-35-durcissement-frontend-impeccable.md)
 - [Sprint 36 — Correctif de schéma des imports visuels](sprint-36-correctif-schema-imports-visuels.md)
+- [Sprint 37 — Remise dégressive sur volume mensuel](sprint-37-remise-volume-mensuelle.md)
+- [Sprint 38 — Récapitulatif de facturation externalisée](sprint-38-recap-facturation-externe.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

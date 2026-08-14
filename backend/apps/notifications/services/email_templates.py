@@ -90,6 +90,11 @@ EMAIL_TAGS = (
         "Commentaire Atelier",
         "Merci de fournir une version 300 DPI sur fond transparent.",
     ),
+    EmailTag("volume.month", "Mois du palier", "août 2026"),
+    EmailTag("volume.monthly_linear_m", "Volume mensuel atteint", "125,5000"),
+    EmailTag("volume.threshold_linear_m", "Seuil du palier", "100,0000"),
+    EmailTag("volume.discount_percent", "Remise du palier", "10,00"),
+    EmailTag("volume.discount_amount", "Remise cumulée HT", "125,50"),
     EmailTag("prospect.first_name", "Prénom du prospect", "Camille"),
     EmailTag("prospect.last_name", "Nom du prospect", "Martin"),
     EmailTag("prospect.company", "Société du prospect", "Atelier Démo"),
@@ -440,6 +445,29 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "Total TTC : {{ order.total_amount }} {{ order.currency }}\n"
             "Mode : {{ order.billing_mode }}\n"
             "Lien client : {{ action.url }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.VOLUME_DISCOUNT_TIER_REACHED,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Palier de remise atteint",
+        audience_label="Client",
+        description=(
+            "Informe une seule fois le client lorsqu’il atteint un nouveau palier "
+            "de volume au cours du mois."
+        ),
+        subject="Votre palier de remise de {{ volume.discount_percent }} % est atteint",
+        body=(
+            "Bonjour,\n\n"
+            "Votre volume DTF pour {{ customer.name }} a atteint "
+            "{{ volume.monthly_linear_m }} m linéaires en {{ volume.month }}.\n\n"
+            "Palier atteint : {{ volume.threshold_linear_m }} m\n"
+            "Remise appliquée : {{ volume.discount_percent }} % sur l’ensemble du "
+            "volume DTF éligible du mois\n"
+            "Remise cumulée actuelle : {{ volume.discount_amount }} EUR HT\n\n"
+            "Suivez votre progression dans votre espace client :\n"
+            "{{ action.url }}\n\n"
+            "Cordialement,\nL’équipe {{ site.name }}"
         ),
     ),
     _definition(

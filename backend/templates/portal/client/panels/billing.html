@@ -150,6 +150,15 @@
       Encours actif — aucun paiement en ligne pour cette commande.
       {% if order.pricing_status == "priced" %}
       Montant estimé : <strong>{{ order.total_amount }} {{ order.currency }}</strong>.
+      {% if order.monthly_volume_linear_m is not None %}
+      Volume éligible du mois : <strong>{{ order.monthly_volume_linear_m }} m</strong>.
+        {% if order.volume_discount_percent %}
+        Palier atteint : <strong>-{{ order.volume_discount_percent }} %</strong> sur tout le DTF du mois
+        (soit -{{ order.volume_discount_amount }} {{ order.currency }} HT sur cette commande).
+        {% else %}
+        Aucun palier de remise atteint à ce stade.
+        {% endif %}
+      {% endif %}
       {% else %}
       Montant communiqué après contrôle technique.
       {% endif %}

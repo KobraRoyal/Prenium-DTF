@@ -2,13 +2,13 @@
 
 ## Verdict
 
-**Score global : 86 / 100.** Le portail Atelier est cohérent, responsive et adapté au pilotage opérationnel. Le Django Admin reste volontairement une surface technique superuser : il est fonctionnel et responsive, mais son vocabulaire et son identité visuelle ne doivent pas être utilisés pour les réglages métier.
+**Score global après itération du 13 août 2026 : 89 / 100.** Le portail Atelier est cohérent, responsive et adapté au pilotage opérationnel. Le Django Admin reste volontairement une surface technique superuser : il est fonctionnel et responsive, mais son vocabulaire et son identité visuelle ne doivent pas être utilisés pour les réglages métier.
 
 | Surface | Score | Verdict |
 | --- | ---: | --- |
 | Portail Atelier | **94 / 100** | Hiérarchie claire, actions lisibles, responsive 375 px sans débordement, console propre |
 | Django Admin | **70 / 100** | Correct comme outil technique, mais modèles majoritairement nommés en anglais et identité distincte du portail produit |
-| Éditeur d’e-mails | **94 / 100** | Intégré au portail Atelier, permissions fines, aperçu, tags contrôlés et audit des modifications |
+| Éditeur d’e-mails | **97 / 100** | Registre compact, aperçu prioritaire, recherche de tags, permissions fines et audit des modifications |
 
 ## Périmètre contrôlé
 
@@ -39,6 +39,8 @@ Captures de recette dans `output/playwright/` : dashboard Atelier, fiche command
 - Entrée **E-mails** ajoutée à la navigation uniquement pour les rôles autorisés.
 - Éditeur produit créé dans le portail Atelier plutôt que dans le Django Admin technique.
 - Interface responsive : messages clients et internes séparés, état actif, version, aperçu et insertion au curseur.
+- Refonte Impeccable du registre et de l’éditeur : statut global scannable, lignes compactes,
+  aperçu en tête des outils, recherche de tags, compteur d’objet et état des modifications.
 
 ## Sécurité et cohérence métier
 
@@ -71,6 +73,7 @@ Aucun défaut bloquant restant sur le périmètre audité.
 ## Checklist de validation
 
 - [x] Atelier desktop et mobile vérifié.
+- [x] Liste et détail des modèles d’e-mails vérifiés à nouveau en desktop et mobile le 13 août 2026.
 - [x] Admin desktop et mobile vérifié.
 - [x] Aucun overflow horizontal à 375 px.
 - [x] Navigation et vocabulaire Atelier harmonisés.

@@ -441,6 +441,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
     def test_staff_customer_detail_exposes_settlement_mode_choice(self) -> None:
         source = template_source("portal/staff/customers/detail.html")
         listing = template_source("portal/staff/customers/list.html")
+        statements = template_source("portal/staff/customers/_billing_statements.html")
 
         self.assertIn("staff-customer-focus", source)
         self.assertIn("default_billing_mode", source)
@@ -448,6 +449,49 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Comptant — carte bancaire", source)
         self.assertIn("settlement_badge", listing)
         self.assertIn("default_billing_mode", listing)
+        self.assertIn("customer-billing-statements", statements)
+        self.assertIn("staff-customer-billing-statement-create", statements)
+        self.assertIn("staff-customer-billing-statement-export", statements)
+        self.assertNotIn("Facturation externalisée", statements)
+
+    def test_staff_customer_detail_distills_long_account_into_accessible_workspace(self) -> None:
+        source = template_source("portal/staff/customers/detail.html")
+        statements = template_source("portal/staff/customers/_billing_statements.html")
+        workspace_css = static_source("css/components/customer-account-workspace.css")
+        portal_entrypoint = static_source("css/entries/portal.css")
+        runtime = static_source("js/customer-account-workspace.js")
+
+        self.assertIn("data-customer-workspace", source)
+        for section_id in [
+            "customer-account",
+            "customer-pricing",
+            "customer-volume",
+            "billing-statements",
+            "customer-access",
+        ]:
+            with self.subTest(section_id=section_id):
+                combined_templates = f"{source}\n{statements}"
+                self.assertIn(f'id="{section_id}"', combined_templates)
+                self.assertIn(f'href="#{section_id}"', source)
+
+        self.assertIn("<details", source)
+        self.assertIn("staff-customer-subsection", source)
+        self.assertIn("staff-customer-subsection__copy", source)
+        self.assertIn("staff-customer-address__locality", source)
+        self.assertIn('field_class="staff-customer-address__country"', source)
+        self.assertIn("staff-customer-form__actions", source)
+        self.assertNotIn("sm:grid-cols-3", source)
+        self.assertIn("account_address_has_errors", source)
+        self.assertIn("volume_discount_has_errors", source)
+        self.assertIn("data-customer-section", statements)
+        self.assertIn("position: sticky", workspace_css)
+        self.assertIn("grid-template-columns: minmax(7.5rem, 0.8fr)", workspace_css)
+        self.assertIn(".staff-customer-settlement", workspace_css)
+        self.assertIn("@media (max-width: 639px)", workspace_css)
+        self.assertIn("customer-account-workspace.css", portal_entrypoint)
+        self.assertIn("revealCustomerSection", runtime)
+        self.assertIn("prefers-reduced-motion: reduce", runtime)
+        self.assertIn("js/customer-account-workspace.js", source)
 
     def test_staff_access_requests_match_staff_entity_patterns(self) -> None:
         listing = template_source("portal/staff/access_requests/list.html")
@@ -466,6 +510,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("staff-data-list", listing)
         self.assertIn("profile.status|badge_tone", listing)
         self.assertIn("prospect-filter-bar", listing)
+        self.assertIn("access-request-command", listing)
+        self.assertIn("access-request-search", listing)
+        self.assertIn("profile.get_monthly_volume_display", listing)
+        self.assertIn("profile.get_urgency_display", listing)
         self.assertIn("aria-current", listing)
 
         self.assertIn("staff-access-focus", detail)
@@ -907,10 +955,20 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_staff_inspection_uses_compact_summary_without_nested_metric_cards(self) -> None:
         source = template_source("portal/staff/panels/inspection.html")
+        portal_entry = static_source("css/entries/portal.css")
+        inspection_css = static_source("css/components/inspection-workbench.css")
 
         self.assertIn("atelier-inspection__summary", source)
+        self.assertIn("Priorité de contrôle", source)
         self.assertIn("Analyse automatique", source)
         self.assertIn("Décision Atelier", source)
+        self.assertIn("Action requise", source)
+        self.assertIn("Le client sera notifié par e-mail", source)
+        self.assertIn('class="atelier-inspection__review-grid"', source)
+        self.assertIn('@import "../components/inspection-workbench.css";', portal_entry)
+        self.assertIn(".atelier-inspection__review-block--decision", inspection_css)
+        self.assertIn("@media (max-width: 639px)", inspection_css)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", inspection_css)
         self.assertNotIn("font-display text-2xl", source)
         self.assertNotIn("uppercase tracking-wide", source)
 

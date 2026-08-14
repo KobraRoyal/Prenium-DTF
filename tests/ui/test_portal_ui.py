@@ -1,7 +1,8 @@
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from apps.customers.models import Customer, CustomerMembership
+from apps.customers.models import Customer, CustomerMembership, CustomerVolumeDiscountTier
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
 from django.contrib.auth import get_user_model
@@ -108,6 +109,43 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     assert billing_full_page.status_code == 302
     assert "panel=billing" in billing_full_page["Location"]
     assert "/panels/billing/" not in billing_full_page["Location"]
+
+
+@pytest.mark.django_db
+def test_client_dashboard_shows_only_scoped_customer_volume_tier():
+    user = get_user_model().objects.create_user(
+        email="volume-dashboard@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Mon atelier", default_billing_mode="deferred")
+    other_customer = Customer.objects.create(name="Atelier voisin", default_billing_mode="deferred")
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=user,
+        role=CustomerMembership.Role.OWNER,
+    )
+    CustomerVolumeDiscountTier.objects.create(
+        customer=customer,
+        minimum_monthly_linear_m=Decimal("10.0000"),
+        discount_percent=Decimal("5.00"),
+    )
+    CustomerVolumeDiscountTier.objects.create(
+        customer=other_customer,
+        minimum_monthly_linear_m=Decimal("1.0000"),
+        discount_percent=Decimal("99.00"),
+    )
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+
+    response = client.get(reverse("portal:client-dashboard"))
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert 'data-testid="client-volume-discount-summary"' in html
+    assert "Votre remise volume" in html
+    assert "10,0000 m" in html or "10.0000 m" in html
+    assert "99,00 %" not in html
+    assert "99.00 %" not in html
 
 
 @pytest.mark.django_db

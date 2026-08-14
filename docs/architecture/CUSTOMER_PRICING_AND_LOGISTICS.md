@@ -20,6 +20,18 @@ Grille de référence (ajustable dans le **catalogue** `CatalogService`, pas par
 4. **TVA** : **20 %** (`ORDER_VAT_RATE_IMMEDIATE`) uniquement si `billing_mode=immediate` (comptant CB), sur **sous-total HT + port**.  
    - Encours (`deferred`) : **`total_amount` = HT produit + frais de port** (pas de TVA dans le Hub). La TVA et la facture mensuelle / bimensuelle sont gérées **hors outil** (logiciel de facturation externe).
 
+5. **Remise volume mensuelle client** : uniquement pour les commandes `deferred`.
+   - Les paliers `CustomerVolumeDiscountTier` sont configurés dans la fiche client Atelier.
+   - Le volume équivalent linéaire du mois est la somme des quantités DTF en m² divisée par la
+     laize en mètres.
+   - Le plus haut seuil atteint fournit un taux unique, appliqué rétroactivement à tout le DTF du
+     mois encore non relevé.
+   - Préparation, port, comptant CB et commandes déjà rattachées à un relevé sont exclus.
+   - La grille Atelier `DefaultCustomerVolumeDiscountTier` est copiée à la création de chaque
+     nouveau client en encours ; la copie devient ensuite indépendante et personnalisable.
+   - Le client voit sa progression sur son dashboard et reçoit un e-mail une fois par nouveau
+     seuil atteint dans le mois. Le message est personnalisable dans les modèles d’e-mails Atelier.
+
 ### Catalogue — résolution anti-régression
 
 - **Préparation fichier** : `Customer.negotiated_file_preparation_fee_eur` si renseigné, sinon service préféré `CATALOG_PREFERRED_FILE_PREP_CODES` (défaut `seed-file-prep`), puis éventuel `seed-*`, puis premier actif.
@@ -40,9 +52,18 @@ tax_amount       = (subtotal + shipping) × 20 % si immediate, sinon 0
 total_amount     = subtotal + shipping + tax  # Stripe TTC (comptant) ou HT+port (encours)
 ```
 
+Pour l’encours avec palier :
+
+```text
+DTF_net          = DTF_brut × (1 - remise_palier / 100)
+subtotal_amount  = DTF_net + préparation
+```
+
 ### Implémentation (`OrderPricingService.compute_and_persist_order_pricing`)
 
 - Une **ligne de commande par fichier** pour le DTF (quantité = m², prix unitaire = prix catalogue au m²).
+- En encours, ces lignes sont recalculées avec le taux mensuel et le prix brut est conservé dans
+  `Order.volume_discount_base_unit_price_eur`.
 - Une **ligne supplémentaire** « Préparation fichier » : quantité = nombre de fichiers, prix unitaire = forfait résolu (catalogue ou négocié client), total = N × forfait.
 - Port + TVA **hors** `OrderLine` (champs Order dédiés) pour ne pas mélanger produit et logistique.
 - Même formule dans `estimate_gang_sheet_quote` (devis pré-paiement).

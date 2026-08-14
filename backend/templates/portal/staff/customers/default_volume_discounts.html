@@ -1,0 +1,75 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Remises par défaut - Atelier{% endblock %}
+
+{% block portal_content %}
+{% include "components/portal/page_head.html" with title="Remises volume par défaut" subtitle="Cette grille est copiée sur chaque nouveau compte en encours. Les comptes existants conservent leurs propres conditions." %}
+
+<section class="volume-discount-settings" data-testid="default-volume-discount-settings" aria-labelledby="default-tier-grid-title">
+  <div class="volume-discount-settings__main">
+    <header class="volume-discount-settings__intro">
+      <div>
+        <h2 id="default-tier-grid-title">Grille de référence</h2>
+        <p>Les seuils sont lus dans l’ordre croissant. La remise doit augmenter avec le volume.</p>
+      </div>
+      <div class="volume-discount-settings__tools">
+        <span class="volume-discount-settings__count">
+          <strong>{{ active_tier_count }}</strong>
+          palier{{ active_tier_count|pluralize }} actif{{ active_tier_count|pluralize }}
+        </span>
+        {% if perms.notifications.view_emailtemplate %}
+        <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-email-template-edit' event='volume_discount_tier_reached' audience='client' %}">Configurer l’e-mail client</a>
+        {% endif %}
+      </div>
+    </header>
+
+    {% if tier_rows %}
+    <ol class="volume-tier-list" aria-label="Paliers par défaut configurés">
+      {% for row in tier_rows %}
+        {% url 'portal:staff-default-volume-discount-tier-update' tier_public_id=row.tier.public_id as tier_update_url %}
+        {% include "portal/staff/customers/_volume_discount_tier_row.html" with action_url=tier_update_url tier=row.tier form=row.form position=row.position state="default" state_label="Copié à la création" state_badge_class="is-neutral" %}
+      {% endfor %}
+    </ol>
+    <p class="volume-discount-settings__note">
+      Les paliers désactivés restent dans la grille pour référence, mais ne sont pas copiés sur les nouveaux comptes.
+    </p>
+    {% else %}
+    <div class="volume-tier-empty">
+      <div class="volume-tier-empty__marker" aria-hidden="true">%</div>
+      <div>
+        <h3>Aucun palier par défaut</h3>
+        <p>Ajoutez le premier seuil pour préparer automatiquement les nouveaux clients en encours.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <aside class="volume-tier-create-card" aria-labelledby="new-default-tier-title">
+    <div class="volume-tier-create-card__head">
+      <h2 id="new-default-tier-title">Ajouter un palier</h2>
+      <p>Définissez le volume mensuel à atteindre, puis la remise appliquée à tout le DTF éligible du mois.</p>
+    </div>
+    <form class="ui-form-stack" method="post" action="{% url 'portal:staff-default-volume-discount-tier-create' %}" data-submit-loading>
+      {% csrf_token %}
+      {% if add_form.non_field_errors %}<p class="error-text ui-error-text" role="alert">{{ add_form.non_field_errors|striptags }}</p>{% endif %}
+      <div class="ui-field-group">
+        <label class="ui-label" for="{{ add_form.minimum_monthly_linear_m.id_for_label }}">Seuil mensuel (m linéaires)</label>
+        {{ add_form.minimum_monthly_linear_m }}
+        <p class="ui-help">Atteint dès que le volume mensuel est supérieur ou égal à ce seuil.</p>
+        {% if add_form.minimum_monthly_linear_m.errors %}<p class="error-text ui-error-text" role="alert">{{ add_form.minimum_monthly_linear_m.errors|striptags }}</p>{% endif %}
+      </div>
+      <div class="ui-field-group">
+        <label class="ui-label" for="{{ add_form.discount_percent.id_for_label }}">Remise générale (%)</label>
+        {{ add_form.discount_percent }}
+        <p class="ui-help">Appliquée rétroactivement à tout le DTF éligible du mois.</p>
+        {% if add_form.discount_percent.errors %}<p class="error-text ui-error-text" role="alert">{{ add_form.discount_percent.errors|striptags }}</p>{% endif %}
+      </div>
+      <label class="volume-tier-toggle" for="{{ add_form.is_active.id_for_label }}">
+        {{ add_form.is_active }}
+        <span>Activer et copier ce palier</span>
+      </label>
+      <button class="ui-btn ui-btn-primary" type="submit">Ajouter à la grille</button>
+    </form>
+  </aside>
+</section>
+{% endblock %}

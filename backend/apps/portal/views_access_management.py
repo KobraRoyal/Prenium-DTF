@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
@@ -60,17 +61,51 @@ class StaffAccessRequestListView(StaffDomainPermissionMixin, View):
     def get(self, request):
         status = request.GET.get("status", ProspectProfile.Status.PENDING_REVIEW)
         allowed_statuses = set(ProspectProfile.Status.values)
-        queryset = ProspectProfile.objects.select_related("reviewed_by", "customer")
-        if status in allowed_statuses:
-            queryset = queryset.filter(status=status)
+        if status not in allowed_statuses:
+            status = ProspectProfile.Status.PENDING_REVIEW
+        search_query = request.GET.get("q", "").strip()[:120]
+        base_queryset = ProspectProfile.objects.all()
+        status_counts = {
+            row["status"]: row["count"]
+            for row in base_queryset.values("status").annotate(count=Count("pk"))
+        }
+        queryset = base_queryset.select_related("reviewed_by", "customer").filter(status=status)
+        if search_query:
+            queryset = queryset.filter(
+                Q(company__icontains=search_query)
+                | Q(first_name__icontains=search_query)
+                | Q(last_name__icontains=search_query)
+                | Q(email__icontains=search_query)
+                | Q(siren__icontains=search_query)
+                | Q(vat_number__icontains=search_query)
+            )
         page_obj = Paginator(queryset, 25).get_page(request.GET.get("page"))
+        status_filters = [
+            {
+                "value": value,
+                "label": label,
+                "count": status_counts.get(value, 0),
+                "is_active": value == status,
+            }
+            for value, label in ProspectProfile.Status.choices
+        ]
         return render(
             request,
             self.template_name,
             {
                 "page_obj": page_obj,
                 "active_status": status,
-                "status_choices": ProspectProfile.Status.choices,
+                "active_status_label": ProspectProfile.Status(status).label,
+                "status_filters": status_filters,
+                "search_query": search_query,
+                "pending_review_count": status_counts.get(
+                    ProspectProfile.Status.PENDING_REVIEW,
+                    0,
+                ),
+                "high_urgency_pending_count": base_queryset.filter(
+                    status=ProspectProfile.Status.PENDING_REVIEW,
+                    urgency=ProspectProfile.Urgency.HIGH,
+                ).count(),
                 "nav_mode": "staff",
                 "nav_key": "staff-access-requests",
             },

@@ -79,11 +79,20 @@ from .views_staff import (
     StaffOrderPriceView,
 )
 from .views_staff_billing import StaffInvoiceMarkPaidView, StaffOrderPanelBillingView
+from .views_staff_billing_statements import (
+    StaffCustomerBillingStatementCreateView,
+    StaffCustomerBillingStatementExportView,
+)
 from .views_staff_customers import (
     StaffCustomerAccountUpdateView,
     StaffCustomerDetailView,
     StaffCustomerListView,
     StaffCustomerPricingUpdateView,
+    StaffCustomerVolumeDiscountTierCreateView,
+    StaffCustomerVolumeDiscountTierUpdateView,
+    StaffDefaultVolumeDiscountSettingsView,
+    StaffDefaultVolumeDiscountTierCreateView,
+    StaffDefaultVolumeDiscountTierUpdateView,
 )
 from .views_staff_dashboard import StaffDashboardView
 from .views_staff_documents import StaffManufacturingOrderBatchPdfView
@@ -396,6 +405,26 @@ urlpatterns = [
         name="staff-customer-pricing-update",
     ),
     path(
+        "staff/customers/<uuid:customer_public_id>/pricing/volume-tiers/",
+        StaffCustomerVolumeDiscountTierCreateView.as_view(),
+        name="staff-customer-volume-discount-tier-create",
+    ),
+    path(
+        "staff/customers/<uuid:customer_public_id>/pricing/volume-tiers/<uuid:tier_public_id>/",
+        StaffCustomerVolumeDiscountTierUpdateView.as_view(),
+        name="staff-customer-volume-discount-tier-update",
+    ),
+    path(
+        "staff/customers/<uuid:customer_public_id>/billing-statements/",
+        StaffCustomerBillingStatementCreateView.as_view(),
+        name="staff-customer-billing-statement-create",
+    ),
+    path(
+        "staff/customers/<uuid:customer_public_id>/billing-statements/<uuid:statement_public_id>/export.csv",
+        StaffCustomerBillingStatementExportView.as_view(),
+        name="staff-customer-billing-statement-export",
+    ),
+    path(
         "staff/access-requests/<uuid:profile_public_id>/",
         StaffAccessRequestDetailView.as_view(),
         name="staff-access-request-detail",
@@ -414,6 +443,21 @@ urlpatterns = [
         "staff/settings/email-templates/",
         StaffEmailTemplateListView.as_view(),
         name="staff-email-template-list",
+    ),
+    path(
+        "staff/settings/volume-discounts/",
+        StaffDefaultVolumeDiscountSettingsView.as_view(),
+        name="staff-default-volume-discount-settings",
+    ),
+    path(
+        "staff/settings/volume-discounts/tiers/",
+        StaffDefaultVolumeDiscountTierCreateView.as_view(),
+        name="staff-default-volume-discount-tier-create",
+    ),
+    path(
+        "staff/settings/volume-discounts/tiers/<uuid:tier_public_id>/",
+        StaffDefaultVolumeDiscountTierUpdateView.as_view(),
+        name="staff-default-volume-discount-tier-update",
     ),
     path(
         "staff/settings/gang-sheets/",

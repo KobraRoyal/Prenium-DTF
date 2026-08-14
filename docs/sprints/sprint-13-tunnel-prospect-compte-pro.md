@@ -64,6 +64,16 @@ docker compose exec -T worker sh -lc \
   'cd /app/backend && celery -A config inspect registered'
 ```
 
+### Expérience file Atelier — 13 août 2026
+
+- La liste affiche les volumes par statut, le nombre de dossiers prêts à examiner et les urgences
+  élevées avant toute ouverture de fiche.
+- Une recherche serveur permet de retrouver une entreprise, un contact, un e-mail, un SIREN ou
+  un identifiant fiscal dans le statut actif ; la recherche est conservée pendant la pagination.
+- Le volume mensuel déclaré et l’urgence sont visibles dans le tableau desktop et les cartes
+  mobiles afin de prioriser la revue sans masquer les contrôles de permission existants.
+- Les états sans résultat expliquent si la file est à jour ou si la recherche doit être élargie.
+
 ## URLs principales
 
 - `/demande-acces/etape-1/` à `/demande-acces/etape-3/`
@@ -101,12 +111,13 @@ Les paramètres SMTP existants restent ceux de l’environnement. Aucun secret n
 - [x] Étape projet convertie en cartes de choix tactiles accessibles au clavier
 - [x] Récapitulatif, consentement et étapes post-envoi clarifiés
 - [x] Backoffice de décision et gestion d’équipe ajoutés
+- [x] File Atelier enrichie avec compteurs par état, recherche et signaux commerciaux
 - [x] Retour HTMX du formulaire d’invitation avec erreurs inline et état en attente
 - [x] Test d’exécution de la tâche e-mail collaborateur et lien signé
 - [x] Procédure de rechargement du registre Celery documentée
 - [x] Documentation du lot mise à jour
 - [ ] Recette SMTP avec le domaine réel en environnement cible
-- [ ] Recette navigateur desktop/mobile avec comptes de démonstration
+- [x] Recette navigateur desktop/mobile de la file Atelier avec compte de démonstration
 
 ## Commandes de validation
 

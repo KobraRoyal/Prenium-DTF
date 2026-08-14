@@ -2,6 +2,7 @@ from celery import shared_task
 
 from apps.customers.models import CustomerInvitation
 from apps.notifications.services.transactional import (
+    deliver_volume_discount_tier_notification,
     send_access_request_approved_email,
     send_access_request_rejected_email,
     send_access_request_submitted_internal_email,
@@ -225,3 +226,14 @@ def send_file_correction_requested_email_task(review_public_id: str) -> None:
         return
     if send_file_correction_requested_email(review=review):
         OrderUploadReviewService().mark_client_notified(review_public_id=review.public_id)
+
+
+@shared_task(
+    name="notifications.send_volume_discount_tier_reached_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_volume_discount_tier_reached_email_task(notification_public_id: str) -> None:
+    deliver_volume_discount_tier_notification(notification_public_id=notification_public_id)

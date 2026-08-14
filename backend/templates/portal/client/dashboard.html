@@ -27,6 +27,43 @@
   <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">{{ client_focus.action_label }}</a>
 </section>
 {% endif %}
+{% if volume_discount_summary %}
+<section class="card client-dashboard-section" aria-labelledby="client-volume-discount-title" data-testid="client-volume-discount-summary">
+  <div class="client-dashboard-section__head">
+    <div>
+      <p class="muted text-xs font-bold uppercase tracking-wider">Avantage mensuel</p>
+      <h2 class="mt-1 font-display text-lg" id="client-volume-discount-title">Votre remise volume</h2>
+      <p class="muted mt-1 text-sm">Progression de {{ volume_discount_summary.month|date:"F Y" }} sur les commandes DTF en encours non relevées.</p>
+    </div>
+    {% if volume_discount_summary.current_tier %}
+    <span class="badge is-success">Palier actuel · -{{ volume_discount_summary.current_tier.discount_percent }} %</span>
+    {% else %}
+    <span class="badge is-neutral">Aucun palier atteint</span>
+    {% endif %}
+  </div>
+  <dl class="grid gap-3 sm:grid-cols-3">
+    <div class="rounded-xl border border-base-300 p-4">
+      <dt class="muted text-sm">Volume actuel</dt>
+      <dd class="mt-1 font-display text-xl">{{ volume_discount_summary.monthly_volume_linear_m }} m</dd>
+    </div>
+    <div class="rounded-xl border border-base-300 p-4">
+      <dt class="muted text-sm">Remise actuelle</dt>
+      <dd class="mt-1 font-display text-xl">{% if volume_discount_summary.current_tier %}-{{ volume_discount_summary.current_tier.discount_percent }} %{% else %}0 %{% endif %}</dd>
+      <small class="muted">Appliquée à tout le DTF éligible du mois</small>
+    </div>
+    <div class="rounded-xl border border-base-300 p-4">
+      <dt class="muted text-sm">Prochain palier</dt>
+      {% if volume_discount_summary.next_tier %}
+      <dd class="mt-1 font-display text-xl">{{ volume_discount_summary.remaining_to_next_tier_linear_m }} m restants</dd>
+      <small class="muted">À {{ volume_discount_summary.next_tier.minimum_monthly_linear_m }} m : -{{ volume_discount_summary.next_tier.discount_percent }} %</small>
+      {% else %}
+      <dd class="mt-1 font-display text-xl">Palier maximal atteint</dd>
+      <small class="muted">Votre meilleur taux configuré est actif.</small>
+      {% endif %}
+    </div>
+  </dl>
+</section>
+{% endif %}
 {% if project_feature_enabled and recent_projects %}
 <section class="card client-dashboard-section" aria-labelledby="client-dashboard-preparations">
   <div class="client-dashboard-section__head">

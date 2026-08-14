@@ -18,10 +18,12 @@ Remplacer le tableau ambigu « Contrôle technique » par une expérience de rev
 ## UX livrée
 
 - synthèse compacte : à contrôler, prêts pour production, corrections demandées et alertes automatiques ;
+- une priorité de contrôle explicite avant la liste, avec consigne courte sur l’action suivante ;
 - une carte responsive par fichier avec aperçu protégé, métadonnées utiles et historique de décision ;
+- un poste de contrôle en deux temps : diagnostic automatique puis décision Atelier et actions associées ;
 - vocabulaire non ambigu : « Analyse réussie » n’est jamais affiché comme « Valide » ;
 - action principale « Approuver pour production » ;
-- demande de correction repliée avec motif, commentaire et notification client ;
+- demande de correction secondaire repliée, avec conséquence e-mail visible avant ouverture ;
 - lien direct vers la personnalisation de l’e-mail de correction ;
 - feedback HTMX local + toast, y compris pour les messages accentués.
 
@@ -42,7 +44,7 @@ Remplacer le tableau ambigu « Contrôle technique » par une expérience de rev
 - [x] Aperçu fichier médié par le backend.
 - [x] Notification client/interne personnalisable branchée sur Celery.
 - [x] Tests service, permission, isolation, portail, e-mail et cohérence UI ajoutés.
-- [x] CSS reconstruit et recette navigateur desktop/mobile effectuée.
+- [x] CSS reconstruit et recette navigateur desktop/mobile effectuée, y compris le poste de contrôle responsive.
 - [x] Documentation et checklist sprint mises à jour.
 
 ## Recette manuelle

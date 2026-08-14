@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.core.models import BaseModel
@@ -12,6 +12,8 @@ CUSTOMER_ROLE_MEMBER = "member"
 CUSTOMER_ROLE_READONLY = "readonly"
 
 ZERO_AMOUNT = Decimal("0.00")
+MIN_VOLUME_LINEAR_M = Decimal("0.0001")
+MAX_DISCOUNT_PERCENT = Decimal("100.00")
 
 
 class CustomerQuerySet(models.QuerySet):
@@ -237,6 +239,132 @@ class CustomerBillingProfile(BaseModel):
 
     def __str__(self) -> str:
         return f"Facturation {self.customer.name}"
+
+
+class CustomerVolumeDiscountTierQuerySet(models.QuerySet):
+    def for_customer(self, customer):
+        return self.filter(customer=customer)
+
+    def active(self):
+        return self.filter(is_active=True)
+
+
+class CustomerVolumeDiscountTier(BaseModel):
+    """Palier de remise rétroactive sur le volume DTF mensuel d'un client en encours."""
+
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="volume_discount_tiers",
+    )
+    minimum_monthly_linear_m = models.DecimalField(
+        "Seuil mensuel (m linéaires)",
+        max_digits=12,
+        decimal_places=4,
+        validators=[MinValueValidator(MIN_VOLUME_LINEAR_M)],
+    )
+    discount_percent = models.DecimalField(
+        "Remise (%)",
+        max_digits=5,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal("0.01")),
+            MaxValueValidator(MAX_DISCOUNT_PERCENT),
+        ],
+    )
+    is_active = models.BooleanField("Palier actif", default=True)
+
+    objects = CustomerVolumeDiscountTierQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("minimum_monthly_linear_m", "created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("customer", "minimum_monthly_linear_m"),
+                name="uniq_customer_volume_discount_threshold",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(minimum_monthly_linear_m__gt=0),
+                name="customer_volume_discount_threshold_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(discount_percent__gt=0)
+                    & models.Q(discount_percent__lte=MAX_DISCOUNT_PERCENT)
+                ),
+                name="customer_volume_discount_percent_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("customer", "is_active", "minimum_monthly_linear_m"),
+                name="cust_vol_tier_lookup_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.customer.name} — {self.minimum_monthly_linear_m} m : -{self.discount_percent} %"
+        )
+
+
+class DefaultCustomerVolumeDiscountTierQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(is_active=True)
+
+
+class DefaultCustomerVolumeDiscountTier(BaseModel):
+    """Palier global copié sur chaque nouveau client en encours."""
+
+    minimum_monthly_linear_m = models.DecimalField(
+        "Seuil mensuel (m linéaires)",
+        max_digits=12,
+        decimal_places=4,
+        validators=[MinValueValidator(MIN_VOLUME_LINEAR_M)],
+    )
+    discount_percent = models.DecimalField(
+        "Remise (%)",
+        max_digits=5,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal("0.01")),
+            MaxValueValidator(MAX_DISCOUNT_PERCENT),
+        ],
+    )
+    is_active = models.BooleanField("Palier actif", default=True)
+
+    objects = DefaultCustomerVolumeDiscountTierQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("minimum_monthly_linear_m", "created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("minimum_monthly_linear_m",),
+                name="uniq_default_volume_discount_threshold",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(minimum_monthly_linear_m__gt=0),
+                name="default_volume_discount_threshold_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(discount_percent__gt=0)
+                    & models.Q(discount_percent__lte=MAX_DISCOUNT_PERCENT)
+                ),
+                name="default_volume_discount_percent_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("is_active", "minimum_monthly_linear_m"),
+                name="default_vol_tier_lookup_idx",
+            ),
+        ]
+        verbose_name = "Palier de remise par défaut"
+        verbose_name_plural = "Paliers de remise par défaut"
+
+    def __str__(self) -> str:
+        return f"{self.minimum_monthly_linear_m} m : -{self.discount_percent} %"
 
 
 class CustomerMembership(BaseModel):

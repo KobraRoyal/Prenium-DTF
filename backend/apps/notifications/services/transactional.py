@@ -4,9 +4,12 @@ import logging
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db import transaction
 from django.urls import reverse
+from django.utils import formats, timezone
 
-from apps.notifications.models import EmailTemplate
+from apps.auditlog.services import record_event
+from apps.notifications.models import EmailTemplate, VolumeDiscountTierNotification
 from apps.notifications.services.email_templates import EmailTemplateService
 from apps.orders.models import Order
 
@@ -35,21 +38,16 @@ def _external_safe_recipients(
         return recipients
 
     safe_recipients: list[str] = []
-    blocked_domains: set[str] = set()
+    blocked_recipient = False
     for recipient in recipients:
         domain = recipient.strip().lower().rpartition("@")[2]
         if domain in _RESERVED_EMAIL_DOMAINS or domain.endswith(_RESERVED_EMAIL_SUFFIXES):
-            blocked_domains.add(domain or "missing-domain")
+            blocked_recipient = True
             continue
         safe_recipients.append(recipient)
 
-    if blocked_domains:
-        logger.warning(
-            "Blocked reserved QA recipient domain(s) for %s/%s: %s",
-            event,
-            audience,
-            ", ".join(sorted(blocked_domains)),
-        )
+    if blocked_recipient:
+        logger.warning("Blocked reserved QA recipient(s) before external email delivery.")
     return safe_recipients
 
 
@@ -74,6 +72,34 @@ def _recipient_emails_for_order(order: Order) -> list[str]:
         if m is not None and getattr(m.user, "email", ""):
             emails.append(m.user.email.strip())
 
+    return emails
+
+
+def _recipient_emails_for_customer(customer) -> list[str]:
+    emails: list[str] = []
+    seen: set[str] = set()
+
+    billing = (customer.billing_email or "").strip()
+    if billing:
+        emails.append(billing)
+        seen.add(billing.lower())
+
+    from apps.customers.models import CustomerMembership
+
+    memberships = (
+        CustomerMembership.objects.active()
+        .filter(
+            customer=customer,
+            role__in=(CustomerMembership.Role.OWNER, CustomerMembership.Role.ADMIN),
+        )
+        .select_related("user")
+        .order_by("role", "created_at")
+    )
+    for membership in memberships:
+        email = (membership.user.email or "").strip()
+        if email and email.lower() not in seen:
+            emails.append(email)
+            seen.add(email.lower())
     return emails
 
 
@@ -506,3 +532,191 @@ def schedule_file_correction_requested_email(*, review_public_id) -> None:
     transaction.on_commit(
         lambda: send_file_correction_requested_email_task.delay(str(review_public_id))
     )
+
+
+def _format_decimal(value, places: int) -> str:
+    return f"{value:.{places}f}".replace(".", ",")
+
+
+def send_volume_discount_tier_reached_email(*, notification) -> bool:
+    context = {
+        "site.name": "Prenium DTF",
+        "customer.name": notification.customer.name,
+        "customer.billing_email": notification.customer.billing_email or "",
+        "volume.month": formats.date_format(notification.month, "F Y"),
+        "volume.monthly_linear_m": _format_decimal(
+            notification.monthly_volume_linear_m,
+            4,
+        ),
+        "volume.threshold_linear_m": _format_decimal(
+            notification.threshold_linear_m,
+            4,
+        ),
+        "volume.discount_percent": _format_decimal(notification.discount_percent, 2),
+        "volume.discount_amount": _format_decimal(notification.discount_amount, 2),
+        "action.url": _absolute_url(reverse("portal:client-dashboard")),
+    }
+    sent = False
+    for recipient in _recipient_emails_for_customer(notification.customer):
+        delivered = _send_context_email(
+            event=EmailTemplate.Event.VOLUME_DISCOUNT_TIER_REACHED,
+            audience=EmailTemplate.Audience.CLIENT,
+            recipients=[recipient],
+            context=context,
+        )
+        sent = delivered or sent
+    return sent
+
+
+@transaction.atomic
+def schedule_volume_discount_tier_reached_email(
+    *,
+    customer,
+    month,
+    threshold_linear_m,
+    monthly_volume_linear_m,
+    discount_percent,
+    discount_amount,
+    actor,
+    source: str,
+) -> tuple[VolumeDiscountTierNotification, bool]:
+    from apps.customers.models import Customer
+
+    customer = Customer.objects.select_for_update().get(pk=customer.pk)
+    notification, created = VolumeDiscountTierNotification.objects.get_or_create(
+        customer=customer,
+        month=month,
+        threshold_linear_m=threshold_linear_m,
+        defaults={
+            "monthly_volume_linear_m": monthly_volume_linear_m,
+            "discount_percent": discount_percent,
+            "discount_amount": discount_amount,
+        },
+    )
+    if not created:
+        return notification, False
+
+    record_event(
+        action="customer.volume_discount_tier_notification_scheduled",
+        actor=actor if getattr(actor, "is_authenticated", False) else None,
+        target=notification,
+        metadata={
+            "customer_public_id": str(customer.public_id),
+            "month": month.isoformat(),
+            "threshold_linear_m": f"{threshold_linear_m:.4f}",
+            "discount_percent": f"{discount_percent:.2f}",
+            "source": source,
+        },
+    )
+    from apps.notifications.tasks import send_volume_discount_tier_reached_email_task
+
+    transaction.on_commit(
+        lambda: send_volume_discount_tier_reached_email_task.delay(str(notification.public_id))
+    )
+    return notification, True
+
+
+@transaction.atomic
+def _claim_volume_discount_tier_notification(*, notification_public_id):
+    notification = (
+        VolumeDiscountTierNotification.objects.select_for_update()
+        .select_related("customer")
+        .filter(public_id=notification_public_id)
+        .first()
+    )
+    if notification is None or notification.status != VolumeDiscountTierNotification.Status.PENDING:
+        return None
+    notification.status = VolumeDiscountTierNotification.Status.SENDING
+    notification.delivery_started_at = timezone.now()
+    notification.attempt_count += 1
+    notification.save(
+        update_fields=[
+            "status",
+            "delivery_started_at",
+            "attempt_count",
+            "updated_at",
+        ]
+    )
+    return notification
+
+
+@transaction.atomic
+def _finalize_volume_discount_tier_notification(*, notification_public_id, status):
+    notification = (
+        VolumeDiscountTierNotification.objects.select_for_update()
+        .select_related("customer")
+        .filter(
+            public_id=notification_public_id,
+            status=VolumeDiscountTierNotification.Status.SENDING,
+        )
+        .first()
+    )
+    if notification is None:
+        return None
+    notification.status = status
+    notification.sent_at = (
+        timezone.now() if status == VolumeDiscountTierNotification.Status.SENT else None
+    )
+    notification.save(update_fields=["status", "sent_at", "updated_at"])
+    return notification
+
+
+def _audit_volume_discount_delivery(*, notification, action: str) -> None:
+    record_event(
+        action=action,
+        actor=None,
+        target=notification,
+        metadata={
+            "customer_public_id": str(notification.customer.public_id),
+            "month": notification.month.isoformat(),
+            "threshold_linear_m": f"{notification.threshold_linear_m:.4f}",
+        },
+    )
+
+
+def deliver_volume_discount_tier_notification(*, notification_public_id) -> bool:
+    """Livre au plus une fois après une prise en charge persistée.
+
+    Un crash ambigu après acceptation SMTP laisse la trace en ``sending`` au lieu
+    de provoquer un renvoi automatique potentiellement doublon. L'admin permet
+    alors une réconciliation explicite à partir de l'état et de l'horodatage.
+    """
+    notification = _claim_volume_discount_tier_notification(
+        notification_public_id=notification_public_id
+    )
+    if notification is None:
+        return False
+    try:
+        sent = send_volume_discount_tier_reached_email(notification=notification)
+    except Exception:
+        failed = _finalize_volume_discount_tier_notification(
+            notification_public_id=notification_public_id,
+            status=VolumeDiscountTierNotification.Status.FAILED,
+        )
+        if failed is not None:
+            _audit_volume_discount_delivery(
+                notification=failed,
+                action="customer.volume_discount_tier_notification_failed",
+            )
+        raise
+
+    status = (
+        VolumeDiscountTierNotification.Status.SENT
+        if sent
+        else VolumeDiscountTierNotification.Status.SKIPPED
+    )
+    finalized = _finalize_volume_discount_tier_notification(
+        notification_public_id=notification_public_id,
+        status=status,
+    )
+    if finalized is None:
+        return False
+    _audit_volume_discount_delivery(
+        notification=finalized,
+        action=(
+            "customer.volume_discount_tier_notification_sent"
+            if sent
+            else "customer.volume_discount_tier_notification_skipped"
+        ),
+    )
+    return sent

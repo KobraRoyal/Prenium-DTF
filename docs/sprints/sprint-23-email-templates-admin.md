@@ -16,6 +16,19 @@ Permettre à l’équipe autorisée de personnaliser depuis le portail Atelier l
 - Destinataires internes configurés par `INTERNAL_NOTIFICATION_EMAILS` (liste séparée par des virgules).
 - Envoi asynchrone Celery existant conservé ; les tâches résolvent le modèle actif au moment de l’envoi.
 
+## Expérience Atelier — mise à niveau du 13 août 2026
+
+- La liste est présentée comme un registre opérationnel : état du catalogue, diffusion,
+  personnalisation, objet envoyé et action restent lisibles sur une même ligne.
+- L’éditeur place l’aperçu avant la palette de données et expose immédiatement l’audience,
+  l’état de diffusion, la source du modèle et sa version.
+- La palette de tags est repliable, recherchable sans accent et limitée en hauteur pour ne plus
+  repousser l’aperçu sous plusieurs écrans.
+- Le compteur d’objet et l’indicateur « À enregistrer » donnent un retour immédiat sans modifier
+  le contrat de validation serveur.
+- Le responsive empile le registre, les métadonnées, l’éditeur, l’aperçu et les tags sans
+  débordement horizontal ; toutes les actions restent utilisables au clavier.
+
 ## Contrat des tags
 
 Tags autorisés :
@@ -52,6 +65,7 @@ Les instructions Django, commentaires de template, tags inconnus, tags mal form�
 - [x] Service métier centralisé et moteur de tags à liste blanche.
 - [x] Envoi client et interne branché sur les événements métier, dont la correction fichier Atelier.
 - [x] Interface liste/édition/aperçu responsive dans le portail Atelier.
+- [x] Registre compact, aperçu prioritaire, recherche de tags et état de modification ajoutés.
 - [x] Insertion de tags au curseur et feedback toast.
 - [x] Permissions lecture/écriture vérifiées côté serveur.
 - [x] Action de modification auditée, sans corps du message dans les logs.

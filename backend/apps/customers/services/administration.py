@@ -33,7 +33,7 @@ class CustomerAdministrationService:
     def get_customer(self, *, customer_public_id):
         return (
             Customer.objects.select_related("billing_profile")
-            .prefetch_related("memberships__user")
+            .prefetch_related("memberships__user", "volume_discount_tiers")
             .filter(public_id=customer_public_id)
             .first()
         )
@@ -79,6 +79,19 @@ class CustomerAdministrationService:
         for field in tracked_fields:
             setattr(customer, field, cleaned_data[field])
         customer.save(update_fields=[*tracked_fields, "updated_at"])
+        if (
+            before["default_billing_mode"] != Customer.DefaultBillingMode.DEFERRED
+            and customer.default_billing_mode == Customer.DefaultBillingMode.DEFERRED
+        ):
+            from apps.customers.services.volume_discounts import (
+                DefaultCustomerVolumeDiscountTierService,
+            )
+
+            DefaultCustomerVolumeDiscountTierService().apply_to_customer(
+                customer=customer,
+                actor=actor,
+                source=f"{source}.billing_mode_changed",
+            )
         after = {field: getattr(customer, field) for field in tracked_fields}
         changes = {
             field: {"before": _serialize(before[field]), "after": _serialize(after[field])}
