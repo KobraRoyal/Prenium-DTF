@@ -68,7 +68,13 @@ def test_generated_surface_bundles_exist_and_contain_expected_markers() -> None:
     bundles = {
         "app.css": [".ui-skip-link", ".ui-field-group"],
         "marketing.css": [".landing-reveal", ".conversion-hero"],
-        "portal.css": [".product-layout", ".workflow-next-action", ".gang-sheet-page"],
+        "portal.css": [
+            ".product-layout",
+            ".workflow-next-action",
+            ".gang-sheet-page",
+            "body.product-shell",
+            "#f7f5f0",
+        ],
         "studio.css": [".gang-editor", ".gang-editor__workspace"],
     }
 
@@ -95,3 +101,18 @@ def test_build_pipeline_and_runtime_image_ship_every_css_bundle() -> None:
 
     assert "npm run build:css:app" in scripts["build:css"]
     assert "npm run build:css:studio" in scripts["build:css"]
+    assert "COPY backend/templates ./templates" in dockerfile
+    assert dockerfile.index("COPY backend/templates ./templates") < dockerfile.index(
+        "RUN npm run build:assets"
+    )
+    assert 'content: ["./templates/**/*.html"]' in read(
+        CSS_DIR / "entries" / "tailwind.surface.config.js"
+    )
+
+
+def test_product_shell_beats_dark_landing_background_outside_tailwind_layer() -> None:
+    source = read(CSS_DIR / "entries" / "portal.css")
+    unlayered = source.split("@tailwind", 1)[0]
+
+    assert "body.product-shell" in unlayered
+    assert "background: #f7f5f0" in unlayered

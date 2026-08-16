@@ -38,6 +38,7 @@
   progression client, recalcul rétroactif et audit financier
 - [x] Sprint 38 — Clôture mensuelle par client, snapshot CSV signé pour facturation externe,
   gel comptable des commandes, permissions croisées et audit des exports
+- [x] Sprint 39 — Contrat de production NAS (compose immuable, runbook release, smoke CSS)
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement
@@ -360,3 +361,12 @@
 - [x] Suite complète PostgreSQL 16 : 627 tests
 - [x] Ruff, Django, migrations, pip-audit, npm audit, builds et smokes Docker conformes
 - [ ] Actions cible : rotation secrets, planification DSM, CI obligatoire et recette API réelle
+
+## Sprint 39 — Contrat de production NAS (2026-08-16)
+
+- [x] `docker-compose.prod.yml` promu contrat NAS (projet `preniumdtf`, pas de bind-mount code)
+- [x] Healthcheck nginx = `/healthz/` + CSS (plus de « healthy » en 502)
+- [x] Entrypoint : collectstatic root, plus de tar `static_src` vers le volume
+- [x] Contrats de déploiement étendus (resolver DNS, absence de conf nginx hôte)
+- [x] Étape CSS Docker : templates copiés avant Tailwind ; fond Atelier hors `@layer`
+- [x] Rebuild NAS `web`/`nginx` : `healthz` 200, `portal.css` 331571 o, `/staff/` fond crème

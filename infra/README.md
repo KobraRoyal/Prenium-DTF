@@ -31,6 +31,10 @@ Le Dockerfile backend expose deux cibles principales :
 - `dev` : pour le local, avec `pytest`, `ruff`, `pre-commit` et `pip-audit`.
 - `prod` : runtime applicatif sans outillage de développement.
 
+L’étape CSS copie `backend/templates` avant `npm run build:assets`. Sans les
+templates, Tailwind purge `@layer components` (shell Atelier) et `/staff/`
+garde le fond sombre `body.landing-saas`.
+
 Commandes qualité sous Docker Compose local :
 
 ```bash
@@ -199,7 +203,7 @@ Attendus :
 
 ### Séquence de déploiement simple
 
-Pour un environnement simple sans orchestration avancée :
+Pour un environnement simple sans orchestration avancée (NAS DS218+ inclus) :
 
 ```bash
 export APP_IMAGE_TAG="$(git rev-parse --short=12 HEAD)"
@@ -210,11 +214,18 @@ docker compose -f docker-compose.prod.yml ps
 curl --fail --silent --show-error \
   --header 'X-Forwarded-Proto: https' \
   http://localhost:8080/healthz/
+curl -sI http://localhost:8080/static/css/portal.css | head -5
 ```
+
+Sur le partage NAS, `docker-compose.yml` **est** ce contrat (`name: preniumdtf`).
+Ne pas conserver de bind-mount `./backend` ni `./infra/nginx`.
 
 Points de vigilance :
 
+- ne pas `docker compose exec web python manage.py migrate` pendant le démarrage :
+  l’entrypoint de `web` migrate déjà ; un second processus casse `auth_permission` ;
 - ne pas lancer plusieurs réplicas `web` tant que `migrate` reste exécuté au démarrage ;
+- après rebuild de `web`, recréer `nginx` (`up -d nginx`) pour re-résoudre l’upstream ;
 - vérifier que `web`, `worker` et `beat` référencent le même identifiant d'image ;
 - vérifier la santé via le domaine HTTPS public ; l'en-tête ci-dessus simule uniquement le reverse
   proxy lors d'un test interne au NAS ;

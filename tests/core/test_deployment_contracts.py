@@ -17,6 +17,10 @@ def test_production_compose_uses_immutable_application_code():
 
     assert all(mount not in compose for mount in forbidden_source_mounts)
     assert "django_static:/usr/share/nginx/prenium-static:ro" in compose
+    assert "./infra/nginx/default.conf" not in compose
+    assert "./infra/nginx/prenium-static" not in compose
+    assert "name: preniumdtf" in compose
+    assert "http://127.0.0.1/healthz/" in compose
     assert "condition: service_healthy" in compose
     assert compose.count("image: prenium-dtf-backend-prod:${APP_IMAGE_TAG:-local}") == 3
     assert compose.count("dockerfile: infra/docker/backend/Dockerfile") == 1
@@ -64,6 +68,33 @@ def test_nginx_allows_django_to_reject_oversized_source_files_cleanly():
 
     assert "client_max_body_size 64m;" in nginx
     assert "limite applicative reste 20 MiB par fichier" in nginx
+
+
+def test_nginx_resolves_django_upstream_via_docker_dns():
+    nginx = (ROOT_DIR / "infra" / "nginx" / "default.conf").read_text()
+
+    assert "resolver 127.0.0.11 ipv6=off valid=30s;" in nginx
+    assert "set $django_upstream http://web:8000;" in nginx
+    assert "proxy_pass $django_upstream;" in nginx
+    assert "server preniumdtf-web:8000;" not in nginx
+
+
+def test_css_stage_copies_templates_before_tailwind_build():
+    dockerfile = (ROOT_DIR / "infra" / "docker" / "backend" / "Dockerfile").read_text()
+
+    assert "COPY backend/templates ./templates" in dockerfile
+    assert dockerfile.index("COPY backend/templates ./templates") < dockerfile.index(
+        "RUN npm run build:assets"
+    )
+
+
+def test_web_entrypoint_collectstatic_runs_as_root_before_gunicorn():
+    entrypoint = (ROOT_DIR / "infra" / "scripts" / "web-entrypoint.sh").read_text()
+
+    assert "python manage.py collectstatic --noinput" in entrypoint
+    assert "gosu app python manage.py collectstatic" not in entrypoint
+    assert "exec gosu app gunicorn" in entrypoint
+    assert "tar -C /app/backend/static_src" not in entrypoint
 
 
 def test_ci_installs_ghostscript_for_both_backend_test_jobs():

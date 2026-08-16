@@ -6,6 +6,9 @@ RUN npm ci
 COPY backend/tailwind.config.js backend/postcss.config.js ./
 COPY backend/scripts ./scripts
 COPY backend/static_src ./static_src
+# Tailwind content: ./templates/**/*.html — without this, @layer components
+# (product-shell) is purged and the Atelier keeps the dark landing background.
+COPY backend/templates ./templates
 RUN npm run build:assets
 
 FROM python:3.12-slim@sha256:229a2c5bfa27522db7815ea81f9bed70af17ccb9de9fc7ad142b1877b5830d36 AS runtime

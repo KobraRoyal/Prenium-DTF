@@ -10,6 +10,13 @@
 @import "../components/prospect-journey.css";
 @import "../components/gang-sheet.css";
 
+/* Unlayered: beats `body.landing-saas` dark background from app.css. */
+body.product-shell {
+  min-height: 100vh;
+  color: #0b0b0b;
+  background: #f7f5f0;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
