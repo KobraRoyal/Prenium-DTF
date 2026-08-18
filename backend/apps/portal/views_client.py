@@ -44,10 +44,7 @@ class ClientDashboardView(LoginRequiredMixin, View):
     template_name = "portal/client/dashboard.html"
 
     def get(self, request):
-        from apps.billing.services.production_payment_gate import (
-            attach_awaits_client_payment,
-            count_orders_awaiting_client_payment,
-        )
+        from apps.billing.services.production_payment_gate import attach_awaits_client_payment
 
         scope = access_scope_service.get_user_scope(request.user)
         memberships = list(scope.memberships)
@@ -56,11 +53,16 @@ class ClientDashboardView(LoginRequiredMixin, View):
         recent_orders = []
         recent_projects = []
         project_feature_enabled = False
-        orders_count = projects_in_progress_count = awaits_payment_count = 0
+        orders_count = projects_in_progress_count = 0
         new_order_url = ""
         client_focus = None
         volume_discount_summary = None
+        account_snapshot = None
+        can_view_account_finance = False
+        can_create_orders = False
         if selected_membership is not None:
+            can_view_account_finance = selected_membership.can_view_account_finance
+            can_create_orders = selected_membership.can_create_orders
             customer = (
                 access_scope_service.get_customer_queryset(request.user)
                 .filter(public_id=selected_membership.customer_public_id)
@@ -70,7 +72,6 @@ class ClientDashboardView(LoginRequiredMixin, View):
                 orders_qs = order_service.list_customer_orders(customer)
                 recent_orders = attach_awaits_client_payment(list(orders_qs[:5]))
                 orders_count = orders_qs.count()
-                awaits_payment_count = count_orders_awaiting_client_payment(customer)
                 project_feature_enabled = b2b_order_projects_enabled_for_customer(customer)
                 if project_feature_enabled:
                     projects_qs = project_service.list_customer_projects_in_progress(customer)
@@ -87,10 +88,26 @@ class ClientDashboardView(LoginRequiredMixin, View):
                     recent_projects=recent_projects,
                     recent_orders=recent_orders,
                     new_order_url=new_order_url,
+                    can_view_account_finance=can_view_account_finance,
+                    can_create_orders=can_create_orders,
                 )
-                volume_discount_summary = dashboard_focus.build_client_volume_discount_summary(
-                    customer=customer
-                )
+                if can_view_account_finance:
+                    volume_discount_summary = dashboard_focus.build_client_volume_discount_summary(
+                        customer=customer
+                    )
+                    account_snapshot = dashboard_focus.build_client_account_snapshot(
+                        customer=customer
+                    )
+        listed_projects = dashboard_focus.attach_project_dashboard_verbs(
+            dashboard_focus.exclude_focused_item(
+                items=recent_projects,
+                public_id=(client_focus or {}).get("project_public_id"),
+            )
+        )
+        listed_orders = dashboard_focus.exclude_focused_item(
+            items=recent_orders,
+            public_id=(client_focus or {}).get("order_public_id"),
+        )
         return render(
             request,
             self.template_name,
@@ -101,13 +118,17 @@ class ClientDashboardView(LoginRequiredMixin, View):
                 "customer": customer,
                 "recent_orders": recent_orders,
                 "recent_projects": recent_projects,
+                "listed_orders": listed_orders,
+                "listed_projects": listed_projects,
                 "orders_count": orders_count,
-                "awaits_payment_count": awaits_payment_count,
                 "projects_in_progress_count": projects_in_progress_count,
                 "new_order_url": new_order_url,
                 "project_feature_enabled": project_feature_enabled,
                 "client_focus": client_focus,
                 "volume_discount_summary": volume_discount_summary,
+                "account_snapshot": account_snapshot,
+                "can_view_account_finance": can_view_account_finance,
+                "can_create_orders": can_create_orders,
                 "nav_mode": "client",
                 "nav_key": "client-dashboard",
                 "badge_tone_for_status": badge_tone_for_status,

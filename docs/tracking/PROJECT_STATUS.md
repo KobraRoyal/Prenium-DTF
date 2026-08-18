@@ -70,6 +70,7 @@
 - [x] Tarification dégressive mensuelle par client : grille Atelier, snapshots commande et gel des relevés
 - [x] Paliers par défaut des nouveaux comptes en encours, e-mail de franchissement personnalisable
   et progression visible sur le dashboard client
+- [x] Dashboard client : CA / encours / remise volume réservés au propriétaire et à l’administrateur ; collaborateur limité au suivi des commandes
 - [x] Récapitulatifs mensuels par client en encours exportables vers l’outil comptable externe
 
 ## Derniers chantiers transverses

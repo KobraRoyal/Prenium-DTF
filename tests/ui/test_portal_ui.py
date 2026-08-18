@@ -80,10 +80,9 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
 
     assert dashboard_response.status_code == 200
     dashboard_html = dashboard_response.content.decode()
-    assert "Commandes à finaliser et commandes transmises" in dashboard_html
+    assert "client-dashboard-focus" in dashboard_html
     assert "product-shell--portal" in dashboard_html
     assert "client-dashboard" in dashboard_html
-    assert "Commandes transmises" in dashboard_html
     assert "Accès isolé" not in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
@@ -143,9 +142,68 @@ def test_client_dashboard_shows_only_scoped_customer_volume_tier():
     html = response.content.decode()
     assert 'data-testid="client-volume-discount-summary"' in html
     assert "Votre remise volume" in html
-    assert "10,0000 m" in html or "10.0000 m" in html
+    assert "10 m" in html
+    assert "10,0000 m" not in html
     assert "99,00 %" not in html
     assert "99.00 %" not in html
+    assert ">Encours</h2>" in html
+    assert "€ HT" in html
+
+
+@pytest.mark.django_db
+def test_client_dashboard_shows_finance_only_to_account_managers():
+    owner = get_user_model().objects.create_user(email="owner-dash@example.com", password="pass")
+    admin = get_user_model().objects.create_user(email="admin-dash@example.com", password="pass")
+    member = get_user_model().objects.create_user(email="member-dash@example.com", password="pass")
+    customer = Customer.objects.create(name="Atelier rôles", default_billing_mode="deferred")
+    CustomerMembership.objects.create(
+        customer=customer, user=owner, role=CustomerMembership.Role.OWNER
+    )
+    CustomerMembership.objects.create(
+        customer=customer, user=admin, role=CustomerMembership.Role.ADMIN
+    )
+    CustomerMembership.objects.create(
+        customer=customer, user=member, role=CustomerMembership.Role.MEMBER
+    )
+    CustomerVolumeDiscountTier.objects.create(
+        customer=customer,
+        minimum_monthly_linear_m=Decimal("10.0000"),
+        discount_percent=Decimal("5.00"),
+    )
+    Order.objects.create(
+        customer=customer,
+        created_by=owner,
+        status=Order.Status.SUBMITTED,
+        pricing_status=Order.PricingStatus.PRICED,
+        billing_mode=Order.BillingMode.DEFERRED,
+        currency="EUR",
+        subtotal_amount=Decimal("128.50"),
+        total_amount=Decimal("128.50"),
+    )
+
+    def dashboard_html(user):
+        client = Client()
+        assert client.login(email=user.email, password="pass")
+        response = client.get(reverse("portal:client-dashboard"))
+        assert response.status_code == 200
+        return response.content.decode()
+
+    owner_html = dashboard_html(owner)
+    admin_html = dashboard_html(admin)
+    member_html = dashboard_html(member)
+
+    for html in (owner_html, admin_html):
+        assert 'data-testid="client-account-finance"' in html
+        assert ">Encours</h2>" in html
+        assert "€ HT" in html
+        assert "128,50 €" in html
+        assert "Votre remise volume" in html
+
+    assert 'data-testid="client-account-finance"' not in member_html
+    assert ">Encours</h2>" not in member_html
+    assert "128,50 €" not in member_html
+    assert "Votre remise volume" not in member_html
+    assert "encours non relevé" not in member_html
 
 
 @pytest.mark.django_db
@@ -170,7 +228,7 @@ def test_client_navigation_shows_project_creation_for_all_active_customers():
     assert client.login(email=user.email, password="pass")
 
     enabled_html = client.get(reverse("portal:client-dashboard")).content.decode()
-    assert "Dashboard" in enabled_html
+    assert "Accueil" in enabled_html
     assert "Créer une commande" in enabled_html
     assert "Planches DTF" not in enabled_html
     assert "À partir de fichiers" in enabled_html
@@ -853,7 +911,11 @@ def test_orders_table_and_dashboard_show_unpaid_payment_flag():
         name="Client Unpaid",
         default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
     )
-    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=user,
+        role=CustomerMembership.Role.OWNER,
+    )
     order = Order.objects.create(
         customer=customer,
         created_by=user,
