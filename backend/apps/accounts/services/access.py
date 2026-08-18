@@ -18,14 +18,6 @@ class MembershipScope:
         return self.role in {CustomerMembership.Role.OWNER, CustomerMembership.Role.ADMIN}
 
     @property
-    def can_view_account_finance(self) -> bool:
-        return self.can_manage_team
-
-    @property
-    def can_create_orders(self) -> bool:
-        return self.role != CustomerMembership.Role.READONLY
-
-    @property
     def role_label(self) -> str:
         return CustomerMembership.Role(self.role).label
 

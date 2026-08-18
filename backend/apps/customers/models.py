@@ -406,14 +406,6 @@ class CustomerMembership(BaseModel):
     def can_manage_team(self) -> bool:
         return self.role in {self.Role.OWNER, self.Role.ADMIN}
 
-    @property
-    def can_view_account_finance(self) -> bool:
-        return self.can_manage_team
-
-    @property
-    def can_create_orders(self) -> bool:
-        return self.role != self.Role.READONLY
-
 
 class CustomerInvitation(BaseModel):
     """Invitation à rejoindre une organisation, sans stocker le jeton brut."""

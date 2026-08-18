@@ -39,8 +39,6 @@ def test_css_entrypoints_keep_shared_and_surface_rules_separate() -> None:
     assert "landing-conversion.css" in marketing_entry
     assert "workflow.css" in portal_entry
     assert "product-shell.css" in portal_entry
-    assert "client-dashboard.css" in portal_entry
-    assert portal_entry.index("product-shell.css") < portal_entry.index("client-dashboard.css")
     assert "prospect-tunnel.css" in portal_entry
     assert "prospect-journey.css" in portal_entry
     assert "gang-sheet.css" in portal_entry
@@ -76,9 +74,6 @@ def test_generated_surface_bundles_exist_and_contain_expected_markers() -> None:
             ".gang-sheet-page",
             "body.product-shell",
             "#f7f5f0",
-            ".client-dashboard-head",
-            ".client-dashboard-board",
-            ".client-dashboard-list__item",
         ],
         "studio.css": [".gang-editor", ".gang-editor__workspace"],
     }
