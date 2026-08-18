@@ -1,0 +1,10 @@
+Bonjour,
+
+Une demande de changement d’e-mail de connexion a été faite pour votre compte {{ brand_name }}.
+
+Confirmez cette nouvelle adresse en ouvrant le lien (valable 24 heures) :
+{{ protocol }}://{{ domain }}{{ confirm_path }}
+
+Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail. Votre adresse actuelle reste inchangée.
+
+— L'équipe {{ brand_name }}

@@ -13,6 +13,13 @@
     x-init="$nextTick(() => window.preniumToast?.('Vos informations ont été enregistrées.', 'success'))"
   >Vos informations ont été enregistrées.</p>
   {% endif %}
+  {% if request.GET.email_changed == "1" %}
+  <p
+    class="ui-sr-only"
+    role="status"
+    x-init="$nextTick(() => window.preniumToast?.('Votre e-mail de connexion a été mis à jour.', 'success'))"
+  >Votre e-mail de connexion a été mis à jour.</p>
+  {% endif %}
 
   <div class="account-profile-layout">
     {% include "components/portal/account_rail.html" with account_section="identity" %}
@@ -45,23 +52,16 @@
             <header class="account-profile-connection__head">
               <div>
                 <h3 id="connection-email-title">E-mail de connexion</h3>
-                <p>Adresse utilisée pour vous authentifier. Elle ne peut pas être modifiée ici.</p>
+                <p>Adresse utilisée pour vous authentifier. Un lien de confirmation est envoyé à la nouvelle adresse.</p>
               </div>
-              <span class="account-profile-lock-badge">
-                <span class="account-profile-lock-badge__icon" aria-hidden="true">
-                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                    <rect x="3.5" y="7.5" width="9" height="6.5" rx="1.2"></rect>
-                    <path d="M5.5 7.5V5.6a2.5 2.5 0 0 1 5 0V7.5"></path>
-                  </svg>
-                </span>
-                Verrouillé
-              </span>
             </header>
 
-            <div class="account-profile-email" aria-label="E-mail de connexion non modifiable">
+            <div class="account-profile-email" aria-label="E-mail de connexion">
               <span class="account-profile-email__value">{{ request.user.email }}</span>
             </div>
-            <p class="account-profile-connection__help">Pour changer cet e-mail, contactez l’équipe IDS afin de sécuriser le nouvel accès.</p>
+            <p class="account-profile-connection__help">
+              <a class="ui-link" href="{% url 'portal:email-change' %}?space={{ nav_mode }}">Changer l’e-mail de connexion</a>
+            </p>
           </section>
 
           <div class="account-profile-form__footer">

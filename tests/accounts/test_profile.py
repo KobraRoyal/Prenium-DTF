@@ -34,7 +34,7 @@ def test_user_can_update_personal_information_without_changing_login_email():
     assert "account-profile-rail" in html
     assert "Identité" in html
     assert "E-mail de connexion" in html
-    assert "Verrouillé" in html
+    assert reverse("portal:email-change") in html
     assert 'href="#connection-email"' not in html
     assert "Modifiez un champ pour activer l’enregistrement." in html
     assert 'x-on:input="dirty = true"' in html

@@ -40,3 +40,22 @@ class AccountClosureForm(forms.Form):
                 "Saisissez votre e-mail de connexion pour confirmer la clôture."
             )
         return value
+
+
+class EmailChangeRequestForm(forms.Form):
+    new_email = forms.EmailField(
+        label="Nouvel e-mail de connexion",
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+    )
+
+    def __init__(self, *args, user: User, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_new_email(self):
+        value = str(self.cleaned_data.get("new_email") or "").strip().lower()
+        if value == self.user.email.strip().lower():
+            raise forms.ValidationError("Indiquez une adresse différente de l’e-mail actuel.")
+        if User.objects.filter(email__iexact=value).exclude(pk=self.user.pk).exists():
+            raise forms.ValidationError("Cette adresse est déjà utilisée par un autre compte.")
+        return value

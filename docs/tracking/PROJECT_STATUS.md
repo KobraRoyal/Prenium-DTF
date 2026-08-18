@@ -39,7 +39,7 @@
 - [x] Sprint 38 — Clôture mensuelle par client, snapshot CSV signé pour facturation externe,
   gel comptable des commandes, permissions croisées et audit des exports
 - [x] Sprint 39 — Contrat de production NAS (compose immuable, runbook release, smoke CSS)
-- [x] Sprint 40 — Fondations RGPD (pages légales, export/clôture, reset MDP, rétention)
+- [x] Sprint 40 — Fondations RGPD (pages légales, export/clôture, reset MDP, rétention, rectification e-mail)
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement

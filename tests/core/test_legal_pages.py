@@ -29,6 +29,7 @@ def test_privacy_policy_stays_reachable_when_home_redirects_to_login(monkeypatch
     response = client.get(reverse("politique-confidentialite"))
     assert response.status_code == 200
     assert "RGPD" in response.content.decode()
+    assert reverse("portal:email-change") in response.content.decode()
 
 
 @pytest.mark.django_db

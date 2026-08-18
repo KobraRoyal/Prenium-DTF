@@ -73,7 +73,11 @@
   <a href="mailto:{{ legal.privacy_email }}">{{ legal.privacy_email }}</a>.
   Réclamation possible auprès de la CNIL (cnil.fr).
 </p>
-<p>L’e-mail de connexion se rectifie sur demande à l’équipe, pour éviter le détournement de compte.</p>
+<p>
+  L’e-mail de connexion se rectifie depuis
+  <a href="{% url 'portal:email-change' %}">Mon compte</a>,
+  après confirmation sur la nouvelle adresse.
+</p>
 
 <h2>8. Sécurité</h2>
 <p>
