@@ -1,0 +1,36 @@
+{% extends "shop/legal/base.html" %}
+
+{% block title %}Mentions légales — {{ legal.brand_name }}{% endblock %}
+{% block legal_title %}Mentions légales{% endblock %}
+{% block legal_lead %}Éditeur du service {{ legal.brand_name }}, hébergement et contact.{% endblock %}
+
+{% block legal_body %}
+<h2>Éditeur</h2>
+<p>
+  Le site et le portail <strong>{{ legal.brand_name }}</strong> sont édités par
+  <strong>{{ legal.controller_name }}</strong>{% if legal.legal_form %}, {{ legal.legal_form }}{% endif %}.
+</p>
+<ul>
+  {% if legal.address or legal.city %}
+  <li>Siège : {{ legal.address }}{% if legal.postal_code %} {{ legal.postal_code }}{% endif %}{% if legal.city %} {{ legal.city }}{% endif %}{% if legal.country %}, {{ legal.country }}{% endif %}</li>
+  {% else %}
+  <li>Adresse : à renseigner via <code>LEGAL_CONTROLLER_ADDRESS</code></li>
+  {% endif %}
+  <li>SIREN : {{ legal.siren|default:"à renseigner via LEGAL_CONTROLLER_SIREN" }}</li>
+  <li>TVA : {{ legal.vat_number|default:"à renseigner via LEGAL_CONTROLLER_VAT" }}</li>
+  <li>Contact : <a href="mailto:{{ legal.contact_email }}">{{ legal.contact_email }}</a></li>
+</ul>
+{% if legal.publication_director %}
+<p>Directeur de la publication : {{ legal.publication_director }}.</p>
+{% endif %}
+
+<h2>Hébergement</h2>
+<p>{{ legal.hosting_description }}.</p>
+
+<h2>Contact données personnelles</h2>
+<p>
+  Pour toute question relative au traitement de vos données :
+  <a href="mailto:{{ legal.privacy_email }}">{{ legal.privacy_email }}</a>.
+  Voir aussi la <a href="{% url 'politique-confidentialite' %}">politique de confidentialité</a>.
+</p>
+{% endblock %}

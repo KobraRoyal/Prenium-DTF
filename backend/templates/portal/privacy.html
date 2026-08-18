@@ -1,0 +1,56 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Mes données - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="account-profile-page">
+  {% include "components/portal/page_head.html" with kicker="Compte" title="Mes données" subtitle="Export et clôture de votre compte personnel, dans le respect du RGPD." %}
+
+  <div class="account-profile-layout">
+    {% include "components/portal/account_rail.html" with account_section="privacy" %}
+
+    <div class="account-profile-main">
+      <section class="account-profile-panel" aria-labelledby="privacy-export-title">
+        <header class="account-profile-panel__head">
+          <div>
+            <h2 id="privacy-export-title">Export</h2>
+            <p>Téléchargez les données de votre compte (identité, organisations, commandes que vous avez créées).</p>
+          </div>
+        </header>
+        <form method="post" action="{% url 'portal:privacy-export' %}" class="ui-form-stack account-profile-form">
+          {% csrf_token %}
+          <input type="hidden" name="space" value="{{ nav_mode }}">
+          <div class="account-profile-form__footer">
+            <button type="submit" class="ui-btn ui-btn-secondary">Télécharger mes données</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="account-profile-panel" aria-labelledby="privacy-close-title">
+        <header class="account-profile-panel__head">
+          <div>
+            <h2 id="privacy-close-title">Clôturer le compte</h2>
+            <p>
+              Anonymise votre identité. Les factures de l’organisation sont conservées 10 ans.
+              Si vous êtes le dernier propriétaire, l’organisation est désactivée.
+            </p>
+          </div>
+        </header>
+        {% if can_self_close %}
+        <form method="post" action="{% url 'portal:privacy-close' %}" class="ui-form-stack account-profile-form">
+          {% csrf_token %}
+          <input type="hidden" name="space" value="{{ nav_mode }}">
+          {% if closure_error %}<p class="error-text" role="alert">{{ closure_error }}</p>{% endif %}
+          {% include "components/forms/field_group.html" with id="id_confirmation" name="confirmation" label=closure_form.confirmation.label type="email" autocomplete="email" value=closure_form.confirmation.value|default:"" error=closure_form.confirmation.errors.0 show_label=1 required=1 %}
+          <div class="account-profile-form__footer">
+            <button type="submit" class="ui-btn ui-btn-danger">Clôturer mon compte</button>
+          </div>
+        </form>
+        {% else %}
+        <p>Les comptes atelier se clôturent via un administrateur, pour éviter de bloquer la production.</p>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

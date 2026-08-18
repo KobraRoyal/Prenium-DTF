@@ -70,7 +70,19 @@ from .views_gang_sheets import (
     StaffGangSheetFinalDownloadView,
     StaffGangSheetSettingsView,
 )
+from .views_password_reset import (
+    PortalPasswordResetCompleteView,
+    PortalPasswordResetConfirmView,
+    PortalPasswordResetDoneView,
+    PortalPasswordResetView,
+)
 from .views_payments import ClientOrderPaymentInitiateView, ClientOrderPaymentReturnView
+from .views_privacy import (
+    PortalAccountClosedView,
+    PortalPrivacyCloseView,
+    PortalPrivacyExportView,
+    PortalPrivacyView,
+)
 from .views_profile import PortalProfileView
 from .views_staff import (
     StaffOrderDeleteView,
@@ -121,7 +133,39 @@ app_name = "portal"
 urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
     path("logout/", PortalLogoutView.as_view(), name="logout"),
+    path(
+        "compte/mot-de-passe-oublie/",
+        PortalPasswordResetView.as_view(),
+        name="password-reset",
+    ),
+    path(
+        "compte/mot-de-passe-oublie/envoye/",
+        PortalPasswordResetDoneView.as_view(),
+        name="password-reset-done",
+    ),
+    path(
+        "compte/mot-de-passe-oublie/<uidb64>/<token>/",
+        PortalPasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
+    path(
+        "compte/mot-de-passe-oublie/termine/",
+        PortalPasswordResetCompleteView.as_view(),
+        name="password-reset-complete",
+    ),
+    path("compte/cloture/", PortalAccountClosedView.as_view(), name="account-closed"),
     path("account/profile/", PortalProfileView.as_view(), name="profile"),
+    path("account/privacy/", PortalPrivacyView.as_view(), name="privacy"),
+    path(
+        "account/privacy/export/",
+        PortalPrivacyExportView.as_view(),
+        name="privacy-export",
+    ),
+    path(
+        "account/privacy/close/",
+        PortalPrivacyCloseView.as_view(),
+        name="privacy-close",
+    ),
     path(
         "acces/invitation/<str:token>/",
         CustomerInvitationAcceptView.as_view(),

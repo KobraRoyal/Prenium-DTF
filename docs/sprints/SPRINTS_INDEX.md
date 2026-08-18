@@ -46,6 +46,7 @@
 - [Sprint 37 — Remise dégressive sur volume mensuel](sprint-37-remise-volume-mensuelle.md)
 - [Sprint 38 — Récapitulatif de facturation externalisée](sprint-38-recap-facturation-externe.md)
 - [Sprint 39 — Contrat de production NAS](sprint-39-nas-production-contract.md)
+- [Sprint 40 — Fondations RGPD](sprint-40-rgpd-fondations.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)
@@ -58,5 +59,6 @@
 
 ## Références transverses
 - Architecture — Commandes B2B facturation différée (`docs/architecture/B2B_DEFERRED_BILLING.md`)
+- Sécurité — ROPA et playbook violation (`docs/security/ROPA.md`, `docs/security/BREACH_PLAYBOOK.md`)
 - Product design — Audit UI/UX portail client 2026 (`docs/product-design/AUDIT_PORTAIL_CLIENT_UI_UX_2026.md`)
 - UI/UX — Frontend premium et refontes landing (`docs/sprints/sprint-uiux-frontend-premium.md`)

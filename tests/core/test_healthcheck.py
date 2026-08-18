@@ -23,3 +23,9 @@ def test_sendcloud_tracking_schedule_is_enabled(settings):
     schedule = settings.CELERY_BEAT_SCHEDULE["shipping-sync-stale-tracking"]
 
     assert schedule["task"] == "shipping.sync_stale_shipments_tracking"
+
+
+def test_privacy_retention_schedule_is_enabled(settings):
+    schedule = settings.CELERY_BEAT_SCHEDULE["privacy-retention-daily"]
+
+    assert schedule["task"] == "core.apply_privacy_retention"

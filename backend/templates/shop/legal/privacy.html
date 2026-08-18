@@ -1,0 +1,84 @@
+{% extends "shop/legal/base.html" %}
+
+{% block title %}Politique de confidentialité — {{ legal.brand_name }}{% endblock %}
+{% block legal_title %}Politique de confidentialité{% endblock %}
+{% block legal_lead %}Comment {{ legal.brand_name }} traite les données personnelles des contacts professionnels, conformément au RGPD.{% endblock %}
+
+{% block legal_body %}
+<h2>1. Responsable de traitement</h2>
+<p>
+  {{ legal.controller_name }} est responsable du traitement des comptes, demandes d’accès,
+  commandes, facturation et journaux de sécurité du portail {{ legal.brand_name }}.
+</p>
+<p>Contact : <a href="mailto:{{ legal.privacy_email }}">{{ legal.privacy_email }}</a>.</p>
+
+<h2>2. Données concernées</h2>
+<ul>
+  <li>Identité de contact : nom, prénom, e-mail, téléphone.</li>
+  <li>Données d’entreprise : raison sociale, SIREN / TVA, adresses de facturation et de livraison.</li>
+  <li>Compte : mot de passe hashé, rôle dans l’organisation, invitations.</li>
+  <li>Commandes, fichiers de production, expéditions, paiements (identifiants prestataires).</li>
+  <li>Journaux techniques : adresse IP sur certaines actions de sécurité.</li>
+</ul>
+<p>
+  Les visuels déposés pour impression peuvent contenir des données de tiers
+  (portraits, noms). Pour ce contenu, {{ legal.controller_name }} agit comme
+  <strong>sous-traitant</strong> du client professionnel. Voir l’
+  <a href="{% url 'accord-sous-traitance' %}">accord de sous-traitance</a>.
+</p>
+
+<h2>3. Finalités et bases légales</h2>
+<ul>
+  <li>Demande d’accès et onboarding : mesures précontractuelles (art. 6.1.b).</li>
+  <li>Exécution des commandes, production, facturation, livraison : contrat (art. 6.1.b).</li>
+  <li>Obligations comptables et fiscales : obligation légale (art. 6.1.c) — conservation 10 ans.</li>
+  <li>Sécurité du portail, journalisation, limitation des abus : intérêt légitime (art. 6.1.f).</li>
+</ul>
+<p>Aucun e-mail marketing n’est envoyé depuis ce portail. Les messages sont transactionnels.</p>
+
+<h2>4. Destinataires</h2>
+<ul>
+  <li>Personnel habilité de {{ legal.controller_name }} (atelier, admin, facturation).</li>
+  <li>Sendcloud, pour les étiquettes et le suivi (destinataire du colis).</li>
+  <li>Stripe et / ou PayPal, pour les paiements en ligne.</li>
+  <li>Prestataire d’envoi d’e-mails (SMTP configuré).</li>
+  {% if legal.google_drive_enabled %}
+  <li>Google Drive, copie de fichiers de commande (transfert hors UE possible — CCT Google).</li>
+  {% else %}
+  <li>Google Drive n’est pas activé sur cet environnement.</li>
+  {% endif %}
+</ul>
+
+<h2>5. Transferts hors Union européenne</h2>
+<p>
+  Stripe, PayPal{% if legal.google_drive_enabled %} et Google Drive{% endif %}
+  peuvent impliquer un transfert hors UE. Ils sont encadrés par les clauses
+  contractuelles types des prestataires, lorsque le service est activé.
+</p>
+
+<h2>6. Durées de conservation</h2>
+<ul>
+  <li>Compte : durée de la relation, puis anonymisation sur demande (hors pièces comptables).</li>
+  <li>Factures et relevés : 10 ans (Code de commerce).</li>
+  <li>Demandes d’accès refusées ou expirées : {{ legal.prospect_pii_retention_days }} jours, puis anonymisation.</li>
+  <li>Adresses IP d’audit : {{ legal.audit_ip_retention_days }} jours.</li>
+  <li>Extraits techniques de paiement / expédition : {{ legal.payment_payload_retention_days }} à {{ legal.shipment_snapshot_retention_days }} jours.</li>
+</ul>
+
+<h2>7. Vos droits</h2>
+<p>
+  Accès, rectification, effacement, limitation, opposition, portabilité :
+  depuis <a href="{% url 'portal:privacy' %}">Mon compte → Données</a>
+  (export et clôture), ou par e-mail à
+  <a href="mailto:{{ legal.privacy_email }}">{{ legal.privacy_email }}</a>.
+  Réclamation possible auprès de la CNIL (cnil.fr).
+</p>
+<p>L’e-mail de connexion se rectifie sur demande à l’équipe, pour éviter le détournement de compte.</p>
+
+<h2>8. Sécurité</h2>
+<p>
+  Isolation des organisations, identifiants publics non séquentiels, fichiers
+  servis uniquement après contrôle d’autorisation, HTTPS en production,
+  mots de passe hashés, limitation des tentatives de connexion.
+</p>
+{% endblock %}

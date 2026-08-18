@@ -104,8 +104,9 @@ class ProspectStep2Form(forms.Form):
 class ProspectStep3ReviewForm(forms.Form):
     terms_accepted = forms.BooleanField(
         label=(
-            "Je confirme l'exactitude des informations et accepte d'être contacté "
-            "dans le cadre de cette demande d'accès."
+            "Je confirme l’exactitude des informations. "
+            "Je demande à être contacté pour instruire cette demande d’accès "
+            "(mesures précontractuelles, art. 6.1.b du RGPD)."
         )
     )
 

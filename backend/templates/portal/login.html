@@ -57,7 +57,16 @@
         {% endif %}
         {% include "components/forms/form_actions.html" with primary_label="Se connecter" primary_class_full="ui-btn ui-btn-primary ui-btn-wide ui-btn-block max-w-xs mx-auto" form_actions_class="justify-center" %}
       </form>
-      <p class="product-login-access">Première visite ? <a class="ui-link" href="{% url 'prospects:step1' %}">Demander un accès professionnel</a></p>
+      <p class="product-login-access">
+        <a class="ui-link" href="{% url 'portal:password-reset' %}">Mot de passe oublié</a>
+        · Première visite ?
+        <a class="ui-link" href="{% url 'prospects:step1' %}">Demander un accès professionnel</a>
+      </p>
+      <p class="product-login-access">
+        <a class="ui-link" href="{% url 'politique-confidentialite' %}">Confidentialité</a>
+        ·
+        <a class="ui-link" href="{% url 'mentions-legales' %}">Mentions légales</a>
+      </p>
     </div>
   </section>
 </main>

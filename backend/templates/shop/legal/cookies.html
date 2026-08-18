@@ -1,0 +1,23 @@
+{% extends "shop/legal/base.html" %}
+
+{% block title %}Politique cookies — {{ legal.brand_name }}{% endblock %}
+{% block legal_title %}Cookies{% endblock %}
+{% block legal_lead %}Le portail n’utilise que des cookies strictement nécessaires au service.{% endblock %}
+
+{% block legal_body %}
+<h2>Cookies déposés</h2>
+<ul>
+  <li><strong>Session</strong> : authentification du compte (HttpOnly, Secure en production).</li>
+  <li><strong>CSRF</strong> : protection des formulaires.</li>
+</ul>
+<p>
+  Ces cookies sont indispensables au fonctionnement. Ils ne nécessitent pas de consentement
+  au sens des recommandations CNIL sur les traceurs strictement nécessaires.
+</p>
+<p>Aucun cookie publicitaire, de mesure d’audience ou de réseau social n’est déposé à ce jour.</p>
+<p>
+  Si un outil de mesure était ajouté plus tard, un bandeau de consentement serait
+  mis en place avant tout dépôt non essentiel.
+</p>
+<p>Voir la <a href="{% url 'politique-confidentialite' %}">politique de confidentialité</a>.</p>
+{% endblock %}

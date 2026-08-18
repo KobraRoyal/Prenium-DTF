@@ -89,6 +89,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.b2b_order_projects.context_processors.b2b_order_project_flags",
+                "apps.core.context_processors.legal_identity",
             ],
         },
     },
@@ -266,10 +267,42 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = env_int("CELERY_TASK_TIME_LIMIT", 300)
 CELERY_TASK_SOFT_TIME_LIMIT = env_int("CELERY_TASK_SOFT_TIME_LIMIT", 240)
+LEGAL_BRAND_NAME = os.environ.get("LEGAL_BRAND_NAME", "Prenium DTF")
+LEGAL_CONTROLLER_NAME = os.environ.get("LEGAL_CONTROLLER_NAME", "IDS Supply")
+LEGAL_CONTROLLER_LEGAL_FORM = os.environ.get("LEGAL_CONTROLLER_LEGAL_FORM", "")
+LEGAL_CONTROLLER_ADDRESS = os.environ.get("LEGAL_CONTROLLER_ADDRESS", "")
+LEGAL_CONTROLLER_POSTAL_CODE = os.environ.get("LEGAL_CONTROLLER_POSTAL_CODE", "")
+LEGAL_CONTROLLER_CITY = os.environ.get("LEGAL_CONTROLLER_CITY", "")
+LEGAL_CONTROLLER_COUNTRY = os.environ.get("LEGAL_CONTROLLER_COUNTRY", "France")
+LEGAL_CONTROLLER_SIREN = os.environ.get("LEGAL_CONTROLLER_SIREN", "")
+LEGAL_CONTROLLER_VAT = os.environ.get("LEGAL_CONTROLLER_VAT", "")
+LEGAL_CONTACT_EMAIL = os.environ.get("LEGAL_CONTACT_EMAIL", "contact@localhost")
+LEGAL_PRIVACY_EMAIL = os.environ.get("LEGAL_PRIVACY_EMAIL", "privacy@localhost")
+LEGAL_PUBLICATION_DIRECTOR = os.environ.get("LEGAL_PUBLICATION_DIRECTOR", "")
+LEGAL_HOSTING_DESCRIPTION = os.environ.get(
+    "LEGAL_HOSTING_DESCRIPTION",
+    "Infrastructure auto-hébergée en France (NAS Synology)",
+)
+PRIVACY_AUDIT_IP_RETENTION_DAYS = env_int("PRIVACY_AUDIT_IP_RETENTION_DAYS", 365)
+PRIVACY_PAYMENT_PAYLOAD_RETENTION_DAYS = env_int(
+    "PRIVACY_PAYMENT_PAYLOAD_RETENTION_DAYS",
+    90,
+)
+PRIVACY_SHIPMENT_SNAPSHOT_RETENTION_DAYS = env_int(
+    "PRIVACY_SHIPMENT_SNAPSHOT_RETENTION_DAYS",
+    90,
+)
+PRIVACY_PROSPECT_PII_RETENTION_DAYS = env_int("PRIVACY_PROSPECT_PII_RETENTION_DAYS", 730)
+PRIVACY_RETENTION_INTERVAL_SECONDS = env_int("PRIVACY_RETENTION_INTERVAL_SECONDS", 86400)
+
 CELERY_BEAT_SCHEDULE = {
     "shipping-sync-stale-tracking": {
         "task": "shipping.sync_stale_shipments_tracking",
         "schedule": max(60, env_int("SENDCLOUD_TRACKING_POLL_SECONDS", 1800)),
+    },
+    "privacy-retention-daily": {
+        "task": "core.apply_privacy_retention",
+        "schedule": max(3600, PRIVACY_RETENTION_INTERVAL_SECONDS),
     },
 }
 

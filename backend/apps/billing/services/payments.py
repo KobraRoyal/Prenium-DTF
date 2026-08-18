@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.accounts.services.privacy import sanitize_provider_payload
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.billing.models import Invoice, Payment
@@ -99,7 +100,7 @@ class PaymentService:
             provider_capture_id=result.provider_capture_id,
         )
         payment.approval_url = result.checkout_url
-        payment.provider_payload = result.payload
+        payment.provider_payload = sanitize_provider_payload(result.payload)
         payment.last_error_message = ""
         payment.save(
             update_fields=[
@@ -336,7 +337,7 @@ class PaymentService:
                 provider_payment_id=payment.provider_payment_id,
                 provider_capture_id=provider_capture_id or payment.provider_capture_id,
             )
-            payment.provider_payload = provider_payload
+            payment.provider_payload = sanitize_provider_payload(provider_payload)
             payment.captured_at = timezone.now()
             payment.last_error_message = ""
             payment.save(

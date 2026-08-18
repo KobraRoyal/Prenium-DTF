@@ -17,6 +17,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
+from apps.accounts.services.privacy import privacy_safe_shipment_request
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.core.public_refs import short_public_ref
@@ -479,6 +480,7 @@ class ShipmentService:
             raise ValidationError("Shipment can only be created when production is ready to ship.")
 
         shipment_request = self._normalize_create_payload(payload)
+        stored_snapshot = privacy_safe_shipment_request(shipment_request)
         gateway = self._get_gateway()
 
         with transaction.atomic():
@@ -491,7 +493,7 @@ class ShipmentService:
                     "shipping_option_code": shipment_request["shipping_option_code"],
                     "contract_id": shipment_request["contract_id"],
                     "source": source,
-                    "request_snapshot": shipment_request,
+                    "request_snapshot": stored_snapshot,
                 },
             )
 
@@ -505,7 +507,7 @@ class ShipmentService:
             shipment.shipping_option_code = shipment_request["shipping_option_code"]
             shipment.contract_id = shipment_request["contract_id"]
             shipment.source = source
-            shipment.request_snapshot = shipment_request
+            shipment.request_snapshot = stored_snapshot
             shipment.last_error_message = ""
             shipment.save(
                 update_fields=[

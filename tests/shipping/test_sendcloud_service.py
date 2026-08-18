@@ -160,6 +160,10 @@ def test_sendcloud_service_declares_order_without_label():
     assert shipment.sendcloud_status_code == "DECLARED"
     assert not shipment.label_file
     assert shipment.request_snapshot["shipping_option_code"] == "sendcloud:letter"
+    assert shipment.request_snapshot["recipient"]["email"] == "[redacted]"
+    assert shipment.request_snapshot["recipient"]["name"] == "[redacted]"
+    assert shipment.request_snapshot["recipient"]["city"] == "Paris"
+    assert gateway.last_payload[0]["shipment_request"]["recipient"]["email"] == "jean@example.com"
     assert AuditLogEntry.objects.filter(
         action="shipping.shipment_created",
         target_public_id=shipment.public_id,

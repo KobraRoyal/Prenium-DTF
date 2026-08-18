@@ -40,7 +40,16 @@
     <label class="prospect-consent-card{% if form.terms_accepted.errors %} is-error{% endif %}">
       <input type="checkbox" name="terms_accepted" required {% if form.terms_accepted.value %}checked{% endif %}>
       <span class="prospect-consent-card__control" aria-hidden="true">✓</span>
-      <span><strong>Je confirme ma demande d’accès professionnel</strong><small>{{ form.terms_accepted.label }}</small></span>
+      <span>
+        <strong>Je confirme ma demande d’accès professionnel</strong>
+        <small>
+          J’ai lu la
+          <a href="{% url 'politique-confidentialite' %}" target="_blank" rel="noopener noreferrer">politique de confidentialité</a>
+          et l’
+          <a href="{% url 'accord-sous-traitance' %}" target="_blank" rel="noopener noreferrer">accord de sous-traitance</a>.
+          {{ form.terms_accepted.label }}
+        </small>
+      </span>
     </label>
     {% if form.terms_accepted.errors %}<p class="error-text" role="alert">{{ form.terms_accepted.errors.0 }}</p>{% endif %}
   </section>

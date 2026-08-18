@@ -67,3 +67,29 @@ class MarketingServicesView(View):
                 "services": services,
             },
         )
+
+
+class LegalPageView(View):
+    """Pages publiques d'information (accessibles même si l'accueil redirige vers le login)."""
+
+    http_method_names = ["get"]
+    template_name = ""
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name)
+
+
+class MentionsLegalesView(LegalPageView):
+    template_name = "shop/legal/mentions.html"
+
+
+class PolitiqueConfidentialiteView(LegalPageView):
+    template_name = "shop/legal/privacy.html"
+
+
+class PolitiqueCookiesView(LegalPageView):
+    template_name = "shop/legal/cookies.html"
+
+
+class AccordSousTraitanceView(LegalPageView):
+    template_name = "shop/legal/dpa.html"

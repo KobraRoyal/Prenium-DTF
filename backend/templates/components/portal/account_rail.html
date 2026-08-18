@@ -1,4 +1,4 @@
-{# Rail partagé Identité / Équipe — account_section: "identity" | "team" #}
+{# Rail partagé Identité / Données / Équipe — account_section: "identity" | "privacy" | "team" #}
 <aside class="account-profile-rail" aria-label="Navigation du compte">
   <div class="account-profile-identity">
     <span class="account-profile-card__avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{% elif request.user.last_name %}{{ request.user.last_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
@@ -19,6 +19,11 @@
       href="{% url 'portal:profile' %}?space={{ nav_mode|default:'client' }}"
       {% if account_section == 'identity' %}aria-current="page"{% endif %}
     >Identité</a>
+    <a
+      class="{% if account_section == 'privacy' %}is-active{% endif %}"
+      href="{% url 'portal:privacy' %}?space={{ nav_mode|default:'client' }}"
+      {% if account_section == 'privacy' %}aria-current="page"{% endif %}
+    >Données</a>
     {% if nav_mode == "client" and customer %}
       {% if selected_membership.can_manage_team or customer_membership %}
       <a

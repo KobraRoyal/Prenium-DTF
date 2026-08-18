@@ -77,6 +77,8 @@ def test_prospect_steps_share_premium_structure_and_ctas():
     assert "Calendrier" in step3_html
     assert "data-submit-loading" in step3_html
     assert "Envoyer ma demande" in step3_html
+    assert reverse("politique-confidentialite") in step3_html
+    assert reverse("accord-sous-traitance") in step3_html
     assert "France" in step3_html
     assert "DTF au mètre" in step3_html
     assert "10 à 50 mètres" in step3_html

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body_class %}landing-saas ui-marketing-body legal-page{% endblock %}
+
+{% block surface_styles %}
+<link rel="stylesheet" href="{% static 'css/marketing.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "components/nav/landing_header.html" %}
+<main class="landing-main legal-article" id="main-content">
+  <article class="agency-section agency-section--ink">
+    <div class="landing-shell legal-article__inner">
+      <p class="agency-kicker">Information légale</p>
+      <h1 class="agency-services-title">{% block legal_title %}{% endblock %}</h1>
+      <p class="landing-lead">{% block legal_lead %}{% endblock %}</p>
+      <div class="legal-article__body">
+        {% block legal_body %}{% endblock %}
+      </div>
+      <p class="legal-article__updated">Dernière mise à jour : 18 août 2026. Textes à faire relire par un conseil.</p>
+    </div>
+  </article>
+</main>
+{% include "shop/partials/landing_footer.html" %}
+{% endblock %}

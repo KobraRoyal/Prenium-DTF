@@ -1,0 +1,57 @@
+{% extends "shop/legal/base.html" %}
+
+{% block title %}Accord de sous-traitance — {{ legal.brand_name }}{% endblock %}
+{% block legal_title %}Accord de sous-traitance{% endblock %}
+{% block legal_lead %}Cadre Art. 28 RGPD pour les fichiers de production déposés par le client professionnel.{% endblock %}
+
+{% block legal_body %}
+<h2>Rôles</h2>
+<p>
+  Le <strong>client</strong> (organisation utilisatrice du portail) est responsable de traitement
+  pour les visuels et fichiers qu’il dépose, lorsqu’ils portent sur des personnes identifiables.
+</p>
+<p>
+  <strong>{{ legal.controller_name }}</strong> est sous-traitant pour l’hébergement, le contrôle
+  prépresse, la production DTF et l’expédition de ces fichiers.
+</p>
+<p>
+  Pour les comptes, commandes et facturation du portail,
+  {{ legal.controller_name }} reste responsable de traitement (voir la
+  <a href="{% url 'politique-confidentialite' %}">politique de confidentialité</a>).
+</p>
+
+<h2>Instructions</h2>
+<p>Le sous-traitant ne traite les fichiers que pour :</p>
+<ul>
+  <li>contrôler la faisabilité technique ;</li>
+  <li>produire les transferts DTF commandés ;</li>
+  <li>livrer la commande ;</li>
+  <li>conserver les traces nécessaires à la garantie et à la comptabilité.</li>
+</ul>
+<p>Aucune réutilisation commerciale des visuels n’est autorisée.</p>
+
+<h2>Sous-traitants ultérieurs</h2>
+<ul>
+  <li>Hébergement : {{ legal.hosting_description }}.</li>
+  <li>Sendcloud (logistique).</li>
+  {% if legal.google_drive_enabled %}
+  <li>Google Drive (copie atelier des fichiers).</li>
+  {% endif %}
+</ul>
+<p>
+  Le client accepte ces sous-traitants ultérieurs en activant son compte.
+  Toute évolution substantielle sera indiquée dans cette page.
+</p>
+
+<h2>Sécurité et assistance</h2>
+<p>
+  Mesures : cloisonnement par organisation, accès atelier habilité, fichiers
+  non publics, journaux d’actions sensibles.
+</p>
+<p>
+  Pour exercer un droit d’une personne concernée portant sur un visuel,
+  le client (responsable) instruit la demande. {{ legal.controller_name }}
+  l’assiste via <a href="mailto:{{ legal.privacy_email }}">{{ legal.privacy_email }}</a>.
+</p>
+<p>Une violation de données sera notifiée au client sans délai injustifié.</p>
+{% endblock %}
