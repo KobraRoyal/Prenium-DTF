@@ -1,0 +1,53 @@
+/* Dashboard client : une carte d’action, palier sans métriques doublées. */
+
+body.product-shell .client-dashboard-focus .client-dashboard-focus__detail {
+  margin: 0;
+  color: var(--product-muted);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.product-shell .client-dashboard-section__head h2 {
+  margin: 0;
+}
+
+body.product-shell .client-dashboard-palier {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+body.product-shell .client-dashboard-palier.is-start {
+  background: color-mix(in srgb, var(--product-accent) 12%, var(--product-panel));
+}
+
+body.product-shell .client-dashboard-palier .page-head__content {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+body.product-shell .client-dashboard-palier h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+body.product-shell .client-dashboard-palier .page-head-lead {
+  margin: 0.45rem 0 0;
+  max-width: 40rem;
+}
+
+body.product-shell .client-dashboard-palier .ui-btn {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 39.99rem) {
+  body.product-shell .client-dashboard-palier {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+}

@@ -90,7 +90,7 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
         shipping_ctx = ShippingMethodService().checkout_ui_context(
             customer=self.customer,
             order=order,
-            widget="select",
+            widget="radios",
         )
         return {
             "customer": self.customer,

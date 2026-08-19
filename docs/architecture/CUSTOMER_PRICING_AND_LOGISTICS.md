@@ -33,8 +33,12 @@ Grille de référence (ajustable dans le **catalogue** `CatalogService`, pas par
    - Le volume équivalent linéaire du mois est la somme des quantités DTF en m² divisée par la
      laize en mètres.
    - Préparation, port et commandes déjà rattachées à un relevé sont exclus.
-   - Le client voit sa progression sur son dashboard et reçoit un e-mail une fois par nouveau
-     seuil atteint dans le mois (encours : au retarif ; comptant : après capture). Voir sprint 41.
+   - Le client voit sa progression sur son dashboard (titre factuel + message
+     commercial). Les messages se personnalisent dans **Atelier → Remises par
+     défaut**, sans HTML : placeholders `{remaining_m}`, `{next_percent}`,
+     `{current_percent}`, `{volume_m}`, `{threshold_m}`. Champ vide = texte Prenium.
+     Il reçoit un e-mail une fois par nouveau seuil atteint dans le mois
+     (encours : au retarif ; comptant : après capture). Voir sprint 41.
 
 ### Catalogue — résolution anti-régression
 
@@ -44,8 +48,7 @@ Grille de référence (ajustable dans le **catalogue** `CatalogService`, pas par
 ### Livraison — UX
 
 - Fiche client en **retrait atelier** (`default_shipping_mode=pickup` ou méthode `is_pickup`) : **pas de choix** à la commande, forcé `pickup` / 0 €.
-- **Encours** ou mode projet **réassort / recommande** : menu déroulant type livraison.
-- **Comptant CB** (hors retrait) : radios livraison.
+- **Hors retrait** : sélecteur à options comparables (nom, prix HT, délai), même contrat HTMX de recalcul du devis.
 
 ### Formule (`OrderPricingService`)
 

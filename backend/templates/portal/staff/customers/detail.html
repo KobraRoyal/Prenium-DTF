@@ -305,6 +305,7 @@
       <div class="volume-discount-panel__tools">
         {% if can_edit_pricing %}
         <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-default-volume-discount-settings' %}">Voir la grille par défaut</a>
+        <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-default-volume-discount-settings' %}#volume-nudge-copy">Messages dashboard</a>
         {% endif %}
         {% if volume_discount_available %}
         {% if customer.default_billing_mode == "immediate" %}

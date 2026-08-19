@@ -57,6 +57,7 @@ Création automatique du `CustomerBillingProfile` si absent.
 ## Audit
 
 - `customer.account_updated`
+- `customer.company_profile.updated` (édition client par propriétaire / administrateur du compte)
 - `customer.pricing_conditions_updated`
 
 ## Fichiers

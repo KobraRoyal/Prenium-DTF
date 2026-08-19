@@ -88,7 +88,7 @@ class ShippingMethodService:
             )
         return method
 
-    def checkout_ui_context(self, *, customer, order=None, widget: str = "select") -> dict:
+    def checkout_ui_context(self, *, customer, order=None, widget: str = "radios") -> dict:
         """Contexte UI choix livraison (checkout classique / partials)."""
         self.ensure_default_methods()
         locks_pickup = self.customer_locks_shipping_to_pickup(customer)

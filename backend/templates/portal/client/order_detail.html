@@ -1,30 +1,39 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags order_tags %}
 
-{% block title %}Détail commande client - Prenium DTF{% endblock %}
+{% block title %}{{ order_client_label|default:order_short_ref }} - Prenium DTF{% endblock %}
 
 {% block portal_content %}
 <div class="client-order-detail">
-{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" title="Commande" title_code=order_short_ref subtitle=order_client_label subtitle_prefix="Votre référence" %}
+  <section class="page-head page-head--premium">
+    {% include "components/portal/breadcrumbs/client_order_detail.html" %}
+    <div class="page-head__content">
+      <h1 class="font-display tracking-tight">{{ order_client_label|default:order_short_ref }}</h1>
+      <p class="page-head-lead">
+        <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
+        {% if order_client_label and order_client_label != order_short_ref %}
+        <span>{{ order_short_ref }}</span>
+        {% endif %}
+      </p>
+    </div>
+  </section>
 
 {% if request.GET.checkout == "success" %}
 {% if awaits_client_payment %}
 <div class="dui-alert dui-alert-warning mb-4" role="status">
   Commande enregistrée — paiement non finalisé.
   <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
-  pour lancer la production.
 </div>
 {% else %}
-<div class="dui-alert dui-alert-success mb-4" role="status">Commande transmise. Vos visuels sont en file de traitement.</div>
+<div class="dui-alert dui-alert-success mb-4" role="status">Commande transmise.</div>
 {% endif %}
 {% endif %}
 {% if request.GET.paid == "1" %}
-<div class="dui-alert dui-alert-success mb-4" role="status">Paiement confirmé. Votre justificatif est disponible dans l’onglet Règlement.</div>
+<div class="dui-alert dui-alert-success mb-4" role="status">Paiement confirmé. Le justificatif est dans Règlement.</div>
 {% elif request.GET.cancelled == "1" %}
 <div class="dui-alert dui-alert-warning mb-4" role="status">
   Paiement non finalisé.
   <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
-  pour confirmer votre commande.
 </div>
 {% endif %}
 
@@ -36,12 +45,7 @@
 {% endif %}
 
 <section class="card client-order-summary" aria-label="Résumé de la commande">
-  {% client_order_refs order %}
   <dl class="client-order-summary__facts">
-    <div class="client-order-summary__fact">
-      <dt>Statut</dt>
-      <dd><span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span></dd>
-    </div>
     <div class="client-order-summary__fact">
       <dt>Commande soumise</dt>
       <dd><time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y" }}</time></dd>
@@ -57,16 +61,6 @@
       <dd>Après contrôle technique</dd>
     </div>
     {% endif %}
-    <div class="client-order-summary__fact">
-      <dt>Règlement</dt>
-      <dd>
-        {% if awaits_client_payment %}
-        <span class="badge is-warning">Paiement en attente</span>
-        {% else %}
-        {{ order.billing_mode|human_status }}
-        {% endif %}
-      </dd>
-    </div>
     {% if shipment and shipment.shipped_at %}
     <div class="client-order-summary__fact client-order-summary__fact--shipping">
       <dt>Expédition</dt>
@@ -102,7 +96,7 @@
     <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.get_credit_hold_status_display }}</span>
   </div>
   {% endif %}
-  {% if order.customer_note %}
+  {% if order.customer_note and order.customer_note != order_client_label %}
   <div class="client-order-summary__note">
     <span class="client-order-summary__note-label">Informations transmises</span>
     <p>{{ order.customer_note }}</p>

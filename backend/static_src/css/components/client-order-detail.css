@@ -1,0 +1,111 @@
+/* Fiche commande transmise : même rythme que la commande à finaliser. */
+
+body.product-shell .client-order-detail > .page-head--premium .ui-breadcrumb {
+  margin: 0 0 0.5rem;
+  color: var(--product-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.product-shell .client-order-detail > .page-head--premium .ui-breadcrumb a {
+  color: var(--product-ink);
+  text-decoration: none;
+}
+
+body.product-shell .client-order-detail > .page-head--premium .ui-breadcrumb a:hover,
+body.product-shell .client-order-detail > .page-head--premium .ui-breadcrumb a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+body.product-shell .client-order-detail .page-head-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+body.product-shell .client-order-summary__facts {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  padding-top: 0;
+}
+
+body.product-shell .client-order-uploads-head {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 0.85rem;
+}
+
+body.product-shell .client-billing-success__receipt {
+  margin: 0;
+  color: var(--product-muted);
+  font-size: 0.75rem;
+}
+
+body.product-shell .client-billing-success__receipt code {
+  color: var(--product-ink);
+}
+
+body.product-shell .client-order-panel > .client-order-panel__lead:first-child {
+  margin: 0 0 1rem;
+  max-width: 65ch;
+}
+
+body.product-shell .client-order-detail .client-billing-overview,
+body.product-shell .client-order-detail .client-shipment-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0;
+  margin: 0 0 1rem;
+}
+
+body.product-shell .client-order-detail .client-billing-overview article,
+body.product-shell .client-order-detail .client-shipment-overview article {
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+body.product-shell .client-order-detail .client-billing-overview article:first-child,
+body.product-shell .client-order-detail .client-shipment-overview article:first-child {
+  padding-left: 0;
+}
+
+body.product-shell .client-order-detail .client-billing-overview article + article,
+body.product-shell .client-order-detail .client-shipment-overview article + article {
+  border-left: 1px solid var(--product-line);
+}
+
+body.product-shell .client-order-detail .client-billing-overview span,
+body.product-shell .client-order-detail .client-shipment-overview span {
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+@media (max-width: 39.99rem) {
+  body.product-shell .client-order-detail .client-billing-overview,
+  body.product-shell .client-order-detail .client-shipment-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.product-shell .client-order-detail .client-billing-overview article,
+  body.product-shell .client-order-detail .client-shipment-overview article {
+    padding: 0.75rem 0 0;
+  }
+
+  body.product-shell .client-order-detail .client-billing-overview article:first-child,
+  body.product-shell .client-order-detail .client-shipment-overview article:first-child {
+    padding-top: 0;
+  }
+
+  body.product-shell .client-order-detail .client-billing-overview article + article,
+  body.product-shell .client-order-detail .client-shipment-overview article + article {
+    border-left: 0;
+    border-top: 1px solid var(--product-line);
+  }
+}

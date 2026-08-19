@@ -1,0 +1,11 @@
+<span
+  class="account-profile-card__avatar"
+  id="account-profile-rail-avatar"
+  hx-swap-oob="true"
+  aria-hidden="true"
+>{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{% elif request.user.last_name %}{{ request.user.last_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
+<strong
+  id="account-profile-rail-name"
+  hx-swap-oob="true"
+  title="{% include 'portal/partials/account_rail_display_name.html' %}"
+>{% include "portal/partials/account_rail_display_name.html" %}</strong>

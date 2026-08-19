@@ -1,0 +1,64 @@
+<section
+  class="account-profile-panel account-identity-panel is-editing"
+  id="account-identity-panel"
+  aria-labelledby="personal-information-title"
+>
+  <header class="account-profile-panel__head">
+    <h2 id="personal-information-title">Identité</h2>
+  </header>
+
+  <form
+    method="post"
+    action="{% url 'portal:profile-identity' %}"
+    class="ui-form-stack account-profile-form account-identity-form"
+    data-submit-loading
+    hx-post="{% url 'portal:profile-identity' %}"
+    hx-target="#account-identity-panel"
+    hx-swap="outerHTML"
+    hx-indicator="#portal-htmx-indicator"
+    oninput="var b=this.querySelector('[data-identity-submit]'); if(b){b.disabled=false; b.setAttribute('aria-disabled','false');}"
+  >
+    {% csrf_token %}
+    <input type="hidden" name="space" value="{{ nav_mode }}">
+    {% if form.non_field_errors %}
+    <p class="error-text ui-error-text" role="alert">{{ form.non_field_errors.0 }}</p>
+    {% endif %}
+
+    <div class="account-profile-form__grid">
+      {% include "components/forms/field_group.html" with id="id_first_name" name="first_name" label="Prénom" type="text" autocomplete="given-name" value=form.first_name.value|default:"" error=form.first_name.errors.0 show_label=1 autofocus=1 %}
+      {% include "components/forms/field_group.html" with id="id_last_name" name="last_name" label="Nom" type="text" autocomplete="family-name" value=form.last_name.value|default:"" error=form.last_name.errors.0 show_label=1 %}
+    </div>
+
+    <div class="ui-field-group">
+      <label class="ui-label" for="id_login_email">E-mail de connexion</label>
+      <input
+        class="ui-input"
+        id="id_login_email"
+        type="email"
+        value="{{ request.user.email }}"
+        readonly
+        aria-readonly="true"
+        aria-describedby="id_login_email-help"
+      >
+      <p class="ui-help" id="id_login_email-help">Pour le modifier, contactez l’atelier.</p>
+    </div>
+
+    <div class="account-profile-form__footer">
+      <button
+        class="ui-btn ui-btn-secondary"
+        type="button"
+        hx-get="{% url 'portal:profile-identity' %}?space={{ nav_mode }}"
+        hx-target="#account-identity-panel"
+        hx-swap="outerHTML"
+        hx-indicator="#portal-htmx-indicator"
+      >Annuler</button>
+      <button
+        class="ui-btn ui-btn-primary"
+        type="submit"
+        data-identity-submit
+        {% if not form.errors %}disabled aria-disabled="true"{% endif %}
+        hx-disabled-elt="this"
+      >Enregistrer</button>
+    </div>
+  </form>
+</section>

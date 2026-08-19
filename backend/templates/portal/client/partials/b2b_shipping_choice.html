@@ -1,13 +1,14 @@
 {# Choix option de livraison — masqué si fiche client = retrait atelier. #}
+{% load l10n %}
 {% if shipping_locked_to_pickup or not show_shipping_choice %}
 <input type="hidden" name="shipping_method_code" value="pickup">
 {% if shipping_locked_to_pickup %}
-<p class="muted text-sm m-0 b2b-shipping-locked">Retrait atelier (défini sur votre compte) — aucun frais d’expédition.</p>
+<p class="muted text-sm m-0 b2b-shipping-locked">Retrait atelier — aucun frais d’expédition.</p>
 {% endif %}
 {% elif shipping_methods %}
   {% if shipping_choice_widget == "select" %}
   <div class="b2b-shipping-choice b2b-shipping-choice--select">
-    <label class="ui-label" for="id_shipping_method_code">Type de livraison</label>
+    <label class="ui-label" for="id_shipping_method_code">Livraison</label>
     <select
       class="ui-input"
       id="id_shipping_method_code"
@@ -26,20 +27,19 @@
         value="{{ method.code }}"
         {% if selected_shipping_method_code == method.code %}selected{% endif %}
       >
-        {{ method.name }}{% if method.resolved_price %} — {{ method.resolved_price }} € HT{% else %} — gratuit{% endif %}
+        {{ method.name }}{% if method.resolved_price %} — {% localize on %}{{ method.resolved_price }}{% endlocalize %} € HT{% else %} — gratuit{% endif %}
       </option>
       {% endfor %}
     </select>
-    <p class="muted text-sm m-0">Les frais sont recalculés côté serveur selon l’option choisie.</p>
   </div>
   {% else %}
-  <fieldset class="b2b-settlement-choice b2b-shipping-choice">
-    <legend>Livraison</legend>
-    <p class="muted text-sm m-0">Choisissez le mode d’acheminement pour cette commande. Les frais sont calculés côté serveur.</p>
-    <div class="b2b-settlement-choice__options">
+  <fieldset class="b2b-shipping-choice">
+    <legend class="b2b-shipping-choice__legend">Livraison</legend>
+    <div class="b2b-shipping-choice__options">
       {% for method in shipping_methods %}
-      <label class="b2b-settlement-choice__option{% if selected_shipping_method_code == method.code %} is-selected{% endif %}">
+      <label class="b2b-shipping-choice__option">
         <input
+          class="ui-sr-only"
           type="radio"
           name="shipping_method_code"
           value="{{ method.code }}"
@@ -50,12 +50,12 @@
           hx-target="#order-project-summary"
           hx-swap="outerHTML"
           hx-include="none"
+          hx-indicator="#portal-htmx-indicator"
           {% endif %}
         >
-        <span>
-          <strong>{{ method.name }}{% if method.resolved_price %} — {{ method.resolved_price }}&nbsp;€ HT{% else %} — gratuit{% endif %}</strong>
-          <small>{% if method.eta_label %}{{ method.eta_label }}. {% endif %}{{ method.description }}</small>
-        </span>
+        <span class="b2b-shipping-choice__name">{{ method.name }}</span>
+        <span class="b2b-shipping-choice__price">{% if method.resolved_price %}{% localize on %}{{ method.resolved_price }}{% endlocalize %}&nbsp;€ HT{% else %}Gratuit{% endif %}</span>
+        {% if method.eta_label %}<span class="b2b-shipping-choice__eta">{{ method.eta_label }}</span>{% endif %}
       </label>
       {% endfor %}
     </div>

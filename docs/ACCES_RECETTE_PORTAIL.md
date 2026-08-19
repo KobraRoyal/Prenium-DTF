@@ -40,13 +40,16 @@ docker compose exec web python manage.py seed_sprint09_recipe --reset
 | `client.a.owner@prenium.local` | Client propriétaire (tenant A) → **`/client/`** |
 | `client.a.member@prenium.local` | Client membre (tenant A) |
 | `client.b.owner@prenium.local` | Client propriétaire (tenant B) — tests **isolation** entre clients |
+| `client.cash.owner@prenium.local` | Client **comptant CB** (Seed Client Comptant) — remise volume prospective, Gang Sheet / checkout |
 | `hybrid.ops.client@prenium.local` | Hybride staff + client — recette **séparation de contexte** |
 
 Sans exécuter `seed_sprint09_recipe`, ces comptes n’existent pas en base.
 
 ## Données seed (architecture B2B actuelle)
 
-La commande crée des commandes en **facturation différée** (`billing_mode = deferred`), **sans lignes tarifées** tant que le staff n’a pas lancé le calcul : les montants viennent de `OrderPricingService` après saisie métrage (seed : métrage linéaire commande) ou contrôle.
+La commande crée des commandes en **facturation différée** (`billing_mode = deferred`) pour les clients A et B, **sans lignes tarifées** tant que le staff n’a pas lancé le calcul : les montants viennent de `OrderPricingService` après saisie métrage (seed : métrage linéaire commande) ou contrôle.
+
+Le **Seed Client Comptant** (`client.cash.owner@prenium.local`) est en `default_billing_mode = immediate`, avec les paliers Atelier 5 m −10 % / 10 m −20 %. Aucune commande n’est pré-créée : le parcours à tester est Gang Sheet → devis remisé → paiement CB.
 
 - **Profils facturation** : `CustomerBillingProfile` pour Seed Client A (mensuel, 25 €/m², plafond encours 5000 €) et Seed Client B (bi-mensuel, 18,50 €/m², plafond 1500 €, blocage encours actif).
 - **Scénarios** (repère : `customer_note` sur `Order`) :

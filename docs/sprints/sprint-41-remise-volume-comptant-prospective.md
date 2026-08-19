@@ -104,6 +104,9 @@ Livrables :
 Fichiers :
 
 - `backend/apps/portal/dashboard_focus.py`
+- `backend/apps/customers/services/volume_nudge_copy.py`
+- `backend/apps/customers/models.py` (`VolumeDiscountDashboardCopy`)
+- `backend/templates/portal/staff/customers/default_volume_discounts.html`
 - `backend/templates/portal/client/dashboard.html`
 - `backend/templates/portal/client/partials/order_project_summary.html`
 - `backend/templates/portal/client/panels/billing.html`
@@ -114,6 +117,8 @@ Fichiers :
 Livrables :
 
 - dashboard comptant : volume **payé**, palier actuel, taux, reste jusqu’au suivant ;
+- messages dashboard personnalisables (Atelier, grille par défaut) : 5 moments ×
+  comptant/encours, placeholders, fallback Prenium si champ vide ;
 - devis Gang Sheet : ligne « Remise volume −X % » + TTC déjà remisé sur le CTA ;
 - panneau facture : « Palier −X % sur cette commande » (jamais « tout le DTF du mois » en comptant) ;
 - Atelier : badge « Comptant — sans rétroactivité » vs « Encours éligible ».
@@ -166,6 +171,7 @@ Livrables :
 ## URLs / HTMX
 
 - inchangées : fiche client Atelier, dashboard client, devis projet (`estimate_gang_sheet_quote` déjà appelé par `views_b2b_order_projects.py`) ;
+- `staff/settings/volume-discounts/messages/` : POST des messages dashboard (singleton, pas d’id incrémental) ;
 - pas de nouvelle ressource par id incrémental.
 
 ## Hors scope
@@ -181,9 +187,10 @@ Livrables :
 - [x] aucune migration (champs snapshot `Order.volume_discount_*` réutilisés)
 - [x] Ruff check des fichiers du lot
 - [x] tests ciblés volume encours **et** cash (13 tests service/pricing verts en local)
+- [x] messages dashboard personnalisables Atelier + fallback Prenium + échappement HTML
 - [ ] suite projet Docker (`make test`) — à lancer quand le démon Docker est dispo
 - [x] isolation client / pas de retarif post-capture / e-mail palier après capture
-- [ ] QA front manuelle dashboard / devis / fiche Atelier
+- [ ] QA front manuelle dashboard / devis / fiche Atelier / messages dashboard
 
 ## Hypothèses
 
@@ -192,4 +199,5 @@ Livrables :
 - Payé = `Payment.Status.CAPTURED` (même helper que la gate production).
 - Recalcul du palier au persist (soumission / tarification Gang Sheet) pour que Stripe reçoive le TTC à jour ; un devis abandonné ne fige rien.
 - Si deux devis concurrent voient le même `volume_paye`, les deux peuvent obtenir le palier franchissant ; acceptable (politique prospective, pas de correction a posteriori).
-- Nouvelle migration **évitée** : réutiliser les colonnes snapshot déjà sur `Order`.
+- Nouvelle migration **évitée** pour le pricing : réutiliser les colonnes snapshot déjà sur `Order`.
+- Messages dashboard : **globaux** (voix Prenium), pas d’override par client dans ce lot.

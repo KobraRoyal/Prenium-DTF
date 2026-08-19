@@ -45,6 +45,7 @@ def test_portal_legacy_views_facade_is_removed():
     [
         ("portal:login", {}, "apps.portal.views_auth"),
         ("portal:profile", {}, "apps.portal.views_profile"),
+        ("portal:profile-identity", {}, "apps.portal.views_profile"),
         ("portal:client-dashboard", {}, "apps.portal.views_client"),
         (
             "portal:client-checkout",
@@ -93,7 +94,7 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
     ("module_name", "allowed_internal_imports"),
     [
         ("views_auth", {"apps.portal.views_common"}),
-        ("views_profile", {"apps.portal.views_common"}),
+        ("views_profile", {"apps.portal.htmx", "apps.portal.views_common"}),
         (
             "views_client",
             {
@@ -142,7 +143,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
     ("module_name", "max_lines"),
     [
         ("views_auth", 60),
-        ("views_profile", 90),
+        ("views_profile", 220),
         ("views_staff_uploads", 130),
         ("views_staff_reviews", 170),
         ("views_staff", 180),

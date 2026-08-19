@@ -1,0 +1,104 @@
+<section
+  class="account-profile-panel account-company-panel is-editing"
+  id="account-company-panel"
+  aria-labelledby="company-information-title"
+>
+  <header class="account-profile-panel__head">
+    <h2 id="company-information-title">Société</h2>
+  </header>
+
+  <form
+    method="post"
+    action="{% url 'portal:client-company-profile' customer_public_id=customer.public_id %}"
+    class="ui-form-stack account-profile-form account-company-form"
+    data-submit-loading
+    hx-post="{% url 'portal:client-company-profile' customer_public_id=customer.public_id %}"
+    hx-target="#account-company-panel"
+    hx-swap="outerHTML"
+    hx-indicator="#portal-htmx-indicator"
+    oninput="var b=this.querySelector('[data-company-submit]'); if(b){b.disabled=false; b.setAttribute('aria-disabled','false');}"
+  >
+    {% csrf_token %}
+    {% if company_form.non_field_errors %}
+    <p class="error-text ui-error-text" role="alert">{{ company_form.non_field_errors.0 }}</p>
+    {% endif %}
+
+    {% include "components/forms/field_group.html" with id="id_company_name" name="name" label="Raison sociale" type="text" autocomplete="organization" value=company_form.name.value|default:"" error=company_form.name.errors.0 required=1 show_label=1 autofocus=1 %}
+    {% include "components/forms/field_group.html" with id="id_company_billing_email" name="billing_email" label="E-mail de facturation" type="email" autocomplete="email" value=company_form.billing_email.value|default:"" error=company_form.billing_email.errors.0 show_label=1 %}
+
+    <div class="account-profile-form__grid">
+      {% include "components/forms/field_group.html" with id="id_company_siren" name="siren" label="SIREN" type="text" inputmode="numeric" value=company_form.siren.value|default:"" error=company_form.siren.errors.0 show_label=1 %}
+      {% include "components/forms/field_group.html" with id="id_company_vat_number" name="vat_number" label="N° TVA" type="text" value=company_form.vat_number.value|default:"" error=company_form.vat_number.errors.0 show_label=1 %}
+    </div>
+
+    <fieldset class="account-company-fieldset">
+      <legend>Facturation</legend>
+      {% include "components/forms/field_group.html" with id="id_company_billing_address_line1" name="billing_address_line1" label="Adresse" type="text" autocomplete="address-line1" value=company_form.billing_address_line1.value|default:"" error=company_form.billing_address_line1.errors.0 show_label=1 %}
+      {% include "components/forms/field_group.html" with id="id_company_billing_address_line2" name="billing_address_line2" label="Complément" type="text" autocomplete="address-line2" value=company_form.billing_address_line2.value|default:"" error=company_form.billing_address_line2.errors.0 show_label=1 %}
+      <div class="account-profile-form__grid">
+        {% include "components/forms/field_group.html" with id="id_company_billing_postal_code" name="billing_postal_code" label="Code postal" type="text" autocomplete="postal-code" value=company_form.billing_postal_code.value|default:"" error=company_form.billing_postal_code.errors.0 show_label=1 %}
+        {% include "components/forms/field_group.html" with id="id_company_billing_city" name="billing_city" label="Ville" type="text" autocomplete="address-level2" value=company_form.billing_city.value|default:"" error=company_form.billing_city.errors.0 show_label=1 %}
+      </div>
+      <div class="ui-field-group">
+        <label class="ui-label" for="id_company_billing_country">Pays de facturation</label>
+        <select class="ui-input{% if company_form.billing_country.errors %} ui-input--error{% endif %}" id="id_company_billing_country" name="billing_country">
+          {% for value, label in company_form.fields.billing_country.choices %}
+          <option value="{{ value }}"{% if company_form.billing_country.value == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if company_form.billing_country.errors %}
+        <p class="error-text ui-error-text" id="id_company_billing_country-error" role="alert">{{ company_form.billing_country.errors.0 }}</p>
+        {% endif %}
+      </div>
+    </fieldset>
+
+    <label class="account-company-same">
+      <input
+        type="checkbox"
+        name="shipping_same_as_billing"
+        value="1"
+        {% if company_form.shipping_same_as_billing.value %}checked{% endif %}
+      >
+      <span>Même adresse de livraison</span>
+    </label>
+
+    <fieldset class="account-company-fieldset account-company-shipping">
+      <legend>Livraison</legend>
+      {% include "components/forms/field_group.html" with id="id_company_shipping_address_line1" name="shipping_address_line1" label="Adresse" type="text" autocomplete="shipping address-line1" value=company_form.shipping_address_line1.value|default:"" error=company_form.shipping_address_line1.errors.0 show_label=1 %}
+      {% include "components/forms/field_group.html" with id="id_company_shipping_address_line2" name="shipping_address_line2" label="Complément" type="text" autocomplete="shipping address-line2" value=company_form.shipping_address_line2.value|default:"" error=company_form.shipping_address_line2.errors.0 show_label=1 %}
+      <div class="account-profile-form__grid">
+        {% include "components/forms/field_group.html" with id="id_company_shipping_postal_code" name="shipping_postal_code" label="Code postal" type="text" autocomplete="shipping postal-code" value=company_form.shipping_postal_code.value|default:"" error=company_form.shipping_postal_code.errors.0 show_label=1 %}
+        {% include "components/forms/field_group.html" with id="id_company_shipping_city" name="shipping_city" label="Ville" type="text" autocomplete="shipping address-level2" value=company_form.shipping_city.value|default:"" error=company_form.shipping_city.errors.0 show_label=1 %}
+      </div>
+      <div class="ui-field-group">
+        <label class="ui-label" for="id_company_shipping_country">Pays de livraison</label>
+        <select class="ui-input{% if company_form.shipping_country.errors %} ui-input--error{% endif %}" id="id_company_shipping_country" name="shipping_country">
+          {% for value, label in company_form.fields.shipping_country.choices %}
+          <option value="{{ value }}"{% if company_form.shipping_country.value == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if company_form.shipping_country.errors %}
+        <p class="error-text ui-error-text" id="id_company_shipping_country-error" role="alert">{{ company_form.shipping_country.errors.0 }}</p>
+        {% endif %}
+      </div>
+    </fieldset>
+
+    <div class="account-profile-form__footer">
+      <button
+        class="ui-btn ui-btn-secondary"
+        type="button"
+        hx-get="{% url 'portal:client-company-profile' customer_public_id=customer.public_id %}"
+        hx-target="#account-company-panel"
+        hx-swap="outerHTML"
+        hx-indicator="#portal-htmx-indicator"
+      >Annuler</button>
+      <button
+        class="ui-btn ui-btn-primary"
+        type="submit"
+        data-company-submit
+        {% if not company_form.errors %}disabled aria-disabled="true"{% endif %}
+        hx-disabled-elt="this"
+      >Enregistrer</button>
+    </div>
+  </form>
+</section>

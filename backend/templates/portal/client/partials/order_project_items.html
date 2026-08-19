@@ -71,12 +71,13 @@
         <div class="b2b-visual-facts" aria-label="Caractéristiques de {{ item.name }}"><span>{{ item.quantity }} ex.</span><span>{{ item.width_mm }} × {{ item.height_mm }} mm</span>{% if item.support_color_label %}<span class="b2b-support-color-badge{% if item.support_color_is_multicolor %} is-rainbow{% endif %}"{% if not item.support_color_is_multicolor %} style="--swatch: {{ item.support_color_hex }}"{% endif %}>{{ item.support_color_label }}</span>{% endif %}</div>
         {% with review=item.technical_review %}
         {% include "portal/client/partials/order_project_quality_review.html" with compact=1 %}
-        {% if review.can_confirm and not review.confirmed and project.status != "submitted" and project.status != "converted" and project.status != "cancelled" %}
-        <p class="b2b-quality-hint muted text-sm">À valider</p>
-        {% endif %}
         {% endwith %}
       </div>
-      <span class="badge{% if item.is_production_gang_sheet_asset and not item.analysis_pending %} is-success{% endif %}">{% if item.is_production_gang_sheet_asset and not item.analysis_pending %}PDF HD{% elif item.asset and item.asset.current_version %}{{ item.asset.current_version.get_analysis_status_display }}{% else %}Fichier requis{% endif %}</span>
+      {% if item.is_production_gang_sheet_asset and not item.analysis_pending %}
+      <span class="badge is-success">PDF HD</span>
+      {% elif not item.asset or not item.asset.current_version %}
+      <span class="badge">Fichier requis</span>
+      {% endif %}
       <div class="ui-table-actions b2b-visual-list-item__actions">
         <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-dialog-open="visual-dialog-{{ item.public_id }}">Ouvrir</button>
         {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True %}

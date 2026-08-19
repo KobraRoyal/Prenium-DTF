@@ -9,7 +9,9 @@ from apps.customers.models import (
     CustomerBillingProfile,
     CustomerVolumeDiscountTier,
     DefaultCustomerVolumeDiscountTier,
+    VolumeDiscountDashboardCopy,
 )
+from apps.customers.services.volume_nudge_copy import COPY_FIELDS, DEFAULT_NUDGE_COPY
 
 
 class StaffCustomerAccountForm(forms.ModelForm):
@@ -204,3 +206,31 @@ class StaffCustomerVolumeDiscountTierForm(forms.ModelForm):
 class StaffDefaultCustomerVolumeDiscountTierForm(StaffCustomerVolumeDiscountTierForm):
     class Meta(StaffCustomerVolumeDiscountTierForm.Meta):
         model = DefaultCustomerVolumeDiscountTier
+
+
+class StaffVolumeDiscountDashboardCopyForm(forms.ModelForm):
+    class Meta:
+        model = VolumeDiscountDashboardCopy
+        fields = COPY_FIELDS
+        widgets = {
+            field: forms.Textarea(
+                attrs={
+                    "class": "ui-input",
+                    "rows": 3,
+                    "maxlength": "400",
+                }
+            )
+            for field in COPY_FIELDS
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in COPY_FIELDS:
+            self.fields[field_name].required = False
+            self.fields[field_name].widget.attrs["placeholder"] = DEFAULT_NUDGE_COPY[field_name]
+
+    def clean(self):
+        cleaned = super().clean()
+        for field_name in COPY_FIELDS:
+            cleaned[field_name] = str(cleaned.get(field_name) or "").strip()
+        return cleaned

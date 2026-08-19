@@ -1,0 +1,96 @@
+/* Fiche commande à finaliser : retour, pas un kicker au-dessus du titre. */
+
+body.product-shell .b2b-project-header__intro .ui-breadcrumb {
+  margin: 0 0 0.5rem;
+  color: var(--product-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.product-shell .b2b-project-header__intro .ui-breadcrumb a {
+  color: var(--product-ink);
+  text-decoration: none;
+}
+
+body.product-shell .b2b-project-header__intro .ui-breadcrumb a:hover,
+body.product-shell .b2b-project-header__intro .ui-breadcrumb a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+body.product-shell .b2b-shipping-choice {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.75rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+body.product-shell .b2b-shipping-choice__legend {
+  float: none;
+  padding: 0;
+  margin: 0;
+  color: var(--product-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.product-shell .b2b-shipping-choice__options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+@media (max-width: 39.99rem) {
+  body.product-shell .b2b-shipping-choice__options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+body.product-shell .b2b-shipping-choice__option {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.75rem;
+  border: 2px solid var(--product-line);
+  background: var(--product-panel);
+  cursor: pointer;
+}
+
+body.product-shell .b2b-shipping-choice__option:hover {
+  background: color-mix(in srgb, var(--product-accent) 10%, var(--product-panel));
+}
+
+body.product-shell .b2b-shipping-choice__option:has(input:checked) {
+  background: color-mix(in srgb, var(--product-accent) 22%, var(--product-panel));
+  border-color: var(--product-ink);
+}
+
+body.product-shell .b2b-shipping-choice__option:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+body.product-shell .b2b-shipping-choice__name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+body.product-shell .b2b-shipping-choice__price {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+body.product-shell .b2b-shipping-choice__eta {
+  color: var(--product-muted);
+  font-size: 0.75rem;
+  line-height: 1.3;
+}

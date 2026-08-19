@@ -71,7 +71,11 @@ from .views_gang_sheets import (
     StaffGangSheetSettingsView,
 )
 from .views_payments import ClientOrderPaymentInitiateView, ClientOrderPaymentReturnView
-from .views_profile import PortalProfileView
+from .views_profile import (
+    ClientCompanyProfileView,
+    PortalProfileIdentityView,
+    PortalProfileView,
+)
 from .views_staff import (
     StaffOrderDeleteView,
     StaffOrderDetailView,
@@ -93,6 +97,7 @@ from .views_staff_customers import (
     StaffDefaultVolumeDiscountSettingsView,
     StaffDefaultVolumeDiscountTierCreateView,
     StaffDefaultVolumeDiscountTierUpdateView,
+    StaffVolumeDiscountDashboardCopyUpdateView,
 )
 from .views_staff_dashboard import StaffDashboardView
 from .views_staff_documents import StaffManufacturingOrderBatchPdfView
@@ -122,6 +127,16 @@ urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
     path("logout/", PortalLogoutView.as_view(), name="logout"),
     path("account/profile/", PortalProfileView.as_view(), name="profile"),
+    path(
+        "account/profile/identity/",
+        PortalProfileIdentityView.as_view(),
+        name="profile-identity",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/company/",
+        ClientCompanyProfileView.as_view(),
+        name="client-company-profile",
+    ),
     path(
         "acces/invitation/<str:token>/",
         CustomerInvitationAcceptView.as_view(),
@@ -448,6 +463,11 @@ urlpatterns = [
         "staff/settings/volume-discounts/",
         StaffDefaultVolumeDiscountSettingsView.as_view(),
         name="staff-default-volume-discount-settings",
+    ),
+    path(
+        "staff/settings/volume-discounts/messages/",
+        StaffVolumeDiscountDashboardCopyUpdateView.as_view(),
+        name="staff-volume-discount-dashboard-copy",
     ),
     path(
         "staff/settings/volume-discounts/tiers/",

@@ -316,6 +316,28 @@
 - [x] Isolation inter-client et restrictions membre/propriétaire conservées
 - [x] Validation complète : 480 tests, 60 tests ciblés, lint, Django et migrations conformes
 
+## Micro-lot portail client — distill fiche commande transmise (2026-08-19)
+
+- [x] En-tête aligné sur la fiche projet : titre client, statut une fois, retour Commandes
+- [x] Quatre onglets distillés (Visuels, Avancement, Expédition, Règlement) sans redites
+- [x] Contrats HTMX, paiement et suivi colis conservés
+
+## Micro-lot portail client — société sur le profil (2026-08-19)
+
+- [x] Affichage raison sociale, SIREN, TVA et adresses sur Mes informations
+- [x] Édition HTMX réservée au propriétaire et aux administrateurs du compte
+- [x] Isolation inter-clients et audit `customer.company_profile.updated`
+
+## Micro-lot portail — identité HTMX sur le profil (2026-08-19)
+
+- [x] Affichage prénom / nom / e-mail, édition HTMX alignée sur la société
+- [x] E-mail de connexion inchangé, audit `account.profile.updated`
+
+## Micro-lot portail — cohérence UI du profil (2026-08-19)
+
+- [x] `page-head` du compte aligné sur dashboard / commandes (carte 2 px + ombre dure)
+- [x] Grille de faits alignée sur la fiche commande (séparateurs 1 px, labels capitales)
+
 ## Sprint 31 — Gang Sheet Generator Pro (2026-07-15)
 
 - [x] App métier dédiée, modèles tenant-scoped, indexes et contraintes

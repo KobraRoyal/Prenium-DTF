@@ -179,6 +179,7 @@ def test_staff_configures_default_ladder_with_pricing_permission_only():
     ).exists()
     html = client.get(url).content.decode()
     assert 'data-testid="default-volume-discount-settings"' in html
+    assert 'data-testid="volume-nudge-copy"' in html
     assert "volume-tier-list" in html
     assert "Copié à la création" in html
     assert "<strong>1</strong>" in html

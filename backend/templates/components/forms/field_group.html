@@ -16,7 +16,7 @@
     {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
     {% if required %}required{% endif %}
     {% if autofocus %}autofocus{% endif %}
-    placeholder="{% if placeholder %}{{ placeholder }}{% else %}{{ label }}{% endif %}"
+    {% if not show_label %}placeholder="{% if placeholder %}{{ placeholder }}{% else %}{{ label }}{% endif %}"{% endif %}
     {% if value %}value="{{ value }}"{% endif %}
     {% if inputmode %}inputmode="{{ inputmode }}"{% endif %}
     {% if pattern %}pattern="{{ pattern }}"{% endif %}

@@ -1,29 +1,10 @@
 {% load portal_tags l10n %}
-<div id="order-project-summary" class="b2b-project-checkout-summary" aria-label="Finalisation de la commande"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
-  <div class="b2b-project-checkout-bar">
-    <nav class="b2b-project-checkout-bar__nav ui-breadcrumb" aria-label="Fil d'Ariane">
-      <ol class="ui-breadcrumb__list">
-        <li class="ui-breadcrumb__item">
-          <a href="{% url 'portal:client-order-project-list' customer_public_id=customer.public_id %}">Commandes à finaliser</a>
-        </li>
-      </ol>
-    </nav>
-    <div class="b2b-project-checkout-bar__meta">
-      <span class="badge{% if project.status == 'ready_to_submit' or project.status == 'converted' or project.status == 'confirmed' %} is-success{% elif project.status == 'action_required' or project.status == 'changes_requested' or project.status == 'blocked' %} is-danger{% elif project.status == 'analyzing' or project.status == 'incomplete' or project.status == 'draft' %} is-warning{% else %} is-neutral{% endif %}">{{ project.get_status_display }}</span>
-      <span class="b2b-project-toolbar__chip">{{ project.items.count }} visuel{{ project.items.count|pluralize }}</span>
-      <span class="b2b-project-toolbar__chip">{{ project.project_number }}</span>
-    </div>
-  </div>
-
-  <section class="b2b-project-checkout{% if gang_sheet_quote %} has-quote{% endif %}" aria-label="Checkout">
+<div id="order-project-summary" class="b2b-project-checkout-summary" aria-label="Montant et transmission"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+  <section class="b2b-project-checkout{% if gang_sheet_quote %} has-quote{% endif %}" aria-label="Transmission">
     {% if gang_sheet_quote %}
     <aside class="b2b-project-quote" aria-label="Montant à régler">
       <div class="b2b-project-quote__head">
-        <div class="b2b-project-quote__title">
-          <p class="b2b-project-quote__eyebrow">{% if gang_sheet_quote.tax_amount_eur %}Total TTC{% else %}Total HT{% endif %}</p>
-          <p class="b2b-project-quote__lead">{% if project.order_mode == "reorder" %}Calculé depuis vos dimensions de réassort{% else %}Calculé depuis votre Gang Sheet{% endif %}</p>
-        </div>
-        <p class="b2b-project-quote__total"><strong>{{ gang_sheet_quote.total_eur }}&nbsp;{{ gang_sheet_quote.currency }}</strong></p>
+        <p class="b2b-project-quote__total"><strong>{{ gang_sheet_quote.total_eur }}&nbsp;{{ gang_sheet_quote.currency }} {% if gang_sheet_quote.tax_amount_eur %}TTC{% else %}HT{% endif %}</strong></p>
       </div>
       <div class="b2b-project-quote__rows" role="list">
         <div class="b2b-project-quote__row" role="listitem">
@@ -81,27 +62,24 @@
           <button class="ui-btn ui-btn-primary b2b-project-checkout-cta" type="submit">
             {% if project.status == "submitted" %}Finaliser et payer {{ gang_sheet_quote.total_eur }} €{% else %}Confirmer et payer {{ gang_sheet_quote.total_eur }} €{% endif %}
           </button>
-          <p class="b2b-project-checkout-hint muted text-sm">Paiement sécurisé par carte. La production démarre après règlement.</p>
+          <p class="b2b-project-checkout-hint muted text-sm">La production démarre après règlement.</p>
           {% else %}
           <button class="ui-btn ui-btn-primary b2b-project-checkout-cta" type="submit">{% if project.status == "submitted" %}Finaliser ma commande{% else %}Confirmer et transmettre{% endif %}</button>
-          <p class="b2b-project-checkout-hint muted text-sm">Votre commande est transmise à l’atelier pour contrôle et production.</p>
           {% endif %}
         </form>
       {% elif project.status == "converted" and project.converted_order %}
         <a class="ui-btn ui-btn-primary b2b-project-checkout-cta" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=project.converted_order.public_id %}">Voir ma commande</a>
       {% elif project.status == "action_required" %}
-        <p class="b2b-project-toolbar__hint b2b-summary-alert">Validez chaque visuel avant de finaliser.</p>
-      {% elif project.status == "draft" or project.status == "incomplete" %}
-        <p class="b2b-project-toolbar__hint muted text-sm">Ajoutez un visuel complet pour finaliser.</p>
+        <p class="b2b-project-toolbar__hint b2b-summary-alert">Validez chaque visuel pour transmettre.</p>
+      {% elif project.items.all %}
+        {% if project.status == "draft" or project.status == "incomplete" %}
+        <p class="b2b-project-toolbar__hint muted text-sm">Complétez chaque visuel pour transmettre.</p>
+        {% endif %}
       {% endif %}
 
       <div class="b2b-project-checkout-secondary">
         {% include "portal/client/partials/order_project_delete_button.html" with button_class="ui-btn ui-btn-ghost ui-btn-sm b2b-project-checkout-delete" label="Supprimer la commande" %}
       </div>
-
-      {% if project.status == "submitted" and not project.converted_order %}
-      <p class="b2b-project-toolbar__footnote muted text-sm">Commande enregistrée. Finalisez pour la transmettre à l’atelier.</p>
-      {% endif %}
     </div>
   </section>
 </div>

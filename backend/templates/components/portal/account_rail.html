@@ -1,9 +1,9 @@
 {# Rail partagé Identité / Équipe — account_section: "identity" | "team" #}
 <aside class="account-profile-rail" aria-label="Navigation du compte">
   <div class="account-profile-identity">
-    <span class="account-profile-card__avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{% elif request.user.last_name %}{{ request.user.last_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
+    <span class="account-profile-card__avatar" id="account-profile-rail-avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{% elif request.user.last_name %}{{ request.user.last_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
     <div>
-      <strong title="{% if request.user.first_name or request.user.last_name %}{{ request.user.first_name }} {{ request.user.last_name }}{% else %}{{ request.user.email }}{% endif %}">{% if request.user.first_name or request.user.last_name %}{{ request.user.first_name }} {{ request.user.last_name }}{% else %}{{ request.user.email }}{% endif %}</strong>
+      <strong id="account-profile-rail-name" title="{% include 'portal/partials/account_rail_display_name.html' %}">{% include "portal/partials/account_rail_display_name.html" %}</strong>
       <small>
         {% if nav_mode == "staff" %}Équipe Atelier
         {% elif selected_membership %}{{ selected_membership.role_label }} · {{ selected_membership.customer_name }}
@@ -18,7 +18,7 @@
       class="{% if account_section == 'identity' %}is-active{% endif %}"
       href="{% url 'portal:profile' %}?space={{ nav_mode|default:'client' }}"
       {% if account_section == 'identity' %}aria-current="page"{% endif %}
-    >Identité</a>
+    >Mes informations</a>
     {% if nav_mode == "client" and customer %}
       {% if selected_membership.can_manage_team or customer_membership %}
       <a

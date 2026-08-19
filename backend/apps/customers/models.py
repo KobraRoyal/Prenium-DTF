@@ -367,6 +367,29 @@ class DefaultCustomerVolumeDiscountTier(BaseModel):
         return f"{self.minimum_monthly_linear_m} m : -{self.discount_percent} %"
 
 
+class VolumeDiscountDashboardCopy(BaseModel):
+    """Messages d’encouragement du dashboard client (singleton Atelier)."""
+
+    singleton = models.BooleanField(default=True, unique=True, editable=False)
+    start_immediate = models.CharField("Compteur à zéro (comptant)", max_length=400, blank=True)
+    start_deferred = models.CharField("Compteur à zéro (encours)", max_length=400, blank=True)
+    warm_immediate = models.CharField("En route (comptant)", max_length=400, blank=True)
+    warm_deferred = models.CharField("En route (encours)", max_length=400, blank=True)
+    hold_immediate = models.CharField("Palier en poche (comptant)", max_length=400, blank=True)
+    hold_deferred = models.CharField("Palier en poche (encours)", max_length=400, blank=True)
+    hot_immediate = models.CharField("Tout proche (comptant)", max_length=400, blank=True)
+    hot_deferred = models.CharField("Tout proche (encours)", max_length=400, blank=True)
+    max_immediate = models.CharField("Palier max (comptant)", max_length=400, blank=True)
+    max_deferred = models.CharField("Palier max (encours)", max_length=400, blank=True)
+
+    class Meta:
+        verbose_name = "Messages dashboard remise volume"
+        verbose_name_plural = "Messages dashboard remise volume"
+
+    def __str__(self) -> str:
+        return "Messages dashboard remise volume"
+
+
 class CustomerMembership(BaseModel):
     class Role(models.TextChoices):
         OWNER = CUSTOMER_ROLE_OWNER, "Propriétaire"

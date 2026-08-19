@@ -2,6 +2,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer, CustomerMembership, CustomerVolumeDiscountTier
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
@@ -80,10 +81,9 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
 
     assert dashboard_response.status_code == 200
     dashboard_html = dashboard_response.content.decode()
-    assert "Commandes à finaliser et commandes transmises" in dashboard_html
     assert "product-shell--portal" in dashboard_html
     assert "client-dashboard" in dashboard_html
-    assert "Commandes transmises" in dashboard_html
+    assert 'data-testid="client-dashboard-focus"' in dashboard_html
     assert "Accès isolé" not in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
@@ -94,14 +94,12 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     assert "Commande soumise" in detail_html
     assert 'role="tablist"' in detail_html
     assert "client-order-panel" in detail_html
-    assert "N° IDS" in detail_html
-    assert "Votre réf." in detail_html
     assert "Visuels" in detail_html
     assert "Contrôle" not in detail_html
     assert uploads_panel_response.status_code == 200
     uploads_html = uploads_panel_response.content.decode()
-    assert "Visuels transmis" in uploads_html
     assert "client-order-panel--uploads" in uploads_html
+    assert "Visuels transmis" not in uploads_html
     assert inspection_panel_response.status_code == 200
     assert production_panel_response.status_code == 200
     assert shipping_panel_response.status_code == 200
@@ -142,10 +140,82 @@ def test_client_dashboard_shows_only_scoped_customer_volume_tier():
     assert response.status_code == 200
     html = response.content.decode()
     assert 'data-testid="client-volume-discount-summary"' in html
-    assert "Votre remise volume" in html
-    assert "10,0000 m" in html or "10.0000 m" in html
+    assert "Encore 10 m pour -5 %" in html
+    assert "Le palier s’applique à tout le DTF du mois." in html
+    assert html.count("10 m") == 1
+    assert "Avantage mensuel" not in html
+    assert "Remise actuelle" not in html
     assert "99,00 %" not in html
     assert "99.00 %" not in html
+    assert "Appliquée à tout le DTF éligible du mois" not in html
+
+
+@pytest.mark.django_db
+def test_client_dashboard_cash_volume_copy_and_empty_lists():
+    user = get_user_model().objects.create_user(
+        email="volume-dashboard-cash@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Atelier comptant",
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=user,
+        role=CustomerMembership.Role.OWNER,
+    )
+    CustomerVolumeDiscountTier.objects.create(
+        customer=customer,
+        minimum_monthly_linear_m=Decimal("5.0000"),
+        discount_percent=Decimal("10.00"),
+    )
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+
+    html = client.get(reverse("portal:client-dashboard")).content.decode()
+
+    assert "Encore 5 m pour -10 %" in html
+    assert "sans rétroactivité" in html
+    assert "déjà sur le tapis" not in html
+    assert "Préparer une commande DTF" not in html
+    assert "Importez vos visuels" not in html
+    assert "en encours non relevées" not in html
+    assert "Commandes transmises" not in html
+    assert "Aucune commande transmise" not in html
+    assert "Nouvelle commande" not in html
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_client_dashboard_does_not_repeat_focused_project_in_list():
+    user = get_user_model().objects.create_user(
+        email="dashboard-focus-once@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Atelier unique")
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=user,
+        role=CustomerMembership.Role.OWNER,
+    )
+    B2BOrderProject.objects.create(
+        customer=customer,
+        created_by=user,
+        project_number="DTF-B2B-2026-000084",
+        name="Planche unique",
+        status=B2BOrderProject.Status.READY_TO_SUBMIT,
+    )
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+
+    html = client.get(reverse("portal:client-dashboard")).content.decode()
+
+    assert html.count("DTF-B2B-2026-000084") == 1
+    assert 'data-testid="client-dashboard-focus"' in html
+    assert "Reprendre" in html
+    assert "Commandes à finaliser" not in html
+    assert "visuel(s)" not in html
 
 
 @pytest.mark.django_db
@@ -895,5 +965,7 @@ def test_orders_table_and_dashboard_show_unpaid_payment_flag():
     dash_response = client.get(reverse("portal:client-dashboard"))
     assert dash_response.status_code == 200
     dash_body = dash_response.content.decode()
-    assert "Paiement non finalisé" in dash_body
-    assert "paiement non finalisé" in dash_body.lower() or "Paiements à finaliser" in dash_body
+    assert "Paiement à finaliser" in dash_body
+    assert "Payer" in dash_body
+    assert dash_body.lower().count("paiement") >= 1
+    assert "Commandes transmises" not in dash_body

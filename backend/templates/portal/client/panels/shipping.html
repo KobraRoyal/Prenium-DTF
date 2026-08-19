@@ -1,6 +1,6 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="shipping" %}
-<div class="panel client-order-panel client-order-panel--shipping{% if shipment and shipment.shipped_at %} client-order-panel--shipping-shipped{% endif %}">
+<div class="panel client-order-panel client-order-panel--shipping{% if shipment and shipment.shipped_at %} client-order-panel--shipping-shipped{% endif %}" aria-label="Expédition">
   {% if shipment and shipment.shipped_at %}
   <section class="client-shipment-card client-shipment-card--shipped" aria-labelledby="client-shipment-shipped-title">
     <div class="client-shipment-card__intro">
@@ -13,7 +13,6 @@
         </svg>
       </span>
       <div class="client-shipment-card__copy">
-        <p class="client-shipment-card__eyebrow">Expédition</p>
         <h3 id="client-shipment-shipped-title">Votre commande est en route</h3>
         <p>
           Colis pris en charge
@@ -46,10 +45,6 @@
         </dd>
       </div>
       {% endif %}
-      <div class="client-shipment-card__fact">
-        <dt>Statut transporteur</dt>
-        <dd>{{ shipment.sendcloud_status_message|default:shipment.sendcloud_status_code|default:"Mise à jour en cours" }}</dd>
-      </div>
       {% if shipment.last_api_sync_at %}
       <div class="client-shipment-card__fact">
         <dt>Dernière mise à jour</dt>
@@ -68,37 +63,26 @@
   </section>
 
   {% elif shipment %}
-  <header class="panel-head panel-head--compact client-shipment-head">
-    <div>
-      <h3 class="font-display text-lg">Expédition</h3>
-      <p class="client-order-panel__lead">
-        {% if shipment.tracking_number %}
-        L’étiquette est prête côté transporteur. Le suivi s’activera dès la prise en charge.
-        {% else %}
-        Votre envoi est déclaré chez le transporteur. Le numéro de suivi apparaîtra ici dès que l’étiquette aura été générée et le colis pris en charge.
-        {% endif %}
-      </p>
-    </div>
-    <div class="client-shipment-head__status">
-      <span class="badge {{ shipment.status|badge_tone }}">{{ shipment.status|human_status }}</span>
-    </div>
-  </header>
+  <p class="client-order-panel__lead">
+    {% if shipment.tracking_number %}
+    L’étiquette est prête. Le suivi s’activera dès la prise en charge.
+    {% else %}
+    Envoi déclaré chez le transporteur. Le numéro de suivi apparaîtra dès la prise en charge.
+    {% endif %}
+  </p>
 
   <section class="client-shipment-overview" aria-label="État d’expédition">
     {% if shipment.tracking_number %}
     <article>
       <span>N° de suivi</span>
       <strong class="client-shipment-overview__tracking">{{ shipment.tracking_number }}</strong>
-      {% if shipment.tracking_url %}
-      <small><a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Ouvrir le suivi</a></small>
-      {% endif %}
     </article>
     {% endif %}
     <article>
       <span>Statut</span>
       <strong>{% if shipment.sendcloud_status_message %}{{ shipment.sendcloud_status_message }}{% else %}En préparation{% endif %}</strong>
       {% if shipment.last_api_sync_at %}
-      <small>Maj {{ shipment.last_api_sync_at|date:"d/m/Y H:i" }}</small>
+      <small>Mise à jour {{ shipment.last_api_sync_at|date:"d/m/Y H:i" }}</small>
       {% endif %}
     </article>
   </section>
@@ -110,15 +94,8 @@
   {% endif %}
 
   {% else %}
-  <header class="panel-head panel-head--compact">
-    <div>
-      <h3 class="font-display text-lg">Expédition</h3>
-      <p class="client-order-panel__lead">Le suivi du colis s’affichera ici dès l’expédition.</p>
-    </div>
-  </header>
   <div class="empty-state client-shipment-empty">
-    <p><strong>Pas encore de suivi</strong></p>
-    <p>Dès que le colis partira, vous recevrez un e-mail avec le numéro et le lien de suivi. Vous pourrez aussi les retrouver ici.</p>
+    <p>Le suivi apparaîtra dès l’expédition.</p>
   </div>
   {% endif %}
 </div>
