@@ -51,6 +51,7 @@ Réglages de référence : `backend/config/settings/base.py` ; durcissement prod
 - [ ] Checksum, alerte d'absence, copie hors NAS et restauration isolée mensuelle vérifiés
 - [ ] Image taguée par SHA, `check --deploy` et checks CI/CodeQL obligatoires avant release
 - [x] Politique de rétention applicative (IP d’audit, payloads paiement, snapshots destinataires, prospects) via `core.apply_privacy_retention` ; durées dans `.env.example`
+- [x] Rectification de l’e-mail de connexion confirmée par lien signé (`account.email_change.*`)
 - [ ] MFA staff : prévu hors périmètre actuel ; à réévaluer avant exposition large
 
 ## Scénarios de test récurrents
@@ -58,9 +59,10 @@ Réglages de référence : `backend/config/settings/base.py` ; durcissement prod
 - Contournement par URL directe ou requête API forgée
 - Élévation de privilège (client → staff)
 - Transition de statut ou mutation non autorisée
-- Rafale de POST login ou reset mot de passe → **429**
+- Rafale de POST login, reset mot de passe ou changement d’e-mail → **429**
 - Export « mes données » d’un client A sans fuite du tenant B
 - Clôture de compte : anonymisation, conservation des factures, refus staff
+- Changement d’e-mail : unicité, token d’un autre compte, invalidation après reset MDP
 - Invitation d’un tenant présentée sur la route équipe d’un autre tenant
 - Réutilisation d’une invitation après acceptation ou révocation
 

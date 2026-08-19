@@ -28,15 +28,22 @@ def _client_ip(request):
     return request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR") or "0.0.0.0"
 
 
+_RATE_LIMITED_POSTS = {
+    "/login": "login",
+    "/compte/mot-de-passe-oublie": "pwdreset",
+    "/account/email-change": "emailchg",
+}
+
+
 def _is_rate_limited_auth_post(request) -> bool:
     if request.method != "POST":
         return False
     path = request.path.rstrip("/") or "/"
-    return path in {"/login", "/compte/mot-de-passe-oublie"}
+    return path in _RATE_LIMITED_POSTS
 
 
 class LoginRateLimitMiddleware:
-    """Limite les POST login et reset mot de passe par adresse IP (cache Django)."""
+    """Limite les POST login, reset mot de passe et changement d’e-mail par adresse IP."""
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -46,7 +53,7 @@ class LoginRateLimitMiddleware:
             max_attempts = getattr(settings, "LOGIN_RATE_LIMIT_MAX_ATTEMPTS", 20)
             window = getattr(settings, "LOGIN_RATE_LIMIT_WINDOW_SECONDS", 900)
             ip = _client_ip(request)
-            path_key = "login" if request.path.rstrip("/") == "/login" else "pwdreset"
+            path_key = _RATE_LIMITED_POSTS[request.path.rstrip("/") or "/"]
             key = f"login_rl:{path_key}:{ip}"
             try:
                 current = cache.incr(key)

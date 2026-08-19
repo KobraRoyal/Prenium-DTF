@@ -11,6 +11,7 @@ Les textes légaux sont des **modèles à faire relire par un conseil**. Renseig
 - Pages publiques : mentions, confidentialité, cookies, accord de sous-traitance (accessibles même si l’accueil redirige vers le login).
 - Pied de landing + login + case du tunnel prospect liés à ces pages.
 - Portail **Mon compte → Données** : export JSON, clôture/anonymisation (sauf comptes atelier).
+- Rectification de l’e-mail de connexion (Art. 16) : lien signé envoyé à la nouvelle adresse, unicité, rate-limit, audit.
 - Réinitialisation de mot de passe, rate-limitée comme le login.
 - Payloads Stripe/PayPal et snapshots destinataires Sendcloud minimisés en base (l’API Sendcloud reçoit toujours l’adresse complète).
 - Tâche Celery quotidienne `core.apply_privacy_retention`.
@@ -25,15 +26,16 @@ Les textes légaux sont des **modèles à faire relire par un conseil**. Renseig
 ## Fichiers clés
 
 - `backend/apps/core/legal.py`, vues et templates `shop/legal/`
-- `backend/apps/accounts/services/privacy.py`
-- `backend/apps/portal/views_privacy.py`, `views_password_reset.py`
-- `docs/security/ROPA.md`, `docs/security/BREACH_PLAYBOOK.md`
+- `backend/apps/accounts/services/privacy.py`, `email_change.py`
+- `backend/apps/portal/views_privacy.py`, `views_password_reset.py`, `views_email_change.py`
+- `docs/security/ROPA.md`, `docs/security/BREACH_PLAYBOOK.md`, `docs/security/AIPD.md`
 
 ## Tests
 
 - `tests/core/test_legal_pages.py`
 - `tests/accounts/test_privacy_rights.py`
 - `tests/accounts/test_password_reset.py`
+- `tests/accounts/test_email_change.py`
 - `tests/core/test_privacy_retention.py`
 - accès croisé export + régression Sendcloud / login
 
@@ -43,4 +45,5 @@ Les textes légaux sont des **modèles à faire relire par un conseil**. Renseig
 - [ ] Relire les 4 pages légales
 - [ ] Vérifier un export JSON sur un compte client de recette
 - [ ] Vérifier qu’un compte atelier ne peut pas se clôturer
+- [ ] Vérifier un changement d’e-mail (lien reçu sur la nouvelle adresse)
 - [ ] Confirmer que Beat exécute `core.apply_privacy_retention`

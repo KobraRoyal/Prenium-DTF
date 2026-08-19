@@ -46,6 +46,7 @@ def test_portal_legacy_views_facade_is_removed():
         ("portal:login", {}, "apps.portal.views_auth"),
         ("portal:password-reset", {}, "apps.portal.views_password_reset"),
         ("portal:profile", {}, "apps.portal.views_profile"),
+        ("portal:email-change", {}, "apps.portal.views_email_change"),
         ("portal:privacy", {}, "apps.portal.views_privacy"),
         ("portal:client-dashboard", {}, "apps.portal.views_client"),
         (
@@ -97,6 +98,7 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
         ("views_auth", {"apps.portal.views_common"}),
         ("views_password_reset", set()),
         ("views_profile", {"apps.portal.views_common"}),
+        ("views_email_change", {"apps.portal.views_common"}),
         ("views_privacy", {"apps.portal.views_common"}),
         (
             "views_client",
@@ -148,6 +150,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_auth", 60),
         ("views_password_reset", 50),
         ("views_profile", 90),
+        ("views_email_change", 120),
         ("views_privacy", 120),
         ("views_staff_uploads", 130),
         ("views_staff_reviews", 170),

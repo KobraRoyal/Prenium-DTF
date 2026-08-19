@@ -14,7 +14,7 @@
         <header class="account-profile-panel__head">
           <div>
             <h2 id="privacy-export-title">Export</h2>
-            <p>Téléchargez les données de votre compte (identité, organisations, commandes que vous avez créées).</p>
+            <p>Téléchargez les données de votre compte (identité, organisations, commandes que vous avez créées). Pour rectifier l’e-mail de connexion, utilisez <a class="ui-link" href="{% url 'portal:email-change' %}?space={{ nav_mode }}">Identité</a>.</p>
           </div>
         </header>
         <form method="post" action="{% url 'portal:privacy-export' %}" class="ui-form-stack account-profile-form">

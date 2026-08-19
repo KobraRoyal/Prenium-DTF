@@ -667,7 +667,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("components/portal/page_head.html", profile)
         self.assertIn('x-on:input="dirty = true"', profile)
         self.assertIn("primary_disabled_until_dirty=1", profile)
-        self.assertIn("account-profile-lock-badge", profile)
+        self.assertIn("portal:email-change", profile)
         self.assertIn("account-profile-page", team)
         self.assertIn('account_section="team"', team)
         self.assertIn("components/portal/account_rail.html", team)

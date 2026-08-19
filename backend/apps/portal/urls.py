@@ -51,6 +51,7 @@ from .views_client import (
     ClientOrderUploadDownloadView,
     ClientOrderUploadPreviewView,
 )
+from .views_email_change import PortalEmailChangeConfirmView, PortalEmailChangeView
 from .views_gang_sheets import (
     ClientGangSheetAddItemView,
     ClientGangSheetAssetGalleryView,
@@ -155,6 +156,12 @@ urlpatterns = [
     ),
     path("compte/cloture/", PortalAccountClosedView.as_view(), name="account-closed"),
     path("account/profile/", PortalProfileView.as_view(), name="profile"),
+    path("account/email-change/", PortalEmailChangeView.as_view(), name="email-change"),
+    path(
+        "account/email-change/confirmer/<str:token>/",
+        PortalEmailChangeConfirmView.as_view(),
+        name="email-change-confirm",
+    ),
     path("account/privacy/", PortalPrivacyView.as_view(), name="privacy"),
     path(
         "account/privacy/export/",

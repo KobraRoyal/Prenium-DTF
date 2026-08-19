@@ -1,0 +1,41 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Changer l’e-mail - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="account-profile-page" x-data>
+  {% include "components/portal/page_head.html" with kicker="Compte" title="E-mail de connexion" subtitle="La nouvelle adresse doit être confirmée par un lien, pour éviter le détournement de compte." %}
+
+  {% if sent %}
+  <p
+    class="ui-sr-only"
+    role="status"
+    x-init="$nextTick(() => window.preniumToast?.('Un lien de confirmation a été envoyé à la nouvelle adresse.', 'success'))"
+  >Un lien de confirmation a été envoyé à la nouvelle adresse.</p>
+  {% endif %}
+
+  <div class="account-profile-layout">
+    {% include "components/portal/account_rail.html" with account_section="identity" %}
+
+    <div class="account-profile-main">
+      <section class="account-profile-panel" aria-labelledby="email-change-title">
+        <header class="account-profile-panel__head">
+          <div>
+            <h2 id="email-change-title">Nouvelle adresse</h2>
+            <p>Adresse actuelle : <strong>{{ request.user.email }}</strong>. Le lien expire sous 24 heures.</p>
+          </div>
+        </header>
+        <form method="post" class="ui-form-stack account-profile-form" data-submit-loading>
+          {% csrf_token %}
+          <input type="hidden" name="space" value="{{ nav_mode }}">
+          {% if error %}<p class="error-text" role="alert">{{ error }}</p>{% endif %}
+          {% include "components/forms/field_group.html" with id="id_new_email" name="new_email" label=form.new_email.label type="email" autocomplete="email" value=form.new_email.value|default:"" error=form.new_email.errors.0 show_label=1 required=1 placeholder="vous@entreprise.fr" %}
+          <div class="account-profile-form__footer">
+            {% include "components/forms/form_actions.html" with primary_label="Envoyer le lien" primary_class_full="ui-btn ui-btn-primary" htmx_disable=1 %}
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
