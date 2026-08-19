@@ -8,6 +8,7 @@ from apps.customers.models import (
     CustomerVolumeDiscountTier,
     DefaultCustomerVolumeDiscountTier,
 )
+from apps.customers.services.volume_discounts import DefaultCustomerVolumeDiscountTierService
 from apps.prospects.models import ProspectProfile
 from apps.prospects.services.onboarding import ProspectReviewService
 from django.contrib.auth import get_user_model
@@ -76,7 +77,7 @@ def test_staff_can_create_customer_tier_with_audit_and_see_it_in_atelier():
 
 
 @pytest.mark.django_db
-def test_tier_configuration_requires_permission_and_deferred_customer():
+def test_tier_configuration_requires_permission_and_allows_immediate_customer():
     viewer = _staff_user(email="viewer-volume@example.com", pricing_permission=False)
     immediate_customer = Customer.objects.create(
         name="Comptant",
@@ -94,9 +95,18 @@ def test_tier_configuration_requires_permission_and_deferred_customer():
     client.logout()
     assert client.login(email=staff.email, password="pass") is True
     response = client.post(url, _new_tier_payload())
-    assert response.status_code == 200
-    assert "réservés aux clients avec encours" in response.content.decode()
-    assert not CustomerVolumeDiscountTier.objects.filter(customer=immediate_customer).exists()
+    assert response.status_code == 302
+    assert CustomerVolumeDiscountTier.objects.filter(customer=immediate_customer).exists()
+    detail = client.get(
+        reverse(
+            "portal:staff-customer-detail",
+            kwargs={"customer_public_id": immediate_customer.public_id},
+        )
+    )
+    assert detail.status_code == 200
+    html = detail.content.decode()
+    assert "Comptant — sans rétroactivité" in html
+    assert "sans rétroactivité sur les commandes déjà payées" in html
 
 
 @pytest.mark.django_db
@@ -232,3 +242,36 @@ def test_approval_copies_only_active_default_tiers_to_new_deferred_customer():
         action="customer.default_volume_discount_tiers_applied",
         target_public_id=profile.customer.public_id,
     ).exists()
+
+
+@pytest.mark.django_db
+def test_apply_to_customer_copies_defaults_for_immediate_accounts():
+    customer = Customer.objects.create(
+        name="Comptant copie",
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    DefaultCustomerVolumeDiscountTier.objects.create(
+        minimum_monthly_linear_m=Decimal("12.0000"),
+        discount_percent=Decimal("6.00"),
+    )
+    DefaultCustomerVolumeDiscountTier.objects.create(
+        minimum_monthly_linear_m=Decimal("24.0000"),
+        discount_percent=Decimal("9.00"),
+        is_active=False,
+    )
+    copied = DefaultCustomerVolumeDiscountTierService().apply_to_customer(
+        customer=customer,
+        actor=None,
+        source="test",
+    )
+    assert len(copied) == 1
+    assert copied[0].minimum_monthly_linear_m == Decimal("12.0000")
+    assert copied[0].discount_percent == Decimal("6.00")
+    assert (
+        DefaultCustomerVolumeDiscountTierService().apply_to_customer(
+            customer=customer,
+            actor=None,
+            source="test",
+        )
+        == []
+    )

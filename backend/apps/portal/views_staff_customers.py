@@ -287,7 +287,7 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
             "volume_discount_has_errors": bool(
                 resolved_tier_add_form.errors or any(row["form"].errors for row in tier_rows)
             ),
-            "volume_discount_available": customer.default_billing_mode == "deferred",
+            "volume_discount_available": customer.default_billing_mode in {"deferred", "immediate"},
             "volume_discount_summary": summary,
             "volume_discount_progress_value": f"{summary['monthly_volume_linear_m']:f}",
             "volume_discount_progress_max": (
@@ -418,7 +418,10 @@ class StaffCustomerVolumeDiscountTierCreateView(StaffDomainPermissionMixin, View
             return with_toast(response, message="Palier invalide.", variant="error")
 
         count = summary["repriced_count"]
-        message = f"Palier ajouté. {count} commande(s) du mois recalculée(s)."
+        if customer.default_billing_mode == "immediate":
+            message = "Palier ajouté. Les commandes déjà payées conservent leur tarif."
+        else:
+            message = f"Palier ajouté. {count} commande(s) du mois recalculée(s)."
         messages.success(request, message)
         return with_toast(redirect(detail_url), message=message, variant="success")
 
@@ -470,6 +473,9 @@ class StaffCustomerVolumeDiscountTierUpdateView(StaffDomainPermissionMixin, View
             return with_toast(response, message="Palier invalide.", variant="error")
 
         count = summary["repriced_count"]
-        message = f"Palier enregistré. {count} commande(s) du mois recalculée(s)."
+        if customer.default_billing_mode == "immediate":
+            message = "Palier enregistré. Les commandes déjà payées conservent leur tarif."
+        else:
+            message = f"Palier enregistré. {count} commande(s) du mois recalculée(s)."
         messages.success(request, message)
         return with_toast(redirect(detail_url), message=message, variant="success")

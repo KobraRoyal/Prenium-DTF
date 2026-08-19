@@ -48,6 +48,7 @@ def test_volume_tier_task_sends_once_and_marks_notification_sent():
     assert "10,00 %" in message.subject
     assert "125,5000" in message.body
     assert "100,0000" in message.body
+    assert "ensemble du volume DTF éligible du mois" in message.body
     assert "https://portal.example.test/client/" in message.body
     assert AuditLogEntry.objects.filter(
         action="customer.volume_discount_tier_notification_sent",
@@ -183,3 +184,61 @@ def test_ambiguous_post_smtp_failure_never_automatically_resends():
         is False
     )
     send_email.assert_called_once_with(notification=ANY)
+
+
+@pytest.mark.django_db
+def test_immediate_capture_schedules_tier_email_once():
+    from apps.billing.models import Payment
+    from apps.customers.services.volume_discounts import CustomerVolumeDiscountTierService
+    from apps.orders.models import Order
+    from django.utils import timezone
+
+    user = get_user_model().objects.create_user(email="cash-tier-mail@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Cash Mail",
+        billing_email="cash-mail@example.com",
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.IMMEDIATE,
+        pricing_status=Order.PricingStatus.PRICED,
+        source="client_portal",
+        currency="EUR",
+        total_amount=Decimal("50.00"),
+        volume_discount_month=timezone.localdate().replace(day=1),
+        monthly_volume_linear_m=Decimal("6.0000"),
+        volume_discount_threshold_linear_m=Decimal("5.0000"),
+        volume_discount_percent=Decimal("10.00"),
+        volume_discount_amount=Decimal("4.00"),
+    )
+    Payment.objects.create(
+        order=order,
+        created_by=user,
+        provider=Payment.Provider.STRIPE,
+        status=Payment.Status.CAPTURED,
+        amount=order.total_amount,
+        currency=order.currency,
+        source="test",
+    )
+
+    with patch(
+        "apps.notifications.tasks.send_volume_discount_tier_reached_email_task.delay"
+    ) as delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            service = CustomerVolumeDiscountTierService()
+            service.notify_immediate_tier_after_capture(
+                order=order,
+                actor=user,
+                source="test",
+            )
+            service.notify_immediate_tier_after_capture(
+                order=order,
+                actor=user,
+                source="test",
+            )
+
+    assert VolumeDiscountTierNotification.objects.filter(customer=customer).count() == 1
+    assert delay.call_count == 1

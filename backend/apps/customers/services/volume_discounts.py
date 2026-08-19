@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, time
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import connection, transaction
-from django.db.models import Sum
+from django.db.models import Exists, OuterRef, Sum
 from django.utils import timezone
 
 from apps.auditlog.services import record_event
@@ -16,9 +17,184 @@ from apps.customers.models import (
     DefaultCustomerVolumeDiscountTier,
 )
 
+FOURPLACES = Decimal("0.0001")
+TWOPLACES = Decimal("0.01")
+ZERO_AMOUNT = Decimal("0.00")
+ZERO_VOLUME = Decimal("0.0000")
+
+DEFERRED_APPLICATION_SCOPE = "sur l’ensemble du volume DTF éligible du mois"
+IMMEDIATE_APPLICATION_SCOPE = "sur cette commande et les suivantes, sans effet rétroactif"
+
+
+@dataclass(frozen=True)
+class ResolvedVolumeTier:
+    minimum_monthly_linear_m: Decimal
+    discount_percent: Decimal
+    pk: int | None = None
+
+
+def month_bounds(month):
+    month_start = month.replace(day=1)
+    if month_start.month == 12:
+        next_month = month_start.replace(year=month_start.year + 1, month=1)
+    else:
+        next_month = month_start.replace(month=month_start.month + 1)
+    current_tz = timezone.get_current_timezone()
+    starts_at = timezone.make_aware(datetime.combine(month_start, time.min), current_tz)
+    ends_at = timezone.make_aware(datetime.combine(next_month, time.min), current_tz)
+    return month_start, next_month, starts_at, ends_at
+
+
+def linear_meters_from_sqm(total_sqm: Decimal) -> Decimal:
+    laize_m = Decimal(int(getattr(settings, "DTF_LAIZE_CM", 55))) / Decimal("100")
+    if laize_m <= 0:
+        raise ValidationError("DTF_LAIZE_CM doit être strictement positif.")
+    return (Decimal(str(total_sqm)) / laize_m).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+
+
+def customer_has_personalized_ladder(customer: Customer) -> bool:
+    return CustomerVolumeDiscountTier.objects.for_customer(customer).exists()
+
+
+def resolve_active_ladder(customer: Customer) -> list[ResolvedVolumeTier]:
+    """Paliers actifs : grille client si elle existe, sinon défauts live (comptant only)."""
+    if customer_has_personalized_ladder(customer):
+        rows = (
+            CustomerVolumeDiscountTier.objects.for_customer(customer)
+            .active()
+            .order_by("minimum_monthly_linear_m", "created_at")
+        )
+        return [
+            ResolvedVolumeTier(
+                minimum_monthly_linear_m=row.minimum_monthly_linear_m,
+                discount_percent=row.discount_percent,
+                pk=row.pk,
+            )
+            for row in rows
+        ]
+    if customer.default_billing_mode != Customer.DefaultBillingMode.IMMEDIATE:
+        return []
+    rows = DefaultCustomerVolumeDiscountTier.objects.active().order_by(
+        "minimum_monthly_linear_m",
+        "created_at",
+    )
+    return [
+        ResolvedVolumeTier(
+            minimum_monthly_linear_m=row.minimum_monthly_linear_m,
+            discount_percent=row.discount_percent,
+            pk=row.pk,
+        )
+        for row in rows
+    ]
+
+
+def pick_tier_for_volume(
+    *,
+    ladder: list[ResolvedVolumeTier],
+    monthly_volume: Decimal,
+) -> ResolvedVolumeTier | None:
+    eligible = [tier for tier in ladder if tier.minimum_monthly_linear_m <= monthly_volume]
+    if not eligible:
+        return None
+    return max(eligible, key=lambda tier: (tier.minimum_monthly_linear_m, tier.discount_percent))
+
+
+def next_tier_for_volume(
+    *,
+    ladder: list[ResolvedVolumeTier],
+    monthly_volume: Decimal,
+) -> ResolvedVolumeTier | None:
+    upcoming = [tier for tier in ladder if tier.minimum_monthly_linear_m > monthly_volume]
+    if not upcoming:
+        return None
+    return min(upcoming, key=lambda tier: (tier.minimum_monthly_linear_m, tier.pk or 0))
+
+
+def paid_immediate_orders_qs(*, customer: Customer, starts_at, ends_at, exclude_order_id=None):
+    from apps.billing.models import Payment
+    from apps.orders.models import Order
+
+    captured = Payment.objects.filter(
+        order_id=OuterRef("pk"),
+        status=Payment.Status.CAPTURED,
+    )
+    queryset = (
+        Order.objects.filter(
+            customer=customer,
+            billing_mode=Order.BillingMode.IMMEDIATE,
+            pricing_status=Order.PricingStatus.PRICED,
+            status=Order.Status.SUBMITTED,
+            created_at__gte=starts_at,
+            created_at__lt=ends_at,
+        )
+        .annotate(_has_captured_payment=Exists(captured))
+        .filter(_has_captured_payment=True)
+    )
+    if exclude_order_id is not None:
+        queryset = queryset.exclude(pk=exclude_order_id)
+    return queryset
+
+
+def paid_monthly_dtf_volume_linear_m(
+    *,
+    customer: Customer,
+    month,
+    exclude_order_id=None,
+) -> Decimal:
+    from apps.catalog.models import CatalogService
+    from apps.orders.models import OrderLine
+
+    _month_start, _next_month, starts_at, ends_at = month_bounds(month)
+    eligible_orders = paid_immediate_orders_qs(
+        customer=customer,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        exclude_order_id=exclude_order_id,
+    )
+    total_sqm = OrderLine.objects.filter(
+        order__in=eligible_orders,
+        service_type=CatalogService.ServiceType.DTF_TRANSFER,
+    ).aggregate(total=Sum("quantity"))["total"] or Decimal("0.00")
+    return linear_meters_from_sqm(total_sqm)
+
+
+def quote_volume_and_tier(
+    *,
+    customer: Customer,
+    additional_linear_m: Decimal,
+    month=None,
+    exclude_order_id=None,
+) -> tuple[Decimal, Decimal, ResolvedVolumeTier | None]:
+    """Volume payé + commande en cours, et palier prospectif associé."""
+    resolved_month = month or timezone.localdate()
+    paid_volume = paid_monthly_dtf_volume_linear_m(
+        customer=customer,
+        month=resolved_month,
+        exclude_order_id=exclude_order_id,
+    )
+    quote_volume = (paid_volume + Decimal(str(additional_linear_m))).quantize(
+        FOURPLACES,
+        rounding=ROUND_HALF_UP,
+    )
+    tier = pick_tier_for_volume(
+        ladder=resolve_active_ladder(customer),
+        monthly_volume=quote_volume,
+    )
+    return paid_volume, quote_volume, tier
+
+
+def application_scope_for_customer(customer: Customer) -> str:
+    if customer.default_billing_mode == Customer.DefaultBillingMode.IMMEDIATE:
+        return IMMEDIATE_APPLICATION_SCOPE
+    return DEFERRED_APPLICATION_SCOPE
+
+
+def is_cash_volume_customer(customer: Customer) -> bool:
+    return customer.default_billing_mode == Customer.DefaultBillingMode.IMMEDIATE
+
 
 class DefaultCustomerVolumeDiscountTierService:
-    """Grille Atelier globale appliquée aux nouveaux comptes en encours."""
+    """Grille Atelier globale copiée sur les nouveaux comptes encours ou comptant."""
 
     _POSTGRES_LOCK_ID = 8_103_701_337
 
@@ -166,7 +342,10 @@ class DefaultCustomerVolumeDiscountTierService:
     @transaction.atomic
     def apply_to_customer(self, *, customer: Customer, actor, source: str):
         customer = Customer.objects.select_for_update().get(pk=customer.pk)
-        if customer.default_billing_mode != Customer.DefaultBillingMode.DEFERRED:
+        if customer.default_billing_mode not in {
+            Customer.DefaultBillingMode.DEFERRED,
+            Customer.DefaultBillingMode.IMMEDIATE,
+        }:
             return []
         if CustomerVolumeDiscountTier.objects.for_customer(customer).exists():
             return []
@@ -204,7 +383,7 @@ class DefaultCustomerVolumeDiscountTierService:
 
 
 class CustomerVolumeDiscountTierService:
-    """Configuration auditée des paliers et recalcul du mois civil courant."""
+    """Configuration auditée des paliers ; retarif rétroactif réservé à l’encours."""
 
     def list_tiers(self, *, customer: Customer):
         return CustomerVolumeDiscountTier.objects.for_customer(customer).order_by(
@@ -220,52 +399,44 @@ class CustomerVolumeDiscountTierService:
         )
 
     def get_current_month_summary(self, *, customer: Customer) -> dict[str, object]:
-        """Synthèse Atelier du volume DTF non relevé du mois civil courant."""
+        """Synthèse du volume DTF du mois civil courant (encours ou comptant payé)."""
         from apps.catalog.models import CatalogService
         from apps.orders.models import Order, OrderLine
 
-        month_start = timezone.localdate().replace(day=1)
-        if month_start.month == 12:
-            next_month = month_start.replace(year=month_start.year + 1, month=1)
+        month_start, _next_month, starts_at, ends_at = month_bounds(timezone.localdate())
+        is_immediate = is_cash_volume_customer(customer)
+        if is_immediate:
+            eligible_orders = paid_immediate_orders_qs(
+                customer=customer,
+                starts_at=starts_at,
+                ends_at=ends_at,
+            )
+            policy = "prospective"
         else:
-            next_month = month_start.replace(month=month_start.month + 1)
-        current_tz = timezone.get_current_timezone()
-        starts_at = timezone.make_aware(datetime.combine(month_start, time.min), current_tz)
-        ends_at = timezone.make_aware(datetime.combine(next_month, time.min), current_tz)
-        eligible_orders = Order.objects.filter(
-            customer=customer,
-            billing_mode=Order.BillingMode.DEFERRED,
-            pricing_status=Order.PricingStatus.PRICED,
-            billing_statement__isnull=True,
-            status=Order.Status.SUBMITTED,
-            created_at__gte=starts_at,
-            created_at__lt=ends_at,
-        )
+            eligible_orders = Order.objects.filter(
+                customer=customer,
+                billing_mode=Order.BillingMode.DEFERRED,
+                pricing_status=Order.PricingStatus.PRICED,
+                billing_statement__isnull=True,
+                status=Order.Status.SUBMITTED,
+                created_at__gte=starts_at,
+                created_at__lt=ends_at,
+            )
+            policy = "retroactive"
         total_sqm = OrderLine.objects.filter(
             order__in=eligible_orders,
             service_type=CatalogService.ServiceType.DTF_TRANSFER,
         ).aggregate(total=Sum("quantity"))["total"] or Decimal("0.00")
-        laize_m = Decimal(int(getattr(settings, "DTF_LAIZE_CM", 55))) / Decimal("100")
-        monthly_volume = (
-            (total_sqm / laize_m).quantize(Decimal("0.0001")) if laize_m > 0 else Decimal("0.0000")
-        )
+        monthly_volume = linear_meters_from_sqm(total_sqm)
         discount_amount = (
             eligible_orders.aggregate(total=Sum("volume_discount_amount"))["total"]
             or Decimal("0.00")
-        ).quantize(Decimal("0.01"))
-        active_tiers = CustomerVolumeDiscountTier.objects.for_customer(customer).active()
-        current_tier = (
-            active_tiers.filter(minimum_monthly_linear_m__lte=monthly_volume)
-            .order_by("-minimum_monthly_linear_m")
-            .first()
-        )
-        next_tier = (
-            active_tiers.filter(minimum_monthly_linear_m__gt=monthly_volume)
-            .order_by("minimum_monthly_linear_m")
-            .first()
-        )
+        ).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        ladder = resolve_active_ladder(customer)
+        current_tier = pick_tier_for_volume(ladder=ladder, monthly_volume=monthly_volume)
+        next_tier = next_tier_for_volume(ladder=ladder, monthly_volume=monthly_volume)
         remaining_to_next_tier = (
-            (next_tier.minimum_monthly_linear_m - monthly_volume).quantize(Decimal("0.0001"))
+            (next_tier.minimum_monthly_linear_m - monthly_volume).quantize(FOURPLACES)
             if next_tier is not None
             else None
         )
@@ -277,12 +448,51 @@ class CustomerVolumeDiscountTierService:
             "current_tier": current_tier,
             "next_tier": next_tier,
             "remaining_to_next_tier_linear_m": remaining_to_next_tier,
+            "policy": policy,
+            "uses_default_ladder": (
+                is_immediate and not customer_has_personalized_ladder(customer)
+            ),
+            "application_scope": application_scope_for_customer(customer),
         }
 
-    def _validate_deferred_customer(self, *, customer: Customer) -> None:
-        if customer.default_billing_mode != Customer.DefaultBillingMode.DEFERRED:
+    def notify_immediate_tier_after_capture(self, *, order, actor, source: str) -> None:
+        """E-mail palier après paiement capturé, jamais au devis."""
+        customer = order.customer
+        if not is_cash_volume_customer(customer):
+            return
+        from apps.orders.models import Order
+
+        if getattr(order, "billing_mode", None) != Order.BillingMode.IMMEDIATE:
+            return
+        threshold = order.volume_discount_threshold_linear_m
+        percent = order.volume_discount_percent or ZERO_AMOUNT
+        if threshold is None or percent <= 0:
+            return
+        month = order.volume_discount_month or timezone.localdate().replace(day=1)
+        paid_volume = paid_monthly_dtf_volume_linear_m(customer=customer, month=month)
+        summary = self.get_current_month_summary(customer=customer)
+        from apps.notifications.services.transactional import (
+            schedule_volume_discount_tier_reached_email,
+        )
+
+        schedule_volume_discount_tier_reached_email(
+            customer=customer,
+            month=month,
+            threshold_linear_m=threshold,
+            monthly_volume_linear_m=paid_volume,
+            discount_percent=percent,
+            discount_amount=summary["discount_amount"],
+            actor=actor,
+            source=source,
+        )
+
+    def _validate_volume_discount_customer(self, *, customer: Customer) -> None:
+        if customer.default_billing_mode not in {
+            Customer.DefaultBillingMode.DEFERRED,
+            Customer.DefaultBillingMode.IMMEDIATE,
+        }:
             raise ValidationError(
-                "Les paliers de remise mensuelle sont réservés aux clients avec encours."
+                "Les paliers de remise mensuelle sont réservés aux comptes encours ou comptant."
             )
 
     def _validate_ladder(
@@ -319,6 +529,24 @@ class CustomerVolumeDiscountTierService:
                 )
 
     def _reprice_current_month(self, *, customer, actor, source):
+        if is_cash_volume_customer(customer):
+            summary = self.get_current_month_summary(customer=customer)
+            return {
+                "repriced_count": 0,
+                "monthly_volume_linear_m": summary["monthly_volume_linear_m"],
+                "discount_percent": (
+                    summary["current_tier"].discount_percent
+                    if summary["current_tier"] is not None
+                    else ZERO_AMOUNT
+                ),
+                "threshold_linear_m": (
+                    summary["current_tier"].minimum_monthly_linear_m
+                    if summary["current_tier"] is not None
+                    else None
+                ),
+                "month": summary["month"],
+                "policy": "prospective",
+            }
         from apps.orders.services.pricing import OrderPricingService
 
         return OrderPricingService().reprice_deferred_month(
@@ -338,7 +566,7 @@ class CustomerVolumeDiscountTierService:
         source: str,
     ) -> tuple[CustomerVolumeDiscountTier, dict[str, object]]:
         customer = Customer.objects.select_for_update().get(pk=customer.pk)
-        self._validate_deferred_customer(customer=customer)
+        self._validate_volume_discount_customer(customer=customer)
         threshold = cleaned_data["minimum_monthly_linear_m"]
         discount = cleaned_data["discount_percent"]
         is_active = bool(cleaned_data.get("is_active", True))
@@ -386,7 +614,7 @@ class CustomerVolumeDiscountTierService:
         source: str,
     ) -> tuple[CustomerVolumeDiscountTier, dict[str, object]]:
         customer = Customer.objects.select_for_update().get(pk=customer.pk)
-        self._validate_deferred_customer(customer=customer)
+        self._validate_volume_discount_customer(customer=customer)
         tier = (
             CustomerVolumeDiscountTier.objects.select_for_update()
             .for_customer(customer)

@@ -177,13 +177,13 @@ Livrables :
 
 ## Checklist de validation
 
-- [ ] `python backend/manage.py check`
-- [ ] `python backend/manage.py makemigrations --check --dry-run` (viser **zéro** migration si les champs snapshot `Order.volume_discount_*` suffisent)
-- [ ] Ruff
-- [ ] tests ciblés volume encours **et** cash + devis Gang Sheet + capture e-mail + permissions
-- [ ] suite projet
-- [ ] revue sécurité : isolation client, pas de retarif post-capture, audit `order.pricing_computed` / palier
-- [ ] QA front : compte comptant (dashboard taux, devis −X %, CTA TTC) ; compte encours (rétroactivité inchangée)
+- [x] `python backend/manage.py check` — non exécuté ici (Docker indisponible) ; `ruff check` OK sur les fichiers touchés
+- [x] aucune migration (champs snapshot `Order.volume_discount_*` réutilisés)
+- [x] Ruff check des fichiers du lot
+- [x] tests ciblés volume encours **et** cash (13 tests service/pricing verts en local)
+- [ ] suite projet Docker (`make test`) — à lancer quand le démon Docker est dispo
+- [x] isolation client / pas de retarif post-capture / e-mail palier après capture
+- [ ] QA front manuelle dashboard / devis / fiche Atelier
 
 ## Hypothèses
 

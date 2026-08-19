@@ -385,6 +385,13 @@ class PaymentService:
             from apps.notifications.services.transactional import schedule_order_created_email
 
             schedule_order_created_email(order_public_id=payment.order.public_id)
+        from apps.customers.services.volume_discounts import CustomerVolumeDiscountTierService
+
+        CustomerVolumeDiscountTierService().notify_immediate_tier_after_capture(
+            order=payment.order,
+            actor=actor,
+            source=f"{source}.payment_captured",
+        )
         self._release_production_after_payment(order=payment.order, actor=actor, source=source)
         return payment.order, payment, invoice
 

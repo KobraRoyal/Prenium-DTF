@@ -33,7 +33,13 @@
     <div>
       <p class="muted text-xs font-bold uppercase tracking-wider">Avantage mensuel</p>
       <h2 class="mt-1 font-display text-lg" id="client-volume-discount-title">Votre remise volume</h2>
-      <p class="muted mt-1 text-sm">Progression de {{ volume_discount_summary.month|date:"F Y" }} sur les commandes DTF en encours non relevées.</p>
+      <p class="muted mt-1 text-sm">
+        {% if volume_discount_summary.policy == "prospective" %}
+        Progression de {{ volume_discount_summary.month|date:"F Y" }} sur les commandes DTF payées. Le nouveau taux s’applique à partir de la commande qui atteint le palier.
+        {% else %}
+        Progression de {{ volume_discount_summary.month|date:"F Y" }} sur les commandes DTF en encours non relevées.
+        {% endif %}
+      </p>
     </div>
     {% if volume_discount_summary.current_tier %}
     <span class="badge is-success">Palier actuel · -{{ volume_discount_summary.current_tier.discount_percent }} %</span>
@@ -49,7 +55,13 @@
     <div class="rounded-xl border border-base-300 p-4">
       <dt class="muted text-sm">Remise actuelle</dt>
       <dd class="mt-1 font-display text-xl">{% if volume_discount_summary.current_tier %}-{{ volume_discount_summary.current_tier.discount_percent }} %{% else %}0 %{% endif %}</dd>
-      <small class="muted">Appliquée à tout le DTF éligible du mois</small>
+      <small class="muted">
+        {% if volume_discount_summary.policy == "prospective" %}
+        Appliquée à partir de ce palier, sans rétroactivité
+        {% else %}
+        Appliquée à tout le DTF éligible du mois
+        {% endif %}
+      </small>
     </div>
     <div class="rounded-xl border border-base-300 p-4">
       <dt class="muted text-sm">Prochain palier</dt>

@@ -539,6 +539,8 @@ def _format_decimal(value, places: int) -> str:
 
 
 def send_volume_discount_tier_reached_email(*, notification) -> bool:
+    from apps.customers.services.volume_discounts import application_scope_for_customer
+
     context = {
         "site.name": "Prenium DTF",
         "customer.name": notification.customer.name,
@@ -554,6 +556,7 @@ def send_volume_discount_tier_reached_email(*, notification) -> bool:
         ),
         "volume.discount_percent": _format_decimal(notification.discount_percent, 2),
         "volume.discount_amount": _format_decimal(notification.discount_amount, 2),
+        "volume.application_scope": application_scope_for_customer(notification.customer),
         "action.url": _absolute_url(reverse("portal:client-dashboard")),
     }
     sent = False

@@ -16,6 +16,11 @@ from apps.customers.models import (
     CustomerBillingProfile,
     CustomerVolumeDiscountTier,
 )
+from apps.customers.services.volume_discounts import (
+    is_cash_volume_customer,
+    linear_meters_from_sqm,
+    quote_volume_and_tier,
+)
 from apps.orders.models import ZERO_AMOUNT, Order, OrderLine
 from apps.shipping.services.methods import ShippingMethodService
 
@@ -203,6 +208,35 @@ class OrderPricingService:
             .strip()
             .lower()
         )
+        dtf_gross_amount = dtf_amount
+        volume_discount_percent = ZERO_AMOUNT
+        volume_discount_amount = ZERO_AMOUNT
+        volume_discount_threshold = None
+        paid_monthly_volume = ZERO_AMOUNT
+        monthly_volume = ZERO_AMOUNT
+        if resolved_billing == Order.BillingMode.IMMEDIATE and is_cash_volume_customer(customer):
+            additional_linear = linear_meters_from_sqm(billable)
+            paid_monthly_volume, monthly_volume, tier = quote_volume_and_tier(
+                customer=customer,
+                additional_linear_m=additional_linear,
+            )
+            if tier is not None:
+                volume_discount_percent = tier.discount_percent.quantize(
+                    TWOPLACES,
+                    rounding=ROUND_HALF_UP,
+                )
+                volume_discount_threshold = tier.minimum_monthly_linear_m
+                factor = (Decimal("100.00") - volume_discount_percent) / Decimal("100.00")
+                dtf_amount = (dtf_gross_amount * factor).quantize(
+                    TWOPLACES,
+                    rounding=ROUND_HALF_UP,
+                )
+                unit_price = (unit_price * factor).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+                volume_discount_amount = (dtf_gross_amount - dtf_amount).quantize(
+                    TWOPLACES,
+                    rounding=ROUND_HALF_UP,
+                )
+                subtotal = (dtf_amount + prep_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         totals = self.compose_order_totals(
             subtotal_ht=subtotal,
             shipping_ht=Decimal(str(shipping_snap["shipping_amount"])),
@@ -215,6 +249,7 @@ class OrderPricingService:
             "billable_sqm": billable,
             "unit_price_eur": unit_price,
             "dtf_amount_eur": dtf_amount,
+            "dtf_gross_amount_eur": dtf_gross_amount,
             "prep_fee_eur": prep_fee,
             "prep_amount_eur": prep_amount,
             "subtotal_eur": totals["subtotal_amount"],
@@ -227,6 +262,11 @@ class OrderPricingService:
             "total_eur": totals["total_amount"],
             "billing_mode": resolved_billing,
             "currency": "EUR",
+            "volume_discount_percent": volume_discount_percent,
+            "volume_discount_amount_eur": volume_discount_amount,
+            "volume_discount_threshold_linear_m": volume_discount_threshold,
+            "paid_monthly_volume_linear_m": paid_monthly_volume,
+            "monthly_volume_linear_m": monthly_volume,
         }
 
     def estimate_reorder_quote(
@@ -922,6 +962,10 @@ class OrderPricingService:
                 "La tarification est figée car la commande appartient à un "
                 "récapitulatif de facturation."
             )
+        from apps.billing.services.production_payment_gate import order_has_captured_payment
+
+        if order.billing_mode == Order.BillingMode.IMMEDIATE and order_has_captured_payment(order):
+            raise ValidationError("Le tarif est figé après paiement.")
         if not order.uses_atelier_pricing():
             raise ValidationError(
                 "Le calcul automatique s'applique aux commandes atelier (encours ou comptant CB)."
@@ -958,6 +1002,53 @@ class OrderPricingService:
             TWOPLACES,
             rounding=ROUND_HALF_UP,
         )
+        volume_discount_month = None
+        monthly_volume_linear_m = None
+        volume_discount_threshold_linear_m = None
+        volume_discount_percent = ZERO_AMOUNT
+        volume_discount_amount = ZERO_AMOUNT
+        effective_unit_price = unit_price
+        if order.billing_mode == Order.BillingMode.IMMEDIATE and is_cash_volume_customer(
+            order.customer
+        ):
+            total_sqm = sum((line[1] for line in priced_lines), Decimal("0.00"))
+            additional_linear = linear_meters_from_sqm(total_sqm)
+            month = timezone.localtime(order.created_at).date()
+            _paid_volume, quote_volume, tier = quote_volume_and_tier(
+                customer=order.customer,
+                additional_linear_m=additional_linear,
+                month=month,
+                exclude_order_id=order.pk,
+            )
+            month_start, _next_month, _starts_at, _ends_at = self._month_bounds(month)
+            volume_discount_month = month_start
+            monthly_volume_linear_m = quote_volume
+            if tier is not None:
+                volume_discount_percent = tier.discount_percent.quantize(
+                    TWOPLACES,
+                    rounding=ROUND_HALF_UP,
+                )
+                volume_discount_threshold_linear_m = tier.minimum_monthly_linear_m
+                factor = (Decimal("100.00") - volume_discount_percent) / Decimal("100.00")
+                effective_unit_price = (unit_price * factor).quantize(
+                    TWOPLACES,
+                    rounding=ROUND_HALF_UP,
+                )
+                discounted_lines = []
+                discounted_dtf = ZERO_AMOUNT
+                for upload, meterage, line_total in priced_lines:
+                    discounted_total = (line_total * factor).quantize(
+                        TWOPLACES,
+                        rounding=ROUND_HALF_UP,
+                    )
+                    discounted_dtf += discounted_total
+                    discounted_lines.append((upload, meterage, discounted_total))
+                volume_discount_amount = (dtf_subtotal - discounted_dtf).quantize(
+                    TWOPLACES,
+                    rounding=ROUND_HALF_UP,
+                )
+                priced_lines = discounted_lines
+                dtf_subtotal = discounted_dtf
         subtotal = (dtf_subtotal + prep_line_total).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         shipping_ht = self.shipping_methods.resolve_shipping_amount_for_order(order)
         totals = self.compose_order_totals(
@@ -989,11 +1080,11 @@ class OrderPricingService:
                     service_type=dtf_service.service_type,
                     unit=dtf_service.unit,
                     quantity=meterage,
-                    unit_price=unit_price,
+                    unit_price=effective_unit_price,
                     line_total=line_total,
                 )
                 upload.meterage_sqm = meterage
-                upload.unit_price_eur = unit_price
+                upload.unit_price_eur = effective_unit_price
                 upload.line_total_eur = line_total
                 upload.save(
                     update_fields=[
@@ -1026,11 +1117,11 @@ class OrderPricingService:
             order_locked.currency = dtf_service.currency
             order_locked.pricing_status = Order.PricingStatus.PRICED
             order_locked.credit_hold_status = credit_hold
-            order_locked.volume_discount_month = None
-            order_locked.monthly_volume_linear_m = None
-            order_locked.volume_discount_threshold_linear_m = None
-            order_locked.volume_discount_percent = ZERO_AMOUNT
-            order_locked.volume_discount_amount = ZERO_AMOUNT
+            order_locked.volume_discount_month = volume_discount_month
+            order_locked.monthly_volume_linear_m = monthly_volume_linear_m
+            order_locked.volume_discount_threshold_linear_m = volume_discount_threshold_linear_m
+            order_locked.volume_discount_percent = volume_discount_percent
+            order_locked.volume_discount_amount = volume_discount_amount
             order_locked.volume_discount_base_unit_price_eur = unit_price
             order_locked.save(
                 update_fields=[

@@ -250,7 +250,7 @@ class CustomerVolumeDiscountTierQuerySet(models.QuerySet):
 
 
 class CustomerVolumeDiscountTier(BaseModel):
-    """Palier de remise rétroactive sur le volume DTF mensuel d'un client en encours."""
+    """Palier de remise volume DTF mensuel (rétroactif encours / prospectif comptant)."""
 
     customer = models.ForeignKey(
         Customer,
@@ -314,7 +314,7 @@ class DefaultCustomerVolumeDiscountTierQuerySet(models.QuerySet):
 
 
 class DefaultCustomerVolumeDiscountTier(BaseModel):
-    """Palier global copié sur chaque nouveau client en encours."""
+    """Palier global copié sur chaque nouveau client encours ou comptant."""
 
     minimum_monthly_linear_m = models.DecimalField(
         "Seuil mensuel (m linéaires)",

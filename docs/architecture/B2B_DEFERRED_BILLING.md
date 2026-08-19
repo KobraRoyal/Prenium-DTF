@@ -129,6 +129,14 @@ fichier et le port restent inchangés. Une commande déjà rattachée à un rele
 La modification d’un palier recalcule immédiatement le mois civil courant ; la tarification,
 l’invalidation du métrage et l’annulation Atelier recalculent le mois concerné.
 
+## Remise volume prospective (paiement comptant)
+
+Les comptes dont le mode par défaut est `immediate` utilisent la **même grille** de paliers, mais
+sans rétroactivité. Le volume historique du mois ne compte que les commandes **payées**
+(`Payment.status = captured`). La commande en cours (devis ou persist) ajoute son propre linéaire
+pour choisir le palier, puis snapshot le taux sur **cette commande seulement**. Voir
+[sprint 41](../sprints/sprint-41-remise-volume-comptant-prospective.md).
+
 Le service verrouille la ligne `Customer` avant l’agrégation afin que deux commandes concurrentes
 ne puissent pas conserver des paliers divergents. Les événements
 `order.monthly_volume_discount_repriced` et `customer.monthly_volume_discount_applied` assurent la

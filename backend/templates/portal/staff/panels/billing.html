@@ -13,13 +13,14 @@
     <article><span>Livraison</span><strong>{{ order.shipping_amount }} {{ order.currency }}</strong><small>{% if order.shipping_method_name %}{{ order.shipping_method_name }}{% else %}Non renseignée{% endif %}</small></article>
     <article><span>TVA</span><strong>{{ order.tax_amount }} {{ order.currency }}</strong><small>{% if order.tax_rate %}Taux {{ order.tax_rate }}{% else %}—{% endif %}</small></article>
     <article><span>Total</span><strong>{{ order.total_amount }} {{ order.currency }}</strong><small>{{ order.pricing_status|human_status }}</small></article>
-    {% if order.billing_mode == "deferred" and order.monthly_volume_linear_m is not None %}
+    {% if order.monthly_volume_linear_m is not None %}
     <article>
       <span>Remise volume</span>
       <strong>{% if order.volume_discount_percent %}-{{ order.volume_discount_percent }} %{% else %}Aucun palier{% endif %}</strong>
       <small>
         {{ order.monthly_volume_linear_m }} m ce mois
         {% if order.volume_discount_amount %} · -{{ order.volume_discount_amount }} {{ order.currency }} HT{% endif %}
+        {% if order.billing_mode == "immediate" %} · sans rétroactivité{% endif %}
       </small>
     </article>
     {% endif %}

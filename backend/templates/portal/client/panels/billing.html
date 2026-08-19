@@ -167,6 +167,14 @@
     <p class="mt-2 mb-0 text-sm">{{ order.get_credit_hold_status_display }} — contactez votre interlocuteur.</p>
     {% endif %}
   </div>
+  {% elif order.billing_mode == "immediate" and order.pricing_status == "priced" and order.volume_discount_percent %}
+  <div class="alert alert--info client-billing-note" role="status">
+    <p class="m-0">
+      Palier atteint : <strong>-{{ order.volume_discount_percent }} %</strong> sur cette commande
+      (soit -{{ order.volume_discount_amount }} {{ order.currency }} HT).
+      Les commandes déjà payées conservent leur tarif.
+    </p>
+  </div>
   {% elif order.billing_mode == "immediate" and order.pricing_status != "priced" %}
   <div class="alert alert--info client-billing-note" role="status">
     <p class="m-0">Le bouton de paiement apparaîtra dès que le prix sera calculé.</p>

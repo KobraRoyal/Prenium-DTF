@@ -39,6 +39,14 @@
             <span class="b2b-project-quote__rate muted">{% localize on %}{{ gang_sheet_quote.unit_price_eur }}{% endlocalize %}&nbsp;€/m²</span>
           </span>
         </div>
+        {% if gang_sheet_quote.volume_discount_percent %}
+        <div class="b2b-project-quote__row" role="listitem">
+          <span class="b2b-project-quote__label">Remise volume −{{ gang_sheet_quote.volume_discount_percent }}&nbsp;%</span>
+          <span class="b2b-project-quote__value">
+            <span class="b2b-project-quote__amount">−{% localize on %}{{ gang_sheet_quote.volume_discount_amount_eur }}{% endlocalize %}&nbsp;{{ gang_sheet_quote.currency }}</span>
+          </span>
+        </div>
+        {% endif %}
         <div class="b2b-project-quote__row" role="listitem">
           <span class="b2b-project-quote__label">Préparation fichier</span>
           <span class="b2b-project-quote__value">

@@ -19,7 +19,10 @@ ACTIONABLE_PROJECT_STATUSES = {
 
 
 def build_client_volume_discount_summary(*, customer):
-    if customer.default_billing_mode != customer.DefaultBillingMode.DEFERRED:
+    if customer.default_billing_mode not in {
+        customer.DefaultBillingMode.DEFERRED,
+        customer.DefaultBillingMode.IMMEDIATE,
+    }:
         return None
     from apps.customers.services.volume_discounts import CustomerVolumeDiscountTierService
 

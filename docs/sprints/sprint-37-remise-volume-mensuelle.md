@@ -11,12 +11,13 @@ mètres linéaires et un pourcentage de remise. Le meilleur palier atteint appli
 - [x] grille propre à chaque client, accessible avec `customers.manage_customer_pricing` ;
 - [x] seuil en mètres linéaires et remise en pourcentage, avec activation/désactivation ;
 - [x] seuils uniques et remises strictement croissantes avec le volume ;
-- [x] configuration réservée aux comptes dont le mode par défaut est `deferred` ;
+- [x] configuration des paliers pour les comptes `deferred` (le sprint 41 l’ouvre aussi au comptant) ;
 - [x] calcul du volume équivalent linéaire : somme des m² DTF / laize configurée ;
 - [x] meilleur palier tel que `seuil <= volume mensuel` ;
 - [x] remise rétroactive sur toutes les commandes `deferred`, `priced`, `submitted`, non relevées,
   du même client et du même mois civil ;
-- [x] préparation fichier, port et commandes comptant exclus de la remise ;
+- [x] préparation fichier, port et commandes comptant exclus de la remise encours (sprint 41 : les
+  commandes comptant d’un **compte** comptant ont un palier prospectif séparé) ;
 - [x] commande rattachée à un `BillingStatement` figée et exclue du recalcul ;
 - [x] recalcul du mois lors d’une nouvelle tarification, d’une invalidation de métrage, d’une
   annulation Atelier ou d’une modification de palier ;
@@ -83,3 +84,6 @@ mètres linéaires et un pourcentage de remise. Le meilleur palier atteint appli
 - [x] scan Impeccable exécuté : aucun défaut propre aux composants ajoutés ; les avertissements
   restants concernent la police et deux accents historiques du design system global, conservés pour
   rester alignés avec `DESIGN.md`.
+
+Le sprint 41 ajoute la politique **prospective** pour les comptes comptant, sans modifier le moteur
+rétroactif ci-dessus.

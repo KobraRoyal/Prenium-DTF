@@ -95,6 +95,11 @@ EMAIL_TAGS = (
     EmailTag("volume.threshold_linear_m", "Seuil du palier", "100,0000"),
     EmailTag("volume.discount_percent", "Remise du palier", "10,00"),
     EmailTag("volume.discount_amount", "Remise cumulée HT", "125,50"),
+    EmailTag(
+        "volume.application_scope",
+        "Portée de la remise",
+        "sur cette commande et les suivantes, sans effet rétroactif",
+    ),
     EmailTag("prospect.first_name", "Prénom du prospect", "Camille"),
     EmailTag("prospect.last_name", "Nom du prospect", "Martin"),
     EmailTag("prospect.company", "Société du prospect", "Atelier Démo"),
@@ -462,8 +467,8 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "Votre volume DTF pour {{ customer.name }} a atteint "
             "{{ volume.monthly_linear_m }} m linéaires en {{ volume.month }}.\n\n"
             "Palier atteint : {{ volume.threshold_linear_m }} m\n"
-            "Remise appliquée : {{ volume.discount_percent }} % sur l’ensemble du "
-            "volume DTF éligible du mois\n"
+            "Remise appliquée : {{ volume.discount_percent }} % "
+            "{{ volume.application_scope }}\n"
             "Remise cumulée actuelle : {{ volume.discount_amount }} EUR HT\n\n"
             "Suivez votre progression dans votre espace client :\n"
             "{{ action.url }}\n\n"
