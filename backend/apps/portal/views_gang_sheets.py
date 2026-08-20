@@ -354,7 +354,7 @@ class ClientGangSheetDeleteView(ClientGangSheetMixin, View):
             return with_toast(HttpResponseRedirect(return_url), error.message, "error")
         return with_toast(
             HttpResponseRedirect(list_url),
-            "Gang Sheet supprimée.",
+            "Planche DTF supprimée.",
             "success",
         )
 
@@ -612,7 +612,7 @@ class ClientGangSheetWorkflowActionView(ClientGangSheetMixin, View):
                 return JsonResponse(
                     {
                         "ok": True,
-                        "message": "Projet de commande préparé.",
+                        "message": "Commande préparée.",
                         "redirect_url": reverse(
                             "portal:client-order-project-detail",
                             kwargs={

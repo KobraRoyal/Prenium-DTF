@@ -17,6 +17,7 @@
     --product-attention-soft: rgba(220, 255, 26, 0.2);
     --product-attention-muted: rgba(220, 255, 26, 0.1);
     --product-danger: #ff5470;
+    --product-danger-text: #9f1239;
     --product-success: #4ade80;
     --product-text-critical-xs: 0.75rem;
     min-height: 100vh;
@@ -753,7 +754,7 @@
 
   body.product-shell .account-profile-nav a {
     display: flex;
-    min-height: 2.5rem;
+    min-height: 2.75rem;
     align-items: center;
     gap: 0.5rem;
     padding: 0.55rem 0.7rem;
@@ -1054,7 +1055,7 @@
 
   body.product-shell .account-team-row__actions .ui-input {
     min-width: 9.5rem;
-    min-height: 2.4rem;
+    min-height: 2.75rem;
     width: auto;
   }
 
@@ -2838,7 +2839,7 @@
   }
 
   body.product-shell .product-date-picker__trigger [data-date-display].is-placeholder {
-    color: rgba(76, 70, 59, 0.5);
+    color: var(--product-muted);
   }
 
   body.product-shell .product-date-picker__popover {
@@ -6869,7 +6870,7 @@
 
     body.product-shell .account-profile-nav a {
       flex: 0 0 auto;
-      min-height: 2.4rem;
+      min-height: 2.75rem;
       white-space: nowrap;
     }
 
@@ -8172,10 +8173,20 @@ body.product-shell .scan-result__label {
   }
 
   body.product-shell .client-order-summary__shipping-action a {
-    color: var(--product-accent);
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    color: var(--product-ink);
     font-weight: 650;
     text-decoration: underline;
     text-underline-offset: 0.12em;
+    text-decoration-color: var(--product-accent);
+    text-decoration-thickness: 3px;
+  }
+
+  body.product-shell .client-order-summary__shipping-action a:hover,
+  body.product-shell .client-order-summary__shipping-action a:focus-visible {
+    background: color-mix(in srgb, var(--product-accent) 24%, transparent);
   }
 
   body.product-shell .client-shipment-head {
@@ -8523,14 +8534,20 @@ body.product-shell .scan-result__label {
     }
 
     body.product-shell .client-order-detail .workflow-shell--compact .workflow-tab-rail--compact {
-      overflow-x: auto;
+      overflow: visible;
       padding: 0.65rem 0.75rem;
     }
 
     body.product-shell .client-order-detail .workflow-tab-group__chips--flat {
-      width: max-content;
-      min-width: 100%;
-      flex-wrap: nowrap;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+      min-width: 0;
+    }
+
+    body.product-shell .client-order-detail .workflow-tab-group__chips--flat .ui-tab-chip {
+      width: 100%;
+      justify-content: center;
     }
 
     body.product-shell .client-order-detail .workflow-shell--compact .ui-tab-chip {

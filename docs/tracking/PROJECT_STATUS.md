@@ -322,6 +322,14 @@
 - [x] Quatre onglets distillés (Visuels, Avancement, Expédition, Règlement) sans redites
 - [x] Contrats HTMX, paiement et suivi colis conservés
 
+## Micro-lot portail client — cohérence professionnelle Impeccable (2026-08-20)
+
+- [x] Audit actuel des 12 parcours et backlog P1–P3 documentés
+- [x] Score Impeccable porté de 12/20 à 16/20 par correction de tous les P1
+- [x] Navigation, lexique, dashboard, studio mobile, onglets et filtres harmonisés
+- [x] Contrastes AA, cibles tactiles et confirmations d'équipe validés dans le navigateur
+- [x] Build CSS, contrôles Django/Ruff, 120 tests ciblés et suite globale 729/729 verts
+
 ## Micro-lot portail client — société sur le profil (2026-08-19)
 
 - [x] Affichage raison sociale, SIREN, TVA et adresses sur Mes informations

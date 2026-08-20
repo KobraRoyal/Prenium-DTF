@@ -76,3 +76,14 @@ stockage manifest stable de Django ne réécrit pas ces imports ES modules.
 - [x] Console navigateur propre.
 - [x] Détecteur Impeccable exécuté après les corrections.
 - [x] Graphe d’architecture rafraîchi.
+
+## Micro-lot portail client — cohérence professionnelle (2026-08-20)
+
+- [x] Audit Impeccable des 12 parcours client documenté avec backlog P1–P3.
+- [x] Quatre P1 corrigés : contrastes, workflow studio mobile, lexique/navigation et dashboard.
+- [x] Onglets et filtres mobiles rendus entièrement visibles sans overflow horizontal.
+- [x] Désactivation membre et révocation invitation protégées par confirmation contextualisée.
+- [x] Cibles prioritaires portées à 44–48 px et contrastes réels mesurés au-dessus de 7,8:1.
+- [x] Build CSS, `collectstatic`, Django, Ruff et 120 tests ciblés validés.
+- [x] Suite globale officielle : 729 tests réussis, 1 ignoré, 0 échec.
+- [x] Recette authentifiée 375/1440 px et documentation produit mises à jour.

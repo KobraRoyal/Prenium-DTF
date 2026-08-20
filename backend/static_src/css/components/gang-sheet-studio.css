@@ -1819,15 +1819,36 @@
       white-space: normal;
     }
 
+    .gang-workflow--editor ol {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gang-workflow--editor li:nth-child(n + 3) {
+      border-top: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 14%, transparent);
+    }
+
+    .gang-workflow--editor li:nth-child(3) {
+      border-left: 0;
+    }
+
     .gang-workflow--editor li > button {
       flex-direction: row;
-      justify-content: center;
+      justify-content: flex-start;
       min-height: 3rem;
-      padding: 0.35rem;
+      padding: 0.45rem 0.65rem;
     }
 
     .gang-workflow--editor li > button > span:last-child {
-      display: none;
+      display: block;
+      min-width: 0;
+    }
+
+    .gang-workflow--editor li > button > span:last-child strong {
+      display: block;
+      overflow-wrap: normal;
+      font-size: 0.68rem;
+      line-height: 1.1;
+      white-space: nowrap;
     }
 
     .gang-inspector-panel--validation {

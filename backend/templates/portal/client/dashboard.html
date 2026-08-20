@@ -1,41 +1,38 @@
 {% extends "portal/layout.html" %}
 {% load ui_tags portal_tags %}
 
-{% block title %}Espace client - Prenium DTF{% endblock %}
+{% block title %}Tableau de bord — Prenium DTF{% endblock %}
 
 {% block portal_content %}
 <div class="client-dashboard">
+<section class="page-head page-head--premium client-dashboard-head" aria-labelledby="client-dashboard-title">
+  <div class="page-head__content">
+    <h1 class="font-display tracking-tight" id="client-dashboard-title">Tableau de bord</h1>
+    <p class="page-head-lead">{% if customer %}Pilotez les commandes et les productions de {{ customer.name }}.{% else %}Retrouvez ici l’activité de votre espace client.{% endif %}</p>
+  </div>
+  {% if client_focus and client_focus.kind == "start" %}
+  <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">Créer une commande</a>
+  {% endif %}
+</section>
 {% if not memberships %}
 <section class="card empty-state">
   <h2 class="font-display text-lg">Aucun espace client actif</h2>
-  <p class="muted">Votre utilisateur n'a pas encore de membership client actif.</p>
+  <p class="muted">Votre compte n’est encore rattaché à aucun espace client actif.</p>
 </section>
 {% else %}
 {% if volume_discount_summary %}
-<section class="page-head page-head--premium client-dashboard-palier{% if client_focus and client_focus.kind == 'start' %} is-start{% endif %}" aria-labelledby="client-volume-discount-title" data-testid="client-volume-discount-summary">
-  <div class="page-head__content">
-    <h1 class="font-display tracking-tight" id="client-volume-discount-title">{{ volume_discount_summary.nudge_headline }}</h1>
+<section class="client-dashboard-palier" aria-labelledby="client-volume-discount-title" data-testid="client-volume-discount-summary">
+  <div>
+    <h2 id="client-volume-discount-title">{{ volume_discount_summary.nudge_headline }}</h2>
     {% if volume_discount_summary.nudge_message %}
-    <p class="page-head-lead">{{ volume_discount_summary.nudge_message }}</p>
+    <p>{{ volume_discount_summary.nudge_message }}</p>
     {% endif %}
   </div>
-  {% if client_focus and client_focus.kind == "start" %}
-  <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">{{ client_focus.action_label }}</a>
-  {% endif %}
+  <span class="client-dashboard-palier__meter" aria-label="Volume DTF du mois">{{ volume_discount_summary.volume_label }} m ce mois</span>
 </section>
 {% endif %}
 {% if client_focus and client_focus.kind != "start" %}
 <section class="client-dashboard-focus {{ client_focus.tone }}" aria-labelledby="client-dashboard-focus-title" data-testid="client-dashboard-focus">
-  <div>
-    <h2 id="client-dashboard-focus-title">{{ client_focus.title }}</h2>
-    {% if client_focus.detail %}
-    <p class="client-dashboard-focus__detail">{{ client_focus.detail }}</p>
-    {% endif %}
-  </div>
-  <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">{{ client_focus.action_label }}</a>
-</section>
-{% elif client_focus and client_focus.kind == "start" and not volume_discount_summary %}
-<section class="client-dashboard-focus" aria-labelledby="client-dashboard-focus-title" data-testid="client-dashboard-focus">
   <div>
     <h2 id="client-dashboard-focus-title">{{ client_focus.title }}</h2>
     {% if client_focus.detail %}

@@ -588,8 +588,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         create_icon = template_source("components/nav/creation_icon.html")
         portal_tags = app_source("apps/portal/templatetags/portal_tags.py")
 
-        self.assertIn(">Dashboard</a>", client_nav)
-        self.assertNotIn("Planches DTF", client_nav)
+        self.assertIn(">Tableau de bord</a>", client_nav)
+        self.assertIn(">Planches DTF</a>", client_nav)
         self.assertIn(">Dashboard</a>", staff_nav)
         self.assertIn(">Commandes</a>", staff_nav)
         self.assertIn("Outils Atelier", staff_nav)
@@ -628,8 +628,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertEqual(profile_icon.count('aria-hidden="true"'), 4)
         self.assertIn("Créer une commande", create_menu)
         self.assertIn("À partir de fichiers", create_menu)
-        self.assertIn("Générer une Gang Sheet", create_menu)
-        self.assertIn("Créer une Gang Sheet", create_menu)
+        self.assertIn("Composer une planche DTF", create_menu)
+        self.assertIn("Créer une planche DTF", create_menu)
         self.assertIn("portal:client-order-project-create", create_menu)
         self.assertIn("portal:client-gang-sheet-list-create", create_menu)
         self.assertIn("cash_checkout_requires_gang_sheet", create_menu)
@@ -654,7 +654,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         source = template_source("components/nav/portal_client_navigation.html")
         create_menu = template_source("components/nav/portal_client_create_menu.html")
 
-        self.assertNotIn("client-gang-sheet-list-create", source)
+        self.assertIn("client-gang-sheet-list-create", source)
+        self.assertIn("portal_nav_access.project_creation_enabled", source)
         self.assertIn("portal_nav_access.project_creation_enabled", create_menu)
         self.assertNotIn("{% if b2b_order_projects_globally_enabled %}", source)
 
@@ -699,6 +700,43 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("?display=inline", gang_library)
         self.assertNotIn('class="gang-workflow"', gang_library)
         self.assertNotIn("Créer une planche autonome", gang_library)
+
+    def test_client_portal_hardening_keeps_actions_named_and_contrasted(self) -> None:
+        dashboard = template_source("portal/client/dashboard.html")
+        editor = template_source("portal/client/gang_sheets/editor.html")
+        team = template_source("portal/client/team.html")
+        invite_panel = template_source("portal/client/partials/team_invite_panel.html")
+        deactivate = template_source(
+            "portal/client/partials/team_member_deactivate_button.html"
+        )
+        revoke = template_source(
+            "portal/client/partials/team_invitation_revoke_button.html"
+        )
+        product_css = static_source("css/components/product-shell.css")
+        gang_css = static_source("css/components/gang-sheet.css")
+        studio_css = static_source("css/components/gang-sheet-studio.css")
+
+        self.assertIn('id="client-dashboard-title">Tableau de bord</h1>', dashboard)
+        self.assertIn('id="client-volume-discount-title">', dashboard)
+        self.assertIn("client-dashboard-palier__meter", dashboard)
+        self.assertEqual(editor.count('aria-label="Étape '), 4)
+        self.assertIn("Studio planche DTF — Prenium DTF", editor)
+        self.assertIn("display: block", studio_css)
+        self.assertIn(
+            ".product-date-picker__trigger [data-date-display].is-placeholder {\n"
+            "    color: var(--product-muted);",
+            product_css,
+        )
+        self.assertIn("--product-danger-text: #9f1239", product_css)
+        self.assertIn("color: var(--product-danger-text", gang_css)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", product_css)
+        self.assertIn("team_member_deactivate_button.html", team)
+        self.assertIn("team_invitation_revoke_button.html", invite_panel)
+        for dialog_source in [deactivate, revoke]:
+            self.assertIn('aria-haspopup="dialog"', dialog_source)
+            self.assertIn("data-dialog-open", dialog_source)
+            self.assertIn("data-dialog-close", dialog_source)
+            self.assertIn("{% csrf_token %}", dialog_source)
 
     def test_gang_sheet_editor_behaves_like_a_responsive_production_studio(self) -> None:
         editor = template_source("portal/client/gang_sheets/editor.html")

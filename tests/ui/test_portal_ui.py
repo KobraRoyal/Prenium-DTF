@@ -240,11 +240,11 @@ def test_client_navigation_shows_project_creation_for_all_active_customers():
     assert client.login(email=user.email, password="pass")
 
     enabled_html = client.get(reverse("portal:client-dashboard")).content.decode()
-    assert "Dashboard" in enabled_html
+    assert "Tableau de bord" in enabled_html
     assert "Créer une commande" in enabled_html
-    assert "Planches DTF" not in enabled_html
+    assert "Planches DTF" in enabled_html
     assert "À partir de fichiers" in enabled_html
-    assert "Générer une Gang Sheet" in enabled_html
+    assert "Composer une planche DTF" in enabled_html
     assert "product-profile__trigger" in enabled_html
     assert "Mon compte" in enabled_html
     assert "Propriétaire · Navigation client" in enabled_html
@@ -281,7 +281,8 @@ def test_client_navigation_shows_project_creation_for_all_active_customers():
         assert page_html.count("Gérer l’équipe") == 1
         assert "Propriétaire · Navigation client" in page_html
         assert "À partir de fichiers" in page_html
-        assert "Générer une Gang Sheet" in page_html
+        assert "Composer une planche DTF" in page_html
+        assert "Planches DTF" in page_html
 
     user.is_staff = True
     user.save(update_fields=["is_staff"])
@@ -310,7 +311,8 @@ def test_client_navigation_falls_back_to_classic_checkout_when_projects_disabled
     html = client.get(reverse("portal:client-dashboard")).content.decode()
     assert "Créer une commande" in html
     assert "À partir de fichiers" not in html
-    assert "Générer une Gang Sheet" not in html
+    assert "Composer une planche DTF" not in html
+    assert "Planches DTF" not in html
     assert (
         reverse("portal:client-checkout", kwargs={"customer_public_id": customer.public_id}) in html
     )

@@ -57,6 +57,13 @@ class GangSheetStudioKeyboardAccessibilityTests(SimpleTestCase):
 
         for step in ["import", "compose", "control", "validate"]:
             self.assertIn(f'data-workflow-step="{step}"', editor)
+        for accessible_name in [
+            "Étape 1 — Importer les fichiers",
+            "Étape 2 — Composer la planche",
+            "Étape 3 — Contrôler la composition",
+            "Étape 4 — Valider la planche",
+        ]:
+            self.assertIn(f'aria-label="{accessible_name}"', editor)
         self.assertIn("const assetCount", runtime)
         self.assertIn("const itemCount = state.items.length", runtime)
         self.assertIn("const issueCount = state.issues.length", runtime)
