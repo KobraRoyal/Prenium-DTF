@@ -11,7 +11,13 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.catalog.models import CatalogService
-from apps.customers.models import Customer, CustomerBillingProfile, CustomerMembership
+from apps.customers.models import (
+    Customer,
+    CustomerBillingProfile,
+    CustomerMembership,
+    DefaultCustomerVolumeDiscountTier,
+)
+from apps.customers.services.volume_discounts import DefaultCustomerVolumeDiscountTierService
 from apps.orders.models import Order
 from apps.orders.services.orders import OrderService
 from apps.orders.services.pricing import OrderPricingService
@@ -43,13 +49,14 @@ class SeedUsers:
     client_a_owner: object
     client_a_member: object
     client_b_owner: object
+    client_cash_owner: object
     hybrid: object
 
 
 class Command(BaseCommand):
     help = (
         "Données de démo recette — alignées B2B "
-        "(facturation différée, profils client, tarification serveur). "
+        "(encours, comptant CB, profils client, tarification serveur). "
         "Mots de passe : voir docs/ACCES_RECETTE_PORTAIL.md"
     )
 
@@ -66,15 +73,21 @@ class Command(BaseCommand):
             self._reset_seed_data()
 
         users = self._seed_users()
-        customer_a, customer_b = self._seed_customers_and_memberships(users)
-        self._seed_customer_billing_profiles(customer_a, customer_b)
+        customer_a, customer_b, customer_cash = self._seed_customers_and_memberships(users)
+        self._seed_customer_billing_profiles(customer_a, customer_b, customer_cash)
+        self._seed_default_volume_discount_tiers()
+        DefaultCustomerVolumeDiscountTierService().apply_to_customer(
+            customer=customer_cash,
+            actor=users.admin,
+            source="seed_recipe",
+        )
         self._seed_catalog_services()
         orders = self._seed_b2b_orders(users, customer_a, customer_b)
         self._seed_uploads_inspections_drive(users, orders)
         self._seed_shipments(users, orders)
 
         self.stdout.write(
-            self.style.SUCCESS("Seed recette B2B généré (facturation différée + workflow).")
+            self.style.SUCCESS("Seed recette B2B généré (encours + comptant CB + workflow).")
         )
         self.stdout.write("")
         self.stdout.write(
@@ -91,6 +104,9 @@ class Command(BaseCommand):
             "- SEED09:A_B2B_IN_PRODUCTION / READY_SHIP / SHIPPED / SHIPPING_FAILED — chaîne GPAO"
         )
         self.stdout.write("- SEED09:B_B2B_1 / SEED09:B_B2B_BLOCKED — client B (isolation)")
+        self.stdout.write(
+            "- Seed Client Comptant — login client.cash.owner@prenium.local, paliers 5 m / 10 m"
+        )
 
     def _reset_seed_data(self):
         user_model = get_user_model()
@@ -101,6 +117,7 @@ class Command(BaseCommand):
             "client.a.owner@prenium.local",
             "client.a.member@prenium.local",
             "client.b.owner@prenium.local",
+            "client.cash.owner@prenium.local",
             "hybrid.ops.client@prenium.local",
         ]
         Customer.objects.filter(name__startswith="Seed ").delete()
@@ -171,6 +188,13 @@ class Command(BaseCommand):
         client_b_owner.set_password("pass1234")
         client_b_owner.save()
 
+        client_cash_owner, _ = user_model.objects.get_or_create(
+            email="client.cash.owner@prenium.local",
+            defaults={"is_active": True},
+        )
+        client_cash_owner.set_password("pass1234")
+        client_cash_owner.save()
+
         hybrid, _ = user_model.objects.get_or_create(
             email="hybrid.ops.client@prenium.local",
             defaults={"is_staff": True, "is_active": True},
@@ -195,6 +219,7 @@ class Command(BaseCommand):
             client_a_owner=client_a_owner,
             client_a_member=client_a_member,
             client_b_owner=client_b_owner,
+            client_cash_owner=client_cash_owner,
             hybrid=hybrid,
         )
 
@@ -272,9 +297,50 @@ class Command(BaseCommand):
             user=users.hybrid,
             defaults={"role": CustomerMembership.Role.MEMBER, "is_active": True},
         )
-        return customer_a, customer_b
 
-    def _seed_customer_billing_profiles(self, customer_a: Customer, customer_b: Customer):
+        customer_cash, _ = Customer.objects.get_or_create(
+            name="Seed Client Comptant",
+            defaults={
+                "billing_email": "billing.cash@prenium.local",
+                "is_active": True,
+                "default_billing_mode": Customer.DefaultBillingMode.IMMEDIATE,
+                "preferred_settlement_method": Customer.PreferredSettlementMethod.STRIPE,
+            },
+        )
+        customer_cash.billing_email = "billing.cash@prenium.local"
+        customer_cash.is_active = True
+        customer_cash.default_billing_mode = Customer.DefaultBillingMode.IMMEDIATE
+        customer_cash.preferred_settlement_method = Customer.PreferredSettlementMethod.STRIPE
+        customer_cash.save(
+            update_fields=[
+                "billing_email",
+                "is_active",
+                "default_billing_mode",
+                "preferred_settlement_method",
+                "updated_at",
+            ]
+        )
+        CustomerMembership.objects.update_or_create(
+            customer=customer_cash,
+            user=users.client_cash_owner,
+            defaults={"role": CustomerMembership.Role.OWNER, "is_active": True},
+        )
+        return customer_a, customer_b, customer_cash
+
+    def _seed_default_volume_discount_tiers(self):
+        """Paliers Atelier du scénario sprint 41 (5 m −10 %, 10 m −20 %)."""
+        for threshold, percent in (
+            (Decimal("5.0000"), Decimal("10.00")),
+            (Decimal("10.0000"), Decimal("20.00")),
+        ):
+            DefaultCustomerVolumeDiscountTier.objects.get_or_create(
+                minimum_monthly_linear_m=threshold,
+                defaults={"discount_percent": percent, "is_active": True},
+            )
+
+    def _seed_customer_billing_profiles(
+        self, customer_a: Customer, customer_b: Customer, customer_cash: Customer
+    ):
         CustomerBillingProfile.objects.update_or_create(
             customer=customer_a,
             defaults={
@@ -291,6 +357,15 @@ class Command(BaseCommand):
                 "price_per_sqm_eur": None,
                 "credit_limit_eur": Decimal("1500.00"),
                 "enforce_credit_block": True,
+            },
+        )
+        CustomerBillingProfile.objects.update_or_create(
+            customer=customer_cash,
+            defaults={
+                "billing_cycle": CustomerBillingProfile.BillingCycle.MONTHLY,
+                "price_per_sqm_eur": Decimal("25.00"),
+                "credit_limit_eur": None,
+                "enforce_credit_block": False,
             },
         )
 

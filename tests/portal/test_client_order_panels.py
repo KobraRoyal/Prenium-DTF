@@ -38,6 +38,8 @@ def test_member_cannot_access_owner_order_panels():
     assert "Visuels" in html
     assert "Avancement" in html
     assert "Expédition" in html
+    assert "Votre référence" not in html
+    assert "Accueil client" not in html
     assert "client-order-panel-billing" not in html
     assert 'panel=billing"' not in html and "?panel=billing" not in html
 
@@ -99,7 +101,7 @@ def test_production_panel_shows_status_history():
     assert response.status_code == 200
     assert "Historique des statuts" in html
     assert "client-order-panel--production" in html
-    assert "Les étapes confirmées par l’atelier" in html
+    assert "Les étapes confirmées par l’atelier" not in html
     assert "Commande transmise" in html
     assert "En production" in html
     assert "Lancement atelier" in html
@@ -260,3 +262,4 @@ def test_reorder_from_order_creates_project_with_visuals():
         )
     )
     assert "Réassort" in panel.content.decode()
+    assert "Visuels transmis" not in panel.content.decode()

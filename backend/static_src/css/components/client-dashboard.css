@@ -1,0 +1,102 @@
+/* Tableau de bord client : orientation stable, prochaine action, avantage secondaire. */
+
+body.product-shell .client-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+body.product-shell .client-dashboard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+body.product-shell .client-dashboard-head h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+body.product-shell .client-dashboard-head .page-head-lead {
+  max-width: 42rem;
+  margin: 0.45rem 0 0;
+}
+
+body.product-shell .client-dashboard-head .ui-btn {
+  flex: 0 0 auto;
+}
+
+body.product-shell .client-dashboard-focus .client-dashboard-focus__detail {
+  margin: 0;
+  color: var(--product-muted);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.product-shell .client-dashboard-section__head h2 {
+  margin: 0;
+}
+
+body.product-shell .client-dashboard-palier {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--product-line);
+  background: color-mix(in srgb, var(--product-accent) 12%, var(--product-panel));
+}
+
+body.product-shell .client-dashboard-palier > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+body.product-shell .client-dashboard-palier h2,
+body.product-shell .client-dashboard-palier p {
+  margin: 0;
+}
+
+body.product-shell .client-dashboard-palier h2 {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+body.product-shell .client-dashboard-palier p {
+  max-width: 52rem;
+  color: var(--product-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+body.product-shell .client-dashboard-palier__meter {
+  flex: 0 0 auto;
+  padding: 0.42rem 0.58rem;
+  border: 1px solid var(--product-line);
+  background: var(--product-panel);
+  font-size: 0.75rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+@media (max-width: 39.99rem) {
+  body.product-shell .client-dashboard-head,
+  body.product-shell .client-dashboard-palier {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body.product-shell .client-dashboard-head .ui-btn,
+  body.product-shell .client-dashboard-palier__meter {
+    width: 100%;
+  }
+
+  body.product-shell .client-dashboard-palier__meter {
+    text-align: center;
+  }
+}

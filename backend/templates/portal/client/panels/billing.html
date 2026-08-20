@@ -1,6 +1,6 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="billing" %}
-<div class="panel client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}">
+<div class="panel client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}" aria-label="Règlement">
   {% if payment and payment.status == "captured" and invoice %}
   <section class="client-billing-success" aria-labelledby="client-billing-success-title">
     <div class="client-billing-success__intro">
@@ -10,7 +10,6 @@
         </svg>
       </span>
       <div class="client-billing-success__copy">
-        <p class="client-billing-success__eyebrow">Paiement réussi</p>
         <h3 id="client-billing-success-title">Merci, c’est confirmé</h3>
         <p>
           {% if payment.provider == "paypal" %}PayPal{% elif payment.provider == "stripe" %}Carte bancaire{% else %}Paiement en ligne{% endif %}
@@ -22,20 +21,9 @@
       </div>
     </div>
 
-    <dl class="client-billing-success__meta" aria-label="Récapitulatif">
-      <div>
-        <dt>Montant réglé</dt>
-        <dd>{{ invoice.total_amount }}&nbsp;{{ invoice.currency }}</dd>
-      </div>
-      <div>
-        <dt>Justificatif</dt>
-        <dd><code>{{ invoice.invoice_number }}</code></dd>
-      </div>
-      <div>
-        <dt>Confirmé le</dt>
-        <dd>{% if payment.captured_at %}{{ payment.captured_at|date:"d/m/Y" }}{% elif invoice.paid_at %}{{ invoice.paid_at|date:"d/m/Y" }}{% else %}—{% endif %}</dd>
-      </div>
-    </dl>
+    <p class="client-billing-success__receipt">
+      Justificatif <code>{{ invoice.invoice_number }}</code>
+    </p>
 
     <div class="client-billing-success__actions">
       <a
@@ -44,58 +32,29 @@
       >
         Télécharger le justificatif
       </a>
-      <a
-        class="ui-btn ui-btn-secondary"
-        href="{% url 'portal:client-order-detail' customer_public_id=order.customer.public_id order_public_id=order.public_id %}?panel=production"
-        hx-get="{% url 'portal:client-order-panel-production' customer_public_id=order.customer.public_id order_public_id=order.public_id %}"
-        hx-target="#client-order-panel"
-        hx-swap="innerHTML"
-        hx-push-url="{% url 'portal:client-order-detail' customer_public_id=order.customer.public_id order_public_id=order.public_id %}?panel=production"
-        hx-indicator="#portal-htmx-indicator"
-      >
-        Suivre la production
-      </a>
     </div>
 
     <p class="client-billing-success__next" role="status">
-      L’atelier peut lancer la fabrication. La facture fiscale sera émise séparément via RCA.
+      La facture fiscale sera émise séparément.
     </p>
   </section>
   {% else %}
 
-  <header class="panel-head panel-head--compact client-billing-head">
-    <div>
-      <h3 class="font-display text-lg">Règlement</h3>
-      <p class="client-order-panel__lead">
-        {% if awaits_client_payment or show_pay_cta %}
-        Paiement non finalisé — réglez pour confirmer la commande et lancer la production.
-        {% elif order.billing_mode == "deferred" %}
-        Facturation différée selon votre encours. Aucun paiement en ligne ici.
-        {% elif order.billing_mode == "immediate" and order.pricing_status != "priced" %}
-        Le paiement s’affichera dès que le prix sera calculé.
-        {% elif invoice %}
-        Justificatif disponible. La facture fiscale est gérée hors plateforme (RCA).
-        {% elif payment %}
-        Suivi du paiement en cours pour cette commande.
-        {% else %}
-        Le détail apparaîtra dès que le tarif sera disponible.
-        {% endif %}
-      </p>
-    </div>
-    <div class="client-billing-head__status">
-      {% if payment and payment.status == "captured" %}
-      <span class="badge is-success">Payée</span>
-      {% elif awaits_client_payment %}
-      <span class="badge is-warning">Paiement non finalisé</span>
-      {% elif order.pricing_status == "priced" %}
-      <span class="badge is-success">Tarifée</span>
-      {% elif order.pricing_status == "failed" %}
-      <span class="badge is-danger">Tarif en échec</span>
-      {% else %}
-      <span class="badge is-warning">Tarif en attente</span>
-      {% endif %}
-    </div>
-  </header>
+  <p class="client-order-panel__lead">
+    {% if awaits_client_payment or show_pay_cta %}
+    Paiement non finalisé — réglez pour confirmer la commande et lancer la production.
+    {% elif order.billing_mode == "deferred" %}
+    Facturation différée selon votre encours. Aucun paiement en ligne ici.
+    {% elif order.billing_mode == "immediate" and order.pricing_status != "priced" %}
+    Le paiement s’affichera dès que le prix sera calculé.
+    {% elif invoice %}
+    Justificatif disponible. La facture fiscale est émise hors plateforme.
+    {% elif payment %}
+    Suivi du paiement en cours pour cette commande.
+    {% else %}
+    Le détail apparaîtra dès que le tarif sera disponible.
+    {% endif %}
+  </p>
 
   <section class="client-billing-overview" aria-label="Synthèse">
     <article>
@@ -123,10 +82,11 @@
           {% if payment.provider == "stripe" %}Carte bancaire{% elif payment.provider == "paypal" %}PayPal{% else %}{{ payment.provider }}{% endif %}
           · {{ payment.amount }} {{ payment.currency }}
         {% else %}
-          Aucune transaction
+          {{ order.billing_mode|human_status }}
         {% endif %}
       </small>
     </article>
+    {% if invoice or order.billing_mode != "deferred" %}
     <article>
       <span>Justificatif</span>
       <strong>{% if invoice %}{{ invoice.invoice_number }}{% else %}Non émis{% endif %}</strong>
@@ -135,41 +95,40 @@
         Confirmé le {{ invoice.paid_at|date:"d/m/Y" }}
         {% elif invoice %}
         {{ invoice.status|human_status }}
-        {% elif order.billing_mode == "deferred" %}
-        Facture périodique (RCA)
         {% else %}
         Après confirmation du paiement
         {% endif %}
       </small>
     </article>
+    {% endif %}
   </section>
 
   {% if order.billing_mode == "deferred" %}
+  {% if order.pricing_status == "priced" and order.monthly_volume_linear_m is not None or order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
   <div class="alert alert--info client-billing-note" role="status">
+    {% if order.pricing_status == "priced" and order.monthly_volume_linear_m is not None %}
     <p class="m-0">
-      Encours actif — aucun paiement en ligne pour cette commande.
-      {% if order.pricing_status == "priced" %}
-      Montant estimé : <strong>{{ order.total_amount }} {{ order.currency }}</strong>.
-      {% if order.monthly_volume_linear_m is not None %}
       Volume éligible du mois : <strong>{{ order.monthly_volume_linear_m }} m</strong>.
-        {% if order.volume_discount_percent %}
-        Palier atteint : <strong>-{{ order.volume_discount_percent }} %</strong> sur tout le DTF du mois
-        (soit -{{ order.volume_discount_amount }} {{ order.currency }} HT sur cette commande).
-        {% else %}
-        Aucun palier de remise atteint à ce stade.
-        {% endif %}
-      {% endif %}
+      {% if order.volume_discount_percent %}
+      Palier atteint : <strong>-{{ order.volume_discount_percent }} %</strong>
+      (soit -{{ order.volume_discount_amount }} {{ order.currency }} HT sur cette commande).
       {% else %}
-      Montant communiqué après contrôle technique.
+      Aucun palier de remise atteint à ce stade.
       {% endif %}
     </p>
+    {% endif %}
     {% if order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
-    <p class="mt-2 mb-0 text-sm">{{ order.get_credit_hold_status_display }} — contactez votre interlocuteur.</p>
+    <p class="{% if order.pricing_status == 'priced' and order.monthly_volume_linear_m is not None %}mt-2 {% endif %}mb-0 text-sm">{{ order.get_credit_hold_status_display }} — contactez votre interlocuteur.</p>
     {% endif %}
   </div>
-  {% elif order.billing_mode == "immediate" and order.pricing_status != "priced" %}
+  {% endif %}
+  {% elif order.billing_mode == "immediate" and order.pricing_status == "priced" and order.volume_discount_percent %}
   <div class="alert alert--info client-billing-note" role="status">
-    <p class="m-0">Le bouton de paiement apparaîtra dès que le prix sera calculé.</p>
+    <p class="m-0">
+      Palier atteint : <strong>-{{ order.volume_discount_percent }} %</strong> sur cette commande
+      (soit -{{ order.volume_discount_amount }} {{ order.currency }} HT).
+      Les commandes déjà payées conservent leur tarif.
+    </p>
   </div>
   {% elif order.billing_mode != "deferred" and settlement_method == "wire_transfer" and not invoice and not show_pay_cta %}
   <div class="alert alert--info client-billing-note" role="status">
@@ -182,7 +141,6 @@
     <div class="client-billing-pay__head">
       <div>
         <h4 id="client-billing-pay-title">Paiement non finalisé</h4>
-        <p class="muted text-sm m-0">Sans paiement validé, la commande n’est pas confirmée et la production ne démarre pas.</p>
       </div>
       <p class="client-billing-pay__amount" aria-label="Montant à régler">
         <span>À régler</span>
@@ -209,14 +167,13 @@
   >
     <div class="b2b-confirm-dialog__shell client-billing-pay-dialog__shell">
       <div class="b2b-confirm-dialog__content">
-        <p class="client-billing-pay-dialog__eyebrow">Paiement sécurisé</p>
         <h2 id="pay-order-title-{{ order.public_id }}">Confirmer le règlement</h2>
         <p class="b2b-confirm-dialog__lead">
           Montant à régler :
           <strong>{{ order.total_amount }}&nbsp;{{ order.currency }}</strong>
         </p>
         <p class="muted text-sm m-0">
-          Vous serez redirigé vers le prestataire de paiement, puis ramené ici une fois le règlement confirmé.
+          Vous serez redirigé vers le prestataire, puis ramené ici une fois le règlement confirmé.
         </p>
       </div>
       <form
@@ -271,29 +228,12 @@
   {% endif %}
 
   {% if payment %}
+  {% if payment.last_error_message or payment.status != "captured" and payment.approval_url and not show_pay_cta %}
   <section class="client-billing-block" aria-labelledby="client-billing-payment-title">
     <div class="client-billing-block__head">
       <h4 id="client-billing-payment-title">État du paiement</h4>
       <span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>
     </div>
-    <dl class="client-billing-detail-list">
-      <div>
-        <dt>Montant</dt>
-        <dd>{{ payment.amount }} {{ payment.currency }}</dd>
-      </div>
-      <div>
-        <dt>Canal</dt>
-        <dd>
-          {% if payment.provider == "stripe" %}Carte bancaire{% elif payment.provider == "paypal" %}PayPal{% else %}{{ payment.provider }}{% endif %}
-        </dd>
-      </div>
-      {% if payment.captured_at %}
-      <div>
-        <dt>Confirmé le</dt>
-        <dd>{{ payment.captured_at|date:"d/m/Y · H:i" }}</dd>
-      </div>
-      {% endif %}
-    </dl>
     {% if payment.last_error_message %}
     <div class="alert alert--danger" role="alert"><p class="m-0">{{ payment.last_error_message }}</p></div>
     {% endif %}
@@ -304,6 +244,7 @@
     {% endif %}
   </section>
   {% endif %}
+  {% endif %}
 
   {% if invoice %}
   <section class="client-billing-block" aria-labelledby="client-billing-invoice-title">
@@ -311,39 +252,12 @@
       <h4 id="client-billing-invoice-title">Justificatif de paiement</h4>
       <span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>
     </div>
-    <dl class="client-billing-detail-list">
-      <div>
-        <dt>Numéro</dt>
-        <dd><code>{{ invoice.invoice_number }}</code></dd>
-      </div>
-      <div>
-        <dt>Total</dt>
-        <dd>{{ invoice.total_amount }} {{ invoice.currency }}</dd>
-      </div>
-      {% if invoice.paid_at %}
-      <div>
-        <dt>Confirmé le</dt>
-        <dd>{{ invoice.paid_at|date:"d/m/Y" }}</dd>
-      </div>
-      {% endif %}
-    </dl>
     <p class="client-billing-block__action mb-0">
       <a class="ui-btn ui-btn-secondary" href="{% url 'billing:client-invoice-download' customer_public_id=order.customer.public_id order_public_id=order.public_id %}">
         Télécharger le justificatif
       </a>
     </p>
-    <p class="muted text-sm mb-0">La facture fiscale est émise séparément via RCA.</p>
   </section>
-  {% elif order.billing_mode != "deferred" and not payment and not show_pay_cta %}
-  <div class="operator-empty-inline">
-    <strong>Justificatif non disponible</strong>
-    <p>Il sera généré après confirmation du paiement. La facture fiscale reste gérée via RCA.</p>
-  </div>
-  {% elif order.billing_mode == "deferred" and not invoice %}
-  <div class="operator-empty-inline">
-    <strong>Facture périodique</strong>
-    <p>Elle sera émise hors plateforme (RCA / cycle d’encours).</p>
-  </div>
   {% endif %}
 
   {% endif %}

@@ -138,7 +138,38 @@ def test_client_create_without_file_still_lands_on_empty_detail():
 
     detail = client.get(response.url)
     assert detail.status_code == 200
-    assert "Finaliser la commande" in detail.content.decode()
+    html = detail.content.decode()
+    assert "Projet sans fichier" in html
+    assert "Finaliser la commande" not in html
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_ready_project_compares_shipping_options_side_by_side():
+    _user, customer, client = portal_scope()
+    create_url = reverse(
+        "portal:client-order-project-create",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+    response = client.post(
+        create_url,
+        {"name": "Commande livraison", "order_mode": "individual_designs"},
+    )
+    project = B2BOrderProject.objects.get(customer=customer)
+    project.status = B2BOrderProject.Status.READY_TO_SUBMIT
+    project.save(update_fields=["status"])
+
+    detail = client.get(response.url)
+    html = detail.content.decode()
+    assert detail.status_code == 200
+    assert 'name="shipping_method_code"' in html
+    assert 'type="radio"' in html
+    assert "b2b-shipping-choice__price" in html
+    assert "Retrait atelier" in html
+    assert "Livraison standard" in html
+    assert "Livraison express" in html
+    assert 'id="id_shipping_method_code"' not in html
+    assert "is-selected" not in html
 
 
 @pytest.mark.django_db
@@ -164,7 +195,8 @@ def test_client_portal_project_flow_is_functional():
     )
     detail = client.get(detail_url)
     assert detail.status_code == 200
-    assert "Finaliser la commande" in detail.content.decode()
+    assert "Projet portail" in detail.content.decode()
+    assert "Finaliser la commande" not in detail.content.decode()
 
     item_response = client.post(
         reverse(

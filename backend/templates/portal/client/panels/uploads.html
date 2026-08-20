@@ -1,18 +1,14 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="uploads" %}
-<div class="panel client-order-panel client-order-panel--uploads">
-  <div class="panel-head panel-head--compact client-order-uploads-head">
-    <div>
-      <h3 class="font-display text-lg">Visuels transmis</h3>
-      <p class="client-order-panel__lead">Consultez les fichiers rattachés à cette commande et leur statut de contrôle.</p>
-    </div>
-    {% if reorder_enabled and uploads %}
+<div class="panel client-order-panel client-order-panel--uploads" aria-label="Visuels">
+  {% if reorder_enabled and uploads %}
+  <div class="client-order-uploads-head">
     <form method="post" action="{% url 'portal:client-order-reorder' customer_public_id=customer.public_id order_public_id=order.public_id %}">
       {% csrf_token %}
       <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Réassort</button>
     </form>
-    {% endif %}
   </div>
+  {% endif %}
 
   {% if request.GET.reorder_error %}
   <div class="dui-alert dui-alert-error mb-4" role="alert">Impossible de préparer le réassort pour cette commande.</div>
@@ -63,7 +59,6 @@
           </td>
           <td>
             <div class="ui-table-actions">
-              <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir</a>
               <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
             </div>
           </td>
@@ -116,7 +111,6 @@
         {% endif %}
       </dl>
       <div class="mt-4 flex flex-wrap gap-2">
-        <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir</a>
         <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
       </div>
     </article>
@@ -124,7 +118,8 @@
   </div>
   {% else %}
   <div class="empty-state">
-    <p>Aucun visuel pour cette commande.</p>
+    <h3>Aucun fichier joint</h3>
+    <p>Cette commande ne contient aucun visuel à consulter.</p>
   </div>
   {% endif %}
 </div>

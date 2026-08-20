@@ -5,7 +5,7 @@
       class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta {% if nav_key == 'client-gang-sheets' %}is-active{% endif %}"
       {% if nav_key == 'client-gang-sheets' %}aria-current="page"{% endif %}
       href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=portal_nav_access.customer_public_id %}"
-    >Créer une Gang Sheet</a>
+    >Créer une planche DTF</a>
     {% else %}
     <details class="product-nav__more product-create-menu" data-product-nav-details>
       <summary class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta product-create-menu__trigger" aria-label="Ouvrir le menu Créer une commande">
@@ -19,7 +19,7 @@
         </a>
         <a class="product-nav__more-link product-create-menu__option" href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=portal_nav_access.customer_public_id %}">
           {% include "components/nav/creation_icon.html" with name="gang-sheet" %}
-          <span><strong>Générer une Gang Sheet</strong><small>Composer automatiquement votre planche DTF</small></span>
+          <span><strong>Composer une planche DTF</strong><small>Assembler automatiquement plusieurs visuels</small></span>
         </a>
       </div>
     </details>

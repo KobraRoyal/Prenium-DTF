@@ -216,15 +216,7 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                     selected_shipping_code = shipping_service.resolve_default_code_for_customer(
                         self.customer
                     )
-                # Encours + réassort : menu déroulant ; comptant CB : radios.
-                is_reorder = (
-                    getattr(project, "order_mode", None) == B2BOrderProject.OrderMode.REORDER
-                )
-                is_deferred = str(billing_mode).strip().lower() == Order.BillingMode.DEFERRED
-                if is_deferred or is_reorder:
-                    shipping_choice_widget = "select"
-                else:
-                    shipping_choice_widget = "radios"
+                shipping_choice_widget = "radios"
                 show_shipping_choice = True
             # Recalcule le devis avec le code réellement applicable (ex. verrou retrait).
             if quote is not None and (

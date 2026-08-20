@@ -1,0 +1,6 @@
+<div class="ui-field-group">
+  <label class="ui-label" for="{{ field.id_for_label }}">{{ title }}</label>
+  {% if hint %}<p class="ui-help">{{ hint }}</p>{% endif %}
+  {{ field }}
+  {% if field.errors %}<p class="error-text ui-error-text" role="alert">{{ field.errors|striptags }}</p>{% endif %}
+</div>

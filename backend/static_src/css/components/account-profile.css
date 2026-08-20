@@ -1,0 +1,205 @@
+/* Compte : même page-head et mêmes faits que dashboard / commandes. */
+
+html body.product-shell .account-profile-page > .page-head--premium {
+  margin: 0;
+  padding: clamp(1.05rem, 2vw, 1.45rem);
+  border: 2px solid var(--product-line);
+  background: var(--product-panel);
+  box-shadow: 5px 5px 0 #0b0b0b;
+}
+
+html body.product-shell .account-profile-page > .page-head--premium h1 {
+  margin-top: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+html body.product-shell .account-profile-page > .page-head--premium .page-head-lead {
+  max-width: 40rem;
+  margin-top: 0.45rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 767px) {
+  html body.product-shell .account-profile-page > .page-head--premium {
+    box-shadow: 4px 4px 0 #0b0b0b;
+  }
+
+  html body.product-shell .account-profile-page > .page-head--premium h1 {
+    font-size: 1.5rem;
+    line-height: 1.15;
+  }
+}
+
+body.product-shell .account-profile-form .ui-input[readonly] {
+  color: var(--product-muted);
+  background: color-mix(in srgb, var(--product-panel-strong) 55%, var(--product-panel));
+  cursor: default;
+}
+
+body.product-shell .account-profile-main {
+  display: grid;
+  gap: 1rem;
+}
+
+body.product-shell .account-identity-panel,
+body.product-shell .account-company-panel {
+  contain: layout;
+}
+
+body.product-shell .account-identity-panel .account-profile-panel__head,
+body.product-shell .account-company-panel .account-profile-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+body.product-shell .account-identity-panel .account-profile-panel__head .ui-btn,
+body.product-shell .account-company-panel .account-profile-panel__head .ui-btn {
+  margin-left: auto;
+  min-height: 2.75rem;
+}
+
+html body.product-shell .account-profile-identity strong,
+html body.product-shell .account-profile-identity small {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: unset;
+}
+
+body.product-shell .account-profile-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+  padding: 0.15rem 1.25rem 1.15rem;
+}
+
+body.product-shell .account-profile-facts > div {
+  min-width: 0;
+  padding: 0.85rem 0 0;
+}
+
+body.product-shell .account-profile-facts > div + div {
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--product-line);
+}
+
+@media (min-width: 40rem) {
+  body.product-shell .account-profile-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.product-shell .account-profile-facts > div {
+    padding: 0.9rem 1rem 0.9rem 0;
+  }
+
+  body.product-shell .account-profile-facts > div + div {
+    margin-top: 0;
+    border-top: 0;
+  }
+
+  body.product-shell .account-profile-facts > div:nth-child(n + 3):not(.account-profile-facts__block) {
+    border-top: 1px solid var(--product-line);
+  }
+
+  body.product-shell .account-profile-facts > div:nth-child(even):not(.account-profile-facts__block) {
+    padding-left: 1rem;
+    padding-right: 0;
+    border-left: 1px solid var(--product-line);
+  }
+
+  body.product-shell .account-profile-facts__block {
+    grid-column: 1 / -1;
+    padding-left: 0;
+    padding-right: 0;
+    border-left: 0;
+    border-top: 1px solid var(--product-line);
+  }
+}
+
+body.product-shell .account-profile-facts dt {
+  margin: 0 0 0.25rem;
+  color: var(--product-muted);
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+body.product-shell .account-profile-facts dd {
+  margin: 0;
+  color: var(--product-ink);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+body.product-shell .account-profile-facts dd.is-empty {
+  color: var(--product-muted);
+  font-weight: 500;
+}
+
+body.product-shell .account-company-readonly,
+body.product-shell .account-profile-facts__help {
+  margin: 0.35rem 0 0;
+  color: var(--product-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+body.product-shell .account-company-readonly {
+  padding: 0 1.25rem 1.15rem;
+}
+
+body.product-shell .account-company-fieldset {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+body.product-shell .account-company-fieldset legend {
+  padding: 0;
+  margin: 0 0 0.35rem;
+  color: var(--product-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+body.product-shell .account-company-same {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  color: var(--product-ink);
+  font-size: 1rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+body.product-shell .account-company-same input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.15rem;
+  flex: 0 0 auto;
+  accent-color: var(--product-ink);
+}
+
+body.product-shell .account-company-form:has([name="shipping_same_as_billing"]:checked) .account-company-shipping {
+  display: none;
+}
+
+body.product-shell .account-company-form .account-profile-form__footer,
+body.product-shell .account-identity-form .account-profile-form__footer {
+  justify-content: flex-end;
+}

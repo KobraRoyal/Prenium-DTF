@@ -14,6 +14,7 @@ from apps.customers.forms_staff import (
     StaffCustomerPricingForm,
     StaffCustomerVolumeDiscountTierForm,
     StaffDefaultCustomerVolumeDiscountTierForm,
+    StaffVolumeDiscountDashboardCopyForm,
 )
 from apps.customers.models import (
     CustomerVolumeDiscountTier,
@@ -24,13 +25,24 @@ from apps.customers.services.volume_discounts import (
     CustomerVolumeDiscountTierService,
     DefaultCustomerVolumeDiscountTierService,
 )
+from apps.customers.services.volume_nudge_copy import (
+    NUDGE_COPY_STAGES,
+    VolumeDiscountDashboardCopyService,
+)
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import StaffDomainPermissionMixin
 
 customer_admin_service = CustomerAdministrationService()
 volume_discount_service = CustomerVolumeDiscountTierService()
 default_volume_discount_service = DefaultCustomerVolumeDiscountTierService()
+volume_nudge_copy_service = VolumeDiscountDashboardCopyService()
 billing_statement_service = BillingStatementService()
+
+
+def _copy_form_audience(form) -> str:
+    if any(form.errors.get(f"{stage}_deferred") for stage, _title, _hint in NUDGE_COPY_STAGES):
+        return "deferred"
+    return "immediate"
 
 
 class StaffDefaultVolumeDiscountSettingsView(StaffDomainPermissionMixin, View):
@@ -38,7 +50,14 @@ class StaffDefaultVolumeDiscountSettingsView(StaffDomainPermissionMixin, View):
     template_name = "portal/staff/customers/default_volume_discounts.html"
 
     def get(self, request):
-        return render(request, self.template_name, self._context())
+        audience = request.GET.get("audience")
+        if audience not in {"immediate", "deferred"}:
+            audience = "immediate"
+        return render(
+            request,
+            self.template_name,
+            self._context(copy_audience=audience),
+        )
 
     def _context(
         self,
@@ -46,6 +65,8 @@ class StaffDefaultVolumeDiscountSettingsView(StaffDomainPermissionMixin, View):
         add_form=None,
         update_form=None,
         update_public_id=None,
+        copy_form=None,
+        copy_audience="immediate",
     ):
         tiers = list(default_volume_discount_service.list_tiers())
         rows = []
@@ -59,13 +80,64 @@ class StaffDefaultVolumeDiscountSettingsView(StaffDomainPermissionMixin, View):
                 )
             )
             rows.append({"tier": tier, "form": form, "position": position})
+        if copy_form is None:
+            stored = volume_nudge_copy_service.stored_messages()
+            copy_form = StaffVolumeDiscountDashboardCopyForm(initial=stored)
         return {
             "tier_rows": rows,
             "active_tier_count": sum(tier.is_active for tier in tiers),
             "add_form": add_form or StaffDefaultCustomerVolumeDiscountTierForm(prefix="new"),
+            "copy_form": copy_form,
+            "copy_audience": copy_audience,
             "nav_mode": "staff",
             "nav_key": "staff-default-volume-discounts",
         }
+
+
+class StaffVolumeDiscountDashboardCopyUpdateView(StaffDomainPermissionMixin, View):
+    required_permission = "customers.manage_customer_pricing"
+
+    def post(self, request):
+        audience = request.POST.get("audience")
+        if audience not in {"immediate", "deferred"}:
+            audience = "immediate"
+        if request.POST.get("restore_defaults"):
+            volume_nudge_copy_service.restore_defaults(
+                actor=request.user,
+                source="staff_portal",
+            )
+            return with_toast(
+                redirect(
+                    f"{reverse('portal:staff-default-volume-discount-settings')}"
+                    f"?audience={audience}#volume-nudge-copy"
+                ),
+                message="Textes Prenium rétablis.",
+                variant="success",
+            )
+        form = StaffVolumeDiscountDashboardCopyForm(request.POST)
+        if not form.is_valid():
+            response = render(
+                request,
+                StaffDefaultVolumeDiscountSettingsView.template_name,
+                StaffDefaultVolumeDiscountSettingsView()._context(
+                    copy_form=form,
+                    copy_audience=_copy_form_audience(form),
+                ),
+            )
+            return with_toast(response, message="Corrigez les messages dashboard.", variant="error")
+        volume_nudge_copy_service.update(
+            cleaned_data=form.cleaned_data,
+            actor=request.user,
+            source="staff_portal",
+        )
+        return with_toast(
+            redirect(
+                f"{reverse('portal:staff-default-volume-discount-settings')}"
+                f"?audience={audience}#volume-nudge-copy"
+            ),
+            message="Messages dashboard enregistrés.",
+            variant="success",
+        )
 
 
 class StaffDefaultVolumeDiscountTierCreateView(StaffDomainPermissionMixin, View):
@@ -287,7 +359,7 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
             "volume_discount_has_errors": bool(
                 resolved_tier_add_form.errors or any(row["form"].errors for row in tier_rows)
             ),
-            "volume_discount_available": customer.default_billing_mode == "deferred",
+            "volume_discount_available": customer.default_billing_mode in {"deferred", "immediate"},
             "volume_discount_summary": summary,
             "volume_discount_progress_value": f"{summary['monthly_volume_linear_m']:f}",
             "volume_discount_progress_max": (
@@ -418,7 +490,10 @@ class StaffCustomerVolumeDiscountTierCreateView(StaffDomainPermissionMixin, View
             return with_toast(response, message="Palier invalide.", variant="error")
 
         count = summary["repriced_count"]
-        message = f"Palier ajouté. {count} commande(s) du mois recalculée(s)."
+        if customer.default_billing_mode == "immediate":
+            message = "Palier ajouté. Les commandes déjà payées conservent leur tarif."
+        else:
+            message = f"Palier ajouté. {count} commande(s) du mois recalculée(s)."
         messages.success(request, message)
         return with_toast(redirect(detail_url), message=message, variant="success")
 
@@ -470,6 +545,9 @@ class StaffCustomerVolumeDiscountTierUpdateView(StaffDomainPermissionMixin, View
             return with_toast(response, message="Palier invalide.", variant="error")
 
         count = summary["repriced_count"]
-        message = f"Palier enregistré. {count} commande(s) du mois recalculée(s)."
+        if customer.default_billing_mode == "immediate":
+            message = "Palier enregistré. Les commandes déjà payées conservent leur tarif."
+        else:
+            message = f"Palier enregistré. {count} commande(s) du mois recalculée(s)."
         messages.success(request, message)
         return with_toast(redirect(detail_url), message=message, variant="success")

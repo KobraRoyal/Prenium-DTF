@@ -1,12 +1,12 @@
 {% extends "portal/layout.html" %}
 
-{% block title %}Mes Gang Sheets — Prenium DTF{% endblock %}
+{% block title %}Planches DTF — Prenium DTF{% endblock %}
 
 {% block portal_content %}
 <div class="gang-sheet-page">
   <header class="gang-library-head">
     <div>
-      <h1>Mes Gang Sheets</h1>
+      <h1>Mes planches DTF</h1>
       <p>Créez, reprenez et commandez vos compositions DTF depuis un seul espace.</p>
     </div>
     {% if can_edit %}
@@ -40,7 +40,7 @@
     </div>
 
     {% if sheets %}
-    <div class="gang-sheet-toolbar" aria-label="Filtrer les Gang Sheets">
+    <div class="gang-sheet-toolbar" aria-label="Filtrer les planches DTF">
       <div class="gang-sheet-filters" role="group" aria-label="Filtrer par statut">
         <button type="button" x-on:click="filter = 'all'" x-bind:aria-pressed="filter === 'all'" x-bind:class="{ 'is-active': filter === 'all' }">Toutes</button>
         <button type="button" x-on:click="filter = 'draft'" x-bind:aria-pressed="filter === 'draft'" x-bind:class="{ 'is-active': filter === 'draft' }">Brouillons</button>
@@ -49,7 +49,7 @@
         <button type="button" x-on:click="filter = 'ordered'" x-bind:aria-pressed="filter === 'ordered'" x-bind:class="{ 'is-active': filter === 'ordered' }">Commandées</button>
       </div>
       <label class="gang-sheet-search">
-        <span class="ui-sr-only">Rechercher une Gang Sheet</span>
+        <span class="ui-sr-only">Rechercher une planche DTF</span>
         <span class="gang-sheet-search__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="search" size="16" %}</span>
         <input type="search" placeholder="Rechercher une planche" x-model.debounce.150ms="query" autocomplete="off">
       </label>
@@ -69,7 +69,7 @@
           <div class="gang-sheet-card__preview">
             <span class="gang-sheet-card__format">{{ sheet.width_mm|floatformat:0 }} × {{ sheet.height_mm|floatformat:0 }} mm</span>
             {% if sheet.preview_file %}
-            <img src="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}?display=inline" alt="Aperçu de la Gang Sheet {{ sheet.name }}" loading="lazy">
+            <img src="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}?display=inline" alt="Aperçu de la planche DTF {{ sheet.name }}" loading="lazy">
             {% else %}
             <div class="gang-sheet-card__mockup"><i></i><i></i><i></i><i></i><i></i></div>
             {% endif %}
@@ -81,7 +81,7 @@
               <span>Modifiée le {{ sheet.updated_at|date:"d/m/Y" }}</span>
             </div>
             <h3>{{ sheet.name }}</h3>
-            <small>{% if sheet.project %}Projet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</small>
+            <small>{% if sheet.project %}Commande {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</small>
             <dl class="gang-sheet-card__facts">
               <div><dt>Surface</dt><dd>{{ sheet.surface_sqm }} m²</dd></div>
               <div><dt>Estimation HT</dt><dd>{{ sheet.estimated_price_eur }} €</dd></div>
@@ -109,7 +109,7 @@
       {% empty %}
       <div class="empty-state gang-sheet-empty">
         <span class="gang-sheet-empty__mark" aria-hidden="true">GS</span>
-        <h3>Créez votre première Gang Sheet</h3>
+        <h3>Créez votre première planche DTF</h3>
         <p>Importez vos fichiers, composez votre planche et préparez votre commande depuis le studio privé.</p>
         {% if can_edit %}<button class="ui-btn ui-btn-primary" type="button" data-dialog-open="create-gang-sheet-dialog" aria-haspopup="dialog">Nouvelle planche</button>{% endif %}
       </div>
@@ -117,7 +117,7 @@
       {% if sheets %}
       <div class="empty-state gang-sheet-empty gang-sheet-empty--filtered" x-show="!hasResults()" x-cloak>
         <h3>Aucune planche trouvée</h3>
-        <p>Modifiez la recherche ou réinitialisez les filtres pour retrouver vos Gang Sheets.</p>
+        <p>Modifiez la recherche ou réinitialisez les filtres pour retrouver vos planches DTF.</p>
         <button class="ui-btn ui-btn-secondary" type="button" x-on:click="filter = 'all'; query = ''">Réinitialiser les filtres</button>
       </div>
       {% endif %}
@@ -138,7 +138,7 @@
         <div>
           <span class="gang-sheet-create-dialog__mark" aria-hidden="true">GS</span>
           <div>
-            <h2 id="new-gang-sheet-title">Nouvelle Gang Sheet</h2>
+            <h2 id="new-gang-sheet-title">Nouvelle planche DTF</h2>
             <p id="new-gang-sheet-description">Donnez un nom à votre composition. Le studio s’ouvrira immédiatement.</p>
           </div>
         </div>

@@ -39,7 +39,7 @@ def test_gang_sheet_library_uses_the_shared_portal_design_system(client):
 
     assert response.status_code == 200
     content = response.content.decode()
-    assert "Mes Gang Sheets" in content
+    assert "Mes planches DTF" in content
     assert 'class="gang-library-head"' in content
     assert 'class="gang-sheet-toolbar"' not in content
     assert 'id="create-gang-sheet-dialog"' in content
@@ -195,7 +195,7 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert "data-crop-auto" in content
     assert "Illustration + pixels" in content
     assert "gang-editor__delete" in content
-    assert "Supprimer cette Gang Sheet ?" in content
+    assert "Supprimer cette planche DTF ?" in content
 
 
 def test_owner_can_delete_a_standalone_draft_from_the_portal(client):
@@ -224,7 +224,7 @@ def test_owner_can_delete_a_standalone_draft_from_the_portal(client):
         kwargs={"customer_public_id": customer.public_id},
     )
     toast = json.loads(response.headers["X-Prenium-Toast"])
-    assert toast == {"message": "Gang Sheet supprimée.", "variant": "success"}
+    assert toast == {"message": "Planche DTF supprimée.", "variant": "success"}
     assert not GangSheet.objects.filter(pk=sheet.pk).exists()
 
 
@@ -371,9 +371,9 @@ def test_owner_can_delete_a_gang_sheet_after_it_was_converted_to_an_order(
 
     assert library_response.status_code == 200
     library_content = library_response.content.decode()
-    assert "Retirer cette Gang Sheet ?" in library_content
-    assert "Le projet de commande et son fichier HD seront conservés" in library_content
-    assert "La commande déjà créée restera également intacte" in library_content
+    assert "Retirer cette planche DTF ?" in library_content
+    assert "La commande préparée et son fichier HD seront conservés" in library_content
+    assert "La commande déjà transmise restera également intacte" in library_content
     assert delete_response.status_code == 302
     assert delete_response.url == library_url
     assert not GangSheet.objects.filter(pk=sheet.pk).exists()
@@ -423,8 +423,8 @@ def test_delete_button_is_available_as_soon_as_hd_is_secured_in_order_project(
 
     assert library_response.status_code == 200
     content = library_response.content.decode()
-    assert "Retirer cette Gang Sheet ?" in content
-    assert "Le projet de commande et son fichier HD seront conservés" in content
+    assert "Retirer cette planche DTF ?" in content
+    assert "La commande préparée et son fichier HD seront conservés" in content
     assert "commande déjà créée" not in content
     assert delete_response.status_code == 302
     assert not GangSheet.objects.filter(pk=sheet.pk).exists()

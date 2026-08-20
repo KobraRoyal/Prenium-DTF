@@ -246,7 +246,7 @@
 
   .gang-sheet-search input {
     min-width: 0;
-    height: 2.65rem;
+    height: 2.75rem;
     padding: 0;
     border: 0;
     outline: 0;
@@ -488,7 +488,7 @@
     padding: 0.55rem 0.65rem;
     border: 0;
     background: transparent;
-    color: var(--product-danger, #b42318);
+    color: var(--product-danger-text, #9f1239);
     cursor: pointer;
     font: inherit;
     font-size: 0.74rem;
@@ -498,7 +498,7 @@
 
   .gang-sheet-card__delete-action:hover,
   .gang-sheet-card__delete-action:focus-visible {
-    background: color-mix(in srgb, var(--product-danger, #b42318) 10%, var(--product-panel, #fffdf8));
+    background: color-mix(in srgb, var(--product-danger-text, #9f1239) 10%, var(--product-panel, #fffdf8));
   }
 
   .gang-status-badge {
@@ -1225,6 +1225,8 @@
     .gang-library-head h1 { font-size: 2rem; }
     .gang-library-head__create { width: 100%; }
     .gang-sheet-toolbar { align-items: stretch; flex-direction: column; }
+    .gang-sheet-filters { flex-wrap: wrap; overflow-x: visible; }
+    .gang-sheet-filters button { flex: 1 1 auto; }
     .gang-sheet-search { grid-template-columns: auto minmax(0, 1fr); width: 100%; }
     .gang-sheet-card-grid { grid-template-columns: minmax(0, 1fr); }
     .gang-sheet-create-dialog__actions,

@@ -53,7 +53,7 @@ def test_converted_projects_are_excluded_from_in_progress_lists():
 
     assert active.name in list_html
     assert converted.name not in list_html
-    assert active.name in dashboard_html
+    assert active.project_number in dashboard_html
     if "Commandes à finaliser" in dashboard_html:
         prep_section = dashboard_html.split("Commandes transmises", 1)[0]
         assert converted.name not in prep_section

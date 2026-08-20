@@ -289,7 +289,13 @@
     <summary class="staff-customer-workspace__summary">
       <span>
         <h2 id="volume-discount-title">Remise volume mensuelle</h2>
-        <small>Le meilleur palier s’applique à tout le DTF éligible du mois</small>
+        <small>
+          {% if customer.default_billing_mode == "immediate" %}
+          À partir du palier atteint, sans rétroactivité sur les commandes déjà payées
+          {% else %}
+          Le meilleur palier s’applique à tout le DTF éligible du mois
+          {% endif %}
+        </small>
       </span>
       <span class="staff-customer-workspace__summary-meta">
         {% if volume_discount_summary.current_tier %}−{{ volume_discount_summary.current_tier.discount_percent }} %{% else %}{{ volume_discount_tier_rows|length }} palier{{ volume_discount_tier_rows|length|pluralize }}{% endif %}
@@ -299,9 +305,14 @@
       <div class="volume-discount-panel__tools">
         {% if can_edit_pricing %}
         <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-default-volume-discount-settings' %}">Voir la grille par défaut</a>
+        <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-default-volume-discount-settings' %}#volume-nudge-copy">Messages dashboard</a>
         {% endif %}
         {% if volume_discount_available %}
+        {% if customer.default_billing_mode == "immediate" %}
+        <span class="badge is-warning">Comptant — sans rétroactivité</span>
+        {% else %}
         <span class="badge is-success">Encours éligible</span>
+        {% endif %}
         {% else %}
         <span class="badge is-neutral">Non applicable</span>
         {% endif %}
@@ -309,7 +320,7 @@
 
     {% if not volume_discount_available %}
     <div class="alert alert--info" role="status">
-      <p class="m-0">Passez d’abord le compte en mode Encours pour activer et configurer les remises volume mensuelles.</p>
+      <p class="m-0">Les remises volume mensuelles sont disponibles pour les comptes encours et comptant.</p>
       {% if volume_discount_tier_add_form.non_field_errors %}
       <p class="error-text ui-error-text mt-2 mb-0" role="alert">{{ volume_discount_tier_add_form.non_field_errors|striptags }}</p>
       {% endif %}
@@ -324,7 +335,7 @@
           <div class="volume-discount-overview__period">{{ volume_discount_summary.month|date:"F Y" }}</div>
           <div class="volume-discount-overview__metric">
             <strong>{{ volume_discount_summary.monthly_volume_linear_m }} m</strong>
-            <span>de DTF éligible</span>
+            <span>{% if customer.default_billing_mode == "immediate" %}de DTF payé{% else %}de DTF éligible{% endif %}</span>
           </div>
           {% if volume_discount_summary.next_tier %}
           <label class="ui-sr-only" for="monthly-volume-tier-progress">Progression vers le prochain palier</label>
@@ -339,7 +350,13 @@
             <span>{{ volume_discount_summary.next_tier.minimum_monthly_linear_m }} m</span>
           </div>
           {% endif %}
-          <p>{{ volume_discount_summary.eligible_order_count }} commande{{ volume_discount_summary.eligible_order_count|pluralize }} non relevée{{ volume_discount_summary.eligible_order_count|pluralize }}</p>
+          <p>
+            {% if customer.default_billing_mode == "immediate" %}
+            {{ volume_discount_summary.eligible_order_count }} commande{{ volume_discount_summary.eligible_order_count|pluralize }} payée{{ volume_discount_summary.eligible_order_count|pluralize }}
+            {% else %}
+            {{ volume_discount_summary.eligible_order_count }} commande{{ volume_discount_summary.eligible_order_count|pluralize }} non relevée{{ volume_discount_summary.eligible_order_count|pluralize }}
+            {% endif %}
+          </p>
         </div>
         <div class="volume-discount-overview__result{% if volume_discount_summary.current_tier %} is-reached{% endif %}">
           {% if volume_discount_summary.next_tier %}

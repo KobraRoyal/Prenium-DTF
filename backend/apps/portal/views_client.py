@@ -10,10 +10,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
-from apps.b2b_order_projects.permissions import (
-    b2b_order_projects_enabled_for_customer,
-    client_new_order_url,
-)
+from apps.b2b_order_projects.permissions import b2b_order_projects_enabled_for_customer
 from apps.b2b_order_projects.services import (
     B2BOrderProjectService,
     B2BOrderReorderService,
@@ -44,53 +41,21 @@ class ClientDashboardView(LoginRequiredMixin, View):
     template_name = "portal/client/dashboard.html"
 
     def get(self, request):
-        from apps.billing.services.production_payment_gate import (
-            attach_awaits_client_payment,
-            count_orders_awaiting_client_payment,
-        )
-
         scope = access_scope_service.get_user_scope(request.user)
         memberships = list(scope.memberships)
         selected_membership = memberships[0] if memberships else None
         customer = None
-        recent_orders = []
-        recent_projects = []
-        project_feature_enabled = False
-        orders_count = projects_in_progress_count = awaits_payment_count = 0
-        new_order_url = ""
-        client_focus = None
-        volume_discount_summary = None
         if selected_membership is not None:
             customer = (
                 access_scope_service.get_customer_queryset(request.user)
                 .filter(public_id=selected_membership.customer_public_id)
                 .first()
             )
-            if customer is not None:
-                orders_qs = order_service.list_customer_orders(customer)
-                recent_orders = attach_awaits_client_payment(list(orders_qs[:5]))
-                orders_count = orders_qs.count()
-                awaits_payment_count = count_orders_awaiting_client_payment(customer)
-                project_feature_enabled = b2b_order_projects_enabled_for_customer(customer)
-                if project_feature_enabled:
-                    projects_qs = project_service.list_customer_projects_in_progress(customer)
-                    recent_projects = project_service.attach_can_delete(list(projects_qs[:5]))
-                    projects_in_progress_count = projects_qs.count()
-                    new_order_url = client_new_order_url(customer=customer)
-                else:
-                    new_order_url = reverse(
-                        "portal:client-checkout",
-                        kwargs={"customer_public_id": customer.public_id},
-                    )
-                client_focus = dashboard_focus.build_client_dashboard_focus(
-                    customer=customer,
-                    recent_projects=recent_projects,
-                    recent_orders=recent_orders,
-                    new_order_url=new_order_url,
-                )
-                volume_discount_summary = dashboard_focus.build_client_volume_discount_summary(
-                    customer=customer
-                )
+        dashboard = dashboard_focus.assemble_client_dashboard(
+            customer=customer,
+            order_service=order_service,
+            project_service=project_service,
+        )
         return render(
             request,
             self.template_name,
@@ -99,15 +64,7 @@ class ClientDashboardView(LoginRequiredMixin, View):
                 "memberships": memberships,
                 "selected_membership": selected_membership,
                 "customer": customer,
-                "recent_orders": recent_orders,
-                "recent_projects": recent_projects,
-                "orders_count": orders_count,
-                "awaits_payment_count": awaits_payment_count,
-                "projects_in_progress_count": projects_in_progress_count,
-                "new_order_url": new_order_url,
-                "project_feature_enabled": project_feature_enabled,
-                "client_focus": client_focus,
-                "volume_discount_summary": volume_discount_summary,
+                **dashboard,
                 "nav_mode": "client",
                 "nav_key": "client-dashboard",
                 "badge_tone_for_status": badge_tone_for_status,

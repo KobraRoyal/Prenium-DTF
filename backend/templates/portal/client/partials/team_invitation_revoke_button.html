@@ -1,0 +1,29 @@
+<button
+  class="ui-btn ui-btn-ghost ui-btn-sm account-team-danger-trigger"
+  type="button"
+  data-dialog-open="revoke-invitation-dialog-{{ invitation.public_id }}"
+  aria-haspopup="dialog"
+>Révoquer</button>
+<dialog
+  class="b2b-confirm-dialog"
+  id="revoke-invitation-dialog-{{ invitation.public_id }}"
+  aria-labelledby="revoke-invitation-title-{{ invitation.public_id }}"
+  aria-describedby="revoke-invitation-desc-{{ invitation.public_id }}"
+>
+  <div class="b2b-confirm-dialog__shell">
+    <div class="b2b-confirm-dialog__content">
+      <h2 id="revoke-invitation-title-{{ invitation.public_id }}">Révoquer cette invitation ?</h2>
+      <p id="revoke-invitation-desc-{{ invitation.public_id }}" class="b2b-confirm-dialog__lead">
+        Le lien envoyé à <strong>{{ invitation.email }}</strong> cessera immédiatement de fonctionner.
+      </p>
+      <p class="b2b-confirm-dialog__hint">Vous pourrez envoyer une nouvelle invitation plus tard si nécessaire.</p>
+    </div>
+    <div class="b2b-confirm-dialog__actions">
+      <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Conserver l’invitation</button>
+      <form method="post" action="{% url 'portal:client-team-invitation-revoke' customer_public_id=customer.public_id invitation_public_id=invitation.public_id %}">
+        {% csrf_token %}
+        <button class="ui-btn ui-btn-danger" type="submit">Révoquer l’invitation</button>
+      </form>
+    </div>
+  </div>
+</dialog>

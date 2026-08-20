@@ -303,3 +303,32 @@ Lot du 2026-07-21 :
 - expérience mobile convertie en navigation par sections, `Composition` étant la tâche affichée par défaut ;
 - contrôles de production regroupés et reformulés sans exposer le PDF HD protégé ;
 - endpoints, permissions multi-tenant et règles de validation inchangés.
+
+## 15. Mise à jour — distill fiche commande transmise (2026-08-19)
+
+- H1 = référence client (ou N° IDS), statut une fois, fil d’Ariane réduit à **Commandes** (comme la fiche projet) ;
+- résumé sans double N° IDS / statut / règlement ; note client masquée si elle recopie le titre ;
+- onglets Visuels, Avancement, Expédition, Règlement : plus de titre d’onglet répété, plus d’eyebrows, jargon RCA retiré côté client ;
+- une action primaire par panneau (Réassort, Suivre, Payer, Télécharger) ;
+- CSS dédié `client-order-detail.css`, `product-shell.css` inchangé.
+
+## 16. Mise à jour — société sur « Mes informations » (2026-08-19)
+
+- le profil client affiche la raison sociale, SIREN, TVA et adresses du compte ;
+- l’édition est HTMX, sans quitter la page : affichage courant → formulaire → retour à l’état enregistré ;
+- seuls le **propriétaire** et les **administrateurs** du compte peuvent modifier ; les collaborateurs voient les informations en lecture seule ;
+- l’Atelier conserve l’administration complète (tarifs, encours, notes) ; le client ne touche pas à ces champs.
+
+## 17. Mise à jour — identité HTMX sur « Mes informations » (2026-08-19)
+
+- le prénom, le nom et l’e-mail de connexion s’affichent d’abord en lecture, comme la société ;
+- **Modifier** ouvre le formulaire HTMX dans le même panneau (`outerHTML`) ; **Annuler** et **Enregistrer** y restent ;
+- l’e-mail de connexion reste en lecture seule ; un POST `email=` ne le change pas ;
+- l’espace Atelier (`?space=staff`) est conservé sur les allers-retours HTMX.
+
+## 18. Mise à jour — alignement UI du profil (2026-08-19)
+
+- Identité et Société partagent la même grille de faits : titre à gauche, **Modifier** à droite, valeurs en deux colonnes ;
+- le H1 reprend le rythme du dashboard (carte `page-head--premium`, 1,5 rem, capitales) ; cibles tactiles 44 px sur **Modifier** ;
+- les champs vides disent **À renseigner** ; après enregistrement HTMX, le rail met à jour le nom sans recharger la page ;
+- la grille de faits reprend les séparateurs 1 px de la fiche commande ; même contrat HTMX.

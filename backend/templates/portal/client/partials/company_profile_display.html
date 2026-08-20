@@ -1,0 +1,57 @@
+<section
+  class="account-profile-panel account-company-panel"
+  id="account-company-panel"
+  aria-labelledby="company-information-title"
+>
+  <header class="account-profile-panel__head">
+    <h2 id="company-information-title">Société</h2>
+    {% if can_edit_company %}
+    <button
+      class="ui-btn ui-btn-secondary ui-btn-sm"
+      type="button"
+      hx-get="{% url 'portal:client-company-profile' customer_public_id=customer.public_id %}?edit=1"
+      hx-target="#account-company-panel"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+    >Modifier</button>
+    {% endif %}
+  </header>
+
+  <dl class="account-profile-facts">
+    <div>
+      <dt>Raison sociale</dt>
+      <dd{% if not company_profile.name %} class="is-empty"{% endif %}>{% if company_profile.name %}{{ company_profile.name }}{% else %}À renseigner{% endif %}</dd>
+    </div>
+    <div>
+      <dt>E-mail de facturation</dt>
+      <dd{% if not company_profile.billing_email %} class="is-empty"{% endif %}>{% if company_profile.billing_email %}{{ company_profile.billing_email }}{% else %}À renseigner{% endif %}</dd>
+    </div>
+    <div>
+      <dt>SIREN</dt>
+      <dd{% if not company_profile.siren %} class="is-empty"{% endif %}>{% if company_profile.siren %}{{ company_profile.siren }}{% else %}À renseigner{% endif %}</dd>
+    </div>
+    <div>
+      <dt>N° TVA</dt>
+      <dd{% if not company_profile.vat_number %} class="is-empty"{% endif %}>{% if company_profile.vat_number %}{{ company_profile.vat_number }}{% else %}À renseigner{% endif %}</dd>
+    </div>
+    <div class="account-profile-facts__block">
+      <dt>Adresse de facturation</dt>
+      <dd{% if not company_profile.billing_address %} class="is-empty"{% endif %}>{% if company_profile.billing_address %}{{ company_profile.billing_address|linebreaksbr }}{% else %}À renseigner{% endif %}</dd>
+    </div>
+    <div class="account-profile-facts__block">
+      <dt>Adresse de livraison</dt>
+      <dd{% if not company_profile.shipping_same_as_billing and not company_profile.shipping_address %} class="is-empty"{% endif %}>
+        {% if company_profile.shipping_same_as_billing %}
+        Identique à la facturation
+        {% elif company_profile.shipping_address %}
+        {{ company_profile.shipping_address|linebreaksbr }}
+        {% else %}
+        À renseigner
+        {% endif %}
+      </dd>
+    </div>
+  </dl>
+  {% if not can_edit_company %}
+  <p class="account-company-readonly">Seul un administrateur du compte peut modifier ces informations.</p>
+  {% endif %}
+</section>

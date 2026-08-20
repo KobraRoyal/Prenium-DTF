@@ -1,0 +1,36 @@
+<section
+  class="account-profile-panel account-identity-panel"
+  id="account-identity-panel"
+  aria-labelledby="personal-information-title"
+>
+  <header class="account-profile-panel__head">
+    <h2 id="personal-information-title">Identité</h2>
+    <button
+      class="ui-btn ui-btn-secondary ui-btn-sm"
+      type="button"
+      hx-get="{% url 'portal:profile-identity' %}?edit=1&amp;space={{ nav_mode }}"
+      hx-target="#account-identity-panel"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+    >Modifier</button>
+  </header>
+
+  <dl class="account-profile-facts">
+    <div>
+      <dt>Prénom</dt>
+      <dd{% if not request.user.first_name %} class="is-empty"{% endif %}>{% if request.user.first_name %}{{ request.user.first_name }}{% else %}À renseigner{% endif %}</dd>
+    </div>
+    <div>
+      <dt>Nom</dt>
+      <dd{% if not request.user.last_name %} class="is-empty"{% endif %}>{% if request.user.last_name %}{{ request.user.last_name }}{% else %}À renseigner{% endif %}</dd>
+    </div>
+    <div class="account-profile-facts__block">
+      <dt>E-mail de connexion</dt>
+      <dd>{{ request.user.email }}</dd>
+      <p class="account-profile-facts__help">Pour le modifier, contactez l’atelier.</p>
+    </div>
+  </dl>
+</section>
+{% if rail_oob %}
+{% include "portal/partials/account_rail_identity_oob.html" %}
+{% endif %}

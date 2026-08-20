@@ -2,7 +2,7 @@
 
 {% block body_class %}{{ block.super }} product-shell--studio{% endblock %}
 
-{% block title %}{{ sheet.name }} — Gang Sheet Generator Pro{% endblock %}
+{% block title %}{{ sheet.name }} — Studio planche DTF — Prenium DTF{% endblock %}
 
 {% block portal_content %}
 {{ gang_sheet_state|json_script:"gang-sheet-initial-state" }}
@@ -28,13 +28,13 @@
     <div class="gang-editor__heading">
       <nav class="ui-breadcrumb" aria-label="Fil d’Ariane">
         <ol class="ui-breadcrumb__list">
-          <li class="ui-breadcrumb__item"><a href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=customer.public_id %}">Gang Sheets</a></li>
+          <li class="ui-breadcrumb__item"><a href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=customer.public_id %}">Planches DTF</a></li>
           <li class="ui-breadcrumb__item" aria-current="page">{{ sheet.name }}</li>
         </ol>
       </nav>
       <div class="gang-editor__title-row">
         <div class="gang-editor__title-copy">
-          <span class="gang-editor__project-ref">{% if sheet.project %}Projet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</span>
+          <span class="gang-editor__project-ref">{% if sheet.project %}Commande {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</span>
           <h1>{{ sheet.name }}</h1>
           <p>Composez, contrôlez puis validez votre planche DTF.</p>
         </div>
@@ -57,16 +57,16 @@
     <nav class="gang-workflow gang-workflow--editor" aria-label="Progression de la planche">
       <ol>
         <li data-workflow-step="import">
-          <button type="button" data-workflow-panel-target="assets"><span data-workflow-marker aria-hidden="true">1</span><span><strong>Importer</strong><small data-workflow-detail>Ajouter vos fichiers</small></span></button>
+          <button type="button" data-workflow-panel-target="assets" aria-label="Étape 1 — Importer les fichiers"><span data-workflow-marker aria-hidden="true">1</span><span><strong>Importer</strong><small data-workflow-detail>Ajouter vos fichiers</small></span></button>
         </li>
         <li data-workflow-step="compose">
-          <button type="button" data-workflow-panel-target="canvas"><span data-workflow-marker aria-hidden="true">2</span><span><strong>Composer</strong><small data-workflow-detail>Placer les visuels</small></span></button>
+          <button type="button" data-workflow-panel-target="canvas" aria-label="Étape 2 — Composer la planche"><span data-workflow-marker aria-hidden="true">2</span><span><strong>Composer</strong><small data-workflow-detail>Placer les visuels</small></span></button>
         </li>
         <li data-workflow-step="control">
-          <button type="button" data-workflow-panel-target="settings"><span data-workflow-marker aria-hidden="true">3</span><span><strong>Contrôler</strong><small data-workflow-detail>Vérifier la composition</small></span></button>
+          <button type="button" data-workflow-panel-target="settings" aria-label="Étape 3 — Contrôler la composition"><span data-workflow-marker aria-hidden="true">3</span><span><strong>Contrôler</strong><small data-workflow-detail>Vérifier la composition</small></span></button>
         </li>
         <li data-workflow-step="validate">
-          <button type="button" data-workflow-panel-target="settings"><span data-workflow-marker aria-hidden="true">4</span><span><strong>Valider</strong><small data-workflow-detail>Générer le rendu HD</small></span></button>
+          <button type="button" data-workflow-panel-target="settings" aria-label="Étape 4 — Valider la planche"><span data-workflow-marker aria-hidden="true">4</span><span><strong>Valider</strong><small data-workflow-detail>Générer le rendu HD</small></span></button>
         </li>
       </ol>
     </nav>
@@ -459,7 +459,7 @@
             data-create-order-project
             href="{% if can_create_order and can_edit %}{{ create_order_project_url }}{% else %}#{% endif %}"
             {% if not can_create_order or not can_edit %}aria-disabled="true" tabindex="-1"{% endif %}
-          >Créer le projet de commande →</a>
+          >Créer la commande →</a>
           {% endif %}
           <a class="ui-btn ui-btn-ghost" data-download-preview href="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}" hidden>
             {% include "portal/client/gang_sheets/partials/icon.html" with name="download" size="16" %}

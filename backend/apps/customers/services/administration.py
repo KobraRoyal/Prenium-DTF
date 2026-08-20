@@ -79,10 +79,7 @@ class CustomerAdministrationService:
         for field in tracked_fields:
             setattr(customer, field, cleaned_data[field])
         customer.save(update_fields=[*tracked_fields, "updated_at"])
-        if (
-            before["default_billing_mode"] != Customer.DefaultBillingMode.DEFERRED
-            and customer.default_billing_mode == Customer.DefaultBillingMode.DEFERRED
-        ):
+        if before["default_billing_mode"] != customer.default_billing_mode:
             from apps.customers.services.volume_discounts import (
                 DefaultCustomerVolumeDiscountTierService,
             )

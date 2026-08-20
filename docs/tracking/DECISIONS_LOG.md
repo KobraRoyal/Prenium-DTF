@@ -2,6 +2,7 @@
 
 | Date | Décision | Motif | Impact |
 |---|---|---|---|
+| 2026-08-19 | Comptant CB : paliers volume **prospectifs** (commande franchissante + suivantes). Encours inchangé (rétroactif). Volume historique = commandes payées seulement. | Stripe fige le TTC ; un retarif rétroactif casserait le paiement. | `OrderPricingService` + devis Gang Sheet ; e-mail palier après capture ; fallback grille Atelier si le client n’a pas personnalisé |
 | 2026-07-26 | Encours : `total = HT produit + port` sans TVA Hub ; facturation mensuelle/bimensuelle externalisée | RCA / outil facture externe porte la TVA périodique | `tax_amount=0` si `billing_mode=deferred` |
 | 2026-07-26 | Options livraison `ShippingMethod` (retrait / standard / express) + TVA 20 % sur comptant CB ; port inclus aussi en encours | Afficher frais par commande et aligner devis Stripe TTC | Snapshot Order + `OrderPricingService` unique ; legacy sans code = port 0 |
 | 2026-07-26 | Sync Drive Gang Sheet : `select_for_update` sans FK nullables (`order`) | PostgreSQL refuse FOR UPDATE sur OUTER JOIN → sync restait `pending` et bloquait le paiement | Message UI dédié `gang_sheet_drive_sync_required` + retry schedule au checkout |

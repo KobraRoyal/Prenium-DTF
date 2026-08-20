@@ -40,9 +40,11 @@ def test_owner_can_invite_but_member_cannot_access_team(client):
     team_html = team_page.content.decode()
     assert "account-profile-layout" in team_html
     assert "account-profile-nav" in team_html
-    assert "Identité" in team_html
+    assert "Mes informations" in team_html
     assert "Équipe" in team_html
     assert "Inviter un collaborateur" in team_html
+    assert "Désactiver cet accès ?" in team_html
+    assert 'data-dialog-open="deactivate-member-dialog-' in team_html
 
     with patch("apps.notifications.tasks.send_customer_invitation_email_task.delay") as delay:
         with TestCase.captureOnCommitCallbacks(execute=True):
@@ -56,6 +58,10 @@ def test_owner_can_invite_but_member_cannot_access_team(client):
     assert response.status_code == 302
     invitation = CustomerInvitation.objects.get(customer=customer, email="new@example.com")
     delay.assert_called_once_with(str(invitation.public_id))
+
+    refreshed_html = client.get(team_url).content.decode()
+    assert "Révoquer cette invitation ?" in refreshed_html
+    assert f"revoke-invitation-dialog-{invitation.public_id}" in refreshed_html
 
 
 @pytest.mark.django_db

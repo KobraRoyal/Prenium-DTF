@@ -8,7 +8,7 @@
 
 <section class="card b2b-order-start-card">
   <div class="b2b-order-start-card__intro">
-    <span class="product-step-badge">Gang Sheet validée</span>
+    <span class="product-step-badge">Planche DTF validée</span>
     <div>
       <h2>Informations de commande</h2>
       <p>Renseignez le nom, la date souhaitée et un commentaire pour l’atelier. La planche HD « {{ sheet.name }} » sera jointe automatiquement.</p>
@@ -48,7 +48,7 @@
     </div>
     <div class="b2b-order-start-card__action">
       <a class="ui-btn ui-btn-ghost" href="{% url 'portal:client-gang-sheet-editor' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}">Retour à la planche</a>
-      {% include "components/forms/form_actions.html" with primary_label="Créer le projet de commande" primary_class_full="ui-btn ui-btn-primary ui-btn-wide" %}
+      {% include "components/forms/form_actions.html" with primary_label="Créer la commande" primary_class_full="ui-btn ui-btn-primary ui-btn-wide" %}
     </div>
   </form>
 </section>

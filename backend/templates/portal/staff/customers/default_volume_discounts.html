@@ -3,8 +3,9 @@
 {% block title %}Remises par défaut - Atelier{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/page_head.html" with title="Remises volume par défaut" subtitle="Cette grille est copiée sur chaque nouveau compte en encours. Les comptes existants conservent leurs propres conditions." %}
+{% include "components/portal/page_head.html" with title="Remises volume par défaut" subtitle="Grille copiée sur les nouveaux comptes, et messages du dashboard client. Les comptes existants conservent leurs propres paliers." %}
 
+<div class="volume-discount-settings-page">
 <section class="volume-discount-settings" data-testid="default-volume-discount-settings" aria-labelledby="default-tier-grid-title">
   <div class="volume-discount-settings__main">
     <header class="volume-discount-settings__intro">
@@ -72,4 +73,53 @@
     </form>
   </aside>
 </section>
+
+<section class="volume-nudge-copy" id="volume-nudge-copy" data-testid="volume-nudge-copy" aria-labelledby="volume-nudge-copy-title" x-data="{ audience: '{{ copy_audience|default:'immediate' }}' }">
+  <header class="volume-nudge-copy__intro">
+    <div>
+      <h2 id="volume-nudge-copy-title">Messages dashboard client</h2>
+      <p>Un texte par moment du palier. Champ vide = texte Prenium. Le titre du dashboard porte déjà les mètres et le taux : ici, uniquement la règle.</p>
+    </div>
+    <p class="volume-nudge-copy__tokens">
+      <code>{remaining_m}</code>
+      <code>{next_percent}</code>
+      <code>{current_percent}</code>
+      <code>{volume_m}</code>
+      <code>{threshold_m}</code>
+    </p>
+  </header>
+
+  <form class="volume-nudge-copy__form" method="post" action="{% url 'portal:staff-volume-discount-dashboard-copy' %}" data-submit-loading>
+    {% csrf_token %}
+    <input type="hidden" name="audience" value="{{ copy_audience|default:'immediate' }}" :value="audience">
+    {% if copy_form.non_field_errors %}<p class="error-text ui-error-text" role="alert">{{ copy_form.non_field_errors|striptags }}</p>{% endif %}
+
+    <div class="volume-nudge-copy__tabs" role="tablist" aria-label="Mode de règlement">
+      <button type="button" class="volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'immediate'" :class="{ 'is-active': audience === 'immediate' }" @click="audience = 'immediate'">Comptant CB</button>
+      <button type="button" class="volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'deferred'" :class="{ 'is-active': audience === 'deferred' }" @click="audience = 'deferred'">Encours</button>
+    </div>
+
+    <div class="volume-nudge-copy__panel ui-form-stack" role="tabpanel" x-show="audience === 'immediate'" {% if copy_audience != 'immediate' %}x-cloak{% endif %}>
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.start_immediate title="Compteur à zéro" hint="Aucune planche comptée ce mois-ci." %}
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.warm_immediate title="En route" hint="Des mètres déjà au compteur, pas encore de palier." %}
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.hold_immediate title="Palier en poche" hint="Un taux est déjà gagné, le suivant attend." %}
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.hot_immediate title="Tout proche" hint="Plus de 75 % du prochain seuil." %}
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.max_immediate title="Palier max" hint="Meilleur taux du mois atteint." %}
+    </div>
+
+    <div class="volume-nudge-copy__panel ui-form-stack" role="tabpanel" x-show="audience === 'deferred'" {% if copy_audience != 'deferred' %}x-cloak{% endif %}>
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.start_deferred title="Compteur à zéro" hint="Aucune planche comptée ce mois-ci." %}
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.warm_deferred title="En route" hint="Des mètres déjà au compteur, pas encore de palier." %}
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.hold_deferred title="Palier en poche" hint="Un taux est déjà gagné, le suivant attend." %}
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.hot_deferred title="Tout proche" hint="Plus de 75 % du prochain seuil." %}
+      {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.max_deferred title="Palier max" hint="Meilleur taux du mois atteint." %}
+    </div>
+
+    <div class="ui-form-actions">
+      <button class="ui-btn ui-btn-primary" type="submit">Enregistrer les messages</button>
+      <button class="ui-btn ui-btn-secondary" type="submit" name="restore_defaults" value="1">Remettre les textes Prenium</button>
+    </div>
+  </form>
+</section>
+</div>
 {% endblock %}

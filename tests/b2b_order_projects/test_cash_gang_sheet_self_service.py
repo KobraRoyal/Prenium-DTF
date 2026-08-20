@@ -190,7 +190,8 @@ def test_gang_sheet_quote_is_available_before_transmit():
     page_quote = response.context["gang_sheet_quote"]
     assert page_quote is not None
     assert page_quote["total_eur"] == Decimal("72.00")
-    assert "Total TTC" in body
+    assert "TTC" in body
+    assert "Total TTC" not in body
     assert "TVA" in body
     assert "Confirmer et payer" in body
     assert "Mode de règlement" not in body
