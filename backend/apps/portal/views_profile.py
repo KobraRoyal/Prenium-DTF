@@ -24,9 +24,7 @@ def _is_htmx(request) -> bool:
 
 def _nav_mode(request) -> str:
     requested_space = request.POST.get("space") or request.GET.get("space")
-    if requested_space == "staff" and access_scope_service.can_access_staff_portal(
-        request.user
-    ):
+    if requested_space == "staff" and access_scope_service.can_access_staff_portal(request.user):
         return "staff"
     return "client"
 

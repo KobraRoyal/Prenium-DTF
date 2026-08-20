@@ -680,7 +680,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("primary_disabled_until_dirty=1", profile)
         self.assertNotIn("account-profile-lock-badge", profile)
         self.assertIn("id_login_email", identity_form)
-        self.assertIn("hx-swap=\"outerHTML\"", identity)
+        self.assertIn('hx-swap="outerHTML"', identity)
         self.assertIn("portal:profile-identity", identity)
         self.assertIn("account-profile-facts", identity)
         self.assertIn("company_profile_display.html", profile)
@@ -706,12 +706,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         editor = template_source("portal/client/gang_sheets/editor.html")
         team = template_source("portal/client/team.html")
         invite_panel = template_source("portal/client/partials/team_invite_panel.html")
-        deactivate = template_source(
-            "portal/client/partials/team_member_deactivate_button.html"
-        )
-        revoke = template_source(
-            "portal/client/partials/team_invitation_revoke_button.html"
-        )
+        deactivate = template_source("portal/client/partials/team_member_deactivate_button.html")
+        revoke = template_source("portal/client/partials/team_invitation_revoke_button.html")
         product_css = static_source("css/components/product-shell.css")
         gang_css = static_source("css/components/gang-sheet.css")
         studio_css = static_source("css/components/gang-sheet-studio.css")
@@ -1225,7 +1221,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("b2b-shipping-choice__price", shipping)
         self.assertIn('type="radio"', shipping)
         self.assertNotIn("is-selected", shipping)
-        self.assertIn("hx-indicator=\"#portal-htmx-indicator\"", shipping)
+        self.assertIn('hx-indicator="#portal-htmx-indicator"', shipping)
 
         self.assertIn("project_client_label", detail)
         self.assertIn("b2b-project-header", detail)

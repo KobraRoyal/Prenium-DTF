@@ -61,7 +61,7 @@ def test_owner_can_invite_but_member_cannot_access_team(client):
 
     refreshed_html = client.get(team_url).content.decode()
     assert "Révoquer cette invitation ?" in refreshed_html
-    assert f'revoke-invitation-dialog-{invitation.public_id}' in refreshed_html
+    assert f"revoke-invitation-dialog-{invitation.public_id}" in refreshed_html
 
 
 @pytest.mark.django_db

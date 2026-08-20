@@ -87,9 +87,7 @@ class Command(BaseCommand):
         self._seed_shipments(users, orders)
 
         self.stdout.write(
-            self.style.SUCCESS(
-                "Seed recette B2B généré (encours + comptant CB + workflow)."
-            )
+            self.style.SUCCESS("Seed recette B2B généré (encours + comptant CB + workflow).")
         )
         self.stdout.write("")
         self.stdout.write(

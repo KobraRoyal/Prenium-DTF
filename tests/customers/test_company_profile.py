@@ -47,10 +47,13 @@ def test_profile_shows_company_information_for_client_space():
     assert "10 rue de la Presse" in html
     assert "Identique à la facturation" in html
     assert "Modifier" in html
-    assert reverse(
-        "portal:client-company-profile",
-        kwargs={"customer_public_id": customer.public_id},
-    ) in html
+    assert (
+        reverse(
+            "portal:client-company-profile",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+        in html
+    )
 
 
 @pytest.mark.django_db

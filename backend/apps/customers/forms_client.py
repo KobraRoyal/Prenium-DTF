@@ -59,9 +59,7 @@ class ClientCompanyProfileForm(forms.ModelForm):
         }
         widgets = {
             "name": forms.TextInput(attrs={"class": "ui-input", "autocomplete": "organization"}),
-            "billing_email": forms.EmailInput(
-                attrs={"class": "ui-input", "autocomplete": "email"}
-            ),
+            "billing_email": forms.EmailInput(attrs={"class": "ui-input", "autocomplete": "email"}),
             "siren": forms.TextInput(
                 attrs={"class": "ui-input", "inputmode": "numeric", "autocomplete": "off"}
             ),
