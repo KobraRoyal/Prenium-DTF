@@ -61,10 +61,7 @@ def production_panel_context(
         "assignment_count": assignment_count,
         "transition_count": job.transitions.count(),
         "show_machine_workspace": bool(
-            can_assign_machine_now
-            or job.assigned_machine_id
-            or assignment_count
-            or print_count
+            can_assign_machine_now or job.assigned_machine_id or assignment_count or print_count
         ),
         "active_machines": active_machines,
         "transition_error": transition_error,

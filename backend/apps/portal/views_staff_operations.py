@@ -34,8 +34,7 @@ class StaffAtelierOperationsPermissionMixin(StaffPortalMixin):
         if request.user.is_authenticated and (
             not access_scope_service.can_access_staff_portal(request.user)
             or any(
-                not request.user.has_perm(permission)
-                for permission in self.required_permissions
+                not request.user.has_perm(permission) for permission in self.required_permissions
             )
         ):
             record_event(
@@ -77,9 +76,7 @@ class StaffAtelierOperationsContextMixin(StaffAtelierOperationsPermissionMixin):
         )
         submitted_order_public_id = str(shipment_error_order_public_id or "")
         for row in workspace["rows"]:
-            row["shipment_form_open"] = submitted_order_public_id == str(
-                row["order"].public_id
-            )
+            row["shipment_form_open"] = submitted_order_public_id == str(row["order"].public_id)
             if row["needs_shipping"] and can_create_shipment:
                 submitted_data = None
                 if submitted_order_public_id == str(row["order"].public_id):
