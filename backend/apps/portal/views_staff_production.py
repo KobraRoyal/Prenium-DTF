@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404
 from django.shortcuts import render
@@ -8,54 +10,90 @@ from django.views import View
 from apps.gang_sheets.models import GangSheet
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
+    access_scope_service,
     badge_tone_for_status,
     meterage_context_for_order,
-    production_scan_service,
     production_workflow_service,
     status_label,
 )
 from apps.portal.views_staff import StaffOrderContextMixin
+from apps.production.models import ProductionMachine
+
+
+def production_panel_context(
+    *,
+    request,
+    order,
+    job,
+    transition_error: str = "",
+    machine_error: str = "",
+    print_error: str = "",
+):
+    from apps.billing.services.production_payment_gate import (
+        order_awaits_client_payment,
+        production_start_blocked_reason,
+    )
+
+    meterage = meterage_context_for_order(request, order, "")
+    payment_block = production_start_blocked_reason(order)
+    active_machines = ProductionMachine.objects.active().order_by("code", "name")
+    return {
+        "order": order,
+        "job": job,
+        "allowed_statuses": production_workflow_service.allowed_target_statuses(
+            current_status=job.status,
+            order=order,
+        ),
+        "can_transition": request.user.has_perm("production.transition_productionjob"),
+        "can_assign_machine": request.user.has_perm(
+            "production.assign_productionmachine"
+        ),
+        "can_confirm_print": request.user.has_perm(
+            "production.confirm_productionprint"
+        ),
+        "can_confirm_print_now": job.status
+        in {"in_progress", "ready_to_ship"},
+        "is_reprint": job.print_records.exists(),
+        "print_count": job.print_records.count(),
+        "active_machines": active_machines,
+        "transition_error": transition_error,
+        "machine_error": machine_error,
+        "print_error": print_error,
+        "print_request_token": uuid.uuid4(),
+        "production_payment_blocked": payment_block is not None,
+        "production_payment_block_reason": payment_block or "",
+        "awaits_client_payment": order_awaits_client_payment(order),
+        "meterage_hx_target": "#staff-order-meterage-slot-production",
+        "gang_sheets": GangSheet.objects.for_order(order).filter(
+            status=GangSheet.Status.VALIDATED
+        ),
+        "can_download_gang_sheet_final": request.user.has_perm(
+            "gang_sheets.download_final_gangsheet"
+        ),
+        **meterage,
+        "badge_tone_for_status": badge_tone_for_status,
+        "status_label": status_label,
+    }
 
 
 class StaffOrderPanelProductionView(StaffOrderContextMixin, View):
     template_name = "portal/staff/panels/production.html"
 
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm("production.view_productionjob"):
+        if not access_scope_service.can_access_staff_portal(request.user) or any(
+            not request.user.has_perm(permission)
+            for permission in ("orders.view_order", "production.view_productionjob")
+        ):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
     def _production_panel_context(self, request, job, transition_error: str = ""):
-        from apps.billing.services.production_payment_gate import (
-            order_awaits_client_payment,
-            production_start_blocked_reason,
+        return production_panel_context(
+            request=request,
+            order=self.order,
+            job=job,
+            transition_error=transition_error,
         )
-
-        meterage = meterage_context_for_order(request, self.order, "")
-        payment_block = production_start_blocked_reason(self.order)
-        return {
-            "order": self.order,
-            "job": job,
-            "allowed_statuses": production_workflow_service.allowed_target_statuses(
-                current_status=job.status,
-                order=self.order,
-            ),
-            "can_transition": request.user.has_perm("production.transition_productionjob"),
-            "transition_error": transition_error,
-            "production_payment_blocked": payment_block is not None,
-            "production_payment_block_reason": payment_block or "",
-            "awaits_client_payment": order_awaits_client_payment(self.order),
-            "meterage_hx_target": "#staff-order-meterage-slot-production",
-            "gang_sheets": GangSheet.objects.for_order(self.order).filter(
-                status=GangSheet.Status.VALIDATED
-            ),
-            "can_download_gang_sheet_final": request.user.has_perm(
-                "gang_sheets.download_final_gangsheet"
-            ),
-            **meterage,
-            "badge_tone_for_status": badge_tone_for_status,
-            "status_label": status_label,
-        }
 
     def get(self, request, order_public_id):
         _, job = production_workflow_service.get_staff_job(
@@ -96,78 +134,3 @@ class StaffOrderPanelProductionView(StaffOrderContextMixin, View):
         if transition_error:
             return with_toast(response, transition_error, "error")
         return with_toast(response, "Transition enregistree.", "success")
-
-
-class StaffOrderPanelScanView(StaffOrderContextMixin, View):
-    template_name = "portal/staff/panels/scan.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm("production.scan_productionjob"):
-            raise PermissionDenied
-        return super().dispatch(request, *args, **kwargs)
-
-    def get(self, request, order_public_id):
-        job = production_workflow_service.get_or_create_for_order(order=self.order)
-        return render(
-            request,
-            self.template_name,
-            {
-                "order": self.order,
-                "job": job,
-                "scan_result": None,
-                "scan_error": "",
-                "can_scan_transition": request.user.has_perm(
-                    "production.scan_transition_productionjob"
-                ),
-                "badge_tone_for_status": badge_tone_for_status,
-                "status_label": status_label,
-            },
-        )
-
-    def post(self, request, order_public_id):
-        scan_error = ""
-        scan_result = None
-        scan_identifier = request.POST.get("scan_identifier", "")
-        to_status = request.POST.get("to_status", "").strip()
-        reason = request.POST.get("reason", "")
-
-        try:
-            if to_status:
-                if not request.user.has_perm("production.scan_transition_productionjob"):
-                    raise PermissionDenied
-                job, _transition = production_scan_service.transition_by_scan(
-                    scan_identifier=scan_identifier,
-                    to_status=to_status,
-                    actor=request.user,
-                    reason=reason,
-                    source="staff_portal",
-                )
-                scan_result = {"job": job, "mode": "transition"}
-            else:
-                job = production_scan_service.resolve_scan(
-                    scan_identifier=scan_identifier,
-                    actor=request.user,
-                    source="staff_portal",
-                )
-                scan_result = {"job": job, "mode": "resolve"}
-        except ValidationError as exc:
-            scan_error = "; ".join(exc.messages)
-
-        response = render(
-            request,
-            self.template_name,
-            {
-                "order": self.order,
-                "job": production_workflow_service.get_or_create_for_order(order=self.order),
-                "scan_result": scan_result,
-                "scan_error": scan_error,
-                "can_scan_transition": request.user.has_perm(
-                    "production.scan_transition_productionjob"
-                ),
-                "badge_tone_for_status": badge_tone_for_status,
-                "status_label": status_label,
-            },
-        )
-        if scan_error:
-            return with_toast(response, scan_error, "error")
-        return with_toast(response, "Scan enregistre.", "success")

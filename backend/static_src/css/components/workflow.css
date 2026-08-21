@@ -674,6 +674,241 @@
   }
 }
 
+/* Atelier DTF — attribution machine et preuve d'impression. */
+@layer components {
+  body.product-shell .operator-machine {
+    overflow: hidden;
+    border: 2px solid var(--product-line, #0b0b0b);
+    background: var(--product-surface, #fffdf9);
+    box-shadow: 5px 5px 0 var(--product-line, #0b0b0b);
+  }
+
+  body.product-shell .operator-machine > .operator-section-head {
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid var(--product-line, #0b0b0b);
+  }
+
+  body.product-shell .operator-machine > .workflow-panel__feedback {
+    margin: 0;
+    border-width: 0 0 1px;
+  }
+
+  body.product-shell .operator-machine__workspace {
+    display: grid;
+    grid-template-columns: minmax(15rem, 0.9fr) minmax(18rem, 1.1fr);
+    min-width: 0;
+  }
+
+  body.product-shell .operator-machine__current,
+  body.product-shell .operator-machine__assign {
+    min-width: 0;
+    padding: 1rem 1.1rem;
+  }
+
+  body.product-shell .operator-machine__current {
+    border-right: 1px solid var(--product-line, #0b0b0b);
+    background: color-mix(in srgb, var(--product-accent, #dcff1a) 12%, white);
+  }
+
+  body.product-shell .operator-machine__current > span,
+  body.product-shell .operator-machine__facts dt {
+    color: var(--product-ink-soft, #5d554d);
+    font-size: 0.68rem;
+    font-weight: 850;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .operator-machine__current.is-empty > strong {
+    display: block;
+    margin-top: 0.55rem;
+    font-size: 0.95rem;
+  }
+
+  body.product-shell .operator-machine__current.is-empty > p,
+  body.product-shell .operator-machine__hint {
+    margin: 0.35rem 0 0;
+    color: var(--product-ink-soft, #5d554d);
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  body.product-shell .operator-machine__identity {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 0.65rem;
+  }
+
+  body.product-shell .operator-machine__identity code {
+    flex: 0 0 auto;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--product-line, #0b0b0b);
+    background: var(--product-line, #0b0b0b);
+    color: var(--product-panel, #fffdf9);
+    font-size: 0.78rem;
+    font-weight: 900;
+  }
+
+  body.product-shell .operator-machine__identity div {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  body.product-shell .operator-machine__identity strong {
+    overflow-wrap: anywhere;
+    font: 900 1.05rem/1.15 var(--ui-font-display, "Space Grotesk", sans-serif);
+  }
+
+  body.product-shell .operator-machine__identity small {
+    color: var(--product-ink-soft, #5d554d);
+    font-size: 0.72rem;
+  }
+
+  body.product-shell .operator-machine__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin: 0.9rem 0 0;
+  }
+
+  body.product-shell .operator-machine__facts dd {
+    margin: 0.2rem 0 0;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  body.product-shell .operator-machine__assign .ui-btn {
+    justify-self: start;
+  }
+
+  body.product-shell .operator-machine__confirm {
+    display: grid;
+    grid-template-columns: minmax(13rem, 0.8fr) minmax(18rem, 1.2fr);
+    gap: 1rem;
+    align-items: center;
+    padding: 0.9rem 1.1rem;
+    border-top: 1px solid var(--product-line, #0b0b0b);
+    border-bottom: 1px solid var(--product-line, #0b0b0b);
+    background: var(--product-accent, #dcff1a);
+  }
+
+  body.product-shell .operator-machine__confirm strong,
+  body.product-shell .operator-machine__confirm p {
+    color: var(--product-accent-ink, #0b0b0b);
+  }
+
+  body.product-shell .operator-machine__confirm p {
+    margin: 0.2rem 0 0;
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+
+  body.product-shell .operator-machine__confirm-form {
+    display: grid;
+    grid-template-columns: minmax(10rem, 1fr) auto;
+    gap: 0.6rem;
+  }
+
+  body.product-shell .operator-machine__confirm-form .ui-input {
+    background: var(--product-panel, #fffdf9);
+  }
+
+  body.product-shell .operator-machine__history {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.product-shell .operator-machine__history > section {
+    min-width: 0;
+    padding: 0.9rem 1.1rem 1rem;
+  }
+
+  body.product-shell .operator-machine__history > section + section {
+    border-left: 1px solid var(--product-line, #0b0b0b);
+  }
+
+  body.product-shell .operator-machine__history h5 {
+    margin: 0 0 0.65rem;
+    font: 850 0.75rem/1.2 var(--ui-font-display, "Space Grotesk", sans-serif);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .operator-machine__history ol {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body.product-shell .operator-machine__history li {
+    display: grid;
+    grid-template-columns: 4.8rem minmax(0, 1fr);
+    gap: 0.65rem;
+    padding: 0.55rem 0;
+    border-top: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 16%, transparent);
+  }
+
+  body.product-shell .operator-machine__history li:first-child {
+    border-top: 0;
+  }
+
+  body.product-shell .operator-machine__history li time,
+  body.product-shell .operator-machine__history li span {
+    color: var(--product-ink-soft, #5d554d);
+    font-size: 0.68rem;
+    line-height: 1.35;
+  }
+
+  body.product-shell .operator-machine__history li div {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  body.product-shell .operator-machine__history li strong {
+    overflow-wrap: anywhere;
+    font-size: 0.76rem;
+  }
+
+  body.product-shell .operator-machine__history li.is-empty {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (max-width: 900px) {
+    body.product-shell .operator-machine__workspace,
+    body.product-shell .operator-machine__confirm,
+    body.product-shell .operator-machine__history {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.product-shell .operator-machine__current {
+      border-right: 0;
+      border-bottom: 1px solid var(--product-line, #0b0b0b);
+    }
+
+    body.product-shell .operator-machine__history > section + section {
+      border-top: 1px solid var(--product-line, #0b0b0b);
+      border-left: 0;
+    }
+  }
+
+  @media (max-width: 640px) {
+    body.product-shell .operator-machine__confirm-form,
+    body.product-shell .operator-machine__facts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.product-shell .operator-machine__assign .ui-btn,
+    body.product-shell .operator-machine__confirm-form .ui-btn {
+      width: 100%;
+    }
+  }
+}
+
 /* Console Atelier 2026 — parcours commande, production, scan, logistique et clôture. */
 @layer components {
   body.product-shell .staff-order-focus__facts {

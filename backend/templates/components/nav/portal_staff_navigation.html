@@ -5,6 +5,9 @@
   {% if perms.customers.view_customer %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-customers' %}is-active{% endif %}" {% if nav_key == 'staff-customers' %}aria-current="page"{% endif %} href="{% url 'portal:staff-customer-list' %}">Comptes</a>
   {% endif %}
+  {% if perms.production.view_productionmachine %}
+  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-machines' %}is-active{% endif %}" {% if nav_key == 'staff-machines' %}aria-current="page"{% endif %} href="{% url 'portal:staff-machine-fleet' %}">Machines DTF</a>
+  {% endif %}
 </div>
 
 {% if perms.prospects.view_prospectprofile or perms.b2b_order_projects.view_b2borderproject or perms.notifications.view_emailtemplate or perms.customers.manage_customer_pricing or perms.gang_sheets.configure_gangsheet %}

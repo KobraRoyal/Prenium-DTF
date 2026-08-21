@@ -27,6 +27,94 @@
     </div>
   </section>
 
+  <section class="operator-machine" aria-labelledby="operator-machine-title">
+    <header class="operator-section-head">
+      <div>
+        <h4 id="operator-machine-title">Poste d’impression DTF</h4>
+        <p>Attribuez l’OF, puis confirmez l’impression pour figer la preuve dossier-machine.</p>
+      </div>
+      {% if job.assigned_machine %}<span class="badge {% if job.assigned_machine.status == 'active' %}is-success{% else %}is-warning{% endif %}">{{ job.assigned_machine.get_status_display }}</span>{% else %}<span class="badge is-warning">À attribuer</span>{% endif %}
+    </header>
+
+    {% if machine_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ machine_error }}</p></div>{% endif %}
+    {% if print_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ print_error }}</p></div>{% endif %}
+
+    <div class="operator-machine__workspace">
+      <div class="operator-machine__current{% if not job.assigned_machine %} is-empty{% endif %}">
+        <span>Imprimante attribuée</span>
+        {% if job.assigned_machine %}
+        <div class="operator-machine__identity"><code>{{ job.assigned_machine.code }}</code><div><strong>{{ job.assigned_machine.name }}</strong><small>{% if job.assigned_machine.location %}{{ job.assigned_machine.location }}{% else %}Emplacement non renseigné{% endif %}{% if job.assigned_machine.max_print_width_cm %} · laize {{ job.assigned_machine.max_print_width_cm|floatformat:"-1" }} cm{% endif %}</small></div></div>
+        <dl class="operator-machine__facts">
+          <div><dt>Attribuée le</dt><dd>{{ job.machine_assigned_at|date:"d/m/Y · H:i" }}</dd></div>
+          <div><dt>Impressions confirmées</dt><dd>{{ print_count }}</dd></div>
+        </dl>
+        {% else %}
+        <strong>Aucune machine sélectionnée</strong>
+        <p>Le workflow reste utilisable, mais aucune preuve machine ne pourra être confirmée tant que l’OF n’est pas attribué.</p>
+        {% endif %}
+      </div>
+
+      {% if can_assign_machine %}
+      <form class="operator-machine__assign ui-form-stack" hx-post="{% url 'portal:staff-order-machine-assignment' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+        {% csrf_token %}
+        <div class="ui-field-group">
+          <label class="ui-label" for="machine_public_id">{% if job.assigned_machine %}Réattribuer l’OF{% else %}Choisir une imprimante{% endif %}</label>
+          <select class="ui-input" id="machine_public_id" name="machine_public_id" required>
+            <option value="" disabled selected hidden>Sélectionner une machine disponible</option>
+            {% for machine in active_machines %}<option value="{{ machine.public_id }}" {% if job.assigned_machine_id == machine.id %}disabled{% endif %}>{{ machine.code }} — {{ machine.name }}{% if machine.location %} · {{ machine.location }}{% endif %}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="ui-field-group"><label class="ui-label" for="machine_reason">Motif de réattribution</label><input class="ui-input" id="machine_reason" name="machine_reason" maxlength="255" placeholder="Obligatoire uniquement si la machine change"></div>
+        <button class="ui-btn ui-btn-secondary" type="submit" {% if not active_machines %}disabled{% endif %}>{% if job.assigned_machine %}Réattribuer la machine{% else %}Attribuer la machine{% endif %}</button>
+        {% if not active_machines %}<p class="operator-machine__hint">Aucune machine disponible. Consultez le parc pour remettre un poste en service.</p>{% endif %}
+      </form>
+      {% else %}
+      <div class="operator-empty-inline"><strong>Attribution en consultation</strong><p>Votre rôle permet de voir la machine et son historique, sans réattribuer l’OF.</p></div>
+      {% endif %}
+    </div>
+
+    <div class="operator-machine__confirm">
+      <div>
+        <strong>{% if is_reprint %}Confirmer une réimpression{% else %}Confirmer l’impression{% endif %}</strong>
+        <p>{% if job.assigned_machine %}La confirmation créera une preuve immuable sur <strong>{{ job.assigned_machine.code }}</strong>.{% else %}Attribuez d’abord une machine pour activer la confirmation.{% endif %}</p>
+      </div>
+      {% if can_confirm_print and can_confirm_print_now and job.assigned_machine %}
+      <form class="operator-machine__confirm-form" hx-post="{% url 'portal:staff-order-print-confirmation' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+        {% csrf_token %}
+        <input type="hidden" name="request_token" value="{{ print_request_token }}">
+        <label class="sr-only" for="print_note">Note d’impression</label>
+        <input class="ui-input" id="print_note" name="print_note" maxlength="255" placeholder="{% if is_reprint %}Motif obligatoire de la réimpression{% else %}Note optionnelle de contrôle{% endif %}" {% if is_reprint %}required{% endif %}>
+        <button class="ui-btn ui-btn-primary" type="submit">{% if is_reprint %}Confirmer la réimpression{% else %}Confirmer l’impression{% endif %}</button>
+      </form>
+      {% elif not can_confirm_print %}
+      <span class="badge badge--muted">Confirmation restreinte</span>
+      {% elif not can_confirm_print_now %}
+      <span class="operator-state-note">Disponible quand l’OF est en production</span>
+      {% else %}
+      <span class="operator-state-note">Machine requise</span>
+      {% endif %}
+    </div>
+
+    <div class="operator-machine__history">
+      <section aria-labelledby="machine-assignment-history-title">
+        <h5 id="machine-assignment-history-title">Historique d’attribution</h5>
+        <ol>
+          {% for assignment in job.machine_assignments.all|slice:":5" %}
+          <li><time datetime="{{ assignment.created_at|date:'c' }}">{{ assignment.created_at|date:"d/m · H:i" }}</time><div><strong>{{ assignment.machine_code_snapshot }} · {{ assignment.machine_name_snapshot }}</strong><span>{% if assignment.previous_machine_code_snapshot %}Depuis {{ assignment.previous_machine_code_snapshot }}{% else %}Première attribution{% endif %}{% if assignment.reason %} · {{ assignment.reason }}{% endif %}</span></div></li>
+          {% empty %}<li class="is-empty"><span>Aucune attribution enregistrée.</span></li>{% endfor %}
+        </ol>
+      </section>
+      <section aria-labelledby="machine-print-history-title">
+        <h5 id="machine-print-history-title">Impressions confirmées</h5>
+        <ol>
+          {% for print in job.print_records.all|slice:":5" %}
+          <li><time datetime="{{ print.printed_at|date:'c' }}">{{ print.printed_at|date:"d/m · H:i" }}</time><div><strong>{{ print.machine_code_snapshot }} · {{ print.machine_name_snapshot }}</strong><span>{% if print.recorded_by %}{{ print.recorded_by.email }}{% else %}Opérateur supprimé{% endif %}{% if print.note %} · {{ print.note }}{% endif %}</span></div></li>
+          {% empty %}<li class="is-empty"><span>Aucune impression confirmée.</span></li>{% endfor %}
+        </ol>
+      </section>
+    </div>
+  </section>
+
   <section class="production-track" aria-labelledby="production-track-title">
     <div class="operator-section-head">
       <div>

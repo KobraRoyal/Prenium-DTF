@@ -13,6 +13,9 @@
     {% if can_read_orders %}
     <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-list' %}">Toutes les commandes</a>
     {% endif %}
+    {% if can_read_machine_fleet %}
+    <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-machine-fleet' %}">Parc machines DTF</a>
+    {% endif %}
   </nav>
 </section>
 
@@ -143,6 +146,7 @@
       <div class="atelier-order-row__production">
         <p class="atelier-order-row__mobile-label">Production</p>
         <strong>{{ row.production_label }}</strong>
+        <span class="atelier-machine-signal{% if row.machine_missing %} is-missing{% endif %}">{% if row.assigned_machine %}<code>{{ row.assigned_machine.code }}</code> {{ row.assigned_machine.name }}{% else %}Machine non attribuée{% endif %}</span>
         {% if row.ready_to_print %}<small class="atelier-ready-signal">OF prêt à imprimer</small>{% endif %}
       </div>
 

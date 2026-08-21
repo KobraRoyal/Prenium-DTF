@@ -39,6 +39,7 @@
 - [x] Sprint 38 — Clôture mensuelle par client, snapshot CSV signé pour facturation externe,
   gel comptable des commandes, permissions croisées et audit des exports
 - [x] Sprint 39 — Contrat de production NAS (compose immuable, runbook release, smoke CSS)
+- [x] Sprint 42 — Parc de machines DTF, affectation des OF et preuves d'impression immuables
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement
@@ -69,7 +70,9 @@
 - [x] Tarification dégressive mensuelle par client : grille Atelier, snapshots commande et gel des relevés
 - [x] Paliers par défaut des nouveaux comptes en encours, e-mail de franchissement personnalisable
   et progression visible sur le dashboard client
-- [x] Récapitulatifs mensuels par client en encours exportables vers l’outil comptable externe
+- [x] Récapitulatifs mensuels par client en encours exportables vers l'outil comptable externe
+- [x] Lot 42 — Parc DTF global Atelier, affectation des dossiers, confirmation d'impression,
+  historique append-only, RBAC dédié et vues responsive Impeccable
 
 ## Derniers chantiers transverses
 

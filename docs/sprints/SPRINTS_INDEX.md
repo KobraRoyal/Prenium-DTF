@@ -46,6 +46,8 @@
 - [Sprint 37 — Remise dégressive sur volume mensuel](sprint-37-remise-volume-mensuelle.md)
 - [Sprint 38 — Récapitulatif de facturation externalisée](sprint-38-recap-facturation-externe.md)
 - [Sprint 39 — Contrat de production NAS](sprint-39-nas-production-contract.md)
+- [Sprint 41 — Remise volume comptant prospective](sprint-41-remise-volume-comptant-prospective.md)
+- [Sprint 42 — Parc de machines DTF et historique d'impression](sprint-42-parc-machines-dtf.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

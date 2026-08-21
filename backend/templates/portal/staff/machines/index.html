@@ -1,0 +1,10 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Parc machines DTF - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="machine-fleet-page">
+  {% include "components/portal/page_head.html" with title="Parc machines DTF" subtitle="Pilotez les imprimantes disponibles et retrouvez la preuve de chaque impression par ordre de fabrication." %}
+  {% include "portal/staff/machines/_fleet_content.html" %}
+</div>
+{% endblock %}

@@ -7606,6 +7606,104 @@ body.product-shell .scan-result__label {
   }
 }
 
+/* Parc machines DTF — registre Atelier et journal de preuve. */
+body.product-shell .machine-fleet-page { display: grid; gap: 1.25rem; min-width: 0; }
+body.product-shell .machine-fleet-page > .page-head { margin-bottom: 0; border-bottom: 2px solid var(--product-line); padding-bottom: 1.15rem; }
+body.product-shell .machine-fleet-content { display: grid; gap: 1.25rem; min-width: 0; }
+body.product-shell .machine-fleet-summary { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(15rem, 0.5fr); border: 2px solid var(--product-line); background: var(--product-panel); box-shadow: 4px 4px 0 var(--product-line); }
+body.product-shell .machine-fleet-summary dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+body.product-shell .machine-fleet-summary dl > div { min-width: 0; padding: 0.9rem 1rem; border-right: 1px solid var(--product-line); }
+body.product-shell .machine-fleet-summary dt { color: var(--product-soft); font-size: 0.68rem; font-weight: 850; letter-spacing: 0.07em; text-transform: uppercase; }
+body.product-shell .machine-fleet-summary dd { margin: 0.25rem 0 0; font: 900 clamp(1rem, 2vw, 1.3rem)/1.15 "Space Grotesk", system-ui, sans-serif; overflow-wrap: anywhere; }
+body.product-shell .machine-fleet-summary > p { display: grid; align-content: center; margin: 0; padding: 0.9rem 1rem; background: var(--product-accent); color: var(--product-accent-ink); font-size: 0.78rem; line-height: 1.45; }
+body.product-shell .machine-fleet-layout { display: grid; grid-template-columns: minmax(18rem, 0.7fr) minmax(26rem, 1.3fr); gap: 1.25rem; align-items: start; min-width: 0; }
+body.product-shell .machine-fleet-create,
+body.product-shell .machine-fleet-register,
+body.product-shell .machine-print-ledger { min-width: 0; border: 2px solid var(--product-line); background: var(--product-panel); }
+body.product-shell .machine-fleet-create { box-shadow: 5px 5px 0 var(--product-line); }
+body.product-shell .machine-fleet-create > header,
+body.product-shell .machine-fleet-register > header,
+body.product-shell .machine-print-ledger > header { display: flex; gap: 0.75rem 1rem; align-items: flex-start; justify-content: space-between; padding: 1rem 1.1rem; border-bottom: 1px solid var(--product-line); }
+body.product-shell .machine-fleet-create > header { display: block; background: var(--product-line); color: var(--product-panel); }
+body.product-shell .machine-fleet-create h2,
+body.product-shell .machine-fleet-register h2,
+body.product-shell .machine-print-ledger h2 { margin: 0; font-family: "Space Grotesk", system-ui, sans-serif; font-size: clamp(1.05rem, 2vw, 1.35rem); font-weight: 900; text-transform: uppercase; }
+body.product-shell .machine-fleet-create header p,
+body.product-shell .machine-fleet-register header p,
+body.product-shell .machine-print-ledger header p { max-width: 64ch; margin: 0.3rem 0 0; color: var(--product-muted); font-size: 0.78rem; line-height: 1.45; }
+body.product-shell .machine-fleet-create header p { color: color-mix(in srgb, var(--product-panel) 78%, transparent); }
+body.product-shell .machine-fleet-create > form { padding: 1rem 1.1rem 1.1rem; }
+body.product-shell .machine-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+body.product-shell .machine-width-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; }
+body.product-shell .machine-width-input > span { display: grid; place-items: center; min-width: 3rem; border: 1px solid var(--product-line); border-left: 0; background: var(--product-panel-strong); font-size: 0.75rem; font-weight: 850; }
+body.product-shell .machine-register { display: grid; }
+body.product-shell .machine-register-row { display: grid; grid-template-columns: minmax(12rem, 1.1fr) minmax(14rem, 1fr) minmax(9rem, 0.7fr) auto; gap: 0.85rem; align-items: center; padding: 0.9rem 1rem; border-bottom: 1px solid color-mix(in srgb, var(--product-line) 20%, transparent); transition: background-color 160ms ease-out; }
+body.product-shell .machine-register-row:last-child { border-bottom: 0; }
+body.product-shell .machine-register-row:hover { background: color-mix(in srgb, var(--product-accent) 8%, var(--product-panel)); }
+body.product-shell .machine-register-row.is-muted { background: var(--product-panel-strong); }
+body.product-shell .machine-register-row__identity { display: flex; gap: 0.65rem; align-items: center; min-width: 0; }
+body.product-shell .machine-register-row__identity code,
+body.product-shell .machine-print-ledger__list code { flex: 0 0 auto; padding: 0.35rem 0.45rem; border: 1px solid var(--product-line); background: var(--product-line); color: var(--product-panel); font-size: 0.7rem; font-weight: 900; }
+body.product-shell .machine-register-row__identity div,
+body.product-shell .machine-register-row__facts,
+body.product-shell .machine-register-row__meta { display: grid; gap: 0.18rem; min-width: 0; }
+body.product-shell .machine-register-row__identity strong { overflow-wrap: anywhere; font-size: 0.88rem; }
+body.product-shell .machine-register-row__identity span,
+body.product-shell .machine-register-row__facts > span:not(.badge),
+body.product-shell .machine-register-row__meta span { color: var(--product-muted); font-size: 0.72rem; line-height: 1.35; }
+body.product-shell .machine-register-row__facts .badge { width: fit-content; }
+body.product-shell .machine-register-row__edit { position: relative; justify-self: end; }
+body.product-shell .machine-register-row__edit summary { min-height: 2.75rem; padding: 0.7rem 0.85rem; border: 1px solid var(--product-line); background: var(--product-panel); cursor: pointer; font-size: 0.75rem; font-weight: 850; list-style: none; }
+body.product-shell .machine-register-row__edit summary::-webkit-details-marker { display: none; }
+body.product-shell .machine-register-row__edit summary:hover,
+body.product-shell .machine-register-row__edit summary:focus-visible { background: var(--product-accent); }
+body.product-shell .machine-register-row__edit[open] { grid-column: 1 / -1; justify-self: stretch; }
+body.product-shell .machine-register-row__edit[open] summary { width: fit-content; margin-left: auto; }
+body.product-shell .machine-register-row__edit form { margin-top: 0.75rem; padding: 1rem; border: 1px solid var(--product-line); background: var(--product-panel-strong); }
+body.product-shell .machine-fleet-empty { padding: 1.25rem; background: var(--product-panel-strong); }
+body.product-shell .machine-fleet-empty strong { font-size: 0.9rem; }
+body.product-shell .machine-fleet-empty p { margin: 0.3rem 0 0; color: var(--product-muted); font-size: 0.8rem; }
+body.product-shell .machine-print-ledger { box-shadow: 4px 4px 0 var(--product-line); }
+body.product-shell .machine-print-ledger__list { display: grid; margin: 0; padding: 0; list-style: none; }
+body.product-shell .machine-print-ledger__list li { display: grid; grid-template-columns: 8rem minmax(13rem, 1fr) minmax(10rem, 0.75fr) minmax(12rem, 0.9fr) auto; gap: 0.85rem; align-items: center; min-width: 0; padding: 0.8rem 1rem; border-bottom: 1px solid color-mix(in srgb, var(--product-line) 20%, transparent); }
+body.product-shell .machine-print-ledger__list li:last-child { border-bottom: 0; }
+body.product-shell .machine-print-ledger__list time,
+body.product-shell .machine-print-ledger__list span { color: var(--product-muted); font-size: 0.72rem; line-height: 1.35; }
+body.product-shell .machine-print-ledger__list li > div { display: grid; gap: 0.12rem; min-width: 0; }
+body.product-shell .machine-print-ledger__list strong,
+body.product-shell .machine-print-ledger__list span { overflow-wrap: anywhere; }
+body.product-shell .atelier-machine-signal { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; color: var(--product-muted); font-size: 0.72rem; }
+body.product-shell .atelier-machine-signal code { color: var(--product-ink); font-size: 0.68rem; font-weight: 900; }
+body.product-shell .atelier-machine-signal.is-missing { color: var(--product-danger); font-weight: 800; }
+body.product-shell .machine-fleet-page .ui-btn,
+body.product-shell .machine-fleet-page summary { min-height: 2.75rem; }
+
+@media (max-width: 1180px) {
+  body.product-shell .machine-fleet-layout,
+  body.product-shell .machine-fleet-summary { grid-template-columns: minmax(0, 1fr); }
+  body.product-shell .machine-fleet-summary dl > div:last-child { border-right: 0; }
+  body.product-shell .machine-register-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.product-shell .machine-print-ledger__list li { grid-template-columns: 7rem repeat(2, minmax(0, 1fr)) auto; }
+  body.product-shell .machine-print-ledger__list li > div:nth-of-type(3) { grid-column: 2 / 4; }
+}
+
+@media (max-width: 720px) {
+  body.product-shell .machine-fleet-summary dl,
+  body.product-shell .machine-form-grid,
+  body.product-shell .machine-register-row,
+  body.product-shell .machine-print-ledger__list li { grid-template-columns: minmax(0, 1fr); }
+  body.product-shell .machine-fleet-summary dl > div { border-right: 0; border-bottom: 1px solid var(--product-line); }
+  body.product-shell .machine-fleet-summary dl > div:last-child { border-bottom: 0; }
+  body.product-shell .machine-fleet-create > header,
+  body.product-shell .machine-fleet-register > header,
+  body.product-shell .machine-print-ledger > header { align-items: stretch; flex-direction: column; }
+  body.product-shell .machine-register-row__edit,
+  body.product-shell .machine-register-row__edit[open],
+  body.product-shell .machine-register-row__edit[open] summary { justify-self: stretch; width: 100%; margin-left: 0; }
+  body.product-shell .machine-print-ledger__list li > div:nth-of-type(3) { grid-column: auto; }
+  body.product-shell .machine-print-ledger__list .ui-btn { width: 100%; }
+}
+
 /* Fiche commande client — hiérarchie compacte, sans surfaces imbriquées. */
   body.product-shell .client-order-detail {
     display: grid;

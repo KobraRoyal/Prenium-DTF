@@ -98,7 +98,7 @@ class AtelierDashboardService:
     def _recent_orders_queryset(self):
         return (
             Order.objects.filter(status=Order.Status.SUBMITTED)
-            .select_related("customer", "production_job")
+            .select_related("customer", "production_job", "production_job__assigned_machine")
             .prefetch_related("uploads", "uploads__atelier_review")
             .order_by("-created_at")
         )
@@ -117,6 +117,9 @@ class AtelierDashboardService:
 
         production_status = (
             production_job.status if production_job is not None else ProductionJob.Status.QUEUED
+        )
+        assigned_machine = (
+            production_job.assigned_machine if production_job is not None else None
         )
         all_approved = bool(uploads) and review_counter[OrderUploadReview.Status.APPROVED] == len(
             uploads
@@ -156,6 +159,13 @@ class AtelierDashboardService:
                 production_status,
                 production_status,
             ),
+            "assigned_machine": assigned_machine,
+            "machine_label": (
+                f"{assigned_machine.code} · {assigned_machine.name}"
+                if assigned_machine is not None
+                else "Machine non attribuée"
+            ),
+            "machine_missing": assigned_machine is None,
             "ready_to_print": ready_to_print,
             "print_eligible": print_eligible,
             "next_action": next_action,
