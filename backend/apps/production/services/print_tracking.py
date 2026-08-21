@@ -153,9 +153,7 @@ class ProductionPrintTrackingService:
                             customer_public_id_snapshot=locked_job.order.customer.public_id,
                         )
                 except IntegrityError as exc:
-                    winner = ProductionPrintRecord.objects.filter(
-                        request_token=token
-                    ).first()
+                    winner = ProductionPrintRecord.objects.filter(request_token=token).first()
                     if winner is not None and winner.production_job_id == locked_job.pk:
                         return locked_job, winner, False
                     message = "Ce jeton de confirmation appartient à un autre dossier."

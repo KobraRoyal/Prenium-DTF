@@ -114,9 +114,7 @@ class ProductionMachineAssignmentService:
                 if current_assignment is not None:
                     current_assignment.ended_at = now
                     current_assignment.ended_by = self._authenticated_actor(actor)
-                    current_assignment.save(
-                        update_fields=("ended_at", "ended_by", "updated_at")
-                    )
+                    current_assignment.save(update_fields=("ended_at", "ended_by", "updated_at"))
 
                 assignment = self._create_assignment(
                     job=locked_job,

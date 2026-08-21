@@ -191,13 +191,14 @@ def test_assignment_is_atomic_append_only_and_reassignment_requires_reason():
     assert job.assigned_machine == second_machine
     assert first_assignment.ended_at is not None
     assert second_assignment.previous_machine_code_snapshot == "DTF-01"
-    assert ProductionJobMachineAssignment.objects.filter(
-        production_job=job,
-        ended_at__isnull=True,
-    ).count() == 1
-    assert AuditLogEntry.objects.filter(
-        action="production.machine_assignment.reassigned"
-    ).exists()
+    assert (
+        ProductionJobMachineAssignment.objects.filter(
+            production_job=job,
+            ended_at__isnull=True,
+        ).count()
+        == 1
+    )
+    assert AuditLogEntry.objects.filter(action="production.machine_assignment.reassigned").exists()
 
 
 @pytest.mark.django_db
@@ -377,9 +378,7 @@ def test_transition_marks_machine_print_started_without_blocking_unassigned_jobs
     assert AuditLogEntry.objects.filter(action="production.machine_print_started").exists()
 
     unassigned_order = create_submitted_order(actor=operator, name="Legacy compatible")
-    unassigned_job = ProductionWorkflowService().get_or_create_for_order(
-        order=unassigned_order
-    )
+    unassigned_job = ProductionWorkflowService().get_or_create_for_order(order=unassigned_order)
     ProductionWorkflowService().transition_existing_job(
         production_job=unassigned_job,
         actor=operator,

@@ -347,6 +347,5 @@ class ProductionPrintRecord(BaseModel):
 
     def __str__(self) -> str:
         return (
-            f"{self.manufacturing_order_number_snapshot} "
-            f"imprimé sur {self.machine_code_snapshot}"
+            f"{self.manufacturing_order_number_snapshot} imprimé sur {self.machine_code_snapshot}"
         )

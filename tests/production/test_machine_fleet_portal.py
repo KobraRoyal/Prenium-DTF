@@ -198,10 +198,13 @@ def test_machine_mutations_are_post_only_and_csrf_protected():
 
     assert logged_client(manager).get(route).status_code == 405
     csrf_client = logged_client(manager, enforce_csrf_checks=True)
-    assert csrf_client.post(
-        route,
-        {"code": "DTF-CSRF", "name": "CSRF", "status": "active"},
-    ).status_code == 403
+    assert (
+        csrf_client.post(
+            route,
+            {"code": "DTF-CSRF", "name": "CSRF", "status": "active"},
+        ).status_code
+        == 403
+    )
 
 
 @pytest.mark.django_db
@@ -322,10 +325,13 @@ def test_print_route_checks_permissions_before_object_lookup_and_audits():
         )
         assert client.post(route, {"request_token": uuid.uuid4()}).status_code == 403
 
-    assert AuditLogEntry.objects.filter(
-        action="production.print.confirmation_rejected",
-        status=AuditLogEntry.Status.FAILURE,
-    ).count() == 2
+    assert (
+        AuditLogEntry.objects.filter(
+            action="production.print.confirmation_rejected",
+            status=AuditLogEntry.Status.FAILURE,
+        ).count()
+        == 2
+    )
 
 
 @pytest.mark.django_db
@@ -357,29 +363,50 @@ def test_machine_permissions_remain_separate_and_all_mutations_require_csrf():
         kwargs={"machine_public_id": machine.public_id},
     )
 
-    assert logged_client(fleet_manager).post(
-        assignment_route,
-        {"machine_public_id": machine.public_id},
-    ).status_code == 403
-    assert logged_client(assign_operator).post(
-        print_route,
-        {"request_token": uuid.uuid4()},
-    ).status_code == 403
-    assert logged_client(viewer).post(
-        update_route,
-        {"code": machine.code, "name": machine.name, "status": "active"},
-    ).status_code == 403
+    assert (
+        logged_client(fleet_manager)
+        .post(
+            assignment_route,
+            {"machine_public_id": machine.public_id},
+        )
+        .status_code
+        == 403
+    )
+    assert (
+        logged_client(assign_operator)
+        .post(
+            print_route,
+            {"request_token": uuid.uuid4()},
+        )
+        .status_code
+        == 403
+    )
+    assert (
+        logged_client(viewer)
+        .post(
+            update_route,
+            {"code": machine.code, "name": machine.name, "status": "active"},
+        )
+        .status_code
+        == 403
+    )
 
     csrf_manager = logged_client(fleet_manager, enforce_csrf_checks=True)
-    assert csrf_manager.post(
-        update_route,
-        {"code": machine.code, "name": machine.name, "status": "active"},
-    ).status_code == 403
+    assert (
+        csrf_manager.post(
+            update_route,
+            {"code": machine.code, "name": machine.name, "status": "active"},
+        ).status_code
+        == 403
+    )
     csrf_operator = logged_client(assign_operator, enforce_csrf_checks=True)
-    assert csrf_operator.post(
-        assignment_route,
-        {"machine_public_id": machine.public_id},
-    ).status_code == 403
+    assert (
+        csrf_operator.post(
+            assignment_route,
+            {"machine_public_id": machine.public_id},
+        ).status_code
+        == 403
+    )
 
     confirm_operator = create_user(
         "portal-separation-confirm@example.com",
@@ -389,10 +416,15 @@ def test_machine_permissions_remain_separate_and_all_mutations_require_csrf():
             "confirm_productionprint",
         ),
     )
-    assert logged_client(confirm_operator, enforce_csrf_checks=True).post(
-        print_route,
-        {"request_token": uuid.uuid4()},
-    ).status_code == 403
+    assert (
+        logged_client(confirm_operator, enforce_csrf_checks=True)
+        .post(
+            print_route,
+            {"request_token": uuid.uuid4()},
+        )
+        .status_code
+        == 403
+    )
 
 
 @pytest.mark.django_db

@@ -118,9 +118,7 @@ class AtelierDashboardService:
         production_status = (
             production_job.status if production_job is not None else ProductionJob.Status.QUEUED
         )
-        assigned_machine = (
-            production_job.assigned_machine if production_job is not None else None
-        )
+        assigned_machine = production_job.assigned_machine if production_job is not None else None
         all_approved = bool(uploads) and review_counter[OrderUploadReview.Status.APPROVED] == len(
             uploads
         )

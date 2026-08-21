@@ -38,11 +38,7 @@ class MachineFleetService:
         ).select_related("status_changed_by")
 
     def get_machine(self, *, machine_public_id, actor):
-        return (
-            self.list_machines(actor=actor)
-            .filter(public_id=machine_public_id)
-            .first()
-        )
+        return self.list_machines(actor=actor).filter(public_id=machine_public_id).first()
 
     def create_machine(self, *, actor, source: str, data: dict) -> ProductionMachine:
         try:
@@ -262,9 +258,9 @@ class MachineFleetService:
         )
 
     def _require_manage_permission(self, actor) -> None:
-        if not self.access_scope_service.can_access_staff_portal(
-            actor
-        ) or not actor.has_perm(self.manage_permission):
+        if not self.access_scope_service.can_access_staff_portal(actor) or not actor.has_perm(
+            self.manage_permission
+        ):
             raise PermissionDenied
 
     def _require_read_permission(self, actor) -> None:

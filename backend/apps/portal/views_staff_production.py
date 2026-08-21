@@ -45,14 +45,9 @@ def production_panel_context(
             order=order,
         ),
         "can_transition": request.user.has_perm("production.transition_productionjob"),
-        "can_assign_machine": request.user.has_perm(
-            "production.assign_productionmachine"
-        ),
-        "can_confirm_print": request.user.has_perm(
-            "production.confirm_productionprint"
-        ),
-        "can_confirm_print_now": job.status
-        in {"in_progress", "ready_to_ship"},
+        "can_assign_machine": request.user.has_perm("production.assign_productionmachine"),
+        "can_confirm_print": request.user.has_perm("production.confirm_productionprint"),
+        "can_confirm_print_now": job.status in {"in_progress", "ready_to_ship"},
         "is_reprint": job.print_records.exists(),
         "print_count": job.print_records.count(),
         "active_machines": active_machines,
@@ -64,9 +59,7 @@ def production_panel_context(
         "production_payment_block_reason": payment_block or "",
         "awaits_client_payment": order_awaits_client_payment(order),
         "meterage_hx_target": "#staff-order-meterage-slot-production",
-        "gang_sheets": GangSheet.objects.for_order(order).filter(
-            status=GangSheet.Status.VALIDATED
-        ),
+        "gang_sheets": GangSheet.objects.for_order(order).filter(status=GangSheet.Status.VALIDATED),
         "can_download_gang_sheet_final": request.user.has_perm(
             "gang_sheets.download_final_gangsheet"
         ),

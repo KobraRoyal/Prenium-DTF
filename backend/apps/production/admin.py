@@ -234,9 +234,7 @@ class ProductionJobMachineAssignmentAdmin(AppendOnlyProductionAdmin):
         "machine_code_snapshot",
         "machine_name_snapshot",
     )
-    readonly_fields = tuple(
-        field.name for field in ProductionJobMachineAssignment._meta.fields
-    )
+    readonly_fields = tuple(field.name for field in ProductionJobMachineAssignment._meta.fields)
     fields = readonly_fields
 
 

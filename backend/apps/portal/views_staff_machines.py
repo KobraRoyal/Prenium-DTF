@@ -43,9 +43,7 @@ def machine_fleet_context(
         ),
         "can_read_print_ledger": can_read_print_ledger,
         "machine_statuses": ProductionMachine.Status.choices,
-        "can_manage_machines": request.user.has_perm(
-            "production.manage_productionmachine"
-        ),
+        "can_manage_machines": request.user.has_perm("production.manage_productionmachine"),
         "form_error": form_error,
         "form_values": form_values or {},
         "edit_machine_public_id": str(edit_machine_public_id or ""),

@@ -84,9 +84,7 @@ class StaffOrderMachineAssignmentView(
         return with_toast(response, "Imprimante attribuée à l’OF.", "success")
 
 
-class StaffOrderPrintConfirmView(
-    StaffOrderMachinePermissionMixin, StaffOrderContextMixin, View
-):
+class StaffOrderPrintConfirmView(StaffOrderMachinePermissionMixin, StaffOrderContextMixin, View):
     template_name = "portal/staff/panels/production.html"
     rejection_action = "production.print.confirmation_rejected"
     required_permissions = (
