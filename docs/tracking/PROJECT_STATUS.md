@@ -40,6 +40,8 @@
   gel comptable des commandes, permissions croisées et audit des exports
 - [x] Sprint 39 — Contrat de production NAS (compose immuable, runbook release, smoke CSS)
 - [x] Sprint 42 — Parc de machines DTF, affectation des OF et preuves d'impression immuables
+- [x] Sprint 43 — Distillation UI/UX de toutes les vues Atelier
+- [x] Sprint 44 — Pilotage Atelier rapide, transitions et Sendcloud sans ouvrir chaque fiche
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement
@@ -73,6 +75,8 @@
 - [x] Récapitulatifs mensuels par client en encours exportables vers l'outil comptable externe
 - [x] Lot 42 — Parc DTF global Atelier, affectation des dossiers, confirmation d'impression,
   historique append-only, RBAC dédié et vues responsive Impeccable
+- [x] Lot 44 — Console de pilotage OF dédiée, scan/recherche, transitions rapides, prérequis
+  explicites et actions Sendcloud inline, avec ancienne route Scan redirigée
 
 ## Derniers chantiers transverses
 
@@ -403,3 +407,25 @@
 - [x] Contrats de déploiement étendus (resolver DNS, absence de conf nginx hôte)
 - [x] Étape CSS Docker : templates copiés avant Tailwind ; fond Atelier hors `@layer`
 - [x] Rebuild NAS `web`/`nginx` : `healthz` 200, `portal.css` 331571 o, `/staff/` fond crème
+
+## Sprint 43 — Distillation UI/UX du portail Atelier (2026-08-21)
+
+- [x] Audit Impeccable de toutes les vues staff et des sept panneaux commande
+- [x] File Atelier, fiche commande et navigation recentrées sur l'action utile
+- [x] Formulaires secondaires machine, remise et refus placés en disclosure progressif
+- [x] Fiche projet B2B modernisée sans texte de sprint obsolète
+- [x] Redondances Facturation, Expédition et Demandes d'accès supprimées
+- [x] Cache CSS invalidé pour le nouveau rendu Atelier
+- [x] Validation finale : 113 tests ciblés, 757 tests globaux, 1 ignoré, Django/Ruff/migrations conformes
+- [x] Recette 1440/768/375 px sans overflow horizontal ni erreur console
+
+## Sprint 44 — Pilotage Atelier rapide (2026-08-21)
+
+- [x] Scan et transitions retirés des fiches commande au profit de `/staff/atelier/pilotage/`
+- [x] Files opérateur paginées, recherche autofocus et actions de statut autorisées en un clic
+- [x] Blocages paiement/tarif expliqués avant action avec accès à la résolution
+- [x] Déclaration et synchronisation Sendcloud disponibles dans la file `À expédier`
+- [x] Feedback HTMX inline, toast et notifications client aux jalons métier conservés
+- [x] Contrôles staff/RBAC avant lookup et audits métier réutilisés
+- [x] Validation finale : 769 tests réussis, 1 ignoré ; Django/Ruff/migrations conformes
+- [x] Recette 1512/1440/375 px sans overflow horizontal ni erreur console

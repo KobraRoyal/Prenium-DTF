@@ -1,4 +1,4 @@
-<section class="card workflow-shell ui-workflow-shell{% if compact %} workflow-shell--compact{% endif %}">
+<section class="card workflow-shell ui-workflow-shell{% if compact %} workflow-shell--compact{% endif %}{% if distilled %} workflow-shell--distilled workflow-shell--tabs-{{ tabs|length }}{% endif %}">
   <div
     class="workflow-tab-rail portal-order-tabs ui-tab-rail{% if compact %} workflow-tab-rail--compact{% endif %}"
     role="tablist"
@@ -22,7 +22,9 @@
         {% if tab.push_url %}hx-push-url="{{ tab.push_url }}"{% endif %}
         hx-indicator="#portal-htmx-indicator"
       >
-        {% if not compact %}
+        {% if distilled %}
+        <strong class="workflow-progress__label">{{ tab.label }}</strong>
+        {% elif not compact %}
         <span class="workflow-progress__number" aria-hidden="true">{{ tab.step_number|stringformat:"02d" }}</span>
         <span class="workflow-progress__copy">
           <strong>{{ tab.label }}</strong>

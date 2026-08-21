@@ -114,6 +114,12 @@ from .views_staff_notifications import (
     StaffEmailTemplateEditView,
     StaffEmailTemplateListView,
 )
+from .views_staff_operations import (
+    StaffAtelierOperationShipmentCreateView,
+    StaffAtelierOperationShipmentSyncView,
+    StaffAtelierOperationsView,
+    StaffAtelierOperationTransitionView,
+)
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
@@ -404,6 +410,26 @@ urlpatterns = [
         name="client-checkout-submit",
     ),
     path("staff/", StaffDashboardView.as_view(), name="staff-dashboard"),
+    path(
+        "staff/atelier/pilotage/",
+        StaffAtelierOperationsView.as_view(),
+        name="staff-atelier-operations",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/transition/",
+        StaffAtelierOperationTransitionView.as_view(),
+        name="staff-atelier-operation-transition",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/shipment/create/",
+        StaffAtelierOperationShipmentCreateView.as_view(),
+        name="staff-atelier-operation-shipment-create",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/shipment/sync/",
+        StaffAtelierOperationShipmentSyncView.as_view(),
+        name="staff-atelier-operation-shipment-sync",
+    ),
     path(
         "staff/machines/",
         StaffMachineFleetView.as_view(),

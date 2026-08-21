@@ -10,9 +10,9 @@
     {% elif order.billing_mode == "deferred" and order.pricing_status == "failed" %}
     Corriger les prérequis (dimensions / inspection), puis relancer le <strong>calcul du prix</strong>.
     {% elif production_job and production_job.status == "queued" %}
-    Prendre en charge l’OF en <strong>Production</strong> ou via <strong>Scan atelier</strong>.
+    Prendre en charge l’OF en <strong>Production</strong> ou depuis le <strong>Pilotage Atelier</strong>.
     {% elif production_job and production_job.status == "in_progress" %}
-    Poursuivre l’atelier ; <strong>Scan atelier</strong> pour les changements de statut.
+    Poursuivre l’atelier ; le <strong>Pilotage Atelier</strong> centralise les changements de statut.
     {% elif production_job and production_job.status == "ready_to_ship" %}
     Préparer l’<strong>Expédition</strong> (déclarer dans Sendcloud).
     {% elif production_job and production_job.status == "blocked" %}

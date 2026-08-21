@@ -9,12 +9,9 @@
 <section class="staff-access-detail" aria-label="Fiche demande d’accès">
   <header class="card staff-access-focus" aria-labelledby="staff-access-title">
     <div class="staff-access-focus__identity">
-      <p class="staff-access-focus__eyebrow">Demande d’accès</p>
       <h1 id="staff-access-title">{{ profile.company }}</h1>
       <div class="staff-access-focus__statuses" aria-label="État de la demande">
         <span class="badge {{ profile.status|badge_tone }}">{{ profile.get_status_display }}</span>
-        <span class="badge is-neutral">{{ profile.get_activity_type_display }}</span>
-        <span class="badge is-neutral">{{ profile.get_urgency_display }}</span>
       </div>
     </div>
     <dl class="staff-access-focus__facts">
@@ -176,26 +173,22 @@
       {% include "components/forms/form_actions.html" with primary_label="Valider et envoyer l’activation" %}
     </form>
 
-    <form
-      class="card staff-access-panel ui-form-stack"
-      method="post"
-      action="{% url 'portal:staff-access-request-reject' profile_public_id=profile.public_id %}"
-      data-submit-loading
-      aria-labelledby="access-reject-heading"
-    >
-      {% csrf_token %}
-      <div class="staff-access-panel__head">
-        <div>
-          <h2 id="access-reject-heading">Refuser la demande</h2>
-          <p class="muted text-sm m-0">Le motif est envoyé au prospect ; la note reste interne.</p>
-        </div>
-      </div>
-      {% include "portal/staff/customers/_field.html" with field=rejection_form.rejection_reason %}
-      {% include "portal/staff/customers/_field.html" with field=rejection_form.review_note %}
-      <div class="ui-form-actions">
-        <button class="ui-btn ui-btn-danger" type="submit">Refuser et notifier</button>
-      </div>
-    </form>
+    <details class="card staff-access-panel access-review-reject" {% if rejection_form.errors %}open{% endif %}>
+      <summary><span><strong id="access-reject-heading">Refuser la demande</strong><small>Action secondaire et irréversible</small></span><span aria-hidden="true">+</span></summary>
+      <form
+        class="ui-form-stack"
+        method="post"
+        action="{% url 'portal:staff-access-request-reject' profile_public_id=profile.public_id %}"
+        data-submit-loading
+        aria-labelledby="access-reject-heading"
+      >
+        {% csrf_token %}
+        <p class="muted text-sm m-0">Le motif est envoyé au prospect ; la note reste interne.</p>
+        {% include "portal/staff/customers/_field.html" with field=rejection_form.rejection_reason %}
+        {% include "portal/staff/customers/_field.html" with field=rejection_form.review_note %}
+        <div class="ui-form-actions"><button class="ui-btn ui-btn-danger" type="submit">Refuser et notifier</button></div>
+      </form>
+    </details>
   </div>
   {% endif %}
 </section>

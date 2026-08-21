@@ -26,7 +26,6 @@
     padding: 0;
   }
 
-  .staff-order-focus__eyebrow,
   .staff-order-focus__next-label {
     margin: 0;
     color: var(--ui-text-muted);
@@ -36,11 +35,15 @@
     text-transform: uppercase;
   }
 
-  .staff-order-focus__eyebrow {
+  .staff-order-focus__reference-line {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.45rem 0.65rem;
+    margin: 0.45rem 0 0.75rem;
+    color: var(--ui-text-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
   }
 
   .staff-order-focus__ref {
@@ -58,7 +61,7 @@
   }
 
   .staff-order-focus__identity h1 {
-    margin: 0.4rem 0 0.35rem;
+    margin: 0;
     font-family: var(--ui-font-display);
     font-size: clamp(1.55rem, 2.6vw, 2.15rem);
     line-height: 1.08;
@@ -674,6 +677,272 @@
   }
 }
 
+/* Fiche commande Atelier distillée — identité, action, puis détail à la demande. */
+@layer components {
+  body.product-shell .staff-order-focus__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(19rem, 0.85fr);
+    align-items: stretch;
+    gap: 1rem;
+    padding: clamp(1rem, 2.2vw, 1.35rem);
+  }
+
+  body.product-shell .staff-order-focus__identity {
+    display: grid;
+    align-content: center;
+  }
+
+  body.product-shell .staff-order-focus__meta {
+    margin: 0.55rem 0 0.8rem;
+  }
+
+  body.product-shell .staff-order-focus__next {
+    display: grid;
+    align-content: center;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid var(--product-line, #0b0b0b);
+    background: color-mix(in srgb, var(--product-accent, #dcff1a) 24%, var(--product-panel, #fffdf8));
+  }
+
+  body.product-shell .staff-order-focus__next-message {
+    margin-top: 0.2rem;
+    font-size: 0.92rem;
+  }
+
+  body.product-shell .staff-order-focus__primary {
+    justify-content: flex-start;
+  }
+
+  body.product-shell .workflow-shell--distilled .workflow-tab-group__chips.workflow-progress {
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  }
+
+  body.product-shell .workflow-shell--distilled .workflow-progress .ui-tab-chip {
+    display: flex;
+    min-height: 3.15rem;
+    justify-content: center;
+    padding: 0.65rem 0.8rem;
+    text-align: center;
+  }
+
+  body.product-shell .workflow-progress__label {
+    color: inherit;
+    font-size: 0.8rem;
+    font-weight: 850;
+  }
+
+  body.product-shell .workflow-disclosure {
+    overflow: hidden;
+    border: 1px solid var(--product-line, #0b0b0b);
+    background: var(--product-panel, #fffdf8);
+  }
+
+  body.product-shell .workflow-disclosure > summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 0.65rem;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3rem;
+    padding: 0.7rem 0.85rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  body.product-shell .workflow-disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  body.product-shell .workflow-disclosure > summary::after {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    content: "";
+    transform: rotate(45deg);
+    transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  body.product-shell .workflow-disclosure[open] > summary {
+    border-bottom: 1px solid var(--product-line, #0b0b0b);
+    background: color-mix(in srgb, var(--product-accent, #dcff1a) 10%, var(--product-panel, #fffdf8));
+  }
+
+  body.product-shell .workflow-disclosure[open] > summary::after {
+    transform: rotate(225deg);
+  }
+
+  body.product-shell .workflow-disclosure > summary:focus-visible {
+    outline: 3px solid var(--product-blue, #00b8ff);
+    outline-offset: -3px;
+  }
+
+  body.product-shell .workflow-disclosure > summary span {
+    font-size: 0.8rem;
+    font-weight: 850;
+  }
+
+  body.product-shell .workflow-disclosure > summary strong {
+    color: var(--product-muted, #4c463b);
+    font-size: 0.7rem;
+    font-weight: 750;
+  }
+
+  body.product-shell .operator-machine__history-disclosure {
+    border-width: 1px 0 0;
+  }
+
+  body.product-shell .production-meterage,
+  body.product-shell .production-history,
+  body.product-shell .billing-breakdown {
+    margin-top: 1rem;
+  }
+
+  body.product-shell .production-meterage .staff-meterage-section,
+  body.product-shell .production-history .operator-history {
+    margin: 0;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  body.product-shell .production-meterage .staff-meterage-section {
+    padding: 1rem;
+  }
+
+  body.product-shell .production-history .operator-history {
+    padding: 1rem;
+  }
+
+  body.product-shell .billing-total {
+    display: grid;
+    grid-template-columns: minmax(12rem, 0.65fr) minmax(0, 1.35fr);
+    border: 1px solid var(--product-line, #0b0b0b);
+    background: var(--product-panel, #fffdf8);
+  }
+
+  body.product-shell .billing-total > div {
+    display: grid;
+    align-content: center;
+    gap: 0.25rem;
+    min-width: 0;
+    padding: 1rem;
+  }
+
+  body.product-shell .billing-total > div + div {
+    border-left: 1px solid var(--product-line, #0b0b0b);
+  }
+
+  body.product-shell .billing-total__amount span,
+  body.product-shell .billing-breakdown__list dt {
+    color: var(--product-muted, #4c463b);
+    font-size: 0.68rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .billing-total__amount strong {
+    font-family: var(--ui-font-display, "Space Grotesk", sans-serif);
+    font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+    letter-spacing: -0.025em;
+  }
+
+  body.product-shell .billing-total__amount small,
+  body.product-shell .billing-total__state p {
+    margin: 0;
+    color: var(--product-muted, #4c463b);
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  body.product-shell .billing-total__state strong {
+    font-size: 0.9rem;
+  }
+
+  body.product-shell .billing-breakdown__list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+  }
+
+  body.product-shell .billing-breakdown__list > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 0.85rem;
+  }
+
+  body.product-shell .billing-breakdown__list > div + div {
+    border-top: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 20%, transparent);
+  }
+
+  body.product-shell .billing-breakdown__list dd {
+    margin: 0;
+    text-align: right;
+    font-size: 0.78rem;
+    font-weight: 750;
+  }
+
+  body.product-shell .shipping-submit-bar > p {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  @media (max-width: 800px) {
+    body.product-shell .staff-order-focus__header,
+    body.product-shell .billing-total {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.product-shell .billing-total > div + div {
+      border-top: 1px solid var(--product-line, #0b0b0b);
+      border-left: 0;
+    }
+  }
+
+  @media (max-width: 640px) {
+    body.product-shell .workflow-shell--distilled .workflow-tab-group__chips.workflow-progress {
+      display: flex;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scrollbar-width: thin;
+    }
+
+    body.product-shell .workflow-shell--distilled .workflow-progress .ui-tab-chip {
+      flex: 0 0 8.25rem;
+      min-height: 3.1rem;
+      border-right: 1px solid var(--product-line, #0b0b0b) !important;
+      border-bottom: 0;
+    }
+
+    body.product-shell .workflow-disclosure > summary {
+      grid-template-columns: minmax(0, 1fr) 0.65rem;
+    }
+
+    body.product-shell .workflow-disclosure > summary strong {
+      display: none;
+    }
+
+    body.product-shell .billing-breakdown__list > div {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    body.product-shell .billing-breakdown__list dd {
+      text-align: left;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body.product-shell .workflow-disclosure > summary::after {
+      transition: none;
+    }
+  }
+}
+
 /* Atelier DTF — attribution machine et preuve d'impression. */
 @layer components {
   body.product-shell .operator-machine {
@@ -699,6 +968,10 @@
     min-width: 0;
   }
 
+  body.product-shell .operator-machine__workspace.is-readonly {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   body.product-shell .operator-machine__current,
   body.product-shell .operator-machine__assign {
     min-width: 0;
@@ -708,6 +981,10 @@
   body.product-shell .operator-machine__current {
     border-right: 1px solid var(--product-line, #0b0b0b);
     background: color-mix(in srgb, var(--product-accent, #dcff1a) 12%, white);
+  }
+
+  body.product-shell .operator-machine__workspace.is-readonly .operator-machine__current {
+    border-right: 0;
   }
 
   body.product-shell .operator-machine__current > span,
@@ -942,9 +1219,9 @@
     text-underline-offset: 0.2em;
   }
 
-  body.product-shell .workflow-progress {
+  body.product-shell .workflow-tab-group__chips.workflow-progress {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0;
     padding: 0;
     border: 2px solid var(--product-line, #0b0b0b);
@@ -1041,10 +1318,7 @@
     display: grid;
     gap: clamp(1rem, 2vw, 1.35rem);
     padding: clamp(0.9rem, 2.2vw, 1.35rem);
-    background:
-      linear-gradient(90deg, color-mix(in srgb, var(--product-line, #0b0b0b) 4%, transparent) 1px, transparent 1px),
-      linear-gradient(180deg, var(--product-surface, #fffdf9), color-mix(in srgb, var(--product-surface-muted, #f2f0eb) 60%, white));
-    background-size: 2.5rem 100%, 100% 100%;
+    background: var(--product-surface, #fffdf9);
     animation: operator-panel-in 180ms ease-out both;
   }
 
@@ -1463,7 +1737,7 @@
   }
 
   @media (max-width: 900px) {
-    body.product-shell .workflow-progress { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    body.product-shell .workflow-tab-group__chips.workflow-progress { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     body.product-shell .workflow-progress .ui-tab-chip { border-bottom: 1px solid var(--product-line, #0b0b0b); }
     body.product-shell .workflow-progress .ui-tab-chip::after { display: none; }
     body.product-shell .workflow-progress .ui-tab-chip:nth-child(2n) { border-right: 0; }
@@ -1485,7 +1759,7 @@
     body.product-shell .staff-order-focus__facts > div { border-left: 0 !important; border-top: 1px solid var(--product-line, #0b0b0b); }
     body.product-shell .staff-order-focus__facts > div:first-child { border-top: 0; }
     body.product-shell .staff-order-focus__back { margin-left: 0; }
-    body.product-shell .workflow-progress { grid-template-columns: minmax(0, 1fr); }
+    body.product-shell .workflow-tab-group__chips.workflow-progress { grid-template-columns: minmax(0, 1fr); }
     body.product-shell .workflow-progress .ui-tab-chip { min-height: 3.7rem; border-right: 0; }
     body.product-shell .workflow-progress .ui-tab-chip:last-child { border-bottom: 0; }
     .workflow-progress__copy small { display: block; }

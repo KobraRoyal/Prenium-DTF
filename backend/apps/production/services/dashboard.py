@@ -168,6 +168,9 @@ class AtelierDashboardService:
             "print_eligible": print_eligible,
             "next_action": next_action,
             "next_panel": next_panel,
+            "next_via_operations": bool(
+                next_action != "Tarifer" and next_panel in {"production", "shipping"}
+            ),
         }
 
     def _review_state(self, *, upload_count: int, counter: Counter) -> tuple[str, str, str]:

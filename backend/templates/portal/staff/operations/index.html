@@ -1,0 +1,56 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Pilotage Atelier - Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<!--
+THESIS: une console de gestes successifs, pas une collection de fiches commande miniatures.
+OWN-WORLD: papier atelier, encre franche, accent terracotta, lignes nettes et contrôles rectangulaires.
+STORY: l'opérateur scanne ou recherche un OF, lit son état, exécute le prochain geste et reste dans la file.
+FIRST VIEWPORT: champ OF autofocus pleine largeur, quatre filtres de file, puis lignes d'action compactes.
+FORM: registre opérationnel inline, extension directe du monde Atelier établi.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
+<section class="atelier-operations-head">
+  {% include "components/portal/page_head.html" with title="Pilotage Atelier" subtitle="Scannez un OF, changez son statut et déclenchez l’action suivante sans quitter la file." %}
+
+  <form
+    class="atelier-operations-scan"
+    method="get"
+    action="{% url 'portal:staff-atelier-operations' %}"
+    hx-get="{% url 'portal:staff-atelier-operations' %}"
+    hx-target="#atelier-operations-workspace"
+    hx-swap="outerHTML"
+    hx-push-url="true"
+    hx-indicator="#portal-htmx-indicator"
+    x-data="{ focused: false }"
+    x-init="$nextTick(() => $refs.operationScan.focus({ preventScroll: true }))"
+  >
+    <input type="hidden" name="queue" value="{{ queue }}">
+    <div class="atelier-operations-scan__field">
+      <label for="atelier-operation-query">Référence OF ou client</label>
+      <input
+        class="ui-input"
+        id="atelier-operation-query"
+        name="q"
+        value="{{ query }}"
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="OF-… ou nom du client"
+        x-ref="operationScan"
+        @focus="focused = true"
+        @blur="focused = false"
+      >
+    </div>
+    <button class="ui-btn ui-btn-primary" type="submit">Afficher l’OF</button>
+    {% if query %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-atelier-operations' %}?queue={{ queue }}">Effacer</a>{% endif %}
+    <p class="atelier-operations-scan__signal" :class="{ 'is-ready': focused }" aria-live="polite">
+      <span aria-hidden="true"></span>
+      <span x-text="focused ? 'Douchette prête' : 'Cliquez dans le champ pour scanner'">Douchette prête</span>
+    </p>
+  </form>
+</section>
+
+{% include "portal/staff/operations/_workspace.html" %}
+{% endblock %}

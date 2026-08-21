@@ -183,6 +183,63 @@ body.product-shell .access-review-actions .ui-form-actions {
   margin-top: 0.25rem;
 }
 
+body.product-shell .access-review-actions {
+  grid-template-columns: minmax(0, 1.25fr) minmax(16rem, 0.75fr);
+}
+
+body.product-shell .access-review-reject {
+  padding: 0;
+}
+
+body.product-shell .access-review-reject > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+body.product-shell .access-review-reject > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.product-shell .access-review-reject > summary > span:first-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+body.product-shell .access-review-reject > summary strong {
+  font-family: var(--ui-font-display);
+  font-size: 0.95rem;
+}
+
+body.product-shell .access-review-reject > summary small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+body.product-shell .access-review-reject > summary > span:last-child {
+  color: var(--danger);
+  font-size: 1.2rem;
+  font-weight: 800;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.product-shell .access-review-reject[open] > summary {
+  border-bottom: 1px solid var(--product-line, var(--line));
+}
+
+body.product-shell .access-review-reject[open] > summary > span:last-child {
+  transform: rotate(45deg);
+}
+
+body.product-shell .access-review-reject > form {
+  padding: 1rem;
+}
+
 .team-layout {
   grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
   gap: 1.25rem;

@@ -54,6 +54,11 @@ def test_portal_legacy_views_facade_is_removed():
         ),
         ("portal:staff-dashboard", {}, "apps.portal.views_staff_dashboard"),
         (
+            "portal:staff-atelier-operations",
+            {},
+            "apps.portal.views_staff_operations",
+        ),
+        (
             "portal:staff-manufacturing-order-batch-pdf",
             {},
             "apps.portal.views_staff_documents",
@@ -121,7 +126,20 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
         ),
         (
             "views_staff_shipping",
-            {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff"},
+            {
+                "apps.portal.htmx",
+                "apps.portal.shipping_forms",
+                "apps.portal.views_common",
+                "apps.portal.views_staff",
+            },
+        ),
+        (
+            "views_staff_operations",
+            {
+                "apps.portal.htmx",
+                "apps.portal.shipping_forms",
+                "apps.portal.views_common",
+            },
         ),
         (
             "views_staff_billing",
@@ -152,6 +170,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_staff_billing", 170),
         ("views_staff_production", 180),
         ("views_staff_shipping", 190),
+        ("views_staff_operations", 240),
         ("views_common", 220),
         ("views_checkout", 260),
         ("views_client", 420),

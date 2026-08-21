@@ -6,24 +6,11 @@ from django.shortcuts import render
 from django.views import View
 
 from apps.portal.htmx import with_toast
+from apps.portal.shipping_forms import build_shipment_form_data, build_shipment_payload
 from apps.portal.views_common import badge_tone_for_status, shipment_service, status_label
 from apps.portal.views_staff import StaffOrderContextMixin
 from apps.production.models import ProductionJob
 from apps.shipping.views import build_label_download_response
-
-_FORM_KEYS = (
-    "recipient_name",
-    "recipient_company_name",
-    "recipient_email",
-    "recipient_phone_number",
-    "recipient_country_code",
-    "recipient_city",
-    "recipient_postal_code",
-    "recipient_address_line_1",
-    "recipient_address_line_2",
-    "recipient_house_number",
-    "parcel_weight_value",
-)
 
 
 class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
@@ -35,22 +22,10 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def _form_data(self, request):
-        customer = self.order.customer
-        if request.method == "POST":
-            return {key: request.POST.get(key, "") for key in _FORM_KEYS}
-        return {
-            "recipient_name": customer.name,
-            "recipient_company_name": customer.name,
-            "recipient_email": customer.billing_email,
-            "recipient_phone_number": "",
-            "recipient_country_code": customer.shipping_country or "FR",
-            "recipient_city": customer.shipping_city,
-            "recipient_postal_code": customer.shipping_postal_code,
-            "recipient_address_line_1": customer.shipping_address_line1,
-            "recipient_address_line_2": customer.shipping_address_line2,
-            "recipient_house_number": "",
-            "parcel_weight_value": "1.0",
-        }
+        return build_shipment_form_data(
+            order=self.order,
+            submitted_data=request.POST if request.method == "POST" else None,
+        )
 
     def _panel_context(self, request, *, shipment, form_error: str = ""):
         try:
@@ -83,30 +58,13 @@ class StaffOrderPanelShippingView(StaffOrderContextMixin, View):
         if not request.user.has_perm("shipping.create_shipment"):
             raise PermissionDenied
 
-        payload = {
-            "recipient": {
-                "name": request.POST.get("recipient_name", ""),
-                "address_line_1": request.POST.get("recipient_address_line_1", ""),
-                "house_number": request.POST.get("recipient_house_number", ""),
-                "postal_code": request.POST.get("recipient_postal_code", ""),
-                "city": request.POST.get("recipient_city", ""),
-                "country_code": request.POST.get("recipient_country_code", ""),
-                "email": request.POST.get("recipient_email", ""),
-                "company_name": request.POST.get("recipient_company_name", ""),
-                "address_line_2": request.POST.get("recipient_address_line_2", ""),
-                "phone_number": request.POST.get("recipient_phone_number", ""),
-            },
-            "parcel": {
-                "weight": {"value": request.POST.get("parcel_weight_value", ""), "unit": "kg"}
-            },
-        }
         form_error = ""
         try:
             _order, shipment = shipment_service.create_shipment(
                 order_public_id=self.order.public_id,
                 actor=request.user,
                 source="staff_portal",
-                payload=payload,
+                payload=build_shipment_payload(request.POST),
             )
         except ValidationError as exc:
             _order, shipment = shipment_service.get_staff_shipment(

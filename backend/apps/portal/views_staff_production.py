@@ -17,7 +17,7 @@ from apps.portal.views_common import (
     status_label,
 )
 from apps.portal.views_staff import StaffOrderContextMixin
-from apps.production.models import ProductionMachine
+from apps.production.models import ProductionJob, ProductionMachine
 
 
 def production_panel_context(
@@ -37,6 +37,13 @@ def production_panel_context(
     meterage = meterage_context_for_order(request, order, "")
     payment_block = production_start_blocked_reason(order)
     active_machines = ProductionMachine.objects.active().order_by("code", "name")
+    assignment_count = job.machine_assignments.count()
+    print_count = job.print_records.count()
+    can_assign_machine_now = job.status in {
+        ProductionJob.Status.QUEUED,
+        ProductionJob.Status.IN_PROGRESS,
+        ProductionJob.Status.BLOCKED,
+    }
     return {
         "order": order,
         "job": job,
@@ -46,10 +53,19 @@ def production_panel_context(
         ),
         "can_transition": request.user.has_perm("production.transition_productionjob"),
         "can_assign_machine": request.user.has_perm("production.assign_productionmachine"),
+        "can_assign_machine_now": can_assign_machine_now,
         "can_confirm_print": request.user.has_perm("production.confirm_productionprint"),
         "can_confirm_print_now": job.status in {"in_progress", "ready_to_ship"},
-        "is_reprint": job.print_records.exists(),
-        "print_count": job.print_records.count(),
+        "is_reprint": print_count > 0,
+        "print_count": print_count,
+        "assignment_count": assignment_count,
+        "transition_count": job.transitions.count(),
+        "show_machine_workspace": bool(
+            can_assign_machine_now
+            or job.assigned_machine_id
+            or assignment_count
+            or print_count
+        ),
         "active_machines": active_machines,
         "transition_error": transition_error,
         "machine_error": machine_error,

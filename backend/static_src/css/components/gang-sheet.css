@@ -1,9 +1,49 @@
-.gang-sheet-page,
+  .gang-sheet-page,
   .gang-settings-page,
   .gang-editor {
     display: grid;
     gap: clamp(1rem, 2vw, 1.4rem);
     color: var(--product-ink, #0b0b0b);
+  }
+
+  .gang-settings-page > .page-head {
+    margin: 0;
+    padding-bottom: 1.1rem;
+    border-bottom: 2px solid var(--product-line, #0b0b0b);
+  }
+
+  .gang-settings-page .gang-sheet-create-card {
+    display: grid;
+    grid-template-columns: minmax(15rem, 0.65fr) minmax(20rem, 1.35fr);
+    gap: 1.25rem;
+    align-items: start;
+    padding: 1.15rem;
+    border: 2px solid var(--product-line, #0b0b0b);
+    background: var(--product-panel, #fffdf8);
+    box-shadow: 4px 4px 0 var(--product-line, #0b0b0b);
+  }
+
+  .gang-settings-page .gang-sheet-create-card h2,
+  .gang-settings-page .gang-sheet-create-card p {
+    margin: 0;
+  }
+
+  .gang-settings-page .gang-sheet-create-card h2 {
+    font: 900 1.15rem/1.2 "Space Grotesk", system-ui, sans-serif;
+  }
+
+  .gang-settings-page .gang-sheet-create-card p {
+    max-width: 45ch;
+    margin-top: 0.35rem;
+    color: var(--product-muted, #4c463b);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 720px) {
+    .gang-settings-page .gang-sheet-create-card {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .gang-editor {

@@ -48,6 +48,8 @@
 - [Sprint 39 — Contrat de production NAS](sprint-39-nas-production-contract.md)
 - [Sprint 41 — Remise volume comptant prospective](sprint-41-remise-volume-comptant-prospective.md)
 - [Sprint 42 — Parc de machines DTF et historique d'impression](sprint-42-parc-machines-dtf.md)
+- [Sprint 43 — Distillation UI/UX du portail Atelier](sprint-43-distillation-ui-ux-atelier.md)
+- [Sprint 44 — Pilotage Atelier rapide](sprint-44-pilotage-atelier.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

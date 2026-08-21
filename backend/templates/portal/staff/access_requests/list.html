@@ -17,10 +17,6 @@
         <dt>Urgence élevée</dt>
         <dd>{{ high_urgency_pending_count }}</dd>
       </div>
-      <div>
-        <dt>Résultats affichés</dt>
-        <dd>{{ page_obj.paginator.count }}</dd>
-      </div>
     </dl>
     <form class="access-request-search" method="get" role="search">
       <input name="status" type="hidden" value="{{ active_status }}">

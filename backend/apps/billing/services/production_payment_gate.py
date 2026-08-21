@@ -14,6 +14,9 @@ def requires_captured_payment_before_production(order: Order) -> bool:
 
 
 def order_has_captured_payment(order: Order) -> bool:
+    prefetched_payments = getattr(order, "_captured_payments", None)
+    if prefetched_payments is not None:
+        return bool(prefetched_payments)
     return Payment.objects.filter(
         order_id=order.pk,
         status=Payment.Status.CAPTURED,

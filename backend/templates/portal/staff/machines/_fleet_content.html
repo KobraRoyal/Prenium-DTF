@@ -15,37 +15,6 @@
   {% endif %}
 
   <div class="machine-fleet-layout">
-    {% if can_manage_machines %}
-    <section class="machine-fleet-create" aria-labelledby="machine-fleet-create-title">
-      <header>
-        <h2 id="machine-fleet-create-title">Ajouter une imprimante</h2>
-        <p>Le code reste court et stable : il sera figé dans chaque historique d’impression.</p>
-      </header>
-      <form
-        class="ui-form-stack"
-        hx-post="{% url 'portal:staff-machine-create' %}"
-        hx-target="#machine-fleet-content"
-        hx-swap="outerHTML"
-        hx-indicator="#portal-htmx-indicator"
-        data-submit-loading
-      >
-        {% csrf_token %}
-        <div class="machine-form-grid">
-          <div class="ui-field-group"><label class="ui-label" for="machine-code">Code machine</label><input class="ui-input" id="machine-code" name="code" value="{{ form_values.code|default:'' }}" placeholder="DTF-01" maxlength="32" required></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-name">Nom d’usage</label><input class="ui-input" id="machine-name" name="name" value="{{ form_values.name|default:'' }}" placeholder="Atlas" maxlength="120" required></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-manufacturer">Fabricant</label><input class="ui-input" id="machine-manufacturer" name="manufacturer" value="{{ form_values.manufacturer|default:'' }}" placeholder="Epson, Mimaki…" maxlength="80"></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-model">Modèle</label><input class="ui-input" id="machine-model" name="model_name" value="{{ form_values.model_name|default:'' }}" placeholder="Référence du modèle" maxlength="120"></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-width">Laize maximale</label><div class="machine-width-input"><input class="ui-input" id="machine-width" name="max_print_width_cm" value="{{ form_values.max_print_width_cm|default:'' }}" inputmode="decimal" placeholder="60"><span>cm</span></div></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-location">Emplacement</label><input class="ui-input" id="machine-location" name="location" value="{{ form_values.location|default:'' }}" placeholder="Atelier nord" maxlength="120"></div>
-        </div>
-        <input type="hidden" name="status" value="active">
-        <div class="ui-field-group"><label class="ui-label" for="machine-serial">Numéro de série <span>(interne)</span></label><input class="ui-input" id="machine-serial" name="serial_number" value="{{ form_values.serial_number|default:'' }}" maxlength="120" autocomplete="off"></div>
-        <div class="ui-field-group"><label class="ui-label" for="machine-notes">Notes Atelier</label><textarea class="ui-input" id="machine-notes" name="notes" rows="3" maxlength="2000" placeholder="Consignes utiles à l’équipe…">{{ form_values.notes|default:'' }}</textarea></div>
-        {% include "components/forms/form_actions.html" with primary_label="Ajouter au parc" htmx_disable=1 form_actions_class="machine-fleet-create__actions" %}
-      </form>
-    </section>
-    {% endif %}
-
     <section class="machine-fleet-register" aria-labelledby="machine-fleet-register-title">
       <header>
         <div><h2 id="machine-fleet-register-title">Machines enregistrées</h2><p>Disponibilité, charge active et historique restent lisibles au même endroit.</p></div>
@@ -105,6 +74,35 @@
       </div>
       {% endif %}
     </section>
+
+    {% if can_manage_machines %}
+    <details class="machine-fleet-create" {% if form_error %}open{% endif %}>
+      <summary id="machine-fleet-create-title"><span><strong>Ajouter une imprimante</strong><small>Créer un nouveau poste dans le parc</small></span><span aria-hidden="true">+</span></summary>
+      <p class="machine-fleet-create__intro">Le code reste court et stable : il sera figé dans chaque historique d’impression.</p>
+      <form
+        class="ui-form-stack"
+        hx-post="{% url 'portal:staff-machine-create' %}"
+        hx-target="#machine-fleet-content"
+        hx-swap="outerHTML"
+        hx-indicator="#portal-htmx-indicator"
+        data-submit-loading
+      >
+        {% csrf_token %}
+        <div class="machine-form-grid">
+          <div class="ui-field-group"><label class="ui-label" for="machine-code">Code machine</label><input class="ui-input" id="machine-code" name="code" value="{{ form_values.code|default:'' }}" placeholder="DTF-01" maxlength="32" required></div>
+          <div class="ui-field-group"><label class="ui-label" for="machine-name">Nom d’usage</label><input class="ui-input" id="machine-name" name="name" value="{{ form_values.name|default:'' }}" placeholder="Atlas" maxlength="120" required></div>
+          <div class="ui-field-group"><label class="ui-label" for="machine-manufacturer">Fabricant</label><input class="ui-input" id="machine-manufacturer" name="manufacturer" value="{{ form_values.manufacturer|default:'' }}" placeholder="Epson, Mimaki…" maxlength="80"></div>
+          <div class="ui-field-group"><label class="ui-label" for="machine-model">Modèle</label><input class="ui-input" id="machine-model" name="model_name" value="{{ form_values.model_name|default:'' }}" placeholder="Référence du modèle" maxlength="120"></div>
+          <div class="ui-field-group"><label class="ui-label" for="machine-width">Laize maximale</label><div class="machine-width-input"><input class="ui-input" id="machine-width" name="max_print_width_cm" value="{{ form_values.max_print_width_cm|default:'' }}" inputmode="decimal" placeholder="60"><span>cm</span></div></div>
+          <div class="ui-field-group"><label class="ui-label" for="machine-location">Emplacement</label><input class="ui-input" id="machine-location" name="location" value="{{ form_values.location|default:'' }}" placeholder="Atelier nord" maxlength="120"></div>
+        </div>
+        <input type="hidden" name="status" value="active">
+        <div class="ui-field-group"><label class="ui-label" for="machine-serial">Numéro de série <span>(interne)</span></label><input class="ui-input" id="machine-serial" name="serial_number" value="{{ form_values.serial_number|default:'' }}" maxlength="120" autocomplete="off"></div>
+        <div class="ui-field-group"><label class="ui-label" for="machine-notes">Notes Atelier</label><textarea class="ui-input" id="machine-notes" name="notes" rows="3" maxlength="2000" placeholder="Consignes utiles à l’équipe…">{{ form_values.notes|default:'' }}</textarea></div>
+        {% include "components/forms/form_actions.html" with primary_label="Ajouter au parc" htmx_disable=1 form_actions_class="machine-fleet-create__actions" %}
+      </form>
+    </details>
+    {% endif %}
   </div>
 
   {% if can_read_print_ledger %}

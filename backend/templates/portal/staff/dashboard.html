@@ -5,18 +5,7 @@
 
 {% block portal_content %}
 <section class="atelier-dashboard-head">
-  {% include "components/portal/page_head.html" with kicker="Pilotage Atelier" title="File Atelier" subtitle="Décidez quoi traiter maintenant, puis imprimez uniquement les OF prêts pour la production." %}
-  <nav class="atelier-dashboard-head__actions" aria-label="Accès rapides Atelier">
-    {% if can_read_projects %}
-    <a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-order-project-list' %}">Projets B2B</a>
-    {% endif %}
-    {% if can_read_orders %}
-    <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-list' %}">Toutes les commandes</a>
-    {% endif %}
-    {% if can_read_machine_fleet %}
-    <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-machine-fleet' %}">Parc machines DTF</a>
-    {% endif %}
-  </nav>
+  {% include "components/portal/page_head.html" with title="File Atelier" subtitle="Traitez la prochaine commande utile et imprimez uniquement les OF validés." %}
 </section>
 
 {% if batch_error %}
@@ -37,7 +26,11 @@
     <strong>{{ worklist_rows.0.next_action }} la commande #{{ worklist_rows.0.order_reference }}</strong>
     <span>{{ worklist_rows.0.order.customer.name }} · {{ worklist_rows.0.review_label }}</span>
   </div>
+  {% if worklist_rows.0.next_via_operations %}
+  <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-atelier-operations' %}?q={{ worklist_rows.0.of_number|urlencode }}">{{ worklist_rows.0.next_action }}</a>
+  {% else %}
   <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-order-detail' order_public_id=worklist_rows.0.order.public_id %}?panel={{ worklist_rows.0.next_panel }}">{{ worklist_rows.0.next_action }}</a>
+  {% endif %}
 </aside>
 {% endif %}
 
@@ -55,19 +48,6 @@
     </div>
     <div class="atelier-worklist__batch-actions">
       <button
-        class="ui-btn ui-btn-ghost"
-        type="button"
-        {% if not printable_count %}disabled{% endif %}
-        @click="selected = Array.from($el.closest('form').querySelectorAll('input[name=order_public_ids]:not(:disabled)')).map((input) => input.value)"
-      >Tout sélectionner</button>
-      <button
-        class="ui-btn ui-btn-secondary"
-        type="submit"
-        name="batch_mode"
-        value="latest_ready"
-        {% if not ready_to_print_count %}disabled{% endif %}
-      >Imprimer les 5 derniers OF prêts</button>
-      <button
         class="ui-btn ui-btn-primary"
         type="submit"
         name="batch_mode"
@@ -77,6 +57,24 @@
         <span x-show="selected.length === 0">Imprimer la sélection</span>
         <span x-show="selected.length > 0" x-text="`Imprimer ${selected.length} OF`"></span>
       </button>
+      <details class="atelier-worklist__batch-more">
+        <summary class="ui-btn ui-btn-secondary">Autres impressions</summary>
+        <div>
+          <button
+            class="ui-btn ui-btn-ghost"
+            type="button"
+            {% if not printable_count %}disabled{% endif %}
+            @click="selected = Array.from($el.closest('form').querySelectorAll('input[name=order_public_ids]:not(:disabled)')).map((input) => input.value)"
+          >Sélectionner tous les OF imprimables</button>
+          <button
+            class="ui-btn ui-btn-secondary"
+            type="submit"
+            name="batch_mode"
+            value="latest_ready"
+            {% if not ready_to_print_count %}disabled{% endif %}
+          >Imprimer les 5 derniers OF prêts</button>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -151,10 +149,17 @@
       </div>
 
       <div class="atelier-order-row__action">
+        {% if row.next_via_operations %}
+        <a
+          class="ui-btn ui-btn-secondary"
+          href="{% url 'portal:staff-atelier-operations' %}?q={{ row.of_number|urlencode }}"
+        >{{ row.next_action }}</a>
+        {% else %}
         <a
           class="ui-btn ui-btn-secondary"
           href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel={{ row.next_panel }}"
         >{{ row.next_action }}</a>
+        {% endif %}
       </div>
     </li>
     {% endfor %}

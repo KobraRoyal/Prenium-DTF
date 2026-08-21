@@ -131,7 +131,7 @@ def test_staff_inspection_panel_uses_clear_machine_and_human_labels(client):
 
     assert response.status_code == 200
     html = response.content.decode()
-    assert "Validation des fichiers" in html
+    assert "Contrôle fichiers" in html
     assert "Analyse réussie" in html
     assert "À contrôler" in html
     assert "Approuver pour production" in html
