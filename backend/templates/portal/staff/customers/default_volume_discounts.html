@@ -45,11 +45,9 @@
     {% endif %}
   </div>
 
-  <aside class="volume-tier-create-card" aria-labelledby="new-default-tier-title">
-    <div class="volume-tier-create-card__head">
-      <h2 id="new-default-tier-title">Ajouter un palier</h2>
-      <p>Définissez le volume mensuel à atteindre, puis la remise appliquée à tout le DTF éligible du mois.</p>
-    </div>
+  <details class="volume-tier-create-card" {% if add_form.errors or not tier_rows %}open{% endif %}>
+    <summary class="volume-tier-create-card__head" id="new-default-tier-title"><span><strong>Ajouter un palier</strong><small>Étendre la grille de référence</small></span><span aria-hidden="true">+</span></summary>
+    <p class="volume-tier-create-card__intro">Définissez le volume mensuel à atteindre, puis la remise appliquée à tout le DTF éligible du mois.</p>
     <form class="ui-form-stack" method="post" action="{% url 'portal:staff-default-volume-discount-tier-create' %}" data-submit-loading>
       {% csrf_token %}
       {% if add_form.non_field_errors %}<p class="error-text ui-error-text" role="alert">{{ add_form.non_field_errors|striptags }}</p>{% endif %}
@@ -71,7 +69,7 @@
       </label>
       <button class="ui-btn ui-btn-primary" type="submit">Ajouter à la grille</button>
     </form>
-  </aside>
+  </details>
 </section>
 
 <section class="volume-nudge-copy" id="volume-nudge-copy" data-testid="volume-nudge-copy" aria-labelledby="volume-nudge-copy-title" x-data="{ audience: '{{ copy_audience|default:'immediate' }}' }">

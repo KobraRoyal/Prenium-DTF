@@ -158,7 +158,7 @@ def test_profile_page_preserves_authorized_staff_navigation():
     assert response.status_code == 200
     html = response.content.decode()
     assert "Atelier" in html
-    assert "Dashboard" in html
+    assert "File Atelier" in html
     assert "Mon compte" in html
     assert "Identité" in html
     assert reverse("portal:profile-identity") in html

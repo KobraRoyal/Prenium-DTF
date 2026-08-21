@@ -3,50 +3,114 @@
   <header class="workflow-panel__hero operator-panel-hero">
     <div>
       <h3 class="workflow-panel__title">Production</h3>
-      <p class="workflow-panel__meta">Une vue unique pour préparer l’OF, avancer la fabrication et conserver la trace des décisions Atelier.</p>
+      <p class="workflow-panel__meta">{% if job.last_transition_at %}Dernière activité le {{ job.last_transition_at|date:"d/m/Y · H:i" }}{% else %}OF prêt à être pris en charge{% endif %}</p>
     </div>
     <div class="operator-panel-hero__actions">
       <span class="badge {{ job.status|badge_tone }}">{{ job.status|human_status }}</span>
-      <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
       <a class="ui-btn ui-btn-secondary" href="{% url 'production:staff-manufacturing-order-pdf' order_public_id=order.public_id %}" target="_blank" rel="noopener noreferrer">Ouvrir l’OF PDF</a>
     </div>
   </header>
 
-  <section class="operator-reference-bar" aria-label="Référence de production">
-    <div>
-      <span>Ordre de fabrication</span>
-      <code>{{ job.manufacturing_order_number }}</code>
-    </div>
-    <div>
-      <span>Dernière activité</span>
-      <strong>{% if job.last_transition_at %}{{ job.last_transition_at|date:"d/m/Y · H:i" }}{% else %}À l’ouverture de l’OF{% endif %}</strong>
-    </div>
-    <div>
-      <span>Opérateur</span>
-      <strong>{% if job.last_transition_by %}{{ job.last_transition_by.email }}{% else %}Non attribué{% endif %}</strong>
-    </div>
-  </section>
-
-  <section class="production-track" aria-labelledby="production-track-title">
-    <div class="operator-section-head">
+  {% if show_machine_workspace %}
+  <section class="operator-machine" aria-labelledby="operator-machine-title">
+    <header class="operator-section-head">
       <div>
-        <h4 id="production-track-title">Avancement de l’OF</h4>
+        <h4 id="operator-machine-title">Machine et impression</h4>
+        <p>L’attribution et la confirmation constituent l’historique dossier-machine.</p>
       </div>
-      {% if job.status == "blocked" %}<span class="operator-state-note operator-state-note--danger">Intervention requise · OF bloqué</span>{% endif %}
+      {% if job.assigned_machine %}<span class="badge {% if job.assigned_machine.status == 'active' %}is-success{% else %}is-warning{% endif %}">{{ job.assigned_machine.get_status_display }}</span>{% else %}<span class="badge is-warning">À attribuer</span>{% endif %}
+    </header>
+
+    {% if machine_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ machine_error }}</p></div>{% endif %}
+    {% if print_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ print_error }}</p></div>{% endif %}
+
+    <div class="operator-machine__workspace{% if not can_assign_machine_now %} is-readonly{% endif %}">
+      <div class="operator-machine__current{% if not job.assigned_machine %} is-empty{% endif %}">
+        <span>Imprimante attribuée</span>
+        {% if job.assigned_machine %}
+        <div class="operator-machine__identity"><code>{{ job.assigned_machine.code }}</code><div><strong>{{ job.assigned_machine.name }}</strong><small>{% if job.assigned_machine.location %}{{ job.assigned_machine.location }}{% else %}Emplacement non renseigné{% endif %}{% if job.assigned_machine.max_print_width_cm %} · laize {{ job.assigned_machine.max_print_width_cm|floatformat:"-1" }} cm{% endif %}</small></div></div>
+        <dl class="operator-machine__facts">
+          <div><dt>Attribuée le</dt><dd>{{ job.machine_assigned_at|date:"d/m/Y · H:i" }}</dd></div>
+          <div><dt>Impressions confirmées</dt><dd>{{ print_count }}</dd></div>
+        </dl>
+        {% else %}
+        <strong>Aucune machine sélectionnée</strong>
+        <p>Le workflow reste utilisable, mais aucune preuve machine ne pourra être confirmée tant que l’OF n’est pas attribué.</p>
+        {% endif %}
+      </div>
+
+      {% if can_assign_machine and can_assign_machine_now %}
+      <form class="operator-machine__assign ui-form-stack" hx-post="{% url 'portal:staff-order-machine-assignment' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+        {% csrf_token %}
+        <div class="ui-field-group">
+          <label class="ui-label" for="machine_public_id">{% if job.assigned_machine %}Réattribuer l’OF{% else %}Choisir une imprimante{% endif %}</label>
+          <select class="ui-input" id="machine_public_id" name="machine_public_id" required>
+            <option value="" disabled selected hidden>Sélectionner une machine disponible</option>
+            {% for machine in active_machines %}<option value="{{ machine.public_id }}" {% if job.assigned_machine_id == machine.id %}disabled{% endif %}>{{ machine.code }} — {{ machine.name }}{% if machine.location %} · {{ machine.location }}{% endif %}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="ui-field-group"><label class="ui-label" for="machine_reason">Motif de réattribution</label><input class="ui-input" id="machine_reason" name="machine_reason" maxlength="255" placeholder="Obligatoire uniquement si la machine change"></div>
+        <button class="ui-btn ui-btn-secondary" type="submit" {% if not active_machines %}disabled{% endif %}>{% if job.assigned_machine %}Réattribuer la machine{% else %}Attribuer la machine{% endif %}</button>
+        {% if not active_machines %}<p class="operator-machine__hint">Aucune machine disponible. Consultez le parc pour remettre un poste en service.</p>{% endif %}
+      </form>
+      {% elif can_assign_machine_now %}
+      <div class="operator-empty-inline"><strong>Attribution en consultation</strong><p>Votre rôle permet de voir la machine et son historique, sans réattribuer l’OF.</p></div>
+      {% endif %}
     </div>
-    <ol class="production-track__steps">
-      <li class="{% if job.status == 'queued' %}is-current{% elif job.status != 'blocked' %}is-complete{% endif %}"><span>01</span><div><strong>File Atelier</strong><small>OF prêt à être pris en charge</small></div></li>
-      <li class="{% if job.status == 'in_progress' %}is-current{% elif job.status == 'ready_to_ship' or job.status == 'completed' %}is-complete{% endif %}"><span>02</span><div><strong>En production</strong><small>Fabrication en cours</small></div></li>
-      <li class="{% if job.status == 'ready_to_ship' %}is-current{% elif job.status == 'completed' %}is-complete{% endif %}"><span>03</span><div><strong>Prêt à expédier</strong><small>Contrôle final terminé</small></div></li>
-      <li class="{% if job.status == 'completed' %}is-current is-complete{% endif %}"><span>04</span><div><strong>Terminé</strong><small>Flux Atelier clôturé</small></div></li>
-    </ol>
+
+    <div class="operator-machine__confirm">
+      <div>
+        <strong>{% if is_reprint %}Confirmer une réimpression{% else %}Confirmer l’impression{% endif %}</strong>
+        <p>{% if job.assigned_machine %}La confirmation créera une preuve immuable sur <strong>{{ job.assigned_machine.code }}</strong>.{% else %}Attribuez d’abord une machine pour activer la confirmation.{% endif %}</p>
+      </div>
+      {% if can_confirm_print and can_confirm_print_now and job.assigned_machine %}
+      <form class="operator-machine__confirm-form" hx-post="{% url 'portal:staff-order-print-confirmation' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+        {% csrf_token %}
+        <input type="hidden" name="request_token" value="{{ print_request_token }}">
+        <label class="sr-only" for="print_note">Note d’impression</label>
+        <input class="ui-input" id="print_note" name="print_note" maxlength="255" placeholder="{% if is_reprint %}Motif obligatoire de la réimpression{% else %}Note optionnelle de contrôle{% endif %}" {% if is_reprint %}required{% endif %}>
+        <button class="ui-btn ui-btn-primary" type="submit">{% if is_reprint %}Confirmer la réimpression{% else %}Confirmer l’impression{% endif %}</button>
+      </form>
+      {% elif not can_confirm_print %}
+      <span class="badge badge--muted">Confirmation restreinte</span>
+      {% elif not can_confirm_print_now %}
+      <span class="operator-state-note">Disponible quand l’OF est en production</span>
+      {% else %}
+      <span class="operator-state-note">Machine requise</span>
+      {% endif %}
+    </div>
+
+    {% if assignment_count or print_count %}
+    <details class="workflow-disclosure operator-machine__history-disclosure">
+      <summary><span>Historique machine</span><strong>{{ assignment_count }} attribution{{ assignment_count|pluralize }} · {{ print_count }} impression{{ print_count|pluralize }}</strong></summary>
+      <div class="operator-machine__history">
+      <section aria-labelledby="machine-assignment-history-title">
+        <h5 id="machine-assignment-history-title">Historique d’attribution</h5>
+        <ol>
+          {% for assignment in job.machine_assignments.all|slice:":5" %}
+          <li><time datetime="{{ assignment.created_at|date:'c' }}">{{ assignment.created_at|date:"d/m · H:i" }}</time><div><strong>{{ assignment.machine_code_snapshot }} · {{ assignment.machine_name_snapshot }}</strong><span>{% if assignment.previous_machine_code_snapshot %}Depuis {{ assignment.previous_machine_code_snapshot }}{% else %}Première attribution{% endif %}{% if assignment.reason %} · {{ assignment.reason }}{% endif %}</span></div></li>
+          {% endfor %}
+        </ol>
+      </section>
+      <section aria-labelledby="machine-print-history-title">
+        <h5 id="machine-print-history-title">Impressions confirmées</h5>
+        <ol>
+          {% for print in job.print_records.all|slice:":5" %}
+          <li><time datetime="{{ print.printed_at|date:'c' }}">{{ print.printed_at|date:"d/m · H:i" }}</time><div><strong>{{ print.machine_code_snapshot }} · {{ print.machine_name_snapshot }}</strong><span>{% if print.recorded_by %}{{ print.recorded_by.email }}{% else %}Opérateur supprimé{% endif %}{% if print.note %} · {{ print.note }}{% endif %}</span></div></li>
+          {% endfor %}
+        </ol>
+      </section>
+      </div>
+    </details>
+    {% endif %}
   </section>
+  {% endif %}
 
   {% if gang_sheets %}
   <section class="operator-subpanel" aria-labelledby="gang-sheets-production-title">
     <div class="operator-section-head">
       <div>
-        <h4 id="gang-sheets-production-title">Gang Sheets validées</h4>
+        <h4 id="gang-sheets-production-title">Fichiers de production</h4>
       </div>
     </div>
     <div class="gang-sheet-production-list">
@@ -61,9 +125,12 @@
   {% endif %}
 
   {% if order.uses_atelier_pricing %}
-  <section id="staff-order-meterage-slot-production" class="staff-meterage-slot operator-subpanel" aria-label="Métrage de production">
-    {% include "components/portal/staff_meterage_section.html" %}
-  </section>
+  <details class="workflow-disclosure production-meterage"{% if order.pricing_status != "priced" %} open{% endif %}>
+    <summary><span>Métrage de production</span><strong>{% if order.meterage_override_linear_m %}{{ order.meterage_override_linear_m }} m{% else %}Estimation automatique{% endif %}</strong></summary>
+    <section id="staff-order-meterage-slot-production" class="staff-meterage-slot" aria-label="Métrage de production">
+      {% include "components/portal/staff_meterage_section.html" %}
+    </section>
+  </details>
   {% endif %}
 
   {% if production_payment_blocked %}
@@ -76,35 +143,37 @@
   <div class="alert alert--danger workflow-panel__feedback" role="alert"><p class="m-0">{{ transition_error }}</p></div>
   {% endif %}
 
-  <div class="operator-two-column">
-    <section class="workflow-form-card operator-action-card" aria-labelledby="staff-production-transition-heading">
-      <div class="workflow-form-card__head">
-        <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0">Faire avancer la production</h4>
-        <p class="muted text-sm m-0">Seules les transitions réellement autorisées depuis <strong>{{ job.status|human_status }}</strong> sont proposées.{% if production_payment_blocked %} Le lancement « En production » reste indisponible tant que le paiement n’est pas confirmé.{% endif %}</p>
+  <section class="workflow-form-card operator-action-card" aria-labelledby="staff-production-transition-heading">
+    <div class="workflow-form-card__head">
+      <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0">Changer le statut</h4>
+      {% if job.status == "blocked" %}<p class="muted text-sm m-0">L’OF est bloqué : choisissez l’issue adaptée.</p>{% endif %}
+    </div>
+
+    {% if can_transition and allowed_statuses %}
+    <form class="ui-form-stack" hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+      {% csrf_token %}
+      <div class="ui-field-group">
+        <label class="ui-label" for="to_status">Nouveau statut</label>
+        <select id="to_status" class="ui-input" name="to_status" required>
+          <option value="" disabled selected hidden>Choisir un statut</option>
+          {% for status in allowed_statuses %}<option value="{{ status }}">{{ status|human_status }}</option>{% endfor %}
+        </select>
       </div>
+      {% include "components/forms/field_group.html" with id="reason" name="reason" label="Commentaire (optionnel)" type="text" placeholder="Ex. contrôle qualité validé, matière indisponible…" show_label=1 %}
+      {% include "components/forms/form_actions.html" with primary_label="Mettre à jour" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
+    </form>
+    {% elif can_transition and production_payment_blocked %}
+    <div class="operator-empty-inline"><strong>Lancement bloqué</strong><p>Contrôlez les fichiers et le métrage avant de poursuivre.</p></div>
+    {% elif not can_transition %}
+    <div class="operator-empty-inline"><strong>Consultation seule</strong><p>Votre rôle ne permet pas de modifier le statut.</p></div>
+    {% else %}
+    <div class="operator-empty-inline"><strong>Workflow terminé</strong><p>Aucune transition supplémentaire n’est disponible.</p></div>
+    {% endif %}
+  </section>
 
-      {% if can_transition and allowed_statuses %}
-      <form class="ui-form-stack" hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
-        {% csrf_token %}
-        <div class="ui-field-group">
-          <label class="ui-label" for="to_status">Prochaine étape</label>
-          <select id="to_status" class="ui-input" name="to_status" required>
-            <option value="" disabled selected hidden>Choisir la prochaine étape</option>
-            {% for status in allowed_statuses %}<option value="{{ status }}">{{ status|human_status }}</option>{% endfor %}
-          </select>
-        </div>
-        {% include "components/forms/field_group.html" with id="reason" name="reason" label="Commentaire de traçabilité (optionnel)" type="text" placeholder="Ex. contrôle qualité validé, matière indisponible…" help_text="Ce commentaire reste visible dans l’historique Atelier." show_label=1 %}
-        {% include "components/forms/form_actions.html" with primary_label="Confirmer la transition" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
-      </form>
-      {% elif can_transition and production_payment_blocked %}
-      <div class="operator-empty-inline"><strong>Lancement bloqué</strong><p>Contrôlez les fichiers et calculez le métrage. Aucune autre transition n’est disponible pour le moment.</p></div>
-      {% elif not can_transition %}
-      <div class="operator-empty-inline"><strong>Consultation seule</strong><p>Votre rôle permet de suivre l’OF, mais pas de modifier son statut.</p></div>
-      {% else %}
-      <div class="operator-empty-inline"><strong>Workflow terminé</strong><p>Aucune transition supplémentaire n’est disponible pour cet OF.</p></div>
-      {% endif %}
-    </section>
-
+  {% if transition_count %}
+  <details class="workflow-disclosure production-history">
+    <summary><span>Historique de production</span><strong>{{ transition_count }} transition{{ transition_count|pluralize }}</strong></summary>
     <section class="operator-history" aria-labelledby="production-history-title">
       <div class="operator-section-head">
         <div><h4 id="production-history-title">Dernières transitions</h4></div>
@@ -115,10 +184,9 @@
           <span class="operator-history__marker" aria-hidden="true"></span>
           <div><strong>{{ transition.from_status|human_status }} → {{ transition.to_status|human_status }}</strong><time datetime="{{ transition.created_at|date:'c' }}">{{ transition.created_at|date:"d/m/Y · H:i" }}</time>{% if transition.reason %}<p>{{ transition.reason }}</p>{% endif %}</div>
         </li>
-        {% empty %}
-        <li class="operator-history__empty"><span class="operator-history__marker" aria-hidden="true"></span><div><strong>OF créé</strong><p>La première transition apparaîtra ici.</p></div></li>
         {% endfor %}
       </ol>
     </section>
-  </div>
+  </details>
+  {% endif %}
 </div>

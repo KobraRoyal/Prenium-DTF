@@ -2,36 +2,53 @@
 <div class="workflow-panel workflow-panel--operator billing-station">
   <header class="workflow-panel__hero operator-panel-hero">
     <div>
-      <h3 class="workflow-panel__title">Règlement</h3>
-      <p class="workflow-panel__meta">Vérifiez le montant, le paiement et le justificatif. La facture fiscale est émise via RCA.</p>
+      <h3 class="workflow-panel__title">Facturation</h3>
+      <p class="workflow-panel__meta">
+        {% if order.billing_mode == "deferred" and not payment and not invoice %}Facture groupée via RCA
+        {% elif invoice and invoice.paid_at %}Règlement confirmé le {{ invoice.paid_at|date:"d/m/Y · H:i" }}
+        {% elif payment and payment.status == "captured" %}Paiement capturé · justificatif à contrôler
+        {% elif order.pricing_status != "priced" %}Le montant doit être calculé avant l’encaissement
+        {% else %}Règlement et justificatif à contrôler{% endif %}
+      </p>
     </div>
-    {% if invoice and invoice.paid_at %}<span class="badge is-success">Payé</span>{% elif payment and payment.status == "captured" %}<span class="badge is-success">Paiement capturé</span>{% elif invoice %}<span class="badge is-warning">Règlement attendu</span>{% else %}<span class="badge">Justificatif à émettre</span>{% endif %}
+    {% if order.billing_mode == "deferred" and not payment and not invoice %}<span class="badge {{ order.billing_mode|badge_tone }}">{{ order.billing_mode|settlement_badge }}</span>{% elif invoice and invoice.paid_at %}<span class="badge is-success">Payé</span>{% elif payment and payment.status == "captured" %}<span class="badge is-success">Paiement capturé</span>{% elif invoice %}<span class="badge is-warning">Règlement attendu</span>{% else %}<span class="badge is-warning">À encaisser</span>{% endif %}
   </header>
 
-  <section class="billing-overview" aria-label="Synthèse de facturation">
-    <article><span>Sous-total HT</span><strong>{{ order.subtotal_amount }} {{ order.currency }}</strong><small>Impression + préparation</small></article>
-    <article><span>Livraison</span><strong>{{ order.shipping_amount }} {{ order.currency }}</strong><small>{% if order.shipping_method_name %}{{ order.shipping_method_name }}{% else %}Non renseignée{% endif %}</small></article>
-    <article><span>TVA</span><strong>{{ order.tax_amount }} {{ order.currency }}</strong><small>{% if order.tax_rate %}Taux {{ order.tax_rate }}{% else %}—{% endif %}</small></article>
-    <article><span>Total</span><strong>{{ order.total_amount }} {{ order.currency }}</strong><small>{{ order.pricing_status|human_status }}</small></article>
-    {% if order.monthly_volume_linear_m is not None %}
-    <article>
-      <span>Remise volume</span>
-      <strong>{% if order.volume_discount_percent %}-{{ order.volume_discount_percent }} %{% else %}Aucun palier{% endif %}</strong>
-      <small>
-        {{ order.monthly_volume_linear_m }} m ce mois
-        {% if order.volume_discount_amount %} · -{{ order.volume_discount_amount }} {{ order.currency }} HT{% endif %}
-        {% if order.billing_mode == "immediate" %} · sans rétroactivité{% endif %}
-      </small>
-    </article>
-    {% endif %}
-    <article><span>Mode</span><strong><span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span></strong><small>{% if order.billing_mode == "immediate" %}Paiement carte après tarification{% elif order.customer.preferred_settlement_method == "paypal" %}Préférence client PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Préférence client Stripe{% else %}Préférence client virement{% endif %}</small></article>
-    <article><span>Paiement</span><strong>{% if payment %}{{ payment.status|human_status }}{% else %}Non enregistré{% endif %}</strong><small>{% if payment %}{{ payment.amount }} {{ payment.currency }}{% else %}Aucune transaction liée{% endif %}</small></article>
-    <article><span>Justificatif</span><strong>{% if invoice %}{{ invoice.invoice_number }}{% else %}Non généré{% endif %}</strong><small>{% if invoice and invoice.paid_at %}Confirmé le {{ invoice.paid_at|date:"d/m/Y" }}{% elif invoice %}{{ invoice.status|human_status }}{% else %}Après encaissement / flux RCA{% endif %}</small></article>
+  <section class="billing-total" aria-label="Montant et mode de facturation">
+    <div class="billing-total__amount">
+      <span>Total</span>
+      <strong>{{ order.total_amount }} {{ order.currency }}</strong>
+      <small>{{ order.pricing_status|human_status }}</small>
+    </div>
+    <div class="billing-total__state">
+      {% if order.billing_mode == "deferred" and not payment and not invoice %}
+      <p>Aucun paiement ni justificatif individuel n’est attendu sur cette commande.</p>
+      {% elif order.billing_mode == "immediate" %}
+      <strong>Paiement immédiat</strong>
+      <p>{% if order.customer.preferred_settlement_method == "paypal" %}Préférence client PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Préférence client Stripe{% else %}Préférence client virement{% endif %}</p>
+      {% else %}
+      <strong>{{ order.billing_mode|settlement_badge }}</strong>
+      <p>Suivi du règlement ci-dessous.</p>
+      {% endif %}
+    </div>
   </section>
 
+  <details class="workflow-disclosure billing-breakdown">
+    <summary><span>Détail du montant</span><strong>HT, livraison et TVA</strong></summary>
+    <dl class="billing-breakdown__list">
+      <div><dt>Sous-total HT</dt><dd>{{ order.subtotal_amount }} {{ order.currency }}</dd></div>
+      <div><dt>Livraison</dt><dd>{{ order.shipping_amount }} {{ order.currency }}{% if order.shipping_method_name %} · {{ order.shipping_method_name }}{% endif %}</dd></div>
+      <div><dt>TVA</dt><dd>{{ order.tax_amount }} {{ order.currency }}{% if order.tax_rate %} · {{ order.tax_rate }}{% endif %}</dd></div>
+      {% if order.monthly_volume_linear_m is not None %}
+      <div><dt>Remise volume</dt><dd>{% if order.volume_discount_percent %}-{{ order.volume_discount_percent }} %{% else %}Aucun palier{% endif %} · {{ order.monthly_volume_linear_m }} m ce mois{% if order.volume_discount_amount %} · -{{ order.volume_discount_amount }} {{ order.currency }} HT{% endif %}</dd></div>
+      {% endif %}
+    </dl>
+  </details>
+
+  {% if payment or invoice or order.billing_mode == "immediate" %}
   <div class="billing-grid">
     <section class="billing-card" aria-labelledby="billing-payment-title">
-      <div class="billing-card__head"><div><h4 id="billing-payment-title">État du paiement</h4></div>{% if payment %}<span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>{% endif %}</div>
+      <div class="billing-card__head"><div><h4 id="billing-payment-title">Paiement</h4></div>{% if payment %}<span class="badge {{ payment.status|badge_tone }}">{{ payment.status|human_status }}</span>{% endif %}</div>
       {% if payment %}
       <dl class="billing-detail-list">
         <div><dt>Montant</dt><dd>{{ payment.amount }} {{ payment.currency }}</dd></div>
@@ -43,12 +60,12 @@
       </dl>
       {% if payment.last_error_message %}<div class="alert alert--danger" role="alert"><p>{{ payment.last_error_message }}</p></div>{% endif %}
       {% else %}
-      <div class="operator-empty-inline"><strong>Aucun paiement lié</strong><p>{% if order.customer.preferred_settlement_method == "wire_transfer" %}Situation normale tant que le virement n’a pas été rapproché.{% elif order.customer.preferred_settlement_method == "stripe" %}La transaction Stripe apparaîtra après création du paiement.{% else %}La transaction PayPal apparaîtra après création du paiement.{% endif %}</p></div>
+      <div class="operator-empty-inline"><strong>Aucun paiement enregistré</strong><p>{% if order.pricing_status != "priced" %}Calculez d’abord le montant.{% else %}La transaction apparaîtra après création du paiement.{% endif %}</p></div>
       {% endif %}
     </section>
 
     <section class="billing-card" aria-labelledby="billing-invoice-title">
-      <div class="billing-card__head"><div><h4 id="billing-invoice-title">Justificatif de paiement</h4></div>{% if invoice %}<span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>{% endif %}</div>
+      <div class="billing-card__head"><div><h4 id="billing-invoice-title">Justificatif</h4></div>{% if invoice %}<span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>{% endif %}</div>
       {% if invoice %}
       <dl class="billing-detail-list">
         <div><dt>Numéro</dt><dd><code>{{ invoice.invoice_number }}</code></dd></div>
@@ -56,25 +73,19 @@
         <div><dt>Email</dt><dd>{{ invoice.billing_email|default:"Non renseigné" }}</dd></div>
         <div><dt>Règlement</dt><dd>{% if invoice.paid_at %}<span class="billing-paid-signal">Confirmé · {{ invoice.paid_at|date:"d/m/Y · H:i" }}</span>{% else %}En attente{% endif %}</dd></div>
       </dl>
-      <p class="muted text-sm">Facture fiscale : outil RCA (hors plateforme).</p>
+      <p class="muted text-sm">Facture fiscale émise dans RCA.</p>
       {% if can_mark_invoice_paid %}
       <form class="billing-confirm-payment" method="post" action="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}" hx-post="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
         {% csrf_token %}
-        <div><strong>Virement reçu ?</strong><p>Confirmez seulement après vérification sur le compte bancaire.</p></div>
+        <div><strong>Virement reçu ?</strong><p>Confirmez après vérification bancaire.</p></div>
         <button class="ui-btn ui-btn-primary" type="submit" hx-disabled-elt="this">Marquer comme payée</button>
       </form>
       {% endif %}
       {% else %}
-      <div class="operator-empty-inline"><strong>Aucun justificatif</strong><p>{% if order.pricing_status != "priced" %}Le prix doit être calculé avant l’encaissement.{% elif order.billing_mode == "deferred" %}Facture périodique gérée via RCA / encours.{% else %}Le justificatif sera créé après capture du paiement en ligne.{% endif %}</p></div>
+      <div class="operator-empty-inline"><strong>Aucun justificatif</strong><p>{% if order.pricing_status != "priced" %}Le prix doit être calculé avant sa création.{% else %}Il sera créé après le paiement.{% endif %}</p></div>
       {% if order.pricing_status != "priced" %}<a class="ui-btn ui-btn-secondary billing-card__action" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Vérifier le métrage</a>{% endif %}
       {% endif %}
     </section>
   </div>
-
-  <details class="billing-files"{% if not invoice %} open{% endif %}>
-    <summary><span>Pièces de la commande</span><strong>{{ upload_rows|length }} fichier{{ upload_rows|length|pluralize }}</strong></summary>
-    {% if upload_rows %}
-    <ul>{% for row in upload_rows %}<li><span>{{ row.upload.original_filename }}</span><small>{{ row.upload.size_bytes|filesizeformat }}</small></li>{% endfor %}</ul>
-    {% else %}<div class="operator-empty-inline"><strong>Aucun fichier</strong><p>Le métrage et la facturation fichier ne sont pas applicables.</p></div>{% endif %}
-  </details>
+  {% endif %}
 </div>

@@ -4045,13 +4045,63 @@
     position: sticky;
     top: 5.75rem;
     display: grid;
-    gap: 1rem;
-    padding: 1.15rem;
+    gap: 0;
+    padding: 0;
   }
 
   body.product-shell .volume-tier-create-card__head {
-    padding-bottom: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.75rem;
+    padding: 0.8rem 1rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  body.product-shell .volume-tier-create-card__head::-webkit-details-marker {
+    display: none;
+  }
+
+  body.product-shell .volume-tier-create-card__head > span:first-child {
+    display: grid;
+    gap: 0.12rem;
+  }
+
+  body.product-shell .volume-tier-create-card__head strong {
+    font-size: 0.95rem;
+    font-weight: 850;
+  }
+
+  body.product-shell .volume-tier-create-card__head small,
+  body.product-shell .volume-tier-create-card__intro {
+    color: var(--product-muted);
+    font-size: 0.76rem;
+    line-height: 1.4;
+  }
+
+  body.product-shell .volume-tier-create-card__head > span:last-child {
+    font-size: 1.25rem;
+    font-weight: 900;
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  body.product-shell .volume-tier-create-card[open] .volume-tier-create-card__head {
     border-bottom: 1px solid var(--product-line);
+  }
+
+  body.product-shell .volume-tier-create-card[open] .volume-tier-create-card__head > span:last-child {
+    transform: rotate(45deg);
+  }
+
+  body.product-shell .volume-tier-create-card__intro {
+    margin: 0;
+    padding: 0.9rem 1rem 0;
+  }
+
+  body.product-shell .volume-tier-create-card > form {
+    padding: 1rem;
   }
 
   body.product-shell .volume-tier-create-card .ui-btn-primary {
@@ -7043,7 +7093,12 @@ body.product-shell .atelier-dashboard-head {
 
 body.product-shell .atelier-dashboard-head .page-head {
   margin: 0;
-  max-width: 48rem;
+  max-width: none;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 /* Les onglets de la file ont leur propre scroll horizontal. Les trois enfants
@@ -7071,6 +7126,225 @@ body.product-shell .atelier-worklist__batch-actions .ui-btn:disabled {
   color: var(--product-soft);
   cursor: not-allowed;
   opacity: 0.72;
+}
+
+body.product-shell .atelier-worklist__batch-more {
+  position: relative;
+}
+
+body.product-shell .atelier-worklist__batch-more > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+body.product-shell .atelier-worklist__batch-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.product-shell .atelier-worklist__batch-more > div {
+  position: absolute;
+  z-index: 15;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  display: grid;
+  gap: 0.5rem;
+  width: min(23rem, 82vw);
+  padding: 0.7rem;
+  border: 1px solid var(--product-line);
+  background: var(--product-panel);
+  box-shadow: 3px 4px 0 var(--product-line);
+}
+
+body.product-shell .atelier-worklist__batch-more > div .ui-btn {
+  width: 100%;
+}
+
+/* Projet B2B Atelier — une lecture ligne par ligne, sans table dense. */
+body.product-shell .staff-project-detail {
+  display: grid;
+  gap: 1rem;
+}
+
+body.product-shell .staff-project-detail__back {
+  width: fit-content;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+body.product-shell .staff-project-focus {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 2px solid var(--product-line);
+}
+
+body.product-shell .staff-project-focus__identity {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem;
+}
+
+body.product-shell .staff-project-focus__identity h1 {
+  margin: 0;
+  font: 900 clamp(1.55rem, 3vw, 2.25rem)/1.05 "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+body.product-shell .staff-project-focus__identity code {
+  display: inline-block;
+  margin-top: 0.45rem;
+  color: var(--product-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+body.product-shell .staff-project-focus__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--product-line);
+}
+
+body.product-shell .staff-project-focus__facts > div {
+  min-width: 0;
+  padding: 0.85rem 1rem;
+}
+
+body.product-shell .staff-project-focus__facts > div + div {
+  border-left: 1px solid color-mix(in srgb, var(--product-line) 25%, transparent);
+}
+
+body.product-shell .staff-project-focus__facts dt {
+  color: var(--product-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+body.product-shell .staff-project-focus__facts dd {
+  margin: 0.2rem 0 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+body.product-shell .staff-project-items {
+  overflow: hidden;
+  border: 2px solid var(--product-line);
+  background: var(--product-panel);
+  box-shadow: 4px 4px 0 var(--product-line);
+}
+
+body.product-shell .staff-project-items > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--product-line);
+}
+
+body.product-shell .staff-project-items > header h2,
+body.product-shell .staff-project-items > header p {
+  margin: 0;
+}
+
+body.product-shell .staff-project-items > header h2 {
+  font: 900 1.2rem/1.15 "Space Grotesk", system-ui, sans-serif;
+}
+
+body.product-shell .staff-project-items > header p {
+  margin-top: 0.25rem;
+  color: var(--product-muted);
+  font-size: 0.8rem;
+}
+
+body.product-shell .staff-project-item-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.product-shell .staff-project-item {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.9fr) minmax(15rem, 1.45fr) auto auto;
+  gap: 0.9rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--product-line) 22%, transparent);
+}
+
+body.product-shell .staff-project-item:last-child {
+  border-bottom: 0;
+}
+
+body.product-shell .staff-project-item.has-issue {
+  background: color-mix(in srgb, var(--product-danger) 8%, var(--product-panel));
+}
+
+body.product-shell .staff-project-item__identity,
+body.product-shell .staff-project-item__file {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+body.product-shell .staff-project-item__identity span,
+body.product-shell .staff-project-item__file span {
+  color: var(--product-muted);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+body.product-shell .staff-project-item__identity strong,
+body.product-shell .staff-project-item__file strong {
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+body.product-shell .staff-project-item__warning {
+  margin: 0.15rem 0 0;
+  color: var(--product-danger-text);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+@media (max-width: 800px) {
+  body.product-shell .staff-project-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  body.product-shell .staff-project-item__file {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  body.product-shell .staff-project-item .ui-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  body.product-shell .staff-project-focus__identity,
+  body.product-shell .staff-project-items > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.product-shell .staff-project-focus__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.product-shell .staff-project-focus__facts > div + div {
+    border-top: 1px solid color-mix(in srgb, var(--product-line) 25%, transparent);
+    border-left: 0;
+  }
 }
 
 body.product-shell .atelier-worklist {
@@ -7517,6 +7791,10 @@ body.product-shell .scan-result__label {
 }
 
 @media (max-width: 1023px) {
+  body.product-shell .atelier-dashboard-metrics .ui-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   body.product-shell .atelier-dashboard-head,
   body.product-shell .atelier-worklist__toolbar {
     align-items: stretch;
@@ -7593,6 +7871,13 @@ body.product-shell .scan-result__label {
     width: 100%;
   }
 
+  body.product-shell .atelier-worklist__batch-more > div {
+    position: static;
+    width: auto;
+    margin-top: 0.5rem;
+    box-shadow: none;
+  }
+
   body.product-shell .atelier-worklist {
     box-shadow: 3px 3px 0 var(--product-line);
   }
@@ -7604,6 +7889,105 @@ body.product-shell .scan-result__label {
   body.product-shell .atelier-order-row__select {
     grid-row: span 5;
   }
+}
+
+/* Parc machines DTF — registre Atelier et journal de preuve. */
+body.product-shell .machine-fleet-page { display: grid; gap: 1.25rem; min-width: 0; }
+body.product-shell .machine-fleet-page > .page-head { margin-bottom: 0; border-bottom: 2px solid var(--product-line); padding-bottom: 1.15rem; }
+body.product-shell .machine-fleet-content { display: grid; gap: 1.25rem; min-width: 0; }
+body.product-shell .machine-fleet-summary { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(15rem, 0.5fr); border: 2px solid var(--product-line); background: var(--product-panel); box-shadow: 4px 4px 0 var(--product-line); }
+body.product-shell .machine-fleet-summary dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+body.product-shell .machine-fleet-summary dl > div { min-width: 0; padding: 0.9rem 1rem; border-right: 1px solid var(--product-line); }
+body.product-shell .machine-fleet-summary dt { color: var(--product-soft); font-size: 0.68rem; font-weight: 850; letter-spacing: 0.07em; text-transform: uppercase; }
+body.product-shell .machine-fleet-summary dd { margin: 0.25rem 0 0; font: 900 clamp(1rem, 2vw, 1.3rem)/1.15 "Space Grotesk", system-ui, sans-serif; overflow-wrap: anywhere; }
+body.product-shell .machine-fleet-summary > p { display: grid; align-content: center; margin: 0; padding: 0.9rem 1rem; background: var(--product-accent); color: var(--product-accent-ink); font-size: 0.78rem; line-height: 1.45; }
+body.product-shell .machine-fleet-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; align-items: start; min-width: 0; }
+body.product-shell .machine-fleet-create,
+body.product-shell .machine-fleet-register,
+body.product-shell .machine-print-ledger { min-width: 0; border: 2px solid var(--product-line); background: var(--product-panel); }
+body.product-shell .machine-fleet-register > header,
+body.product-shell .machine-print-ledger > header { display: flex; gap: 0.75rem 1rem; align-items: flex-start; justify-content: space-between; padding: 1rem 1.1rem; border-bottom: 1px solid var(--product-line); }
+body.product-shell .machine-fleet-register h2,
+body.product-shell .machine-print-ledger h2 { margin: 0; font-family: "Space Grotesk", system-ui, sans-serif; font-size: clamp(1.05rem, 2vw, 1.35rem); font-weight: 900; text-transform: uppercase; }
+body.product-shell .machine-fleet-register header p,
+body.product-shell .machine-print-ledger header p { max-width: 64ch; margin: 0.3rem 0 0; color: var(--product-muted); font-size: 0.78rem; line-height: 1.45; }
+body.product-shell .machine-fleet-create > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.75rem; padding: 0.75rem 1rem; background: var(--product-line); color: var(--product-panel); cursor: pointer; list-style: none; }
+body.product-shell .machine-fleet-create > summary::-webkit-details-marker { display: none; }
+body.product-shell .machine-fleet-create > summary > span:first-child { display: grid; gap: 0.12rem; }
+body.product-shell .machine-fleet-create > summary strong { font: 900 1rem/1.15 "Space Grotesk", system-ui, sans-serif; text-transform: uppercase; }
+body.product-shell .machine-fleet-create > summary small { color: color-mix(in srgb, var(--product-panel) 75%, transparent); font-size: 0.72rem; }
+body.product-shell .machine-fleet-create > summary > span:last-child { font-size: 1.3rem; font-weight: 900; transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+body.product-shell .machine-fleet-create[open] > summary > span:last-child { transform: rotate(45deg); }
+body.product-shell .machine-fleet-create__intro { margin: 0; padding: 0.85rem 1.1rem 0; color: var(--product-muted); font-size: 0.78rem; line-height: 1.45; }
+body.product-shell .machine-fleet-create > form { padding: 1rem 1.1rem 1.1rem; }
+body.product-shell .machine-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+body.product-shell .machine-width-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; }
+body.product-shell .machine-width-input > span { display: grid; place-items: center; min-width: 3rem; border: 1px solid var(--product-line); border-left: 0; background: var(--product-panel-strong); font-size: 0.75rem; font-weight: 850; }
+body.product-shell .machine-register { display: grid; }
+body.product-shell .machine-register-row { display: grid; grid-template-columns: minmax(12rem, 1.1fr) minmax(14rem, 1fr) minmax(9rem, 0.7fr) auto; gap: 0.85rem; align-items: center; padding: 0.9rem 1rem; border-bottom: 1px solid color-mix(in srgb, var(--product-line) 20%, transparent); transition: background-color 160ms ease-out; }
+body.product-shell .machine-register-row:last-child { border-bottom: 0; }
+body.product-shell .machine-register-row:hover { background: color-mix(in srgb, var(--product-accent) 8%, var(--product-panel)); }
+body.product-shell .machine-register-row.is-muted { background: var(--product-panel-strong); }
+body.product-shell .machine-register-row__identity { display: flex; gap: 0.65rem; align-items: center; min-width: 0; }
+body.product-shell .machine-register-row__identity code,
+body.product-shell .machine-print-ledger__list code { flex: 0 0 auto; padding: 0.35rem 0.45rem; border: 1px solid var(--product-line); background: var(--product-line); color: var(--product-panel); font-size: 0.7rem; font-weight: 900; }
+body.product-shell .machine-register-row__identity div,
+body.product-shell .machine-register-row__facts,
+body.product-shell .machine-register-row__meta { display: grid; gap: 0.18rem; min-width: 0; }
+body.product-shell .machine-register-row__identity strong { overflow-wrap: anywhere; font-size: 0.88rem; }
+body.product-shell .machine-register-row__identity span,
+body.product-shell .machine-register-row__facts > span:not(.badge),
+body.product-shell .machine-register-row__meta span { color: var(--product-muted); font-size: 0.72rem; line-height: 1.35; }
+body.product-shell .machine-register-row__facts .badge { width: fit-content; }
+body.product-shell .machine-register-row__edit { position: relative; justify-self: end; }
+body.product-shell .machine-register-row__edit summary { min-height: 2.75rem; padding: 0.7rem 0.85rem; border: 1px solid var(--product-line); background: var(--product-panel); cursor: pointer; font-size: 0.75rem; font-weight: 850; list-style: none; }
+body.product-shell .machine-register-row__edit summary::-webkit-details-marker { display: none; }
+body.product-shell .machine-register-row__edit summary:hover,
+body.product-shell .machine-register-row__edit summary:focus-visible { background: var(--product-accent); }
+body.product-shell .machine-register-row__edit[open] { grid-column: 1 / -1; justify-self: stretch; }
+body.product-shell .machine-register-row__edit[open] summary { width: fit-content; margin-left: auto; }
+body.product-shell .machine-register-row__edit form { margin-top: 0.75rem; padding: 1rem; border: 1px solid var(--product-line); background: var(--product-panel-strong); }
+body.product-shell .machine-fleet-empty { padding: 1.25rem; background: var(--product-panel-strong); }
+body.product-shell .machine-fleet-empty strong { font-size: 0.9rem; }
+body.product-shell .machine-fleet-empty p { margin: 0.3rem 0 0; color: var(--product-muted); font-size: 0.8rem; }
+body.product-shell .machine-print-ledger { box-shadow: 4px 4px 0 var(--product-line); }
+body.product-shell .machine-print-ledger__list { display: grid; margin: 0; padding: 0; list-style: none; }
+body.product-shell .machine-print-ledger__list li { display: grid; grid-template-columns: 8rem minmax(13rem, 1fr) minmax(10rem, 0.75fr) minmax(12rem, 0.9fr) auto; gap: 0.85rem; align-items: center; min-width: 0; padding: 0.8rem 1rem; border-bottom: 1px solid color-mix(in srgb, var(--product-line) 20%, transparent); }
+body.product-shell .machine-print-ledger__list li:last-child { border-bottom: 0; }
+body.product-shell .machine-print-ledger__list time,
+body.product-shell .machine-print-ledger__list span { color: var(--product-muted); font-size: 0.72rem; line-height: 1.35; }
+body.product-shell .machine-print-ledger__list li > div { display: grid; gap: 0.12rem; min-width: 0; }
+body.product-shell .machine-print-ledger__list strong,
+body.product-shell .machine-print-ledger__list span { overflow-wrap: anywhere; }
+body.product-shell .atelier-machine-signal { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; color: var(--product-muted); font-size: 0.72rem; }
+body.product-shell .atelier-machine-signal code { color: var(--product-ink); font-size: 0.68rem; font-weight: 900; }
+body.product-shell .atelier-machine-signal.is-missing { color: var(--product-danger); font-weight: 800; }
+body.product-shell .machine-fleet-page .ui-btn,
+body.product-shell .machine-fleet-page summary { min-height: 2.75rem; }
+
+@media (max-width: 1180px) {
+  body.product-shell .machine-fleet-layout,
+  body.product-shell .machine-fleet-summary { grid-template-columns: minmax(0, 1fr); }
+  body.product-shell .machine-fleet-summary dl > div:last-child { border-right: 0; }
+  body.product-shell .machine-register-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.product-shell .machine-print-ledger__list li { grid-template-columns: 7rem repeat(2, minmax(0, 1fr)) auto; }
+  body.product-shell .machine-print-ledger__list li > div:nth-of-type(3) { grid-column: 2 / 4; }
+}
+
+@media (max-width: 720px) {
+  body.product-shell .machine-fleet-summary dl,
+  body.product-shell .machine-form-grid,
+  body.product-shell .machine-register-row,
+  body.product-shell .machine-print-ledger__list li { grid-template-columns: minmax(0, 1fr); }
+  body.product-shell .machine-fleet-summary dl > div { border-right: 0; border-bottom: 1px solid var(--product-line); }
+  body.product-shell .machine-fleet-summary dl > div:last-child { border-bottom: 0; }
+  body.product-shell .machine-fleet-register > header,
+  body.product-shell .machine-print-ledger > header { align-items: stretch; flex-direction: column; }
+  body.product-shell .machine-register-row__edit,
+  body.product-shell .machine-register-row__edit[open],
+  body.product-shell .machine-register-row__edit[open] summary { justify-self: stretch; width: 100%; margin-left: 0; }
+  body.product-shell .machine-print-ledger__list li > div:nth-of-type(3) { grid-column: auto; }
+  body.product-shell .machine-print-ledger__list .ui-btn { width: 100%; }
 }
 
 /* Fiche commande client — hiérarchie compacte, sans surfaces imbriquées. */
@@ -8577,3 +8961,48 @@ body.product-shell .scan-result__label {
       flex: 1 1 8rem;
     }
   }
+
+@layer components {
+  body.product-shell .staff-order-detail-stack .workflow-shell--tabs-4 .workflow-progress {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  body.product-shell .staff-order-detail-stack .workflow-shell--tabs-5 .workflow-progress {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+
+  body.product-shell .staff-order-detail-stack .workflow-shell--tabs-6 .workflow-progress {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+
+  body.product-shell .staff-order-detail-stack .operator-subpanel {
+    padding: 1rem;
+  }
+
+  @media (max-width: 900px) {
+    body.product-shell .staff-order-detail-stack .workflow-shell--distilled .workflow-progress {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    body.product-shell .staff-order-detail-stack .workflow-shell--tabs-5 .workflow-progress .ui-tab-chip:last-child {
+      grid-column: 1 / -1;
+      border-right: 0 !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    body.product-shell .staff-order-detail-stack .workflow-shell--distilled .workflow-progress {
+      display: grid;
+      overflow: visible;
+    }
+
+    body.product-shell .staff-order-detail-stack .workflow-shell--distilled .workflow-progress .ui-tab-chip {
+      min-width: 0;
+      border-bottom: 1px solid var(--product-line, #0b0b0b);
+    }
+
+    body.product-shell .staff-order-detail-stack .workflow-shell--distilled .workflow-progress .ui-tab-chip:last-child {
+      border-bottom: 0;
+    }
+  }
+}

@@ -3,27 +3,17 @@
   <header class="workflow-panel__hero operator-panel-hero">
     <div>
       <h3 class="workflow-panel__title">Expédition</h3>
-      <p class="workflow-panel__meta">Déclarez destinataire, produits et n° de commande dans Sendcloud. L’expéditeur et l’étiquette sont gérés dans Sendcloud.</p>
+      <p class="workflow-panel__meta">{% if shipment %}Envoi déclaré dans Sendcloud · suivi synchronisé automatiquement{% elif shipping_ready %}Vérifiez le destinataire et le poids avant la déclaration Sendcloud{% else %}Disponible quand l’OF sera prêt à expédier{% endif %}</p>
     </div>
     {% if shipment %}<span class="badge {{ shipment.status|badge_tone }}">{{ shipment.status|human_status }}</span>{% elif shipping_ready %}<span class="badge is-success">Prêt à déclarer</span>{% else %}<span class="badge is-warning">En attente production</span>{% endif %}
   </header>
-
-  <section class="shipping-readiness{% if shipping_ready %} is-ready{% endif %}" aria-labelledby="shipping-readiness-title">
-    <span class="shipping-readiness__index" aria-hidden="true">01</span>
-    <div>
-      <h4 id="shipping-readiness-title">{% if shipping_ready %}La production est prête à expédier{% else %}Terminez la production avant de créer l’envoi{% endif %}</h4>
-      <p>Statut Atelier : <strong>{% if production_job %}{{ production_job.status|human_status }}{% else %}OF non initialisé{% endif %}</strong>. La déclaration Sendcloud n’est possible qu’à l’étape « Prêt à expédier ».</p>
-    </div>
-    {% if not shipping_ready and not shipment %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Ouvrir Production</a>{% endif %}
-  </section>
 
   {% if form_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p class="m-0">{{ form_error }}</p></div>{% endif %}
 
   {% if shipment %}
   <section class="shipment-status-card" aria-labelledby="shipment-status-title">
     <div class="shipment-status-card__head">
-      <div><h4 id="shipment-status-title">{{ shipment.status|human_status }}</h4></div>
-      <span class="badge {{ shipment.status|badge_tone }}">{{ shipment.status|human_status }}</span>
+      <div><h4 id="shipment-status-title">Suivi Sendcloud</h4></div>
     </div>
     <dl class="shipment-status-card__facts">
       <div><dt>Numéro de suivi</dt><dd>{{ shipment.tracking_number|default:"En attente (étiquette Sendcloud)" }}</dd></div>
@@ -49,16 +39,15 @@
   {% elif not can_create_shipment %}
   <div class="operator-empty-inline operator-empty-inline--large"><strong>Consultation seule</strong><p>Votre rôle permet de consulter la logistique, mais pas de créer une expédition.</p></div>
   {% elif not shipping_ready %}
-  <div class="operator-empty-inline operator-empty-inline--large"><strong>Aucun envoi à préparer pour le moment</strong><p>Revenez ici dès que l’OF passe à « Prêt à expédier ». Le formulaire sera alors activé.</p></div>
+  <div class="operator-empty-inline operator-empty-inline--large"><strong>Expédition non disponible</strong><p>L’OF est actuellement « {% if production_job %}{{ production_job.status|human_status }}{% else %}non initialisé{% endif %} ».</p>{% if perms.production.view_productionjob %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Ouvrir Production</a>{% endif %}</div>
   {% else %}
   <section class="shipping-form-shell" aria-labelledby="staff-shipping-form-heading">
     <div class="operator-section-head">
-      <div><h4 id="staff-shipping-form-heading">Déclarer dans Sendcloud</h4><p>Vérifiez le destinataire. Prenium envoie l’adresse, les produits et le n° de commande comme référence d’expédition. L’expéditeur et l’étiquette restent gérés dans Sendcloud.</p></div>
+      <div><h4 id="staff-shipping-form-heading">Déclarer dans Sendcloud</h4><p>L’adresse, les produits et la commande seront transmis. L’étiquette restera gérée dans Sendcloud.</p></div>
     </div>
 
     <form class="shipping-guided-form" hx-post="{% url 'portal:staff-order-panel-shipping' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
       {% csrf_token %}
-      <p class="ui-help">Référence d’expédition Sendcloud : <strong>{{ order.public_id|short_ref }}</strong></p>
       <fieldset class="shipping-form-section">
         <legend><span>1</span>Destinataire</legend>
         <div class="shipping-form-grid">
@@ -88,7 +77,7 @@
         </div>
       </fieldset>
 
-      <div class="shipping-submit-bar"><div><strong>Vérification finale</strong><p>Prenium déclare destinataire + produits + n° de commande. L’opérateur génère l’étiquette dans Sendcloud.</p></div><button type="submit" class="ui-btn ui-btn-primary" hx-disabled-elt="this">Déclarer dans Sendcloud</button></div>
+      <div class="shipping-submit-bar"><p>Adresse et poids vérifiés ?</p><button type="submit" class="ui-btn ui-btn-primary" hx-disabled-elt="this">Déclarer dans Sendcloud</button></div>
     </form>
   </section>
   {% endif %}

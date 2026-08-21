@@ -67,16 +67,6 @@ def order_htmx_tabs(context, variant):
                 "permission": "production.view_productionjob",
             },
             {
-                "slug": "scan",
-                "label": "Scan atelier",
-                "caption": "Tracer l'avancement",
-                "url": reverse(
-                    "portal:staff-order-panel-scan",
-                    kwargs={"order_public_id": oid},
-                ),
-                "permission": "production.scan_productionjob",
-            },
-            {
                 "slug": "shipping",
                 "label": "Expédition",
                 "caption": "Créer et suivre l'envoi",
@@ -200,6 +190,7 @@ def order_htmx_tabs(context, variant):
 
     return {
         "compact": variant == "client",
+        "distilled": variant == "staff",
         "tablist_label": "Étapes de la commande" if variant == "staff" else "Suivi commande",
         "tabs": flat_tabs,
         "tab_groups": tab_groups,

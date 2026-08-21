@@ -101,16 +101,32 @@ from .views_staff_customers import (
 )
 from .views_staff_dashboard import StaffDashboardView
 from .views_staff_documents import StaffManufacturingOrderBatchPdfView
+from .views_staff_machine_jobs import (
+    StaffOrderMachineAssignmentView,
+    StaffOrderPrintConfirmView,
+)
+from .views_staff_machines import (
+    StaffMachineCreateView,
+    StaffMachineFleetView,
+    StaffMachineUpdateView,
+)
 from .views_staff_notifications import (
     StaffEmailTemplateEditView,
     StaffEmailTemplateListView,
 )
-from .views_staff_production import StaffOrderPanelProductionView, StaffOrderPanelScanView
+from .views_staff_operations import (
+    StaffAtelierOperationShipmentCreateView,
+    StaffAtelierOperationShipmentSyncView,
+    StaffAtelierOperationsView,
+    StaffAtelierOperationTransitionView,
+)
+from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
     StaffOrderUploadPreviewView,
     StaffOrderUploadReviewView,
 )
+from .views_staff_scan import StaffOrderPanelScanView
 from .views_staff_shipping import (
     StaffOrderPanelShippingSyncView,
     StaffOrderPanelShippingView,
@@ -395,6 +411,41 @@ urlpatterns = [
     ),
     path("staff/", StaffDashboardView.as_view(), name="staff-dashboard"),
     path(
+        "staff/atelier/pilotage/",
+        StaffAtelierOperationsView.as_view(),
+        name="staff-atelier-operations",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/transition/",
+        StaffAtelierOperationTransitionView.as_view(),
+        name="staff-atelier-operation-transition",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/shipment/create/",
+        StaffAtelierOperationShipmentCreateView.as_view(),
+        name="staff-atelier-operation-shipment-create",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/shipment/sync/",
+        StaffAtelierOperationShipmentSyncView.as_view(),
+        name="staff-atelier-operation-shipment-sync",
+    ),
+    path(
+        "staff/machines/",
+        StaffMachineFleetView.as_view(),
+        name="staff-machine-fleet",
+    ),
+    path(
+        "staff/machines/create/",
+        StaffMachineCreateView.as_view(),
+        name="staff-machine-create",
+    ),
+    path(
+        "staff/machines/<uuid:machine_public_id>/update/",
+        StaffMachineUpdateView.as_view(),
+        name="staff-machine-update",
+    ),
+    path(
         "staff/access-requests/",
         StaffAccessRequestListView.as_view(),
         name="staff-access-request-list",
@@ -559,6 +610,16 @@ urlpatterns = [
         "staff/orders/<uuid:order_public_id>/panels/production/",
         StaffOrderPanelProductionView.as_view(),
         name="staff-order-panel-production",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/machine-assignment/",
+        StaffOrderMachineAssignmentView.as_view(),
+        name="staff-order-machine-assignment",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/print-confirmation/",
+        StaffOrderPrintConfirmView.as_view(),
+        name="staff-order-print-confirmation",
     ),
     path(
         "staff/orders/<uuid:order_public_id>/panels/shipping/sync/",

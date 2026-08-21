@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from django.conf import settings
 from django.shortcuts import render
 from django.urls import reverse
@@ -22,6 +20,7 @@ class StaffDashboardView(StaffPortalMixin, View):
             getattr(settings, "B2B_DTF_ORDER_PROJECT_ENABLED", False)
             and request.user.has_perm("b2b_order_projects.view_b2borderproject")
         )
+        can_read_machine_fleet = request.user.has_perm("production.view_productionmachine")
         dashboard = (
             atelier_dashboard_service.build_dashboard(active_tab=request.GET.get("queue"))
             if can_read_worklist
@@ -82,6 +81,7 @@ class StaffDashboardView(StaffPortalMixin, View):
                 "can_read_worklist": can_read_worklist,
                 "can_batch_print": can_read_worklist,
                 "can_read_projects": can_read_projects,
+                "can_read_machine_fleet": can_read_machine_fleet,
                 "kpi_rows": kpi_rows,
                 "batch_error": request.GET.get("batch_error", ""),
                 "nav_mode": "staff",

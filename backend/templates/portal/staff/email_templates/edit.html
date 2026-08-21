@@ -19,7 +19,6 @@
       <span>Source</span>
       <strong>{% if effective_template.is_customized %}Personnalisée · v{{ effective_template.version }}{% else %}Modèle par défaut{% endif %}</strong>
     </div>
-    <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-email-template-list' %}">Tous les modèles</a>
   </div>
 
   {% if saved %}<div class="alert alert--success mt-5" role="status"><p class="m-0">Le modèle est enregistré. Il sera utilisé lors des prochains envois.</p></div>{% endif %}

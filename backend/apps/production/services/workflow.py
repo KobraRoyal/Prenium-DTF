@@ -365,8 +365,8 @@ class ProductionWorkflowService:
 
         with transaction.atomic():
             locked_job = (
-                ProductionJob.objects.select_for_update()
-                .select_related("order", "order__customer")
+                ProductionJob.objects.select_for_update(of=("self",))
+                .select_related("order", "order__customer", "assigned_machine")
                 .get(pk=production_job.pk)
             )
             from_status = locked_job.status
@@ -431,6 +431,18 @@ class ProductionWorkflowService:
                     source=source,
                 )
 
+                if normalized_status == ProductionJob.Status.IN_PROGRESS:
+                    from apps.production.services.machine_assignments import (
+                        ProductionMachineAssignmentService,
+                    )
+
+                    ProductionMachineAssignmentService().mark_print_started_for_transition(
+                        job=locked_job,
+                        actor=actor,
+                        source=source,
+                        now=now,
+                    )
+
                 record_event(
                     action="production.status_changed",
                     actor=actor if getattr(actor, "is_authenticated", False) else None,
@@ -444,6 +456,16 @@ class ProductionWorkflowService:
                         "from_status": from_status,
                         "to_status": normalized_status,
                         "reason": normalized_reason[:255],
+                        "machine_public_id": (
+                            str(locked_job.assigned_machine.public_id)
+                            if locked_job.assigned_machine is not None
+                            else None
+                        ),
+                        "machine_code": (
+                            locked_job.assigned_machine.code
+                            if locked_job.assigned_machine is not None
+                            else ""
+                        ),
                         "source": source,
                     },
                 )
@@ -524,11 +546,20 @@ class ProductionWorkflowService:
             "order__customer",
             "order__created_by",
             "last_transition_by",
+            "assigned_machine",
+            "machine_assigned_by",
         ).prefetch_related(
             "transitions",
             "transitions__changed_by",
             "scan_logs",
             "scan_logs__actor",
+            "machine_assignments",
+            "machine_assignments__machine",
+            "machine_assignments__previous_machine",
+            "machine_assignments__assigned_by",
+            "print_records",
+            "print_records__machine",
+            "print_records__recorded_by",
             "order__items",
             "order__uploads",
             "order__uploads__inspection",

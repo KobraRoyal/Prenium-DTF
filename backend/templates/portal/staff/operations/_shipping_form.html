@@ -1,0 +1,27 @@
+<details class="atelier-operation-shipping-form"{% if row.shipment_form_open %} open{% endif %}>
+  <summary>
+    <span><strong>Déclarer dans Sendcloud</strong><small>Destinataire prérempli · vérification avant envoi</small></span>
+    <span class="ui-btn ui-btn-primary">Préparer l’expédition</span>
+  </summary>
+  <form hx-post="{% url 'portal:staff-atelier-operation-shipment-create' order_public_id=row.order.public_id %}" hx-target="#atelier-operations-workspace" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+    {% csrf_token %}
+    <input type="hidden" name="queue" value="{{ queue }}">
+    <input type="hidden" name="q" value="{{ query }}">
+    <input type="hidden" name="page" value="{{ page_obj.number }}">
+    <input type="hidden" name="recipient_company_name" value="{{ row.shipment_form_data.recipient_company_name }}">
+    <input type="hidden" name="recipient_phone_number" value="{{ row.shipment_form_data.recipient_phone_number }}">
+    <input type="hidden" name="recipient_address_line_2" value="{{ row.shipment_form_data.recipient_address_line_2 }}">
+
+    <div class="atelier-operation-shipping-form__grid">
+      <div class="ui-field-group"><label class="ui-label" for="recipient-name-{{ row.order.public_id }}">Contact</label><input class="ui-input" id="recipient-name-{{ row.order.public_id }}" name="recipient_name" value="{{ row.shipment_form_data.recipient_name }}" required autocomplete="shipping name"></div>
+      <div class="ui-field-group"><label class="ui-label" for="recipient-email-{{ row.order.public_id }}">E-mail de suivi</label><input class="ui-input" id="recipient-email-{{ row.order.public_id }}" name="recipient_email" value="{{ row.shipment_form_data.recipient_email }}" type="email" required autocomplete="shipping email"></div>
+      <div class="ui-field-group atelier-operation-shipping-form__number"><label class="ui-label" for="recipient-number-{{ row.order.public_id }}">N°</label><input class="ui-input" id="recipient-number-{{ row.order.public_id }}" name="recipient_house_number" value="{{ row.shipment_form_data.recipient_house_number }}" required autocomplete="shipping address-line1"></div>
+      <div class="ui-field-group atelier-operation-shipping-form__street"><label class="ui-label" for="recipient-street-{{ row.order.public_id }}">Voie</label><input class="ui-input" id="recipient-street-{{ row.order.public_id }}" name="recipient_address_line_1" value="{{ row.shipment_form_data.recipient_address_line_1 }}" required autocomplete="shipping address-line1"></div>
+      <div class="ui-field-group"><label class="ui-label" for="recipient-postal-{{ row.order.public_id }}">Code postal</label><input class="ui-input" id="recipient-postal-{{ row.order.public_id }}" name="recipient_postal_code" value="{{ row.shipment_form_data.recipient_postal_code }}" required autocomplete="shipping postal-code"></div>
+      <div class="ui-field-group"><label class="ui-label" for="recipient-city-{{ row.order.public_id }}">Ville</label><input class="ui-input" id="recipient-city-{{ row.order.public_id }}" name="recipient_city" value="{{ row.shipment_form_data.recipient_city }}" required autocomplete="shipping address-level2"></div>
+      <div class="ui-field-group"><label class="ui-label" for="recipient-country-{{ row.order.public_id }}">Pays</label><input class="ui-input" id="recipient-country-{{ row.order.public_id }}" name="recipient_country_code" value="{{ row.shipment_form_data.recipient_country_code }}" minlength="2" maxlength="2" required autocomplete="shipping country"></div>
+      <div class="ui-field-group"><label class="ui-label" for="parcel-weight-{{ row.order.public_id }}">Poids (kg)</label><input class="ui-input" id="parcel-weight-{{ row.order.public_id }}" name="parcel_weight_value" value="{{ row.shipment_form_data.parcel_weight_value }}" type="number" min="0.01" step="0.01" required inputmode="decimal"></div>
+    </div>
+    <div class="atelier-operation-shipping-form__actions"><p>Cette action crée la commande dans Sendcloud. L’étiquette reste générée dans Sendcloud.</p><button class="ui-btn ui-btn-primary" type="submit" hx-disabled-elt="this">Déclarer maintenant</button></div>
+  </form>
+</details>

@@ -330,7 +330,7 @@ def test_staff_navigation_groups_only_authorized_secondary_tools():
     assert client.login(email=staff_user.email, password="pass")
 
     limited_html = client.get(reverse("portal:staff-dashboard")).content.decode()
-    assert "Dashboard" in limited_html
+    assert "File Atelier" in limited_html
     assert "Commandes" in limited_html
     assert "Mon compte" in limited_html
     assert "Équipe Atelier" in limited_html
@@ -465,6 +465,7 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     shipping_panel_response = client.get(
         reverse("portal:staff-order-panel-shipping", kwargs={"order_public_id": order.public_id})
     )
+    operations_response = client.get(reverse("portal:staff-atelier-operations"))
     scan_panel_response = client.get(
         reverse("portal:staff-order-panel-scan", kwargs={"order_public_id": order.public_id})
     )
@@ -487,7 +488,7 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert detail_response.status_code == 200
     detail_html = detail_response.content.decode()
     assert "staff-order-focus" in detail_html
-    assert "Prochaine action" in detail_html
+    assert "À faire" in detail_html
     assert "Aucun visuel reçu" in detail_html
     assert "Client &amp; références" not in detail_html
     assert "Workflow commande" not in detail_html
@@ -495,13 +496,17 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert "Incident Drive" not in detail_html
     assert "tab_icon" not in detail_html
     assert "/panels/inspection/" in detail_html
-    assert "Valider les fichiers" in detail_html
-    assert "Tracer l&#x27;avancement" in detail_html
-    assert "Retour à la file" in detail_html
+    assert "Valider les fichiers" not in detail_html
+    assert "Tracer l&#x27;avancement" not in detail_html
+    assert "Scan atelier" not in detail_html
+    assert "/panels/scan/" not in detail_html
+    assert "Retour à la file" not in detail_html
     assert production_panel_response.status_code == 200
     production_html = production_panel_response.content.decode()
     assert "data-submit-loading" in production_html
-    assert "Avancement de l’OF" in production_html
+    assert "Avancement de l’OF" not in production_html
+    assert "operator-reference-bar" not in production_html
+    assert "Métrage de production" in production_html
     assert '<option value="in_progress">' in production_html
     assert '<option value="blocked">' in production_html
     assert '<option value="ready_to_ship">' not in production_html
@@ -510,21 +515,23 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert drive_panel_response.status_code == 200
     assert shipping_panel_response.status_code == 200
     shipping_html = shipping_panel_response.content.decode()
-    assert "Terminez la production avant de créer l’envoi" in shipping_html
+    assert "Disponible quand l’OF sera prêt à expédier" in shipping_html
     assert "Consultation seule" in shipping_html
     assert "Générer l’étiquette" not in shipping_html
     assert "Déclarer dans Sendcloud" not in shipping_html
-    assert scan_panel_response.status_code == 200
-    scan_html = scan_panel_response.content.decode()
-    assert "Scannez la référence OF" in scan_html
-    assert "Utiliser l’OF de cette commande" in scan_html
-    assert "$refs.scanInput.focus({ preventScroll: true })" in scan_html
-    assert "data-submit-loading" in scan_html
+    assert operations_response.status_code == 200
+    operations_html = operations_response.content.decode()
+    assert "Pilotage Atelier" in operations_html
+    assert "Référence OF ou client" in operations_html
+    assert "Démarrer la production" in operations_html
+    assert scan_panel_response.status_code == 302
+    assert reverse("portal:staff-atelier-operations") in scan_panel_response["Location"]
     assert billing_panel_response.status_code == 200
     billing_html = billing_panel_response.content.decode()
     assert "workflow-panel" in billing_html
-    assert "Synthèse de facturation" in billing_html
-    assert "Pièces de la commande" in billing_html
+    assert "Montant et mode de facturation" in billing_html
+    assert "Détail du montant" in billing_html
+    assert "Pièces de la commande" not in billing_html
 
 
 @pytest.mark.django_db
@@ -562,7 +569,8 @@ def test_shipping_panel_is_prefilled_only_when_workflow_and_permission_allow_cre
 
     assert response.status_code == 200
     html = response.content.decode()
-    assert "La production est prête à expédier" in html
+    assert "Prêt à déclarer" in html
+    assert "Vérifiez le destinataire et le poids" in html
     assert 'value="Atelier Client"' in html
     assert 'value="logistique@example.com"' in html
     assert 'value="Rue des Imprimeurs"' in html

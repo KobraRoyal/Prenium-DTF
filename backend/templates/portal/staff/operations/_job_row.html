@@ -1,0 +1,93 @@
+{% load portal_tags %}
+<li class="atelier-operation-row{% if row.job.status == 'blocked' %} is-blocked{% elif row.job.status == 'ready_to_ship' %} is-shipping{% endif %}">
+  <article>
+    <div class="atelier-operation-row__identity">
+      <span class="atelier-operation-row__mobile-label">Ordre de fabrication</span>
+      <strong>{{ row.job.manufacturing_order_number }}</strong>
+      <span>{{ row.customer.name }} · commande {{ row.order.short_ref|upper }}</span>
+      <a href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=production">Ouvrir le dossier</a>
+    </div>
+
+    <div class="atelier-operation-row__machine">
+      <span class="atelier-operation-row__mobile-label">Machine</span>
+      {% if row.job.assigned_machine %}
+      <strong><code>{{ row.job.assigned_machine.code }}</code> {{ row.job.assigned_machine.name }}</strong>
+      <small>{{ row.print_count }} impression{{ row.print_count|pluralize }} confirmée{{ row.print_count|pluralize }}</small>
+      {% else %}
+      <strong>Non attribuée</strong>
+      <small>Attribution disponible dans Production</small>
+      {% endif %}
+    </div>
+
+    <div class="atelier-operation-row__state">
+      <span class="atelier-operation-row__mobile-label">État</span>
+      <span class="badge {{ row.job.status|badge_tone }}">{{ row.job.status|human_status }}</span>
+      {% if row.job.last_transition_at %}<time datetime="{{ row.job.last_transition_at|date:'c' }}">{{ row.job.last_transition_at|date:"d/m · H:i" }}</time>{% else %}<small>Aucune transition</small>{% endif %}
+    </div>
+
+    <div class="atelier-operation-row__actions">
+      <span class="atelier-operation-row__mobile-label">Action immédiate</span>
+      {% if can_transition and row.allowed_actions %}
+      <form
+        class="atelier-operation-transition"
+        hx-post="{% url 'portal:staff-atelier-operation-transition' order_public_id=row.order.public_id %}"
+        hx-target="#atelier-operations-workspace"
+        hx-swap="outerHTML"
+        hx-indicator="#portal-htmx-indicator"
+        data-submit-loading
+      >
+        {% csrf_token %}
+        <input type="hidden" name="queue" value="{{ queue }}">
+        <input type="hidden" name="q" value="{{ query }}">
+        <input type="hidden" name="page" value="{{ page_obj.number }}">
+        <div class="atelier-operation-transition__buttons">
+          {% for action in row.allowed_actions %}
+          <button class="ui-btn {% if action.is_primary %}ui-btn-primary{% else %}ui-btn-secondary{% endif %}{% if action.is_danger %} is-danger{% endif %}" type="submit" name="to_status" value="{{ action.status }}" hx-disabled-elt="this">{{ action.label }}</button>
+          {% endfor %}
+        </div>
+        <details class="atelier-operation-note">
+          <summary>Ajouter une note</summary>
+          <label class="sr-only" for="operation-reason-{{ row.order.public_id }}">Note de transition</label>
+          <input class="ui-input" id="operation-reason-{{ row.order.public_id }}" name="reason" maxlength="255" placeholder="Contrôle, incident ou décision Atelier">
+        </details>
+      </form>
+      {% elif not can_transition %}
+      <span class="atelier-operation-row__readonly">Consultation seule</span>
+      {% elif row.job.status == 'completed' %}
+      <strong class="atelier-operation-row__done">Workflow terminé</strong>
+      {% endif %}
+      {% if row.start_block_reason %}
+      <aside class="atelier-operation-prerequisite" role="note">
+        <strong>Démarrage en attente.</strong>
+        <span>{{ row.start_block_reason }}</span>
+        <a href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=billing">Résoudre le prérequis</a>
+      </aside>
+      {% endif %}
+    </div>
+  </article>
+
+  {% if row.shipment %}
+  <section class="atelier-operation-shipment" aria-label="Suivi Sendcloud">
+    <div>
+      <strong>Sendcloud déclaré</strong>
+      <span>{% if row.shipment.tracking_number %}Suivi {{ row.shipment.tracking_number }}{% else %}Étiquette et suivi en attente{% endif %}</span>
+    </div>
+    <div class="atelier-operation-shipment__actions">
+      {% if row.shipment.label_file %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-shipment-label-download' order_public_id=row.order.public_id %}">Étiquette</a>{% endif %}
+      {% if row.shipment.tracking_url %}<a class="ui-btn ui-btn-secondary" href="{{ row.shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre</a>{% endif %}
+      {% if can_view_shipping and row.shipment.status == 'created' and row.shipment.sendcloud_order_id %}
+      <form hx-post="{% url 'portal:staff-atelier-operation-shipment-sync' order_public_id=row.order.public_id %}" hx-target="#atelier-operations-workspace" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+        {% csrf_token %}<input type="hidden" name="queue" value="{{ queue }}"><input type="hidden" name="q" value="{{ query }}"><input type="hidden" name="page" value="{{ page_obj.number }}">
+        <button class="ui-btn ui-btn-secondary" type="submit" hx-disabled-elt="this">Actualiser</button>
+      </form>
+      {% endif %}
+    </div>
+  </section>
+  {% elif row.needs_shipping %}
+    {% if can_create_shipment %}
+      {% include "portal/staff/operations/_shipping_form.html" %}
+    {% else %}
+      <div class="atelier-operation-shipment atelier-operation-shipment--waiting"><strong>Expédition à déclarer</strong><span>Permission Sendcloud requise.</span></div>
+    {% endif %}
+  {% endif %}
+</li>

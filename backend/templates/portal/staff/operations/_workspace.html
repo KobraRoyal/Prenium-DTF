@@ -1,0 +1,61 @@
+<section id="atelier-operations-workspace" class="atelier-operations-workspace" aria-live="polite">
+  {% if feedback %}
+  <div class="alert {% if feedback_tone == 'error' %}alert--danger{% else %}alert--success{% endif %} atelier-operations-feedback" role="{% if feedback_tone == 'error' %}alert{% else %}status{% endif %}">
+    <p>{{ feedback }}</p>
+  </div>
+  {% endif %}
+
+  <nav class="atelier-operations-tabs" aria-label="Filtrer le pilotage Atelier">
+    {% for tab in tabs %}
+    <a
+      class="atelier-operations-tab{% if tab.is_active %} is-active{% endif %}"
+      href="{% url 'portal:staff-atelier-operations' %}?queue={{ tab.key }}{% if query %}&q={{ query|urlencode }}{% endif %}"
+      hx-get="{% url 'portal:staff-atelier-operations' %}?queue={{ tab.key }}{% if query %}&q={{ query|urlencode }}{% endif %}"
+      hx-target="#atelier-operations-workspace"
+      hx-swap="outerHTML"
+      hx-push-url="true"
+      hx-indicator="#portal-htmx-indicator"
+      {% if tab.is_active %}aria-current="page"{% endif %}
+    >
+      <span>{{ tab.label }}</span>
+      <strong>{{ tab.count }}</strong>
+    </a>
+    {% endfor %}
+  </nav>
+
+  {% if query %}<p class="atelier-operations-query-state">Résultats pour <strong>{{ query }}</strong> · {{ page_obj.paginator.count }} OF</p>{% endif %}
+
+  {% if rows %}
+  <div class="atelier-operations-list-head" aria-hidden="true">
+    <span>Ordre de fabrication</span>
+    <span>Machine</span>
+    <span>État</span>
+    <span>Action immédiate</span>
+  </div>
+  <ol class="atelier-operations-list" aria-label="Ordres de fabrication à piloter">
+    {% for row in rows %}
+      {% include "portal/staff/operations/_job_row.html" %}
+    {% endfor %}
+  </ol>
+
+  {% if page_obj.has_other_pages %}
+  <nav class="atelier-operations-pagination" aria-label="Pagination du pilotage Atelier">
+    {% if page_obj.has_previous %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-atelier-operations' %}?queue={{ queue }}&q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}" hx-get="{% url 'portal:staff-atelier-operations' %}?queue={{ queue }}&q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}" hx-target="#atelier-operations-workspace" hx-swap="outerHTML" hx-push-url="true">Précédent</a>{% endif %}
+    <span>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-atelier-operations' %}?queue={{ queue }}&q={{ query|urlencode }}&page={{ page_obj.next_page_number }}" hx-get="{% url 'portal:staff-atelier-operations' %}?queue={{ queue }}&q={{ query|urlencode }}&page={{ page_obj.next_page_number }}" hx-target="#atelier-operations-workspace" hx-swap="outerHTML" hx-push-url="true">Suivant</a>{% endif %}
+  </nav>
+  {% endif %}
+  {% else %}
+  <div class="atelier-operations-empty">
+    {% if query %}
+      {% include "components/ui/empty_state.html" with title="Aucun OF trouvé" message="Vérifiez la référence scannée ou effacez la recherche pour reprendre la file." %}
+    {% elif queue == "shipping" %}
+      {% include "components/ui/empty_state.html" with title="Aucune expédition à lancer" message="Les OF prêts apparaîtront ici dès la fin de production." %}
+    {% elif queue == "completed" %}
+      {% include "components/ui/empty_state.html" with title="Aucun OF terminé" message="Les dossiers clôturés resteront consultables dans cette file." %}
+    {% else %}
+      {% include "components/ui/empty_state.html" with title="File Atelier à jour" message="Aucun changement de statut n’est requis pour le moment." %}
+    {% endif %}
+  </div>
+  {% endif %}
+</section>

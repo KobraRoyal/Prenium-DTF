@@ -1,7 +1,53 @@
 {% extends "portal/layout.html" %}
+{% load portal_tags %}
 {% block title %}{{ project.project_number }} OPS - Prenium DTF{% endblock %}
 {% block portal_content %}
-{% include "components/portal/page_head.html" with kicker="Contrôle OPS" title=project.name subtitle=project.project_number %}
-<section class="card"><div class="grid gap-4 md:grid-cols-3"><div><p class="muted">Client</p><strong>{{ project.customer.name }}</strong></div><div><p class="muted">Statut</p><strong>{{ project.get_status_display }}</strong></div><div><p class="muted">Créé par</p><strong>{{ project.created_by.email|default:"—" }}</strong></div></div></section>
-<section class="card mt-6"><h2 class="font-display text-lg">Lignes du projet</h2>{% if project.items.all %}<div class="mt-4 overflow-x-auto ui-table-shell"><table class="dui-table"><thead><tr><th>Visuel</th><th>Fichier et analyse</th><th>Dimensions</th><th>Qté</th></tr></thead><tbody>{% for item in project.items.all %}<tr><td>{{ item.name }}</td><td>{% if item.asset.current_version %}<p>{{ item.asset.current_version.original_filename }} · v{{ item.asset.current_version.version_number }}</p><p class="muted text-xs">{{ item.asset.current_version.get_analysis_status_display }}{% if item.asset.current_version.analysis.image_width %} · {{ item.asset.current_version.analysis.image_width }} × {{ item.asset.current_version.analysis.image_height }} px{% endif %}</p>{% for warning in item.asset.current_version.analysis.warnings %}<p class="text-xs text-warning">{{ warning }}</p>{% endfor %}<a class="ui-link text-sm" href="{% url 'portal:staff-order-project-item-asset-download' project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>{% else %}<span class="text-error">Fichier manquant</span>{% endif %}</td><td>{{ item.width_mm }} × {{ item.height_mm }} mm</td><td>{{ item.quantity }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted mt-4">Aucune ligne.</p>{% endif %}<p class="muted mt-5 text-sm">Les actions de contrôle, correction et confirmation seront activées dans le Sprint 4.</p></section>
+<div class="staff-project-detail">
+  <a class="ui-link staff-project-detail__back" href="{% url 'portal:staff-order-project-list' %}">Retour aux projets B2B</a>
+
+  <section class="card staff-project-focus" aria-labelledby="staff-project-title">
+    <div class="staff-project-focus__identity">
+      <div>
+        <h1 id="staff-project-title">{{ project.name }}</h1>
+        <code>{{ project.project_number }}</code>
+      </div>
+      <span class="badge {{ project.status|badge_tone }}">{{ project.get_status_display }}</span>
+    </div>
+    <dl class="staff-project-focus__facts">
+      <div><dt>Client</dt><dd>{{ project.customer.name }}</dd></div>
+      <div><dt>Créé par</dt><dd>{{ project.created_by.email|default:"Non renseigné" }}</dd></div>
+      <div><dt>Visuels</dt><dd>{{ project.items.count }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="staff-project-items" aria-labelledby="staff-project-items-title">
+    <header>
+      <div><h2 id="staff-project-items-title">Visuels à contrôler</h2><p>Vérifiez le fichier, l’analyse et les dimensions avant traitement.</p></div>
+      <span class="badge is-neutral">{{ project.items.count }} ligne{{ project.items.count|pluralize }}</span>
+    </header>
+    {% if project.items.all %}
+    <ol class="staff-project-item-list">
+      {% for item in project.items.all %}
+      <li class="staff-project-item{% if not item.asset.current_version %} has-issue{% endif %}">
+        <div class="staff-project-item__identity"><strong>{{ item.name }}</strong><span>{{ item.width_mm }} × {{ item.height_mm }} mm · {{ item.quantity }} exemplaire{{ item.quantity|pluralize }}</span></div>
+        {% if item.asset.current_version %}
+        <div class="staff-project-item__file">
+          <strong>{{ item.asset.current_version.original_filename }}</strong>
+          <span>Version {{ item.asset.current_version.version_number }}{% if item.asset.current_version.analysis.image_width %} · {{ item.asset.current_version.analysis.image_width }} × {{ item.asset.current_version.analysis.image_height }} px{% endif %}</span>
+          {% for warning in item.asset.current_version.analysis.warnings %}<p class="staff-project-item__warning">{{ warning }}</p>{% endfor %}
+        </div>
+        <span class="badge {{ item.asset.current_version.analysis_status|badge_tone }}">{{ item.asset.current_version.get_analysis_status_display }}</span>
+        <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-project-item-asset-download' project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>
+        {% else %}
+        <div class="staff-project-item__file"><strong>Fichier manquant</strong><span>Le client doit ajouter une version exploitable.</span></div>
+        <span class="badge is-danger">À corriger</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    {% include "components/ui/empty_state.html" with title="Aucun visuel" message="Ce projet ne contient encore aucune ligne à contrôler." %}
+    {% endif %}
+  </section>
+</div>
 {% endblock %}

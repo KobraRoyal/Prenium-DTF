@@ -403,6 +403,23 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("event.detail?.target", runtime)
         self.assertIn("target instanceof HTMLElement", runtime)
 
+    def test_scan_is_replaced_by_the_dedicated_operations_console(self) -> None:
+        tabs = app_source("apps/portal/templatetags/order_tags.py")
+        operations = template_source("portal/staff/operations/index.html")
+        workspace = template_source("portal/staff/operations/_workspace.html")
+        row = template_source("portal/staff/operations/_job_row.html")
+        shipping_form = template_source("portal/staff/operations/_shipping_form.html")
+        portal_css = static_source("css/entries/portal.css")
+
+        self.assertNotIn('"slug": "scan"', tabs)
+        self.assertNotIn("Scan atelier", tabs)
+        self.assertIn("Pilotage Atelier", operations)
+        self.assertIn("operationScan.focus", operations)
+        self.assertIn('id="atelier-operations-workspace"', workspace)
+        self.assertIn("staff-atelier-operation-transition", row)
+        self.assertIn("staff-atelier-operation-shipment-create", shipping_form)
+        self.assertIn("atelier-operations.css", portal_css)
+
     def test_staff_order_detail_keeps_only_actionable_summary(self) -> None:
         source = template_source("portal/staff/order_detail.html")
         delete_partial = template_source("portal/staff/partials/order_delete_button.html")
@@ -411,20 +428,23 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('class="card staff-order-focus"', source)
         self.assertIn("staff-order-focus__header", source)
         self.assertIn("staff-order-focus__primary", source)
-        self.assertIn("staff-order-focus__tools", source)
-        self.assertIn("Prochaine action", source)
+        self.assertIn("À faire", source)
         self.assertIn("staff-order-focus__of", source)
-        self.assertIn(">Client<", source)
-        self.assertIn("Tarif", source)
+        self.assertIn("staff-order-focus__client", source)
+        self.assertIn("order.total_amount", source)
+        self.assertIn("Dossier Drive", source)
+        self.assertNotIn("staff-order-focus__facts", source)
+        self.assertNotIn("Créée le", source)
+        self.assertNotIn("Retour à la file", source)
         self.assertNotIn("Ordre de fabrication", source)
         self.assertNotIn("Référence", source)
         self.assertIn("order_payment_captured", source)
-        self.assertIn("Payée", source)
         self.assertIn("À encaisser", source)
-        self.assertIn("settlement_badge", source)
-        self.assertIn("order.billing_mode|badge_tone", source)
+        self.assertNotIn("Payée", source)
+        self.assertNotIn("settlement_badge", source)
         self.assertNotIn("Mode de facturation", source)
         self.assertIn("portal/staff/partials/order_delete_button.html", source)
+        self.assertIn("{% if can_delete_order %}", source)
         self.assertIn("portal:staff-order-delete", delete_partial)
         self.assertIn("can_delete_order", delete_partial)
         self.assertIn("staff_order_focus.order_reference", breadcrumb)
@@ -436,11 +456,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_staff_orders_table_shows_settlement_badge(self) -> None:
         orders = template_source("components/tables/orders_table.html")
-        production = template_source("portal/staff/panels/production.html")
+        billing = template_source("portal/staff/panels/billing.html")
 
         self.assertIn("settlement_badge", orders)
         self.assertIn('variant == "staff"', orders)
-        self.assertIn("settlement_badge", production)
+        self.assertIn("settlement_badge", billing)
+        self.assertNotIn("settlement_badge", template_source("portal/staff/panels/production.html"))
 
     def test_staff_customer_detail_exposes_settlement_mode_choice(self) -> None:
         source = template_source("portal/staff/customers/detail.html")
@@ -590,7 +611,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         self.assertIn(">Tableau de bord</a>", client_nav)
         self.assertIn(">Planches DTF</a>", client_nav)
-        self.assertIn(">Dashboard</a>", staff_nav)
+        self.assertIn(">File Atelier</a>", staff_nav)
         self.assertIn(">Commandes</a>", staff_nav)
         self.assertIn("Outils Atelier", staff_nav)
         self.assertIn("Demandes d’accès", staff_nav)
@@ -981,7 +1002,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
     def test_staff_dashboard_uses_french_premium_copy(self) -> None:
         source = template_source("portal/staff/dashboard.html")
 
-        self.assertIn('kicker="Pilotage Atelier"', source)
+        self.assertNotIn("kicker=", source)
         self.assertIn('title="File Atelier"', source)
         self.assertIn("Commandes Atelier", source)
         self.assertIn('aria-label="Filtrer la file Atelier"', source)
@@ -992,6 +1013,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         dashboard_css = static_source("css/components/product-shell.css")
         self.assertNotIn("--product-paper", dashboard_css)
         self.assertIn("Imprimer les 5 derniers OF prêts", source)
+        self.assertIn("Autres impressions", source)
+        self.assertNotIn("Accès rapides Atelier", source)
         self.assertNotIn("Contrats permissions", source)
         self.assertNotIn("Accès commandes autorisé", source)
         self.assertNotIn("Accueil staff", source)
@@ -1004,13 +1027,38 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertEqual(staff_nav.count("portal:staff-customer-list"), 1)
         self.assertNotIn("Comptes clients", staff_nav)
 
+    def test_staff_views_distill_secondary_actions_and_repeated_information(self) -> None:
+        order = template_source("portal/staff/order_detail.html")
+        access_list = template_source("portal/staff/access_requests/list.html")
+        access_detail = template_source("portal/staff/access_requests/detail.html")
+        machine_fleet = template_source("portal/staff/machines/_fleet_content.html")
+        discount_settings = template_source("portal/staff/customers/default_volume_discounts.html")
+        billing = template_source("portal/staff/panels/billing.html")
+        project = template_source("portal/staff/order_project_detail.html")
+
+        self.assertNotIn("staff-order-focus__eyebrow", order)
+        self.assertEqual(order.count("staff_order_focus.review_label"), 1)
+        self.assertNotIn("staff_order_focus.production_label", order)
+        self.assertNotIn("Résultats affichés", access_list)
+        self.assertIn(
+            '<details class="card staff-access-panel access-review-reject"', access_detail
+        )
+        self.assertIn('<details class="machine-fleet-create"', machine_fleet)
+        self.assertIn('<details class="volume-tier-create-card"', discount_settings)
+        self.assertNotIn("<span>Paiement</span>", billing)
+        self.assertNotIn("<span>Justificatif</span>", billing)
+        self.assertIn("staff-project-item-list", project)
+        self.assertNotIn("Sprint 4", project)
+
     def test_staff_inspection_uses_compact_summary_without_nested_metric_cards(self) -> None:
         source = template_source("portal/staff/panels/inspection.html")
         portal_entry = static_source("css/entries/portal.css")
         inspection_css = static_source("css/components/inspection-workbench.css")
 
-        self.assertIn("atelier-inspection__summary", source)
-        self.assertIn("Priorité de contrôle", source)
+        self.assertNotIn("atelier-inspection__summary", source)
+        self.assertNotIn("Priorité de contrôle", source)
+        self.assertIn("pending_review_count", source)
+        self.assertIn("approved_review_count", source)
         self.assertIn("Analyse automatique", source)
         self.assertIn("Décision Atelier", source)
         self.assertIn("Action requise", source)
@@ -1022,6 +1070,29 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("@media (prefers-reduced-motion: reduce)", inspection_css)
         self.assertNotIn("font-display text-2xl", source)
         self.assertNotIn("uppercase tracking-wide", source)
+
+    def test_staff_order_panels_keep_one_status_and_disclose_secondary_detail(self) -> None:
+        tabs = template_source("components/order/order_tabs.html")
+        production = template_source("portal/staff/panels/production.html")
+        operations = template_source("portal/staff/operations/index.html")
+        shipping = template_source("portal/staff/panels/shipping.html")
+        billing = template_source("portal/staff/panels/billing.html")
+
+        self.assertIn("workflow-shell--distilled", tabs)
+        self.assertIn("workflow-shell--tabs-{{ tabs|length }}", tabs)
+        self.assertIn("workflow-progress__label", tabs)
+        self.assertNotIn("Avancement de l’OF", production)
+        self.assertNotIn("operator-reference-bar", production)
+        self.assertIn("show_machine_workspace", production)
+        self.assertIn("workflow-disclosure production-meterage", production)
+        self.assertIn("workflow-disclosure production-history", production)
+        self.assertIn("operationScan.focus", operations)
+        self.assertNotIn("Utiliser l’OF de cette commande", operations)
+        self.assertNotIn("shipping-readiness", shipping)
+        self.assertIn("Suivi Sendcloud", shipping)
+        self.assertIn("billing-total", billing)
+        self.assertIn("workflow-disclosure billing-breakdown", billing)
+        self.assertNotIn("Pièces de la commande", billing)
 
     def test_staff_order_detail_flattens_nested_workflow_borders(self) -> None:
         product_css = static_source("css/components/product-shell.css")
@@ -1139,14 +1210,15 @@ class PortalUiCoherenceTests(SimpleTestCase):
         staff_detail = template_source("portal/staff/order_detail.html")
         staff_customer = template_source("components/portal/staff_customer_snapshot.html")
         production = template_source("portal/staff/panels/production.html")
-        scan = template_source("portal/staff/panels/scan.html")
+        operations = template_source("portal/staff/operations/_job_row.html")
 
         self.assertNotIn('class="card order-command-bar" style=', staff_detail)
         self.assertNotIn('class="card staff-customer-snapshot" style=', staff_customer)
         self.assertNotIn('class="workflow-kpi" style=', production)
-        self.assertIn('class="production-track"', production)
-        self.assertIn('class="scan-result"', scan)
-        self.assertNotIn("display: inline; margin-right", scan)
+        self.assertNotIn('class="production-track"', production)
+        self.assertIn('class="workflow-disclosure production-history"', production)
+        self.assertIn('class="atelier-operation-row', operations)
+        self.assertNotIn("display: inline; margin-right", operations)
 
     def test_prospect_primary_actions_declare_button_hierarchy(self) -> None:
         paths = [

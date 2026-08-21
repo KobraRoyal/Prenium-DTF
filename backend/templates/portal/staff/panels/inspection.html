@@ -1,39 +1,18 @@
 <div id="staff-order-inspection-panel" class="workflow-panel atelier-inspection">
   <div class="workflow-panel__hero atelier-inspection__hero">
     <div>
-      <h3 class="workflow-panel__title">Validation des fichiers</h3>
-      <p class="workflow-panel__meta">L’analyse automatique détecte les problèmes techniques. La décision Atelier autorise — ou bloque — la production.</p>
+      <h3 class="workflow-panel__title">Contrôle fichiers</h3>
+      <p class="workflow-panel__meta">
+        {% if pending_review_count %}{{ pending_review_count }} fichier{{ pending_review_count|pluralize }} à contrôler{% if automatic_attention_count %} · {{ automatic_attention_count }} alerte{{ automatic_attention_count|pluralize }} technique{{ automatic_attention_count|pluralize }}{% endif %}
+        {% elif changes_requested_count %}{{ changes_requested_count }} correction{{ changes_requested_count|pluralize }} attendue{{ changes_requested_count|pluralize }} du client
+        {% elif all_uploads_approved %}{{ approved_review_count }} fichier{{ approved_review_count|pluralize }} prêt{{ approved_review_count|pluralize }} pour production
+        {% else %}Aucune décision en attente{% endif %}
+      </p>
     </div>
-    {% if perms.notifications.view_emailtemplate %}
-    <div class="workflow-panel__actions max-sm:w-full">
-      <a class="ui-btn ui-btn-ghost max-sm:w-full" href="{% url 'portal:staff-email-template-edit' event='file_correction_requested' audience='client' %}">Modifier l’e-mail client</a>
-    </div>
-    {% endif %}
   </div>
 
   {% if uploads %}
-  <section class="atelier-inspection__queue" aria-labelledby="inspection-queue-title">
-    <div class="atelier-inspection__queue-copy">
-      <h4 id="inspection-queue-title">Priorité de contrôle</h4>
-      {% if pending_review_count %}
-      <p><strong>{% if pending_review_count == 1 %}1 fichier attend une décision.{% else %}{{ pending_review_count }} fichiers attendent une décision.{% endif %}</strong> Ouvrez l’aperçu, vérifiez le diagnostic, puis choisissez l’issue Atelier.</p>
-      {% elif all_uploads_approved %}
-      <p><strong>Contrôle terminé.</strong> Tous les fichiers peuvent partir en production.</p>
-      {% else %}
-      <p><strong>Aucune décision en attente.</strong> Les corrections déjà demandées restent visibles dans chaque fichier.</p>
-      {% endif %}
-    </div>
-    <ul class="atelier-inspection__summary" aria-label="Synthèse des validations">
-      <li class="is-pending"><strong>{{ pending_review_count }}</strong><span>À contrôler</span></li>
-      <li class="is-ready"><strong>{{ approved_review_count }}</strong><span>Prêts</span></li>
-      <li class="is-correction"><strong>{{ changes_requested_count }}</strong><span>Corrections</span></li>
-      <li{% if automatic_attention_count %} class="is-attention"{% endif %}><strong>{{ automatic_attention_count }}</strong><span>Alertes auto</span></li>
-    </ul>
-  </section>
-
-  {% if all_uploads_approved %}
-  <div class="alert alert--success mt-4" role="status"><p><strong>Commande prête :</strong> tous les fichiers sont approuvés pour production.</p></div>
-  {% elif not can_review_uploads %}
+  {% if not can_review_uploads %}
   <div class="alert alert--info mt-4" role="status"><p>Vous pouvez consulter les contrôles, mais votre rôle ne permet pas de prendre une décision Atelier.</p></div>
   {% endif %}
 

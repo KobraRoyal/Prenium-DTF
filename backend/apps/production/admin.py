@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import ProductionJob, ProductionJobScanLog, ProductionJobTransition
+from .models import (
+    ProductionJob,
+    ProductionJobMachineAssignment,
+    ProductionJobScanLog,
+    ProductionJobTransition,
+    ProductionMachine,
+    ProductionPrintRecord,
+)
 
 
 class ProductionJobTransitionInline(admin.TabularInline):
@@ -65,6 +72,9 @@ class ProductionJobAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(ProductionJobTransition)
 class ProductionJobTransitionAdmin(admin.ModelAdmin):
@@ -101,6 +111,9 @@ class ProductionJobTransitionAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False
 
 
@@ -145,3 +158,102 @@ class ProductionJobScanLogAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ProductionMachine)
+class ProductionMachineAdmin(admin.ModelAdmin):
+    list_display = (
+        "code",
+        "name",
+        "status",
+        "manufacturer",
+        "model_name",
+        "location",
+        "status_changed_at",
+    )
+    list_filter = ("status", "manufacturer", "location")
+    search_fields = ("code", "name", "manufacturer", "model_name", "serial_number")
+    readonly_fields = (
+        "public_id",
+        "code",
+        "name",
+        "manufacturer",
+        "model_name",
+        "serial_number",
+        "location",
+        "max_print_width_cm",
+        "status",
+        "notes",
+        "status_changed_at",
+        "status_changed_by",
+        "created_at",
+        "updated_at",
+    )
+    fields = readonly_fields
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class AppendOnlyProductionAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ProductionJobMachineAssignment)
+class ProductionJobMachineAssignmentAdmin(AppendOnlyProductionAdmin):
+    list_display = (
+        "public_id",
+        "production_job",
+        "machine_code_snapshot",
+        "previous_machine_code_snapshot",
+        "assigned_by",
+        "printing_started_at",
+        "ended_at",
+        "created_at",
+    )
+    list_filter = ("source", "created_at", "printing_started_at", "ended_at")
+    search_fields = (
+        "production_job__manufacturing_order_number",
+        "production_job__order__public_id",
+        "machine_code_snapshot",
+        "machine_name_snapshot",
+    )
+    readonly_fields = tuple(field.name for field in ProductionJobMachineAssignment._meta.fields)
+    fields = readonly_fields
+
+
+@admin.register(ProductionPrintRecord)
+class ProductionPrintRecordAdmin(AppendOnlyProductionAdmin):
+    list_display = (
+        "public_id",
+        "manufacturing_order_number_snapshot",
+        "machine_code_snapshot",
+        "recorded_by",
+        "printed_at",
+        "source",
+    )
+    list_filter = ("source", "printed_at")
+    search_fields = (
+        "manufacturing_order_number_snapshot",
+        "order_public_id_snapshot",
+        "machine_code_snapshot",
+        "machine_name_snapshot",
+    )
+    readonly_fields = tuple(field.name for field in ProductionPrintRecord._meta.fields)
+    fields = readonly_fields
