@@ -1,10 +1,13 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags order_tags %}
 
-{% block title %}Fiche commande Atelier - Prenium DTF{% endblock %}
+{% block title %}Fiche commande Atelier — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/breadcrumbs/staff_order_detail.html" %}
+<div class="portal-page portal-page--staff staff-order-detail-page">
+<div class="portal-page-rail">
+  {% include "components/portal/breadcrumbs/staff_order_detail.html" %}
+</div>
 
 <section class="staff-order-detail-stack" aria-label="Synthèse commande Atelier">
 <section class="card staff-order-focus" aria-labelledby="staff-order-title">
@@ -81,4 +84,5 @@
 
 {% order_htmx_tabs "staff" %}
 </section>
+</div>
 {% endblock %}

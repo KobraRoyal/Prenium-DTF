@@ -57,20 +57,23 @@ def test_marketing_pages_are_accessible_for_anonymous():
     assert 'meta name="description"' in home_html
     assert services.status_code == 200
     services_html = services.content.decode()
-    assert "Choisissez votre service DTF" in services_html
-    assert "agency-services-title" in services_html
-    assert "agency-marquee" in services_html
-    assert "agency-card--acid" in services_html
-    assert "landing-section--compact" not in services_html
-    assert "marketing-grid--services" not in services_html
-    assert "impression premium ou préparation fichier" in services_html
+    assert "landing-conversion-page" in services_html
+    assert "conversion-button conversion-button--primary" in services_html
+    assert "agency-services-title" not in services_html
+    assert "agency-marquee" not in services_html
+    assert "agency-card--acid" not in services_html
+    assert "agency-button" not in services_html
+    assert 'id="services-hero"' in services_html
+    assert 'id="services-benefits"' in services_html
+    assert 'id="services-use-cases"' in services_html
+    assert 'id="services-cta-final"' in services_html
+    assert "impression premium ou préparation fichier" in services_html.lower()
     assert "envoyer un fichier à optimiser" in services_html.lower()
     assert "Déjà client ? Connexion" in services_html
-    assert "Bénéfices métier" in services_html
-    assert "Cas d’usage" in services_html
     assert "Impression DTF premium" in services_html
     assert "Préparation de fichiers DTF" in services_html
     assert "TIFF avec canal alpha" in services_html
+    assert "conversion-footer" in services_html
     assert "js/marketing.js" in services_html
     assert "vendor/htmx-1.9.12.min.js" not in services_html
 
@@ -215,7 +218,7 @@ def test_client_checkout_page_uses_unified_product_shell_partials():
     assert response.status_code == 200
     body = response.content.decode()
     assert "product-shell--portal" in body
-    assert "checkout-dui-surface" in body
+    assert "product-checkout-card" in body
     assert "checkout-summary-box" in body
     assert "checkout-dropzone-dui" in body
     assert body.count("data-submit-loading") >= 3

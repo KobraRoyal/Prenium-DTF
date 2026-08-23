@@ -1,23 +1,16 @@
 /* Fiche commande transmise : même rythme que la commande à finaliser. */
 
-body.product-shell .client-order-detail > .page-head--premium .ui-breadcrumb {
-  margin: 0 0 0.5rem;
-  color: var(--product-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
+body.product-shell .client-order-detail-banner__content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
 }
 
-body.product-shell .client-order-detail > .page-head--premium .ui-breadcrumb a {
-  color: var(--product-ink);
-  text-decoration: none;
-}
-
-body.product-shell .client-order-detail > .page-head--premium .ui-breadcrumb a:hover,
-body.product-shell .client-order-detail > .page-head--premium .ui-breadcrumb a:focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
+body.product-shell .client-order-detail-banner__content p {
+  margin: 0;
+  flex: 1 1 14rem;
 }
 
 body.product-shell .client-order-detail .page-head-lead {

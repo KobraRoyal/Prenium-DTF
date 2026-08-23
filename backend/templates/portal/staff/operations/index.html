@@ -1,18 +1,18 @@
 {% extends "portal/layout.html" %}
 
-{% block title %}Pilotage Atelier - Prenium DTF{% endblock %}
+{% block title %}Pilotage Atelier — Prenium DTF{% endblock %}
 
 {% block portal_content %}
+<div class="portal-page portal-page--staff atelier-operations-page">
 <!--
 THESIS: une console de gestes successifs, pas une collection de fiches commande miniatures.
-OWN-WORLD: papier atelier, encre franche, accent terracotta, lignes nettes et contrôles rectangulaires.
+OWN-WORLD: shell clair atelier, surfaces blanches, accent corail sur l’action suivante, lignes nettes.
 STORY: l'opérateur scanne ou recherche un OF, lit son état, exécute le prochain geste et reste dans la file.
 FIRST VIEWPORT: champ OF autofocus pleine largeur, quatre filtres de file, puis lignes d'action compactes.
 FORM: registre opérationnel inline, extension directe du monde Atelier établi.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 -->
 <section class="atelier-operations-head">
-  {% include "components/portal/page_head.html" with title="Pilotage Atelier" subtitle="Scannez un OF, changez son statut et déclenchez l’action suivante sans quitter la file." %}
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_operations.html" title="Pilotage Atelier" subtitle="Scannez un OF, changez son statut et déclenchez l’action suivante sans quitter la file." %}
 
   <form
     class="atelier-operations-scan"
@@ -53,4 +53,5 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 </section>
 
 {% include "portal/staff/operations/_workspace.html" %}
+</div>
 {% endblock %}

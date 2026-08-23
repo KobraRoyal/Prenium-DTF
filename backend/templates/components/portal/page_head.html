@@ -1,16 +1,25 @@
-{# Paramètres usuels : kicker OU breadcrumb_template ; title ; subtitle (optionnel) ; title_code (optionnel, affiché en <code> après title). #}
-<section class="page-head page-head--premium">
+{# Paramètres : breadcrumb_template | kicker ; title ; subtitle | lead_template ; title_code ; head_class ; head_labelledby ; actions_template. #}
+{# Operate shell : rail (crème) → intro (crème) → contenu dans .portal-page-surface en dessous. #}
+{% if breadcrumb_template %}
+<div class="portal-page-rail">
+  {% include breadcrumb_template %}
+</div>
+{% endif %}
+<header class="portal-page-intro page-head{% if head_class %} {{ head_class }}{% endif %}"{% if head_labelledby %} aria-labelledby="{{ head_labelledby }}"{% endif %}>
   <div class="page-head__content">
-    {% if breadcrumb_template %}
-      {% include breadcrumb_template %}
-    {% elif kicker %}
+    {% if kicker and not breadcrumb_template %}
       <p class="page-head__eyebrow">{{ kicker }}</p>
     {% endif %}
-    <h1 class="font-display text-2xl tracking-tight">
+    <h1 class="font-display text-2xl tracking-tight"{% if head_labelledby %} id="{{ head_labelledby }}"{% endif %}>
       {{ title }}{% if title_code %} <code>{{ title_code }}</code>{% endif %}
     </h1>
-    {% if subtitle %}
+    {% if lead_template %}
+      {% include lead_template %}
+    {% elif subtitle %}
       <p class="page-head-lead">{% if subtitle_prefix %}{{ subtitle_prefix }} — {% endif %}{{ subtitle }}</p>
     {% endif %}
   </div>
-</section>
+  {% if actions_template %}
+    {% include actions_template %}
+  {% endif %}
+</header>

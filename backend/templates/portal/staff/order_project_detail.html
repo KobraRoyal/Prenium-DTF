@@ -1,10 +1,13 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags %}
-{% block title %}{{ project.project_number }} OPS - Prenium DTF{% endblock %}
+{% block title %}{{ project.project_number }} OPS — Prenium DTF{% endblock %}
 {% block portal_content %}
-<div class="staff-project-detail">
-  <a class="ui-link staff-project-detail__back" href="{% url 'portal:staff-order-project-list' %}">Retour aux projets B2B</a>
+<div class="portal-page portal-page--staff staff-project-detail-page">
+<div class="portal-page-rail">
+  {% include "components/portal/breadcrumbs/staff_order_project_detail.html" %}
+</div>
 
+<section class="staff-project-detail" aria-label="Fiche projet B2B">
   <section class="card staff-project-focus" aria-labelledby="staff-project-title">
     <div class="staff-project-focus__identity">
       <div>
@@ -46,8 +49,9 @@
       {% endfor %}
     </ol>
     {% else %}
-    {% include "components/ui/empty_state.html" with title="Aucun visuel" message="Ce projet ne contient encore aucune ligne à contrôler." %}
+    {% include "components/ui/empty_state.html" with title="Aucun fichier joint" message="Ce projet ne contient encore aucune ligne à contrôler." %}
     {% endif %}
   </section>
+</section>
 </div>
 {% endblock %}

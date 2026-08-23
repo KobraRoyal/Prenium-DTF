@@ -1,0 +1,54 @@
+# Sprint 48 — Shell clair homogène (Operate Impeccable)
+
+## Objectif
+
+Homogénéiser toutes les vues Prenium DTF autour d’un shell cohérent : header produit (logo corail, nav pills), fil d’Ariane uppercase, cartes blanches sur fond crème `#f4f0e6`, formulaires `ui-*`, alerts sémantiques — en remplacement du pivot sombre documenté dans les sprints 46–47.
+
+## Direction
+
+**« Atelier clair et chaleureux »** — voir `DESIGN.md` (North Star). Le corail `#ff8775` signale l’action ; le violet `#770176` porte le focus clavier. Les fiches staff « focus » (commande, compte, accès) conservent breadcrumb + carte synthèse comme modèle de référence.
+
+## Architecture livrée
+
+- **`page_head.html`** : partial canonique (`breadcrumb_template`, `lead_template`, `actions_template`, `head_class`).
+- **`client_trail.html` / `staff_trail.html`** : fils d’Ariane DRY avec wrappers par section.
+- **`portal.css`** : alias `--product-*` → tokens globaux clairs (unlayered, post-`product-shell.css`).
+- **`shell.css`** : overrides runtime (breadcrumbs corail, ombres neutralisées, cartes arrondies, tunnel prospect, toasts `alert--*`).
+- **Templates** : migration `dui-*` → `ui-input`, `ui-field-group`, `alert alert--*` sur checkout, vues client, staff (inspection, e-mails), tunnel prospect, toasts Alpine.
+
+## Vues migrées
+
+- Portail : listes staff/client, settings, checkout, commande, projet B2B, dashboard, profil, équipe, bibliothèque planches DTF.
+- Partials : breadcrumbs dédiés (dont `staff_order_project_detail`), `page_head_leads/*`, `page_head_actions/*`, `upload_support_color.html`, pagination partagée.
+- Marketing : header landing aligné sur `product-header` / `ui-foundation-nav`.
+- Tunnel prospect : steps 1–3, invitation accept.
+
+## Dette connue (hors purge physique)
+
+- `product-shell.css` conserve des fallbacks brutalistes (`#0b0b0b`, ombres dures) — neutralisés à runtime via `shell.css` + alias tokens.
+- `product-polish.css` / `prospect-journey.css` : hooks legacy `checkout-dui-input` conservés dans les CSS sources (Impeccable) ; templates tunnel utilisent `product-field-input` + overrides runtime dans `entries/portal.css`.
+- Studio gang sheet : header production dédié (métriques live) ; breadcrumb extrait en partial DRY.
+- Purge physique des fichiers CSS legacy bloquée par le hook Impeccable sans approbation explicite fichier entier.
+
+## Validation
+
+- [x] Build CSS (`npm run build:assets`).
+- [x] **Docker** : `cd backend && npm run build:css:docker` (collectstatic dans le volume `django_static` servi par nginx).
+- [x] **Redémarrage web** après changement de cache-bust templates : `docker compose restart web` (Gunicorn ne recharge pas toujours les templates HTML à chaud).
+- [x] Overrides boutons portail (`box-shadow: none`, états hover) dans `entries/portal.css` — écrase `app-legacy.css` `.btn` lime + ombre décalée.
+- [x] Cache-bust surface CSS : `?v=20260823-brand-light-v8` (`portal.css`, `marketing.css`, `studio.css`).
+- [x] Tests fondations / polish / cohérence portail.
+- [x] Suite complète — **809 passed, 1 skipped**.
+- [x] Vérification navigateur (recette Docker `localhost:8080`, hard refresh) :
+  - Client : `/client/` (breadcrumb Accueil client), commandes, fiche commande, planches DTF, studio gang sheet (`portal.css` + `studio.css` v8), profil, équipe, formulaire nouvelle commande.
+  - Staff (`staff.ops@prenium.local`) : `/staff/`, `/staff/orders/`, `/staff/machines/` — header pills, fil d’Ariane, fond crème, pas d’ombre `8px 8px` sur boutons.
+  - Auth / marketing : `/login/`, `/`, `/demande-acces/etape-1/`.
+  - CSS servi : `portal.css?v=20260823-brand-light-v8` contient 41 blocs `body.landing-saas.portal-shell.product-shell` + override `tr.ui-row-warning` (plus de fond lime).
+- [x] `/staff/settings/branding/` : template migré ; accès 403 pour `staff.ops` (permission `branding.view_brandthemesettings`) — hors périmètre shell.
+- [x] `DESIGN.md` — thème clair documenté.
+- [ ] Revue Impeccable complète post-purge physique `product-shell.css` (optionnel, P3).
+
+## Liens
+
+- Supersedes visuellement : [Sprint 46](sprint-46-design-system-sombre-impeccable.md), complète [Sprint 47](sprint-47-coherence-tables-actions-partials.md).
+- Contrat : `DESIGN.md`, `.impeccable/design.json`.

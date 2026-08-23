@@ -1,21 +1,35 @@
 {% load static %}
 <!doctype html>
-<html lang="fr" data-theme="prenium" class="font-sans antialiased">
+<html
+  lang="fr"
+  data-theme="prenium"
+  class="font-sans antialiased"
+  style="--brand: {{ site_brand_theme.primary|default:'#FF8775' }}; --brand-strong: {{ site_brand_theme.primary_strong|default:'#E65944' }}; --brand-soft: {{ site_brand_theme.primary_soft|default:'#FFE9E3' }}; --action-text: {{ site_brand_theme.primary_ink|default:'#1A1815' }}; --accent: {{ site_brand_theme.secondary|default:'#A83BC4' }}; --accent-strong: {{ site_brand_theme.secondary_strong|default:'#770176' }}; --accent-soft: {{ site_brand_theme.secondary_soft|default:'#F3DFF6' }}; --accent-text: {{ site_brand_theme.secondary_ink|default:'#FFFFFF' }};"
+>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="{{ site_brand_theme.paper|default:'#F4F0E6' }}">
     <title>{% block title %}Prenium DTF{% endblock %}</title>
     <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
     <link rel="preload" href="{% static 'vendor/fonts/space-grotesk-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{% static 'vendor/fonts/dm-sans-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
     {% block surface_styles %}
-    {# Login est la seule surface produit qui étend directement base.html. #}
-    <link rel="stylesheet" href="{% static 'css/portal.css' %}">
+    {# Login : socle portail sans surcouche client/staff. #}
+    {% include "components/portal/surface_styles.html" %}
     {% endblock %}
     {% block extra_head %}{% endblock %}
   </head>
-  <body class="{% block body_class %}{% endblock %}">
+  <body class="{% block body_class %}{% endblock %}"><!--
+THESIS: Prenium DTF makes every production state legible on a warm, bright workspace with one obvious next action.
+OWN-WORLD: Cream paper, warm-white trays, charcoal ink, configurable coral and purple signals, fine lines, and 14/16/18px radii.
+STORY: Identify the state, see one next action, complete it, and let supporting evidence recede.
+FIRST VIEWPORT: Compact rounded navigation; the landing pairs a decisive promise with a production board, while product views lead with state and one branded action.
+FORM: Bright embroidery workbench; user-pinned Octostitch color reference; seed key user-pinned-20260823.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
     <a class="ui-skip-link" href="#main-content">Aller au contenu principal</a>
     {% include "components/ui/toast_stack.html" %}
     {% block content %}{% endblock %}

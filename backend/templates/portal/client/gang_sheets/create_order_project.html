@@ -1,12 +1,12 @@
 {% extends "portal/layout.html" %}
 
-{% block title %}Préparer la commande - Prenium DTF{% endblock %}
+{% block title %}Préparer la commande — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="b2b-order-start-page">
-{% include "components/portal/page_head.html" with title="Préparer la commande" subtitle="Même parcours que pour une nouvelle commande : nom, date et commentaire avant validation." %}
+<div class="portal-page portal-page--client b2b-order-start-page">
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_gang_sheet_create_order.html" title="Préparer la commande" subtitle="Même parcours que pour une nouvelle commande : nom, date et commentaire avant validation." %}
 
-<section class="card b2b-order-start-card">
+<section class="portal-page-surface b2b-order-start-card">
   <div class="b2b-order-start-card__intro">
     <span class="product-step-badge">Planche DTF validée</span>
     <div>
@@ -14,27 +14,27 @@
       <p>Renseignez le nom, la date souhaitée et un commentaire pour l’atelier. La planche HD « {{ sheet.name }} » sera jointe automatiquement.</p>
     </div>
   </div>
-  {% if form_error %}<div class="dui-alert dui-alert-error mb-4" role="alert">{{ form_error }}</div>{% endif %}
+  {% if form_error %}<div class="alert alert--danger mb-4" role="alert">{{ form_error }}</div>{% endif %}
   <form method="post" class="ui-form-stack b2b-order-start-form" data-submit-loading>
     {% csrf_token %}
     <div class="b2b-order-start-form__row">
-      <div class="dui-form-control">
-        <label class="product-form-label" for="id-name">Nom de la commande</label>
-        <input class="dui-input dui-input-bordered w-full" id="id-name" name="name" required maxlength="255" autocomplete="off" placeholder="Ex. Collection été — réassort" value="{{ submitted.name|default:sheet.name }}">
+      <div class="ui-field-group">
+        <label class="ui-label" for="id-name">Nom de la commande</label>
+        <input class="ui-input w-full" id="id-name" name="name" required maxlength="255" autocomplete="off" placeholder="Ex. Collection été — réassort" value="{{ submitted.name|default:sheet.name }}">
       </div>
-      <div class="dui-form-control b2b-order-start-form__date">
-        <label class="product-form-label" for="id-date">Date souhaitée <span class="muted">(facultatif)</span></label>
+      <div class="ui-field-group b2b-order-start-form__date">
+        <label class="ui-label" for="id-date">Date souhaitée <span class="muted">(facultatif)</span></label>
         {% include "components/forms/product_date_field.html" with id="id-date" name="requested_date" value=submitted.requested_date|default:"" label="Date souhaitée" %}
       </div>
     </div>
-    <div class="dui-form-control">
-      <label class="product-form-label" for="id-comment">Commentaire <span class="muted">(facultatif)</span></label>
-      <textarea class="dui-textarea dui-textarea-bordered w-full" id="id-comment" name="customer_comment" rows="3" placeholder="Délai, conditionnement, consignes utiles pour l’atelier…">{{ submitted.customer_comment|default:'' }}</textarea>
+    <div class="ui-field-group">
+      <label class="ui-label" for="id-comment">Commentaire <span class="muted">(facultatif)</span></label>
+      <textarea class="ui-input w-full" id="id-comment" name="customer_comment" rows="3" placeholder="Délai, conditionnement, consignes utiles pour l’atelier…">{{ submitted.customer_comment|default:'' }}</textarea>
     </div>
-    <div class="dui-form-control b2b-order-start-form__quantity">
-      <label class="product-form-label" for="id-quantity">Exemplaires de planche</label>
+    <div class="ui-field-group b2b-order-start-form__quantity">
+      <label class="ui-label" for="id-quantity">Exemplaires de planche</label>
       <input
-        class="dui-input dui-input-bordered"
+        class="ui-input"
         id="id-quantity"
         name="quantity"
         type="number"

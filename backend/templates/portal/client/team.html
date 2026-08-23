@@ -1,17 +1,18 @@
 {% extends "portal/layout.html" %}
 
-{% block title %}Équipe — {{ customer.name }}{% endblock %}
+{% block title %}Équipe — {{ customer.name }} — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="account-profile-page account-team-page">
-  {% include "components/portal/page_head.html" with title="Équipe" %}
+<div class="portal-page portal-page--client account-profile-page account-team-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_team.html" title="Équipe" subtitle="Gérez les membres actifs et les invitations en attente pour votre organisation." %}
 
   {% if messages %}
     {% for message in messages %}
-      <div class="dui-alert {% if message.tags == 'success' %}dui-alert-success{% else %}dui-alert-error{% endif %}" role="status">{{ message }}</div>
+      <div class="alert {% if message.tags == 'success' %}alert--success{% else %}alert--danger{% endif %} mb-4" role="status">{{ message }}</div>
     {% endfor %}
   {% endif %}
 
+  <section class="portal-page-surface account-profile-surface">
   <div class="account-profile-layout">
     {% include "components/portal/account_rail.html" with account_section="team" %}
 
@@ -65,9 +66,7 @@
               </div>
             </article>
           {% empty %}
-            <div class="account-team-empty">
-              <p>Aucun membre actif pour cette organisation.</p>
-            </div>
+            {% include "components/ui/empty_state.html" with title="Aucun membre actif" message="Aucun membre actif pour cette organisation." %}
           {% endfor %}
         </div>
       </section>
@@ -75,5 +74,6 @@
       {% include "portal/client/partials/team_invite_panel.html" %}
     </div>
   </div>
+  </section>
 </div>
 {% endblock %}

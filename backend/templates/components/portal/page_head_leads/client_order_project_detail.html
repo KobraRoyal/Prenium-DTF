@@ -1,0 +1,6 @@
+<p class="page-head-lead">
+  <span class="badge{% if project.status == 'ready_to_submit' or project.status == 'converted' or project.status == 'confirmed' %} is-success{% elif project.status == 'action_required' or project.status == 'changes_requested' or project.status == 'blocked' %} is-danger{% elif project.status == 'analyzing' or project.status == 'incomplete' or project.status == 'draft' %} is-warning{% else %} is-neutral{% endif %}">{{ project.get_status_display }}</span>
+  {% if project_client_label and project_client_label != project.project_number %}
+  <span>{{ project.project_number }}</span>
+  {% endif %}
+</p>

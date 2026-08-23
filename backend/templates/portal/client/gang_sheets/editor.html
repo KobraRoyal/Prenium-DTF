@@ -2,7 +2,7 @@
 
 {% block body_class %}{{ block.super }} product-shell--studio{% endblock %}
 
-{% block title %}{{ sheet.name }} — Studio planche DTF — Prenium DTF{% endblock %}
+{% block title %}{{ sheet.name }} — Studio — Prenium DTF{% endblock %}
 
 {% block portal_content %}
 {{ gang_sheet_state|json_script:"gang-sheet-initial-state" }}
@@ -24,14 +24,12 @@
 >
   <input type="hidden" data-csrf value="{{ csrf_token }}">
 
+  <div class="portal-page-rail">
+    {% include "components/portal/breadcrumbs/client_gang_sheet_editor.html" %}
+  </div>
+
   <header class="gang-editor__header">
     <div class="gang-editor__heading">
-      <nav class="ui-breadcrumb" aria-label="Fil d’Ariane">
-        <ol class="ui-breadcrumb__list">
-          <li class="ui-breadcrumb__item"><a href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=customer.public_id %}">Planches DTF</a></li>
-          <li class="ui-breadcrumb__item" aria-current="page">{{ sheet.name }}</li>
-        </ol>
-      </nav>
       <div class="gang-editor__title-row">
         <div class="gang-editor__title-copy">
           <span class="gang-editor__project-ref">{% if sheet.project %}Commande {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</span>
@@ -66,7 +64,7 @@
           <button type="button" data-workflow-panel-target="settings" aria-label="Étape 3 — Contrôler la composition"><span data-workflow-marker aria-hidden="true">3</span><span><strong>Contrôler</strong><small data-workflow-detail>Vérifier la composition</small></span></button>
         </li>
         <li data-workflow-step="validate">
-          <button type="button" data-workflow-panel-target="settings" aria-label="Étape 4 — Valider la planche"><span data-workflow-marker aria-hidden="true">4</span><span><strong>Valider</strong><small data-workflow-detail>Générer le rendu HD</small></span></button>
+          <button type="button" data-workflow-panel-target="settings" aria-label="Étape 4 — Finaliser la planche"><span data-workflow-marker aria-hidden="true">4</span><span><strong>Finaliser</strong><small data-workflow-detail>Préparer le rendu</small></span></button>
         </li>
       </ol>
     </nav>
@@ -84,7 +82,6 @@
     <div class="b2b-dialog-shell">
       <header class="b2b-dialog-head">
         <div>
-          <p class="product-eyebrow">Nouvelle source</p>
           <h2 id="gang-asset-dialog-title">Vérifier l’import</h2>
         </div>
         <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
@@ -102,7 +99,8 @@
             <div class="b2b-configurator__preview">
               <div class="b2b-preview-stage is-checker" data-configurator-stage>
                 <div class="b2b-preview-bounds" data-configurator-bounds hidden>
-                  <img class="b2b-preview-image" alt="Aperçu du fichier sélectionné" data-configurator-preview hidden>
+          <!-- impeccable-disable-next-line broken-image: le JS assigne src avant de retirer hidden. -->
+          <img class="b2b-preview-image" alt="Aperçu du fichier sélectionné" data-configurator-preview hidden>
                   <div class="gang-crop-box" data-gang-crop-box tabindex="0" role="group" aria-label="Zone de recadrage" hidden>
                     <span data-crop-handle="nw" aria-hidden="true"></span><span data-crop-handle="ne" aria-hidden="true"></span>
                     <span data-crop-handle="se" aria-hidden="true"></span><span data-crop-handle="sw" aria-hidden="true"></span>
@@ -124,11 +122,12 @@
               </div>
             </div>
             <div class="b2b-configurator__controls gang-asset-modal-form__controls">
-              <p class="product-eyebrow">Fichiers à analyser</p>
-              <label class="dui-form-control">
-                <span class="product-form-label">Fichier(s)</span>
+              <p class="b2b-dialog-kicker">Fichiers à analyser</p>
+              <div class="ui-field-group">
+                <label class="ui-label" for="id-gang-asset-files">Fichier(s)</label>
                 <input
-                  class="dui-file-input dui-file-input-bordered w-full"
+                  class="ui-input product-file-input w-full"
+                  id="id-gang-asset-files"
                   type="file"
                   name="files"
                   multiple
@@ -141,7 +140,7 @@
                   {% if not can_edit %}disabled{% endif %}
                   required
                 >
-              </label>
+              </div>
               <p class="muted text-sm" id="gang-asset-files-help">
                 PNG, JPG, TIFF, PDF, EPS ou PSD · {{ gang_sheet_upload_max_size_label }} maximum par fichier · {{ gang_sheet_upload_max_files }} fichiers et {{ gang_sheet_upload_max_total_size_label }} maximum par import.
               </p>
@@ -407,8 +406,20 @@
           <div class="gang-advanced-tools__content">
             <p>Vide utilisé par Auto-imposer (≠ écart précis).</p>
             <div class="gang-spacing-grid">
-              <label for="gang-spacing-x">Horizontal X <span><input id="gang-spacing-x" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-spacing-x> mm</span></label>
-              <label for="gang-spacing-y">Vertical Y <span><input id="gang-spacing-y" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-spacing-y> mm</span></label>
+              <div class="ui-field-group">
+                <label class="ui-label" for="gang-spacing-x">Horizontal X</label>
+                <div class="gang-spacing-input">
+                  <input id="gang-spacing-x" class="ui-input" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-spacing-x>
+                  <span class="gang-spacing-unit">mm</span>
+                </div>
+              </div>
+              <div class="ui-field-group">
+                <label class="ui-label" for="gang-spacing-y">Vertical Y</label>
+                <div class="gang-spacing-input">
+                  <input id="gang-spacing-y" class="ui-input" type="number" min="0" max="100" step="0.1" inputmode="decimal" data-spacing-y>
+                  <span class="gang-spacing-unit">mm</span>
+                </div>
+              </div>
             </div>
             <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-apply-spacing>
               {% include "portal/client/gang_sheets/partials/icon.html" with name="layout" size="16" %}
@@ -420,22 +431,23 @@
       <section class="gang-inspector-panel gang-inspector-panel--validation">
         <div class="gang-validation-heading">
           <span class="gang-panel-icon gang-panel-icon--ok" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="check" size="16" %}</span>
-          <div><h2>Contrôle de production</h2><p>Vérifiez la composition avant de générer le rendu.</p></div>
+          <div><h2>Finaliser la planche</h2><p>Préparez le rendu HD, puis confirmez cette composition.</p></div>
         </div>
         <ul data-issues-list><li class="is-ok">Aucune anomalie de placement.</li></ul>
         <div class="gang-validation-actions">
           <button type="button" class="ui-btn ui-btn-primary" data-render-sheet {% if not can_edit %}disabled{% endif %}>
             {% include "portal/client/gang_sheets/partials/icon.html" with name="canvas" size="16" %}
-            Générer le rendu HD
+            Préparer le rendu HD
           </button>
           <button type="button" class="ui-btn ui-btn-secondary" data-validate-sheet {% if not can_edit %}disabled{% endif %}>
             {% include "portal/client/gang_sheets/partials/icon.html" with name="check" size="16" %}
-            Valider la planche
+            Confirmer la composition
           </button>
-          <label class="dui-form-control gang-sheet-quantity" data-sheet-quantity-field hidden>
-            <span class="product-form-label">Exemplaires de planche</span>
+          <div class="ui-field-group gang-sheet-quantity" data-sheet-quantity-field hidden>
+            <label class="ui-label" for="id-sheet-quantity">Exemplaires de planche</label>
             <input
-              class="dui-input dui-input-bordered"
+              class="ui-input"
+              id="id-sheet-quantity"
               type="number"
               min="1"
               max="200"
@@ -445,7 +457,7 @@
               data-sheet-quantity
               aria-label="Nombre d’exemplaires de la planche"
             >
-          </label>
+          </div>
           <aside class="gang-sheet-order-quote" data-sheet-order-quote hidden aria-live="polite">
             <p class="gang-sheet-order-quote__eyebrow">Total estimé HT</p>
             <p class="gang-sheet-order-quote__total"><strong data-sheet-order-quote-total>—</strong></p>

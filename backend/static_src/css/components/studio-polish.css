@@ -1,0 +1,339 @@
+/* Finition Studio sombre — densité calme, outils secondaires compacts. */
+body.product-shell--studio .gang-editor {
+  --gang-panel: var(--surface);
+  --gang-panel-subtle: var(--surface-raised);
+  --gang-line: var(--line);
+  --gang-line-strong: var(--line-strong);
+  --gang-ink: var(--ink);
+  --gang-muted: var(--muted);
+  --gang-accent: var(--brand);
+  --gang-accent-strong: var(--brand-strong);
+  --gang-focus: var(--focus-ring);
+  color: var(--gang-ink);
+}
+
+body.product-shell--studio .gang-editor__header,
+body.product-shell--studio .gang-editor__workspace,
+body.product-shell--studio .gang-editor__status,
+body.product-shell--studio .gang-workflow,
+body.product-shell--studio .gang-asset-launcher,
+body.product-shell--studio .gang-inspector-panel {
+  border-radius: 1rem;
+  box-shadow: none;
+}
+
+body.product-shell--studio .gang-editor__header {
+  border: 1px solid color-mix(in srgb, var(--gang-line-strong) 24%, transparent);
+  background: var(--gang-panel);
+}
+
+body.product-shell--studio .gang-editor__metrics > div {
+  border-radius: 0.875rem;
+  background: var(--gang-panel-subtle);
+}
+
+body.product-shell--studio .gang-workflow {
+  overflow: hidden;
+  border: 1px solid var(--gang-line);
+  background: var(--gang-panel);
+}
+
+body.product-shell--studio .gang-workflow button {
+  min-height: 3.25rem;
+}
+
+body.product-shell--studio .gang-workflow li[aria-current="step"] button,
+body.product-shell--studio .gang-workflow li.is-active button {
+  color: var(--gang-ink);
+  background: color-mix(in srgb, var(--gang-accent) 13%, var(--gang-panel));
+}
+
+body.product-shell--studio .gang-editor__workspace {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--gang-line-strong) 28%, transparent);
+}
+
+body.product-shell--studio .gang-editor__sidebar,
+body.product-shell--studio .gang-editor__inspector {
+  background: var(--gang-panel);
+}
+
+body.product-shell--studio .gang-asset-launcher {
+  border: 1px solid var(--gang-line);
+  background: var(--gang-panel-subtle);
+}
+
+body.product-shell--studio .gang-asset-empty {
+  min-height: 8rem;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+/* La toolbar conserve tous ses contrats mais baisse le bruit visuel. */
+body.product-shell--studio .gang-editor__toolbar {
+  gap: 0.4rem;
+  min-height: 3.25rem;
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--gang-line);
+  background: var(--gang-panel-subtle);
+}
+
+body.product-shell--studio .gang-editor__toolbar-meta {
+  padding-right: 0.55rem;
+}
+
+body.product-shell--studio .gang-editor__toolbar-meta > strong {
+  font-size: 0.75rem;
+}
+
+body.product-shell--studio .gang-editor__toolbar-group {
+  gap: 0.18rem;
+  padding: 0.16rem;
+  border: 1px solid color-mix(in srgb, var(--gang-line) 78%, transparent);
+  border-radius: 999px;
+  background: var(--gang-panel);
+}
+
+body.product-shell--studio .gang-tool-btn {
+  min-width: 2.3rem;
+  min-height: 2.3rem;
+  padding: 0.4rem 0.55rem;
+  border-color: transparent;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.product-shell--studio .gang-tool-btn:hover:not(:disabled),
+body.product-shell--studio .gang-tool-btn.is-active {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--gang-ink) 9%, var(--gang-panel));
+  box-shadow: none;
+  transform: none;
+}
+
+body.product-shell--studio .gang-tool-btn--accent {
+  background: color-mix(in srgb, var(--gang-accent) 14%, var(--gang-panel));
+  color: #ffb5a7;
+}
+
+body.product-shell--studio .gang-editor__selection-tools .gang-tool-btn > span:last-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+body.product-shell--studio .gang-editor__save {
+  border-radius: 999px;
+  background: var(--gang-accent);
+  color: #171310;
+}
+
+body.product-shell--studio .gang-editor__status {
+  border: 1px solid var(--gang-line);
+  background: var(--gang-panel);
+}
+
+body.product-shell--studio .gang-inspector-panel {
+  border: 1px solid var(--gang-line);
+  background: var(--gang-panel);
+  box-shadow: none;
+}
+
+body.product-shell--studio .gang-inspector-panel--validation {
+  border-color: color-mix(in srgb, var(--gang-accent) 46%, var(--gang-line));
+  background: color-mix(in srgb, var(--gang-accent) 10%, var(--gang-panel));
+}
+
+body.product-shell--studio .gang-validation-actions {
+  gap: 0.55rem;
+}
+
+body.product-shell--studio .gang-validation-actions > :is(.ui-btn, a) {
+  border-radius: 999px;
+}
+
+body.product-shell--studio :is(.gang-tool-btn, .gang-workflow button, .gang-editor__mobile-tabs button):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--gang-focus) 72%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 72rem) {
+  body.product-shell--studio .gang-editor__toolbar-meta {
+    display: none;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  body.product-shell--studio .gang-editor__header,
+  body.product-shell--studio .gang-editor__workspace,
+  body.product-shell--studio .gang-editor__status,
+  body.product-shell--studio .gang-workflow,
+  body.product-shell--studio .gang-inspector-panel {
+    border-radius: 0.875rem;
+  }
+
+  body.product-shell--studio .gang-editor__toolbar {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  body.product-shell--studio .gang-editor__toolbar-group {
+    flex: 0 0 auto;
+  }
+
+  body.product-shell--studio .gang-editor__selection-tools .gang-tool-btn > span:last-child {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    clip-path: none;
+  }
+}
+
+/* Garde Studio : contrôles et états restent sombres, y compris sur mobile. */
+html[data-theme="prenium"] body.product-shell--studio .gang-editor :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea
+) {
+  border: 1px solid var(--gang-line);
+  border-radius: 0.75rem;
+  color: var(--gang-ink);
+  background: var(--gang-panel);
+}
+
+/* Recadrage et sélection : contrôles sombres, repères corail sur le canevas clair. */
+html[data-theme="prenium"] body.product-shell--studio .gang-crop-box {
+  border-color: var(--gang-accent);
+  box-shadow:
+    0 0 0 100vmax rgba(8, 8, 8, 0.58),
+    inset 0 0 0 1px rgba(23, 19, 16, 0.82);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-crop-box:focus-visible {
+  border-color: var(--gang-accent-strong);
+  box-shadow:
+    0 0 0 100vmax rgba(8, 8, 8, 0.58),
+    0 0 0 4px color-mix(in srgb, var(--gang-focus) 82%, transparent);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-crop-box [data-crop-handle] {
+  border-color: #171310;
+  background: var(--gang-accent);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-crop-controls {
+  border-color: var(--gang-line);
+  border-radius: 0.875rem;
+  color: var(--gang-ink);
+  background: var(--gang-panel-subtle);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-crop-controls__head strong {
+  color: var(--gang-ink);
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .gang-crop-controls__head span,
+  .gang-crop-controls > p,
+  .gang-crop-mode button span
+) {
+  color: var(--gang-muted);
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .gang-crop-mode button,
+  .gang-crop-controls__nav button
+) {
+  border-color: var(--gang-line);
+  border-radius: 0.75rem;
+  color: var(--gang-ink);
+  background: var(--gang-panel);
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-crop-mode button.is-active {
+  border-color: var(--gang-accent);
+  background: color-mix(in srgb, var(--gang-accent) 14%, var(--gang-panel));
+  box-shadow: inset 0 0 0 1px var(--gang-accent);
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .gang-crop-mode button,
+  .gang-crop-controls__nav button
+):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--gang-focus) 72%, transparent);
+  outline-offset: 2px;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-snap-guide {
+  background: var(--gang-accent);
+  box-shadow: 0 0 0 1px rgba(23, 19, 16, 0.72);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-selection-marquee {
+  border-color: var(--gang-accent);
+  background: color-mix(in srgb, var(--gang-accent) 14%, transparent);
+  box-shadow: 0 0 0 1px rgba(23, 19, 16, 0.68) inset;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item.is-selected {
+  border-color: var(--gang-accent);
+  box-shadow:
+    0 0 0 2px rgba(23, 19, 16, 0.76),
+    0 0 0 4px var(--gang-accent);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item.has-issue {
+  box-shadow:
+    0 0 0 2px rgba(23, 19, 16, 0.76),
+    0 0 0 4px var(--product-danger, #ff827b);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item__resize {
+  border-color: #171310;
+  background: var(--gang-accent);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item-action:focus-visible {
+  outline-color: var(--gang-focus);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--validation li.is-ok {
+  color: #a8e6bd;
+  background: color-mix(in srgb, var(--product-success) 13%, var(--gang-panel));
+}
+
+@media (max-width: 47.99rem) {
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__mobile-tabs {
+    border-radius: 0.875rem;
+    box-shadow: none;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__mobile-tabs button {
+    gap: 0.2rem;
+    padding-inline: 0.3rem;
+    color: var(--gang-muted);
+    background: var(--gang-panel);
+    font-size: 0.72rem;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__mobile-tabs button.is-active {
+    border-bottom-color: var(--gang-accent);
+    color: var(--gang-ink);
+    background: color-mix(in srgb, var(--gang-accent) 14%, var(--gang-panel));
+  }
+}
+
+@media (max-width: 26rem) {
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__mobile-tabs button > svg {
+    display: none;
+  }
+}

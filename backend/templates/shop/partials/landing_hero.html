@@ -1,37 +1,39 @@
 <section id="landing-hero" class="landing-section conversion-hero" aria-labelledby="landing-hero-title">
   <div class="landing-shell conversion-hero__grid">
     <div class="conversion-hero__copy">
-      <p class="conversion-brand">Prenium DTF</p>
-      <h1 id="landing-hero-title">Du fichier au transfert, <em>tout est sous contrôle.</em></h1>
-      <p class="conversion-hero__lead">Contrôle prépresse, production et suivi dans un portail B2B réservé aux professionnels.</p>
+      <h1 id="landing-hero-title">Du fichier au transfert, <em>gardez l’atelier en vue.</em></h1>
+      <p class="conversion-hero__lead">Prenium DTF relie contrôle prépresse, production et expédition dans un même suivi B2B — simple pour vous, cadré pour l’atelier.</p>
       <div class="conversion-hero__actions">
         <a class="conversion-button conversion-button--primary" href="{% url 'prospects:step1' %}">
           Ouvrir mon accès pro
-          <span aria-hidden="true">↗</span>
         </a>
         <a class="conversion-button conversion-button--ghost" href="#landing-how-it-works">Voir le process</a>
       </div>
-      <p class="conversion-hero__note">3 étapes · Réponse sous 1 à 2 jours · Sans engagement</p>
+      <p class="conversion-hero__note">Demande en 3 étapes <span aria-hidden="true">·</span> Réponse sous 1 à 2 jours ouvrés <span aria-hidden="true">·</span> Sans engagement</p>
     </div>
 
     <div class="conversion-board" aria-label="Aperçu du suivi d’une commande dans le portail Prenium DTF">
       <div class="conversion-board__topline">
-        <span class="conversion-board__live"><i aria-hidden="true"></i> En cours</span>
-        <span>Portail B2B</span>
+        <span class="conversion-board__demo">Aperçu de démonstration</span>
+        <span>Commande PDTF-2048</span>
       </div>
       <div class="conversion-board__title">
         <div>
-          <span>Commande</span>
-          <strong>Chaque étape.<br>Un seul suivi.</strong>
+          <span>État du dossier</span>
+          <strong>Production en cours</strong>
         </div>
-        <span class="conversion-board__badge">Traçable</span>
+        <span class="conversion-board__badge">À l’atelier</span>
       </div>
       <ol class="conversion-board__timeline">
-        <li class="is-done"><span>01</span><div><strong>Fichier reçu</strong><small>Documents centralisés</small></div><b>✓</b></li>
-        <li class="is-done"><span>02</span><div><strong>Contrôle prépresse</strong><small>Points bloquants vérifiés</small></div><b>✓</b></li>
-        <li class="is-active"><span>03</span><div><strong>Production</strong><small>Statut visible</small></div><b aria-hidden="true"></b></li>
-        <li><span>04</span><div><strong>Expédition</strong><small>Suivi associé</small></div><b aria-hidden="true"></b></li>
+        <li class="is-done"><span class="conversion-board__marker" aria-hidden="true"></span><div><strong>Fichier reçu</strong><small>Documents rattachés au dossier</small></div><b>Terminé</b></li>
+        <li class="is-done"><span class="conversion-board__marker" aria-hidden="true"></span><div><strong>Contrôle prépresse</strong><small>Points techniques vérifiés</small></div><b>Terminé</b></li>
+        <li class="is-active"><span class="conversion-board__marker" aria-hidden="true"></span><div><strong>Production</strong><small>Prise en charge par l’atelier</small></div><b>En cours</b></li>
+        <li><span class="conversion-board__marker" aria-hidden="true"></span><div><strong>Expédition</strong><small>Suivi ajouté après l’envoi</small></div><b>À venir</b></li>
       </ol>
+      <div class="conversion-board__footer">
+        <span>Dernière mise à jour : aujourd’hui, 10:42</span>
+        <span>Visibilité partagée avec votre équipe</span>
+      </div>
     </div>
   </div>
 </section>

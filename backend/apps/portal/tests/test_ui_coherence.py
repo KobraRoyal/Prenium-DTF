@@ -66,12 +66,13 @@ class PortalUiCoherenceTests(SimpleTestCase):
             with self.subTest(path=path):
                 self.assertIn('id="main-content"', template_source(path))
 
-    def test_light_product_surfaces_advertise_light_native_controls(self) -> None:
+    def test_product_surfaces_inherit_light_native_controls_from_base(self) -> None:
+        base = template_source("base.html")
+        self.assertIn('<meta name="color-scheme" content="light">', base)
         for path in ["portal/layout.html", "portal/login.html", "prospects/base_tunnel.html"]:
             with self.subTest(path=path):
                 source = template_source(path)
-                self.assertIn('<meta name="color-scheme" content="light">', source)
-                self.assertNotIn('<meta name="color-scheme" content="dark">', source)
+                self.assertNotIn('<meta name="color-scheme"', source)
 
     def test_marketing_runtime_is_lightweight_and_keeps_menu_fallback(self) -> None:
         home = template_source("shop/home.html")
@@ -89,7 +90,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         landing_motion = static_source("js/landing-motion.js")
         self.assertIn("initLandingHeaderState", landing_motion)
-        self.assertIn("initLandingBoardTilt", landing_motion)
+        self.assertNotIn("initLandingBoardTilt", landing_motion)
+        self.assertNotIn('addEventListener("pointermove"', landing_motion)
         self.assertIn("initLandingSmoothAnchors", landing_motion)
         self.assertIn('header.classList.toggle("is-scrolled"', landing_motion)
         self.assertIn("IntersectionObserver", landing_motion)
@@ -110,6 +112,25 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("@media (prefers-reduced-motion: reduce)", conversion_css)
         self.assertIn('@import "../components/landing-conversion.css"', marketing_entrypoint)
 
+    def test_marketing_services_page_uses_conversion_shell(self) -> None:
+        source = template_source("shop/services.html")
+        partials = "".join(
+            template_source(path)
+            for path in [
+                "shop/partials/services_hero.html",
+                "shop/partials/services_benefits.html",
+                "shop/partials/services_use_cases.html",
+                "shop/partials/services_cta_final.html",
+            ]
+        )
+
+        self.assertIn("landing-conversion-page", source)
+        self.assertIn("landing-main", source)
+        self.assertIn("js/marketing.js", source)
+        self.assertNotIn("agency-section", source)
+        self.assertNotIn("agency-button", partials)
+        self.assertIn("conversion-button--primary", partials)
+
     def test_landing_conversion_keeps_one_primary_funnel_and_no_duplicate_form(self) -> None:
         home = template_source("shop/home.html")
         hero = template_source("shop/partials/landing_hero.html")
@@ -120,7 +141,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn('include "shop/partials/landing_contact.html"', home)
         self.assertNotIn('include "shop/partials/landing_team.html"', home)
         self.assertIn("prospects:step1", hero)
-        self.assertIn("prospects:step1", process)
+        self.assertNotIn("prospects:step1", process)
+        self.assertNotIn("conversion-button", process)
         self.assertIn("prospects:step1", final_cta)
         self.assertNotIn("<form", hero + process + final_cta)
         self.assertNotIn("{% url 'services' %}", final_cta)
@@ -145,6 +167,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
     def test_landing_impeccable_accessibility_and_visual_contracts(self) -> None:
         landing_css = static_source("css/components/landing.css")
         conversion_css = static_source("css/components/landing-conversion.css")
+        shell_css = static_source("css/components/shell.css")
         base = template_source("base.html")
         logo = template_source("components/brand/logo.html")
         partials = "".join(
@@ -175,8 +198,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("@keyframes conversion-scroll-progress", conversion_css)
         self.assertIn("animation-timeline: scroll(root block)", conversion_css)
         self.assertIn("prefers-reduced-motion: reduce", conversion_css)
-        self.assertIn(".agency-header .agency-nav__link:hover", conversion_css)
-        self.assertIn('.agency-menu-toggle[aria-expanded="true"]', conversion_css)
+        self.assertIn(
+            "body.ui-marketing-body.landing-conversion-page .product-header.is-scrolled",
+            shell_css,
+        )
+        self.assertIn("product-menu-button", template_source("components/nav/landing_header.html"))
+        self.assertIn("ui-foundation-nav", template_source("components/nav/landing_header.html"))
         self.assertIn(
             ".conversion-button.conversion-button--ghost:hover",
             conversion_css,
@@ -226,7 +253,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
             ]
         )
 
-        self.assertIn('class="client-order-detail"', detail)
+        self.assertIn("client-order-detail", detail)
+        self.assertIn("portal-page--client", detail)
+        self.assertIn("components/portal/page_head.html", detail)
+        self.assertIn("page_head_leads/client_order_detail.html", detail)
         self.assertIn('class="client-order-summary__facts"', detail)
         self.assertIn("Commande soumise", detail)
         self.assertIn("Tarification", detail)
@@ -250,6 +280,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Relancer le paiement", panels)
         self.assertNotIn("Reprendre le paiement en cours", panels)
         self.assertIn("Continuer vers le paiement", panels)
+        self.assertIn("order_status_banner", detail)
+        self.assertIn("client-order-detail-banner", detail)
+        self.assertIn('class="ui-btn ui-btn-primary ui-btn-sm" href="?panel=billing&amp;pay=1"', detail)
+        self.assertNotIn('class="link font-medium"', detail)
+        self.assertEqual(detail.count('role="status"'), 1)
         self.assertIn("client-order-list", breadcrumb)
         self.assertNotIn("ui-breadcrumb__item--order-ref", breadcrumb)
         self.assertNotIn("Accueil client", breadcrumb)
@@ -319,6 +354,13 @@ class PortalUiCoherenceTests(SimpleTestCase):
                     + r"[^{}]*\{[^}]*font-size: var\(--product-text-critical-xs\)",
                 )
 
+    def test_branding_settings_use_portal_alert_contract(self) -> None:
+        branding = template_source("portal/staff/settings/branding.html")
+
+        self.assertIn("alert alert--danger", branding)
+        self.assertIn("alert alert--info", branding)
+        self.assertNotIn("ui-alert", branding)
+
     def test_checkout_and_prospect_mobile_layouts_are_compact(self) -> None:
         product_css = static_source("css/components/product-shell.css")
         prospect_css = static_source("css/components/prospect-tunnel.css")
@@ -340,15 +382,41 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('autocomplete="new-password"', invitation)
 
     def test_portal_breadcrumb_partials_use_semantic_nav(self) -> None:
-        paths = [
+        canonical_trails = [
+            "components/portal/breadcrumbs/staff_trail.html",
+            "components/portal/breadcrumbs/client_trail.html",
+        ]
+        trail_wrappers = [
+            "components/portal/breadcrumbs/client_dashboard.html",
+            "components/portal/breadcrumbs/client_orders_list.html",
+            "components/portal/breadcrumbs/client_gang_sheets_list.html",
+            "components/portal/breadcrumbs/staff_orders_list.html",
+            "components/portal/breadcrumbs/staff_customers_list.html",
+        ]
+        bespoke_paths = [
             "components/portal/breadcrumbs/client_order_detail.html",
+            "components/portal/breadcrumbs/client_order_project_detail.html",
+            "components/portal/breadcrumbs/client_gang_sheet_editor.html",
+            "components/portal/breadcrumbs/client_order_project_form.html",
+            "components/portal/breadcrumbs/client_gang_sheet_create_order.html",
             "components/portal/breadcrumbs/staff_order_detail.html",
             "components/portal/breadcrumbs/checkout_client.html",
-            "components/portal/breadcrumbs/client_orders_list.html",
-            "components/portal/breadcrumbs/staff_orders_list.html",
         ]
 
-        for path in paths:
+        for path in canonical_trails:
+            with self.subTest(path=path):
+                source = template_source(path)
+                self.assertIn('class="ui-breadcrumb"', source)
+                self.assertIn('aria-label="Fil d’Ariane"', source)
+                self.assertIn('aria-current="page"', source)
+                self.assertNotIn('<p class="breadcrumb"', source)
+
+        for path in trail_wrappers:
+            with self.subTest(path=path):
+                source = template_source(path)
+                self.assertIn("_trail.html", source)
+
+        for path in bespoke_paths:
             with self.subTest(path=path):
                 source = template_source(path)
                 self.assertIn('class="ui-breadcrumb"', source)
@@ -572,6 +640,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("data-product-menu-toggle", source)
         self.assertIn("data-product-menu", source)
         self.assertIn('aria-controls="landing-primary-nav"', source)
+        self.assertIn("product-menu-button", source)
+        self.assertIn("ui-foundation-nav", source)
         self.assertIn('data-menu-open-label="Ouvrir le menu"', source)
         self.assertNotIn("data-landing-menu", source)
         self.assertNotIn("data-landing-menu-toggle", source)
@@ -609,15 +679,16 @@ class PortalUiCoherenceTests(SimpleTestCase):
         create_icon = template_source("components/nav/creation_icon.html")
         portal_tags = app_source("apps/portal/templatetags/portal_tags.py")
 
-        self.assertIn(">Tableau de bord</a>", client_nav)
-        self.assertIn(">Planches DTF</a>", client_nav)
+        self.assertIn("Votre espace", client_nav)
+        self.assertIn("Pilotage quotidien", staff_nav)
+        self.assertIn("Administration Atelier", staff_nav)
         self.assertIn(">File Atelier</a>", staff_nav)
         self.assertIn(">Commandes</a>", staff_nav)
         self.assertIn("Outils Atelier", staff_nav)
         self.assertIn("Demandes d’accès", staff_nav)
         self.assertIn("Modèles d’e-mails", staff_nav)
         self.assertIn("Réglages de laize", staff_nav)
-        self.assertIn("Espace client", header)
+        self.assertIn("Votre compte", header)
         self.assertIn(">Atelier</span>", header)
         self.assertIn("product-menu-button__icon", header)
         self.assertIn("ui-btn ui-btn-ghost ui-btn-sm product-menu-button", header)
@@ -709,11 +780,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('account_section="team"', team)
         self.assertNotIn("kicker=", team)
         self.assertIn("components/portal/account_rail.html", team)
+        self.assertIn("components/ui/empty_state.html", team)
         self.assertIn("portal:profile", account_rail)
         self.assertIn("account-profile-rail-name", account_rail)
         self.assertIn("portal:client-team", account_rail)
         self.assertIn('x-bind:disabled="!dirty"', form_actions)
-        self.assertIn("gang-library-head", gang_library)
+        self.assertIn("portal-page--client", gang_library)
+        self.assertIn("components/portal/page_head.html", gang_library)
+        self.assertIn("client_gang_sheets_list.html", gang_library)
         self.assertIn("gang-sheet-toolbar", gang_library)
         self.assertIn('id="create-gang-sheet-dialog"', gang_library)
         self.assertIn("data-dialog-auto-open", gang_library)
@@ -733,7 +807,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         gang_css = static_source("css/components/gang-sheet.css")
         studio_css = static_source("css/components/gang-sheet-studio.css")
 
-        self.assertIn('id="client-dashboard-title">Tableau de bord</h1>', dashboard)
+        self.assertIn('head_labelledby="client-dashboard-title"', dashboard)
+        self.assertIn("components/portal/page_head.html", dashboard)
+        self.assertIn('title="Tableau de bord"', dashboard)
         self.assertIn('id="client-volume-discount-title">', dashboard)
         self.assertIn("client-dashboard-palier__meter", dashboard)
         self.assertEqual(editor.count('aria-label="Étape '), 4)
@@ -929,12 +1005,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         orders = template_source("components/tables/orders_table.html")
         projects = template_source("portal/client/order_projects_list.html")
         product_css = static_source("css/components/product-shell.css")
+        shell_css = static_source("css/components/shell.css")
 
         self.assertNotIn("md:!hidden", header)
         self.assertNotIn("md:flex", header)
         self.assertIn("@media (max-width: 959px)", product_css)
-        self.assertIn("body.product-shell .ui-data-table thead th", product_css)
-        self.assertIn("top: 0", product_css)
+        self.assertNotIn("body.product-shell .ui-data-table thead th", product_css)
+        self.assertIn("body.product-shell .ui-data-table th", shell_css)
+        self.assertIn("top: 0", shell_css)
         # Visibilité table/cartes : Tailwind + règles product-shell (960px).
         self.assertIn(".ui-orders-table-desktop", product_css)
         self.assertIn(".ui-orders-list-mobile", product_css)
@@ -956,6 +1034,16 @@ class PortalUiCoherenceTests(SimpleTestCase):
         customers = template_source("portal/staff/customers/list.html")
         self.assertIn("min-[960px]:block", customers)
         self.assertIn("min-[960px]:hidden", customers)
+
+        for path in [
+            "portal/client/partials/checkout_uploads.html",
+            "portal/client/panels/uploads.html",
+            "portal/staff/panels/uploads.html",
+        ]:
+            with self.subTest(path=path):
+                upload_table = template_source(path)
+                self.assertIn("min-[960px]:block", upload_table)
+                self.assertIn("min-[960px]:hidden", upload_table)
 
     def test_auth_login_uses_dedicated_minimal_header(self) -> None:
         source = template_source("portal/login.html")
@@ -982,8 +1070,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("brand_home_url as resolved_brand_home_url", logo)
         self.assertIn("brand_home_href", template_source("components/nav/portal_header.html"))
         portal_header = template_source("components/nav/portal_header.html")
+        landing_header = template_source("components/nav/landing_header.html")
         self.assertIn("portal:client-dashboard", portal_header)
         self.assertIn("portal:staff-dashboard", portal_header)
+        self.assertIn("product-header", landing_header)
+        self.assertIn("ui-foundation-nav", landing_header)
         self.assertNotIn("{% url 'home' %}", logo)
         self.assertIn("body .ui-brand-lockup__name", legacy_css)
         self.assertIn("body .ui-brand-lockup__subtitle", legacy_css)
@@ -1048,6 +1139,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("<span>Paiement</span>", billing)
         self.assertNotIn("<span>Justificatif</span>", billing)
         self.assertIn("staff-project-item-list", project)
+        self.assertIn("components/portal/breadcrumbs/staff_order_project_detail.html", project)
+        self.assertNotIn("staff-project-detail__back", project)
         self.assertNotIn("Sprint 4", project)
 
     def test_staff_inspection_uses_compact_summary_without_nested_metric_cards(self) -> None:
@@ -1191,9 +1284,33 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('hx-trigger="input changed delay:300ms, search"', client_source)
         self.assertIn("client_orders_list_results.html", client_source)
         self.assertIn("Retour au tableau de bord", staff_source)
+        self.assertIn("portal-page-surface", staff_source)
+        self.assertIn("ui-list-section", staff_source)
+        self.assertNotIn('<section class="card">', staff_source)
         self.assertIn("portal:staff-dashboard", staff_source)
         self.assertIn("Aucune commande à afficher.", staff_source)
         self.assertNotIn("Aucune commande a afficher.", staff_source)
+
+    def test_portal_lists_share_pagination_and_form_action_partials(self) -> None:
+        pagination_partial = 'include "components/portal/pagination.html"'
+        for path in [
+            "portal/client/partials/client_orders_list_results.html",
+            "portal/staff/orders_list.html",
+            "portal/staff/customers/list.html",
+            "portal/staff/access_requests/list.html",
+            "portal/client/order_projects_list.html",
+            "portal/staff/order_projects_list.html",
+            "portal/client/gang_sheets/list.html",
+        ]:
+            with self.subTest(path=path):
+                self.assertIn(pagination_partial, template_source(path))
+
+        customer_detail = template_source("portal/staff/customers/detail.html")
+        self.assertEqual(
+            customer_detail.count('include "components/forms/form_actions.html"'),
+            2,
+        )
+        self.assertNotIn('class="form-actions"', customer_detail)
 
     def test_staff_shipping_form_matches_backend_payload_fields(self) -> None:
         source = template_source("portal/staff/panels/shipping.html")
@@ -1250,10 +1367,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "id_vat_number",
         ]:
             with self.subTest(field_id=field_id):
-                self.assertIn(f'class="product-form-label" for="{field_id}"', source)
+                self.assertIn(f'class="ui-label" for="{field_id}"', source)
                 self.assertNotIn(f'class="ui-sr-only" for="{field_id}"', source)
 
         self.assertIn("<legend>{{ form.activity_type.label }}</legend>", source)
+        self.assertIn('class="ui-field-error"', source)
+        self.assertNotIn('class="error-text"', source)
 
     def test_b2b_order_project_flow_reuses_portal_htmx_contracts(self) -> None:
         detail = template_source("portal/client/order_project_detail.html")
@@ -1296,8 +1415,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('hx-indicator="#portal-htmx-indicator"', shipping)
 
         self.assertIn("project_client_label", detail)
+        self.assertIn("components/portal/page_head.html", detail)
+        self.assertIn("breadcrumbs/client_order_project_detail.html", detail)
         self.assertIn("b2b-project-header", detail)
-        self.assertIn("ui-breadcrumb__list", detail)
         self.assertNotIn("b2b-project-checkout-bar__meta", summary)
         self.assertNotIn("page-head__eyebrow", detail)
         self.assertNotIn("b2b-project-quote__eyebrow", summary)
@@ -1542,3 +1662,81 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('name="customer_comment"', start_form)
         self.assertIn("bindOrderStartPickVisual", configurator_runtime)
         self.assertIn("data-order-start-pick-visual", configurator_runtime)
+
+    def test_p3_retired_agency_partials_and_panel_empty_states(self) -> None:
+        for dead_partial in [
+            TEMPLATES_DIR / "shop/partials/landing_team.html",
+            TEMPLATES_DIR / "shop/partials/landing_contact.html",
+        ]:
+            with self.subTest(path=str(dead_partial)):
+                self.assertFalse(dead_partial.exists())
+
+        empty_partial = 'include "components/ui/empty_state.html"'
+        for path in [
+            "portal/client/panels/uploads.html",
+            "portal/staff/panels/uploads.html",
+            "portal/staff/panels/inspection.html",
+            "portal/client/panels/inspection.html",
+        ]:
+            with self.subTest(path=path):
+                source = template_source(path)
+                self.assertIn(empty_partial, source)
+                self.assertNotIn('<div class="empty-state">', source)
+
+        gang_editor = template_source("portal/client/gang_sheets/editor.html")
+        self.assertNotIn("product-eyebrow", gang_editor)
+        self.assertIn("b2b-dialog-kicker", gang_editor)
+
+        operations = template_source("portal/staff/operations/index.html")
+        self.assertNotIn("terracotta", operations)
+        self.assertIn("shell clair atelier", operations)
+
+    def test_p3_polish_titles_empty_states_and_studio_spacing_labels(self) -> None:
+        title_paths = [
+            "portal/client/orders_list.html",
+            "portal/client/gang_sheets/list.html",
+            "portal/client/gang_sheets/editor.html",
+            "portal/staff/settings/branding.html",
+            "portal/staff/gang_sheets/settings.html",
+            "portal/client/team.html",
+        ]
+        for path in title_paths:
+            with self.subTest(path=path):
+                source = template_source(path)
+                self.assertNotIn(" - Prenium DTF", source)
+                self.assertNotIn(" — Atelier", source)
+
+        editor = template_source("portal/client/gang_sheets/editor.html")
+        self.assertIn("— Studio — Prenium DTF", editor)
+        self.assertIn('class="ui-label" for="gang-spacing-x"', editor)
+        self.assertNotIn('<label for="gang-spacing-x">Horizontal X <span>', editor)
+
+        empty_partial = template_source("components/ui/empty_state.html")
+        self.assertIn("cta_button_label", empty_partial)
+        self.assertIn("cta_button_dialog", empty_partial)
+
+        for path, needle in [
+            ("portal/client/partials/order_project_items.html", "Aucun fichier joint"),
+            ("portal/staff/order_project_detail.html", "Aucun fichier joint"),
+            ("portal/client/panels/production.html", "components/ui/empty_state.html"),
+            ("portal/staff/panels/drive_sync.html", "components/ui/empty_state.html"),
+            ("portal/client/panels/shipping.html", "components/ui/empty_state.html"),
+        ]:
+            with self.subTest(path=path):
+                source = template_source(path)
+                self.assertIn(needle, source)
+                self.assertNotIn("Aucun visuel", source)
+
+    def test_lot4_portal_header_nav_removes_parasite_borders(self) -> None:
+        header = template_source("components/nav/portal_header.html")
+        landing_header = template_source("components/nav/landing_header.html")
+        portal_entry = static_source("css/entries/portal.css")
+
+        self.assertIn("ui-nav-rail", header)
+        self.assertIn("ui-nav-rail", landing_header)
+        self.assertNotIn("ui-nav-panel", header)
+        self.assertNotIn("ui-nav-panel", landing_header)
+        self.assertIn("v15 — Header portail : navigation fluide sans cadres parasites", portal_entry)
+        self.assertIn(".product-header .ui-foundation-nav .ui-nav-rail", portal_entry)
+        self.assertIn(".product-header .ui-foundation-nav .product-profile__trigger", portal_entry)
+        self.assertIn("border: 0 !important", portal_entry.split("v15 — Header portail")[-1])

@@ -1,4 +1,7 @@
-<div class="empty-state text-center">
+<div class="empty-state text-center{% if extra_class %} {{ extra_class }}{% endif %}">
+  {% if empty_mark %}
+  <span class="gang-sheet-empty__mark" aria-hidden="true">{{ empty_mark }}</span>
+  {% endif %}
   {% if title %}
   <h3 class="mt-0 font-display text-lg text-[color:var(--ink)]">{{ title }}</h3>
   {% endif %}
@@ -8,6 +11,15 @@
   {% if cta_url and cta_label %}
   <p class="mt-4">
     <a class="ui-btn ui-btn-primary" href="{{ cta_url }}">{{ cta_label }}</a>
+  </p>
+  {% elif cta_button_label %}
+  <p class="mt-4">
+    <button
+      class="ui-btn {% if cta_button_class %}{{ cta_button_class }}{% else %}ui-btn-primary{% endif %}"
+      type="button"
+      {% if cta_button_dialog %}data-file-picker-dialog="{{ cta_button_dialog }}" aria-controls="{{ cta_button_dialog }}" aria-haspopup="dialog"{% endif %}
+      {% if cta_button_dialog_open %}data-dialog-open="{{ cta_button_dialog_open }}" aria-haspopup="dialog"{% endif %}
+    >{{ cta_button_label }}</button>
   </p>
   {% endif %}
 </div>

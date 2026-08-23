@@ -11,7 +11,7 @@
 
   {% if upload_rows %}
   <h4 class="workflow-panel__subtitle">Détail des fichiers</h4>
-  <div class="hidden md:block ui-table-shell table-wrap ui-table-shell--comfortable">
+  <div class="hidden min-[960px]:block ui-table-shell table-wrap ui-table-shell--comfortable">
     <table class="ui-data-table ui-data-table--comfortable w-full border-collapse text-sm">
       <thead>
         <tr>
@@ -61,7 +61,7 @@
     </table>
   </div>
 
-  <div class="md:hidden space-y-3" aria-label="Fichiers commande (staff)">
+  <div class="grid gap-3 min-[960px]:hidden" aria-label="Fichiers commande (staff)">
     {% for row in upload_rows %}
     <article class="ui-mobile-order-card product-mobile-file-card">
       <p class="break-words font-medium text-[color:var(--ink)] m-0">
@@ -99,6 +99,6 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty-state"><p>Aucun upload pour cette commande.</p></div>
+  {% include "components/ui/empty_state.html" with title="Aucun upload" message="Aucun upload pour cette commande." %}
   {% endif %}
 </div>

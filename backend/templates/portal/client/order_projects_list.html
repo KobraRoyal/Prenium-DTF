@@ -1,26 +1,28 @@
 {% extends "portal/layout.html" %}
 {% load ui_tags portal_tags %}
 
-{% block title %}Commandes à finaliser - Prenium DTF{% endblock %}
+{% block title %}Commandes à finaliser — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/page_head.html" with title="Commandes à finaliser" subtitle="N° IDS et votre référence pour chaque commande non encore transmise." %}
-
 {% if customer.default_billing_mode == "immediate" %}
 {% url 'portal:client-gang-sheet-list-create' customer_public_id=customer.public_id as create_url %}
 {% else %}
 {% url 'portal:client-order-project-create' customer_public_id=customer.public_id as create_url %}
 {% endif %}
 
-<div class="client-dashboard-toolbar">
-  <a class="ui-btn ui-btn-primary" href="{{ create_url }}">{% if customer.default_billing_mode == "immediate" %}Nouvelle planche DTF{% else %}Nouvelle commande{% endif %}</a>
-</div>
+<div class="portal-page portal-page--client client-order-projects-page">
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_projects_list.html" title="Commandes à finaliser" subtitle="N° IDS et votre référence pour chaque commande non encore transmise." %}
 
-<section class="card client-dashboard-section">
+<section class="portal-page-surface client-dashboard-section">
+  <div class="client-dashboard-toolbar">
+    <a class="ui-btn ui-btn-primary" href="{{ create_url }}">{% if customer.default_billing_mode == "immediate" %}Nouvelle planche DTF{% else %}Nouvelle commande{% endif %}</a>
+  </div>
   {% if projects %}
   {% ui_order_projects_table projects=projects customer=customer show_delete=True %}
+  {% include "components/portal/pagination.html" with pagination_label="Pagination commandes à finaliser" %}
   {% else %}
   {% include "components/ui/empty_state.html" with title="Aucune commande à finaliser" message="Créez une commande, ajoutez vos visuels puis transmettez-la à l'atelier." cta_url=create_url cta_label="Nouvelle commande" %}
   {% endif %}
 </section>
+</div>
 {% endblock %}

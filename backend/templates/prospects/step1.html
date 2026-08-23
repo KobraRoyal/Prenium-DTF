@@ -14,31 +14,31 @@
 <form method="post" class="ui-form-stack prospect-form prospect-step1" novalidate data-submit-loading x-data="{ country: '{{ form.country.value|default:'FR' }}' }">
   {% csrf_token %}
   {% if form.non_field_errors %}
-  <div class="dui-alert dui-alert-error prospect-step1__alert" role="alert">{{ form.non_field_errors.0 }}</div>
+  <div class="alert alert--danger prospect-step1__alert" role="alert">{{ form.non_field_errors.0 }}</div>
   {% endif %}
 
   <section class="prospect-form__section prospect-step1__section" aria-labelledby="contact-heading">
     <h3 id="contact-heading" class="prospect-form__section-title">Vos coordonnées</h3>
     <div class="prospect-form__panel prospect-step1__surface prospect-step1__contact-grid">
-      <div class="dui-form-control prospect-step1__field">
-        <label class="product-form-label" for="id_first_name">{{ form.first_name.label }}</label>
-        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.first_name.errors %} border-error/60{% endif %}" id="id_first_name" name="first_name" value="{{ form.first_name.value|default:'' }}" required autocomplete="given-name" placeholder="Camille">
-        {% if form.first_name.errors %}<p class="error-text" role="alert">{{ form.first_name.errors.0 }}</p>{% endif %}
+      <div class="ui-field-group prospect-step1__field">
+        <label class="ui-label" for="id_first_name">{{ form.first_name.label }}</label>
+        <input class="ui-input product-field-input w-full{% if form.first_name.errors %} ui-input--error{% endif %}" id="id_first_name" name="first_name" value="{{ form.first_name.value|default:'' }}" required autocomplete="given-name" placeholder="Camille">
+        {% if form.first_name.errors %}<p class="ui-field-error" role="alert">{{ form.first_name.errors.0 }}</p>{% endif %}
       </div>
-      <div class="dui-form-control prospect-step1__field">
-        <label class="product-form-label" for="id_last_name">{{ form.last_name.label }}</label>
-        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.last_name.errors %} border-error/60{% endif %}" id="id_last_name" name="last_name" value="{{ form.last_name.value|default:'' }}" required autocomplete="family-name" placeholder="Martin">
-        {% if form.last_name.errors %}<p class="error-text" role="alert">{{ form.last_name.errors.0 }}</p>{% endif %}
+      <div class="ui-field-group prospect-step1__field">
+        <label class="ui-label" for="id_last_name">{{ form.last_name.label }}</label>
+        <input class="ui-input product-field-input w-full{% if form.last_name.errors %} ui-input--error{% endif %}" id="id_last_name" name="last_name" value="{{ form.last_name.value|default:'' }}" required autocomplete="family-name" placeholder="Martin">
+        {% if form.last_name.errors %}<p class="ui-field-error" role="alert">{{ form.last_name.errors.0 }}</p>{% endif %}
       </div>
-      <div class="dui-form-control prospect-step1__field">
-        <label class="product-form-label" for="id_email">{{ form.email.label }}</label>
-        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.email.errors %} border-error/60{% endif %}" id="id_email" name="email" type="email" value="{{ form.email.value|default:'' }}" required autocomplete="email" inputmode="email" placeholder="camille@votre-societe.fr">
-        {% if form.email.errors %}<p class="error-text" role="alert">{{ form.email.errors.0 }}</p>{% endif %}
+      <div class="ui-field-group prospect-step1__field">
+        <label class="ui-label" for="id_email">{{ form.email.label }}</label>
+        <input class="ui-input product-field-input w-full{% if form.email.errors %} ui-input--error{% endif %}" id="id_email" name="email" type="email" value="{{ form.email.value|default:'' }}" required autocomplete="email" inputmode="email" placeholder="camille@votre-societe.fr">
+        {% if form.email.errors %}<p class="ui-field-error" role="alert">{{ form.email.errors.0 }}</p>{% endif %}
       </div>
-      <div class="dui-form-control prospect-step1__field">
-        <label class="product-form-label" for="id_phone">{{ form.phone.label }}</label>
-        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.phone.errors %} border-error/60{% endif %}" id="id_phone" name="phone" type="tel" value="{{ form.phone.value|default:'' }}" required autocomplete="tel" inputmode="tel" placeholder="+33 6 12 34 56 78">
-        {% if form.phone.errors %}<p class="error-text" role="alert">{{ form.phone.errors.0 }}</p>{% endif %}
+      <div class="ui-field-group prospect-step1__field">
+        <label class="ui-label" for="id_phone">{{ form.phone.label }}</label>
+        <input class="ui-input product-field-input w-full{% if form.phone.errors %} ui-input--error{% endif %}" id="id_phone" name="phone" type="tel" value="{{ form.phone.value|default:'' }}" required autocomplete="tel" inputmode="tel" placeholder="+33 6 12 34 56 78">
+        {% if form.phone.errors %}<p class="ui-field-error" role="alert">{{ form.phone.errors.0 }}</p>{% endif %}
       </div>
     </div>
   </section>
@@ -46,27 +46,27 @@
   <section class="prospect-form__section prospect-step1__section" aria-labelledby="company-heading">
     <h3 id="company-heading" class="prospect-form__section-title">Votre structure</h3>
     <div class="prospect-form__panel prospect-step1__surface prospect-step1__company-grid">
-      <div class="dui-form-control prospect-step1__field prospect-step1__field--full">
-        <label class="product-form-label" for="id_company">{{ form.company.label }}</label>
-        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.company.errors %} border-error/60{% endif %}" id="id_company" name="company" value="{{ form.company.value|default:'' }}" required autocomplete="organization" placeholder="Nom commercial ou raison sociale">
-        {% if form.company.errors %}<p class="error-text" role="alert">{{ form.company.errors.0 }}</p>{% endif %}
+      <div class="ui-field-group prospect-step1__field prospect-step1__field--full">
+        <label class="ui-label" for="id_company">{{ form.company.label }}</label>
+        <input class="ui-input product-field-input w-full{% if form.company.errors %} ui-input--error{% endif %}" id="id_company" name="company" value="{{ form.company.value|default:'' }}" required autocomplete="organization" placeholder="Nom commercial ou raison sociale">
+        {% if form.company.errors %}<p class="ui-field-error" role="alert">{{ form.company.errors.0 }}</p>{% endif %}
       </div>
-      <div class="dui-form-control prospect-step1__field">
-        <label class="product-form-label" for="id_country">{{ form.country.label }}</label>
-        <select class="dui-select dui-select-bordered checkout-dui-input{% if form.country.errors %} border-error/60{% endif %}" id="id_country" name="country" required x-model="country" autocomplete="country">
+      <div class="ui-field-group prospect-step1__field">
+        <label class="ui-label" for="id_country">{{ form.country.label }}</label>
+        <select class="ui-input product-field-input w-full{% if form.country.errors %} ui-input--error{% endif %}" id="id_country" name="country" required x-model="country" autocomplete="country">
           {% for value, label in form.country.field.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
         </select>
-        {% if form.country.errors %}<p class="error-text" role="alert">{{ form.country.errors.0 }}</p>{% endif %}
+        {% if form.country.errors %}<p class="ui-field-error" role="alert">{{ form.country.errors.0 }}</p>{% endif %}
       </div>
-      <div class="dui-form-control prospect-step1__field" x-show="country === 'FR'" x-cloak>
-        <label class="product-form-label" for="id_siren">Numéro SIREN</label>
-        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.siren.errors %} border-error/60{% endif %}" id="id_siren" name="siren" value="{{ form.siren.value|default:'' }}" inputmode="numeric" maxlength="14" :required="country === 'FR'" placeholder="123 456 789">
-        {% if form.siren.errors %}<p class="error-text" role="alert">{{ form.siren.errors.0 }}</p>{% endif %}
+      <div class="ui-field-group prospect-step1__field" x-show="country === 'FR'" x-cloak>
+        <label class="ui-label" for="id_siren">Numéro SIREN</label>
+        <input class="ui-input product-field-input w-full{% if form.siren.errors %} ui-input--error{% endif %}" id="id_siren" name="siren" value="{{ form.siren.value|default:'' }}" inputmode="numeric" maxlength="14" :required="country === 'FR'" placeholder="123 456 789">
+        {% if form.siren.errors %}<p class="ui-field-error" role="alert">{{ form.siren.errors.0 }}</p>{% endif %}
       </div>
-      <div class="dui-form-control prospect-step1__field" x-show="country !== 'FR'" x-cloak>
-        <label class="product-form-label" for="id_vat_number">N° de TVA / identifiant fiscal</label>
-        <input class="dui-input dui-input-bordered checkout-dui-input{% if form.vat_number.errors %} border-error/60{% endif %}" id="id_vat_number" name="vat_number" value="{{ form.vat_number.value|default:'' }}" maxlength="40" :required="country !== 'FR'" placeholder="Ex. BE0123456789">
-        {% if form.vat_number.errors %}<p class="error-text" role="alert">{{ form.vat_number.errors.0 }}</p>{% endif %}
+      <div class="ui-field-group prospect-step1__field" x-show="country !== 'FR'" x-cloak>
+        <label class="ui-label" for="id_vat_number">N° de TVA / identifiant fiscal</label>
+        <input class="ui-input product-field-input w-full{% if form.vat_number.errors %} ui-input--error{% endif %}" id="id_vat_number" name="vat_number" value="{{ form.vat_number.value|default:'' }}" maxlength="40" :required="country !== 'FR'" placeholder="Ex. BE0123456789">
+        {% if form.vat_number.errors %}<p class="ui-field-error" role="alert">{{ form.vat_number.errors.0 }}</p>{% endif %}
       </div>
 
       <fieldset class="prospect-step1__activity prospect-step1__field--full">
@@ -84,7 +84,7 @@
           {% endif %}
           {% endfor %}
         </div>
-        {% if form.activity_type.errors %}<p class="error-text" role="alert">{{ form.activity_type.errors.0 }}</p>{% endif %}
+        {% if form.activity_type.errors %}<p class="ui-field-error" role="alert">{{ form.activity_type.errors.0 }}</p>{% endif %}
       </fieldset>
     </div>
   </section>

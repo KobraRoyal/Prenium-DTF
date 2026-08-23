@@ -1,28 +1,59 @@
 /**
- * Tokens partagés landing + portail (complètent :root dans legacy/app-legacy.css).
- * Ne pas dupliquer les couleurs déjà définies dans le legacy : utiliser var(--*) quand possible.
+ * Atelier clair et chaleureux partagé par toutes les surfaces Prenium DTF.
+ * Les couleurs de marque sont surchargeables par la configuration Atelier.
  */
-@layer base {
-  :root {
-    --ui-max-w: 1120px;
-    --ui-page-pad-x: clamp(0.75rem, 3vw, 1.5rem);
-    --ui-section-gap: 1rem;
-    --ui-radius-lg: var(--radius);
-    --ui-font-display: "Space Grotesk", system-ui, sans-serif;
-    --ui-font-body: "DM Sans", system-ui, sans-serif;
-    --ui-header-h: 3.5rem;
-    --ui-action-min-h: 2.75rem;
-    --ui-action-radius: 0;
-    --ui-action-border-width: 2px;
-    --ui-action-border: #201d18;
-    --ui-action-primary-bg: var(--brand);
-    --ui-action-primary-bg-hover: var(--brand-strong);
-    --ui-action-primary-text: #fffaf2;
-    --ui-action-secondary-bg: #fffdf8;
-    --ui-action-secondary-bg-hover: #f4eadb;
-    --ui-action-secondary-text: var(--brand-strong);
-    --ui-action-shadow: 4px 4px 0 rgba(32, 29, 24, 0.95);
-    --ui-action-shadow-hover: 6px 6px 0 rgba(32, 29, 24, 0.95);
-    --ui-action-transition: 160ms ease;
-  }
+:root,
+html[data-theme="prenium"] {
+  color-scheme: light;
+  --bg: #f4f0e6;
+  --bg-accent: #ece7d8;
+  --surface: #fbf6ee;
+  --surface-raised: #fffdf8;
+  --card: #fbf6ee;
+  --ink: #1a1815;
+  --muted: #6b675c;
+  --muted-soft: #888276;
+  --line: #e2dccb;
+  --line-strong: #c8bfaa;
+  --brand: #ff8775;
+  --brand-strong: #e65944;
+  --brand-soft: #ffe9e3;
+  --accent: #a83bc4;
+  --accent-strong: #770176;
+  --accent-soft: #f3dff6;
+  --accent-text: #ffffff;
+  --success: #287451;
+  --warning: #8b5d08;
+  --danger: #a33b45;
+  --danger-text: #8f3039;
+  --focus-ring: var(--accent-strong);
+  --action-text: #1a1815;
+  --radius: 16px;
+  --radius-sm: 14px;
+  --radius-lg: 18px;
+  --shadow-soft: 0 8px 24px rgba(83, 67, 43, 0.08);
+  --shadow-raised: 0 16px 40px rgba(83, 67, 43, 0.12);
+  --transition-base: 170ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  --ui-max-w: 1180px;
+  --ui-page-pad-x: clamp(1rem, 3vw, 1.75rem);
+  --ui-section-gap: clamp(1rem, 2vw, 1.5rem);
+  --ui-radius-sm: var(--radius-sm);
+  --ui-radius-lg: var(--radius-lg);
+  --ui-font-display: "Space Grotesk", system-ui, sans-serif;
+  --ui-font-body: "DM Sans", system-ui, sans-serif;
+  --ui-header-h: 4.25rem;
+  --ui-action-min-h: 2.75rem;
+  --ui-action-radius: 999px;
+  --ui-action-border-width: 1.5px;
+  --ui-action-border: color-mix(in srgb, var(--ink) 24%, transparent);
+  --ui-action-primary-bg: var(--brand);
+  --ui-action-primary-bg-hover: var(--brand-strong);
+  --ui-action-primary-text: var(--action-text);
+  --ui-action-secondary-bg: var(--surface);
+  --ui-action-secondary-bg-hover: var(--bg-accent);
+  --ui-action-secondary-text: var(--ink);
+  --ui-action-shadow: 0 5px 16px rgba(83, 67, 43, 0.1);
+  --ui-action-shadow-hover: 0 8px 22px rgba(83, 67, 43, 0.14);
+  --ui-action-transition: var(--transition-base);
 }

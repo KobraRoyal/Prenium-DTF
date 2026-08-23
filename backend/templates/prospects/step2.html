@@ -13,7 +13,7 @@
 {% block prospect_inner %}
 <form method="post" class="ui-form-stack prospect-form prospect-project-form text-left" novalidate data-submit-loading>
   {% csrf_token %}
-  {% if form.non_field_errors %}<div class="dui-alert dui-alert-error" role="alert">{{ form.non_field_errors.0 }}</div>{% endif %}
+  {% if form.non_field_errors %}<div class="alert alert--danger" role="alert">{{ form.non_field_errors.0 }}</div>{% endif %}
 
   <section class="prospect-project-section" aria-labelledby="project-scope-title">
     <h3 id="project-scope-title" class="prospect-form__section-title">Le besoin</h3>
@@ -30,7 +30,7 @@
         </label>
         {% endif %}{% endfor %}
       </div>
-      {% if form.service_interest.errors %}<p class="error-text" role="alert">{{ form.service_interest.errors.0 }}</p>{% endif %}
+      {% if form.service_interest.errors %}<p class="ui-field-error" role="alert">{{ form.service_interest.errors.0 }}</p>{% endif %}
     </fieldset>
 
     <fieldset class="prospect-project-fieldset">
@@ -45,7 +45,7 @@
         </label>
         {% endif %}{% endfor %}
       </div>
-      {% if form.project_timing.errors %}<p class="error-text" role="alert">{{ form.project_timing.errors.0 }}</p>{% endif %}
+      {% if form.project_timing.errors %}<p class="ui-field-error" role="alert">{{ form.project_timing.errors.0 }}</p>{% endif %}
     </fieldset>
   </section>
 
@@ -64,7 +64,7 @@
           </label>
           {% endif %}{% endfor %}
         </div>
-        {% if form.monthly_volume.errors %}<p class="error-text" role="alert">{{ form.monthly_volume.errors.0 }}</p>{% endif %}
+        {% if form.monthly_volume.errors %}<p class="ui-field-error" role="alert">{{ form.monthly_volume.errors.0 }}</p>{% endif %}
       </fieldset>
 
       <fieldset class="prospect-project-fieldset">
@@ -78,7 +78,7 @@
           </label>
           {% endif %}{% endfor %}
         </div>
-        {% if form.order_frequency.errors %}<p class="error-text" role="alert">{{ form.order_frequency.errors.0 }}</p>{% endif %}
+        {% if form.order_frequency.errors %}<p class="ui-field-error" role="alert">{{ form.order_frequency.errors.0 }}</p>{% endif %}
       </fieldset>
     </div>
 
@@ -94,12 +94,12 @@
         </label>
         {% endif %}{% endfor %}
       </div>
-      {% if form.urgency.errors %}<p class="error-text" role="alert">{{ form.urgency.errors.0 }}</p>{% endif %}
+      {% if form.urgency.errors %}<p class="ui-field-error" role="alert">{{ form.urgency.errors.0 }}</p>{% endif %}
     </fieldset>
 
-    <div class="dui-form-control prospect-project-goal">
-      <label class="product-form-label" for="id_main_goal">Objectif principal <span class="prospect-project-goal__optional">(optionnel)</span></label>
-      <textarea class="dui-textarea dui-textarea-bordered w-full checkout-dui-input" id="id_main_goal" name="main_goal" rows="3" maxlength="500" placeholder="Ex. lancer une capsule de 100 pièces le mois prochain">{{ form.main_goal.value|default:'' }}</textarea>
+    <div class="ui-field-group prospect-project-goal">
+      <label class="ui-label" for="id_main_goal">Objectif principal <span class="prospect-project-goal__optional">(optionnel)</span></label>
+      <textarea class="ui-input product-field-input w-full" id="id_main_goal" name="main_goal" rows="3" maxlength="500" placeholder="Ex. lancer une capsule de 100 pièces le mois prochain">{{ form.main_goal.value|default:'' }}</textarea>
     </div>
   </section>
 

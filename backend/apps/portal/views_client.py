@@ -136,8 +136,10 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
 
     def get(self, request, customer_public_id, order_public_id):
         from apps.billing.services.production_payment_gate import order_awaits_client_payment
+        from apps.portal.client_order_presentation import client_order_status_banner
 
         order = self.get_order_or_404(order_public_id)
+        awaits_client_payment = order_awaits_client_payment(order)
         shipment = None
         try:
             shipment = order.shipment
@@ -150,10 +152,14 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
                 order=order,
                 shipment=shipment,
                 active_panel=request.GET.get("panel", ""),
-                awaits_client_payment=order_awaits_client_payment(order),
+                awaits_client_payment=awaits_client_payment,
             )
             | {
                 "order_client_label": order_client_reference(order),
+                "order_status_banner": client_order_status_banner(
+                    awaits_client_payment=awaits_client_payment,
+                    query_params=request.GET,
+                ),
                 "nav_mode": "client",
                 "nav_key": "client-orders",
             },

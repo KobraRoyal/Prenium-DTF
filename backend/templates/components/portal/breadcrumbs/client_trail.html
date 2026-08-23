@@ -1,0 +1,14 @@
+<nav class="ui-breadcrumb" aria-label="Fil d’Ariane">
+  <ol class="ui-breadcrumb__list">
+    <li class="ui-breadcrumb__item">
+      {% if client_current %}
+      <span aria-current="page">Accueil client</span>
+      {% else %}
+      <a href="{% url 'portal:client-dashboard' %}">Accueil client</a>
+      {% endif %}
+    </li>
+    {% if current_label %}
+    <li class="ui-breadcrumb__item"><span aria-current="page">{{ current_label }}</span></li>
+    {% endif %}
+  </ol>
+</nav>

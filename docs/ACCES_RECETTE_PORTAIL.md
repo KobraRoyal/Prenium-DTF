@@ -82,11 +82,16 @@ Voir aussi la vue d’ensemble métier : [architecture/B2B_PRODUCT_AND_OPERATION
 
 ## Après changement de CSS / templates (Docker)
 
-Si la page ne reflète pas les derniers fichiers :
+Nginx sert les statics depuis le volume **`django_static`** (collectstatic), pas directement `static_src/`.
+
+Si la page ne reflète pas les derniers styles (ombres brutalistes, ancien cache-bust `?v=`…) :
 
 ```bash
+cd backend && npm run build:css:docker
 docker compose restart web
 ```
+
+Puis hard-refresh navigateur. Les templates portail chargent `portal.css?v=20260823-brand-light-v7` (ou version courante du sprint).
 
 ## Référence détaillée sprint
 

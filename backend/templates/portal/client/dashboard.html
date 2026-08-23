@@ -4,20 +4,11 @@
 {% block title %}Tableau de bord — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="client-dashboard">
-<section class="page-head page-head--premium client-dashboard-head" aria-labelledby="client-dashboard-title">
-  <div class="page-head__content">
-    <h1 class="font-display tracking-tight" id="client-dashboard-title">Tableau de bord</h1>
-    <p class="page-head-lead">{% if customer %}Pilotez les commandes et les productions de {{ customer.name }}.{% else %}Retrouvez ici l’activité de votre espace client.{% endif %}</p>
-  </div>
-  {% if client_focus and client_focus.kind == "start" %}
-  <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">Créer une commande</a>
-  {% endif %}
-</section>
+<div class="portal-page portal-page--client client-dashboard">
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_dashboard.html" head_labelledby="client-dashboard-title" title="Tableau de bord" lead_template="components/portal/page_head_leads/client_dashboard.html" actions_template="components/portal/page_head_actions/client_dashboard.html" %}
 {% if not memberships %}
-<section class="card empty-state">
-  <h2 class="font-display text-lg">Aucun espace client actif</h2>
-  <p class="muted">Votre compte n’est encore rattaché à aucun espace client actif.</p>
+<section class="portal-page-surface">
+  {% include "components/ui/empty_state.html" with title="Aucun espace client actif" message="Votre compte n’est encore rattaché à aucun espace client actif." %}
 </section>
 {% else %}
 {% if volume_discount_summary %}
@@ -43,7 +34,7 @@
 </section>
 {% endif %}
 {% if project_feature_enabled and recent_projects %}
-<section class="card client-dashboard-section" aria-labelledby="client-dashboard-preparations">
+<section class="portal-page-surface client-dashboard-section" aria-labelledby="client-dashboard-preparations">
   <div class="client-dashboard-section__head">
     <h2 class="font-display text-lg" id="client-dashboard-preparations">Commandes à finaliser</h2>
     {% if projects_in_progress_count > recent_projects|length %}
@@ -55,7 +46,7 @@
 {% endif %}
 
 {% if recent_orders %}
-<section class="card client-dashboard-section" aria-labelledby="client-dashboard-orders">
+<section class="portal-page-surface client-dashboard-section" aria-labelledby="client-dashboard-orders">
   <div class="client-dashboard-section__head">
     <h2 class="font-display text-lg" id="client-dashboard-orders">Commandes transmises</h2>
     {% if orders_count > recent_orders|length %}

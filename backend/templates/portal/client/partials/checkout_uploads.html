@@ -1,14 +1,14 @@
 {% load portal_tags %}
-<section class="checkout-dui-surface product-checkout-card" id="checkout-uploads">
+<section class="product-checkout-card" id="checkout-uploads">
   <div class="product-checkout-card__body gap-4">
     <div>
-      <h3 class="dui-card-title font-display text-lg">Étape 2 — Joindre les fichiers</h3>
+      <h3 class="font-display text-lg">Étape 2 — Joindre les fichiers</h3>
       {% client_order_refs order variant="stack" %}
-      <p class="text-sm opacity-75 mt-2">Ajoutez un ou plusieurs fichiers de production. Indiquez la quantité et, si besoin, la couleur du support pour guider l'atelier.</p>
+      <p class="muted text-sm mt-2">Ajoutez un ou plusieurs fichiers de production. Indiquez la quantité et, si besoin, la couleur du support pour guider l'atelier.</p>
     </div>
 
     {% if upload_error %}
-    <div class="dui-alert dui-alert-error border border-error/40 bg-error/15 text-error-content" role="alert">
+    <div class="alert alert--danger" role="alert">
       <span>{{ upload_error }}</span>
     </div>
     {% endif %}
@@ -20,22 +20,22 @@
       hx-target="#checkout-uploads"
       hx-swap="outerHTML"
       hx-indicator="#portal-htmx-indicator"
-      class="flex flex-col gap-6"
+      class="ui-form-stack"
       data-submit-loading
     >
       {% csrf_token %}
       <input type="hidden" name="order_public_id" value="{{ order.public_id }}">
 
       <div class="grid gap-4 sm:grid-cols-2">
-        <div class="dui-form-control w-full">
-          <label class="product-form-label" for="id-upload-qty">Quantité (exemplaires)</label>
-          <input id="id-upload-qty" name="quantity" type="number" value="1" min="1" step="1" required placeholder="Quantité (exemplaires) — ex. 12" class="dui-input dui-input-bordered w-full checkout-dui-input">
+        <div class="ui-field-group">
+          <label class="ui-label" for="id-upload-qty">Quantité (exemplaires)</label>
+          <input id="id-upload-qty" name="quantity" type="number" value="1" min="1" step="1" required placeholder="Ex. 12" class="ui-input">
         </div>
-        <div class="dui-form-control w-full">
-          <label class="product-form-label" for="id-support-color">Couleur du support (optionnel)</label>
+        <div class="ui-field-group">
+          <label class="ui-label" for="id-support-color">Couleur du support (optionnel)</label>
           <div class="flex flex-wrap gap-2 items-center">
-            <input id="id-support-color" name="support_color_hex" type="color" value="#ffffff" class="h-10 w-14 cursor-pointer p-1">
-            <span class="text-xs opacity-60" aria-hidden="true">Indicatif pour l’atelier</span>
+            <input id="id-support-color" name="support_color_hex" type="color" value="#ffffff" class="h-10 w-14 cursor-pointer rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--line)_80%,transparent)] p-1">
+            <span class="ui-field-help" aria-hidden="true">Indicatif pour l’atelier</span>
           </div>
         </div>
       </div>
@@ -43,26 +43,26 @@
       <label for="checkout-file-input" class="dropzone checkout-dropzone-dui group flex cursor-pointer flex-col items-center justify-center gap-3 px-4 py-10 text-center transition">
         <span class="product-step-badge">Fichier production</span>
         <strong class="text-base">Déposez votre fichier ici</strong>
-        <span class="max-w-sm text-sm opacity-70">PDF, PNG, JPG, SVG, AI, PSD, TIFF — max 100&nbsp;Mo. Le contrôle technique continue ensuite côté atelier.</span>
+        <span class="max-w-sm muted text-sm">PDF, PNG, JPG, SVG, AI, PSD, TIFF — max 100&nbsp;Mo. Le contrôle technique continue ensuite côté atelier.</span>
         <input
           id="checkout-file-input"
           type="file"
           name="file"
           required
           accept=".pdf,.png,.jpg,.jpeg,.svg,.ai,.psd,.tif,.tiff,application/pdf,image/png,image/jpeg,image/svg+xml,image/tiff,application/postscript,image/vnd.adobe.photoshop"
-          class="dui-file-input dui-file-input-bordered dui-file-input-primary product-file-input w-full max-w-md text-sm"
+          class="ui-input product-file-input w-full max-w-md text-sm"
         >
       </label>
 
       {% include "components/forms/form_actions.html" with primary_label="Ajouter le fichier" primary_class_full="ui-btn ui-btn-primary ui-btn-wide" htmx_disable=1 %}
 
-      <p class="m-0 text-xs opacity-65">Astuce : ajoutez tous les fichiers utiles avant l'envoi final pour éviter un aller-retour de validation.</p>
+      <p class="ui-field-help m-0">Astuce : ajoutez tous les fichiers utiles avant l'envoi final pour éviter un aller-retour de validation.</p>
     </form>
 
-    <div class="dui-divider text-xs opacity-50">Fichiers envoyés</div>
+    <div class="checkout-panel-divider" role="presentation"><span>Fichiers envoyés</span></div>
 
-    <div class="hidden overflow-x-auto ui-table-shell md:block">
-      <table class="dui-table dui-table-zebra dui-table-sm">
+    <div class="hidden ui-table-shell ui-table-shell--comfortable table-wrap min-[960px]:block">
+      <table class="ui-data-table ui-data-table--compact">
         <thead>
           <tr>
             <th>Fichier</th>
@@ -78,17 +78,9 @@
             <td class="font-medium">{{ upload.original_filename }}</td>
             <td>{{ upload.quantity }}</td>
             <td>
-              {% if upload.support_color_is_multicolor %}
-              <span class="b2b-support-color-badge is-rainbow">Multicolore</span>
-              {% elif upload.support_color_hex %}
-              <span class="inline-flex items-center gap-1" title="{{ upload.support_color_hex }}">
-                <span class="product-color-swatch h-4 w-4" style="background-color: {{ upload.support_color_hex }}"></span>
-              </span>
-              {% else %}
-              <span class="text-xs opacity-50">—</span>
-              {% endif %}
+              {% include "components/tables/upload_support_color.html" with upload=upload %}
             </td>
-            <td class="text-sm opacity-80">{{ upload.size_bytes|filesizeformat }}</td>
+            <td class="muted text-sm">{{ upload.size_bytes|filesizeformat }}</td>
             <td>
               {% if upload.inspection %}
               {% with tone=upload.inspection.status|badge_tone %}
@@ -101,39 +93,30 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="text-center text-sm opacity-60">Aucun fichier pour le moment.</td>
+            <td colspan="5" class="text-center muted text-sm">Aucun fichier pour le moment.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <div class="space-y-3 md:hidden" aria-label="Fichiers envoyés">
+    <div class="grid gap-3 min-[960px]:hidden" aria-label="Fichiers envoyés">
       {% for upload in uploads %}
       <article class="ui-mobile-order-card">
         <p class="break-words font-medium">{{ upload.original_filename }}</p>
         <dl class="mt-3 grid grid-cols-2 gap-2 text-sm">
           <div>
-            <dt class="text-xs opacity-60">Qté</dt>
+            <dt class="muted text-xs">Qté</dt>
             <dd>{{ upload.quantity }}</dd>
           </div>
           <div>
-            <dt class="text-xs opacity-60">Taille</dt>
-            <dd class="opacity-90">{{ upload.size_bytes|filesizeformat }}</dd>
+            <dt class="muted text-xs">Taille</dt>
+            <dd>{{ upload.size_bytes|filesizeformat }}</dd>
           </div>
           <div class="col-span-2">
-            <dt class="text-xs opacity-60">Couleur</dt>
+            <dt class="muted text-xs">Couleur</dt>
             <dd>
-              {% if upload.support_color_is_multicolor %}
-              <span class="b2b-support-color-badge is-rainbow">Multicolore</span>
-              {% elif upload.support_color_hex %}
-              <span class="inline-flex items-center gap-2">
-                <span class="product-color-swatch h-5 w-5" style="background-color: {{ upload.support_color_hex }}"></span>
-                <span class="font-mono text-xs">{{ upload.support_color_hex }}</span>
-              </span>
-              {% else %}
-              <span class="text-xs opacity-50">—</span>
-              {% endif %}
+              {% include "components/tables/upload_support_color.html" with upload=upload %}
             </dd>
           </div>
         </dl>
@@ -148,7 +131,7 @@
         </div>
       </article>
       {% empty %}
-      <p class="text-center text-sm opacity-60">Aucun fichier pour le moment.</p>
+      {% include "components/ui/empty_state.html" with title="Aucun fichier" message="Aucun fichier pour le moment." %}
       {% endfor %}
     </div>
   </div>

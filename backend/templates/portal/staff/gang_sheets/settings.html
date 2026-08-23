@@ -1,11 +1,11 @@
 {% extends "portal/layout.html" %}
 {% load l10n %}
 
-{% block title %}Réglages Gang Sheet — Atelier{% endblock %}
+{% block title %}Réglages planches DTF — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="gang-settings-page">
-  {% include "components/portal/page_head.html" with title="Laize et contraintes Gang Sheet" subtitle="Définissez les dimensions appliquées aux nouvelles planches sans modifier les brouillons existants." %}
+<div class="portal-page portal-page--staff gang-settings-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_gang_sheet_settings.html" title="Laize et contraintes Gang Sheet" subtitle="Définissez les dimensions appliquées aux nouvelles planches sans modifier les brouillons existants." %}
   <section class="gang-sheet-create-card">
     <div><h2>Paramètres de composition</h2><p>Dimensions en millimètres. La hauteur client suit automatiquement le pas défini.</p></div>
     <form method="post" class="ui-form-stack">

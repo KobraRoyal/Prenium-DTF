@@ -94,8 +94,6 @@
   {% endif %}
 
   {% else %}
-  <div class="empty-state client-shipment-empty">
-    <p>Le suivi apparaîtra dès l’expédition.</p>
-  </div>
+  {% include "components/ui/empty_state.html" with title="Expédition en préparation" message="Le suivi apparaîtra dès l'expédition de votre commande." %}
   {% endif %}
 </div>

@@ -1195,6 +1195,31 @@ html.js-landing-motion {
   }
 }
 
+body.landing-saas.ui-marketing-body {
+  font-family: var(--ui-font-body);
+  background-color: var(--bg);
+  background-image: none;
+  color: var(--ink);
+}
+
+body.landing-saas.ui-marketing-body .muted {
+  color: var(--muted);
+}
+
+body.landing-saas.ui-marketing-body .landing-main a {
+  color: var(--brand-strong);
+}
+
+body.landing-saas.ui-marketing-body .landing-saas-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 body.landing-saas {
   font-family: "DM Sans", "Manrope", system-ui, sans-serif;
   background-color: #0c0a09;

@@ -4,15 +4,16 @@
 {% block title %}Mes commandes — Prenium DTF{% endblock %}
 
 {% block portal_content %}
+<div class="portal-page portal-page--client client-orders-page">
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_orders_list.html" title="Mes commandes" subtitle_prefix=customer.name subtitle="N° IDS et votre référence pour chaque commande transmise." %}
 
-<section class="card client-dashboard-section">
+<section class="portal-page-surface client-dashboard-section">
   <div class="client-dashboard-toolbar">
-    <label class="dui-form-control client-orders-search">
-      <span class="product-form-label" for="client-orders-search-input">Rechercher</span>
+    <div class="ui-field-group client-orders-search">
+      <label class="ui-label" for="client-orders-search-input">Rechercher</label>
       <input
         id="client-orders-search-input"
-        class="dui-input dui-input-bordered w-full"
+        class="ui-input w-full"
         type="search"
         name="q"
         value="{{ search_query }}"
@@ -26,10 +27,11 @@
         hx-indicator="#portal-htmx-indicator"
         aria-controls="client-orders-list-results"
       >
-    </label>
+    </div>
   </div>
   <div id="client-orders-list-results" aria-live="polite">
     {% include "portal/client/partials/client_orders_list_results.html" %}
   </div>
 </section>
+</div>
 {% endblock %}

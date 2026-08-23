@@ -24,8 +24,6 @@
     <p class="m-0">Le contrôle technique est mis à jour au fil du traitement. En cas d'alerte, l'équipe revient vers vous avant production.</p>
   </div>
   {% else %}
-  <div class="empty-state">
-    <p>Le bloc inspection sera disponible après le premier téléversement.</p>
-  </div>
+  {% include "components/ui/empty_state.html" with title="Inspection en attente" message="Le bloc inspection sera disponible après le premier téléversement." %}
   {% endif %}
 </div>

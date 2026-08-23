@@ -1,9 +1,10 @@
 {% extends "portal/layout.html" %}
 {% load ui_tags %}
 
-{% block title %}Commandes Atelier - Prenium DTF{% endblock %}
+{% block title %}Commandes Atelier — Prenium DTF{% endblock %}
 
 {% block portal_content %}
+<div class="portal-page portal-page--staff staff-orders-page">
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_orders_list.html" title="Commandes" subtitle="Vue opérationnelle centralisée avec lecture rapide des statuts et prochaines actions." %}
 
 {% if request.GET.deleted == "1" %}
@@ -12,23 +13,14 @@
 </div>
 {% endif %}
 
-<section class="card">
+<section class="portal-page-surface ui-list-section">
   {% if orders %}
   {% ui_orders_table orders=orders variant="staff" %}
-  {% if page_obj and page_obj.paginator.num_pages > 1 %}
-  <nav class="staff-pagination" aria-label="Pagination commandes Atelier">
-    {% if page_obj.has_previous %}
-    <a class="ui-btn ui-btn-secondary" href="?page={{ page_obj.previous_page_number }}">Précédent</a>
-    {% endif %}
-    <span class="muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}
-    <a class="ui-btn ui-btn-secondary" href="?page={{ page_obj.next_page_number }}">Suivant</a>
-    {% endif %}
-  </nav>
-  {% endif %}
+  {% include "components/portal/pagination.html" with pagination_label="Pagination commandes Atelier" pagination_class="staff-pagination" %}
   {% else %}
   {% url 'portal:staff-dashboard' as staff_dashboard_url %}
   {% include "components/ui/empty_state.html" with title="File vide" message="Aucune commande à afficher." cta_url=staff_dashboard_url cta_label="Retour au tableau de bord" %}
   {% endif %}
 </section>
+</div>
 {% endblock %}

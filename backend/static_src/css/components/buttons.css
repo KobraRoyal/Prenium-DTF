@@ -2,7 +2,8 @@
   .ui-btn,
   .btn,
   .btn-saas-primary,
-  .btn-saas-secondary {
+  .btn-saas-secondary,
+  .dui-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -11,18 +12,17 @@
     max-width: 100%;
     border: var(--ui-action-border-width) solid var(--ui-action-border);
     border-radius: var(--ui-action-radius);
-    padding: 0.68rem 1rem;
+    padding: 0.65rem 1.05rem;
     color: var(--ui-action-primary-text);
     background: var(--ui-action-primary-bg);
     box-shadow: var(--ui-action-shadow);
     font-family: var(--ui-font-display);
     font-size: 0.88rem;
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: 0;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
     text-align: center;
     text-decoration: none;
-    text-transform: uppercase;
     touch-action: manipulation;
     cursor: pointer;
     transition:
@@ -37,18 +37,20 @@
   .ui-btn:hover,
   .btn:hover,
   .btn-saas-primary:hover,
-  .btn-saas-secondary:hover {
+  .btn-saas-secondary:hover,
+  .dui-btn:hover {
     color: var(--ui-action-primary-text);
     background: var(--ui-action-primary-bg-hover);
     box-shadow: var(--ui-action-shadow-hover);
     text-decoration: none;
-    transform: translate(-2px, -2px);
+    transform: translateY(-1px);
   }
 
   .ui-btn:focus-visible,
   .btn:focus-visible,
   .btn-saas-primary:focus-visible,
-  .btn-saas-secondary:focus-visible {
+  .btn-saas-secondary:focus-visible,
+  .dui-btn:focus-visible {
     outline: 3px solid var(--focus-ring);
     outline-offset: 3px;
   }
@@ -56,15 +58,18 @@
   .ui-btn:active,
   .btn:active,
   .btn-saas-primary:active,
-  .btn-saas-secondary:active {
-    transform: translate(0, 0);
-    box-shadow: 2px 2px 0 rgba(32, 29, 24, 0.95);
+  .btn-saas-secondary:active,
+  .dui-btn:active {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+    transform: translateY(0);
   }
 
   .ui-btn-primary,
   .btn-primary,
   .btn:not(.btn-secondary),
-  .btn-saas-primary {
+  .btn-saas-primary,
+  .dui-btn-primary {
+    border-color: color-mix(in srgb, var(--brand) 78%, var(--ink));
     color: var(--ui-action-primary-text);
     background: var(--ui-action-primary-bg);
   }
@@ -72,46 +77,54 @@
   .ui-btn-secondary,
   .btn-secondary,
   .btn.btn-secondary,
-  .btn-saas-secondary {
+  .btn-saas-secondary,
+  .dui-btn-secondary {
     color: var(--ui-action-secondary-text);
     background: var(--ui-action-secondary-bg);
+    box-shadow: none;
   }
 
   .ui-btn-secondary:hover,
   .btn-secondary:hover,
   .btn.btn-secondary:hover,
-  .btn-saas-secondary:hover {
+  .btn-saas-secondary:hover,
+  .dui-btn-secondary:hover {
     color: var(--ui-action-secondary-text);
     background: var(--ui-action-secondary-bg-hover);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.18);
   }
 
-  .ui-btn-ghost {
+  .ui-btn-ghost,
+  .dui-btn-ghost {
+    border-color: transparent;
     color: var(--ui-action-secondary-text);
     background: transparent;
     box-shadow: none;
   }
 
-  .ui-btn-ghost:hover {
+  .ui-btn-ghost:hover,
+  .dui-btn-ghost:hover {
+    border-color: color-mix(in srgb, var(--ink) 14%, transparent);
     color: var(--ui-action-secondary-text);
-    background: color-mix(in srgb, var(--brand) 9%, transparent);
+    background: color-mix(in srgb, var(--brand) 10%, transparent);
     box-shadow: none;
-    transform: none;
   }
 
   .ui-btn-danger {
-    color: #fff;
+    border-color: var(--danger);
+    color: #171310;
     background: var(--danger);
   }
 
   .ui-btn-danger:hover {
-    color: #fff;
-    background: color-mix(in srgb, var(--danger) 82%, #000);
+    color: #171310;
+    background: color-mix(in srgb, var(--danger) 84%, white);
   }
 
   .ui-btn-sm {
-    min-height: 2.35rem;
-    padding: 0.5rem 0.72rem;
-    font-size: 0.78rem;
+    min-height: var(--ui-action-min-h);
+    padding: 0.55rem 0.85rem;
+    font-size: 0.82rem;
   }
 
   .ui-btn-wide {
@@ -127,29 +140,35 @@
   .btn[disabled],
   .btn[aria-disabled="true"],
   .btn-saas-primary[disabled],
-  .btn-saas-secondary[disabled] {
-    opacity: 0.56;
+  .btn-saas-secondary[disabled],
+  .dui-btn[disabled] {
+    border-color: color-mix(in srgb, var(--line) 78%, var(--ink));
+    color: color-mix(in srgb, var(--muted) 72%, var(--bg));
+    background: var(--bg-accent);
+    box-shadow: none;
+    opacity: 0.72;
     cursor: not-allowed;
     pointer-events: none;
     transform: none;
-    box-shadow: none;
   }
 
   .ui-btn.is-loading,
   .btn.is-loading,
   .btn-saas-primary.is-loading,
-  .btn-saas-secondary.is-loading {
+  .btn-saas-secondary.is-loading,
+  .dui-btn.is-loading {
     pointer-events: none;
-    opacity: 0.82;
+    opacity: 0.78;
   }
 
   .ui-btn.is-loading::after,
   .btn.is-loading::after,
   .btn-saas-primary.is-loading::after,
-  .btn-saas-secondary.is-loading::after {
+  .btn-saas-secondary.is-loading::after,
+  .dui-btn.is-loading::after {
     content: "";
-    width: 0.78rem;
-    height: 0.78rem;
+    width: 0.85rem;
+    height: 0.85rem;
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 999px;
@@ -157,38 +176,39 @@
   }
 
   body.prospect-tunnel-page .ui-btn {
-    border-color: rgba(255, 248, 234, 0.86);
-    box-shadow: 4px 4px 0 rgba(240, 168, 122, 0.38);
+    border-color: color-mix(in srgb, var(--ink) 24%, transparent);
+    box-shadow: var(--ui-action-shadow);
   }
 
   body.prospect-tunnel-page .ui-btn-primary {
-    color: #1c1815;
-    background: #f0a87a;
+    border-color: color-mix(in srgb, var(--brand) 78%, var(--ink));
+    color: var(--ui-action-primary-text);
+    background: var(--brand);
   }
 
   body.prospect-tunnel-page .ui-btn-primary:hover {
-    color: #1c1815;
-    background: #ffd8b8;
+    color: var(--ui-action-primary-text);
+    background: var(--brand-strong);
   }
 
   body.prospect-tunnel-page .ui-btn-secondary {
-    color: #f8f0e7;
-    background: rgba(255, 255, 255, 0.04);
+    color: var(--ink);
+    background: var(--surface);
     box-shadow: none;
   }
 
   body.prospect-tunnel-page .ui-btn-secondary:hover {
-    color: #fffaf2;
-    background: rgba(240, 168, 122, 0.14);
-    box-shadow: none;
-    transform: none;
+    color: var(--ink);
+    background: var(--bg-accent);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.18);
   }
 
   @media (prefers-reduced-motion: reduce) {
     .ui-btn,
     .btn,
     .btn-saas-primary,
-    .btn-saas-secondary {
+    .btn-saas-secondary,
+    .dui-btn {
       transition: none;
     }
 
@@ -199,8 +219,59 @@
     .ui-btn:active,
     .btn:active,
     .btn-saas-primary:active,
-    .btn-saas-secondary:active {
+    .btn-saas-secondary:active,
+    .dui-btn:hover,
+    .dui-btn:active {
       transform: none;
     }
   }
+}
+
+/*
+ * Autorité finale des variantes dans le portail. Les anciennes feuilles produit
+ * restent chargées pendant leur migration, mais elles ne redéfinissent plus la
+ * couleur, la profondeur ou la forme des actions secondaires et ghost.
+ */
+html[data-theme="prenium"] body.product-shell :is(
+  .ui-btn-secondary,
+  .btn-secondary,
+  .btn.btn-secondary,
+  .btn-saas-secondary,
+  .dui-btn-secondary
+) {
+  border-color: color-mix(in srgb, var(--line) 78%, var(--ink));
+  border-radius: var(--ui-action-radius);
+  color: var(--ui-action-secondary-text);
+  background: var(--ui-action-secondary-bg);
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell :is(
+  .ui-btn-secondary,
+  .btn-secondary,
+  .btn.btn-secondary,
+  .btn-saas-secondary,
+  .dui-btn-secondary
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: color-mix(in srgb, var(--brand) 58%, var(--ink));
+  color: var(--ui-action-secondary-text);
+  background: var(--ui-action-secondary-bg-hover);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+
+html[data-theme="prenium"] body.product-shell :is(.ui-btn-ghost, .dui-btn-ghost) {
+  border-color: transparent;
+  border-radius: var(--ui-action-radius);
+  color: var(--ui-action-secondary-text);
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell :is(.ui-btn-ghost, .dui-btn-ghost):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: color-mix(in srgb, var(--ink) 14%, transparent);
+  color: var(--ui-action-secondary-text);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  box-shadow: none;
+  transform: none;
 }

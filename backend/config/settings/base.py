@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "apps.core",
+    "apps.branding",
     "apps.accounts",
     "apps.customers",
     "apps.auditlog",
@@ -89,6 +90,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.b2b_order_projects.context_processors.b2b_order_project_flags",
+                "apps.branding.context_processors.brand_theme",
             ],
         },
     },
@@ -133,6 +135,7 @@ STAFF_ORDER_LIST_PAGE_SIZE = env_int("STAFF_ORDER_LIST_PAGE_SIZE", 25)
 B2B_DTF_ORDER_PROJECT_ENABLED = env_bool("B2B_DTF_ORDER_PROJECT_ENABLED", True)
 B2B_ORDER_PROJECT_LIST_PAGE_SIZE = env_int("B2B_ORDER_PROJECT_LIST_PAGE_SIZE", 20)
 STAFF_B2B_ORDER_PROJECT_LIST_PAGE_SIZE = env_int("STAFF_B2B_ORDER_PROJECT_LIST_PAGE_SIZE", 25)
+GANG_SHEET_LIST_PAGE_SIZE = env_int("GANG_SHEET_LIST_PAGE_SIZE", 24)
 ORDER_UPLOAD_ALLOWED_MIME_TYPES = tuple(
     env_list(
         "ORDER_UPLOAD_ALLOWED_MIME_TYPES",

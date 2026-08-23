@@ -1,46 +1,20 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags order_tags %}
 
-{% block title %}{{ order_client_label|default:order_short_ref }} - Prenium DTF{% endblock %}
+{% block title %}{{ order_client_label|default:order_short_ref }} — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="client-order-detail">
-  <section class="page-head page-head--premium">
-    {% include "components/portal/breadcrumbs/client_order_detail.html" %}
-    <div class="page-head__content">
-      <h1 class="font-display tracking-tight">{{ order_client_label|default:order_short_ref }}</h1>
-      <p class="page-head-lead">
-        <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-        {% if order_client_label and order_client_label != order_short_ref %}
-        <span>{{ order_short_ref }}</span>
-        {% endif %}
-      </p>
-    </div>
-  </section>
+<div class="portal-page portal-page--client client-order-detail">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" title=order_client_label|default:order_short_ref lead_template="components/portal/page_head_leads/client_order_detail.html" %}
 
-{% if request.GET.checkout == "success" %}
-{% if awaits_client_payment %}
-<div class="dui-alert dui-alert-warning mb-4" role="status">
-  Commande enregistrée — paiement non finalisé.
-  <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
-</div>
-{% else %}
-<div class="dui-alert dui-alert-success mb-4" role="status">Commande transmise.</div>
-{% endif %}
-{% endif %}
-{% if request.GET.paid == "1" %}
-<div class="dui-alert dui-alert-success mb-4" role="status">Paiement confirmé. Le justificatif est dans Règlement.</div>
-{% elif request.GET.cancelled == "1" %}
-<div class="dui-alert dui-alert-warning mb-4" role="status">
-  Paiement non finalisé.
-  <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
-</div>
-{% endif %}
-
-{% if awaits_client_payment and request.GET.checkout != "success" and request.GET.cancelled != "1" and request.GET.paid != "1" %}
-<div class="dui-alert dui-alert-warning mb-4" role="status">
-  Cette commande attend votre paiement.
-  <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
+{% if order_status_banner %}
+<div class="alert alert--{{ order_status_banner.tone }} mb-4 client-order-detail-banner" role="status">
+  <div class="client-order-detail-banner__content">
+    <p>{{ order_status_banner.message }}</p>
+    {% if order_status_banner.show_pay_cta %}
+    <a class="ui-btn ui-btn-primary ui-btn-sm" href="?panel=billing&amp;pay=1">Payer maintenant</a>
+    {% endif %}
+  </div>
 </div>
 {% endif %}
 
@@ -59,35 +33,6 @@
     <div class="client-order-summary__fact client-order-summary__fact--pricing">
       <dt>Tarification</dt>
       <dd>Après contrôle technique</dd>
-    </div>
-    {% endif %}
-    {% if shipment and shipment.shipped_at %}
-    <div class="client-order-summary__fact client-order-summary__fact--shipping">
-      <dt>Expédition</dt>
-      <dd>
-        <span class="badge is-success">Expédiée</span>
-        {% if shipment.tracking_number %}
-        <span class="client-order-summary__tracking">{{ shipment.tracking_number }}</span>
-        {% endif %}
-      </dd>
-      {% if shipment.tracking_url %}
-      <dd class="client-order-summary__shipping-action">
-        <a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a>
-      </dd>
-      {% endif %}
-    </div>
-    {% elif shipment and shipment.tracking_number %}
-    <div class="client-order-summary__fact client-order-summary__fact--shipping">
-      <dt>Expédition</dt>
-      <dd>
-        <span class="badge is-info">Suivi prêt</span>
-        <span class="client-order-summary__tracking">{{ shipment.tracking_number }}</span>
-      </dd>
-      {% if shipment.tracking_url %}
-      <dd class="client-order-summary__shipping-action">
-        <a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a>
-      </dd>
-      {% endif %}
     </div>
     {% endif %}
   </dl>

@@ -1,0 +1,10 @@
+{% if upload.support_color_is_multicolor %}
+<span class="b2b-support-color-badge is-rainbow">Multicolore</span>
+{% elif upload.support_color_hex %}
+<span class="ui-support-color" title="Couleur du support {{ upload.support_color_hex }}">
+  <span class="ui-support-color__swatch" style="--support-color: {{ upload.support_color_hex }}" aria-hidden="true"></span>
+  <code class="ui-support-color__value">{{ upload.support_color_hex }}</code>
+</span>
+{% else %}
+<span class="muted">—</span>
+{% endif %}

@@ -1,0 +1,31 @@
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="ui-list-pagination{% if pagination_class %} {{ pagination_class }}{% endif %}" aria-label="{{ pagination_label|default:'Pagination' }}">
+  <span class="ui-list-pagination__meta">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+  <div class="ui-list-pagination__actions">
+    {% if page_obj.has_previous %}
+    <a
+      class="ui-btn ui-btn-secondary ui-btn-sm"
+      href="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_status %}status={{ active_status|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
+      {% if htmx_target %}
+      hx-get="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_status %}status={{ active_status|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
+      hx-target="{{ htmx_target }}"
+      hx-swap="innerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      {% endif %}
+    >{{ previous_label|default:"Précédent" }}</a>
+    {% endif %}
+    {% if page_obj.has_next %}
+    <a
+      class="ui-btn ui-btn-secondary ui-btn-sm"
+      href="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_status %}status={{ active_status|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
+      {% if htmx_target %}
+      hx-get="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_status %}status={{ active_status|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
+      hx-target="{{ htmx_target }}"
+      hx-swap="innerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      {% endif %}
+    >{{ next_label|default:"Suivant" }}</a>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

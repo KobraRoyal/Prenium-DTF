@@ -40,7 +40,11 @@ def test_gang_sheet_library_uses_the_shared_portal_design_system(client):
     assert response.status_code == 200
     content = response.content.decode()
     assert "Mes planches DTF" in content
-    assert 'class="gang-library-head"' in content
+    assert "portal-page--client" in content
+    assert "portal-page-rail" in content
+    assert "portal-page-intro" in content
+    assert "portal-page-surface" in content
+    assert 'class="ui-breadcrumb"' in content
     assert 'class="gang-sheet-toolbar"' not in content
     assert 'id="create-gang-sheet-dialog"' in content
     assert 'data-dialog-open="create-gang-sheet-dialog"' in content
@@ -143,7 +147,8 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert 'data-workflow-step="validate"' in content
     assert "Vos visuels" in content
     assert "Plan de travail" in content
-    assert "Contrôle de production" in content
+    assert "Contrôler la composition" in content
+    assert "Finaliser la planche" in content
     assert "Rendu de production sécurisé" in content
     assert 'data-mobile-panel-tab="canvas"' in content
     assert "data-zoom-reset" in content

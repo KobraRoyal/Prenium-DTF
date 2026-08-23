@@ -30,9 +30,15 @@
       </div>
     </div>
     <div class="b2b-configurator__controls">
-      <label class="dui-form-control"><span class="product-form-label">Fichier</span><input class="dui-file-input dui-file-input-bordered w-full" type="file" name="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf" data-configurator-file required></label>
+      <div class="ui-field-group">
+        <label class="ui-label" for="id-add-visual-file">Fichier</label>
+        <input class="ui-input product-file-input w-full" id="id-add-visual-file" type="file" name="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf" data-configurator-file required>
+      </div>
       <div class="b2b-configurator-params" data-configurator-params hidden>
-        <label class="dui-form-control"><span class="product-form-label">Nom</span><input class="dui-input dui-input-bordered" name="name" type="text" data-configurator-name required></label>
+        <div class="ui-field-group">
+          <label class="ui-label" for="id-add-visual-name">Nom</label>
+          <input class="ui-input" id="id-add-visual-name" name="name" type="text" data-configurator-name required>
+        </div>
         <input type="hidden" name="width_mm" data-configurator-width value="">
         <input type="hidden" name="height_mm" data-configurator-height value="">
         {% include "portal/client/partials/order_project_rotation_hidden.html" %}

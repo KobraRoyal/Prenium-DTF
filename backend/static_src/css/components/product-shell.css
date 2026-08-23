@@ -1828,74 +1828,6 @@
     text-decoration-line: none !important;
   }
 
-  body.product-shell .btn,
-  body.product-shell .ui-btn,
-  body.product-shell .dui-btn-primary {
-    min-height: 2.875rem;
-    border-radius: 0;
-    border: 2px solid #000;
-    padding: 0.68rem 1rem;
-    background: var(--product-accent);
-    color: var(--product-accent-ink);
-    font-size: 0.82rem;
-    font-weight: 900;
-    line-height: 1.15;
-    box-shadow: 4px 4px 0 #000;
-    transition:
-      transform 0.18s ease,
-      box-shadow 0.18s ease,
-      background 0.18s ease;
-  }
-
-  body.product-shell .btn:hover,
-  body.product-shell .ui-btn:hover,
-  body.product-shell .dui-btn-primary:hover {
-    background: #f2ff7a;
-    color: var(--product-accent-ink);
-    transform: translate(-1px, -1px);
-    box-shadow: 6px 6px 0 #000;
-  }
-
-  body.product-shell .btn-secondary,
-  body.product-shell .ui-btn-secondary,
-  body.product-shell .ui-btn-ghost,
-  body.product-shell .dui-btn-ghost {
-    border-color: var(--product-line-strong);
-    background: var(--product-panel);
-    color: var(--product-ink);
-    box-shadow: 2px 2px 0 rgba(11, 11, 11, 0.82);
-  }
-
-  body.product-shell .btn-secondary:hover,
-  body.product-shell .ui-btn-secondary:hover,
-  body.product-shell .ui-btn-ghost:hover,
-  body.product-shell .dui-btn-ghost:hover {
-    border-color: var(--product-accent);
-    background: rgba(220, 255, 26, 0.1);
-    color: var(--product-ink);
-    box-shadow: 3px 3px 0 rgba(11, 11, 11, 0.82);
-    transform: translate(-1px, -1px);
-  }
-
-  body.product-shell .ui-btn:focus-visible,
-  body.product-shell .btn:focus-visible,
-  body.product-shell .dui-btn:focus-visible,
-  body.product-shell .ui-inline-link--button:focus-visible {
-    outline: 3px solid var(--product-blue);
-    outline-offset: 3px;
-  }
-
-  body.product-shell .ui-btn-danger {
-    background: var(--danger);
-    color: #fff;
-    border-color: #000;
-  }
-
-  body.product-shell .ui-btn-danger:hover {
-    background: color-mix(in srgb, var(--danger) 82%, #000);
-    color: #fff;
-  }
-
   body.product-shell button.is-loading,
   body.product-shell .dui-btn.is-loading {
     position: relative;
@@ -2050,76 +1982,6 @@
     }
   }
 
-  body.product-shell .ui-order-secondary__value,
-  body.product-shell .ui-order-secondary time,
-  body.product-shell .ui-data-table td,
-  body.product-shell .ui-data-table th {
-    color: rgba(11, 11, 11, 0.9);
-  }
-
-  body.product-shell .ui-table-shell {
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    border: 2px solid var(--product-line);
-    border-radius: 0;
-    background: rgba(11, 11, 11, 0.035);
-    scrollbar-gutter: stable;
-  }
-
-  body.product-shell .ui-data-table {
-    color: var(--product-ink);
-    background: transparent;
-  }
-
-  body.product-shell .ui-data-table thead {
-    background: rgba(11, 11, 11, 0.055);
-  }
-
-  body.product-shell .ui-data-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background: #efede7;
-  }
-
-  body.product-shell .ui-data-table tbody tr {
-    background: rgba(11, 11, 11, 0.035) !important;
-  }
-
-  body.product-shell .ui-data-table tbody tr:nth-child(even) {
-    background: rgba(11, 11, 11, 0.055) !important;
-  }
-
-  body.product-shell .ui-data-table tbody tr.ui-row-warning,
-  body.product-shell .ui-mobile-order-card.ui-card-warning {
-    background: var(--product-attention-soft) !important;
-    box-shadow: inset 4px 0 0 var(--product-accent);
-  }
-
-  body.product-shell .ui-mobile-order-card.ui-card-warning {
-    border-color: var(--product-line);
-    background:
-      linear-gradient(var(--product-accent), var(--product-accent)) top / 100% 4px no-repeat,
-      var(--product-attention-soft) !important;
-  }
-
-  body.product-shell .ui-data-table tbody tr.ui-row-anomaly,
-  body.product-shell .ui-mobile-order-card.ui-card-anomaly {
-    background:
-      linear-gradient(90deg, rgba(255, 84, 112, 0.38), rgba(255, 84, 112, 0.14) 70%),
-      var(--product-panel) !important;
-  }
-
-  body.product-shell .ui-data-table tbody tr:hover {
-    background: rgba(220, 255, 26, 0.35) !important;
-  }
-
-  body.product-shell .ui-table-primary-cell,
-  body.product-shell .ui-table-mono {
-    color: rgba(11, 11, 11, 0.76);
-  }
-
   body.product-shell .ui-inline-link--button {
     display: inline-flex;
     align-items: center;
@@ -2173,16 +2035,6 @@
     font-weight: 850;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-  }
-
-  body.product-shell .ui-mobile-order-card {
-    display: grid;
-    gap: 0.75rem;
-    padding: 1rem;
-    border: 2px solid var(--product-line);
-    border-radius: 0;
-    background: rgba(11, 11, 11, 0.045);
-    box-shadow: 5px 5px 0 #0b0b0b;
   }
 
   body.product-shell .product-mobile-file-card {
@@ -6308,31 +6160,6 @@
     top: 5.75rem;
   }
 
-  body.product-shell .checkout-dropzone-dui,
-  body.product-shell .dropzone {
-    border: 2px dashed var(--product-line-strong) !important;
-    border-radius: 0 !important;
-    background: rgba(220, 255, 26, 0.08) !important;
-    color: var(--product-ink);
-  }
-
-  body.product-shell .checkout-dropzone-dui:hover,
-  body.product-shell .dropzone.is-dragover {
-    border-color: var(--product-accent) !important;
-    background: rgba(220, 255, 26, 0.14) !important;
-  }
-
-  body.product-shell .dui-table {
-    color: var(--product-ink);
-    background: transparent;
-  }
-
-  body.product-shell .dui-table th,
-  body.product-shell .dui-table td {
-    border-bottom: 1px solid var(--product-line);
-    color: rgba(11, 11, 11, 0.88);
-  }
-
   body.product-shell .dui-badge {
     border-color: var(--product-line);
     color: var(--product-ink);
@@ -6340,12 +6167,6 @@
 
   body.product-shell .dui-divider {
     color: var(--product-soft);
-  }
-
-  body.product-shell input[type="color"] {
-    border: 2px solid var(--product-line-strong) !important;
-    border-radius: 0 !important;
-    background: rgba(11, 11, 11, 0.08) !important;
   }
 
   body.product-shell .b2b-color-swatch-input input[type="color"] {
@@ -7704,72 +7525,6 @@ body.product-shell .atelier-inspection__correction summary {
   font-weight: 700;
 }
 
-/* Listes staff responsive (table desktop / cartes tablette).
-   Visibilité portée aussi par utilitaires Tailwind `hidden lg:block` / `lg:hidden`
-   pour rester correcte même si le CSS collecté est en retard. */
-body.product-shell .staff-data-card {
-  display: grid;
-  gap: 0.55rem;
-  padding: 1rem;
-  border: 1px solid var(--product-line);
-  background: var(--product-panel);
-  color: inherit;
-  text-decoration: none;
-}
-
-body.product-shell .staff-data-card + .staff-data-card {
-  border-top: 0;
-}
-
-body.product-shell .staff-data-card__head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  justify-content: space-between;
-}
-
-body.product-shell .staff-data-card__facts {
-  display: grid;
-  gap: 0.55rem;
-  margin: 0;
-}
-
-@media (min-width: 480px) {
-  body.product-shell .staff-data-card__facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-body.product-shell .staff-data-card__facts dt {
-  margin: 0;
-  color: var(--product-soft);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-body.product-shell .staff-data-card__facts dd {
-  margin: 0.15rem 0 0;
-  font-weight: 650;
-}
-
-body.product-shell .staff-data-card__cta {
-  margin-top: 0.25rem;
-  color: var(--product-ink);
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-body.product-shell .staff-pagination {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 1rem;
-}
-
 /* Cibles tactiles atelier (≥ 44px). */
 body.product-shell .atelier-worklist .ui-btn,
 body.product-shell .atelier-dashboard-head .ui-btn,
@@ -8817,12 +8572,6 @@ body.product-shell .machine-fleet-page summary { min-height: 2.75rem; }
     width: 0.9rem;
     height: 0.9rem;
     border-width: 1px;
-    box-shadow: none;
-  }
-
-  body.product-shell .client-order-detail .ui-mobile-order-card {
-    border-width: 1px;
-    background: rgba(11, 11, 11, 0.025);
     box-shadow: none;
   }
 

@@ -39,9 +39,6 @@
     {% endfor %}
   </ul>
   {% else %}
-  <div class="empty-state">
-    <p class="m-0">Aucun incident Drive : tous les fichiers synchronisés ou en attente sans anomalie détectée ici.</p>
-    <p class="muted mt-2 text-sm m-0">Utilisez l’onglet <strong>Fichiers</strong> pour ouvrir chaque document.</p>
-  </div>
+  {% include "components/ui/empty_state.html" with title="Aucun incident Drive" message="Tous les fichiers synchronisés ou en attente sans anomalie détectée ici. Utilisez l'onglet Fichiers pour ouvrir chaque document." %}
   {% endif %}
 </div>

@@ -10,10 +10,18 @@
 {% block body_class %}landing-saas ui-marketing-body landing-conversion-page{% endblock %}
 
 {% block surface_styles %}
-<link rel="stylesheet" href="{% static 'css/marketing.css' %}">
+<link rel="stylesheet" href="{% static 'css/marketing.css' %}?v=20260823-brand-light-v14">
 {% endblock %}
 
 {% block content %}
+<!--
+THESIS: Prenium DTF rend la production visible du fichier à l’expédition, sans empiler les promesses marketing attendues.
+OWN-WORLD: ivoire chaud, encre presque noire, corail signal, courbes généreuses, bordures franches et ombres souples.
+STORY: comprendre la promesse, voir le workflow, vérifier les preuves, se reconnaître dans un cas, lever ses doutes puis demander l’accès.
+FIRST VIEWPORT: promesse et deux actions à gauche; démonstration honnêtement étiquetée du suivi atelier à droite; action primaire immédiatement visible.
+FORM: landing éditoriale B2B ludique, direction verrouillée par le brief utilisateur; navigation hors lot.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
 {% include "components/nav/landing_header.html" %}
 <main class="landing-main" id="main-content">
   {% include "shop/partials/landing_hero.html" %}

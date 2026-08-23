@@ -1,25 +1,25 @@
 @layer components {
   .ui-skip-link {
     position: fixed;
-    top: 0.5rem;
-    left: 0.5rem;
+    top: 0.75rem;
+    left: 0.75rem;
     z-index: 100;
-    min-height: 2.75rem;
-    border: 2px solid #0b0b0b;
-    padding: 0.65rem 0.85rem;
-    color: #0b0b0b;
-    background: #dcff1a;
-    box-shadow: 4px 4px 0 #0b0b0b;
+    min-height: var(--ui-action-min-h);
+    border: 1.5px solid var(--brand);
+    border-radius: 999px;
+    padding: 0.65rem 1rem;
+    color: var(--ui-action-primary-text);
+    background: var(--brand);
+    box-shadow: var(--shadow-soft);
     font-family: var(--ui-font-display);
-    font-weight: 800;
+    font-weight: 700;
     text-decoration: none;
-    text-transform: uppercase;
-    transform: translateY(calc(-100% - 1rem));
-    transition: transform 160ms ease-out;
+    transform: translateY(calc(-100% - 1.5rem));
+    transition: transform var(--transition-base);
   }
 
   .ui-skip-link:focus-visible {
-    outline: 3px solid #00b8ff;
+    outline: 3px solid var(--focus-ring);
     outline-offset: 3px;
     transform: translateY(0);
   }
@@ -27,15 +27,21 @@
   .ui-brand-lockup {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.7rem;
     min-width: 0;
   }
 
   .ui-brand-lockup__home,
   .ui-brand-lockup__home:hover {
-    min-height: 2.75rem;
+    min-height: var(--ui-action-min-h);
     color: inherit;
     text-decoration: none;
+  }
+
+  .ui-brand-lockup__home:focus-visible {
+    border-radius: var(--ui-radius-sm);
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 4px;
   }
 
   .ui-brand-lockup__mark {
@@ -44,12 +50,13 @@
     height: 2.75rem;
     flex: 0 0 auto;
     place-items: center;
-    border: 2px solid #0b0b0b;
-    color: #0b0b0b;
-    background: #dcff1a;
-    box-shadow: 4px 4px 0 #0b0b0b;
+    border: 1.5px solid color-mix(in srgb, var(--brand) 80%, var(--ink));
+    border-radius: var(--ui-radius-sm);
+    color: var(--ui-action-primary-text);
+    background: var(--brand);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.24);
     font-family: var(--ui-font-display);
-    font-weight: 900;
+    font-weight: 700;
     line-height: 1;
     text-decoration: none;
   }
@@ -62,50 +69,26 @@
 
   .ui-brand-lockup__name,
   .ui-brand-lockup__name:hover {
-    color: #0b0b0b;
+    color: var(--ink);
     font-family: var(--ui-font-display);
     font-size: 1rem;
-    font-weight: 900;
-    line-height: 1;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
     text-decoration: none;
-    text-transform: uppercase;
   }
 
   .ui-brand-lockup__subtitle {
-    color: #6f675a;
+    color: var(--muted);
     font-size: 0.68rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
+    font-weight: 650;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-  }
-
-  body.ui-marketing-body .agency-header .ui-brand-lockup__name,
-  body.ui-marketing-body .agency-header .ui-brand-lockup__name:hover {
-    color: #fff8ea;
-  }
-
-  body.ui-marketing-body .agency-header .ui-brand-lockup__subtitle {
-    color: rgba(255, 248, 234, 0.72);
-  }
-
-  body.ui-marketing-body.prospect-tunnel-page .agency-header .ui-brand-lockup__name,
-  body.ui-marketing-body.prospect-tunnel-page .agency-header .ui-brand-lockup__name:hover {
-    color: #0b0b0b;
-  }
-
-  body.ui-marketing-body.prospect-tunnel-page .agency-header .ui-brand-lockup__subtitle {
-    color: rgba(11, 11, 11, 0.64);
   }
 
   .ui-shell-main {
     padding-left: var(--ui-page-pad-x);
     padding-right: var(--ui-page-pad-x);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .ui-skip-link {
-      transition: none;
-    }
   }
 
   .ui-portal-header-inner {
@@ -115,44 +98,22 @@
     gap: 0.75rem;
   }
 
-  @media (min-width: 768px) {
-    .ui-portal-header-inner {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-  }
-
   .ui-brand-row {
     display: flex;
     width: 100%;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
   }
 
-  @media (min-width: 768px) {
-    .ui-brand-row {
-      width: auto;
-      display: contents;
-    }
-  }
-
   .ui-table-shell {
-    margin-left: -0.25rem;
-    margin-right: -0.25rem;
-  }
-
-  @media (min-width: 768px) {
-    .ui-table-shell {
-      margin-left: 0;
-      margin-right: 0;
-    }
+    margin-inline: -0.25rem;
   }
 
   .ui-data-table {
+    width: 100%;
     min-width: 36rem;
+    border-collapse: collapse;
   }
 
   .ui-table-shell--comfortable .ui-data-table {
@@ -161,18 +122,16 @@
 
   .ui-data-table--compact th,
   .ui-data-table--compact td {
-    padding-top: 0.55rem;
-    padding-bottom: 0.55rem;
+    padding-block: 0.55rem;
   }
 
   .ui-data-table--comfortable th,
   .ui-data-table--comfortable td {
-    padding-top: 0.78rem;
-    padding-bottom: 0.78rem;
+    padding-block: 0.78rem;
   }
 
   .ui-table-primary-cell {
-    font-weight: 600;
+    font-weight: 650;
   }
 
   .ui-table-mono {
@@ -189,90 +148,769 @@
   .ui-inline-flag {
     display: inline-flex;
     align-items: center;
+    min-height: 1.75rem;
+    border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--line));
     border-radius: 999px;
-    padding: 0.12rem 0.45rem;
-    font-size: 0.72rem;
-    background: color-mix(in srgb, var(--warning) 10%, white);
+    padding: 0.15rem 0.55rem;
     color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+    font-size: 0.72rem;
+    font-weight: 650;
   }
 
   .ui-row-warning {
-    background: color-mix(in srgb, var(--warning) 3%, white);
+    background: color-mix(in srgb, var(--warning) 5%, var(--surface));
   }
 
   .ui-row-anomaly {
-    background: color-mix(in srgb, var(--danger) 4%, white);
+    background: color-mix(in srgb, var(--danger) 5%, var(--surface));
   }
 
   .ui-card-warning {
-    border-color: color-mix(in srgb, var(--warning) 25%, white);
+    border-color: color-mix(in srgb, var(--warning) 35%, var(--line));
+    background: color-mix(in srgb, var(--warning) 6%, var(--surface));
   }
 
   .ui-card-anomaly {
-    border-color: color-mix(in srgb, var(--danger) 25%, white);
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+    background: color-mix(in srgb, var(--danger) 6%, var(--surface));
   }
 
-  body.landing-saas.portal-shell .ui-table-shell {
-    overflow: hidden;
-    border-radius: 0;
+  :is(.ui-data-card, .ui-mobile-order-card) {
+    display: grid;
+    gap: 0.7rem;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--ui-radius-sm);
+    color: var(--ink);
+    background: var(--surface);
+    text-decoration: none;
   }
 
-  body.landing-saas.portal-shell .ui-data-table {
-    color: var(--product-ink, #0b0b0b);
-    background: transparent;
+  .ui-data-card__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
   }
 
-  body.landing-saas.portal-shell .ui-data-table thead {
-    background: rgba(11, 11, 11, 0.05);
+  .ui-data-card__facts {
+    display: grid;
+    gap: 0.65rem;
+    margin: 0;
   }
 
-  body.landing-saas.portal-shell .ui-data-table tbody tr {
-    background: rgba(11, 11, 11, 0.015);
+  .ui-data-card__facts dt {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 650;
   }
 
-  body.landing-saas.portal-shell .ui-data-table tbody tr:nth-child(even) {
-    background: rgba(11, 11, 11, 0.04);
+  .ui-data-card__facts dd {
+    margin: 0.15rem 0 0;
+    color: var(--ink);
+    font-weight: 650;
   }
 
-  body.landing-saas.portal-shell .ui-data-table tbody tr.ui-row-warning {
-    background: rgba(220, 255, 26, 0.2);
-    box-shadow: inset 4px 0 0 var(--product-accent, #dcff1a);
+  .ui-data-card__cta {
+    margin-top: 0.15rem;
+    color: var(--ink);
+    font-family: var(--ui-font-display);
+    font-size: 0.78rem;
+    font-weight: 700;
   }
 
-  body.landing-saas.portal-shell .ui-data-table tbody tr.ui-row-anomaly {
-    background:
-      linear-gradient(90deg, rgba(255, 84, 112, 0.38), rgba(255, 84, 112, 0.14) 70%),
-      var(--product-panel, #fffdf8);
+  .ui-list-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
   }
 
-  body.landing-saas.portal-shell .ui-data-table tbody tr:hover {
-    background: rgba(220, 255, 26, 0.35);
+  .ui-list-section {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+    margin: 0;
   }
 
-  body.landing-saas.portal-shell .ui-inline-flag {
-    border: 2px solid var(--product-line, #0b0b0b);
-    border-radius: 0;
-    background: rgba(220, 255, 26, 0.42);
-    color: var(--product-ink, #0b0b0b);
-    font-weight: 850;
-    text-transform: uppercase;
+  .ui-list-pagination__meta {
+    color: var(--muted);
+    font-size: 0.86rem;
   }
 
-  body.landing-saas.portal-shell .ui-table-primary-cell,
-  body.landing-saas.portal-shell .ui-table-mono {
-    color: var(--product-ink, #0b0b0b);
-    background: rgba(11, 11, 11, 0.04);
+  .ui-list-pagination__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
   }
 
-  body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-warning {
-    border-color: var(--product-line, #0b0b0b);
-    background:
-      linear-gradient(var(--product-accent, #dcff1a), var(--product-accent, #dcff1a)) top / 100% 4px no-repeat,
-      rgba(220, 255, 26, 0.12);
+  .ui-support-color {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
   }
 
-  body.landing-saas.portal-shell .ui-mobile-order-card.ui-card-anomaly {
-    border-color: var(--product-line, #0b0b0b);
-    background: linear-gradient(180deg, rgba(255, 84, 112, 0.3), rgba(255, 84, 112, 0.12));
+  .ui-support-color__swatch {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: 0 0 auto;
+    border: 1px solid color-mix(in srgb, var(--line) 72%, var(--ink));
+    border-radius: 999px;
+    background: var(--support-color, transparent);
   }
+
+  .ui-support-color__value {
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.75rem;
+  }
+
+  @media (min-width: 480px) {
+    .ui-data-card__facts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 768px) {
+    .ui-portal-header-inner {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .ui-brand-row {
+      display: contents;
+      width: auto;
+    }
+
+    .ui-table-shell {
+      margin-inline: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ui-skip-link {
+      transition: none;
+    }
+  }
+}
+
+/* Unlayered overrides keep the foundation authoritative over legacy surface CSS. */
+html[data-theme="prenium"] body.product-shell {
+  --product-bg: var(--bg);
+  --product-panel: var(--surface);
+  --product-panel-strong: var(--bg-accent);
+  --product-line: var(--line);
+  --product-line-strong: color-mix(in srgb, var(--line) 55%, var(--ink));
+  --product-ink: var(--ink);
+  --product-muted: var(--muted);
+  --product-soft: var(--muted);
+  --product-accent: var(--brand);
+  --product-accent-ink: var(--ui-action-primary-text);
+  --product-blue: var(--focus-ring);
+  --product-pink: var(--brand-strong);
+  --product-warning: var(--warning);
+  --product-danger: var(--danger);
+  --product-success: var(--success);
+  color: var(--ink);
+  background: var(--bg);
+  font-family: var(--ui-font-body);
+}
+
+html[data-theme="prenium"] body.product-shell .app-main {
+  width: min(var(--ui-max-w), calc(100vw - (2 * var(--ui-page-pad-x))));
+  max-width: var(--ui-max-w);
+}
+
+html[data-theme="prenium"] :is(body.product-shell.portal-shell, body.ui-marketing-body) .product-header,
+html[data-theme="prenium"] body.product-shell .product-auth-header {
+  border-bottom: 1px solid var(--line) !important;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .product-header.is-scrolled {
+  border-bottom-color: var(--line) !important;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-brand-lockup__mark {
+  border: 1.5px solid color-mix(in srgb, var(--brand) 80%, var(--ink));
+  border-radius: var(--ui-radius-sm);
+  color: var(--ui-action-primary-text);
+  background: var(--brand);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-brand-lockup__name {
+  color: var(--ink) !important;
+  font-weight: 700;
+  text-transform: none;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav {
+  min-height: var(--ui-header-h);
+  gap: clamp(0.75rem, 1.6vw, 1.3rem);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__workspace {
+  min-height: 2rem;
+  border-left: none;
+  color: var(--muted);
+  font-family: var(--ui-font-display);
+  font-weight: 650;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__workspace > span {
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-menu-button,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__trigger,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__more-trigger {
+  min-height: var(--ui-action-min-h);
+  border: 1.5px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+  font-family: var(--ui-font-display);
+  font-weight: 650;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .ui-btn {
+  min-height: var(--ui-action-min-h);
+  border: none;
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: var(--ui-font-display);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__link:hover,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__link:focus-visible {
+  border: none;
+  color: var(--ink);
+  background: var(--bg-accent);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__link.is-active,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__link[aria-current="page"] {
+  border: none;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--brand) 18%, var(--surface));
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__cta {
+  margin-left: 0.35rem;
+  border-color: color-mix(in srgb, var(--brand) 78%, var(--ink));
+  color: var(--ui-action-primary-text);
+  background: var(--brand);
+  box-shadow: var(--ui-action-shadow);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__cta:hover,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__cta:focus-visible {
+  color: var(--ui-action-primary-text);
+  background: var(--brand-strong);
+  box-shadow: var(--ui-action-shadow-hover);
+  transform: translateY(-1px);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__account {
+  border-left: none;
+  padding-left: 0.35rem;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__avatar {
+  color: var(--surface);
+  background: var(--ink);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__more-menu,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__menu {
+  border: 1.5px solid var(--line);
+  border-radius: var(--ui-radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__more-link,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__action,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__logout {
+  min-height: var(--ui-action-min-h);
+  border-radius: var(--ui-radius-sm);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__more-link:hover,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__more-link:focus-visible,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__action:hover,
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__action:focus-visible {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--brand) 14%, var(--surface));
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav :is(a, button, summary):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .agency-header {
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .ui-brand-lockup__name,
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .ui-brand-lockup__subtitle {
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink);
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .agency-nav__link,
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .agency-menu-toggle,
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .landing-mobile-primary-cta,
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .agency-nav__cta {
+  min-height: var(--ui-action-min-h);
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+  font-family: var(--ui-font-display);
+  font-weight: 650;
+  text-transform: none;
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .agency-menu-toggle {
+  display: inline-flex;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2.75rem;
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .agency-menu-toggle__lines {
+  display: grid;
+  width: 1.25rem;
+  gap: 0.25rem;
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .agency-menu-toggle__lines span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .agency-menu-toggle,
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .agency-nav__link {
+  background: var(--surface);
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .agency-nav__cta,
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav .landing-mobile-primary-cta {
+  border-color: color-mix(in srgb, var(--brand) 78%, var(--ink));
+  color: var(--ui-action-primary-text) !important;
+  -webkit-text-fill-color: var(--ui-action-primary-text) !important;
+  background: var(--brand);
+  box-shadow: var(--ui-action-shadow);
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav :is(.agency-nav__link, .agency-menu-toggle):hover,
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav :is(.agency-nav__link, .agency-menu-toggle):focus-visible {
+  color: var(--ink) !important;
+  background: var(--bg-accent);
+  box-shadow: 0 3px 10px rgba(27, 25, 22, 0.1);
+  transform: translateY(-1px);
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav :is(.agency-nav__cta, .landing-mobile-primary-cta):hover,
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav :is(.agency-nav__cta, .landing-mobile-primary-cta):focus-visible {
+  color: var(--ui-action-primary-text) !important;
+  -webkit-text-fill-color: var(--ui-action-primary-text) !important;
+  background: var(--brand-strong);
+  box-shadow: var(--ui-action-shadow-hover);
+  transform: translateY(-1px);
+}
+
+html[data-theme="prenium"] body.ui-marketing-body.landing-conversion-page {
+  background-color: var(--bg);
+  color: var(--ink);
+}
+
+html[data-theme="prenium"] body.ui-marketing-body.landing-conversion-page .product-header.is-scrolled {
+  border-bottom-color: var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="prenium"] {
+  scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) var(--bg);
+  scrollbar-width: thin;
+}
+
+html[data-theme="prenium"] body {
+  caret-color: var(--brand);
+}
+
+html[data-theme="prenium"] ::selection {
+  color: var(--ui-action-primary-text);
+  background: var(--brand);
+}
+
+html[data-theme="prenium"] :is(a, button, input, select, textarea, summary) {
+  text-underline-offset: 0.18em;
+}
+
+html[data-theme="prenium"] :is(.ui-data-table, .ui-table-mono, [data-numeric]) {
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-theme="prenium"] body.ui-marketing-body .ui-public-nav :is(a, button):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-table-shell {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--ui-radius-sm);
+  background: var(--surface);
+  box-shadow: none;
+  scrollbar-gutter: stable;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-table {
+  color: var(--ink);
+  background: transparent;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-table thead {
+  color: var(--muted);
+  background: var(--bg-accent);
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom-color: var(--line);
+  color: var(--muted);
+  background: var(--bg-accent);
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-table td {
+  border-bottom-color: color-mix(in srgb, var(--line) 72%, transparent);
+  color: var(--ink);
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--bg-accent) 58%, var(--surface));
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--brand) 10%, var(--surface));
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-table tbody tr.ui-row-warning {
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-table tbody tr.ui-row-anomaly {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+}
+
+html[data-theme="prenium"] body.product-shell :is(
+  .ui-data-table,
+  .ui-data-card,
+  .ui-mobile-order-card
+) .muted,
+html[data-theme="prenium"] body.product-shell .ui-list-pagination__meta {
+  color: var(--muted) !important;
+}
+
+html[data-theme="prenium"] body.product-shell :is(.ui-data-card, .ui-mobile-order-card) {
+  border-color: var(--line);
+  border-radius: var(--ui-radius-sm);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-mobile-order-card.ui-card-warning {
+  border-color: color-mix(in srgb, var(--warning) 38%, var(--line));
+  background: color-mix(in srgb, var(--warning) 6%, var(--surface));
+}
+
+html[data-theme="prenium"] body.product-shell .ui-mobile-order-card.ui-card-anomaly {
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--line));
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-card:hover {
+  border-color: color-mix(in srgb, var(--brand) 36%, var(--line));
+  color: var(--ink);
+  background: color-mix(in srgb, var(--brand) 6%, var(--surface));
+}
+
+html[data-theme="prenium"] body.product-shell .ui-data-card__facts dt {
+  color: var(--muted) !important;
+}
+
+html[data-theme="prenium"] body.product-shell :is(.ui-data-card__facts dd, .ui-data-card__cta) {
+  color: var(--ink) !important;
+}
+
+@media (max-width: 959px) {
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-menu-button {
+    display: inline-flex;
+    min-width: var(--ui-action-min-h);
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links {
+    gap: 0.85rem;
+    margin-top: 0.25rem;
+    padding: 1rem 0 0.5rem;
+    border-top: 1.5px solid var(--line);
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__primary,
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__account {
+    gap: 0.35rem;
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__account {
+    padding-top: 0.85rem;
+    border-top: 1.5px solid var(--line);
+    border-left: 0;
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__section-label {
+    color: var(--muted);
+    font-family: var(--ui-font-display);
+    font-weight: 650;
+    letter-spacing: 0.06em;
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .ui-btn,
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__more-trigger {
+    min-height: var(--ui-action-min-h);
+    border-radius: var(--ui-radius-sm);
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__cta {
+    margin-left: 0;
+  }
+
+  html[data-theme="prenium"] body.ui-marketing-body .ui-foundation-nav {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  html[data-theme="prenium"] body.ui-marketing-body .ui-foundation-nav .product-nav__links {
+    display: none;
+    flex: 1 1 100%;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  html[data-theme="prenium"] body.ui-marketing-body .ui-foundation-nav .product-nav__links.is-open,
+  html[data-theme="prenium"] body.ui-marketing-body [data-product-menu].is-open {
+    display: flex !important;
+  }
+
+  html[data-theme="prenium"] body.ui-marketing-body .ui-foundation-nav .product-nav__body,
+  html[data-theme="prenium"] body.ui-marketing-body .ui-foundation-nav .product-nav__primary,
+  html[data-theme="prenium"] body.ui-marketing-body .ui-foundation-nav .product-nav__account {
+    width: 100%;
+  }
+
+  html[data-theme="prenium"] body.ui-marketing-body .ui-foundation-nav .product-nav__links .ui-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  html[data-theme="prenium"] body.ui-marketing-body .ui-foundation-nav .product-nav__links .product-nav__cta {
+    justify-content: center;
+  }
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-breadcrumb {
+  color: var(--muted);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-breadcrumb a {
+  color: var(--ink);
+  text-decoration-color: var(--brand-strong);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-breadcrumb__item + .ui-breadcrumb__item::before {
+  color: var(--muted-soft);
+}
+
+/* Fil d'Ariane : hors carte, style homogène sur toutes les vues portail. */
+html[data-theme="prenium"] body.product-shell .portal-page-breadcrumb {
+  margin: 0 0 0.85rem;
+}
+
+html[data-theme="prenium"] body.product-shell .portal-page-breadcrumb .ui-breadcrumb {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+html[data-theme="prenium"] body.product-shell .portal-page-breadcrumb .ui-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+html[data-theme="prenium"] body.product-shell .portal-page-breadcrumb .ui-breadcrumb a:hover,
+html[data-theme="prenium"] body.product-shell .portal-page-breadcrumb .ui-breadcrumb a:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--brand-strong);
+  text-underline-offset: 0.18em;
+}
+
+html[data-theme="prenium"] body.product-shell .portal-page-breadcrumb .ui-breadcrumb [aria-current="page"] {
+  color: var(--ink);
+}
+
+html[data-theme="prenium"] body.product-shell .page-head--premium .ui-breadcrumb {
+  display: none;
+}
+
+html[data-theme="prenium"] body.product-shell .portal-page-surface {
+  padding: clamp(1rem, 2vw, 1.35rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+html[data-theme="prenium"] body.product-shell :is(
+  .page-head--premium,
+  .card,
+  .panel,
+  .staff-customer-focus,
+  .staff-order-focus,
+  .staff-access-focus,
+  .staff-project-focus,
+  .staff-project-items,
+  .product-auth-card,
+  .volume-tier-create-card,
+  .workflow-panel,
+  .workflow-form-card,
+  .ui-panel-shell,
+  .empty-state,
+  .product-checkout-card,
+  .b2b-configurator,
+  .gang-sheet-card
+) {
+  box-shadow: none !important;
+  border-radius: var(--radius);
+}
+
+html[data-theme="prenium"] body.product-shell.portal-shell.landing-saas .app-header.landing-saas-header.product-header {
+  border-bottom: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .checkout-panel-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-block: 0.25rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+html[data-theme="prenium"] body.product-shell .checkout-panel-divider::before,
+html[data-theme="prenium"] body.product-shell .checkout-panel-divider::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--line);
+}
+
+html[data-theme="prenium"] body.product-shell .checkout-panel-divider--compact {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .checkout-panel-divider--compact::before,
+html[data-theme="prenium"] body.product-shell .checkout-panel-divider--compact::after {
+  display: none;
+}
+
+html[data-theme="prenium"] body.product-shell .checkout-panel-divider--compact {
+  height: 1px;
+  background: var(--line);
+}
+
+html[data-theme="prenium"] body.product-shell .product-checkout-card .product-file-input.ui-input {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface) 88%, var(--bg-accent));
+}
+
+body.prospect-journey-page .prospect-step1__field .ui-label,
+body.prospect-journey-page .prospect-project-goal .ui-label {
+  color: var(--journey-ink);
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+body.prospect-journey-page .prospect-panel select.ui-input.product-field-input:focus,
+body.prospect-journey-page .prospect-panel textarea.ui-input.product-field-input:focus {
+  outline: 2px solid var(--journey-accent);
+  outline-offset: 2px;
+}
+
+body.product-shell .gang-library-head.page-head--premium {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+body.product-shell .gang-library-head .page-head__content {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ui-toast.alert {
+  margin: 0;
+  box-shadow: var(--shadow-soft);
 }

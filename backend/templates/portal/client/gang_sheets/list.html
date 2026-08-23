@@ -3,24 +3,11 @@
 {% block title %}Planches DTF — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="gang-sheet-page">
-  <header class="gang-library-head">
-    <div>
-      <h1>Mes planches DTF</h1>
-      <p>Créez, reprenez et commandez vos compositions DTF depuis un seul espace.</p>
-    </div>
-    {% if can_edit %}
-    <button class="ui-btn ui-btn-primary gang-library-head__create" type="button" data-dialog-open="create-gang-sheet-dialog" aria-haspopup="dialog">
-      {% include "portal/client/gang_sheets/partials/icon.html" with name="plus" size="16" %}
-      Nouvelle planche
-    </button>
-    {% else %}
-    <span class="product-pill">Consultation seule</span>
-    {% endif %}
-  </header>
+<div class="portal-page portal-page--client gang-sheet-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_gang_sheets_list.html" title="Mes planches DTF" subtitle="Créez, reprenez et commandez vos compositions DTF depuis un seul espace." actions_template="components/portal/page_head_actions/client_gang_sheets_list.html" %}
 
   <section
-    class="gang-sheet-library"
+    class="portal-page-surface gang-sheet-library"
     aria-labelledby="gang-sheet-library-title"
     x-data="{
       filter: 'all',
@@ -107,21 +94,23 @@
         {% endif %}
       </article>
       {% empty %}
-      <div class="empty-state gang-sheet-empty">
-        <span class="gang-sheet-empty__mark" aria-hidden="true">GS</span>
-        <h3>Créez votre première planche DTF</h3>
-        <p>Importez vos fichiers, composez votre planche et préparez votre commande depuis le studio privé.</p>
-        {% if can_edit %}<button class="ui-btn ui-btn-primary" type="button" data-dialog-open="create-gang-sheet-dialog" aria-haspopup="dialog">Nouvelle planche</button>{% endif %}
-      </div>
+      {% if can_edit %}
+      {% include "components/ui/empty_state.html" with extra_class="gang-sheet-empty" empty_mark="GS" title="Créez votre première planche DTF" message="Importez vos fichiers, composez votre planche et préparez votre commande depuis le studio privé." cta_button_label="Nouvelle planche" cta_button_dialog_open="create-gang-sheet-dialog" %}
+      {% else %}
+      {% include "components/ui/empty_state.html" with extra_class="gang-sheet-empty" empty_mark="GS" title="Créez votre première planche DTF" message="Importez vos fichiers, composez votre planche et préparez votre commande depuis le studio privé." %}
+      {% endif %}
       {% endfor %}
       {% if sheets %}
-      <div class="empty-state gang-sheet-empty gang-sheet-empty--filtered" x-show="!hasResults()" x-cloak>
-        <h3>Aucune planche trouvée</h3>
-        <p>Modifiez la recherche ou réinitialisez les filtres pour retrouver vos planches DTF.</p>
-        <button class="ui-btn ui-btn-secondary" type="button" x-on:click="filter = 'all'; query = ''">Réinitialiser les filtres</button>
+      <div class="empty-state text-center gang-sheet-empty gang-sheet-empty--filtered" x-show="!hasResults()" x-cloak>
+        <h3 class="mt-0 font-display text-lg text-[color:var(--ink)]">Aucune planche trouvée</h3>
+        <p class="muted mt-2">Modifiez la recherche ou réinitialisez les filtres pour retrouver vos planches DTF.</p>
+        <p class="mt-4">
+          <button class="ui-btn ui-btn-secondary" type="button" x-on:click="filter = 'all'; query = ''">Réinitialiser les filtres</button>
+        </p>
       </div>
       {% endif %}
     </div>
+    {% include "components/portal/pagination.html" with pagination_label="Pagination planches DTF" %}
   </section>
 
   {% if can_edit %}

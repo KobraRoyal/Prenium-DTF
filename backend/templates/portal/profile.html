@@ -1,10 +1,10 @@
 {% extends "portal/layout.html" %}
 
-{% block title %}Mes informations - Prenium DTF{% endblock %}
+{% block title %}Mes informations — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="account-profile-page">
-  {% include "components/portal/page_head.html" with title="Mes informations" subtitle="Identité de connexion et société de facturation." %}
+<div class="portal-page portal-page--client account-profile-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_profile.html" title="Mes informations" subtitle="Identité de connexion et société de facturation." %}
 
   {% if saved %}
   <p
@@ -15,6 +15,7 @@
   >Vos informations ont été enregistrées.</p>
   {% endif %}
 
+  <section class="portal-page-surface account-profile-surface">
   <div class="account-profile-layout">
     {% include "components/portal/account_rail.html" with account_section="identity" %}
 
@@ -26,5 +27,6 @@
       {% endif %}
     </div>
   </div>
+  </section>
 </div>
 {% endblock %}

@@ -1,10 +1,13 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags %}
 
-{% block title %}{{ profile.company }} — Demande d’accès{% endblock %}
+{% block title %}{{ profile.company }} — Demande d’accès — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/breadcrumbs/staff_access_request_detail.html" %}
+<div class="portal-page portal-page--staff staff-access-detail-page">
+<div class="portal-page-rail">
+  {% include "components/portal/breadcrumbs/staff_access_request_detail.html" %}
+</div>
 
 <section class="staff-access-detail" aria-label="Fiche demande d’accès">
   <header class="card staff-access-focus" aria-labelledby="staff-access-title">
@@ -192,4 +195,5 @@
   </div>
   {% endif %}
 </section>
+</div>
 {% endblock %}

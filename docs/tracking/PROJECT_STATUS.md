@@ -77,6 +77,12 @@
   historique append-only, RBAC dédié et vues responsive Impeccable
 - [x] Lot 44 — Console de pilotage OF dédiée, scan/recherche, transitions rapides, prérequis
   explicites et actions Sendcloud inline, avec ancienne route Scan redirigée
+- [x] Lot 45 — Refonte UI/UX finale cohérente, shell partagé, surfaces marketing/produit/Atelier/Studio,
+  responsive desktop/mobile et validation complète documentés dans `sprint-45-design-system-arrondi-coherent.md`
+- [x] Lot 46 — Système sombre « Banc de contrôle nocturne », contrastes et recadrage Studio durcis,
+  revue Impeccable `ship` documentée dans `sprint-46-design-system-sombre-impeccable.md`
+- [x] Lot 48 — Shell clair homogène « Atelier clair et chaleureux », `page_head` DRY, breadcrumbs,
+  overrides runtime portail/marketing/prospect, **806 tests verts** — `sprint-48-shell-clair-homogene-impeccable.md`
 
 ## Derniers chantiers transverses
 
@@ -429,3 +435,16 @@
 - [x] Contrôles staff/RBAC avant lookup et audits métier réutilisés
 - [x] Validation finale : 769 tests réussis, 1 ignoré ; Django/Ruff/migrations conformes
 - [x] Recette 1512/1440/375 px sans overflow horizontal ni erreur console
+
+## Sprint 47 — Cohérence tables, actions et partials (2026-08-23)
+
+- [x] Toutes les tables portail migrées vers `ui-table-shell` / `ui-data-table`
+- [x] Listes staff mobiles migrées vers les cartes partagées `ui-data-card`
+- [x] Variantes secondaire et ghost centralisées dans `buttons.css`, alias historiques inclus
+- [x] Pagination client/staff et actions formulaire mutualisées par partials Django
+- [x] Couleur de support upload mutualisée et lisible par texte + swatch
+- [x] Contrat sombre déclaré sur portail, login et tunnel prospect
+- [x] Priorité Studio corrigée ; accents lime/bleu remplacés par les tokens corail
+- [x] Recette authentifiée à 1440/768/375 px, sans overflow horizontal
+- [x] Revue Impeccable indépendante : aucun P0/P1 ; badges, cartes mobiles et dette de tokens signalés puis corrigés
+- [x] Validation finale : 791 tests réussis, 1 ignoré ; Django, Ruff, format, migrations et santé conformes

@@ -134,15 +134,15 @@
                 <input type="hidden" name="status" value="changes_requested">
                 {% if form_error and error_upload_id == upload_id %}<div class="alert alert--danger" role="alert"><p>{{ form_error }}</p></div>{% endif %}
                 <div class="ui-field-group">
-                  <label for="review-reason-{{ upload.public_id }}">Motif de la correction</label>
-                  <select class="dui-select dui-select-bordered w-full" id="review-reason-{{ upload.public_id }}" name="reason_code" required>
+                  <label class="ui-label" for="review-reason-{{ upload.public_id }}">Motif de la correction</label>
+                  <select class="ui-input w-full" id="review-reason-{{ upload.public_id }}" name="reason_code" required>
                     <option value="">Sélectionner un motif</option>
                     {% for value, label in review_reasons %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
                   </select>
                 </div>
                 <div class="ui-field-group">
-                  <label for="review-comment-{{ upload.public_id }}">Précision pour le client <span class="muted">(facultatif, sauf « Autre »)</span></label>
-                  <textarea class="dui-textarea dui-textarea-bordered min-h-24 w-full" id="review-comment-{{ upload.public_id }}" name="comment" maxlength="2000" rows="3" placeholder="Expliquez clairement ce qui doit être corrigé."></textarea>
+                  <label class="ui-label" for="review-comment-{{ upload.public_id }}">Précision pour le client <span class="muted">(facultatif, sauf « Autre »)</span></label>
+                  <textarea class="ui-input min-h-24 w-full" id="review-comment-{{ upload.public_id }}" name="comment" maxlength="2000" rows="3" placeholder="Expliquez clairement ce qui doit être corrigé."></textarea>
                 </div>
                 <div class="atelier-inspection__correction-footer">
                   <p>Le message utilisera le modèle d’e-mail client personnalisable.</p>
@@ -159,6 +159,6 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty-state"><p>Aucun fichier à contrôler pour cette commande.</p></div>
+  {% include "components/ui/empty_state.html" with title="Aucun fichier" message="Aucun fichier à contrôler pour cette commande." %}
   {% endif %}
 </div>

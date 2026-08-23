@@ -1,36 +1,19 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags %}
 
-{% block title %}{{ project_client_label|default:project.project_number }} - Prenium DTF{% endblock %}
+{% block title %}{{ project_client_label|default:project.project_number }} — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="b2b-project-page">
+<div class="portal-page portal-page--client b2b-project-page">
   <header class="b2b-project-header">
     <div class="b2b-project-header__intro">
-      <section class="page-head page-head--premium">
-        <nav class="ui-breadcrumb" aria-label="Fil d'Ariane">
-          <ol class="ui-breadcrumb__list">
-            <li class="ui-breadcrumb__item">
-              <a href="{% url 'portal:client-order-project-list' customer_public_id=customer.public_id %}">Commandes à finaliser</a>
-            </li>
-          </ol>
-        </nav>
-        <div class="page-head__content">
-          <h1 class="font-display tracking-tight">{{ project_client_label|default:project.project_number }}</h1>
-          <p class="page-head-lead">
-            <span class="badge{% if project.status == 'ready_to_submit' or project.status == 'converted' or project.status == 'confirmed' %} is-success{% elif project.status == 'action_required' or project.status == 'changes_requested' or project.status == 'blocked' %} is-danger{% elif project.status == 'analyzing' or project.status == 'incomplete' or project.status == 'draft' %} is-warning{% else %} is-neutral{% endif %}">{{ project.get_status_display }}</span>
-            {% if project_client_label and project_client_label != project.project_number %}
-            <span>{{ project.project_number }}</span>
-            {% endif %}
-          </p>
-        </div>
-      </section>
+      {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_project_detail.html" title=project_client_label|default:project.project_number lead_template="components/portal/page_head_leads/client_order_project_detail.html" %}
     </div>
     {% include "portal/client/partials/order_project_summary.html" %}
   </header>
 
   {% if request.GET.submit_error %}
-  <div class="dui-alert dui-alert-error mb-4" role="alert">
+  <div class="alert alert--danger mb-4" role="alert">
     {% if request.GET.submit_error == "action_required" %}
       Validez les dimensions et le contrôle technique de chaque visuel avant transmission.
     {% elif request.GET.submit_error == "incomplete" %}

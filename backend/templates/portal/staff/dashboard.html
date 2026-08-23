@@ -1,11 +1,12 @@
 {% extends "portal/layout.html" %}
 {% load ui_tags %}
 
-{% block title %}File Atelier - Prenium DTF{% endblock %}
+{% block title %}File Atelier — Prenium DTF{% endblock %}
 
 {% block portal_content %}
+<div class="portal-page portal-page--staff atelier-dashboard">
 <section class="atelier-dashboard-head">
-  {% include "components/portal/page_head.html" with title="File Atelier" subtitle="Traitez la prochaine commande utile et imprimez uniquement les OF validés." %}
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_atelier_home.html" title="File Atelier" subtitle="Traitez la prochaine commande utile et imprimez uniquement les OF validés." %}
 </section>
 
 {% if batch_error %}
@@ -183,4 +184,5 @@
   {% include "components/ui/empty_state.html" with title="File Atelier indisponible" message="Les permissions Commandes et Production sont nécessaires pour afficher cette file." %}
 </section>
 {% endif %}
+</div>
 {% endblock %}

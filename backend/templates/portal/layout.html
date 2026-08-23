@@ -4,14 +4,10 @@
 {% block body_class %}landing-saas portal-shell product-shell product-shell--portal{% endblock %}
 
 {% block surface_styles %}
-<link rel="stylesheet" href="{% static 'css/portal.css' %}?v=20260821-atelier-pilotage-v5">
+{% include "components/portal/surface_styles.html" with portal_surface=nav_mode|default:"client" %}
 {% if request.resolver_match.view_name == "portal:client-gang-sheet-editor" %}
-<link rel="stylesheet" href="{% static 'css/studio.css' %}?v=20260820-client-pro3">
+<link rel="stylesheet" href="{% static 'css/studio.css' %}?v=20260823-brand-light-v16">
 {% endif %}
-{% endblock %}
-
-{% block extra_head %}
-<meta name="color-scheme" content="light">
 {% endblock %}
 
 {% block content %}
@@ -19,5 +15,5 @@
 <main class="app-main app-content landing-saas-main ui-shell-main product-layout" id="main-content">
   {% block portal_content %}{% endblock %}
 </main>
-<div id="portal-htmx-indicator" class="htmx-indicator" aria-live="polite">Chargement...</div>
+<div id="portal-htmx-indicator" class="htmx-indicator" role="status" aria-live="polite">Chargement…</div>
 {% endblock %}

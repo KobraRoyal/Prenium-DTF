@@ -87,7 +87,10 @@
     {% else %}
     <form class="b2b-configurator__controls" method="post" enctype="multipart/form-data" hx-encoding="multipart/form-data" hx-post="{% url 'portal:client-order-project-item-asset' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='attach' %}" hx-target="#order-project-items" hx-swap="outerHTML">
       {% csrf_token %}
-      <label class="dui-form-control"><span class="product-form-label">Fichier</span><input class="dui-file-input dui-file-input-bordered w-full" type="file" name="file" data-configurator-file required></label>
+      <div class="ui-field-group">
+        <label class="ui-label" for="id-visual-editor-file">Fichier</label>
+        <input class="ui-input product-file-input w-full" id="id-visual-editor-file" type="file" name="file" data-configurator-file required>
+      </div>
       <input type="hidden" name="name" value="{{ item.name }}" data-configurator-name>
       <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}" data-configurator-width>
       <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}" data-configurator-height>

@@ -3,10 +3,11 @@
 
 {% block title %}Demandes d’accès — Prenium DTF{% endblock %}
 {% block portal_content %}
-<div class="access-request-queue" data-testid="access-request-queue">
+<div class="portal-page portal-page--staff access-request-queue" data-testid="access-request-queue">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_access_requests_list.html" title="Demandes d’accès" subtitle="Qualifiez les entreprises et ouvrez les comptes professionnels en toute sécurité." %}
 
-  <section class="access-request-command" aria-labelledby="access-request-command-title">
+  <section class="portal-page-surface access-request-surface">
+  <div class="access-request-command" aria-labelledby="access-request-command-title">
     <h2 class="sr-only" id="access-request-command-title">Pilotage de la file</h2>
     <dl class="access-request-command__facts">
       <div>
@@ -25,7 +26,7 @@
       <button class="ui-btn ui-btn-primary ui-btn-sm" type="submit">Rechercher</button>
       {% if search_query %}<a class="ui-btn ui-btn-ghost ui-btn-sm" href="?status={{ active_status }}">Effacer</a>{% endif %}
     </form>
-  </section>
+  </div>
 
   <nav class="prospect-filter-bar access-request-statuses" aria-label="Filtrer par statut">
     {% for filter in status_filters %}
@@ -58,8 +59,8 @@
     </header>
 
     <div class="staff-data-list access-request-list" aria-label="Liste des demandes d’accès">
-      <div class="staff-data-list__desktop table-wrap hidden min-[960px]:block">
-        <table class="table access-request-table">
+      <div class="staff-data-list__desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
+        <table class="ui-data-table ui-data-table--comfortable access-request-table">
           <thead>
             <tr>
               <th>Entreprise</th>
@@ -112,10 +113,10 @@
         </table>
       </div>
 
-      <div class="staff-data-list__mobile access-request-cards grid gap-0 min-[960px]:hidden" aria-label="Demandes en cartes">
+      <div class="staff-data-list__mobile access-request-cards grid gap-3 min-[960px]:hidden" aria-label="Demandes en cartes">
         {% for profile in page_obj %}
-        <article class="staff-data-card access-request-card">
-          <div class="staff-data-card__head">
+        <article class="ui-data-card access-request-card">
+          <div class="ui-data-card__head">
             <div>
               <h3 class="font-display">{{ profile.company }}</h3>
               <p>{{ profile.get_activity_type_display }}</p>
@@ -123,7 +124,7 @@
             <span class="badge {{ profile.status|badge_tone }}">{{ profile.get_status_display }}</span>
           </div>
           <p class="access-request-card__contact"><strong>{{ profile.first_name }} {{ profile.last_name }}</strong><span>{{ profile.email }}</span></p>
-          <dl class="staff-data-card__facts">
+          <dl class="ui-data-card__facts">
             <div>
               <dt>Volume mensuel</dt>
               <dd>{{ profile.get_monthly_volume_display }}</dd>
@@ -157,16 +158,7 @@
     </div>
   </section>
 
-  {% if page_obj.paginator.num_pages > 1 %}
-  <nav class="staff-pagination" aria-label="Pagination demandes d’accès">
-    {% if page_obj.has_previous %}
-    <a class="ui-btn ui-btn-secondary" href="?status={{ active_status }}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}&amp;page={{ page_obj.previous_page_number }}">Précédent</a>
-    {% endif %}
-    <span class="muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}
-    <a class="ui-btn ui-btn-secondary" href="?status={{ active_status }}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}&amp;page={{ page_obj.next_page_number }}">Suivant</a>
-    {% endif %}
-  </nav>
-  {% endif %}
+  {% include "components/portal/pagination.html" with pagination_label="Pagination demandes d’accès" pagination_class="staff-pagination" %}
+  </section>
 </div>
 {% endblock %}

@@ -73,7 +73,8 @@ def test_generated_surface_bundles_exist_and_contain_expected_markers() -> None:
             ".workflow-next-action",
             ".gang-sheet-page",
             "body.product-shell",
-            "#f7f5f0",
+            "--product-bg:var(--bg)",
+            "tr.ui-row-warning",
         ],
         "studio.css": [".gang-editor", ".gang-editor__workspace"],
     }
@@ -110,9 +111,56 @@ def test_build_pipeline_and_runtime_image_ship_every_css_bundle() -> None:
     )
 
 
-def test_product_shell_beats_dark_landing_background_outside_tailwind_layer() -> None:
+def test_product_shell_keeps_shared_light_background_outside_tailwind_layer() -> None:
     source = read(CSS_DIR / "entries" / "portal.css")
     unlayered = source.split("@tailwind", 1)[0]
 
     assert "body.product-shell" in unlayered
-    assert "background: #f7f5f0" in unlayered
+    assert "background: var(--bg)" in unlayered
+
+
+def test_shell_css_exposes_portal_page_breadcrumb_rail() -> None:
+    portal_entry = read(CSS_DIR / "entries" / "portal.css")
+
+    for marker in [
+        ".portal-page-rail",
+        ".portal-page--client",
+        ".portal-page-intro",
+        ".portal-page-surface",
+        "main.app-main",
+        "background: transparent !important",
+        ".product-nav__links .ui-btn",
+        "border: 0 !important",
+    ]:
+        assert marker in portal_entry
+
+
+def test_built_portal_css_overrides_app_legacy_portal_shell() -> None:
+    portal_css = read(CSS_DIR / "portal.css")
+
+    for marker in [
+        "portal-page-rail",
+        "portal-page-intro",
+        "portal-page-surface",
+        "body.landing-saas.portal-shell.product-shell",
+        "box-shadow:none!important",
+        ".ui-btn-ghost",
+        "filter:none!important",
+        ".gang-sheet-card__facts",
+    ]:
+        assert marker.replace(" ", "") in portal_css.replace(" ", "")
+
+
+def test_surface_templates_share_css_cache_bust_version() -> None:
+    expected = "20260823-brand-light-v14"
+    template_paths = [
+        TEMPLATES_DIR / "base.html",
+        TEMPLATES_DIR / "portal" / "layout.html",
+        TEMPLATES_DIR / "prospects" / "base_tunnel.html",
+        TEMPLATES_DIR / "shop" / "home.html",
+        TEMPLATES_DIR / "shop" / "services.html",
+    ]
+
+    for path in template_paths:
+        source = read(path)
+        assert f"?v={expected}" in source, path.name

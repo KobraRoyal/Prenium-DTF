@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+"""Checkout client historique (upload synchrone + facturation différée).
+
+Conservé pour les comptes sans projets B2B asynchrones. Lorsque
+`b2b_order_projects_enabled_for_customer` est vrai, `/checkout/` redirige vers
+la création de projet (`client_new_order_url`) — deux parcours documentés, un
+seul actif par compte.
+"""
+
 from uuid import UUID
 
 from django.core.exceptions import ValidationError

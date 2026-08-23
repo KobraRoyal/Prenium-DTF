@@ -7,6 +7,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.cache import cache
+from django.core.paginator import Paginator
 from django.core.exceptions import PermissionDenied
 from django.http import FileResponse, Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
@@ -166,15 +167,22 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
 class ClientGangSheetListCreateView(ClientGangSheetMixin, View):
     template_name = "portal/client/gang_sheets/list.html"
 
+    def paginated_sheets(self, request):
+        page = Paginator(
+            gang_sheet_service.list_customer_sheets(self.customer),
+            settings.GANG_SHEET_LIST_PAGE_SIZE,
+        ).get_page(request.GET.get("page"))
+        sheets = gang_sheet_service.attach_can_delete(list(page.object_list))
+        return sheets, page
+
     def get(self, request, customer_public_id):
-        sheets = gang_sheet_service.attach_can_delete(
-            list(gang_sheet_service.list_customer_sheets(self.customer))
-        )
+        sheets, page = self.paginated_sheets(request)
         return render(
             request,
             self.template_name,
             self.context(
                 sheets=sheets,
+                page_obj=page,
                 can_edit=self.customer_membership.role != CustomerMembership.Role.READONLY,
                 nav_key="client-gang-sheets",
             ),
@@ -189,14 +197,14 @@ class ClientGangSheetListCreateView(ClientGangSheetMixin, View):
                 name=request.POST.get("name", ""),
             )
         except GangSheetDomainError as error:
+            sheets, page = self.paginated_sheets(request)
             return with_toast(
                 render(
                     request,
                     self.template_name,
                     self.context(
-                        sheets=gang_sheet_service.attach_can_delete(
-                            list(gang_sheet_service.list_customer_sheets(self.customer))
-                        ),
+                        sheets=sheets,
+                        page_obj=page,
                         can_edit=True,
                         form_error=error.message,
                         nav_key="client-gang-sheets",

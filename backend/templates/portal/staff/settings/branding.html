@@ -1,0 +1,94 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Identité visuelle — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div
+  class="portal-page portal-page--staff brand-settings-page"
+  x-data="{
+    primary: '{{ form.primary_color.value|default:'#FF8775'|escapejs }}',
+    secondary: '{{ form.secondary_color.value|default:'#A83BC4'|escapejs }}',
+    safeColor(value, fallback) { return /^#[0-9A-Fa-f]{6}$/.test(value) ? value : fallback },
+    readableInk(value, fallback) {
+      const color = this.safeColor(value, fallback).slice(1)
+      const red = parseInt(color.slice(0, 2), 16)
+      const green = parseInt(color.slice(2, 4), 16)
+      const blue = parseInt(color.slice(4, 6), 16)
+      return ((red * 299 + green * 587 + blue * 114) / 1000) >= 145 ? '#1A1815' : '#FFFFFF'
+    }
+  }"
+>
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_branding.html" title="Identité visuelle" subtitle="Définissez les deux couleurs de marque utilisées sur les espaces Client et Atelier." %}
+
+  <div class="brand-settings-layout">
+    <section class="brand-settings-card" aria-labelledby="brand-settings-form-title">
+      <div class="brand-settings-card__head">
+        <h2 id="brand-settings-form-title">Couleurs de l’interface</h2>
+        <p>Le fond reste clair et lisible. La couleur primaire guide les actions, la secondaire distingue les repères et les accents.</p>
+      </div>
+
+      <form method="post" class="ui-form-stack" novalidate>
+        {% csrf_token %}
+        <fieldset class="brand-settings-fieldset" {% if not can_change_brand_theme %}disabled{% endif %}>
+        {% for field in form %}
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <div class="brand-color-field">
+            {{ field }}
+            <input
+              class="brand-color-field__picker"
+              type="color"
+              aria-label="Sélectionner {{ field.label|lower }}"
+              x-model="{% if field.name == 'primary_color' %}primary{% else %}secondary{% endif %}"
+            >
+          </div>
+          <p class="ui-field-help">Format hexadécimal complet, par exemple {% if field.name == 'primary_color' %}#FF8775{% else %}#A83BC4{% endif %}.</p>
+          {% for error in field.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+        </div>
+        {% endfor %}
+        {% if form.non_field_errors %}
+        <div class="alert alert--danger" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        {% if can_change_brand_theme %}
+        <div class="ui-form-actions brand-settings-actions">
+          <button class="ui-btn ui-btn-primary" type="submit">Appliquer aux deux espaces</button>
+          <button class="ui-btn ui-btn-secondary" type="submit" name="intent" value="restore" formnovalidate>Restaurer la palette claire</button>
+        </div>
+        {% else %}
+        <p class="alert alert--info" role="status">Vous pouvez consulter la palette, mais seul un administrateur Atelier peut la modifier.</p>
+        {% endif %}
+        </fieldset>
+      </form>
+    </section>
+
+    <section
+      class="brand-preview"
+      aria-labelledby="brand-preview-title"
+      :style="{
+        '--preview-primary': safeColor(primary, '#FF8775'),
+        '--preview-primary-ink': readableInk(primary, '#FF8775'),
+        '--preview-secondary': safeColor(secondary, '#A83BC4')
+      }"
+    >
+      <div class="brand-preview__head">
+        <div>
+          <h2 id="brand-preview-title">Aperçu de l’espace Client</h2>
+        </div>
+        <span class="brand-preview__status"><span></span> En production</span>
+      </div>
+      <div class="brand-preview__panel">
+        <p class="brand-preview__kicker">Commande DTF #1084</p>
+        <h3>Vos fichiers sont prêts pour l’atelier.</h3>
+        <p>Les informations importantes gardent une hiérarchie nette, avec une seule action principale.</p>
+        <div class="brand-preview__progress" aria-hidden="true"><span></span></div>
+        <div class="brand-preview__actions">
+          <span class="brand-preview__button">Voir la commande</span>
+          <span class="brand-preview__link">Consulter les fichiers</span>
+        </div>
+      </div>
+      <p class="brand-preview__note">L’aperçu est immédiat. L’enregistrement applique la palette à toutes les nouvelles pages chargées.</p>
+    </section>
+  </div>
+</div>
+{% endblock %}

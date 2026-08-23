@@ -110,7 +110,7 @@ def test_production_panel_shows_status_history():
 
 
 @pytest.mark.django_db
-def test_owner_shipping_panel_and_order_summary_show_tracking():
+def test_owner_shipping_panel_owns_the_primary_tracking_action():
     from apps.shipping.models import Shipment
     from django.utils import timezone
 
@@ -150,9 +150,8 @@ def test_owner_shipping_panel_and_order_summary_show_tracking():
     )
     detail_html = detail.content.decode()
     assert detail.status_code == 200
-    assert "Expédiée" in detail_html
-    assert "TRK-CLIENT-001" in detail_html
-    assert "Suivre le colis" in detail_html
+    assert "TRK-CLIENT-001" not in detail_html
+    assert "Suivre le colis" not in detail_html
 
     shipping = client.get(
         reverse(

@@ -87,6 +87,7 @@ from .views_staff_billing_statements import (
     StaffCustomerBillingStatementCreateView,
     StaffCustomerBillingStatementExportView,
 )
+from .views_staff_branding import StaffBrandSettingsView
 from .views_staff_customers import (
     StaffCustomerAccountUpdateView,
     StaffCustomerDetailView,
@@ -509,6 +510,11 @@ urlpatterns = [
         "staff/settings/email-templates/",
         StaffEmailTemplateListView.as_view(),
         name="staff-email-template-list",
+    ),
+    path(
+        "staff/settings/branding/",
+        StaffBrandSettingsView.as_view(),
+        name="staff-brand-settings",
     ),
     path(
         "staff/settings/volume-discounts/",

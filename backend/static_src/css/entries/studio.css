@@ -1,6 +1,95 @@
 /* Studio : couche éditeur uniquement, après app.css puis portal.css. */
 @import "../components/gang-sheet-studio.css";
+@import "../components/studio-polish.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Unlayered: studio aligné shell clair (post gang-sheet-studio, prime sur portal.css). */
+html[data-theme="prenium"] body.product-shell--studio .gang-editor :where(
+  [class*="-card"],
+  [class*="-panel"],
+  [class*="-header"],
+  [class*="-workspace"],
+  [class*="-sidebar"],
+  [class*="-inspector"],
+  [class*="-toolbar"],
+  [class*="-launcher"],
+  [class*="-workflow"],
+  [class*="-status"],
+  [class*="-stage"],
+  [class*="-dialog"],
+  dialog
+) {
+  box-shadow: none !important;
+  border-color: var(--line) !important;
+  border-radius: var(--radius);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-crop-box [data-crop-handle] {
+  border-color: var(--line) !important;
+  background: var(--brand-soft) !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-workflow [data-workflow-marker],
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics .is-price {
+  background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;
+  color: var(--brand-strong) !important;
+  box-shadow: none !important;
+}
+
+/* Boutons Studio : hérite du shell portail, prime sur gang-sheet-studio (#dcff1a). */
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .ui-btn,
+  .btn,
+  .dui-btn,
+  .gang-tool-btn,
+  button.ui-btn
+) {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .ui-btn,
+  .btn,
+  .dui-btn,
+  .gang-tool-btn,
+  button.ui-btn
+):is(:hover, :focus-visible, :active) {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .ui-btn-primary,
+  .ui-btn.ui-btn-primary,
+  .gang-editor__save
+):is(:hover, :focus-visible, :active) {
+  background: var(--brand-strong) !important;
+  border-color: color-mix(in srgb, var(--brand-strong) 82%, var(--ink)) !important;
+  color: var(--action-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-modal-form__controls > .b2b-dialog-kicker {
+  margin: 0 0 0.25rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-spacing-grid .gang-spacing-input {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-spacing-grid .gang-spacing-input .ui-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-spacing-grid .gang-spacing-unit {
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}

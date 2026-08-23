@@ -1,0 +1,8 @@
+/* Surcouche client : dashboard, fiche commande, projets B2B, planches (liste). */
+@import "../components/client-dashboard.css";
+@import "../components/client-order-detail.css";
+@import "../components/b2b-order-project.css";
+@import "../components/gang-sheet.css";
+
+@tailwind components;
+@tailwind utilities;
