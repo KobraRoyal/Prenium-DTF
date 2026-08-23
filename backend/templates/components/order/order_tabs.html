@@ -59,7 +59,7 @@
           {% include "components/ui/skeleton.html" with height="3.5rem" width="100%" tone="panel" %}
         </div>
         <span class="workflow-panel-loading__text">Chargement du panneau…</span>
-      </div>{% else %}<div class="empty-state"><h3>Aucun panneau disponible</h3><p>{{ empty_message }}</p></div>{% endif %}
+      </div>{% else %}{% include "components/ui/empty_state.html" with title="Aucun panneau disponible" message=empty_message %}{% endif %}
     </div>
   </div>
 </section>

@@ -44,6 +44,8 @@ STAFF_FOCUS_VIEWS = [
     "portal/staff/access_requests/detail.html",
 ]
 
+ALL_PORTAL_PAGE_VIEWS = CLIENT_PAGE_VIEWS + STAFF_PAGE_VIEWS + STAFF_FOCUS_VIEWS
+
 LEGACY_PATTERNS = [
     (r'class="btn"', "class=\"btn\""),
     ("product-eyebrow", "product-eyebrow"),
@@ -67,19 +69,12 @@ def template_source(relative_path: str) -> str:
 
 class PortalViewsUiHomogeneityTests(SimpleTestCase):
     def test_client_pages_use_portal_page_client_shell(self) -> None:
-        surface_optional = {
-            "portal/client/dashboard.html",
-            "portal/client/order_detail.html",
-            "portal/client/order_project_detail.html",
-        }
         for path in CLIENT_PAGE_VIEWS:
             with self.subTest(path=path):
                 source = template_source(path)
                 self.assertIn('extends "portal/layout.html"', source)
                 self.assertIn("portal-page--client", source)
                 self.assertIn("page_head.html", source)
-                if path not in surface_optional:
-                    self.assertIn("portal-page-surface", source)
 
     def test_staff_list_pages_use_portal_page_staff_shell(self) -> None:
         for path in STAFF_PAGE_VIEWS:
@@ -103,9 +98,13 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
                 self.assertNotIn("page_head.html", source)
                 self.assertTrue(any(marker in source for marker in focus_markers))
 
+    def test_all_portal_pages_expose_portal_page_surface(self) -> None:
+        for path in ALL_PORTAL_PAGE_VIEWS:
+            with self.subTest(path=path):
+                self.assertIn("portal-page-surface", template_source(path))
+
     def test_portal_page_titles_use_em_dash_brand_suffix(self) -> None:
-        all_views = CLIENT_PAGE_VIEWS + STAFF_PAGE_VIEWS + STAFF_FOCUS_VIEWS
-        for path in all_views:
+        for path in ALL_PORTAL_PAGE_VIEWS:
             with self.subTest(path=path):
                 source = template_source(path)
                 match = re.search(r"{% block title %}(.*?){% endblock %}", source, re.DOTALL)
@@ -114,16 +113,14 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
                 self.assertIn("— Prenium DTF", title, f"{path} : titre sans suffixe marque")
 
     def test_portal_pages_avoid_legacy_visual_patterns(self) -> None:
-        all_views = CLIENT_PAGE_VIEWS + STAFF_PAGE_VIEWS + STAFF_FOCUS_VIEWS
-        for path in all_views:
+        for path in ALL_PORTAL_PAGE_VIEWS:
             with self.subTest(path=path):
                 source = template_source(path)
                 for pattern, label in LEGACY_PATTERNS:
                     self.assertIsNone(re.search(pattern, source), f"{path} : reliquat {label}")
 
     def test_portal_pages_prefer_shared_empty_state_partial(self) -> None:
-        all_views = CLIENT_PAGE_VIEWS + STAFF_PAGE_VIEWS + STAFF_FOCUS_VIEWS
-        for path in all_views:
+        for path in ALL_PORTAL_PAGE_VIEWS:
             if path in EMPTY_STATE_EXCEPTIONS:
                 continue
             with self.subTest(path=path):
@@ -147,3 +144,16 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         )
         self.assertIn(".portal-page--staff .portal-page-intro", css)
         self.assertIn(".portal-page--client .portal-page-intro", css)
+
+    def test_portal_core_flattens_nested_surfaces_inside_page_surface(self) -> None:
+        css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-core.css").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            ".workflow-shell",
+            ".client-order-summary",
+            ".staff-customer-workspace",
+            ".atelier-worklist",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, css)

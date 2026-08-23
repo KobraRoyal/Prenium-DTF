@@ -16,10 +16,13 @@ class ProductPolishUITests(SimpleTestCase):
     def test_product_polish_is_the_last_portal_component_before_tailwind(self) -> None:
         entry = source(CSS_DIR / "entries/portal.css")
         polish_import = '@import "../components/product-polish.css";'
+        last_import = '@import "../components/prospect-journey.css";'
 
         self.assertIn(polish_import, entry)
+        self.assertIn(last_import, entry)
         self.assertLess(entry.index(polish_import), entry.index("@tailwind base"))
-        self.assertEqual(entry.rfind("@import"), entry.index(polish_import))
+        self.assertLess(entry.index(last_import), entry.index("@tailwind base"))
+        self.assertEqual(entry.rfind("@import"), entry.index(last_import))
 
         polish = source(CSS_DIR / "components/product-polish.css")
         self.assertIn("@layer utilities", polish)
@@ -79,7 +82,8 @@ class ProductPolishUITests(SimpleTestCase):
             client_dashboard,
         )
         self.assertNotIn('class="product-eyebrow">Espace client', client_dashboard)
-        self.assertIn('class="atelier-dashboard"', atelier_dashboard)
+        self.assertIn("portal-page--staff", atelier_dashboard)
+        self.assertIn("atelier-dashboard", atelier_dashboard)
         self.assertNotIn('class="product-eyebrow">Production', atelier_dashboard)
         self.assertIn("product-login-heading__note", login)
         self.assertNotIn('class="product-eyebrow">Votre espace Prenium', login)

@@ -16,6 +16,7 @@
 {% endif %}
 
 {% if can_read_worklist %}
+<section class="portal-page-surface atelier-dashboard-surface">
 <div class="atelier-dashboard-metrics">
 {% ui_kpi_grid items=kpi_rows %}
 </div>
@@ -179,9 +180,12 @@
   </div>
   {% endif %}
 </form>
+</section>
 {% else %}
+<section class="portal-page-surface atelier-dashboard-surface">
 <section class="card">
   {% include "components/ui/empty_state.html" with title="File Atelier indisponible" message="Les permissions Commandes et Production sont nécessaires pour afficher cette file." %}
+</section>
 </section>
 {% endif %}
 </div>

@@ -9,7 +9,6 @@
     <div class="b2b-project-header__intro">
       {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_project_detail.html" title=project_client_label|default:project.project_number lead_template="components/portal/page_head_leads/client_order_project_detail.html" %}
     </div>
-    {% include "portal/client/partials/order_project_summary.html" %}
   </header>
 
   {% if request.GET.submit_error %}
@@ -34,9 +33,12 @@
   </div>
   {% endif %}
 
-  <div class="stack-lg mt-6">
-  {% include "portal/client/partials/order_project_items.html" %}
-    {% include "portal/client/partials/order_project_fields.html" %}
-  </div>
+  <section class="portal-page-surface b2b-project-surface">
+    {% include "portal/client/partials/order_project_summary.html" %}
+    <div class="stack-lg mt-6">
+    {% include "portal/client/partials/order_project_items.html" %}
+      {% include "portal/client/partials/order_project_fields.html" %}
+    </div>
+  </section>
 </div>
 {% endblock %}

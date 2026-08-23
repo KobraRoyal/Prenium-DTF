@@ -101,7 +101,7 @@
       {% endif %}
       {% endfor %}
       {% if sheets %}
-      <div class="empty-state text-center gang-sheet-empty gang-sheet-empty--filtered" x-show="!hasResults()" x-cloak>
+      <div class="empty-state text-center gang-sheet-empty gang-sheet-empty--filtered" x-show="!hasResults()" x-cloak x-bind:aria-hidden="hasResults()" role="status">
         <h3 class="mt-0 font-display text-lg text-[color:var(--ink)]">Aucune planche trouvée</h3>
         <p class="muted mt-2">Modifiez la recherche ou réinitialisez les filtres pour retrouver vos planches DTF.</p>
         <p class="mt-4">

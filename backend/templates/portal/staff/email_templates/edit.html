@@ -25,6 +25,7 @@
   {% if form.non_field_errors %}<div class="alert alert--danger mt-5" role="alert">{{ form.non_field_errors }}</div>{% endif %}
   {% if not can_edit_email_templates %}<div class="alert alert--warning mt-5" role="status"><p class="m-0">Votre rôle permet la consultation, mais pas la modification de ce modèle.</p></div>{% endif %}
 
+  <section class="portal-page-surface email-template-editor-surface">
   <div class="email-template-workbench">
     <form method="post" class="email-template-compose" data-email-template-editor data-submit-loading>
       {% csrf_token %}
@@ -125,5 +126,6 @@
       </details>
     </aside>
   </div>
+  </section>
 </div>
 {% endblock %}

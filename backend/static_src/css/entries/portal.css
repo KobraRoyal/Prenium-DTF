@@ -784,7 +784,27 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   .account-team-panel,
   .account-team-row,
   .ui-data-card,
-  .b2b-order-start-card__intro
+  .b2b-order-start-card__intro,
+  .workflow-shell,
+  .client-order-summary,
+  .email-template-overview,
+  .email-template-section,
+  .email-template-workbench,
+  .email-template-editor-meta,
+  .brand-settings-card,
+  .gang-sheet-create-card,
+  .volume-discount-settings,
+  .atelier-worklist,
+  .atelier-dashboard-metrics,
+  .atelier-next-action,
+  .atelier-operations-scan,
+  .atelier-operations-workspace,
+  .machine-fleet-content,
+  .staff-project-items,
+  .staff-customer-workspace,
+  .access-review-grid,
+  .staff-access-panel,
+  .b2b-project-checkout-summary
 ) {
   border: 0 !important;
   box-shadow: none !important;

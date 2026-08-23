@@ -813,7 +813,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('id="client-volume-discount-title">', dashboard)
         self.assertIn("client-dashboard-palier__meter", dashboard)
         self.assertEqual(editor.count('aria-label="Étape '), 4)
-        self.assertIn("Studio planche DTF — Prenium DTF", editor)
+        self.assertIn("— Studio — Prenium DTF", editor)
         self.assertIn("display: block", studio_css)
         self.assertIn(
             ".product-date-picker__trigger [data-date-display].is-placeholder {\n"

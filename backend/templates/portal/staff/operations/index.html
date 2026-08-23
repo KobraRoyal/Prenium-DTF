@@ -11,9 +11,9 @@ STORY: l'opérateur scanne ou recherche un OF, lit son état, exécute le procha
 FIRST VIEWPORT: champ OF autofocus pleine largeur, quatre filtres de file, puis lignes d'action compactes.
 FORM: registre opérationnel inline, extension directe du monde Atelier établi.
 -->
-<section class="atelier-operations-head">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_operations.html" title="Pilotage Atelier" subtitle="Scannez un OF, changez son statut et déclenchez l’action suivante sans quitter la file." %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_operations.html" title="Pilotage Atelier" subtitle="Scannez un OF, changez son statut et déclenchez l’action suivante sans quitter la file." %}
 
+<section class="portal-page-surface atelier-operations-surface">
   <form
     class="atelier-operations-scan"
     method="get"
@@ -50,8 +50,8 @@ FORM: registre opérationnel inline, extension directe du monde Atelier établi.
       <span x-text="focused ? 'Douchette prête' : 'Cliquez dans le champ pour scanner'">Douchette prête</span>
     </p>
   </form>
-</section>
 
-{% include "portal/staff/operations/_workspace.html" %}
+  {% include "portal/staff/operations/_workspace.html" %}
+</section>
 </div>
 {% endblock %}

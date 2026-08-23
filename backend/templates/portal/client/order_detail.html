@@ -18,7 +18,8 @@
 </div>
 {% endif %}
 
-<section class="card client-order-summary" aria-label="Résumé de la commande">
+<section class="portal-page-surface client-order-detail-surface">
+<section class="client-order-summary" aria-label="Résumé de la commande">
   <dl class="client-order-summary__facts">
     <div class="client-order-summary__fact">
       <dt>Commande soumise</dt>
@@ -50,5 +51,6 @@
 </section>
 
 {% order_htmx_tabs "client" %}
+</section>
 </div>
 {% endblock %}
