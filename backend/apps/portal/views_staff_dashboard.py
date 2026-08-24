@@ -3,8 +3,8 @@ from django.shortcuts import render
 from django.views import View
 
 from apps.portal.views_common import StaffPortalMixin
-from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 from apps.production.services.dashboard import AtelierDashboardService
+from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 
 atelier_dashboard_service = AtelierDashboardService()
 

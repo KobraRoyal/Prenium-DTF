@@ -292,7 +292,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Continuer vers le paiement", panels)
         self.assertIn("order_status_banner", detail)
         self.assertIn("client-order-detail-banner", detail)
-        self.assertIn('class="ui-btn ui-btn-primary ui-btn-sm" href="?panel=billing&amp;pay=1"', detail)
+        self.assertIn(
+            'class="ui-btn ui-btn-primary ui-btn-sm" href="?panel=billing&amp;pay=1"',
+            detail,
+        )
         self.assertNotIn('class="link font-medium"', detail)
         self.assertEqual(detail.count('role="status"'), 1)
         self.assertIn("client-order-list", breadcrumb)
@@ -619,7 +622,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("position: sticky", workspace_css)
         self.assertIn("grid-template-columns: minmax(7.5rem, 0.8fr)", workspace_css)
         self.assertIn(".staff-customer-settlement", workspace_css)
-        self.assertIn("staff-customer-settlement .b2b-settlement-choice__option input[type=\"radio\"]", portal_entrypoint)
+        self.assertIn(
+            'staff-customer-settlement .b2b-settlement-choice__option input[type="radio"]',
+            portal_entrypoint,
+        )
         self.assertIn("@media (max-width: 639px)", workspace_css)
         self.assertIn("customer-account-workspace.css", portal_entrypoint)
         self.assertIn("revealCustomerSection", runtime)
@@ -1142,16 +1148,16 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("atelier-dashboard-metrics", source)
         self.assertNotIn("ui_list_tabs", source)
         self.assertIn("ui_atelier_worklist_table", source)
-        self.assertIn("ui-orders-table-desktop", template_source("components/tables/atelier_worklist_table.html"))
-        self.assertIn("ui-data-table", template_source("components/tables/atelier_worklist_table.html"))
-        self.assertIn("ui-mobile-order-card", template_source("components/tables/atelier_worklist_table.html"))
+        worklist_table = template_source("components/tables/atelier_worklist_table.html")
+        self.assertIn("ui-orders-table-desktop", worklist_table)
+        self.assertIn("ui-data-table", worklist_table)
+        self.assertIn("ui-mobile-order-card", worklist_table)
         self.assertNotIn("atelier-order-list", source)
         self.assertNotIn("atelier-worklist__legend", source)
         self.assertIn("atelier-worklist-command", source)
         self.assertIn("ui-list-command--compact", source)
         self.assertIn("ui-list-command", source)
         self.assertNotIn("atelier-worklist-results", source)
-        worklist_table = template_source("components/tables/atelier_worklist_table.html")
         self.assertIn("files_to_process_label", worklist_table)
         self.assertNotIn("Contrôle dans le pilotage", worklist_table)
         self.assertNotIn(">Production<", worklist_table)
@@ -1176,7 +1182,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
             ".portal-page-surface.ui-list-section .staff-data-list__mobile",
             portal_core,
         )
-        self.assertIn("display: none !important", portal_core.split("staff-data-list__mobile")[-1][:400])
+        self.assertIn(
+            "display: none !important",
+            portal_core.split("staff-data-list__mobile")[-1][:400],
+        )
         self.assertIn(
             ".portal-page-surface.ui-list-section .staff-data-list__mobile",
             portal_staff,
@@ -1207,9 +1216,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertEqual(order.count("staff_order_focus.review_label"), 1)
         self.assertNotIn("staff_order_focus.production_label", order)
         self.assertNotIn("Résultats affichés", access_list)
-        self.assertIn(
-            '<details class="staff-access-panel access-review-reject"', access_detail
-        )
+        self.assertIn('<details class="staff-access-panel access-review-reject"', access_detail)
         self.assertIn('<details class="machine-fleet-create"', machine_fleet)
         self.assertIn('<details class="volume-tier-create-card"', discount_settings)
         self.assertNotIn("<span>Paiement</span>", billing)
@@ -1817,7 +1824,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("ui-nav-rail", landing_header)
         self.assertNotIn("ui-nav-panel", header)
         self.assertNotIn("ui-nav-panel", landing_header)
-        self.assertIn("v15 — Header portail : navigation fluide sans cadres parasites", portal_entry)
+        self.assertIn(
+            "v15 — Header portail : navigation fluide sans cadres parasites",
+            portal_entry,
+        )
         self.assertIn(".product-header .ui-foundation-nav .ui-nav-rail", portal_entry)
         self.assertIn(".product-header .ui-foundation-nav .product-profile__trigger", portal_entry)
         self.assertIn("border: 0 !important", portal_entry.split("v15 — Header portail")[-1])

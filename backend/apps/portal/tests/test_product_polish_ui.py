@@ -91,7 +91,8 @@ class ProductPolishUITests(SimpleTestCase):
         login = source(TEMPLATES_DIR / "portal/login.html")
 
         self.assertIn(
-            'components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_dashboard.html"',
+            'components/portal/page_head.html" with breadcrumb_template='
+            '"components/portal/breadcrumbs/client_dashboard.html"',
             client_dashboard,
         )
         self.assertNotIn('class="product-eyebrow">Espace client', client_dashboard)
@@ -237,7 +238,7 @@ class ProductPolishUITests(SimpleTestCase):
         entry = portal_surface_css()
 
         for marker in [
-            "html[data-theme=\"prenium\"] body.product-shell",
+            'html[data-theme="prenium"] body.product-shell',
             ".staff-project-focus",
             ".staff-project-items",
             ".gang-editor__header",

@@ -166,8 +166,8 @@ def test_built_portal_css_overrides_app_legacy_portal_shell() -> None:
 
 def test_built_portal_core_skips_bem_focus_children() -> None:
     built = read(CSS_DIR / "portal-core.css").replace(" ", "")
-    assert '[class*=-focus]:not([class*=__])' in built
-    assert '[class*=-focus],.workflow-shell' not in built
+    assert "[class*=-focus]:not([class*=__])" in built
+    assert "[class*=-focus],.workflow-shell" not in built
 
 
 def test_surface_templates_share_css_cache_bust_version() -> None:

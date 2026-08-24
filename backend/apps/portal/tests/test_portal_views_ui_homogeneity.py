@@ -66,10 +66,10 @@ CLIENT_ORDER_PANELS = [
 ALL_PORTAL_PAGE_VIEWS = CLIENT_PAGE_VIEWS + STAFF_PAGE_VIEWS + STAFF_FOCUS_VIEWS
 
 LEGACY_PATTERNS = [
-    (r'class="btn"', "class=\"btn\""),
+    (r'class="btn"', 'class="btn"'),
     ("product-eyebrow", "product-eyebrow"),
     ("agency-", "agency-"),
-    (r'\bopacity-\d+\b', "opacity-* utility"),
+    (r"\bopacity-\d+\b", "opacity-* utility"),
 ]
 
 RAW_EMPTY_STATE = re.compile(
@@ -157,7 +157,9 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
                         continue
                     if "x-show" in snippet or "x-cloak" in snippet:
                         continue
-                    self.fail(f"{path} : empty-state brut sans partial partagé : {match.group(0)!r}")
+                    self.fail(
+                        f"{path} : empty-state brut sans partial partagé : {match.group(0)!r}"
+                    )
 
     def test_empty_state_partial_supports_dialog_open_cta(self) -> None:
         source = template_source("components/ui/empty_state.html")
@@ -440,9 +442,8 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn(".atelier-operations-panel > .ui-list-tabs", css)
 
     def test_pilotage_flat_styles_live_in_operations_component(self) -> None:
-        css = (Path(settings.BASE_DIR) / "static_src/css/components/atelier-operations.css").read_text(
-            encoding="utf-8"
-        )
+        css_path = Path(settings.BASE_DIR) / "static_src/css/components/atelier-operations.css"
+        css = css_path.read_text(encoding="utf-8")
         for marker in (
             ".atelier-operation-row__workflow",
             ".atelier-operation-workflow__link",
@@ -535,8 +536,14 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
 
     def test_staff_atelier_configuration_surfaces_use_flat_typography(self) -> None:
         checks = {
-            "portal/staff/email_templates/list.html": ("font-display text-lg", "email-template-surface"),
-            "portal/staff/settings/branding.html": ("font-display text-lg", "brand-settings-surface"),
+            "portal/staff/email_templates/list.html": (
+                "font-display text-lg",
+                "email-template-surface",
+            ),
+            "portal/staff/settings/branding.html": (
+                "font-display text-lg",
+                "brand-settings-surface",
+            ),
         }
         for path, (typography, surface_class) in checks.items():
             with self.subTest(path=path):

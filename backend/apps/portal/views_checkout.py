@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Checkout client historique (upload synchrone + facturation différée).
 
 Conservé pour les comptes sans projets B2B asynchrones. Lorsque
@@ -7,6 +5,8 @@ Conservé pour les comptes sans projets B2B asynchrones. Lorsque
 la création de projet (`client_new_order_url`) — deux parcours documentés, un
 seul actif par compte.
 """
+
+from __future__ import annotations
 
 from uuid import UUID
 

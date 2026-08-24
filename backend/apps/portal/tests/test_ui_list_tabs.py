@@ -8,7 +8,7 @@ class UiListTabsTagTests(SimpleTestCase):
         request = HttpRequest()
         request.GET = {"q": "acme"}
         template = Template(
-            '{% load ui_tags %}'
+            "{% load ui_tags %}"
             '{% ui_list_tabs tabs aria_label="Filtrer" url_name="portal:staff-access-request-list" '
             'query_param="status" preserve_query="q" %}'
         )
@@ -37,7 +37,7 @@ class UiListTabsTagTests(SimpleTestCase):
 
     def test_ui_list_tabs_supports_htmx_navigation(self) -> None:
         template = Template(
-            '{% load ui_tags %}'
+            "{% load ui_tags %}"
             '{% ui_list_tabs tabs aria_label="Filtrer" url_name="portal:staff-atelier-operations" '
             'query_param="queue" preserve_query="q" htmx_target="#atelier-operations-panel" '
             'htmx_indicator="#portal-htmx-indicator" %}'

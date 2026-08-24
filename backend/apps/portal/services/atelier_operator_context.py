@@ -46,9 +46,7 @@ def build_operator_steps(
         }
     )
 
-    shipping_active = (
-        job.status == ProductionJob.Status.READY_TO_SHIP and shipment is None
-    )
+    shipping_active = job.status == ProductionJob.Status.READY_TO_SHIP and shipment is None
     shipping_done = job.status == ProductionJob.Status.COMPLETED or shipment is not None
 
     steps: list[dict[str, str]] = []

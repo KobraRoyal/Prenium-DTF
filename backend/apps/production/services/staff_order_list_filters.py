@@ -106,8 +106,7 @@ class StaffOrderListFilterService:
                 _has_pending=has_pending,
             )
             .filter(
-                Q(_upload_count=0)
-                | (Q(_has_pending=True) & Q(_has_changes=False)),
+                Q(_upload_count=0) | (Q(_has_pending=True) & Q(_has_changes=False)),
             )
             .distinct()
         )

@@ -266,7 +266,9 @@ class StaffAtelierOperationMachineAssignView(StaffAtelierOperationsContextMixin,
         if machine_error:
             response = self._render_workspace(request, machine_error=machine_error)
             return with_toast(response, machine_error, "error")
-        message = "Imprimante attribuée à l’OF." if changed else "Cette imprimante est déjà attribuée."
+        message = (
+            "Imprimante attribuée à l’OF." if changed else "Cette imprimante est déjà attribuée."
+        )
         response = self._render_workspace(request, feedback=message)
         return with_toast(response, message, "success" if changed else "info")
 
@@ -298,11 +300,7 @@ class StaffAtelierOperationPrintConfirmView(StaffAtelierOperationsContextMixin, 
         if print_error:
             response = self._render_workspace(request, print_error=print_error)
             return with_toast(response, print_error, "error")
-        message = (
-            "Impression confirmée et historisée."
-            if created
-            else "Impression déjà confirmée."
-        )
+        message = "Impression confirmée et historisée." if created else "Impression déjà confirmée."
         response = self._render_workspace(request, feedback=message)
         return with_toast(response, message, "success" if created else "info")
 

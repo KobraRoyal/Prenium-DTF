@@ -194,7 +194,7 @@ class UiFoundationSourceTests(SimpleTestCase):
         self.assertIn("corePlugins: []", surface_config)
         shell = source(CSS_DIR / "components" / "shell.css")
         toggle_rule = shell.split(
-            "html[data-theme=\"prenium\"] :is(body.product-shell, body.ui-marketing-body) "
+            'html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) '
             ".ui-foundation-nav .product-menu-button {",
             1,
         )
@@ -253,7 +253,10 @@ class UiFoundationSourceTests(SimpleTestCase):
         client_trail = source(TEMPLATES_DIR / "components/portal/breadcrumbs/client_trail.html")
 
         self.assertIn('class="portal-page-rail"', page_head)
-        self.assertLess(page_head.index('class="portal-page-rail"'), page_head.index("portal-page-intro"))
+        self.assertLess(
+            page_head.index('class="portal-page-rail"'),
+            page_head.index("portal-page-intro"),
+        )
 
         for marker in [
             'aria-label="Fil d’Ariane"',

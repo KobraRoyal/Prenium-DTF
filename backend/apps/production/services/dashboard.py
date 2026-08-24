@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import Counter
 
 from django.core.exceptions import ObjectDoesNotExist
-
 from django.urls import reverse
 
 from apps.billing.services.production_payment_gate import (
@@ -104,8 +103,10 @@ class AtelierDashboardService:
         return focus
 
     def _unissued_orders_queryset(self):
-        return ManufacturingOrderBatchService()._unissued_queryset().select_related(
-            "production_job__assigned_machine"
+        return (
+            ManufacturingOrderBatchService()
+            ._unissued_queryset()
+            .select_related("production_job__assigned_machine")
         )
 
     def _serialize_order(self, *, order: Order) -> dict[str, object]:

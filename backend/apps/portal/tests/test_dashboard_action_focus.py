@@ -47,10 +47,11 @@ def _project(status):
 
 class DashboardActionFocusTests(SimpleTestCase):
     def test_staff_dashboard_surfaces_one_real_next_action(self) -> None:
-        template = (
-            Path(settings.BASE_DIR) / "templates/portal/staff/dashboard.html"
-        ).read_text(encoding="utf-8") + (
-            Path(settings.BASE_DIR) / "templates/portal/staff/partials/dashboard_worklist_panel.html"
+        template = (Path(settings.BASE_DIR) / "templates/portal/staff/dashboard.html").read_text(
+            encoding="utf-8"
+        ) + (
+            Path(settings.BASE_DIR)
+            / "templates/portal/staff/partials/dashboard_worklist_panel.html"
         ).read_text(encoding="utf-8")
         order_detail = (
             Path(settings.BASE_DIR) / "templates/portal/staff/order_detail.html"

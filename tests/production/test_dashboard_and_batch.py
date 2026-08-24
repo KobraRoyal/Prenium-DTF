@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import uuid
 
-import pymupdf
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer
@@ -17,7 +16,6 @@ from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUpload, OrderUploadDriveSync, OrderUploadReview
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.core.exceptions import ValidationError
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
@@ -188,7 +186,9 @@ def test_batch_service_merges_one_of_per_order_and_marks_issued():
     assert second.production_job.of_document_issued_at is not None
     audit = AuditLogEntry.objects.get(action="production.manufacturing_orders_batch_downloaded")
     assert audit.actor == actor
-    assert AuditLogEntry.objects.filter(action="production.manufacturing_orders_marked_issued").exists()
+    assert AuditLogEntry.objects.filter(
+        action="production.manufacturing_orders_marked_issued"
+    ).exists()
 
 
 @pytest.mark.django_db
