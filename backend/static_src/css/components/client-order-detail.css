@@ -1,5 +1,30 @@
 /* Fiche commande transmise : même rythme que la commande à finaliser. */
 
+body.product-shell .client-checkout-intro {
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--product-accent) 8%, var(--product-panel));
+  color: var(--product-ink);
+}
+
+body.product-shell .client-order-panel__head {
+  margin: 0 0 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--product-line);
+}
+
+body.product-shell .client-order-panel__head h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+body.product-shell .client-inspection-kpis .ui-kpi-card.is-attention {
+  background: color-mix(in srgb, var(--product-warning) 14%, var(--product-panel));
+}
+
 body.product-shell .client-order-detail-banner__content {
   display: flex;
   flex-wrap: wrap;

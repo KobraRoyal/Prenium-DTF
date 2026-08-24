@@ -1,6 +1,6 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="uploads" %}
-<div class="panel client-order-panel client-order-panel--uploads" aria-label="Visuels">
+<div class="client-order-panel client-order-panel--uploads" aria-label="Visuels">
   {% if reorder_enabled and uploads %}
   <div class="client-order-uploads-head">
     <form method="post" action="{% url 'portal:client-order-reorder' customer_public_id=customer.public_id order_public_id=order.public_id %}">

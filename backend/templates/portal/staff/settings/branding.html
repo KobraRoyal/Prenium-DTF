@@ -20,11 +20,11 @@
 >
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_branding.html" title="Identité visuelle" subtitle="Définissez les deux couleurs de marque utilisées sur les espaces Client et Atelier." %}
 
-  <div class="brand-settings-layout portal-page-surface brand-settings-surface">
+  <section class="brand-settings-layout portal-page-surface brand-settings-surface">
     <section class="brand-settings-card" aria-labelledby="brand-settings-form-title">
       <div class="brand-settings-card__head">
-        <h2 id="brand-settings-form-title">Couleurs de l’interface</h2>
-        <p>Le fond reste clair et lisible. La couleur primaire guide les actions, la secondaire distingue les repères et les accents.</p>
+        <h2 id="brand-settings-form-title" class="font-display text-lg">Couleurs de l’interface</h2>
+        <p class="muted text-sm">Le fond reste clair et lisible. La couleur primaire guide les actions, la secondaire distingue les repères et les accents.</p>
       </div>
 
       <form method="post" class="ui-form-stack" novalidate>
@@ -73,7 +73,7 @@
     >
       <div class="brand-preview__head">
         <div>
-          <h2 id="brand-preview-title">Aperçu de l’espace Client</h2>
+          <h2 id="brand-preview-title" class="font-display text-lg">Aperçu de l’espace Client</h2>
         </div>
         <span class="brand-preview__status"><span></span> En production</span>
       </div>
@@ -89,6 +89,6 @@
       </div>
       <p class="brand-preview__note">L’aperçu est immédiat. L’enregistrement applique la palette à toutes les nouvelles pages chargées.</p>
     </section>
-  </div>
+  </section>
 </div>
 {% endblock %}

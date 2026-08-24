@@ -1,21 +1,21 @@
 {% load portal_tags %}
 <div class="workflow-panel">
-  <div class="workflow-panel__hero">
+  <header class="workflow-panel__hero">
     <div>
       <h3 class="workflow-panel__title">Synchronisation Drive</h3>
       <p class="workflow-panel__meta">
         Vue <strong>incidents uniquement</strong> : fichiers sans synchro OK ou avec erreur. Le détail par fichier (lien Drive) reste dans l’onglet <strong>Fichiers</strong>.
       </p>
     </div>
-  </div>
+  </header>
 
   {% if drive_sync_problems %}
   <p class="drive-sync-count muted text-sm mb-3">
     <strong>{{ drive_sync_problems|length }}</strong> fichier{{ drive_sync_problems|length|pluralize }} à traiter (hors statut synchronisé).
   </p>
-  <ul class="m-0 list-none space-y-3 p-0">
+  <ul class="drive-sync-list m-0 list-none space-y-0 p-0" role="list">
     {% for upload in drive_sync_problems %}
-    <li class="product-list-card p-3">
+    <li class="drive-sync-row" role="listitem">
       <p class="m-0 font-medium break-words text-[color:var(--ink)]">{{ upload.original_filename }}</p>
       {% if upload.drive_sync %}
       <div class="mt-2 flex flex-wrap items-center gap-2">

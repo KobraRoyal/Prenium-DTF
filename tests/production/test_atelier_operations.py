@@ -119,25 +119,36 @@ def test_console_lists_jobs_and_searches_by_of_without_detail_navigation():
     create_order(actor=actor, customer_name="Second Client")
     route = reverse("portal:staff-atelier-operations")
 
+    idle = client.get(route)
+    idle_html = idle.content.decode()
+    assert idle.status_code == 200
+    assert "Pilotage Atelier" in idle_html
+    assert "En attente de scan" in idle_html
+    assert "Premier Client" not in idle_html
+    assert "atelier-operations-list" not in idle_html
+
     response = client.get(route, {"q": first_job.scan_identifier})
 
     assert response.status_code == 200
     html = response.content.decode()
-    assert "Pilotage Atelier" in html
     assert first_job.manufacturing_order_number in html
     assert "Premier Client" in html
     assert "Second Client" not in html
     assert "Consultation seule" in html
-    assert "Douchette prête" in html
+    assert "Commande identifiée" in html
+    assert "atelier-operations-focus" in html
+    assert "ui-list-tabs" in html
+    assert "atelier-operations-list" not in html
 
     partial = client.get(
         route,
-        {"queue": "all"},
+        {"q": first_job.scan_identifier},
         HTTP_HX_REQUEST="true",
     )
     partial_html = partial.content.decode()
     assert partial.status_code == 200
-    assert 'id="atelier-operations-workspace"' in partial_html
+    assert 'id="atelier-operations-panel"' in partial_html
+    assert "Commande identifiée" in partial_html
     assert "<!doctype html>" not in partial_html.lower()
 
 
@@ -243,6 +254,7 @@ def test_console_declares_ready_order_in_sendcloud_without_opening_detail(monkey
         route,
         {
             "queue": "shipping",
+            "q": job.scan_identifier,
             "recipient_name": "Atelier Client",
             "recipient_company_name": "Atelier Client",
             "recipient_email": "logistique@example.com",

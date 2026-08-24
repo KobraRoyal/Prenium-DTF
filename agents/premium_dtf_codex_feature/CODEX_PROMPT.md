@@ -192,7 +192,7 @@ Le numéro du projet doit être unique.
 Format recommandé :
 
 ```text
-DTF-B2B-2026-000001
+GANG-SHEET-2026-000001
 ```
 
 Utiliser un générateur sûr contre les collisions et les accès concurrents.

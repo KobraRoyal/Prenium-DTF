@@ -37,6 +37,29 @@ reorder_service = B2BOrderReorderService()
 asset_service = AssetService()
 
 
+def client_inspection_kpi_rows(inspection_counter: Counter) -> list[dict]:
+    ok = inspection_counter.get("ok", 0)
+    warning = inspection_counter.get("warning", 0)
+    error = inspection_counter.get("error", 0)
+    return [
+        {
+            "label": "Validés",
+            "value": str(ok),
+            "tone": "is-ready" if ok else "",
+        },
+        {
+            "label": "À surveiller",
+            "value": str(warning),
+            "tone": "is-attention" if warning else "",
+        },
+        {
+            "label": "À corriger",
+            "value": str(error),
+            "tone": "is-danger" if error else "",
+        },
+    ]
+
+
 class ClientDashboardView(LoginRequiredMixin, View):
     template_name = "portal/client/dashboard.html"
 
@@ -206,6 +229,7 @@ class ClientOrderPanelInspectionView(ClientOrderContextMixin, View):
                 "uploads": uploads,
                 "inspections": inspections,
                 "inspection_counter": inspection_counter,
+                "inspection_kpi_rows": client_inspection_kpi_rows(inspection_counter),
                 "badge_tone_for_status": badge_tone_for_status,
                 "status_label": status_label,
             },

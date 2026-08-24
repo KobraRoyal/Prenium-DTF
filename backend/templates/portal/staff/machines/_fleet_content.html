@@ -7,7 +7,7 @@
       <div><dt>En maintenance</dt><dd>{{ fleet_summary.maintenance }}</dd></div>
       <div><dt>Retirées</dt><dd>{{ fleet_summary.retired }}</dd></div>
     </dl>
-    <p><strong>Règle Atelier.</strong> Une machine qui porte un dossier actif doit être réattribuée avant sa maintenance ou son retrait.</p>
+    <p class="machine-fleet-summary__rule"><strong>Règle Atelier.</strong> Une machine qui porte un dossier actif doit être réattribuée avant sa maintenance ou son retrait.</p>
   </section>
 
   {% if form_error %}
@@ -17,7 +17,7 @@
   <div class="machine-fleet-layout">
     <section class="machine-fleet-register" aria-labelledby="machine-fleet-register-title">
       <header>
-        <div><h2 id="machine-fleet-register-title">Machines enregistrées</h2><p>Disponibilité, charge active et historique restent lisibles au même endroit.</p></div>
+        <div><h2 id="machine-fleet-register-title" class="font-display text-lg">Machines enregistrées</h2><p class="muted text-sm">Disponibilité, charge active et historique restent lisibles au même endroit.</p></div>
         <span class="badge is-neutral">{{ fleet_summary.total }} au total</span>
       </header>
       {% if machines %}
@@ -68,10 +68,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="machine-fleet-empty">
-        <strong>Aucune imprimante enregistrée</strong>
-        <p>Ajoutez la première machine pour commencer à attribuer et tracer les impressions.</p>
-      </div>
+      {% include "components/ui/empty_state.html" with title="Aucune imprimante enregistrée" message="Ajoutez la première machine pour commencer à attribuer et tracer les impressions." %}
       {% endif %}
     </section>
 
@@ -108,7 +105,7 @@
   {% if can_read_print_ledger %}
   <section class="machine-print-ledger" aria-labelledby="machine-print-ledger-title">
     <header>
-      <div><h2 id="machine-print-ledger-title">Journal des impressions</h2><p>Preuve horodatée : dossier, imprimante et opérateur au moment de la confirmation.</p></div>
+      <div><h2 id="machine-print-ledger-title" class="font-display text-lg">Journal des impressions</h2><p class="muted text-sm">Preuve horodatée : dossier, imprimante et opérateur au moment de la confirmation.</p></div>
       <span class="badge is-neutral">12 dernières</span>
     </header>
     {% if recent_prints %}
@@ -124,7 +121,7 @@
       {% endfor %}
     </ol>
     {% else %}
-    <div class="machine-fleet-empty"><strong>Aucune impression confirmée</strong><p>Le journal se remplira depuis le panneau Production de chaque OF.</p></div>
+    {% include "components/ui/empty_state.html" with title="Aucune impression confirmée" message="Le journal se remplira depuis le panneau Production de chaque OF." %}
     {% endif %}
   </section>
   {% endif %}

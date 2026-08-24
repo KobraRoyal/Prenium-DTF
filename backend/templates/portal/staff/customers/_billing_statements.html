@@ -78,13 +78,7 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="billing-statement-empty">
-    <div class="billing-statement-empty__marker" aria-hidden="true">CSV</div>
-    <div>
-      <strong>Aucun récapitulatif généré</strong>
-      <p>Le premier relevé apparaîtra ici après la clôture d’un mois contenant des commandes en encours tarifées.</p>
-    </div>
-  </div>
+  {% include "components/ui/empty_state.html" with empty_mark="CSV" title="Aucun récapitulatif généré" message="Le premier relevé apparaîtra ici après la clôture d'un mois contenant des commandes en encours tarifées." %}
   {% endif %}
   </div>
 </details>

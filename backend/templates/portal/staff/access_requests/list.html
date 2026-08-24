@@ -1,15 +1,15 @@
 {% extends "portal/layout.html" %}
-{% load portal_tags %}
+{% load portal_tags ui_tags %}
 
 {% block title %}Demandes d’accès — Prenium DTF{% endblock %}
 {% block portal_content %}
 <div class="portal-page portal-page--staff access-request-queue" data-testid="access-request-queue">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_access_requests_list.html" title="Demandes d’accès" subtitle="Qualifiez les entreprises et ouvrez les comptes professionnels en toute sécurité." %}
 
-  <section class="portal-page-surface access-request-surface">
-  <div class="access-request-command" aria-labelledby="access-request-command-title">
+  <section class="portal-page-surface ui-list-section access-request-surface">
+  <div class="access-request-command ui-list-command" aria-labelledby="access-request-command-title">
     <h2 class="sr-only" id="access-request-command-title">Pilotage de la file</h2>
-    <dl class="access-request-command__facts">
+    <dl class="access-request-command__facts ui-list-command__facts">
       <div>
         <dt>À examiner</dt>
         <dd>{{ pending_review_count }}</dd>
@@ -19,7 +19,7 @@
         <dd>{{ high_urgency_pending_count }}</dd>
       </div>
     </dl>
-    <form class="access-request-search" method="get" role="search">
+    <form class="access-request-search ui-list-command__tools" method="get" role="search">
       <input name="status" type="hidden" value="{{ active_status }}">
       <label class="sr-only" for="access-request-search">Rechercher une demande</label>
       <input class="ui-input" id="access-request-search" name="q" type="search" value="{{ search_query }}" placeholder="Entreprise, contact, e-mail ou identifiant" autocomplete="off">
@@ -28,21 +28,10 @@
     </form>
   </div>
 
-  <nav class="prospect-filter-bar access-request-statuses" aria-label="Filtrer par statut">
-    {% for filter in status_filters %}
-    <a
-      class="access-request-status{% if filter.is_active %} is-active{% endif %}{% if not filter.count %} is-empty{% endif %}"
-      href="?status={{ filter.value }}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}"
-      {% if filter.is_active %}aria-current="page"{% endif %}
-    >
-      <span>{{ filter.label }}</span>
-      <strong>{{ filter.count }}</strong>
-    </a>
-    {% endfor %}
-  </nav>
+  {% ui_list_tabs status_filters aria_label="Filtrer par statut" url_name="portal:staff-access-request-list" query_param="status" preserve_query="q" %}
 
-  <section class="access-request-results" aria-labelledby="access-request-results-title">
-    <header class="access-request-results__head">
+  <section class="access-request-results ui-list-results" aria-labelledby="access-request-results-title">
+    <header class="access-request-results__head ui-list-results__head">
       <div>
         <h2 class="font-display" id="access-request-results-title">{{ active_status_label }}</h2>
         <p>

@@ -202,7 +202,7 @@ def test_client_dashboard_does_not_repeat_focused_project_in_list():
     B2BOrderProject.objects.create(
         customer=customer,
         created_by=user,
-        project_number="DTF-B2B-2026-000084",
+        project_number="GANG-SHEET-2026-000084",
         name="Planche unique",
         status=B2BOrderProject.Status.READY_TO_SUBMIT,
     )
@@ -211,7 +211,7 @@ def test_client_dashboard_does_not_repeat_focused_project_in_list():
 
     html = client.get(reverse("portal:client-dashboard")).content.decode()
 
-    assert html.count("DTF-B2B-2026-000084") == 1
+    assert html.count("GANG-SHEET-2026-000084") == 1
     assert 'data-testid="client-dashboard-focus"' in html
     assert "Reprendre" in html
     assert "Commandes à finaliser" not in html
@@ -330,7 +330,7 @@ def test_staff_navigation_groups_only_authorized_secondary_tools():
     assert client.login(email=staff_user.email, password="pass")
 
     limited_html = client.get(reverse("portal:staff-dashboard")).content.decode()
-    assert "File Atelier" in limited_html
+    assert "Tableau de bord" in limited_html
     assert "Commandes" in limited_html
     assert "Mon compte" in limited_html
     assert "Équipe Atelier" in limited_html
@@ -475,20 +475,22 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
 
     assert dashboard_response.status_code == 200
     dashboard_html = dashboard_response.content.decode()
-    assert "File Atelier" in dashboard_html
+    assert "Tableau de bord" in dashboard_html
+    assert "ui-kpi-grid" in dashboard_html
+    assert "OF non imprimés" in dashboard_html
     assert "product-shell--portal" in dashboard_html
-    assert "Commandes Atelier" in dashboard_html
-    assert 'aria-label="Filtrer la file Atelier"' in dashboard_html
-    assert 'role="tablist"' not in dashboard_html
-    assert "Prêts à imprimer" in dashboard_html
-    assert "Imprimer les 5 derniers OF prêts" in dashboard_html
+    assert "Filtrer la file Atelier" not in dashboard_html
+    assert "Imprimer le lot" in dashboard_html
+    assert "Prochain geste" not in dashboard_html
+    assert "atelier-next-action" not in dashboard_html
     assert "Contrats permissions" not in dashboard_html
     assert "Accès commandes autorisé" not in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
     detail_html = detail_response.content.decode()
-    assert "staff-order-focus" in detail_html
-    assert "À faire" in detail_html
+    assert "atelier-next-action" in detail_html
+    assert "staff-order-detail-identity" in detail_html
+    assert "Prochain geste" in detail_html
     assert "Aucun visuel reçu" in detail_html
     assert "Client &amp; références" not in detail_html
     assert "Workflow commande" not in detail_html
@@ -522,8 +524,8 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert operations_response.status_code == 200
     operations_html = operations_response.content.decode()
     assert "Pilotage Atelier" in operations_html
-    assert "Référence OF ou client" in operations_html
-    assert "Démarrer la production" in operations_html
+    assert "N° ordre de fabrication" in operations_html
+    assert "Scanner un OF" in operations_html
     assert scan_panel_response.status_code == 302
     assert reverse("portal:staff-atelier-operations") in scan_panel_response["Location"]
     assert billing_panel_response.status_code == 200

@@ -1,16 +1,17 @@
 {% extends "portal/layout.html" %}
-{% block title %}Projets B2B OPS — Prenium DTF{% endblock %}
+{% block title %}Gang Sheets OPS — Prenium DTF{% endblock %}
 {% block portal_content %}
 <div class="portal-page portal-page--staff staff-order-projects-page">
-{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_order_projects_list.html" title="Projets B2B transmis" subtitle="File de contrôle des projets transmis par les clients." %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_order_projects_list.html" title="Gang Sheets transmis" subtitle="File de contrôle des planches transmises par les clients." %}
 
-<section class="portal-page-surface staff-data-list" aria-label="Liste des projets B2B">
+<section class="portal-page-surface ui-list-section" aria-label="Liste des Gang Sheets">
   {% if projects %}
+  <div class="staff-data-list">
   <div class="staff-data-list__desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
     <table class="ui-data-table ui-data-table--comfortable">
       <thead>
         <tr>
-          <th>Projet</th>
+          <th>Gang Sheet</th>
           <th>Client</th>
           <th>Statut</th>
           <th>Lignes</th>
@@ -33,7 +34,7 @@
     </table>
   </div>
 
-  <div class="staff-data-list__mobile grid gap-3 min-[960px]:hidden" aria-label="Projets en cartes">
+  <div class="staff-data-list__mobile grid gap-3 min-[960px]:hidden" aria-label="Gang Sheets en cartes">
     {% for project in projects %}
     <a class="ui-data-card" href="{% url 'portal:staff-order-project-detail' project_public_id=project.public_id %}">
       <div class="ui-data-card__head">
@@ -51,9 +52,10 @@
     </a>
     {% endfor %}
   </div>
-  {% include "components/portal/pagination.html" with pagination_label="Pagination projets B2B" pagination_class="staff-pagination" %}
+  </div>
+  {% include "components/portal/pagination.html" with pagination_label="Pagination Gang Sheets" pagination_class="staff-pagination" %}
   {% else %}
-  {% include "components/ui/empty_state.html" with title="Aucun projet transmis" message="Les projets client transmis apparaîtront ici." %}
+  {% include "components/ui/empty_state.html" with title="Aucune Gang Sheet transmise" message="Les planches client transmises apparaîtront ici." %}
   {% endif %}
 </section>
 </div>

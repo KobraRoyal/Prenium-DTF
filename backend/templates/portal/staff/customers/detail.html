@@ -9,8 +9,8 @@
   {% include "components/portal/breadcrumbs/staff_customers.html" %}
 </div>
 
-<section class="staff-customer-detail" aria-label="Fiche compte client">
-  <header class="card staff-customer-focus" aria-labelledby="staff-customer-title">
+<section class="portal-page-surface staff-customer-detail-identity" aria-labelledby="staff-customer-title">
+  <header class="staff-customer-focus" aria-labelledby="staff-customer-title">
     <div class="staff-customer-focus__identity">
       <h1 id="staff-customer-title">{{ customer.name }}</h1>
       <div class="staff-customer-focus__statuses" aria-label="État du compte">
@@ -42,8 +42,9 @@
       </div>
     </dl>
   </header>
+</section>
 
-  <div class="staff-customer-workspace portal-page-surface staff-customer-workspace-surface" data-customer-workspace>
+<section class="portal-page-surface staff-customer-workspace staff-customer-workspace-surface" data-customer-workspace aria-label="Sections du compte">
     <nav class="staff-customer-workspace__nav" aria-label="Sections du compte client">
       <div class="staff-customer-workspace__nav-head">
         <strong>Gérer ce compte</strong>
@@ -95,12 +96,8 @@
           {% include "portal/staff/customers/_field.html" with field=account_form.billing_email %}
           {% include "portal/staff/customers/_field.html" with field=account_form.siren %}
           {% include "portal/staff/customers/_field.html" with field=account_form.vat_number %}
-          <div class="ui-field-group md:col-span-2">
-            <label class="ui-label flex items-center gap-2" for="{{ account_form.is_active.id_for_label }}">
-              {{ account_form.is_active }}
-              <span>{{ account_form.is_active.label }}</span>
-            </label>
-            {% if account_form.is_active.errors %}<p class="error-text ui-error-text" role="alert">{{ account_form.is_active.errors|striptags }}</p>{% endif %}
+          <div class="md:col-span-2">
+            {% include "portal/staff/customers/_checkbox_field.html" with field=account_form.is_active %}
           </div>
         </div>
       </fieldset>
@@ -244,10 +241,10 @@
         {% for field in pricing_form %}
         <div class="ui-field-group{% if field.name == 'enforce_credit_block' %} md:col-span-2{% endif %}">
           {% if field.field.widget.input_type == 'checkbox' %}
-          <label class="ui-label flex items-center gap-2" for="{{ field.id_for_label }}">
+          <div class="ui-checkbox-row">
             {{ field }}
-            <span>{{ field.label }}</span>
-          </label>
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          </div>
           {% else %}
           <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
           {{ field }}
@@ -386,8 +383,8 @@
 
       <div class="volume-tier-section-head">
         <div>
-          <h3>Grille propre au client</h3>
-          <p>Préparation fichier et livraison sont exclues du volume et de la remise.</p>
+          <h3 class="font-display text-lg">Grille propre au client</h3>
+          <p class="muted text-sm">Préparation fichier et livraison sont exclues du volume et de la remise.</p>
         </div>
         <span>{{ volume_discount_tier_rows|length }} palier{{ volume_discount_tier_rows|length|pluralize }}</span>
       </div>
@@ -413,10 +410,7 @@
         {% endif %}
       </ol>
       {% else %}
-      <div class="volume-tier-empty">
-        <div class="volume-tier-empty__marker" aria-hidden="true">%</div>
-        <div><h3>Aucun palier configuré</h3><p>Le prix DTF négocié ou catalogue s’applique sans remise.</p></div>
-      </div>
+      {% include "components/ui/empty_state.html" with empty_mark="%" title="Aucun palier configuré" message="Le prix DTF négocié ou catalogue s'applique sans remise." %}
       {% endif %}
 
       {% if can_edit_pricing %}
@@ -447,10 +441,10 @@
               {% if volume_discount_tier_add_form.discount_percent.errors %}<p class="error-text ui-error-text" role="alert">{{ volume_discount_tier_add_form.discount_percent.errors|striptags }}</p>{% endif %}
             </div>
             <div class="volume-tier-create-inline__actions">
-              <label class="volume-tier-toggle" for="{{ volume_discount_tier_add_form.is_active.id_for_label }}">
+              <div class="ui-checkbox-row volume-tier-toggle">
                 {{ volume_discount_tier_add_form.is_active }}
-                <span>Palier actif</span>
-              </label>
+                <label for="{{ volume_discount_tier_add_form.is_active.id_for_label }}">Palier actif</label>
+              </div>
               <button class="ui-btn ui-btn-primary" type="submit">Ajouter à la grille</button>
             </div>
           </div>
@@ -499,7 +493,6 @@
     </div>
   </details>
     </div>
-  </div>
 </section>
 </div>
 {% endblock %}

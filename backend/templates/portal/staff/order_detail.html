@@ -9,19 +9,34 @@
   {% include "components/portal/breadcrumbs/staff_order_detail.html" %}
 </div>
 
-<section class="staff-order-detail-stack" aria-label="Synthèse commande Atelier">
-<section class="card staff-order-focus" aria-labelledby="staff-order-title">
+{% if price_error %}
+<div class="alert alert--danger mb-4" role="alert">
+  <p>{{ price_error }}</p>
+</div>
+{% endif %}
+{% if delete_error %}
+<div class="alert alert--danger mb-4" role="alert">
+  <p>{{ delete_error }}</p>
+</div>
+{% endif %}
+{% if priced_ok %}
+<div class="alert alert--success workflow-panel__feedback workflow-panel__feedback--ephemeral mb-4" role="status">
+  <p>Tarification enregistrée.</p>
+</div>
+{% endif %}
+
+<section class="portal-page-surface staff-order-detail-identity" aria-labelledby="staff-order-title">
   <header class="staff-order-focus__header">
     <div class="staff-order-focus__identity">
-      <h1 id="staff-order-title">
+      <h1 id="staff-order-title" class="font-display">
         {% if production_job %}
-        <code class="staff-order-focus__of">{{ production_job.manufacturing_order_number }}</code>
+        <span class="staff-order-focus__of">{{ production_job.manufacturing_order_number }}</span>
         {% else %}
         OF à générer
         {% endif %}
       </h1>
-      <p class="staff-order-focus__meta">
-        <span>Commande <code class="staff-order-focus__ref">{{ staff_order_focus.order_reference }}</code></span>
+      <p class="staff-order-focus__meta muted text-sm">
+        <span>Commande <span class="staff-order-focus__ref">{{ staff_order_focus.order_reference }}</span></span>
         <span aria-hidden="true">·</span>
         <a class="staff-order-focus__client" href="{% url 'portal:staff-customer-detail' customer_public_id=order.customer.public_id %}">{{ order.customer.name }}</a>
         <span aria-hidden="true">·</span>
@@ -40,51 +55,34 @@
       </div>
       {% endif %}
     </div>
-    <div class="staff-order-focus__next">
-      <div class="staff-order-focus__next-copy">
-        <p class="staff-order-focus__next-label">À faire</p>
-        <p class="staff-order-focus__next-message">{{ staff_order_focus.action_message }}</p>
-      </div>
-      <div class="staff-order-focus__primary">
-        <a class="ui-btn ui-btn-primary" href="{{ request.path }}?panel={{ staff_order_focus.next_panel }}">{{ staff_order_focus.action_label }}</a>
-        {% if can_price_order and order.pricing_status != "priced" %}
-        <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}" data-submit-loading>
-          {% csrf_token %}
-          <button type="submit" class="ui-btn ui-btn-secondary">Calculer le prix</button>
-        </form>
-        {% endif %}
-      </div>
+    {% if can_delete_order %}
+    <div class="staff-order-focus__tools" aria-label="Actions secondaires">
+      {% include "portal/staff/partials/order_delete_button.html" %}
     </div>
+    {% endif %}
   </header>
+</section>
 
-  {% if can_delete_order %}
-  <div class="staff-order-focus__tools" aria-label="Actions secondaires">
-    {% include "portal/staff/partials/order_delete_button.html" %}
+<aside class="atelier-next-action" aria-labelledby="staff-order-next-title">
+  <div>
+    <p id="staff-order-next-title">Prochain geste</p>
+    <strong>{{ staff_order_focus.action_message }}</strong>
   </div>
-  {% endif %}
-</section>
+  <div class="staff-order-focus__primary">
+    <a class="ui-btn ui-btn-primary" href="{{ request.path }}?panel={{ staff_order_focus.next_panel }}">{{ staff_order_focus.action_label }}</a>
+    {% if can_price_order and order.pricing_status != "priced" %}
+    <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}" data-submit-loading>
+      {% csrf_token %}
+      <button type="submit" class="ui-btn ui-btn-secondary">Calculer le prix</button>
+    </form>
+    {% endif %}
+  </div>
+</aside>
 
-<div class="staff-order-detail-stack__status">
-{% if price_error %}
-<div class="alert alert--danger" role="alert">
-  <p>{{ price_error }}</p>
-</div>
-{% endif %}
-{% if delete_error %}
-<div class="alert alert--danger" role="alert">
-  <p>{{ delete_error }}</p>
-</div>
-{% endif %}
-{% if priced_ok %}
-<div class="alert alert--success workflow-panel__feedback workflow-panel__feedback--ephemeral" role="status">
-  <p>Tarification enregistrée.</p>
-</div>
-{% endif %}
-</div>
-
-<section class="portal-page-surface staff-order-detail-surface">
-{% order_htmx_tabs "staff" %}
-</section>
+<section class="portal-page-surface staff-order-detail-surface" aria-label="Étapes commande Atelier">
+  <div class="staff-order-detail-stack">
+    {% order_htmx_tabs "staff" %}
+  </div>
 </section>
 </div>
 {% endblock %}

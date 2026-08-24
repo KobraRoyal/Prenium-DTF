@@ -2,6 +2,7 @@
 @import "../components/client-dashboard.css";
 @import "../components/client-order-detail.css";
 @import "../components/b2b-order-project.css";
+@import "../components/kpi-metrics.css";
 @import "../components/gang-sheet.css";
 
 @tailwind components;

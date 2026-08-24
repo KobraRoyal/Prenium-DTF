@@ -6,9 +6,12 @@
 {% block portal_content %}
 <div class="portal-page portal-page--staff gang-settings-page">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_gang_sheet_settings.html" title="Laize et contraintes Gang Sheet" subtitle="Définissez les dimensions appliquées aux nouvelles planches sans modifier les brouillons existants." %}
-  <section class="portal-page-surface gang-sheet-create-card">
-    <div><h2>Paramètres de composition</h2><p>Dimensions en millimètres. La hauteur client suit automatiquement le pas défini.</p></div>
-    <form method="post" class="ui-form-stack">
+  <section class="portal-page-surface gang-settings-surface">
+    <header class="gang-settings-surface__intro">
+      <h2 class="font-display text-lg">Paramètres de composition</h2>
+      <p class="muted text-sm">Dimensions en millimètres. La hauteur client suit automatiquement le pas défini.</p>
+    </header>
+    <form method="post" class="ui-form-stack gang-settings-surface__form">
       {% csrf_token %}
       {% for field in form %}
       <div class="ui-field-group">

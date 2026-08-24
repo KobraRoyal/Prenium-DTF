@@ -1,6 +1,6 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="production" %}
-<div class="panel client-order-panel client-order-panel--production" aria-label="Avancement">
+<div class="client-order-panel client-order-panel--production" aria-label="Avancement">
   {% if status_history %}
   <ol class="client-status-timeline" aria-label="Historique des statuts de la commande">
     {% for event in status_history %}

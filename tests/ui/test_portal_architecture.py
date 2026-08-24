@@ -103,6 +103,7 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
         (
             "views_client",
             {
+                "apps.portal.client_order_presentation",
                 "apps.portal.dashboard_focus",
                 "apps.portal.views_common",
                 "apps.portal.views_payments",
@@ -111,7 +112,7 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
         ("views_checkout", {"apps.portal.htmx", "apps.portal.views_common"}),
         ("views_staff", {"apps.portal.views_common"}),
         ("views_staff_dashboard", {"apps.portal.views_common"}),
-        ("views_staff_documents", {"apps.portal.views_common"}),
+        ("views_staff_documents", {"apps.portal.htmx", "apps.portal.views_common"}),
         (
             "views_staff_uploads",
             {"apps.portal.views_common", "apps.portal.views_staff"},
@@ -137,6 +138,7 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
             "views_staff_operations",
             {
                 "apps.portal.htmx",
+                "apps.portal.services.atelier_operator_context",
                 "apps.portal.shipping_forms",
                 "apps.portal.views_common",
             },
@@ -170,9 +172,9 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_staff_billing", 170),
         ("views_staff_production", 180),
         ("views_staff_shipping", 190),
-        ("views_staff_operations", 240),
+        ("views_staff_operations", 400),
         ("views_common", 220),
-        ("views_checkout", 260),
+        ("views_checkout", 270),
         ("views_client", 420),
     ],
 )

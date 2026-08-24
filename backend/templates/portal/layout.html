@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static portal_tags %}
 
 {% block body_class %}landing-saas portal-shell product-shell product-shell--portal{% endblock %}
 
 {% block surface_styles %}
 {% include "components/portal/surface_styles.html" with portal_surface=nav_mode|default:"client" %}
 {% if request.resolver_match.view_name == "portal:client-gang-sheet-editor" %}
-<link rel="stylesheet" href="{% static 'css/studio.css' %}?v=20260823-brand-light-v16">
+{% portal_css_asset_v as asset_v %}
+<link rel="stylesheet" href="{% static 'css/studio.css' %}?v={{ asset_v }}">
 {% endif %}
 {% endblock %}
 

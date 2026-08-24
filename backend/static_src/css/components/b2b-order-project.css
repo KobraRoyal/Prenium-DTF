@@ -1,5 +1,12 @@
 /* Fiche commande à finaliser : retour, pas un kicker au-dessus du titre. */
 
+body.product-shell .b2b-configurator,
+body.product-shell .b2b-project-options {
+  border: 2px solid var(--product-line);
+  background: var(--product-panel);
+  color: var(--product-ink);
+}
+
 body.product-shell .b2b-project-header__intro .ui-breadcrumb {
   margin: 0 0 0.5rem;
   color: var(--product-muted);

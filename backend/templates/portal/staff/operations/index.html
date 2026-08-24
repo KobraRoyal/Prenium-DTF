@@ -4,51 +4,52 @@
 
 {% block portal_content %}
 <div class="portal-page portal-page--staff atelier-operations-page">
-<!--
-THESIS: une console de gestes successifs, pas une collection de fiches commande miniatures.
-OWN-WORLD: shell clair atelier, surfaces blanches, accent corail sur l’action suivante, lignes nettes.
-STORY: l'opérateur scanne ou recherche un OF, lit son état, exécute le prochain geste et reste dans la file.
-FIRST VIEWPORT: champ OF autofocus pleine largeur, quatre filtres de file, puis lignes d'action compactes.
-FORM: registre opérationnel inline, extension directe du monde Atelier établi.
--->
-{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_operations.html" title="Pilotage Atelier" subtitle="Scannez un OF, changez son statut et déclenchez l’action suivante sans quitter la file." %}
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_operations.html" title="Pilotage Atelier" subtitle="Scannez un OF pour afficher la commande et piloter production, contrôle fichiers, machine et expédition." %}
 
-<section class="portal-page-surface atelier-operations-surface">
+<section class="portal-page-surface ui-list-section atelier-operations-surface">
   <form
-    class="atelier-operations-scan"
+    class="atelier-operations-scan-bar"
     method="get"
     action="{% url 'portal:staff-atelier-operations' %}"
     hx-get="{% url 'portal:staff-atelier-operations' %}"
-    hx-target="#atelier-operations-workspace"
+    hx-target="#atelier-operations-panel"
     hx-swap="outerHTML"
     hx-push-url="true"
     hx-indicator="#portal-htmx-indicator"
     x-data="{ focused: false }"
     x-init="$nextTick(() => $refs.operationScan.focus({ preventScroll: true }))"
+    aria-labelledby="atelier-operations-scan-title"
   >
-    <input type="hidden" name="queue" value="{{ queue }}">
-    <div class="atelier-operations-scan__field">
-      <label for="atelier-operation-query">Référence OF ou client</label>
+    <div class="atelier-operations-scan-bar__head">
+      <div>
+        <h2 class="font-display" id="atelier-operations-scan-title">Scanner un OF</h2>
+        <p>Saisissez ou scannez le numéro d’ordre de fabrication pour afficher la commande.</p>
+      </div>
+      <p class="atelier-operations-scan__signal" :class="{ 'is-ready': focused }" aria-live="polite">
+        <span aria-hidden="true"></span>
+        <span x-text="focused ? 'Douchette prête' : 'En attente de scan'">En attente de scan</span>
+      </p>
+    </div>
+    <div class="atelier-operations-scan-bar__field">
+      <label class="ui-label" for="atelier-operation-query">N° ordre de fabrication</label>
       <input
-        class="ui-input"
+        class="ui-input atelier-operations-scan__input"
         id="atelier-operation-query"
         name="q"
         value="{{ query }}"
         type="search"
         autocomplete="off"
         spellcheck="false"
-        placeholder="OF-… ou nom du client"
+        placeholder="OF-20260823-XXXXXXXX"
         x-ref="operationScan"
         @focus="focused = true"
         @blur="focused = false"
       >
     </div>
-    <button class="ui-btn ui-btn-primary" type="submit">Afficher l’OF</button>
-    {% if query %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-atelier-operations' %}?queue={{ queue }}">Effacer</a>{% endif %}
-    <p class="atelier-operations-scan__signal" :class="{ 'is-ready': focused }" aria-live="polite">
-      <span aria-hidden="true"></span>
-      <span x-text="focused ? 'Douchette prête' : 'Cliquez dans le champ pour scanner'">Douchette prête</span>
-    </p>
+    <div class="atelier-operations-scan-bar__actions">
+      <button class="ui-btn ui-btn-primary" type="submit">Afficher la commande</button>
+      {% if query %}<a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-atelier-operations' %}">Nouveau scan</a>{% endif %}
+    </div>
   </form>
 
   {% include "portal/staff/operations/_workspace.html" %}

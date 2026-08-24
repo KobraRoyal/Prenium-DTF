@@ -7,23 +7,23 @@
   {% include "components/portal/breadcrumbs/staff_order_project_detail.html" %}
 </div>
 
-<section class="staff-project-detail" aria-label="Fiche projet B2B">
-  <section class="card staff-project-focus" aria-labelledby="staff-project-title">
-    <div class="staff-project-focus__identity">
-      <div>
-        <h1 id="staff-project-title">{{ project.name }}</h1>
-        <code>{{ project.project_number }}</code>
-      </div>
-      <span class="badge {{ project.status|badge_tone }}">{{ project.get_status_display }}</span>
+<section class="portal-page-surface staff-project-detail-identity" aria-labelledby="staff-project-title">
+  <div class="staff-project-focus__identity">
+    <div>
+      <h1 id="staff-project-title">{{ project.name }}</h1>
+      <code>{{ project.project_number }}</code>
     </div>
-    <dl class="staff-project-focus__facts">
-      <div><dt>Client</dt><dd>{{ project.customer.name }}</dd></div>
-      <div><dt>Créé par</dt><dd>{{ project.created_by.email|default:"Non renseigné" }}</dd></div>
-      <div><dt>Visuels</dt><dd>{{ project.items.count }}</dd></div>
-    </dl>
-  </section>
+    <span class="badge {{ project.status|badge_tone }}">{{ project.get_status_display }}</span>
+  </div>
+  <dl class="staff-project-focus__facts">
+    <div><dt>Client</dt><dd>{{ project.customer.name }}</dd></div>
+    <div><dt>Créé par</dt><dd>{{ project.created_by.email|default:"Non renseigné" }}</dd></div>
+    <div><dt>Visuels</dt><dd>{{ project.items.count }}</dd></div>
+  </dl>
+</section>
 
-  <section class="portal-page-surface staff-project-items" aria-labelledby="staff-project-items-title">
+<section class="portal-page-surface staff-project-detail-surface" aria-labelledby="staff-project-items-title">
+  <section class="staff-project-items" aria-labelledby="staff-project-items-title">
     <header>
       <div><h2 id="staff-project-items-title">Visuels à contrôler</h2><p>Vérifiez le fichier, l’analyse et les dimensions avant traitement.</p></div>
       <span class="badge is-neutral">{{ project.items.count }} ligne{{ project.items.count|pluralize }}</span>

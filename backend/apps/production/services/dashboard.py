@@ -4,6 +4,8 @@ from collections import Counter
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from django.urls import reverse
+
 from apps.billing.services.production_payment_gate import (
     order_awaits_client_payment,
     production_start_blocked_reason,
@@ -11,62 +13,84 @@ from apps.billing.services.production_payment_gate import (
 from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
+from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUploadDriveSync, OrderUploadReview
 
 
 class AtelierDashboardService:
-    """Construit la file opérationnelle Atelier sans données commerciales inutiles."""
+    """Tour de contrôle : commandes soumises dont l'OF PDF n'a pas encore été émis."""
 
-    recent_limit = 12
-    default_tab = "to_review"
-    tab_definitions = (
-        ("to_review", "À traiter"),
-        ("ready", "Prêts à imprimer"),
-        ("production", "En production"),
-        ("all", "Tous"),
-    )
+    pilotage_url = "/staff/atelier/pilotage/"
 
-    def build_dashboard(self, *, active_tab: str | None = None) -> dict[str, object]:
-        normalized_tab = self._normalize_tab(active_tab)
-        orders = list(self._recent_orders_queryset()[: self.recent_limit])
-        all_rows = [self._serialize_order(order=order) for order in orders]
-        rows = [row for row in all_rows if self._row_matches_tab(row=row, tab=normalized_tab)]
-        tab_counts = {
-            tab: sum(self._row_matches_tab(row=row, tab=tab) for row in all_rows)
-            for tab, _label in self.tab_definitions
-        }
+    def build_dashboard(self) -> dict[str, object]:
+        all_orders = list(self._unissued_orders_queryset())
+        rows = [self._serialize_order(order=order) for order in all_orders]
+        metrics = self._build_metrics(rows)
+        batch_service = ManufacturingOrderBatchService()
+        unprinted_total = batch_service.count_unissued_orders()
         return {
             "rows": rows,
-            "active_tab": normalized_tab,
-            "tabs": [
-                {
-                    "key": tab,
-                    "label": label,
-                    "count": tab_counts[tab],
-                    "is_active": tab == normalized_tab,
-                }
-                for tab, label in self.tab_definitions
-            ],
-            "metrics": {
-                "pending_review": sum(
-                    row["review_status"] in {"missing_files", "pending"} for row in all_rows
-                ),
-                "changes_requested": sum(
-                    row["review_status"] == "changes_requested" for row in all_rows
-                ),
-                "ready_to_print": sum(row["ready_to_print"] for row in all_rows),
-                "in_production": sum(
-                    row["production_status"]
-                    in {ProductionJob.Status.IN_PROGRESS, ProductionJob.Status.BLOCKED}
-                    for row in all_rows
-                ),
-                "blocked": sum(
-                    row["production_status"] == ProductionJob.Status.BLOCKED for row in all_rows
-                ),
-            },
+            "metrics": metrics,
+            "kpi_rows": self._build_kpi_rows(
+                metrics=metrics,
+                unprinted_total=unprinted_total,
+            ),
             "printable_count": sum(row["print_eligible"] for row in rows),
+            "unprinted_of_total": unprinted_total,
+            "unprinted_of_batch_count": min(unprinted_total, batch_service.max_batch_size),
+            "batch_print_limit": batch_service.max_batch_size,
         }
+
+    def _build_metrics(self, all_rows: list[dict[str, object]]) -> dict[str, int]:
+        return {
+            "unprinted": len(all_rows),
+            "pending_review": sum(
+                row["review_status"] in {"missing_files", "pending"} for row in all_rows
+            ),
+            "changes_requested": sum(
+                row["review_status"] == "changes_requested" for row in all_rows
+            ),
+            "files_validated": sum(row["review_status"] == "approved" for row in all_rows),
+        }
+
+    def _build_kpi_rows(
+        self,
+        *,
+        metrics: dict[str, int],
+        unprinted_total: int,
+    ) -> list[dict[str, object]]:
+        orders_url = reverse("portal:staff-order-list")
+        return [
+            {
+                "label": "OF non imprimés",
+                "value": unprinted_total,
+                "hint": "Voir la liste filtrée des OF à émettre.",
+                "tone": "is-ready" if unprinted_total else "",
+                "card_href": f"{orders_url}?queue=unprinted",
+            },
+            {
+                "label": "À contrôler",
+                "value": metrics["pending_review"],
+                "hint": "Fichiers à valider dans le pilotage.",
+                "tone": "is-attention" if metrics["pending_review"] else "",
+                "card_href": f"{orders_url}?queue=to_review",
+            },
+            {
+                "label": "Corrections client",
+                "value": metrics["changes_requested"],
+                "hint": "Visuels à corriger avant le pilotage.",
+                "tone": "is-danger" if metrics["changes_requested"] else "",
+                "card_href": f"{orders_url}?queue=changes",
+            },
+            {
+                "label": "Fichiers validés",
+                "value": metrics["files_validated"],
+                "hint": "Prêts pour le pilotage après impression OF.",
+                "tone": "" if not metrics["files_validated"] else "is-ready",
+                "card_href": f"{orders_url}?queue=approved",
+            },
+        ]
 
     def build_order_focus(self, *, order: Order) -> dict[str, object]:
         """Expose la seule prochaine action utile à la fiche commande Atelier."""
@@ -79,28 +103,9 @@ class AtelierDashboardService:
         focus["action_message"] = action_message
         return focus
 
-    def _normalize_tab(self, active_tab: str | None) -> str:
-        allowed = {tab for tab, _label in self.tab_definitions}
-        return active_tab if active_tab in allowed else self.default_tab
-
-    def _row_matches_tab(self, *, row: dict[str, object], tab: str) -> bool:
-        if tab == "to_review":
-            return row["review_status"] in {"missing_files", "pending", "changes_requested"}
-        if tab == "ready":
-            return bool(row["ready_to_print"])
-        if tab == "production":
-            return row["production_status"] in {
-                ProductionJob.Status.IN_PROGRESS,
-                ProductionJob.Status.BLOCKED,
-            }
-        return True
-
-    def _recent_orders_queryset(self):
-        return (
-            Order.objects.filter(status=Order.Status.SUBMITTED)
-            .select_related("customer", "production_job", "production_job__assigned_machine")
-            .prefetch_related("uploads", "uploads__atelier_review")
-            .order_by("-created_at")
+    def _unissued_orders_queryset(self):
+        return ManufacturingOrderBatchService()._unissued_queryset().select_related(
+            "production_job__assigned_machine"
         )
 
     def _serialize_order(self, *, order: Order) -> dict[str, object]:
@@ -130,10 +135,15 @@ class AtelierDashboardService:
             and production_start_blocked_reason(order) is None
         )
         print_eligible = bool(
-            all_approved
-            and production_job is not None
+            production_job is not None
+            and production_job.of_document_issued_at is None
             and production_status != ProductionJob.Status.COMPLETED
-            and production_start_blocked_reason(order) is None
+            and order.status == Order.Status.SUBMITTED
+        )
+        files_to_process_count, files_to_process_label = self._files_to_process_summary(
+            upload_count=len(uploads),
+            review_status=review_status,
+            review_counter=review_counter,
         )
         next_action, next_panel = self._next_action(
             review_status=review_status,
@@ -152,6 +162,8 @@ class AtelierDashboardService:
             "review_tone": review_tone,
             "approved_count": review_counter[OrderUploadReview.Status.APPROVED],
             "upload_count": len(uploads),
+            "files_to_process_count": files_to_process_count,
+            "files_to_process_label": files_to_process_label,
             "production_status": production_status,
             "production_label": ProductionWorkflowService.document_status_labels.get(
                 production_status,
@@ -166,12 +178,29 @@ class AtelierDashboardService:
             "machine_missing": assigned_machine is None,
             "ready_to_print": ready_to_print,
             "print_eligible": print_eligible,
+            "of_unissued": print_eligible,
             "next_action": next_action,
             "next_panel": next_panel,
-            "next_via_operations": bool(
-                next_action != "Tarifer" and next_panel in {"production", "shipping"}
-            ),
+            "next_via_operations": next_action in {"Contrôler", "Suivre", "Lancer", "Expédier"},
         }
+
+    def _files_to_process_summary(
+        self,
+        *,
+        upload_count: int,
+        review_status: str,
+        review_counter: Counter,
+    ) -> tuple[int, str]:
+        if upload_count == 0:
+            return 0, "Aucun fichier"
+        pending = review_counter[OrderUploadReview.Status.PENDING]
+        changes = review_counter[OrderUploadReview.Status.CHANGES_REQUESTED]
+        to_process = pending + changes
+        if review_status == "missing_files":
+            return 0, "Aucun fichier"
+        if to_process == 0:
+            return 0, f"{upload_count} validé(s)"
+        return to_process, f"{to_process} à traiter"
 
     def _review_state(self, *, upload_count: int, counter: Counter) -> tuple[str, str, str]:
         if upload_count == 0:

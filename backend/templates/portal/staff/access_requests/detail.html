@@ -9,8 +9,16 @@
   {% include "components/portal/breadcrumbs/staff_access_request_detail.html" %}
 </div>
 
-<section class="staff-access-detail" aria-label="Fiche demande d’accès">
-  <header class="card staff-access-focus" aria-labelledby="staff-access-title">
+{% if messages %}
+{% for message in messages %}
+<div class="alert {% if message.tags == 'success' %}alert--success{% else %}alert--danger{% endif %} workflow-panel__feedback mb-4" role="status">
+  <p class="m-0">{{ message }}</p>
+</div>
+{% endfor %}
+{% endif %}
+
+<section class="portal-page-surface staff-access-detail-identity" aria-labelledby="staff-access-title">
+  <header class="staff-access-focus" aria-labelledby="staff-access-title">
     <div class="staff-access-focus__identity">
       <h1 id="staff-access-title">{{ profile.company }}</h1>
       <div class="staff-access-focus__statuses" aria-label="État de la demande">
@@ -36,17 +44,21 @@
       </div>
     </dl>
   </header>
+</section>
 
-  {% if messages %}
-  {% for message in messages %}
-  <div class="alert {% if message.tags == 'success' %}alert--success{% else %}alert--danger{% endif %} workflow-panel__feedback" role="status">
-    <p class="m-0">{{ message }}</p>
+{% if can_review and profile.status == "pending_review" %}
+<aside class="atelier-next-action" aria-labelledby="staff-access-next-title">
+  <div>
+    <p id="staff-access-next-title">Prochain geste</p>
+    <strong>Valider l’accès ou refuser la demande après lecture du dossier.</strong>
   </div>
-  {% endfor %}
-  {% endif %}
+  <a class="ui-btn ui-btn-primary" href="#access-approve-heading">Traiter la demande</a>
+</aside>
+{% endif %}
 
-  <div class="access-review-grid portal-page-surface staff-access-detail-surface">
-    <section class="card staff-access-panel" aria-labelledby="access-company-heading">
+<section class="portal-page-surface staff-access-detail-surface" aria-label="Dossier demande d’accès">
+  <div class="access-review-grid">
+    <section class="staff-access-panel" aria-labelledby="access-company-heading">
       <div class="staff-access-panel__head">
         <div>
           <h2 id="access-company-heading">Entreprise</h2>
@@ -81,7 +93,7 @@
       </dl>
     </section>
 
-    <section class="card staff-access-panel" aria-labelledby="access-project-heading">
+    <section class="staff-access-panel" aria-labelledby="access-project-heading">
       <div class="staff-access-panel__head">
         <div>
           <h2 id="access-project-heading">Projet</h2>
@@ -114,7 +126,7 @@
   </div>
 
   {% if profile.status != "pending_review" or profile.reviewed_at %}
-  <section class="card staff-access-panel" aria-labelledby="access-decision-heading">
+  <section class="staff-access-panel" aria-labelledby="access-decision-heading">
     <div class="staff-access-panel__head">
       <div>
         <h2 id="access-decision-heading">Décision</h2>
@@ -159,7 +171,7 @@
   {% if can_review and profile.status == "pending_review" %}
   <div class="access-review-actions">
     <form
-      class="card staff-access-panel ui-form-stack"
+      class="staff-access-panel ui-form-stack"
       method="post"
       action="{% url 'portal:staff-access-request-approve' profile_public_id=profile.public_id %}"
       data-submit-loading
@@ -176,7 +188,7 @@
       {% include "components/forms/form_actions.html" with primary_label="Valider et envoyer l’activation" %}
     </form>
 
-    <details class="card staff-access-panel access-review-reject" {% if rejection_form.errors %}open{% endif %}>
+    <details class="staff-access-panel access-review-reject" {% if rejection_form.errors %}open{% endif %}>
       <summary><span><strong id="access-reject-heading">Refuser la demande</strong><small>Action secondaire et irréversible</small></span><span aria-hidden="true">+</span></summary>
       <form
         class="ui-form-stack"

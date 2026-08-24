@@ -1,16 +1,30 @@
 <section class="kpi-grid ui-kpi-grid">
   {% for item in items %}
-  <article class="card ui-card ui-card--metric ui-kpi-card{% if item.tone %} {{ item.tone }}{% endif %}">
+  {% if item.card_href %}
+  <a
+    class="ui-kpi-card ui-kpi-card--filter{% if item.tone %} {{ item.tone }}{% endif %}{% if item.is_active %} is-active{% endif %}"
+    href="{{ item.card_href }}"
+    aria-current="{% if item.is_active %}true{% else %}false{% endif %}"
+  >
+  {% else %}
+  <article class="ui-kpi-card{% if item.tone %} {{ item.tone }}{% endif %}">
+  {% endif %}
     <div class="ui-kpi-card__top">
       <p class="muted text-sm">{{ item.label }}</p>
       {% if item.action_url %}
-      <a class="ui-kpi-card__action" href="{{ item.action_url }}" aria-label="{{ item.action_label|default:item.label }}">{{ item.action_label|default:"Ouvrir" }}</a>
+      <span class="ui-kpi-card__action" aria-hidden="true">{{ item.action_label|default:"Ouvrir" }}</span>
+      {% elif item.card_href %}
+      <span class="ui-kpi-card__action" aria-hidden="true">Filtrer</span>
       {% endif %}
     </div>
     <p class="ui-kpi-card__value">{{ item.value }}</p>
     {% if item.hint %}
     <p class="ui-kpi-card__hint">{{ item.hint }}</p>
     {% endif %}
+  {% if item.card_href %}
+  </a>
+  {% else %}
   </article>
+  {% endif %}
   {% endfor %}
 </section>

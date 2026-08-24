@@ -12,17 +12,30 @@ def source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def portal_surface_css() -> str:
+    """CSS réellement chargé par le portail après le split core / client / staff / prospect."""
+    return "\n".join(
+        [
+            source(CSS_DIR / "entries" / "portal-core.css"),
+            source(CSS_DIR / "entries" / "portal.css"),
+            source(CSS_DIR / "entries" / "prospect.css"),
+            source(CSS_DIR / "components" / "prospect-journey.css"),
+            source(CSS_DIR / "components" / "product-polish.css"),
+        ]
+    )
+
+
 class ProductPolishUITests(SimpleTestCase):
     def test_product_polish_is_the_last_portal_component_before_tailwind(self) -> None:
-        entry = source(CSS_DIR / "entries/portal.css")
+        core = source(CSS_DIR / "entries/portal-core.css")
+        aggregator = source(CSS_DIR / "entries/portal.css")
         polish_import = '@import "../components/product-polish.css";'
         last_import = '@import "../components/prospect-journey.css";'
 
-        self.assertIn(polish_import, entry)
-        self.assertIn(last_import, entry)
-        self.assertLess(entry.index(polish_import), entry.index("@tailwind base"))
-        self.assertLess(entry.index(last_import), entry.index("@tailwind base"))
-        self.assertEqual(entry.rfind("@import"), entry.index(last_import))
+        self.assertIn(polish_import, core)
+        self.assertIn(last_import, aggregator)
+        self.assertLess(core.index(polish_import), core.index("@tailwind base"))
+        self.assertEqual(aggregator.rfind("@import"), aggregator.index(last_import))
 
         polish = source(CSS_DIR / "components/product-polish.css")
         self.assertIn("@layer utilities", polish)
@@ -178,7 +191,7 @@ class ProductPolishUITests(SimpleTestCase):
                     self.assertNotIn(marker, markup)
 
     def test_portal_entrypoint_redefines_product_tokens_from_global_palette(self) -> None:
-        entry = source(CSS_DIR / "entries" / "portal.css")
+        entry = portal_surface_css()
         shell = source(CSS_DIR / "components" / "shell.css")
 
         for token in [
@@ -195,7 +208,7 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn(".staff-customer-focus", shell)
 
     def test_portal_entrypoint_neutralizes_prospect_brutalist_runtime(self) -> None:
-        entry = source(CSS_DIR / "entries" / "portal.css")
+        entry = portal_surface_css()
 
         for marker in [
             "body.prospect-journey-page",
@@ -210,7 +223,7 @@ class ProductPolishUITests(SimpleTestCase):
                 self.assertIn(marker, entry)
 
     def test_portal_entrypoint_styles_prospect_product_field_inputs(self) -> None:
-        entry = source(CSS_DIR / "entries" / "portal.css")
+        entry = portal_surface_css()
 
         for marker in [
             ".product-field-input",
@@ -221,7 +234,7 @@ class ProductPolishUITests(SimpleTestCase):
                 self.assertIn(marker, entry)
 
     def test_portal_entrypoint_neutralizes_product_shell_card_shadows(self) -> None:
-        entry = source(CSS_DIR / "entries" / "portal.css")
+        entry = portal_surface_css()
 
         for marker in [
             "html[data-theme=\"prenium\"] body.product-shell",
@@ -234,7 +247,7 @@ class ProductPolishUITests(SimpleTestCase):
                 self.assertIn(marker, entry)
 
     def test_portal_entrypoint_overrides_app_legacy_portal_shell_brutalism(self) -> None:
-        entry = source(CSS_DIR / "entries" / "portal.css")
+        entry = portal_surface_css()
         legacy = source(CSS_DIR / "legacy" / "app-legacy.css")
 
         self.assertIn("body.landing-saas.portal-shell .card", legacy)

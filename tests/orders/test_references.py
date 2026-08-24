@@ -14,7 +14,7 @@ def test_order_client_reference_from_linked_project():
     B2BOrderProject.objects.create(
         customer=customer,
         created_by=user,
-        project_number="DTF-B2B-2026-100001",
+        project_number="GANG-SHEET-2026-100001",
         name="Collection été",
         converted_order=order,
         status=B2BOrderProject.Status.CONVERTED,

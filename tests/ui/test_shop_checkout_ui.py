@@ -67,8 +67,8 @@ def test_marketing_pages_are_accessible_for_anonymous():
     assert 'id="services-benefits"' in services_html
     assert 'id="services-use-cases"' in services_html
     assert 'id="services-cta-final"' in services_html
-    assert "impression premium ou préparation fichier" in services_html.lower()
-    assert "envoyer un fichier à optimiser" in services_html.lower()
+    assert "impression dtf premium ou préparation fichier" in services_html.lower()
+    assert "faire optimiser un fichier" in services_html.lower()
     assert "Déjà client ? Connexion" in services_html
     assert "Impression DTF premium" in services_html
     assert "Préparation de fichiers DTF" in services_html

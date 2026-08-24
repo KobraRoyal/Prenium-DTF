@@ -4,20 +4,23 @@
     gap: 1.25rem;
   }
 
-  body.product-shell .access-request-command {
+  body.product-shell :is(.access-request-command, .ui-list-command) {
     display: grid;
     grid-template-columns: minmax(0, 0.82fr) minmax(24rem, 1.18fr);
+  }
+
+  body.product-shell .access-request-command {
     border: 1px solid var(--product-line);
     background: var(--product-panel);
   }
 
-  body.product-shell .access-request-command__facts {
+  body.product-shell :is(.access-request-command__facts, .ui-list-command__facts) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin: 0;
   }
 
-  body.product-shell .access-request-command__facts > div {
+  body.product-shell :is(.access-request-command__facts, .ui-list-command__facts) > div {
     display: grid;
     align-content: center;
     gap: 0.25rem;
@@ -25,11 +28,11 @@
     padding: 0.85rem 1rem;
   }
 
-  body.product-shell .access-request-command__facts > div + div {
+  body.product-shell :is(.access-request-command__facts, .ui-list-command__facts) > div + div {
     border-left: 1px solid var(--product-line);
   }
 
-  body.product-shell .access-request-command__facts dt {
+  body.product-shell :is(.access-request-command__facts, .ui-list-command__facts) dt {
     color: var(--product-muted);
     font-size: 0.7rem;
     font-weight: 750;
@@ -37,14 +40,14 @@
     text-transform: uppercase;
   }
 
-  body.product-shell .access-request-command__facts dd {
+  body.product-shell :is(.access-request-command__facts, .ui-list-command__facts) dd {
     margin: 0;
     font-size: 1.15rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
   }
 
-  body.product-shell .access-request-search {
+  body.product-shell :is(.access-request-search, .ui-list-command__tools) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
@@ -55,7 +58,7 @@
     background: color-mix(in srgb, var(--product-blue) 6%, var(--product-panel));
   }
 
-  body.product-shell .access-request-search .ui-input {
+  body.product-shell :is(.access-request-search, .ui-list-command__tools) .ui-input {
     min-width: 0;
     min-height: 2.75rem;
   }
@@ -130,14 +133,17 @@
     font-variant-numeric: tabular-nums;
   }
 
-  body.product-shell .access-request-results {
+  body.product-shell :is(.access-request-results, .ui-list-results) {
     min-width: 0;
+  }
+
+  body.product-shell .access-request-results {
     border: 1px solid var(--product-line);
     background: var(--product-panel);
     box-shadow: 4px 4px 0 var(--product-line);
   }
 
-  body.product-shell .access-request-results__head {
+  body.product-shell :is(.access-request-results__head, .ui-list-results__head) {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -146,18 +152,18 @@
     border-bottom: 1px solid var(--product-line);
   }
 
-  body.product-shell .access-request-results__head h2,
-  body.product-shell .access-request-results__head p {
+  body.product-shell :is(.access-request-results__head, .ui-list-results__head) h2,
+  body.product-shell :is(.access-request-results__head, .ui-list-results__head) p {
     margin: 0;
   }
 
-  body.product-shell .access-request-results__head h2 {
+  body.product-shell :is(.access-request-results__head, .ui-list-results__head) h2 {
     font-size: 1.2rem;
     font-weight: 800;
     letter-spacing: -0.02em;
   }
 
-  body.product-shell .access-request-results__head p {
+  body.product-shell :is(.access-request-results__head, .ui-list-results__head) p {
     margin-top: 0.15rem;
     color: var(--product-muted);
     font-size: 0.82rem;
@@ -303,7 +309,7 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    body.product-shell .access-request-search {
+    body.product-shell :is(.access-request-search, .ui-list-command__tools) {
       border-top: 1px solid var(--product-line);
       border-left: 0;
     }
@@ -320,17 +326,17 @@
       border-left: 0;
     }
 
-    body.product-shell .access-request-results {
+    body.product-shell :is(.access-request-results, .ui-list-results) {
       box-shadow: 3px 3px 0 var(--product-line);
     }
   }
 
   @media (max-width: 639px) {
-    body.product-shell .access-request-command__facts {
+    body.product-shell :is(.access-request-command__facts, .ui-list-command__facts) {
       grid-template-columns: minmax(0, 1fr);
     }
 
-    body.product-shell .access-request-command__facts > div {
+    body.product-shell :is(.access-request-command__facts, .ui-list-command__facts) > div {
       display: flex;
       align-items: baseline;
       justify-content: space-between;
@@ -338,20 +344,20 @@
       padding: 0.7rem 0.85rem;
     }
 
-    body.product-shell .access-request-command__facts > div + div {
+    body.product-shell :is(.access-request-command__facts, .ui-list-command__facts) > div + div {
       border-top: 1px solid var(--product-line);
       border-left: 0;
     }
 
-    body.product-shell .access-request-command__facts dd {
+    body.product-shell :is(.access-request-command__facts, .ui-list-command__facts) dd {
       font-size: 1rem;
     }
 
-    body.product-shell .access-request-search {
+    body.product-shell :is(.access-request-search, .ui-list-command__tools) {
       grid-template-columns: minmax(0, 1fr) auto;
     }
 
-    body.product-shell .access-request-search .ui-btn-ghost {
+    body.product-shell :is(.access-request-search, .ui-list-command__tools) .ui-btn-ghost {
       grid-column: 1 / -1;
       width: 100%;
     }
@@ -376,7 +382,7 @@
       border-left: 0 !important;
     }
 
-    body.product-shell .access-request-results__head {
+    body.product-shell :is(.access-request-results__head, .ui-list-results__head) {
       align-items: flex-start;
       flex-direction: column;
       padding: 1rem;

@@ -1,5 +1,5 @@
 <div id="staff-order-inspection-panel" class="workflow-panel atelier-inspection">
-  <div class="workflow-panel__hero atelier-inspection__hero">
+  <header class="workflow-panel__hero atelier-inspection__hero">
     <div>
       <h3 class="workflow-panel__title">Contrôle fichiers</h3>
       <p class="workflow-panel__meta">
@@ -9,7 +9,7 @@
         {% else %}Aucune décision en attente{% endif %}
       </p>
     </div>
-  </div>
+  </header>
 
   {% if uploads %}
   {% if not can_review_uploads %}

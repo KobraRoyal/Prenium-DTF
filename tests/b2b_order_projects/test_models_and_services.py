@@ -33,7 +33,7 @@ def test_project_service_creates_unique_numbers_and_audit_without_order_or_produ
         customer=customer, actor=user, data={"name": "Série hiver"}, source="test"
     )
 
-    assert first.project_number.startswith("DTF-B2B-")
+    assert first.project_number.startswith("GANG-SHEET-")
     assert first.project_number != second.project_number
     assert first.converted_order is None
     assert not hasattr(first, "production_job")

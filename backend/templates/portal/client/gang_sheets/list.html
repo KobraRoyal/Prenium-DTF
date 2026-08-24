@@ -7,7 +7,7 @@
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_gang_sheets_list.html" title="Mes planches DTF" subtitle="Créez, reprenez et commandez vos compositions DTF depuis un seul espace." actions_template="components/portal/page_head_actions/client_gang_sheets_list.html" %}
 
   <section
-    class="portal-page-surface gang-sheet-library"
+    class="portal-page-surface ui-list-section gang-sheet-library"
     aria-labelledby="gang-sheet-library-title"
     x-data="{
       filter: 'all',
@@ -28,13 +28,13 @@
 
     {% if sheets %}
     <div class="gang-sheet-toolbar" aria-label="Filtrer les planches DTF">
-      <div class="gang-sheet-filters" role="group" aria-label="Filtrer par statut">
-        <button type="button" x-on:click="filter = 'all'" x-bind:aria-pressed="filter === 'all'" x-bind:class="{ 'is-active': filter === 'all' }">Toutes</button>
-        <button type="button" x-on:click="filter = 'draft'" x-bind:aria-pressed="filter === 'draft'" x-bind:class="{ 'is-active': filter === 'draft' }">Brouillons</button>
-        <button type="button" x-on:click="filter = 'processing'" x-bind:aria-pressed="filter === 'processing'" x-bind:class="{ 'is-active': filter === 'processing' }">En traitement</button>
-        <button type="button" x-on:click="filter = 'validated'" x-bind:aria-pressed="filter === 'validated'" x-bind:class="{ 'is-active': filter === 'validated' }">Validées</button>
-        <button type="button" x-on:click="filter = 'ordered'" x-bind:aria-pressed="filter === 'ordered'" x-bind:class="{ 'is-active': filter === 'ordered' }">Commandées</button>
-      </div>
+      <nav class="ui-list-tabs gang-sheet-library__filters" role="tablist" aria-label="Filtrer par statut">
+        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'all'" :aria-selected="filter === 'all'" :class="{ 'is-active': filter === 'all' }"><span class="ui-list-tabs__label">Toutes</span></button>
+        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'draft'" :aria-selected="filter === 'draft'" :class="{ 'is-active': filter === 'draft' }"><span class="ui-list-tabs__label">Brouillons</span></button>
+        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'processing'" :aria-selected="filter === 'processing'" :class="{ 'is-active': filter === 'processing' }"><span class="ui-list-tabs__label">En traitement</span></button>
+        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'validated'" :aria-selected="filter === 'validated'" :class="{ 'is-active': filter === 'validated' }"><span class="ui-list-tabs__label">Validées</span></button>
+        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'ordered'" :aria-selected="filter === 'ordered'" :class="{ 'is-active': filter === 'ordered' }"><span class="ui-list-tabs__label">Commandées</span></button>
+      </nav>
       <label class="gang-sheet-search">
         <span class="ui-sr-only">Rechercher une planche DTF</span>
         <span class="gang-sheet-search__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="search" size="16" %}</span>
@@ -68,7 +68,7 @@
               <span>Modifiée le {{ sheet.updated_at|date:"d/m/Y" }}</span>
             </div>
             <h3>{{ sheet.name }}</h3>
-            <small>{% if sheet.project %}Commande {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</small>
+            <small>{% if sheet.project %}Gang Sheet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</small>
             <dl class="gang-sheet-card__facts">
               <div><dt>Surface</dt><dd>{{ sheet.surface_sqm }} m²</dd></div>
               <div><dt>Estimation HT</dt><dd>{{ sheet.estimated_price_eur }} €</dd></div>

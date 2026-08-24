@@ -6,6 +6,10 @@
 <div class="portal-page portal-page--client b2b-order-start-page">
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_project_form.html" title="Nouvelle commande" subtitle="Identifiez votre demande, puis choisissez le premier visuel." %}
 
+{% if form_error %}
+<div class="alert alert--danger mb-4" role="alert">{{ form_error }}</div>
+{% endif %}
+
 <section class="portal-page-surface b2b-order-start-card">
   <div class="b2b-order-start-card__intro">
     <span class="product-step-badge">Étape 1 sur 2</span>
@@ -14,7 +18,6 @@
       <p>Nom, date souhaitée et commentaire pour l’atelier. Au clic suivant, vous sélectionnez directement votre premier fichier.</p>
     </div>
   </div>
-  {% if form_error %}<div class="alert alert--danger mb-4" role="alert">{{ form_error }}</div>{% endif %}
   <form
     method="post"
     class="ui-form-stack b2b-order-start-form"

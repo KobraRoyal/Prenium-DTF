@@ -116,10 +116,14 @@ from .views_staff_notifications import (
     StaffEmailTemplateListView,
 )
 from .views_staff_operations import (
+    StaffAtelierOperationMachineAssignView,
+    StaffAtelierOperationMeterageView,
+    StaffAtelierOperationPrintConfirmView,
     StaffAtelierOperationShipmentCreateView,
     StaffAtelierOperationShipmentSyncView,
     StaffAtelierOperationsView,
     StaffAtelierOperationTransitionView,
+    StaffAtelierOperationUploadReviewView,
 )
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
@@ -420,6 +424,26 @@ urlpatterns = [
         "staff/atelier/pilotage/<uuid:order_public_id>/transition/",
         StaffAtelierOperationTransitionView.as_view(),
         name="staff-atelier-operation-transition",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/review/",
+        StaffAtelierOperationUploadReviewView.as_view(),
+        name="staff-atelier-operation-upload-review",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/machine/",
+        StaffAtelierOperationMachineAssignView.as_view(),
+        name="staff-atelier-operation-machine-assign",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/print/",
+        StaffAtelierOperationPrintConfirmView.as_view(),
+        name="staff-atelier-operation-print-confirm",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/meterage/",
+        StaffAtelierOperationMeterageView.as_view(),
+        name="staff-atelier-operation-meterage",
     ),
     path(
         "staff/atelier/pilotage/<uuid:order_public_id>/shipment/create/",

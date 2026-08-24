@@ -47,17 +47,19 @@ def _project(status):
 
 class DashboardActionFocusTests(SimpleTestCase):
     def test_staff_dashboard_surfaces_one_real_next_action(self) -> None:
-        template = (Path(settings.BASE_DIR) / "templates/portal/staff/dashboard.html").read_text(
-            encoding="utf-8"
-        )
-        view = (Path(settings.BASE_DIR) / "apps/portal/views_staff_dashboard.py").read_text(
-            encoding="utf-8"
-        )
+        template = (
+            Path(settings.BASE_DIR) / "templates/portal/staff/dashboard.html"
+        ).read_text(encoding="utf-8") + (
+            Path(settings.BASE_DIR) / "templates/portal/staff/partials/dashboard_worklist_panel.html"
+        ).read_text(encoding="utf-8")
+        order_detail = (
+            Path(settings.BASE_DIR) / "templates/portal/staff/order_detail.html"
+        ).read_text(encoding="utf-8")
 
-        self.assertIn("Prochain geste", template)
-        self.assertIn("worklist_rows.0.next_action", template)
-        self.assertIn('"action_url"', view)
-        self.assertIn('"Blocages à lever"', view)
+        self.assertNotIn("Prochain geste", template)
+        self.assertNotIn("atelier-next-action", template)
+        self.assertIn("Prochain geste", order_detail)
+        self.assertIn("Imprimer le lot", template)
 
     def test_client_dashboard_prioritizes_resume_payment_or_tracking(self) -> None:
         template = (Path(settings.BASE_DIR) / "templates/portal/client/dashboard.html").read_text(

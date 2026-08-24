@@ -180,7 +180,7 @@ class UiFoundationSourceTests(SimpleTestCase):
 
     def test_prospect_menu_toggle_is_standalone_44px_with_portal_css_only(self) -> None:
         header = source(TEMPLATES_DIR / "components" / "nav" / "landing_header.html")
-        portal_entry = source(CSS_DIR / "entries" / "portal.css")
+        portal_entry = source(CSS_DIR / "entries" / "portal-core.css")
         surface_config = source(CSS_DIR / "entries" / "tailwind.surface.config.js")
 
         toggle = re.search(

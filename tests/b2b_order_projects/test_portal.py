@@ -115,7 +115,7 @@ def test_client_can_delete_visual_from_validation_modal_flow():
     assert delete_response.status_code == 200
     project.refresh_from_db()
     assert project.items.count() == 0
-    assert "Aucun visuel" in delete_response.content.decode()
+    assert "Aucun fichier joint" in delete_response.content.decode()
 
 
 @pytest.mark.django_db
@@ -835,7 +835,7 @@ def test_portal_cross_tenant_project_is_not_found():
     project = B2BOrderProject.objects.create(
         customer=other,
         created_by=user,
-        project_number="DTF-B2B-2026-999993",
+        project_number="GANG-SHEET-2026-999993",
         name="Secret",
     )
     response = client.get(
@@ -865,7 +865,7 @@ def test_staff_portal_project_queue_requires_permission():
     staff.user_permissions.add(Permission.objects.get(codename="view_b2borderproject"))
     response = client.get(url)
     assert response.status_code == 200
-    assert b"Projets B2B transmis" in response.content
+    assert b"Gang Sheets transmis" in response.content
 
 
 @pytest.mark.django_db
@@ -874,7 +874,7 @@ def test_delete_confirmation_modal_is_rendered_on_project_list():
     _user, customer, client = portal_scope()
     project = B2BOrderProject.objects.create(
         customer=customer,
-        project_number="DTF-B2B-2026-999986",
+        project_number="GANG-SHEET-2026-999986",
         name="Commande test",
     )
     response = client.get(

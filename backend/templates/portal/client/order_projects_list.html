@@ -13,7 +13,7 @@
 <div class="portal-page portal-page--client client-order-projects-page">
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_projects_list.html" title="Commandes à finaliser" subtitle="N° IDS et votre référence pour chaque commande non encore transmise." %}
 
-<section class="portal-page-surface client-dashboard-section">
+<section class="portal-page-surface ui-list-section client-dashboard-section">
   <div class="client-dashboard-toolbar">
     <a class="ui-btn ui-btn-primary" href="{{ create_url }}">{% if customer.default_billing_mode == "immediate" %}Nouvelle planche DTF{% else %}Nouvelle commande{% endif %}</a>
   </div>

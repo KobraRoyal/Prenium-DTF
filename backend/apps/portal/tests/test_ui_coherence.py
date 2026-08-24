@@ -12,6 +12,12 @@ def template_source(relative_path: str) -> str:
     return (TEMPLATES_DIR / relative_path).read_text(encoding="utf-8")
 
 
+def staff_dashboard_markup() -> str:
+    return template_source("portal/staff/dashboard.html") + template_source(
+        "portal/staff/partials/dashboard_worklist_panel.html"
+    )
+
+
 def static_source(relative_path: str) -> str:
     return (STATIC_SRC_DIR / relative_path).read_text(encoding="utf-8")
 
@@ -250,6 +256,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
                 "portal/client/panels/production.html",
                 "portal/client/panels/shipping.html",
                 "portal/client/panels/billing.html",
+                "portal/client/panels/inspection.html",
             ]
         )
 
@@ -265,6 +272,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn('subtitle_prefix="Votre référence"', detail)
         self.assertNotIn("page-head__eyebrow", detail)
         self.assertIn("client-order-panel", panels)
+        self.assertNotIn('class="panel client-order-panel', panels)
+        self.assertNotIn('article class="card"', panels)
+        self.assertIn("ui_kpi_grid", panels)
         self.assertIn("client-billing-overview", panels)
         self.assertIn("client-billing-pay", panels)
         self.assertIn("client-billing-success", panels)
@@ -475,15 +485,38 @@ class PortalUiCoherenceTests(SimpleTestCase):
         tabs = app_source("apps/portal/templatetags/order_tags.py")
         operations = template_source("portal/staff/operations/index.html")
         workspace = template_source("portal/staff/operations/_workspace.html")
+        focus_card = template_source("portal/staff/operations/_focus_card.html")
+        operator_workflow = template_source("portal/staff/operations/_operator_workflow.html")
+        operator_meterage = template_source("portal/staff/operations/_operator_meterage.html")
         row = template_source("portal/staff/operations/_job_row.html")
         shipping_form = template_source("portal/staff/operations/_shipping_form.html")
-        portal_css = static_source("css/entries/portal.css")
+        portal_css = static_source("css/entries/portal-staff.css")
 
         self.assertNotIn('"slug": "scan"', tabs)
         self.assertNotIn("Scan atelier", tabs)
         self.assertIn("Pilotage Atelier", operations)
         self.assertIn("operationScan.focus", operations)
-        self.assertIn('id="atelier-operations-workspace"', workspace)
+        self.assertIn("atelier-operations-scan-bar", operations)
+        self.assertIn("Scanner un OF", operations)
+        self.assertIn("Afficher la commande", operations)
+        self.assertNotIn("ui-list-command--stats-only", operations)
+        self.assertNotIn("next_focus_row", operations)
+        self.assertNotIn("atelier-operations-next-action", operations)
+        self.assertIn('id="atelier-operations-panel"', workspace)
+        self.assertIn("En attente de scan", workspace)
+        self.assertIn("focus_row", workspace)
+        self.assertIn("ui_list_tabs", focus_card)
+        self.assertIn("atelier-operations-focus__tabs", focus_card)
+        self.assertIn("atelier-operations-focus", focus_card)
+        self.assertIn("Commande identifiée", focus_card)
+        self.assertIn("_operator_workflow.html", focus_card)
+        self.assertIn("atelier-operator-workflow", operator_workflow)
+        self.assertIn("staff-atelier-operation-upload-review", operator_workflow)
+        self.assertIn("staff-atelier-operation-machine-assign", operator_workflow)
+        self.assertIn("staff-atelier-operation-print-confirm", operator_workflow)
+        self.assertIn("staff-atelier-operation-meterage", operator_meterage)
+        self.assertNotIn("atelier-operations-list", workspace)
+        self.assertNotIn("atelier-operations-tab", workspace)
         self.assertIn("staff-atelier-operation-transition", row)
         self.assertIn("staff-atelier-operation-shipment-create", shipping_form)
         self.assertIn("atelier-operations.css", portal_css)
@@ -493,10 +526,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         delete_partial = template_source("portal/staff/partials/order_delete_button.html")
         breadcrumb = template_source("components/portal/breadcrumbs/staff_order_detail.html")
 
-        self.assertIn('class="card staff-order-focus"', source)
+        self.assertIn("staff-order-detail-identity", source)
         self.assertIn("staff-order-focus__header", source)
-        self.assertIn("staff-order-focus__primary", source)
-        self.assertIn("À faire", source)
+        self.assertIn("atelier-next-action", source)
+        self.assertIn("Prochain geste", source)
         self.assertIn("staff-order-focus__of", source)
         self.assertIn("staff-order-focus__client", source)
         self.assertIn("order.total_amount", source)
@@ -537,6 +570,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
         statements = template_source("portal/staff/customers/_billing_statements.html")
 
         self.assertIn("staff-customer-focus", source)
+        self.assertIn("staff-customer-detail-identity", source)
+        self.assertIn("staff-customer-workspace", source)
+        self.assertLess(
+            source.index("staff-customer-detail-identity"),
+            source.index("data-customer-workspace"),
+        )
         self.assertIn("default_billing_mode", source)
         self.assertIn("b2b-settlement-choice__option", source)
         self.assertIn("Comptant — carte bancaire", source)
@@ -551,7 +590,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         source = template_source("portal/staff/customers/detail.html")
         statements = template_source("portal/staff/customers/_billing_statements.html")
         workspace_css = static_source("css/components/customer-account-workspace.css")
-        portal_entrypoint = static_source("css/entries/portal.css")
+        portal_entrypoint = static_source("css/entries/portal-staff.css")
         runtime = static_source("js/customer-account-workspace.js")
 
         self.assertIn("data-customer-workspace", source)
@@ -580,6 +619,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("position: sticky", workspace_css)
         self.assertIn("grid-template-columns: minmax(7.5rem, 0.8fr)", workspace_css)
         self.assertIn(".staff-customer-settlement", workspace_css)
+        self.assertIn("staff-customer-settlement .b2b-settlement-choice__option input[type=\"radio\"]", portal_entrypoint)
         self.assertIn("@media (max-width: 639px)", workspace_css)
         self.assertIn("customer-account-workspace.css", portal_entrypoint)
         self.assertIn("revealCustomerSection", runtime)
@@ -602,12 +642,13 @@ class PortalUiCoherenceTests(SimpleTestCase):
         )
         self.assertIn("staff-data-list", listing)
         self.assertIn("profile.status|badge_tone", listing)
-        self.assertIn("prospect-filter-bar", listing)
+        self.assertIn("ui_list_tabs", listing)
         self.assertIn("access-request-command", listing)
+        self.assertIn("ui-list-command", listing)
         self.assertIn("access-request-search", listing)
         self.assertIn("profile.get_monthly_volume_display", listing)
         self.assertIn("profile.get_urgency_display", listing)
-        self.assertIn("aria-current", listing)
+        self.assertIn("aria-current", template_source("components/ui/list_tabs.html"))
 
         self.assertIn("staff-access-focus", detail)
         self.assertIn("staff-access-panel", detail)
@@ -682,7 +723,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Votre espace", client_nav)
         self.assertIn("Pilotage quotidien", staff_nav)
         self.assertIn("Administration Atelier", staff_nav)
-        self.assertIn(">File Atelier</a>", staff_nav)
+        self.assertIn(">Tableau de bord</a>", staff_nav)
         self.assertIn(">Commandes</a>", staff_nav)
         self.assertIn("Outils Atelier", staff_nav)
         self.assertIn("Demandes d’accès", staff_nav)
@@ -1091,20 +1132,55 @@ class PortalUiCoherenceTests(SimpleTestCase):
                 self.assertNotIn(forbidden, source.lower())
 
     def test_staff_dashboard_uses_french_premium_copy(self) -> None:
-        source = template_source("portal/staff/dashboard.html")
+        source = staff_dashboard_markup()
 
         self.assertNotIn("kicker=", source)
-        self.assertIn('title="File Atelier"', source)
-        self.assertIn("Commandes Atelier", source)
-        self.assertIn('aria-label="Filtrer la file Atelier"', source)
-        self.assertNotIn('role="tablist"', source)
-        self.assertIn("{{ tab.label }}", source)
-        self.assertIn("Fichiers non approuvés", source)
+        self.assertIn('title="Tableau de bord"', source)
+        self.assertNotIn("atelier-next-action", source)
+        self.assertNotIn("Prochain geste", source)
+        self.assertIn("ui_kpi_grid", source)
+        self.assertIn("atelier-dashboard-metrics", source)
+        self.assertNotIn("ui_list_tabs", source)
+        self.assertIn("ui_atelier_worklist_table", source)
+        self.assertIn("ui-orders-table-desktop", template_source("components/tables/atelier_worklist_table.html"))
+        self.assertIn("ui-data-table", template_source("components/tables/atelier_worklist_table.html"))
+        self.assertIn("ui-mobile-order-card", template_source("components/tables/atelier_worklist_table.html"))
+        self.assertNotIn("atelier-order-list", source)
+        self.assertNotIn("atelier-worklist__legend", source)
+        self.assertIn("atelier-worklist-command", source)
+        self.assertIn("ui-list-command--compact", source)
+        self.assertIn("ui-list-command", source)
+        self.assertNotIn("atelier-worklist-results", source)
+        worklist_table = template_source("components/tables/atelier_worklist_table.html")
+        self.assertIn("files_to_process_label", worklist_table)
+        self.assertNotIn("Contrôle dans le pilotage", worklist_table)
+        self.assertNotIn(">Production<", worklist_table)
+        self.assertIn("is-batch-selected", worklist_table)
+        kpi_grid = template_source("components/tables/kpi_grid.html")
+        self.assertIn("ui-kpi-card--filter", kpi_grid)
+        self.assertIn("card_href", kpi_grid)
         self.assertNotIn("<svg", source)
         dashboard_css = static_source("css/components/product-shell.css")
         self.assertNotIn("--product-paper", dashboard_css)
-        self.assertIn("Imprimer les 5 derniers OF prêts", source)
-        self.assertIn("Autres impressions", source)
+        self.assertIn("Imprimer le lot", source)
+        self.assertIn('value="all_unprinted"', source)
+        self.assertIn("data-atelier-batch", source)
+        self.assertIn('id="atelier-dashboard-panel"', source)
+        self.assertIn("atelier-dashboard-batch.js", template_source("portal/staff/dashboard.html"))
+        self.assertNotIn("Imprimer tous les OF prêts", source)
+        self.assertNotIn("atelier-worklist__batch-more", source)
+        portal_core = static_source("css/entries/portal-core.css")
+        portal_staff = static_source("css/entries/portal-staff.css")
+        self.assertNotIn(".staff-data-list__mobile\n) {", portal_core)
+        self.assertIn(
+            ".portal-page-surface.ui-list-section .staff-data-list__mobile",
+            portal_core,
+        )
+        self.assertIn("display: none !important", portal_core.split("staff-data-list__mobile")[-1][:400])
+        self.assertIn(
+            ".portal-page-surface.ui-list-section .staff-data-list__mobile",
+            portal_staff,
+        )
         self.assertNotIn("Accès rapides Atelier", source)
         self.assertNotIn("Contrats permissions", source)
         self.assertNotIn("Accès commandes autorisé", source)
@@ -1132,7 +1208,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("staff_order_focus.production_label", order)
         self.assertNotIn("Résultats affichés", access_list)
         self.assertIn(
-            '<details class="card staff-access-panel access-review-reject"', access_detail
+            '<details class="staff-access-panel access-review-reject"', access_detail
         )
         self.assertIn('<details class="machine-fleet-create"', machine_fleet)
         self.assertIn('<details class="volume-tier-create-card"', discount_settings)
@@ -1145,7 +1221,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_staff_inspection_uses_compact_summary_without_nested_metric_cards(self) -> None:
         source = template_source("portal/staff/panels/inspection.html")
-        portal_entry = static_source("css/entries/portal.css")
+        portal_entry = static_source("css/entries/portal-staff.css")
         inspection_css = static_source("css/components/inspection-workbench.css")
 
         self.assertNotIn("atelier-inspection__summary", source)
@@ -1254,7 +1330,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         ]
 
         for path in paths:
-            source = template_source(path)
+            if path == "portal/staff/dashboard.html":
+                source = staff_dashboard_markup()
+            else:
+                source = template_source(path)
             with self.subTest(path=path):
                 self.assertIn("ui-btn", source)
                 self.assertNotIn('class="btn', source)
@@ -1288,7 +1367,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("ui-list-section", staff_source)
         self.assertNotIn('<section class="card">', staff_source)
         self.assertIn("portal:staff-dashboard", staff_source)
-        self.assertIn("Aucune commande à afficher.", staff_source)
+        self.assertIn("Aucune commande", staff_source)
         self.assertNotIn("Aucune commande a afficher.", staff_source)
 
     def test_portal_lists_share_pagination_and_form_action_partials(self) -> None:
@@ -1335,6 +1414,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn('class="production-track"', production)
         self.assertIn('class="workflow-disclosure production-history"', production)
         self.assertIn('class="atelier-operation-row', operations)
+        self.assertIn("atelier-operation-workflow", operations)
+        self.assertIn("workflow_hint", operations)
         self.assertNotIn("display: inline; margin-right", operations)
 
     def test_prospect_primary_actions_declare_button_hierarchy(self) -> None:
@@ -1630,7 +1711,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("HTMLIFrameElement", configurator_runtime)
         self.assertNotIn("innerHTML", configurator_runtime)
         self.assertNotIn("Configurateur DTF", header)
-        self.assertIn("Projets B2B", staff_navigation)
+        self.assertIn("Gang Sheets", staff_navigation)
         dashboard = template_source("portal/client/dashboard.html")
         self.assertNotIn("client-dashboard-toolbar", dashboard)
         self.assertNotIn(">Nouvelle commande</a>", dashboard)
@@ -1689,7 +1770,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         operations = template_source("portal/staff/operations/index.html")
         self.assertNotIn("terracotta", operations)
-        self.assertIn("shell clair atelier", operations)
+        self.assertIn("atelier-operations-scan-bar", operations)
 
     def test_p3_polish_titles_empty_states_and_studio_spacing_labels(self) -> None:
         title_paths = [
@@ -1730,7 +1811,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
     def test_lot4_portal_header_nav_removes_parasite_borders(self) -> None:
         header = template_source("components/nav/portal_header.html")
         landing_header = template_source("components/nav/landing_header.html")
-        portal_entry = static_source("css/entries/portal.css")
+        portal_entry = static_source("css/entries/portal-core.css")
 
         self.assertIn("ui-nav-rail", header)
         self.assertIn("ui-nav-rail", landing_header)

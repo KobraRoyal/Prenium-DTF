@@ -15,8 +15,8 @@
   <section class="operator-machine" aria-labelledby="operator-machine-title">
     <header class="operator-section-head">
       <div>
-        <h4 id="operator-machine-title">Machine et impression</h4>
-        <p>L’attribution et la confirmation constituent l’historique dossier-machine.</p>
+        <h4 id="operator-machine-title" class="font-display text-lg">Machine et impression</h4>
+        <p class="muted text-sm">L’attribution et la confirmation constituent l’historique dossier-machine.</p>
       </div>
       {% if job.assigned_machine %}<span class="badge {% if job.assigned_machine.status == 'active' %}is-success{% else %}is-warning{% endif %}">{{ job.assigned_machine.get_status_display }}</span>{% else %}<span class="badge is-warning">À attribuer</span>{% endif %}
     </header>
@@ -110,7 +110,7 @@
   <section class="operator-subpanel" aria-labelledby="gang-sheets-production-title">
     <div class="operator-section-head">
       <div>
-        <h4 id="gang-sheets-production-title">Fichiers de production</h4>
+        <h4 id="gang-sheets-production-title" class="font-display text-lg">Fichiers de production</h4>
       </div>
     </div>
     <div class="gang-sheet-production-list">
@@ -145,7 +145,7 @@
 
   <section class="workflow-form-card operator-action-card" aria-labelledby="staff-production-transition-heading">
     <div class="workflow-form-card__head">
-      <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0">Changer le statut</h4>
+      <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0 font-display text-lg">Changer le statut</h4>
       {% if job.status == "blocked" %}<p class="muted text-sm m-0">L’OF est bloqué : choisissez l’issue adaptée.</p>{% endif %}
     </div>
 
@@ -176,7 +176,7 @@
     <summary><span>Historique de production</span><strong>{{ transition_count }} transition{{ transition_count|pluralize }}</strong></summary>
     <section class="operator-history" aria-labelledby="production-history-title">
       <div class="operator-section-head">
-        <div><h4 id="production-history-title">Dernières transitions</h4></div>
+        <div><h4 id="production-history-title" class="font-display text-lg">Dernières transitions</h4></div>
       </div>
       <ol class="operator-history__list">
         {% for transition in job.transitions.all|slice:":5" %}

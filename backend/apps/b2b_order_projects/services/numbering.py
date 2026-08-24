@@ -3,6 +3,8 @@ from django.utils import timezone
 
 from apps.b2b_order_projects.models import B2BOrderProjectNumberSequence
 
+PROJECT_NUMBER_PREFIX = "GANG-SHEET"
+
 
 class B2BOrderProjectNumberService:
     @transaction.atomic
@@ -13,4 +15,4 @@ class B2BOrderProjectNumberService:
         value = sequence.next_value
         sequence.next_value = value + 1
         sequence.save(update_fields=["next_value"])
-        return f"DTF-B2B-{year}-{value:06d}"
+        return f"{PROJECT_NUMBER_PREFIX}-{year}-{value:06d}"

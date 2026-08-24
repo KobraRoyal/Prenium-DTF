@@ -44,7 +44,7 @@ class B2BOrderProjectNumberSequence(models.Model):
     next_value = models.PositiveBigIntegerField(default=1)
 
     class Meta:
-        verbose_name = "Séquence de numéro de projet B2B"
+        verbose_name = "Séquence de numéro Gang Sheet"
 
 
 class B2BOrderProject(BaseModel):

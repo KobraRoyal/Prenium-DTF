@@ -8,18 +8,18 @@
 
 /* Unlayered: studio aligné shell clair (post gang-sheet-studio, prime sur portal.css). */
 html[data-theme="prenium"] body.product-shell--studio .gang-editor :where(
-  [class*="-card"],
-  [class*="-panel"],
-  [class*="-header"],
-  [class*="-workspace"],
-  [class*="-sidebar"],
-  [class*="-inspector"],
-  [class*="-toolbar"],
-  [class*="-launcher"],
-  [class*="-workflow"],
-  [class*="-status"],
-  [class*="-stage"],
-  [class*="-dialog"],
+  [class*="-card"]:not([class*="__"]),
+  [class*="-panel"]:not([class*="__"]),
+  [class*="-header"]:not([class*="__"]),
+  [class*="-workspace"]:not([class*="__"]),
+  [class*="-sidebar"]:not([class*="__"]),
+  [class*="-inspector"]:not([class*="__"]),
+  [class*="-toolbar"]:not([class*="__"]),
+  [class*="-launcher"]:not([class*="__"]),
+  [class*="-workflow"]:not([class*="__"]),
+  [class*="-status"]:not([class*="__"]),
+  [class*="-stage"]:not([class*="__"]),
+  [class*="-dialog"]:not([class*="__"]),
   dialog
 ) {
   box-shadow: none !important;

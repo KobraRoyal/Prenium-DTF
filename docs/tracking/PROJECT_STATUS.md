@@ -29,7 +29,7 @@
 - [x] Micro-lot 11.10 — Système de boutons SaaS unifié et cohérent
 - [x] Micro-lot 11.11 — Audit global UI/UX par app et vues + corrections de cohérence SaaS
 - [x] Sprint 25 — PDF OF Atelier sans redondance et distinction OF / commande
-- [x] Sprint 26 — Dashboard Atelier opérationnel et impression sécurisée des OF en lot
+- [x] Sprint 26 — Tour de contrôle `/staff/` (OF non imprimés, lot PDF sans validation préalable) ; contrôle/production dans le pilotage ; sans bandeau « Prochain geste »
 - [x] Sprint 27 — Aperçus visuels dans les OF et onglets Atelier sans icônes
 - [x] Sprint 28 — Fiche commande Atelier orientée action, sans redondance ni icônes
 - [x] Sprint 29 — Couleur support et dimensions client visibles dans Contrôle et l’OF

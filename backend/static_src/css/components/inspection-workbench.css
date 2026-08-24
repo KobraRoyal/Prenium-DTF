@@ -116,6 +116,8 @@
   }
 
   body.product-shell .atelier-inspection__file {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     border: 1px solid var(--product-line);
   }
 
