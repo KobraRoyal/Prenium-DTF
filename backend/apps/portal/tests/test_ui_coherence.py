@@ -1086,7 +1086,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("function clearSelectionFromCanvasBackground", runtime)
         self.assertIn('q("[data-canvas-clear-zone]")', runtime)
         self.assertIn(".gang-snap-guide", studio_css)
-        self.assertIn('canvasClearZone.addEventListener("pointerdown", startRectangleSelection)', runtime)
+        self.assertIn(
+            'canvasClearZone.addEventListener("pointerdown", startRectangleSelection)',
+            runtime,
+        )
         self.assertIn("function canStartRectangleSelection", runtime)
         self.assertIn(".gang-selection-marquee", studio_css)
         self.assertIn(".gang-editor__history", studio_css)

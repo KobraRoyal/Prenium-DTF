@@ -43,7 +43,10 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn(".gang-editor__mobile-tabs button > svg", polish)
         self.assertIn(".gang-inspector-panel--validation li.is-ok", polish)
         self.assertIn(".gang-sheet-item__label", polish)
-        self.assertIn(".gang-sheet-item:is(:hover, :focus-within, .is-selected) .gang-sheet-item__label", polish)
+        self.assertIn(
+            ".gang-sheet-item:is(:hover, :focus-within, .is-selected) .gang-sheet-item__label",
+            polish,
+        )
         self.assertIn(".gang-selection-frame__size", polish)
         self.assertIn(".gang-selection-frame__chrome", polish)
         self.assertIn("translate(-50%, calc(-100% - 0.4rem))", polish)
