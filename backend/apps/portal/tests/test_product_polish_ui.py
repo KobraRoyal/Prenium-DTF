@@ -115,7 +115,9 @@ class ProductPolishUITests(SimpleTestCase):
         login = source(TEMPLATES_DIR / "portal/login.html")
 
         self.assertIn('@import "../components/auth-login.css";', core)
-        self.assertLess(core.index('@import "../components/product-polish.css";'), core.index('@import "../components/auth-login.css";'))
+        polish_import = '@import "../components/product-polish.css";'
+        auth_import = '@import "../components/auth-login.css";'
+        self.assertLess(core.index(polish_import), core.index(auth_import))
         self.assertIn("width: min(100%, 26.5rem)", login_css)
         self.assertIn("grid-template-columns: minmax(0, 1fr)", login_css)
         self.assertNotIn("product-login-heading", login_css)
