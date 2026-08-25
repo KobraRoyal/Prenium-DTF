@@ -514,9 +514,33 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Commande identifiée", focus_card)
         self.assertIn("_operator_workflow.html", focus_card)
         self.assertIn("atelier-operator-workflow", operator_workflow)
+        self.assertIn("atelier-stepper", operator_workflow)
+        self.assertIn("atelier-stepper__track", operator_workflow)
+        self.assertIn("atelier-stepper__marker", operator_workflow)
+        self.assertIn("Parcours de production", operator_workflow)
+        self.assertNotIn("workflow-progress", operator_workflow)
+        self.assertNotIn("ui-tab-chip", operator_workflow)
+        self.assertNotIn("atelier-operator-steps", operator_workflow)
         self.assertIn("staff-atelier-operation-upload-review", operator_workflow)
         self.assertIn("staff-atelier-operation-machine-assign", operator_workflow)
         self.assertIn("staff-atelier-operation-print-confirm", operator_workflow)
+        self.assertIn("require_machine_selection", operator_workflow)
+        self.assertLess(
+            operator_workflow.index("atelier-operator-panel--control"),
+            operator_workflow.index("atelier-operator-panel--machine"),
+        )
+        self.assertLess(
+            operator_workflow.index("atelier-operator-panel--machine"),
+            operator_workflow.index("_operator_meterage.html"),
+        )
+        self.assertLess(
+            operator_workflow.index("_operator_meterage.html"),
+            operator_workflow.index("atelier-operator-panel--print"),
+        )
+        self.assertLess(
+            operator_workflow.index("atelier-operator-panel--print"),
+            operator_workflow.index("atelier-operator-panel--shipping"),
+        )
         self.assertIn("staff-atelier-operation-meterage", operator_meterage)
         self.assertNotIn("atelier-operations-list", workspace)
         self.assertNotIn("atelier-operations-tab", workspace)
@@ -1131,6 +1155,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
     def test_login_hides_internal_roles_and_keeps_only_useful_copy(self) -> None:
         source = template_source("portal/login.html")
 
+        self.assertIn("product-login-card__intro", source)
+        self.assertNotIn("product-login-heading", source)
         self.assertIn("Retrouvez vos commandes, vos fichiers et vos documents", source)
         self.assertIn("Demander un accès professionnel", source)
         for forbidden in ["client", "staff", "backend", "permissions", "droits"]:
@@ -1146,6 +1172,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Prochain geste", source)
         self.assertIn("ui_kpi_grid", source)
         self.assertIn("atelier-dashboard-metrics", source)
+        self.assertNotIn('class="portal-page-surface atelier-dashboard-metrics', source)
+        self.assertIn("atelier-dashboard-stack", source)
+        self.assertNotIn("class=\"atelier-dashboard-panel\"", source)
         self.assertNotIn("ui_list_tabs", source)
         self.assertIn("ui_atelier_worklist_table", source)
         worklist_table = template_source("components/tables/atelier_worklist_table.html")
@@ -1240,10 +1269,22 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Action requise", source)
         self.assertIn("Le client sera notifié par e-mail", source)
         self.assertIn('class="atelier-inspection__review-grid"', source)
+        self.assertLess(
+            source.index('class="atelier-inspection__review-grid"'),
+            source.index('class="atelier-inspection__correction"'),
+        )
+        self.assertGreater(
+            source.index('class="atelier-inspection__correction"'),
+            source.index("</div>", source.index('class="atelier-inspection__review-grid"')),
+        )
         self.assertIn('@import "../components/inspection-workbench.css";', portal_entry)
         self.assertIn(".atelier-inspection__review-block--decision", inspection_css)
+        self.assertIn("minmax(0, 1.18fr)", inspection_css)
+        self.assertIn(".atelier-inspection__correction .ui-input", inspection_css)
+        self.assertIn(".atelier-inspection__correction select.ui-input", portal_entry)
         self.assertIn("@media (max-width: 639px)", inspection_css)
         self.assertIn("@media (prefers-reduced-motion: reduce)", inspection_css)
+        self.assertIn("Facultatif, sauf si le motif est", source)
         self.assertNotIn("font-display text-2xl", source)
         self.assertNotIn("uppercase tracking-wide", source)
 
@@ -1260,6 +1301,15 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Avancement de l’OF", production)
         self.assertNotIn("operator-reference-bar", production)
         self.assertIn("show_machine_workspace", production)
+        self.assertIn("require_machine_selection", production)
+        self.assertLess(
+            production.index("Sélection machine"),
+            production.index("Métrage de production"),
+        )
+        self.assertLess(
+            production.index("Métrage de production"),
+            production.index('id="operator-print-title"'),
+        )
         self.assertIn("workflow-disclosure production-meterage", production)
         self.assertIn("workflow-disclosure production-history", production)
         self.assertIn("operationScan.focus", operations)

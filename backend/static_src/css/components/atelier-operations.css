@@ -210,33 +210,244 @@
     margin: 0 0 0.85rem;
   }
 
-  body.product-shell .atelier-operations-page .atelier-operator-steps {
+  body.product-shell .atelier-operations-page .atelier-stepper {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    padding: 0.85rem clamp(0.85rem, 2vw, 1.1rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm, 14px);
+    background: color-mix(in srgb, var(--bg) 22%, var(--surface));
+    overflow: hidden;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__head {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.35rem 1rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__title {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__progress {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__progress strong {
+    color: var(--ink);
+    font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__track {
+    --stepper-marker: 2.35rem;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--step-count, 4), minmax(0, 1fr));
+    gap: 0.55rem;
+    min-width: 0;
+    max-width: 100%;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  body.product-shell .atelier-operations-page .atelier-operator-steps__item {
-    min-height: 2.25rem;
-    padding: 0.45rem 0.85rem;
+  body.product-shell .atelier-operations-page .atelier-stepper__track::before {
+    position: absolute;
+    top: calc(var(--stepper-marker) / 2);
+    right: calc(100% / (var(--step-count, 4) * 2));
+    left: calc(100% / (var(--step-count, 4) * 2));
+    height: 2px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--line) 88%, var(--ink));
+    content: "";
+    pointer-events: none;
   }
 
-  body.product-shell .atelier-operations-page .atelier-operator-steps__item.is-done {
-    background: color-mix(in srgb, var(--success) 14%, var(--surface));
+  body.product-shell .atelier-operations-page .atelier-stepper__step {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    justify-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    text-align: center;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__marker {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: var(--stepper-marker);
+    height: var(--stepper-marker);
+    border: 1.5px solid color-mix(in srgb, var(--line) 70%, var(--ink));
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--muted);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__index {
+    font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__copy {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__label {
+    display: block;
+    overflow-wrap: anywhere;
+    color: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__state {
+    display: block;
+    color: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.2;
+    opacity: 0.92;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-pending {
+    color: var(--muted);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-done {
     color: var(--success);
   }
 
-  body.product-shell .atelier-operations-page .atelier-operator-steps__item.is-active {
-    background: color-mix(in srgb, var(--brand) 18%, var(--surface));
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-done .atelier-stepper__marker {
+    border-color: color-mix(in srgb, var(--success) 55%, var(--line));
+    background: color-mix(in srgb, var(--success) 16%, var(--surface));
+    color: var(--success);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-active {
     color: var(--ink);
   }
 
-  body.product-shell .atelier-operations-page .atelier-operator-steps__item.is-blocked {
-    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-active .atelier-stepper__marker {
+    border-color: color-mix(in srgb, var(--brand) 70%, var(--line));
+    background: color-mix(in srgb, var(--brand) 22%, var(--surface));
+    color: var(--ink);
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--brand) 16%, transparent),
+      0 8px 18px color-mix(in srgb, var(--brand) 18%, transparent);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-active .atelier-stepper__state {
+    color: color-mix(in srgb, var(--brand-strong, var(--brand)) 78%, var(--ink));
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-blocked {
     color: var(--danger);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-blocked .atelier-stepper__marker {
+    border-color: color-mix(in srgb, var(--danger) 55%, var(--line));
+    background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+    color: var(--danger);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step[aria-current="step"] .atelier-stepper__marker {
+    outline: 2px solid color-mix(in srgb, var(--focus, #770176) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    body.product-shell .atelier-operations-page .atelier-stepper__step.is-active .atelier-stepper__marker {
+      animation: atelier-stepper-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    }
+  }
+
+  @keyframes atelier-stepper-pulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 4px color-mix(in srgb, var(--brand) 16%, transparent),
+        0 8px 18px color-mix(in srgb, var(--brand) 18%, transparent);
+    }
+    50% {
+      box-shadow:
+        0 0 0 7px color-mix(in srgb, var(--brand) 10%, transparent),
+        0 10px 22px color-mix(in srgb, var(--brand) 22%, transparent);
+    }
+  }
+
+  @media (max-width: 719px) {
+    body.product-shell .atelier-operations-page .atelier-stepper__track {
+      display: flex;
+      gap: 0.65rem;
+      max-width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      padding-bottom: 0.15rem;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__track::before {
+      display: none;
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__step {
+      flex: 0 0 7.5rem;
+      scroll-snap-align: start;
+      padding: 0.55rem 0.45rem 0.45rem;
+      border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__step.is-active {
+      border-color: color-mix(in srgb, var(--brand) 45%, var(--line));
+      background: color-mix(in srgb, var(--brand) 10%, var(--surface));
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__step.is-done {
+      border-color: color-mix(in srgb, var(--success) 35%, var(--line));
+      background: color-mix(in srgb, var(--success) 8%, var(--surface));
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__step.is-blocked {
+      border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+      background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+    }
   }
 
   body.product-shell .atelier-operations-page .atelier-operator-panel {

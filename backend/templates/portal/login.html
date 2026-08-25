@@ -9,15 +9,13 @@
 
 <main class="app-main app-content landing-saas-main ui-shell-main product-layout" id="main-content">
   <section class="product-login-shell" aria-labelledby="login-heading">
-    <div class="product-login-heading">
-      <h1 id="login-heading">Connexion</h1>
-      <p>Retrouvez vos commandes, vos fichiers et vos documents dans un espace unique.</p>
-      <p class="product-login-heading__note">Un accès professionnel, du dépôt des visuels jusqu’au suivi de production.</p>
-    </div>
-
-    <div class="product-auth-card product-login-card" aria-label="Formulaire de connexion">
+    <div class="product-auth-card product-login-card">
+      <header class="product-login-card__intro">
+        <h1 id="login-heading">Connexion</h1>
+        <p>Retrouvez vos commandes, vos fichiers et vos documents dans un espace unique.</p>
+      </header>
       {% if form.errors %}
-      <div class="alert alert--danger mb-4" role="alert">
+      <div class="alert alert--danger" role="alert">
         <span class="text-sm leading-snug">Email ou mot de passe incorrect. Vérifiez vos informations puis réessayez.</span>
       </div>
       {% endif %}
@@ -51,7 +49,7 @@
         {% if next %}
         <input type="hidden" name="next" value="{{ next }}">
         {% endif %}
-        {% include "components/forms/form_actions.html" with primary_label="Se connecter" primary_class_full="ui-btn ui-btn-primary ui-btn-wide ui-btn-block max-w-xs mx-auto" form_actions_class="justify-center" %}
+        {% include "components/forms/form_actions.html" with primary_label="Se connecter" primary_class_full="ui-btn ui-btn-primary ui-btn-block" %}
       </form>
       <p class="product-login-access">Première visite ? <a class="ui-link" href="{% url 'prospects:step1' %}">Demander un accès professionnel</a></p>
     </div>

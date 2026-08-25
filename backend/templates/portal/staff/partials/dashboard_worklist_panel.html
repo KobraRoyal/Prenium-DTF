@@ -1,7 +1,7 @@
 {% load ui_tags %}
-<div id="atelier-dashboard-panel" class="atelier-dashboard-panel">
+<div id="atelier-dashboard-panel" class="atelier-dashboard-stack">
 {% if dashboard_kpi_rows %}
-<section class="portal-page-surface atelier-dashboard-metrics ui-list-section" aria-label="Indicateurs de la file Atelier">
+<section class="atelier-dashboard-metrics" aria-label="Indicateurs de la file Atelier">
   {% ui_kpi_grid dashboard_kpi_rows %}
 </section>
 {% endif %}

@@ -3,6 +3,7 @@
 @import "../components/workflow.css";
 @import "../components/product-shell.css";
 @import "../components/product-polish.css";
+@import "../components/auth-login.css";
 @import "../components/account-profile.css";
 
 /* Unlayered: keeps the product shell aligned with the shared light tokens. */
@@ -93,13 +94,12 @@ html[data-theme="prenium"] body.product-shell :where(
   .page-head,
   .page-head--premium,
   [class*="-card"]:not([class*="__"]),
-  [class*="-panel"]:not([class*="__"]),
+  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack),
   [class*="-focus"]:not([class*="__"]),
   .workflow-shell,
   .ui-workflow-shell,
   .ui-panel-shell,
   .workflow-panel-shell,
-  .product-login-shell,
   .shipping-form-shell,
   [class*="-head"]:not(.page-head):not([class*="heading"]):not([class*="__"]),
   [class*="-header"]:not([class*="__"]),
@@ -135,13 +135,12 @@ html[data-theme="prenium"] body.product-shell :where(
   .panel,
   .page-head--premium,
   [class*="-card"]:not([class*="__"]),
-  [class*="-panel"]:not([class*="__"]),
+  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack),
   [class*="-focus"]:not([class*="__"]),
   .workflow-shell,
   .ui-workflow-shell,
   .ui-panel-shell,
   .workflow-panel-shell,
-  .product-login-shell,
   .shipping-form-shell,
   [class*="-section"]:not([class*="__"]),
   [class*="-block"]:not([class*="__"]),
@@ -215,13 +214,12 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
   .service-card,
   .selectable-card,
   [class*="-card"]:not([class*="__"]),
-  [class*="-panel"]:not([class*="__"]),
+  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack),
   [class*="-focus"]:not([class*="__"]),
   .workflow-shell,
   .ui-workflow-shell,
   .ui-panel-shell,
   .workflow-panel-shell,
-  .product-login-shell,
   .shipping-form-shell
 ) {
   background: var(--surface) !important;
@@ -991,7 +989,7 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.atelier-dashboard-metrics .ui-kpi-card {
   border: 0 !important;
   box-shadow: none !important;
-  background: color-mix(in srgb, var(--bg) 18%, var(--surface)) !important;
+  background: transparent !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .atelier-worklist {

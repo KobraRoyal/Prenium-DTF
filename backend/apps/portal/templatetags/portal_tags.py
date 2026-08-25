@@ -12,7 +12,7 @@ from apps.orders.references import order_client_reference, project_client_refere
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260823-ui-surface-flat-v65"
+PORTAL_CSS_ASSET_V = "20260824-dashboard-kpi-unwrap-v76"
 
 STATUS_LABELS = {
     "draft": "Brouillon",

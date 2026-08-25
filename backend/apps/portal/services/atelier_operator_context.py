@@ -3,7 +3,6 @@ from __future__ import annotations
 import uuid
 
 from apps.portal.views_staff_production import production_panel_context
-from apps.portal.views_staff_reviews import _inspection_context
 from apps.production.models import ProductionJob
 
 
@@ -30,14 +29,28 @@ def build_operator_steps(
     control_done = not control_required or inspection.get("all_uploads_approved")
     control_blocked = inspection.get("changes_requested_count", 0) > 0
     control_active = control_required and not control_done and not control_blocked
+    prerequisites_done = control_done and not control_blocked
 
+    require_machine_selection = bool(production.get("require_machine_selection"))
     machine_done = bool(job.assigned_machine_id)
-    machine_active = control_done and not machine_done and production.get("can_assign_machine_now")
+    machine_ready = machine_done or not require_machine_selection
+    machine_active = (
+        prerequisites_done
+        and require_machine_selection
+        and not machine_done
+        and production.get("can_assign_machine_now")
+    )
+
+    uses_meterage = bool(order.uses_atelier_pricing())
+    meterage_done = (not uses_meterage) or order.meterage_override_linear_m is not None
+    meterage_active = prerequisites_done and machine_ready and uses_meterage and not meterage_done
 
     print_done = production.get("print_count", 0) > 0
     production_active = (
-        control_done
-        and machine_done
+        prerequisites_done
+        and machine_ready
+        and meterage_done
+        and not print_done
         and job.status
         in {
             ProductionJob.Status.QUEUED,
@@ -55,7 +68,7 @@ def build_operator_steps(
         steps.append(
             {
                 "key": "control",
-                "label": "Contrôle",
+                "label": "Contrôle fichier",
                 "state": _step_state(
                     done=control_done,
                     blocked=control_blocked,
@@ -64,29 +77,29 @@ def build_operator_steps(
             }
         )
 
-    if order.uses_atelier_pricing():
-        meterage_done = order.meterage_override_linear_m is not None
+    if require_machine_selection:
+        steps.append(
+            {
+                "key": "machine",
+                "label": "Machine",
+                "state": _step_state(
+                    done=machine_done,
+                    active=bool(machine_active),
+                ),
+            }
+        )
+
+    if uses_meterage:
         steps.append(
             {
                 "key": "meterage",
                 "label": "Métrage",
                 "state": _step_state(
                     done=meterage_done,
-                    active=control_done and not meterage_done,
+                    active=meterage_active,
                 ),
             }
         )
-
-    steps.append(
-        {
-            "key": "machine",
-            "label": "Machine",
-            "state": _step_state(
-                done=machine_done,
-                active=bool(machine_active),
-            ),
-        }
-    )
 
     steps.append(
         {
@@ -94,7 +107,7 @@ def build_operator_steps(
             "label": "Impression",
             "state": _step_state(
                 done=print_done,
-                active=production_active and not print_done,
+                active=production_active,
             ),
         }
     )
@@ -138,6 +151,8 @@ def build_operator_context(
 ) -> dict[str, object]:
     order = row["order"]
     job = row["job"]
+    from apps.portal.views_staff_reviews import _inspection_context
+
     production = production_panel_context(
         request=request,
         order=order,

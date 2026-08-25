@@ -1,0 +1,86 @@
+/* Connexion : une carte essentielle sur fond crème. Hors layer pour primer sur product-polish. */
+html[data-theme="prenium"] body.product-shell--auth .product-layout {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(100dvh - 5.75rem);
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  width: min(100%, 26.5rem);
+  margin: clamp(1rem, 4vh, 2.25rem) auto;
+  gap: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card {
+  display: grid;
+  gap: 1.25rem;
+  padding: clamp(1.35rem, 3.5vw, 1.85rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card__intro {
+  display: grid;
+  gap: 0.4rem;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card__intro h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.45rem, 3vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-transform: none;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card__intro p {
+  margin: 0;
+  max-width: none;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card .alert {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card .ui-form-actions {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-access {
+  margin: 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-access .ui-link {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+@media (max-width: 39.99rem) {
+  html[data-theme="prenium"] body.product-shell--auth .product-layout {
+    justify-content: flex-start;
+  }
+
+  html[data-theme="prenium"] body.product-shell .product-login-shell {
+    margin-top: 0.75rem;
+  }
+}

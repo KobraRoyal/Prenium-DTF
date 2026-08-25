@@ -180,7 +180,7 @@ def test_surface_templates_share_css_cache_bust_version() -> None:
     assert "portal_css_asset_v" in surface_styles
     assert "?v={{ asset_v }}" in surface_styles
     assert "portal_css_asset_v" in layout
-    assert expected == "20260823-ui-surface-flat-v65"
+    assert expected == "20260824-dashboard-kpi-unwrap-v76"
 
     for path in (
         TEMPLATES_DIR / "portal" / "layout.html",

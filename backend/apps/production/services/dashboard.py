@@ -270,7 +270,8 @@ class AtelierDashboardService:
             return "Consulter la production", "La fabrication est terminée. Vérifiez la clôture."
         return (
             "Préparer la production",
-            "Tous les visuels sont approuvés. Vérifiez le métrage puis lancez la fabrication.",
+            "Tous les visuels sont approuvés. Sélectionnez une machine s’il y en a "
+            "plusieurs, saisissez le métrage, puis confirmez l’impression.",
         )
 
     def _drive_needs_attention(self, upload) -> bool:

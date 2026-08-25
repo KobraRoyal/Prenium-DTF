@@ -99,14 +99,28 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn("portal-page--staff", atelier_dashboard)
         self.assertIn("atelier-dashboard", atelier_dashboard)
         self.assertNotIn('class="product-eyebrow">Production', atelier_dashboard)
-        self.assertIn("product-login-heading__note", login)
+        self.assertIn("product-login-card__intro", login)
+        self.assertNotIn("product-login-heading", login)
         self.assertNotIn('class="product-eyebrow">Votre espace Prenium', login)
-        self.assertIn('aria-label="Formulaire de connexion"', login)
+        self.assertIn('id="login-heading"', login)
         self.assertIn("data-submit-loading", login)
         self.assertIn("ui-form-stack", login)
         self.assertIn("ui-input", login)
         self.assertNotIn("dui-input", login)
         self.assertNotIn("dui-alert", login)
+
+    def test_login_auth_surface_is_a_single_centered_card(self) -> None:
+        core = source(CSS_DIR / "entries/portal-core.css")
+        login_css = source(CSS_DIR / "components/auth-login.css")
+        login = source(TEMPLATES_DIR / "portal/login.html")
+
+        self.assertIn('@import "../components/auth-login.css";', core)
+        self.assertLess(core.index('@import "../components/product-polish.css";'), core.index('@import "../components/auth-login.css";'))
+        self.assertIn("width: min(100%, 26.5rem)", login_css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", login_css)
+        self.assertNotIn("product-login-heading", login_css)
+        self.assertIn("product-login-card__intro", login)
+        self.assertEqual(login.count("product-auth-card"), 1)
 
     def test_checkout_and_core_client_views_use_ui_form_contract(self) -> None:
         form_paths = [

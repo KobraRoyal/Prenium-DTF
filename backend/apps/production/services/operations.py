@@ -214,11 +214,14 @@ class AtelierOperationsService:
     def _workflow_hint(self, *, job: ProductionJob, print_count: int) -> str:
         if job.status == ProductionJob.Status.QUEUED:
             if not job.assigned_machine_id:
-                return "Attribuez une machine, puis démarrez la production."
-            return "Démarrez la production ou confirmez l’impression."
+                return (
+                    "Contrôlez les fichiers, sélectionnez une machine s’il y en a "
+                    "plusieurs, puis saisissez le métrage."
+                )
+            return "Saisissez le métrage, puis démarrez l’impression."
         if job.status == ProductionJob.Status.IN_PROGRESS:
             if print_count == 0:
-                return "Confirmez l’impression sur la machine attribuée."
+                return "Confirmez l’impression après le métrage."
             return "Avancez le statut ou préparez l’expédition."
         if job.status == ProductionJob.Status.READY_TO_SHIP:
             return "Déclarez l’expédition Sendcloud ou terminez l’OF."
