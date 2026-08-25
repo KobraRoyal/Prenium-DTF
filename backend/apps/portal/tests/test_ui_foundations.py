@@ -40,7 +40,8 @@ class UiFoundationSourceTests(SimpleTestCase):
             "--radius-lg: 18px",
             "--ui-action-min-h: 2.75rem",
             "--ui-action-radius: 999px",
-            "--ui-action-border-width: 1.5px",
+            "--ui-action-border-width: 2px",
+            "--ui-action-shadow: 3px 3px 0 var(--ink)",
             '--ui-font-display: "Space Grotesk"',
             '--ui-font-body: "DM Sans"',
         ]:
@@ -48,7 +49,8 @@ class UiFoundationSourceTests(SimpleTestCase):
                 self.assertIn(contract, tokens)
 
         self.assertNotIn("gradient(", owned_css)
-        self.assertIsNone(re.search(r"box-shadow:\s*[1-9]\d*px\s+[1-9]\d*px\s+0(?:px)?", owned_css))
+        self.assertIn("--shadow-soft: 0 8px 24px", tokens)
+        self.assertIn("box-shadow: var(--ui-action-shadow)", owned_css)
 
     def test_buttons_and_forms_keep_interaction_states_and_touch_targets(self) -> None:
         buttons = source(CSS_DIR / "components" / "buttons.css")
