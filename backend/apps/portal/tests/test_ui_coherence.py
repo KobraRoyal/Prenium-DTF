@@ -980,7 +980,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("function selectionBounds", runtime)
         self.assertIn("function alignmentBounds", runtime)
         self.assertIn("function alignSelectedItems", runtime)
-        self.assertIn('effectiveAlignmentReference() === "selection"', runtime)
+        self.assertIn('effectiveAlignmentReference() !== "selection"', runtime)
         self.assertIn("event.shiftKey || event.ctrlKey || event.metaKey", runtime)
         self.assertIn("item.x_mm = round(centerX - size.width / 2)", runtime)
         self.assertIn("item.y_mm = round(centerY - size.height / 2)", runtime)
