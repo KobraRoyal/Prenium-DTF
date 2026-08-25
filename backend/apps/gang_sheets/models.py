@@ -512,7 +512,10 @@ class GangSheetItem(BaseModel):
         indexes = [
             models.Index(fields=("customer", "sheet", "z_index")),
             models.Index(fields=("customer", "asset_version")),
-            models.Index(fields=("sheet", "layout_group_id")),
+            models.Index(
+                fields=("sheet", "layout_group_id"),
+                name="gangitem_sheet_group_idx",
+            ),
         ]
         constraints = [
             models.CheckConstraint(condition=models.Q(width_mm__gt=0), name="gangitem_width_gt_0"),
