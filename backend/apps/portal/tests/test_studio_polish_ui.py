@@ -28,14 +28,31 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("--gang-ink: var(--ink)", polish)
         self.assertIn("--gang-accent: var(--brand)", polish)
         self.assertIn(".gang-editor__toolbar", polish)
+        self.assertIn(".gang-editor__toolbar-start", polish)
+        self.assertIn(".gang-editor__toolbar-tools", polish)
+        self.assertIn(".gang-editor__save.is-saved", polish)
+        self.assertIn(".gang-sheet-canvas-scroll", polish)
+        self.assertIn("overflow: hidden", polish)
         self.assertIn(".gang-editor__selection-tools", polish)
+        self.assertIn(".gang-inspector-panel--validation", polish)
+        self.assertIn(".gang-inspector-section__title", polish)
+        self.assertIn(".gang-inspector-danger", polish)
+        self.assertIn(".gang-inspector-panel--multi", polish)
+        self.assertIn("position: sticky", polish)
         self.assertIn(".gang-editor__mobile-tabs button.is-active", polish)
         self.assertIn(".gang-editor__mobile-tabs button > svg", polish)
         self.assertIn(".gang-inspector-panel--validation li.is-ok", polish)
-        self.assertIn(".gang-crop-box", polish)
+        self.assertIn(".gang-sheet-item__label", polish)
+        self.assertIn(".gang-sheet-item:is(:hover, :focus-within, .is-selected) .gang-sheet-item__label", polish)
+        self.assertIn(".gang-selection-frame__size", polish)
+        self.assertIn(".gang-selection-frame__chrome", polish)
+        self.assertIn("translate(-50%, calc(-100% - 0.4rem))", polish)
+        self.assertIn("display: none", polish)
+        self.assertIn(".gang-sheet-canvas:has(.gang-selection-frame.is-multiple)", polish)
         self.assertIn(".gang-crop-controls", polish)
         self.assertIn(".gang-snap-guide", polish)
         self.assertIn(".gang-selection-marquee", polish)
+        self.assertIn(".is-marquee-selecting", polish)
         self.assertNotIn("#dcff1a", polish)
         self.assertNotIn("#1f66ff", polish)
         self.assertIn("@media (max-width: 47.99rem)", polish)
@@ -51,6 +68,9 @@ class StudioPolishUITests(SimpleTestCase):
             ".gang-snap-guide",
             ".gang-selection-marquee",
             ".gang-sheet-item.is-selected",
+            ".gang-selection-frame",
+            ".gang-selection-frame.is-group",
+            ".gang-group-tools",
             ".gang-sheet-item-action:focus-visible",
         ]:
             with self.subTest(selector=selector):
@@ -65,6 +85,7 @@ class StudioPolishUITests(SimpleTestCase):
             "body.product-shell--studio",
             "box-shadow: none !important",
             ".gang-editor__save",
+            ".gang-sheet-canvas-scroll",
         ]:
             with self.subTest(marker=marker):
                 self.assertIn(marker, entry)
@@ -80,13 +101,22 @@ class StudioPolishUITests(SimpleTestCase):
         for attribute in ["hx-get", "hx-trigger", "hx-target", "hx-swap", "hx-sync"]:
             self.assertIn(attribute, gallery)
 
-    def test_final_step_describes_one_outcome_without_changing_actions(self) -> None:
+    def test_final_step_uses_one_confirm_cta(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
 
         self.assertIn("Étape 4 — Finaliser la planche", editor)
-        self.assertIn("Préparer le rendu", editor)
-        self.assertIn("Préparer le rendu HD", editor)
         self.assertIn("Confirmer la composition", editor)
-        self.assertIn("data-render-sheet", editor)
         self.assertIn("data-validate-sheet", editor)
+        self.assertIn("data-validate-label", editor)
+        self.assertNotIn("Préparer le rendu HD", editor)
+        self.assertNotIn("data-render-sheet", editor)
         self.assertNotIn("Générer le rendu HD", editor)
+        self.assertIn("data-snap-toggle", editor)
+        self.assertIn("data-zoom-in", editor)
+        self.assertIn("data-save-label", editor)
+        self.assertIn("gang-editor__toolbar-start", editor)
+        self.assertIn("data-validation-panel", editor)
+        self.assertIn("data-multi-inspector", editor)
+        self.assertIn("data-rotate-selection", editor)
+        self.assertIn("gang-inspector-section__title", editor)
+        self.assertIn("Aligner et répartir", editor)

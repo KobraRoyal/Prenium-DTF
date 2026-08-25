@@ -913,6 +913,55 @@ def test_stale_revision_cannot_overwrite_a_newer_draft():
     assert exc.value.code == "STALE_REVISION"
 
 
+def test_save_layout_persists_layout_group_id():
+    user, customer, project = create_customer_scope(email="group-layout@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Groupée")
+    first = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    second = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+    group_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+
+    locked, issues = service.save_layout(
+        sheet=sheet,
+        expected_revision=sheet.revision,
+        payload=[
+            {
+                "public_id": str(first.public_id),
+                "x_mm": "10",
+                "y_mm": "10",
+                "width_mm": "80",
+                "height_mm": "40",
+                "rotation": 0,
+                "layout_group_id": group_id,
+            },
+            {
+                "public_id": str(second.public_id),
+                "x_mm": "100",
+                "y_mm": "10",
+                "width_mm": "80",
+                "height_mm": "40",
+                "rotation": 0,
+                "layout_group_id": group_id,
+            },
+        ],
+        actor=user,
+    )
+
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert str(first.layout_group_id) == group_id
+    assert str(second.layout_group_id) == group_id
+    serialized = service.serialize_sheet(locked, preview_url_resolver=lambda _version: "")
+    assert {item["layout_group_id"] for item in serialized["items"]} == {group_id}
+    assert issues == []
+
+
 def test_render_creates_low_resolution_preview_and_private_production_pdf():
     user, customer, project = create_customer_scope(email="render@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)

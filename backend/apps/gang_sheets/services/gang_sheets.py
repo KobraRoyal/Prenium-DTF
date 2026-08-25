@@ -4,6 +4,7 @@ import logging
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
+from uuid import UUID
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -723,12 +724,22 @@ class GangSheetService:
                 item.width_mm = self._decimal(row.get("width_mm"))
                 item.height_mm = self._decimal(row.get("height_mm"))
                 item.rotation = normalize_rotation(row.get("rotation", 0))
+                item.layout_group_id = self._optional_uuid(row.get("layout_group_id"))
         except (KeyError, TypeError, ValueError, InvalidOperation) as error:
             raise GangSheetDomainError(
                 "INVALID_LAYOUT", str(error) or "Placement invalide."
             ) from error
         GangSheetItem.objects.bulk_update(
-            items.values(), ["x_mm", "y_mm", "width_mm", "height_mm", "rotation", "updated_at"]
+            items.values(),
+            [
+                "x_mm",
+                "y_mm",
+                "width_mm",
+                "height_mm",
+                "rotation",
+                "layout_group_id",
+                "updated_at",
+            ],
         )
         self._mark_dirty(locked)
         self._refresh_sheet(locked)
@@ -1032,6 +1043,7 @@ class GangSheetService:
                     "width_mm": float(item.width_mm),
                     "height_mm": float(item.height_mm),
                     "rotation": item.rotation,
+                    "layout_group_id": str(item.layout_group_id) if item.layout_group_id else None,
                     "has_issue": str(item.public_id) in issue_ids,
                 }
                 for item in items
@@ -1163,6 +1175,12 @@ class GangSheetService:
         if number < 0 or (number == 0 and not allow_zero):
             raise ValueError("Les dimensions doivent être strictement positives.")
         return number
+
+    @staticmethod
+    def _optional_uuid(value):
+        if value in (None, "", "null"):
+            return None
+        return UUID(str(value))
 
     @classmethod
     def _spacing_decimal(cls, value):

@@ -45,15 +45,17 @@ html[data-theme="prenium"] {
   --ui-header-h: 4.25rem;
   --ui-action-min-h: 2.75rem;
   --ui-action-radius: 999px;
-  --ui-action-border-width: 1.5px;
-  --ui-action-border: color-mix(in srgb, var(--ink) 24%, transparent);
+  --ui-action-border-width: 2px;
+  --ui-action-border: var(--ink);
   --ui-action-primary-bg: var(--brand);
   --ui-action-primary-bg-hover: var(--brand-strong);
   --ui-action-primary-text: var(--action-text);
-  --ui-action-secondary-bg: var(--surface);
-  --ui-action-secondary-bg-hover: var(--bg-accent);
-  --ui-action-secondary-text: var(--ink);
-  --ui-action-shadow: 0 5px 16px rgba(83, 67, 43, 0.1);
-  --ui-action-shadow-hover: 0 8px 22px rgba(83, 67, 43, 0.14);
+  --ui-action-secondary-bg: color-mix(in srgb, var(--brand) 14%, var(--surface-raised));
+  --ui-action-secondary-bg-hover: color-mix(in srgb, var(--brand) 22%, var(--surface-raised));
+  --ui-action-secondary-text: var(--brand-strong);
+  --ui-action-secondary-border: var(--brand);
+  --ui-action-shadow: 3px 3px 0 var(--ink);
+  --ui-action-shadow-hover: 4px 4px 0 var(--ink);
+  --ui-action-shadow-active: 1px 1px 0 var(--ink);
   --ui-action-transition: var(--transition-base);
 }

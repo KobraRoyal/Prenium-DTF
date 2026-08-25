@@ -64,7 +64,7 @@
           <button type="button" data-workflow-panel-target="settings" aria-label="Étape 3 — Contrôler la composition"><span data-workflow-marker aria-hidden="true">3</span><span><strong>Contrôler</strong><small data-workflow-detail>Vérifier la composition</small></span></button>
         </li>
         <li data-workflow-step="validate">
-          <button type="button" data-workflow-panel-target="settings" aria-label="Étape 4 — Finaliser la planche"><span data-workflow-marker aria-hidden="true">4</span><span><strong>Finaliser</strong><small data-workflow-detail>Préparer le rendu</small></span></button>
+          <button type="button" data-workflow-panel-target="settings" aria-label="Étape 4 — Finaliser la planche"><span data-workflow-marker aria-hidden="true">4</span><span><strong>Finaliser</strong><small data-workflow-detail>Confirmer la composition</small></span></button>
         </li>
       </ol>
     </nav>
@@ -229,57 +229,67 @@
 
     <section class="gang-editor__stage is-mobile-active" id="gang-editor-canvas" role="tabpanel" data-editor-panel="canvas" aria-label="Composition de la planche" aria-labelledby="gang-editor-tab-canvas">
       <div class="gang-editor__toolbar" role="toolbar" aria-label="Outils de composition">
-        <div class="gang-editor__toolbar-meta">
-          <strong>Plan de travail</strong>
-          <span data-canvas-format>—</span>
+        <div class="gang-editor__toolbar-start">
+          <div class="gang-editor__toolbar-meta">
+            <span class="gang-editor__toolbar-meta-label">Plan de travail</span>
+            <strong data-canvas-format>—</strong>
+          </div>
+          <div class="gang-editor__toolbar-group gang-editor__toolbar-group--impose" role="group" aria-label="Imposition">
+            <button type="button" class="gang-tool-btn gang-tool-btn--accent" data-auto-place {% if not can_edit %}disabled{% endif %} title="Réorganiser tous les visuels selon l’espacement défini">
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="layout" size="16" %}
+              <span>Auto-imposer</span>
+            </button>
+          </div>
         </div>
-        <div class="gang-editor__toolbar-group" role="group" aria-label="Imposition">
-          <button type="button" class="gang-tool-btn gang-tool-btn--accent" data-auto-place {% if not can_edit %}disabled{% endif %} title="Réorganiser tous les visuels selon l’espacement défini">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="layout" size="16" %}
-            <span>Auto-imposer</span>
+
+        <div class="gang-editor__toolbar-tools">
+          <div class="gang-editor__toolbar-group gang-editor__history" role="group" aria-label="Historique">
+            <button type="button" class="gang-tool-btn gang-tool-btn--icon" data-undo-layout aria-label="Annuler" aria-keyshortcuts="Control+Z Meta+Z" title="Annuler (Ctrl/Cmd + Z)" disabled>
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="undo" size="16" %}
+            </button>
+            <button type="button" class="gang-tool-btn gang-tool-btn--icon" data-redo-layout aria-label="Rétablir" aria-keyshortcuts="Control+Y Meta+Y Control+Shift+Z Meta+Shift+Z" title="Rétablir (Maj + Ctrl/Cmd + Z)" disabled>
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="redo" size="16" %}
+            </button>
+          </div>
+          <div class="gang-editor__toolbar-group gang-editor__selection-tools" role="group" aria-label="Sélection et aimants">
+            <button type="button" class="gang-tool-btn is-active" data-snap-toggle aria-pressed="true" aria-label="Aimants" title="Aimantation aux bords et guides">
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="magnet" size="16" %}
+              <span>Aimants</span>
+            </button>
+            <button type="button" class="gang-tool-btn" data-select-all aria-label="Tout sélectionner" aria-keyshortcuts="Control+A Meta+A" title="Sélectionner tous les visuels">
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="select-all" size="16" %}
+              <span>Tout</span>
+            </button>
+            <button type="button" class="gang-tool-btn gang-editor__touch-multiselect" data-touch-multiselect aria-pressed="false" aria-label="Multi-sélection tactile" title="Toucher plusieurs visuels pour les sélectionner">
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="multi-select" size="16" %}
+              <span>Multi</span>
+            </button>
+          </div>
+          <div class="gang-editor__toolbar-group gang-editor__zoom" role="group" aria-label="Zoom">
+            <button type="button" class="gang-tool-btn gang-tool-btn--icon" data-zoom-out aria-label="Réduire le zoom" title="Zoom −">
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="zoom-out" size="16" %}
+            </button>
+            <button type="button" class="gang-tool-btn gang-tool-btn--zoom" data-zoom-reset aria-label="Réinitialiser le zoom" title="Réinitialiser le zoom">
+              <span data-zoom-value>100 %</span>
+            </button>
+            <button type="button" class="gang-tool-btn gang-tool-btn--icon" data-zoom-in aria-label="Augmenter le zoom" title="Zoom +">
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="zoom-in" size="16" %}
+            </button>
+          </div>
+        </div>
+
+        <div class="gang-editor__toolbar-end">
+          <button type="button" class="ui-btn ui-btn-primary ui-btn-sm gang-editor__save gang-tool-btn--save" data-save-layout aria-keyshortcuts="Control+S Meta+S" {% if not can_edit %}disabled{% endif %} title="Enregistrer (Ctrl/Cmd + S)">
+            {% include "portal/client/gang_sheets/partials/icon.html" with name="save" size="16" %}
+            <span data-save-label>Enregistrer</span>
           </button>
         </div>
-        <div class="gang-editor__toolbar-group gang-editor__history" role="group" aria-label="Historique">
-          <button type="button" class="gang-tool-btn gang-tool-btn--icon" data-undo-layout aria-label="Annuler" aria-keyshortcuts="Control+Z Meta+Z" title="Annuler (Ctrl/Cmd + Z)" disabled>
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="undo" size="16" %}
-          </button>
-          <button type="button" class="gang-tool-btn gang-tool-btn--icon" data-redo-layout aria-label="Rétablir" aria-keyshortcuts="Control+Y Meta+Y Control+Shift+Z Meta+Shift+Z" title="Rétablir (Maj + Ctrl/Cmd + Z)" disabled>
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="redo" size="16" %}
-          </button>
-        </div>
-        <div class="gang-editor__toolbar-group gang-editor__selection-tools" role="group" aria-label="Sélection et aimants">
-          <button type="button" class="gang-tool-btn is-active" data-snap-toggle aria-pressed="true" title="Aimantation aux bords et guides">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="magnet" size="16" %}
-            <span>Aimants</span>
-          </button>
-          <button type="button" class="gang-tool-btn" data-select-all aria-keyshortcuts="Control+A Meta+A" title="Sélectionner tous les visuels">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="select-all" size="16" %}
-            <span>Tout</span>
-          </button>
-          <button type="button" class="gang-tool-btn gang-editor__touch-multiselect" data-touch-multiselect aria-pressed="false" title="Toucher plusieurs visuels pour les sélectionner">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="multi-select" size="16" %}
-            <span>Multi</span>
-          </button>
-        </div>
-        <div class="gang-editor__toolbar-group gang-editor__zoom" role="group" aria-label="Zoom">
-          <button type="button" class="gang-tool-btn gang-tool-btn--icon" data-zoom-out aria-label="Réduire le zoom" title="Zoom −">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="zoom-out" size="16" %}
-          </button>
-          <button type="button" class="gang-tool-btn gang-tool-btn--zoom" data-zoom-reset aria-label="Réinitialiser le zoom" title="Réinitialiser le zoom">
-            <span data-zoom-value>100 %</span>
-          </button>
-          <button type="button" class="gang-tool-btn gang-tool-btn--icon" data-zoom-in aria-label="Augmenter le zoom" title="Zoom +">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="zoom-in" size="16" %}
-          </button>
-        </div>
-        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm gang-editor__save gang-tool-btn--save" data-save-layout aria-keyshortcuts="Control+S Meta+S" {% if not can_edit %}disabled{% endif %} title="Enregistrer (Ctrl/Cmd + S)">
-          {% include "portal/client/gang_sheets/partials/icon.html" with name="save" size="16" %}
-          <span>Enregistrer</span>
-        </button>
       </div>
-      <div class="gang-sheet-canvas-wrap" data-canvas-clear-zone>
-        <p class="sr-only" id="gang-sheet-keyboard-help">Dans la planche : Ctrl ou Commande plus A sélectionne tout, S enregistre, Z annule, Y rétablit et D duplique. R pivote la sélection. Suppr efface et Échap désélectionne.</p>
-        <div class="gang-sheet-canvas" data-sheet-canvas role="region" tabindex="0" aria-label="Planche DTF interactive" aria-describedby="gang-sheet-keyboard-help"></div>
+      <div class="gang-sheet-canvas-scroll" data-canvas-scroll>
+        <div class="gang-sheet-canvas-wrap" data-canvas-clear-zone>
+          <p class="sr-only" id="gang-sheet-keyboard-help">Dans la planche : clic maintenu puis glisser sélectionne plusieurs visuels. Ctrl ou Commande plus A sélectionne tout, S enregistre, Z annule, Y rétablit et D duplique. R pivote la sélection. Suppr efface et Échap désélectionne.</p>
+          <div class="gang-sheet-canvas" data-sheet-canvas role="region" tabindex="0" aria-label="Planche DTF interactive" aria-describedby="gang-sheet-keyboard-help"></div>
+        </div>
       </div>
     </section>
 
@@ -288,115 +298,169 @@
         <span class="gang-editor__panel-label-icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="settings" size="16" %}</span>
         <div><strong>Réglages</strong><small>Sélection et contrôle</small></div>
       </div>
-      <section class="gang-inspector-panel" data-empty-inspector>
+
+      <section class="gang-inspector-panel gang-inspector-panel--empty" data-empty-inspector>
         <span class="gang-inspector-panel__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="cursor" size="22" %}</span>
         <h2>Sélectionnez un visuel</h2>
-        <p>Cliquez sur une occurrence. Maintenez <kbd>Maj</kbd> ou <kbd>⌘</kbd> pour en sélectionner plusieurs.</p>
+        <p>Cliquez un visuel, ou maintenez le clic et glissez sur la planche. <kbd>Maj</kbd> ou <kbd>⌘</kbd> ajoute à la sélection.</p>
+        <ol class="gang-inspector-empty-steps" aria-label="Parcours rapide">
+          <li>Importer vos fichiers dans la galerie</li>
+          <li>Placer les visuels sur la planche</li>
+          <li>Contrôler puis finaliser ci-dessous</li>
+        </ol>
       </section>
-      <section class="gang-inspector-panel" data-item-inspector hidden>
-        <span class="gang-inspector-panel__context">Visuel sélectionné</span>
-        <h2 data-selected-name>Visuel</h2>
-        <div class="gang-inspector-grid">
-          <label>Largeur <span><input type="number" min="0.01" step="0.1" data-input-width> cm</span></label>
-          <label>Hauteur <span><input type="number" min="0.01" step="0.1" data-input-height> cm</span></label>
-          <label>Position X <span><input type="number" step="0.1" data-input-x> cm</span></label>
-          <label>Position Y <span><input type="number" step="0.1" data-input-y> cm</span></label>
+
+      <section class="gang-inspector-panel gang-inspector-panel--item" data-item-inspector hidden>
+        <header class="gang-inspector-panel__head">
+          <span class="gang-inspector-panel__context">Visuel sélectionné</span>
+          <h2 data-selected-name>Visuel</h2>
+        </header>
+        <div class="gang-inspector-section">
+          <h3 class="gang-inspector-section__title">Dimensions</h3>
+          <div class="gang-inspector-grid">
+            <label>Largeur <span><input type="number" min="0.01" step="0.1" data-input-width aria-label="Largeur en centimètres"> cm</span></label>
+            <label>Hauteur <span><input type="number" min="0.01" step="0.1" data-input-height aria-label="Hauteur en centimètres"> cm</span></label>
+          </div>
+          <label class="gang-ratio-lock">
+            <input type="checkbox" data-lock-ratio checked>
+            {% include "portal/client/gang_sheets/partials/icon.html" with name="lock" size="14" %}
+            Conserver les proportions
+          </label>
         </div>
-        <label class="gang-ratio-lock">
-          <input type="checkbox" data-lock-ratio checked>
-          {% include "portal/client/gang_sheets/partials/icon.html" with name="lock" size="14" %}
-          Conserver les proportions
-        </label>
-        <div class="gang-inspector-actions">
-          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-rotate-item>
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="rotate" size="16" %}
-            Pivoter 90°
-          </button>
-          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-duplicate-item>
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="duplicate" size="16" %}
-            Dupliquer
-          </button>
-          <button type="button" class="ui-btn ui-btn-danger ui-btn-sm" data-delete-item>
+        <div class="gang-inspector-section">
+          <h3 class="gang-inspector-section__title">Position</h3>
+          <div class="gang-inspector-grid">
+            <label>Position X <span><input type="number" step="0.1" data-input-x aria-label="Position X en centimètres"> cm</span></label>
+            <label>Position Y <span><input type="number" step="0.1" data-input-y aria-label="Position Y en centimètres"> cm</span></label>
+          </div>
+        </div>
+        <div class="gang-inspector-section">
+          <h3 class="gang-inspector-section__title">Actions</h3>
+          <div class="gang-inspector-actions">
+            <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-rotate-item>
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="rotate" size="16" %}
+              Pivoter 90°
+            </button>
+            <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-duplicate-item>
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="duplicate" size="16" %}
+              Dupliquer
+            </button>
+          </div>
+          <button type="button" class="gang-inspector-danger" data-delete-item>
             {% include "portal/client/gang_sheets/partials/icon.html" with name="trash" size="16" %}
-            Supprimer
+            Supprimer ce visuel
           </button>
         </div>
       </section>
+
+      <section class="gang-inspector-panel gang-inspector-panel--multi" data-multi-inspector hidden>
+        <header class="gang-inspector-panel__head">
+          <span class="gang-inspector-panel__context">Sélection multiple</span>
+          <h2 data-multi-summary>2 visuels</h2>
+          <p class="gang-inspector-panel__meta">Ensemble <strong data-multi-bounds>—</strong></p>
+        </header>
+        <div class="gang-inspector-section">
+          <h3 class="gang-inspector-section__title">Groupe</h3>
+          <div class="gang-group-tools" data-group-tools>
+            <button type="button" class="gang-action-chip" data-group-selection title="Mémoriser la sélection comme un groupe">
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="lock" size="16" %}
+              <span>Grouper</span>
+            </button>
+            <button type="button" class="gang-action-chip" data-ungroup-selection title="Dissocier le ou les groupes sélectionnés" disabled>
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="unlock" size="16" %}
+              <span>Dissocier</span>
+            </button>
+            <p class="gang-group-tools__help" data-group-help>Sélectionnez au moins 2 visuels pour créer un groupe mémorisé.</p>
+          </div>
+        </div>
+        <div class="gang-inspector-section">
+          <h3 class="gang-inspector-section__title">Actions</h3>
+          <div class="gang-inspector-actions">
+            <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-rotate-selection>
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="rotate" size="16" %}
+              Pivoter 90°
+            </button>
+            <button type="button" class="gang-inspector-danger gang-selection-delete" data-delete-selected hidden>
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="trash" size="16" %}
+              <span data-delete-selected-label>Supprimer la sélection</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section class="gang-inspector-panel gang-alignment-panel" data-alignment-panel hidden aria-label="Outils avancés de sélection">
         <details class="gang-advanced-tools" data-advanced-selection-tools>
           <summary>
             <span class="gang-panel-icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="align" size="16" %}</span>
-            <span><strong>Outils avancés de sélection</strong><small data-selection-summary>1 visuel sélectionné</small></span>
+            <span><strong>Aligner et répartir</strong><small data-selection-summary>1 visuel sélectionné</small></span>
           </summary>
           <div class="gang-advanced-tools__content">
-        <fieldset class="gang-alignment-reference">
-          <legend>Aligner par rapport à</legend>
-          <div>
-            <label><input type="radio" name="gang-alignment-reference" value="selection" data-align-reference checked><span>Sélection</span></label>
-            <label><input type="radio" name="gang-alignment-reference" value="sheet" data-align-reference><span>Planche</span></label>
-          </div>
-        </fieldset>
-        <div class="gang-alignment-actions" role="toolbar" aria-label="Aligner les visuels sélectionnés">
-          <button type="button" data-align="left" aria-label="Aligner à gauche" title="Aligner à gauche">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="align-left" size="18" %}
-          </button>
-          <button type="button" data-align="center-x" aria-label="Centrer horizontalement" title="Centrer horizontalement">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="align-center-x" size="18" %}
-          </button>
-          <button type="button" data-align="right" aria-label="Aligner à droite" title="Aligner à droite">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="align-right" size="18" %}
-          </button>
-          <button type="button" data-align="top" aria-label="Aligner en haut" title="Aligner en haut">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="align-top" size="18" %}
-          </button>
-          <button type="button" data-align="center-y" aria-label="Centrer verticalement" title="Centrer verticalement">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="align-center-y" size="18" %}
-          </button>
-          <button type="button" data-align="bottom" aria-label="Aligner en bas" title="Aligner en bas">
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="align-bottom" size="18" %}
-          </button>
-        </div>
-        <div class="gang-distribution-tools">
-          <span>Répartir régulièrement</span>
-          <div role="group" aria-label="Répartir les visuels sélectionnés">
-            <button type="button" class="gang-action-chip" data-distribute="horizontal" aria-label="Répartir horizontalement" title="Répartir horizontalement">
-              {% include "portal/client/gang_sheets/partials/icon.html" with name="distribute-h" size="16" %}
-              <span>Horizontal</span>
-            </button>
-            <button type="button" class="gang-action-chip" data-distribute="vertical" aria-label="Répartir verticalement" title="Répartir verticalement">
-              {% include "portal/client/gang_sheets/partials/icon.html" with name="distribute-v" size="16" %}
-              <span>Vertical</span>
-            </button>
-          </div>
-        </div>
-        <div class="gang-precise-gap">
-          <div class="gang-precise-gap__copy">
-            <strong>Écart précis</strong>
-            <span>Espace exact entre les visuels sélectionnés.</span>
-          </div>
-          <label for="gang-selection-gap" class="gang-precise-gap__field">
-            <span class="sr-only">Valeur d’écart</span>
-            <span><input id="gang-selection-gap" type="number" min="0" max="1000" step="0.1" value="2" inputmode="decimal" data-selection-gap> mm</span>
-          </label>
-          <div class="gang-precise-gap__actions" role="group" aria-label="Appliquer l’écart précis">
-            <button type="button" class="gang-action-chip" data-apply-selection-gap="horizontal" aria-label="Appliquer l’écart horizontal" title="Écart horizontal (X)">
-              {% include "portal/client/gang_sheets/partials/icon.html" with name="gap-h" size="16" %}
-              <span>Écart X</span>
-            </button>
-            <button type="button" class="gang-action-chip" data-apply-selection-gap="vertical" aria-label="Appliquer l’écart vertical" title="Écart vertical (Y)">
-              {% include "portal/client/gang_sheets/partials/icon.html" with name="gap-v" size="16" %}
-              <span>Écart Y</span>
-            </button>
-          </div>
-        </div>
-        <button type="button" class="ui-btn ui-btn-danger ui-btn-sm gang-selection-delete" data-delete-selected hidden>
-          {% include "portal/client/gang_sheets/partials/icon.html" with name="trash" size="16" %}
-          Supprimer la sélection
-        </button>
+            <fieldset class="gang-alignment-reference">
+              <legend>Référence d’alignement</legend>
+              <div>
+                <label><input type="radio" name="gang-alignment-reference" value="selection" data-align-reference checked><span>Sélection</span></label>
+                <label><input type="radio" name="gang-alignment-reference" value="sheet" data-align-reference><span>Planche</span></label>
+                <label><input type="radio" name="gang-alignment-reference" value="others" data-align-reference><span>Autres visuels</span></label>
+              </div>
+            </fieldset>
+            <div class="gang-alignment-actions" role="toolbar" aria-label="Aligner les visuels sélectionnés">
+              <button type="button" data-align="left" aria-label="Aligner à gauche" title="Aligner à gauche">
+                {% include "portal/client/gang_sheets/partials/icon.html" with name="align-left" size="18" %}
+              </button>
+              <button type="button" data-align="center-x" aria-label="Centrer horizontalement" title="Centrer horizontalement">
+                {% include "portal/client/gang_sheets/partials/icon.html" with name="align-center-x" size="18" %}
+              </button>
+              <button type="button" data-align="right" aria-label="Aligner à droite" title="Aligner à droite">
+                {% include "portal/client/gang_sheets/partials/icon.html" with name="align-right" size="18" %}
+              </button>
+              <button type="button" data-align="top" aria-label="Aligner en haut" title="Aligner en haut">
+                {% include "portal/client/gang_sheets/partials/icon.html" with name="align-top" size="18" %}
+              </button>
+              <button type="button" data-align="center-y" aria-label="Centrer verticalement" title="Centrer verticalement">
+                {% include "portal/client/gang_sheets/partials/icon.html" with name="align-center-y" size="18" %}
+              </button>
+              <button type="button" data-align="bottom" aria-label="Aligner en bas" title="Aligner en bas">
+                {% include "portal/client/gang_sheets/partials/icon.html" with name="align-bottom" size="18" %}
+              </button>
+            </div>
+            <div class="gang-distribution-tools">
+              <span>Répartir régulièrement</span>
+              <div role="group" aria-label="Répartir les visuels sélectionnés">
+                <button type="button" class="gang-action-chip" data-distribute="horizontal" aria-label="Répartir horizontalement" title="Répartir horizontalement">
+                  {% include "portal/client/gang_sheets/partials/icon.html" with name="distribute-h" size="16" %}
+                  <span>Horizontal</span>
+                </button>
+                <button type="button" class="gang-action-chip" data-distribute="vertical" aria-label="Répartir verticalement" title="Répartir verticalement">
+                  {% include "portal/client/gang_sheets/partials/icon.html" with name="distribute-v" size="16" %}
+                  <span>Vertical</span>
+                </button>
+              </div>
+            </div>
+            <div class="gang-precise-gap">
+              <div class="gang-precise-gap__copy">
+                <strong>Écart précis</strong>
+                <span>Espace exact entre les visuels sélectionnés.</span>
+              </div>
+              <label for="gang-selection-gap" class="gang-precise-gap__field">
+                <span class="sr-only">Valeur d’écart</span>
+                <span><input id="gang-selection-gap" type="number" min="0" max="1000" step="0.1" value="2" inputmode="decimal" data-selection-gap> mm</span>
+              </label>
+              <div class="gang-precise-gap__actions" role="group" aria-label="Appliquer l’écart précis">
+                <button type="button" class="gang-action-chip" data-apply-selection-gap="horizontal" aria-label="Appliquer l’écart horizontal" title="Écart horizontal (X)">
+                  {% include "portal/client/gang_sheets/partials/icon.html" with name="gap-h" size="16" %}
+                  <span>Écart X</span>
+                </button>
+                <button type="button" class="gang-action-chip" data-apply-selection-gap="vertical" aria-label="Appliquer l’écart vertical" title="Écart vertical (Y)">
+                  {% include "portal/client/gang_sheets/partials/icon.html" with name="gap-v" size="16" %}
+                  <span>Écart Y</span>
+                </button>
+              </div>
+            </div>
             <p class="gang-alignment-panel__help" data-alignment-help>La sélection utilise son cadre global comme référence.</p>
           </div>
         </details>
       </section>
+
       <section class="gang-inspector-panel gang-spacing-panel" aria-label="Réglages avancés d’auto-imposition">
         <details class="gang-advanced-tools" data-advanced-spacing-tools>
           <summary>
@@ -404,7 +468,7 @@
             <span><strong>Espacement auto-imposition</strong><small>Réglages avancés</small></span>
           </summary>
           <div class="gang-advanced-tools__content">
-            <p>Vide utilisé par Auto-imposer (≠ écart précis).</p>
+            <p>Vide utilisé par Auto-imposer (≠ écart précis de la sélection).</p>
             <div class="gang-spacing-grid">
               <div class="ui-field-group">
                 <label class="ui-label" for="gang-spacing-x">Horizontal X</label>
@@ -428,20 +492,20 @@
           </div>
         </details>
       </section>
-      <section class="gang-inspector-panel gang-inspector-panel--validation">
+
+      <section class="gang-inspector-panel gang-inspector-panel--validation" data-validation-panel>
         <div class="gang-validation-heading">
           <span class="gang-panel-icon gang-panel-icon--ok" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="check" size="16" %}</span>
-          <div><h2>Finaliser la planche</h2><p>Préparez le rendu HD, puis confirmez cette composition.</p></div>
+          <div>
+            <h2>Finaliser la planche</h2>
+            <p data-validation-lead>Un clic prépare le rendu HD atelier, puis confirme la composition.</p>
+          </div>
         </div>
         <ul data-issues-list><li class="is-ok">Aucune anomalie de placement.</li></ul>
         <div class="gang-validation-actions">
-          <button type="button" class="ui-btn ui-btn-primary" data-render-sheet {% if not can_edit %}disabled{% endif %}>
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="canvas" size="16" %}
-            Préparer le rendu HD
-          </button>
-          <button type="button" class="ui-btn ui-btn-secondary" data-validate-sheet {% if not can_edit %}disabled{% endif %}>
+          <button type="button" class="ui-btn ui-btn-primary" data-validate-sheet {% if not can_edit %}disabled{% endif %}>
             {% include "portal/client/gang_sheets/partials/icon.html" with name="check" size="16" %}
-            Confirmer la composition
+            <span data-validate-label>Confirmer la composition</span>
           </button>
           <div class="ui-field-group gang-sheet-quantity" data-sheet-quantity-field hidden>
             <label class="ui-label" for="id-sheet-quantity">Exemplaires de planche</label>

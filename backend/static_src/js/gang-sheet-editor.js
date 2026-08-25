@@ -18,6 +18,7 @@ if (root) {
   let dirty = false;
   let zoom = 1;
   let pollTimer = null;
+  let pendingValidateAfterRender = false;
   let resizeFrame = null;
   let galleryWasPending = qPendingGallery();
   const canEdit = root.dataset.canEdit === "true";
@@ -33,13 +34,14 @@ if (root) {
   const HISTORY_LIMIT = 40;
 
   function layoutSnapshot() {
-    return state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation }) => ({
+    return state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id }) => ({
       public_id,
       x_mm,
       y_mm,
       width_mm,
       height_mm,
       rotation,
+      layout_group_id: layout_group_id || null,
     }));
   }
 
@@ -79,6 +81,7 @@ if (root) {
       item.width_mm = saved.width_mm;
       item.height_mm = saved.height_mm;
       item.rotation = saved.rotation;
+      item.layout_group_id = saved.layout_group_id || null;
     });
   }
 
@@ -117,12 +120,14 @@ if (root) {
 
   function renderZoom() {
     const stage = q("[data-editor-panel='canvas']");
-    const availableWidth = Math.max(320, (stage?.clientWidth || 0) - 64);
+    const scroll = q("[data-canvas-scroll]") || stage;
+    const availableWidth = Math.max(320, (scroll?.clientWidth || stage?.clientWidth || 0) - 64);
     const baseWidth = Math.min(700, availableWidth);
     canvas.style.width = `${Math.round(baseWidth * zoom)}px`;
     q("[data-zoom-value]").textContent = `${Math.round(zoom * 100)} %`;
     window.requestAnimationFrame(() => {
       positionSelectedItemToolbar();
+      positionSelectionGroupToolbar();
     });
   }
 
@@ -190,39 +195,86 @@ if (root) {
       : Math.max(1, round(start.height + deltaY));
   }
 
-  function createItemAction({ label, icon, attribute, danger = false }) {
+  function createItemAction({ label, icon, attribute, danger = false, iconOnly = false }) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `gang-sheet-item-action${danger ? " is-danger" : ""}`;
+    button.className = `gang-sheet-item-action${danger ? " is-danger" : ""}${iconOnly ? " is-icon" : ""}`;
     button.setAttribute(attribute, "");
     const iconNode = document.createElement("span");
     iconNode.setAttribute("aria-hidden", "true");
-    iconNode.textContent = icon;
-    const labelNode = document.createElement("span");
-    labelNode.textContent = label;
-    button.append(iconNode, labelNode);
+    if (typeof icon === "string") {
+      iconNode.textContent = icon;
+    } else if (icon instanceof Node) {
+      iconNode.append(icon);
+    }
+    button.append(iconNode);
+    if (!iconOnly) {
+      const labelNode = document.createElement("span");
+      labelNode.textContent = label;
+      button.append(labelNode);
+    } else {
+      button.setAttribute("title", label);
+    }
     return button;
+  }
+
+  function createLockIcon({ open = false } = {}) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "16");
+    svg.setAttribute("height", "16");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.75");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const paths = open
+      ? [
+          "M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v.75",
+          "M4.5 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H4.5a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z",
+        ]
+      : [
+          "M16.5 10.5V7.875a4.5 4.5 0 1 0-9 0V10.5m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z",
+        ];
+    paths.forEach((d) => {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      svg.append(path);
+    });
+    return svg;
+  }
+
+  function positionToolbarNearRect(toolbar, targetRect, { preferBelow = false, topClearance = 0 } = {}) {
+    if (!toolbar || !targetRect) return;
+    const gap = 6;
+    const canvasRect = canvas.getBoundingClientRect();
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const contentLeft = canvasRect.left + canvas.clientLeft;
+    const contentTop = canvasRect.top + canvas.clientTop;
+    const idealLeft = targetRect.left - contentLeft + (targetRect.width - toolbarRect.width) / 2;
+    const maxLeft = Math.max(gap, canvas.clientWidth - toolbarRect.width - gap);
+    const left = Math.max(gap, Math.min(idealLeft, maxLeft));
+    const aboveTop = targetRect.top - contentTop - toolbarRect.height - gap - topClearance;
+    const belowTop = targetRect.bottom - contentTop + gap;
+    let top = preferBelow ? belowTop : aboveTop;
+    if (preferBelow) {
+      if (top + toolbarRect.height > canvas.clientHeight - gap) top = aboveTop;
+    } else if (top < gap) {
+      top = belowTop;
+    }
+    const maxTop = Math.max(gap, canvas.clientHeight - toolbarRect.height - gap);
+    toolbar.style.left = `${round(left)}px`;
+    toolbar.style.top = `${round(Math.max(gap, Math.min(top, maxTop)))}px`;
+    toolbar.style.visibility = "visible";
   }
 
   function positionSelectedItemToolbar() {
     const toolbar = canvas.querySelector("[data-item-toolbar]");
     const itemNode = selectedIds.size === 1 && selectedId ? canvas.querySelector(`[data-item-id="${selectedId}"]`) : null;
     if (!toolbar || !itemNode) return;
-    const gap = 6;
-    const canvasRect = canvas.getBoundingClientRect();
-    const itemRect = itemNode.getBoundingClientRect();
-    const toolbarRect = toolbar.getBoundingClientRect();
-    const contentLeft = canvasRect.left + canvas.clientLeft;
-    const contentTop = canvasRect.top + canvas.clientTop;
-    const idealLeft = itemRect.left - contentLeft + (itemRect.width - toolbarRect.width) / 2;
-    const maxLeft = Math.max(gap, canvas.clientWidth - toolbarRect.width - gap);
-    const left = Math.max(gap, Math.min(idealLeft, maxLeft));
-    let top = itemRect.top - contentTop - toolbarRect.height - gap;
-    if (top < gap) top = itemRect.bottom - contentTop + gap;
-    const maxTop = Math.max(gap, canvas.clientHeight - toolbarRect.height - gap);
-    toolbar.style.left = `${round(left)}px`;
-    toolbar.style.top = `${round(Math.max(gap, Math.min(top, maxTop)))}px`;
-    toolbar.style.visibility = "visible";
+    positionToolbarNearRect(toolbar, itemNode.getBoundingClientRect());
   }
 
   function renderSelectedItemToolbar(item) {
@@ -248,6 +300,72 @@ if (root) {
     toolbar.append(rotateButton, deleteButton);
     canvas.append(toolbar);
     window.requestAnimationFrame(positionSelectedItemToolbar);
+  }
+
+  function positionSelectionGroupToolbar() {
+    const toolbar = canvas.querySelector("[data-group-toolbar]");
+    const frame = canvas.querySelector("[data-selection-frame]");
+    if (!toolbar || !frame) return;
+    // Menu sous le cadre : la taille d’ensemble reste lisible au-dessus.
+    positionToolbarNearRect(toolbar, frame.getBoundingClientRect(), {
+      preferBelow: true,
+      topClearance: 40,
+    });
+  }
+
+  function renderSelectionGroupToolbar() {
+    if (!canEdit || selectedIds.size < 2 || ["rendering", "validated"].includes(state.status)) return;
+    const items = selectedItems();
+    const hasGroup = items.some((item) => item.layout_group_id);
+    const allGroupedTogether = Boolean(
+      items[0]?.layout_group_id
+      && items.every((item) => item.layout_group_id === items[0].layout_group_id)
+    );
+    const toolbar = document.createElement("div");
+    toolbar.className = "gang-sheet-item-toolbar gang-sheet-item-toolbar--group";
+    toolbar.dataset.groupToolbar = "";
+    toolbar.setAttribute("role", "toolbar");
+    toolbar.setAttribute("aria-label", "Actions sur la sélection groupée");
+    toolbar.style.visibility = "hidden";
+
+    const rotateButton = createItemAction({
+      label: "Pivoter",
+      icon: "↻",
+      attribute: "data-canvas-rotate-item",
+    });
+    rotateButton.setAttribute("aria-label", `Pivoter les ${items.length} visuels de 90 degrés`);
+    rotateButton.disabled = busy;
+
+    const groupButton = createItemAction({
+      label: "Grouper",
+      icon: createLockIcon(),
+      attribute: "data-canvas-group-selection",
+    });
+    groupButton.setAttribute("aria-label", `Grouper ${items.length} visuels`);
+    groupButton.disabled = busy || items.length < 2;
+
+    const ungroupButton = createItemAction({
+      label: "Dissocier",
+      icon: createLockIcon({ open: true }),
+      attribute: "data-canvas-ungroup-selection",
+    });
+    ungroupButton.setAttribute("aria-label", "Dissocier le groupe sélectionné");
+    ungroupButton.disabled = busy || !hasGroup;
+    if (allGroupedTogether) groupButton.hidden = true;
+    else ungroupButton.hidden = !hasGroup;
+
+    const deleteButton = createItemAction({
+      label: "Supprimer",
+      icon: "×",
+      attribute: "data-canvas-delete-item",
+      danger: true,
+    });
+    deleteButton.setAttribute("aria-label", `Supprimer les ${items.length} visuels sélectionnés`);
+    deleteButton.disabled = busy;
+
+    toolbar.append(rotateButton, groupButton, ungroupButton, deleteButton);
+    canvas.append(toolbar);
+    window.requestAnimationFrame(positionSelectionGroupToolbar);
   }
 
   function refreshCalculatedState() {
@@ -305,8 +423,10 @@ if (root) {
       const node = document.createElement("button");
       node.type = "button";
       const isSelected = selectedIds.has(item.public_id);
-      node.className = `gang-sheet-item${isSelected ? " is-selected" : ""}${selectedId === item.public_id ? " is-primary" : ""}${issueIds.has(item.public_id) ? " has-issue" : ""}`;
+      const isGrouped = Boolean(item.layout_group_id);
+      node.className = `gang-sheet-item${isSelected ? " is-selected" : ""}${selectedId === item.public_id ? " is-primary" : ""}${isGrouped ? " is-grouped" : ""}${issueIds.has(item.public_id) ? " has-issue" : ""}`;
       node.dataset.itemId = item.public_id;
+      if (item.layout_group_id) node.dataset.layoutGroupId = item.layout_group_id;
       node.style.left = `${(item.x_mm / state.width_mm) * 100}%`;
       node.style.top = `${(item.y_mm / state.height_mm) * 100}%`;
       node.style.width = `${(size.width / state.width_mm) * 100}%`;
@@ -339,7 +459,10 @@ if (root) {
           suppressNextItemClick = false;
           return;
         }
-        selectItem(item.public_id, { additive: touchMultiSelect || event.shiftKey || event.ctrlKey || event.metaKey });
+        selectItem(item.public_id, {
+          additive: touchMultiSelect || event.shiftKey || event.ctrlKey || event.metaKey,
+          isolate: event.altKey,
+        });
       });
       if (canEdit) {
         node.addEventListener("pointerdown", (event) => startPointerAction(event, item));
@@ -347,7 +470,9 @@ if (root) {
       canvas.append(node);
     });
     renderSnapGuides();
+    renderSelectionFrame();
     if (selectedIds.size === 1 && selected()) renderSelectedItemToolbar(selected());
+    if (selectedIds.size > 1) renderSelectionGroupToolbar();
     if (!state.items.length) {
       const empty = document.createElement("div");
       empty.className = "gang-sheet-canvas__empty";
@@ -386,28 +511,72 @@ if (root) {
     });
   }
 
+  function syncGroupControls({ locked = ["rendering", "validated"].includes(state.status) } = {}) {
+    const selectionCount = selectedIds.size;
+    const groupIds = new Set(
+      selectedItems().map((item) => item.layout_group_id).filter(Boolean)
+    );
+    const canMutate = canEdit && !locked && !busy;
+    qa("[data-group-selection], [data-canvas-group-selection]").forEach((control) => {
+      control.disabled = !canMutate || selectionCount < 2;
+    });
+    qa("[data-ungroup-selection], [data-canvas-ungroup-selection]").forEach((control) => {
+      control.disabled = !canMutate || groupIds.size === 0;
+    });
+    const groupHelp = q("[data-group-help]");
+    if (groupHelp) {
+      groupHelp.textContent = groupIds.size
+        ? "Cliquez un membre pour sélectionner tout le groupe. Option + clic isole un visuel."
+        : "Sélectionnez au moins 2 visuels pour créer un groupe mémorisé.";
+    }
+  }
+
   function renderInspector() {
     const item = selected();
     const selectionCount = selectedIds.size;
+    const multiInspector = q("[data-multi-inspector]");
     q("[data-empty-inspector]").hidden = selectionCount > 0;
     q("[data-item-inspector]").hidden = selectionCount !== 1 || !item;
+    if (multiInspector) multiInspector.hidden = selectionCount < 2;
     q("[data-alignment-panel]").hidden = selectionCount === 0;
     const advancedSelectionTools = q("[data-advanced-selection-tools]");
     if (advancedSelectionTools && selectionCount > 1) advancedSelectionTools.open = true;
     const selectionDelete = q("[data-delete-selected]");
-    selectionDelete.hidden = selectionCount < 2;
-    selectionDelete.textContent = selectionCount > 1
-      ? `Supprimer la sélection (${selectionCount})`
-      : "Supprimer la sélection";
+    const selectionDeleteLabel = q("[data-delete-selected-label]");
+    if (selectionDelete) {
+      selectionDelete.hidden = selectionCount < 2;
+      const label = selectionCount > 1
+        ? `Supprimer la sélection (${selectionCount})`
+        : "Supprimer la sélection";
+      if (selectionDeleteLabel) selectionDeleteLabel.textContent = label;
+      else selectionDelete.textContent = label;
+    }
+    if (selectionCount > 1) {
+      const multiSummary = q("[data-multi-summary]");
+      const multiBounds = q("[data-multi-bounds]");
+      if (multiSummary) {
+        multiSummary.textContent = `${selectionCount} visuel${selectionCount > 1 ? "s" : ""}`;
+      }
+      if (multiBounds) {
+        const bounds = selectionBounds(selectedItems());
+        multiBounds.textContent = `${round((bounds.right - bounds.left) / 10, 1)} × ${round((bounds.bottom - bounds.top) / 10, 1)} cm`;
+      }
+    }
     if (selectionCount > 0) {
       q("[data-selection-summary]").textContent = `${selectionCount} visuel${selectionCount > 1 ? "s" : ""} sélectionné${selectionCount > 1 ? "s" : ""}`;
       const reference = effectiveAlignmentReference();
       qa("[data-align-reference]").forEach((control) => {
         control.checked = control.value === reference;
       });
-      q("[data-alignment-help]").textContent = reference === "selection"
-        ? "Les visuels s’alignent sur le cadre global de la sélection."
-        : "Les visuels s’alignent dans la zone utile de la planche en respectant ses marges.";
+      const help = q("[data-alignment-help]");
+      if (reference === "selection") {
+        help.textContent = "Les visuels s’alignent individuellement sur le cadre de la sélection.";
+      } else if (reference === "others") {
+        help.textContent = "Le groupe se déplace d’un bloc pour s’aligner sur le cadre des autres visuels.";
+      } else {
+        help.textContent = "Le groupe se déplace d’un bloc dans la zone utile de la planche.";
+      }
+      syncGroupControls();
     }
     if (!item || selectionCount !== 1) return;
     q("[data-selected-name]").textContent = item.asset_name;
@@ -527,10 +696,10 @@ if (root) {
           : status === "rendering"
             ? "Rendu HD en cours"
             : status === "ready"
-              ? "Rendu prêt à valider"
+              ? "Prête à confirmer"
               : status === "render_failed"
-                ? "Relancer le rendu HD"
-                : "Générer le rendu HD",
+                ? "Relancer la confirmation"
+                : "Confirmer la composition",
     };
     qa("[data-workflow-step]").forEach((node) => {
       const step = node.dataset.workflowStep;
@@ -570,16 +739,21 @@ if (root) {
     root.dataset.sheetStatus = state.status;
     const locked = ["rendering", "validated"].includes(state.status);
     qa(
-      "[data-add-asset], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix]"
+      "[data-add-asset], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection]"
     ).forEach((control) => {
       const assetPending = control.matches("[data-add-asset]") && control.dataset.assetReady !== "true";
       control.disabled = !canEdit || locked || assetPending;
     });
+    syncGroupControls({ locked });
     qa("[data-issue-focus]").forEach((control) => {
       control.disabled = busy;
     });
     q("[data-save-layout]").disabled = !canEdit || locked || !dirty || busy;
-    q("[data-save-layout]").textContent = busy ? "Enregistrement…" : dirty ? "Enregistrer" : "Enregistré";
+    const saveLabel = q("[data-save-label]");
+    const saveText = busy ? "Enregistrement…" : dirty ? "Enregistrer" : "Enregistré";
+    if (saveLabel) saveLabel.textContent = saveText;
+    else q("[data-save-layout]").textContent = saveText;
+    q("[data-save-layout]")?.classList.toggle("is-saved", !dirty && !busy);
     q("[data-auto-place]").disabled = !canEdit || locked || state.items.length === 0 || busy;
     q("[data-apply-spacing]").disabled = !canEdit || locked || state.items.length === 0 || busy;
     qa("[data-align]").forEach((control) => {
@@ -595,14 +769,60 @@ if (root) {
       control.disabled = !canEdit || locked || busy || selectedIds.size < 2;
     });
     q("[data-selection-gap]").disabled = !canEdit || locked || busy || selectedIds.size < 2;
-    q("[data-delete-selected]").disabled = !canEdit || locked || busy || selectedIds.size < 2;
+    const selectionDeleteControl = q("[data-delete-selected]");
+    if (selectionDeleteControl) {
+      selectionDeleteControl.disabled = !canEdit || locked || busy || selectedIds.size < 2;
+    }
     q("[data-select-all]").disabled = !canEdit || locked || busy || state.items.length === 0;
     q("[data-snap-toggle]").setAttribute("aria-pressed", String(snapEnabled));
     q("[data-touch-multiselect]").setAttribute("aria-pressed", String(touchMultiSelect));
     renderHistoryControls();
     q("[data-download-preview]").hidden = !["ready", "validated"].includes(state.status);
-    q("[data-validate-sheet]").disabled = !canEdit || state.status !== "ready" || state.issues.length > 0;
-    q("[data-render-sheet]").disabled = !canEdit || state.items.length === 0 || state.issues.length > 0 || locked;
+    const validateBtn = q("[data-validate-sheet]");
+    const validateLabel = q("[data-validate-label]");
+    const validationLead = q("[data-validation-lead]");
+    const canStartRender =
+      canEdit &&
+      !busy &&
+      state.items.length > 0 &&
+      state.issues.length === 0 &&
+      !locked &&
+      ["draft", "render_failed"].includes(state.status);
+    const canConfirmReady = canEdit && !busy && state.status === "ready" && state.issues.length === 0;
+    if (validateBtn) {
+      if (state.status === "rendering" || pendingValidateAfterRender) {
+        validateBtn.disabled = true;
+        if (validateLabel) validateLabel.textContent = "Rendu HD en cours…";
+        if (validationLead) {
+          validationLead.textContent = "Préparation du fichier atelier… la confirmation suivra automatiquement.";
+        }
+      } else if (state.status === "validated") {
+        validateBtn.disabled = true;
+        if (validateLabel) validateLabel.textContent = "Composition confirmée";
+        if (validationLead) {
+          validationLead.textContent = "Planche verrouillée. Téléchargez l’aperçu ou créez la commande.";
+        }
+      } else if (state.status === "ready") {
+        validateBtn.disabled = !canConfirmReady;
+        if (validateLabel) validateLabel.textContent = "Confirmer la composition";
+        if (validationLead) {
+          validationLead.textContent = "Rendu HD prêt. Confirmez pour verrouiller la composition.";
+        }
+      } else if (state.status === "render_failed") {
+        validateBtn.disabled = !canStartRender;
+        if (validateLabel) validateLabel.textContent = "Relancer la confirmation";
+        if (validationLead) {
+          validationLead.textContent = state.render_error || "Le rendu a échoué. Relancez la confirmation.";
+        }
+      } else {
+        validateBtn.disabled = !canStartRender;
+        if (validateLabel) validateLabel.textContent = "Confirmer la composition";
+        if (validationLead) {
+          validationLead.textContent =
+            "Un seul clic prépare le rendu HD atelier, puis confirme la composition.";
+        }
+      }
+    }
     syncCreateOrderProjectControl();
     const quantityField = q("[data-sheet-quantity-field]");
     const quantityInput = q("[data-sheet-quantity]");
@@ -672,7 +892,20 @@ if (root) {
     selectedIds.clear();
   }
 
-  function selectItem(publicId, { additive = false } = {}) {
+  function selectItem(publicId, { additive = false, isolate = false } = {}) {
+    const item = state.items.find((candidate) => candidate.public_id === publicId);
+    if (!item) return;
+    const groupId = item.layout_group_id || null;
+    if (!additive && groupId && !isolate) {
+      selectedIds = new Set(
+        state.items
+          .filter((candidate) => candidate.layout_group_id === groupId)
+          .map((candidate) => candidate.public_id)
+      );
+      selectedId = publicId;
+      render();
+      return;
+    }
     if (!additive) {
       selectedIds = new Set([publicId]);
       selectedId = publicId;
@@ -702,6 +935,39 @@ if (root) {
     control?.setAttribute("aria-pressed", String(touchMultiSelect));
     root.dataset.touchMultiSelect = String(touchMultiSelect);
     renderStatus();
+  }
+
+  function renderSelectionFrame() {
+    const items = selectedItems();
+    if (!items.length) return;
+    const bounds = selectionBounds(items);
+    const frame = document.createElement("div");
+    const sharedGroupId = items[0]?.layout_group_id || null;
+    const isPersistentGroup = Boolean(
+      sharedGroupId && items.every((item) => item.layout_group_id === sharedGroupId)
+    );
+    const widthCm = round((bounds.right - bounds.left) / 10, 1);
+    const heightCm = round((bounds.bottom - bounds.top) / 10, 1);
+    frame.className = `gang-selection-frame${items.length > 1 ? " is-multiple" : ""}${isPersistentGroup ? " is-group" : ""}`;
+    frame.dataset.selectionFrame = "";
+    frame.setAttribute("aria-hidden", "true");
+    frame.style.left = `${(bounds.left / state.width_mm) * 100}%`;
+    frame.style.top = `${(bounds.top / state.height_mm) * 100}%`;
+    frame.style.width = `${((bounds.right - bounds.left) / state.width_mm) * 100}%`;
+    frame.style.height = `${((bounds.bottom - bounds.top) / state.height_mm) * 100}%`;
+    if (items.length > 1) {
+      const chrome = document.createElement("div");
+      chrome.className = "gang-selection-frame__chrome";
+      const badge = document.createElement("span");
+      badge.className = "gang-selection-frame__badge";
+      const countLabel = isPersistentGroup
+        ? `Groupe · ${items.length}`
+        : `${items.length} sélectionnés`;
+      badge.textContent = `${countLabel} · ${widthCm} × ${heightCm} cm`;
+      chrome.append(badge);
+      frame.append(chrome);
+    }
+    canvas.append(frame);
   }
 
   function renderSnapGuides() {
@@ -762,13 +1028,39 @@ if (root) {
     };
   }
 
+  function canStartRectangleSelection(event) {
+    if (!canEdit || busy || ["rendering", "validated"].includes(state.status)) return false;
+    if (event.pointerType === "touch" || event.button !== 0) return false;
+    const target = event.target;
+    if (!(target instanceof Element)) return false;
+    if (target.closest("[data-item-id], [data-item-toolbar], [data-group-toolbar], [data-resize-handle], [data-crop-box]")) {
+      return false;
+    }
+    return target === canvas
+      || target === canvasClearZone
+      || canvas.contains(target)
+      || Boolean(canvasClearZone?.contains(target));
+  }
+
+  function pointerToCanvasPx(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(1, canvas.clientWidth);
+    const height = Math.max(1, canvas.clientHeight);
+    const x = clientX - rect.left - canvas.clientLeft;
+    const y = clientY - rect.top - canvas.clientTop;
+    return {
+      x: Math.max(0, Math.min(width, x)),
+      y: Math.max(0, Math.min(height, y)),
+      width,
+      height,
+    };
+  }
+
   function startRectangleSelection(event) {
-    if (event.target !== canvas || event.pointerType === "touch" || event.button !== 0) return;
+    if (!canStartRectangleSelection(event)) return;
     event.preventDefault();
     const pointerId = event.pointerId;
-    const canvasRect = canvas.getBoundingClientRect();
-    const startX = Math.max(0, Math.min(canvasRect.width, event.clientX - canvasRect.left));
-    const startY = Math.max(0, Math.min(canvasRect.height, event.clientY - canvasRect.top));
+    const start = pointerToCanvasPx(event.clientX, event.clientY);
     const additive = event.shiftKey || event.ctrlKey || event.metaKey;
     const previousSelection = new Set(selectedIds);
     const previousSelectedId = selectedId;
@@ -779,25 +1071,14 @@ if (root) {
     marquee.dataset.selectionMarquee = "";
     marquee.setAttribute("aria-hidden", "true");
     canvas.append(marquee);
+    canvas.classList.add("is-marquee-selecting");
     canvas.setPointerCapture?.(event.pointerId);
-    const move = (moveEvent) => {
-      if (moveEvent.pointerId !== pointerId) return;
-      const currentX = Math.max(0, Math.min(canvasRect.width, moveEvent.clientX - canvasRect.left));
-      const currentY = Math.max(0, Math.min(canvasRect.height, moveEvent.clientY - canvasRect.top));
-      moved = moved || Math.abs(currentX - startX) > 2 || Math.abs(currentY - startY) > 2;
-      const left = Math.min(startX, currentX);
-      const top = Math.min(startY, currentY);
-      const right = Math.max(startX, currentX);
-      const bottom = Math.max(startY, currentY);
-      marquee.style.left = `${left}px`;
-      marquee.style.top = `${top}px`;
-      marquee.style.width = `${right - left}px`;
-      marquee.style.height = `${bottom - top}px`;
+    const applyMarqueeSelection = (left, top, right, bottom, width, height) => {
       const area = {
-        left: (left / canvasRect.width) * state.width_mm,
-        top: (top / canvasRect.height) * state.height_mm,
-        right: (right / canvasRect.width) * state.width_mm,
-        bottom: (bottom / canvasRect.height) * state.height_mm,
+        left: (left / width) * state.width_mm,
+        top: (top / height) * state.height_mm,
+        right: (right / width) * state.width_mm,
+        bottom: (bottom / height) * state.height_mm,
       };
       selectedIds = new Set(initialSelection);
       state.items.forEach((item) => {
@@ -811,23 +1092,44 @@ if (root) {
       Array.from(canvas.querySelectorAll("[data-item-id]")).forEach((node) => {
         const isSelected = selectedIds.has(node.dataset.itemId);
         node.classList.toggle("is-selected", isSelected);
+        node.classList.toggle("is-primary", selectedIds.size === 1 && node.dataset.itemId === Array.from(selectedIds)[0]);
         node.setAttribute("aria-pressed", String(isSelected));
       });
+    };
+    const move = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      const current = pointerToCanvasPx(moveEvent.clientX, moveEvent.clientY);
+      moved = moved || Math.abs(current.x - start.x) > 2 || Math.abs(current.y - start.y) > 2;
+      if (!moved) return;
+      const left = Math.min(start.x, current.x);
+      const top = Math.min(start.y, current.y);
+      const right = Math.max(start.x, current.x);
+      const bottom = Math.max(start.y, current.y);
+      marquee.style.left = `${left}px`;
+      marquee.style.top = `${top}px`;
+      marquee.style.width = `${right - left}px`;
+      marquee.style.height = `${bottom - top}px`;
+      applyMarqueeSelection(left, top, right, bottom, current.width, current.height);
     };
     const cleanup = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", cancel);
       if (canvas.hasPointerCapture?.(pointerId)) canvas.releasePointerCapture(pointerId);
+      canvas.classList.remove("is-marquee-selecting");
       marquee.remove();
     };
     const end = (endEvent) => {
       if (endEvent.pointerId !== pointerId) return;
       cleanup();
       suppressNextCanvasClick = moved;
-      selectedId = Array.from(selectedIds).at(-1) || null;
+      if (!moved && !additive) {
+        selectedIds = new Set();
+        selectedId = null;
+      } else {
+        selectedId = Array.from(selectedIds).at(-1) || null;
+      }
       render();
-      if (moved) window.setTimeout(() => { suppressNextCanvasClick = false; }, 0);
     };
     const cancel = (cancelEvent) => {
       if (cancelEvent.pointerId !== pointerId) return;
@@ -850,7 +1152,15 @@ if (root) {
     canvas.setPointerCapture?.(pointerId);
     const resizing = event.target.closest("[data-resize-handle]");
     if (!selectedIds.has(item.public_id) || resizing) {
-      selectedIds = new Set([item.public_id]);
+      if (!resizing && item.layout_group_id) {
+        selectedIds = new Set(
+          state.items
+            .filter((candidate) => candidate.layout_group_id === item.layout_group_id)
+            .map((candidate) => candidate.public_id)
+        );
+      } else {
+        selectedIds = new Set([item.public_id]);
+      }
     }
     selectedId = item.public_id;
     const startX = event.clientX;
@@ -956,7 +1266,15 @@ if (root) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         revision: state.revision,
-        items: state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation }) => ({ public_id, x_mm, y_mm, width_mm, height_mm, rotation })),
+        items: state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id }) => ({
+          public_id,
+          x_mm,
+          y_mm,
+          width_mm,
+          height_mm,
+          rotation,
+          layout_group_id: layout_group_id || null,
+        })),
       }),
     });
     state.revision = payload.revision;
@@ -1361,14 +1679,48 @@ if (root) {
     const poll = async () => {
       try {
         await reloadState();
-        if (state.status === "rendering") pollTimer = window.setTimeout(poll, 2000);
-        else if (state.status === "ready") window.preniumToast?.("Rendu HD terminé. L’aperçu est disponible.", "success");
-        else if (state.status === "render_failed") window.preniumToast?.("Le rendu HD a échoué.", "error");
+        if (state.status === "rendering") {
+          pollTimer = window.setTimeout(poll, 2000);
+          return;
+        }
+        if (state.status === "ready") {
+          if (pendingValidateAfterRender) {
+            pendingValidateAfterRender = false;
+            window.preniumToast?.("Rendu HD terminé. Confirmation en cours…", "success");
+            await runAction("validate");
+            return;
+          }
+          window.preniumToast?.("Rendu HD terminé. L’aperçu est disponible.", "success");
+          return;
+        }
+        if (state.status === "render_failed") {
+          pendingValidateAfterRender = false;
+          window.preniumToast?.("Le rendu HD a échoué.", "error");
+        }
       } catch (error) {
         pollTimer = window.setTimeout(poll, 4000);
       }
     };
     pollTimer = window.setTimeout(poll, 1500);
+  }
+
+  async function confirmComposition() {
+    if (!canEdit || busy) return;
+    if (state.status === "ready") {
+      await runAction("validate");
+      return;
+    }
+    if (!["draft", "render_failed"].includes(state.status)) return;
+    if (!state.items.length || state.issues.length > 0) {
+      window.preniumToast?.("Corrigez les anomalies avant de confirmer.", "error");
+      return;
+    }
+    pendingValidateAfterRender = true;
+    await runAction("render", { saveFirst: true });
+    if (!["rendering", "ready"].includes(state.status)) {
+      pendingValidateAfterRender = false;
+      renderStatus();
+    }
   }
 
   root.addEventListener("click", async (event) => {
@@ -1440,7 +1792,7 @@ if (root) {
   });
   q("[data-select-all]").addEventListener("click", selectAllItems);
   q("[data-touch-multiselect]").addEventListener("click", toggleTouchMultiSelect);
-  canvas.addEventListener("pointerdown", startRectangleSelection);
+  canvasClearZone.addEventListener("pointerdown", startRectangleSelection);
   function clearSelectionFromCanvasBackground(event) {
     if (
       ![canvas, canvasClearZone].includes(event.target)
@@ -1485,6 +1837,16 @@ if (root) {
     return runAction("auto-place", { saveFirst: true, body: spacingRequestBody() });
   }
 
+  function sheetUsefulBounds() {
+    const margin = Math.max(0, Number(state.margin_mm) || 0);
+    return {
+      left: margin,
+      top: margin,
+      right: Math.max(margin, state.width_mm - margin),
+      bottom: Math.max(margin, state.height_mm - margin),
+    };
+  }
+
   function selectionBounds(items) {
     return items.reduce((bounds, item) => {
       const size = effectiveSize(item);
@@ -1498,19 +1860,63 @@ if (root) {
   }
 
   function alignmentBounds(items) {
-    if (effectiveAlignmentReference() === "selection") return selectionBounds(items);
-    const margin = Math.max(0, Number(state.margin_mm) || 0);
-    return {
-      left: margin,
-      top: margin,
-      right: Math.max(margin, state.width_mm - margin),
-      bottom: Math.max(margin, state.height_mm - margin),
+    const reference = effectiveAlignmentReference();
+    if (reference === "selection") return selectionBounds(items);
+    if (reference === "others") {
+      const selectedSet = new Set(items.map((item) => item.public_id));
+      const others = state.items.filter((item) => !selectedSet.has(item.public_id));
+      if (!others.length) return sheetUsefulBounds();
+      return selectionBounds(others);
+    }
+    return sheetUsefulBounds();
+  }
+
+  function translateSelectionAsGroup(direction) {
+    const items = selectedItems();
+    if (!items.length || !canEdit || ["rendering", "validated"].includes(state.status)) return;
+    const before = layoutSnapshot();
+    const group = selectionBounds(items);
+    const target = alignmentBounds(items);
+    let deltaX = 0;
+    let deltaY = 0;
+    if (direction === "left") deltaX = target.left - group.left;
+    else if (direction === "center-x") {
+      deltaX = (target.left + target.right) / 2 - (group.left + group.right) / 2;
+    } else if (direction === "right") deltaX = target.right - group.right;
+    else if (direction === "top") deltaY = target.top - group.top;
+    else if (direction === "center-y") {
+      deltaY = (target.top + target.bottom) / 2 - (group.top + group.bottom) / 2;
+    } else if (direction === "bottom") deltaY = target.bottom - group.bottom;
+    items.forEach((item) => {
+      item.x_mm = round(item.x_mm + deltaX);
+      item.y_mm = round(item.y_mm + deltaY);
+    });
+    const labels = {
+      left: "à gauche",
+      "center-x": "au centre horizontal",
+      right: "à droite",
+      top: "en haut",
+      "center-y": "au centre vertical",
+      bottom: "en bas",
     };
+    const referenceLabel = effectiveAlignmentReference() === "others"
+      ? "les autres visuels"
+      : "la planche";
+    commitLayoutMutation(before);
+    render();
+    window.preniumToast?.(
+      `Groupe déplacé ${labels[direction]} par rapport à ${referenceLabel}.`,
+      "success"
+    );
   }
 
   function alignSelectedItems(direction) {
     const items = selectedItems();
     if (!items.length || !canEdit || ["rendering", "validated"].includes(state.status)) return;
+    if (effectiveAlignmentReference() !== "selection") {
+      translateSelectionAsGroup(direction);
+      return;
+    }
     const before = layoutSnapshot();
     const bounds = alignmentBounds(items);
     const centerX = (bounds.left + bounds.right) / 2;
@@ -1532,10 +1938,44 @@ if (root) {
       "center-y": "au centre vertical",
       bottom: "en bas",
     };
-    const referenceLabel = effectiveAlignmentReference() === "selection" ? "la sélection" : "la planche";
     commitLayoutMutation(before);
     render();
-    window.preniumToast?.(`${items.length} visuel${items.length > 1 ? "s" : ""} aligné${items.length > 1 ? "s" : ""} ${labels[direction]} sur ${referenceLabel}.`, "success");
+    window.preniumToast?.(
+      `${items.length} visuel${items.length > 1 ? "s" : ""} aligné${items.length > 1 ? "s" : ""} ${labels[direction]} sur la sélection.`,
+      "success"
+    );
+  }
+
+  function groupSelectedItems() {
+    const items = selectedItems();
+    if (items.length < 2 || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
+      return;
+    }
+    const before = layoutSnapshot();
+    const groupId = window.crypto?.randomUUID?.() || `group-${Date.now()}`;
+    items.forEach((item) => {
+      item.layout_group_id = groupId;
+    });
+    commitLayoutMutation(before);
+    render();
+    window.preniumToast?.(`Groupe de ${items.length} visuels mémorisé.`, "success");
+  }
+
+  function ungroupSelectedItems() {
+    const items = selectedItems().filter((item) => item.layout_group_id);
+    if (!items.length || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
+      return;
+    }
+    const before = layoutSnapshot();
+    const groupIds = new Set(items.map((item) => item.layout_group_id));
+    state.items.forEach((item) => {
+      if (item.layout_group_id && groupIds.has(item.layout_group_id)) {
+        item.layout_group_id = null;
+      }
+    });
+    commitLayoutMutation(before);
+    render();
+    window.preniumToast?.("Groupe dissocié.", "success");
   }
 
   function distributeSelectedItems(axis) {
@@ -1617,14 +2057,17 @@ if (root) {
   qa("[data-align]").forEach((control) => {
     control.addEventListener("click", () => alignSelectedItems(control.dataset.align));
   });
+  q("[data-group-selection]")?.addEventListener("click", groupSelectedItems);
+  q("[data-ungroup-selection]")?.addEventListener("click", ungroupSelectedItems);
   qa("[data-distribute]").forEach((control) => {
     control.addEventListener("click", () => distributeSelectedItems(control.dataset.distribute));
   });
   qa("[data-apply-selection-gap]").forEach((control) => {
     control.addEventListener("click", () => applyPreciseGap(control.dataset.applySelectionGap));
   });
-  q("[data-render-sheet]").addEventListener("click", () => runAction("render", { saveFirst: true }));
-  q("[data-validate-sheet]").addEventListener("click", () => runAction("validate"));
+  q("[data-validate-sheet]")?.addEventListener("click", () => {
+    confirmComposition();
+  });
   q("[data-create-order-project]")?.addEventListener("click", (event) => {
     const link = event.currentTarget;
     if (!(link instanceof HTMLAnchorElement)) {
@@ -1654,15 +2097,41 @@ if (root) {
   q("[data-sheet-quantity]")?.addEventListener("input", () => updateOrderQuoteUi());
   q("[data-sheet-quantity]")?.addEventListener("change", () => updateOrderQuoteUi());
   function rotateSelected() {
-    const item = selected();
-    if (item && canEdit && !busy && !["rendering", "validated"].includes(state.status)) {
-      const before = layoutSnapshot();
-      item.rotation = (Number(item.rotation) + 90) % 360;
-      commitLayoutMutation(before);
-      render();
+    const items = selectedItems();
+    if (!items.length || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    const before = layoutSnapshot();
+    if (items.length === 1) {
+      items[0].rotation = (Number(items[0].rotation) + 90) % 360;
+    } else {
+      const bounds = selectionBounds(items);
+      const centerX = (bounds.left + bounds.right) / 2;
+      const centerY = (bounds.top + bounds.bottom) / 2;
+      items.forEach((item) => {
+        const size = effectiveSize(item);
+        const itemCenterX = item.x_mm + size.width / 2;
+        const itemCenterY = item.y_mm + size.height / 2;
+        const dx = itemCenterX - centerX;
+        const dy = itemCenterY - centerY;
+        // Pivot horaire 90° du groupe autour de son centre.
+        const nextCenterX = centerX + dy;
+        const nextCenterY = centerY - dx;
+        item.rotation = (Number(item.rotation) + 90) % 360;
+        const nextSize = effectiveSize(item);
+        item.x_mm = round(nextCenterX - nextSize.width / 2);
+        item.y_mm = round(nextCenterY - nextSize.height / 2);
+      });
+    }
+    commitLayoutMutation(before);
+    render();
+    if (items.length > 1) {
+      window.preniumToast?.(
+        `Groupe de ${items.length} visuels pivoté de 90°.`,
+        "success"
+      );
     }
   }
-  q("[data-rotate-item]").addEventListener("click", rotateSelected);
+  q("[data-rotate-item]")?.addEventListener("click", rotateSelected);
+  q("[data-rotate-selection]")?.addEventListener("click", rotateSelected);
   async function duplicateSelected() {
     const item = selected();
     if (!item || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
@@ -1700,8 +2169,8 @@ if (root) {
       );
     } catch (error) { window.preniumToast?.(error.message, "error"); }
   }
-  q("[data-delete-item]").addEventListener("click", deleteSelected);
-  q("[data-delete-selected]").addEventListener("click", deleteSelected);
+  q("[data-delete-item]")?.addEventListener("click", deleteSelected);
+  q("[data-delete-selected]")?.addEventListener("click", deleteSelected);
 
   root.addEventListener("click", (event) => {
     const issueFix = event.target.closest("[data-issue-fix]");
@@ -1720,7 +2189,17 @@ if (root) {
       return;
     }
     const deleteButton = event.target.closest("[data-canvas-delete-item]");
-    if (deleteButton && !deleteButton.disabled) deleteSelected();
+    if (deleteButton && !deleteButton.disabled) {
+      deleteSelected();
+      return;
+    }
+    const groupButton = event.target.closest("[data-canvas-group-selection]");
+    if (groupButton && !groupButton.disabled) {
+      groupSelectedItems();
+      return;
+    }
+    const ungroupButton = event.target.closest("[data-canvas-ungroup-selection]");
+    if (ungroupButton && !ungroupButton.disabled) ungroupSelectedItems();
   });
 
   [["[data-input-width]", "width_mm"], ["[data-input-height]", "height_mm"], ["[data-input-x]", "x_mm"], ["[data-input-y]", "y_mm"]].forEach(([selector, key]) => {
@@ -1770,7 +2249,7 @@ if (root) {
     } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d" && canEdit && selectedIds.size === 1) {
       event.preventDefault();
       duplicateSelected();
-    } else if (event.key.toLowerCase() === "r" && canEdit && selectedIds.size === 1 && selected()) {
+    } else if (event.key.toLowerCase() === "r" && canEdit && selectedIds.size > 0) {
       event.preventDefault();
       rotateSelected();
     } else if ((event.key === "Delete" || event.key === "Backspace") && canEdit && selectedIds.size > 0) {

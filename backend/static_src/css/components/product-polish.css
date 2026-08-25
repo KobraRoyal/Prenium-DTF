@@ -1250,13 +1250,26 @@ html[data-theme="prenium"] body.product-shell .brand-preview__button {
   min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
-  border: 1px solid color-mix(in srgb, var(--preview-primary) 78%, var(--product-ink));
+  justify-content: center;
+  gap: 0.4rem;
   border-radius: 999px;
   padding: 0.65rem 0.95rem;
-  color: var(--preview-primary-ink);
-  background: var(--preview-primary);
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+html[data-theme="prenium"] body.product-shell .brand-preview__button--primary {
+  border: 2px solid var(--product-ink);
+  color: var(--preview-primary-ink);
+  background: var(--preview-primary);
+  box-shadow: 3px 3px 0 var(--product-ink);
+}
+
+html[data-theme="prenium"] body.product-shell .brand-preview__button--secondary {
+  border: 2px solid var(--preview-primary);
+  color: color-mix(in srgb, var(--preview-primary) 72%, var(--product-ink));
+  background: color-mix(in srgb, var(--preview-primary) 14%, var(--surface-raised));
+  box-shadow: none;
 }
 
 html[data-theme="prenium"] body.product-shell .brand-preview__link {

@@ -43,7 +43,7 @@
     background: var(--ui-action-primary-bg-hover);
     box-shadow: var(--ui-action-shadow-hover);
     text-decoration: none;
-    transform: translateY(-1px);
+    transform: translate(-1px, -1px);
   }
 
   .ui-btn:focus-visible,
@@ -60,8 +60,8 @@
   .btn-saas-primary:active,
   .btn-saas-secondary:active,
   .dui-btn:active {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
-    transform: translateY(0);
+    box-shadow: var(--ui-action-shadow-active);
+    transform: translate(1px, 1px);
   }
 
   .ui-btn-primary,
@@ -69,9 +69,21 @@
   .btn:not(.btn-secondary),
   .btn-saas-primary,
   .dui-btn-primary {
-    border-color: color-mix(in srgb, var(--brand) 78%, var(--ink));
+    border-color: var(--ink);
     color: var(--ui-action-primary-text);
     background: var(--ui-action-primary-bg);
+    box-shadow: var(--ui-action-shadow);
+  }
+
+  .ui-btn-primary:hover,
+  .btn-primary:hover,
+  .btn:not(.btn-secondary):hover,
+  .btn-saas-primary:hover,
+  .dui-btn-primary:hover {
+    border-color: var(--ink);
+    color: var(--ui-action-primary-text);
+    background: var(--ui-action-primary-bg-hover);
+    box-shadow: var(--ui-action-shadow-hover);
   }
 
   .ui-btn-secondary,
@@ -79,6 +91,7 @@
   .btn.btn-secondary,
   .btn-saas-secondary,
   .dui-btn-secondary {
+    border-color: var(--ui-action-secondary-border);
     color: var(--ui-action-secondary-text);
     background: var(--ui-action-secondary-bg);
     box-shadow: none;
@@ -89,9 +102,20 @@
   .btn.btn-secondary:hover,
   .btn-saas-secondary:hover,
   .dui-btn-secondary:hover {
+    border-color: var(--brand-strong);
     color: var(--ui-action-secondary-text);
     background: var(--ui-action-secondary-bg-hover);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.18);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .ui-btn-secondary:active,
+  .btn-secondary:active,
+  .btn.btn-secondary:active,
+  .btn-saas-secondary:active,
+  .dui-btn-secondary:active {
+    box-shadow: none;
+    transform: none;
   }
 
   .ui-btn-ghost,

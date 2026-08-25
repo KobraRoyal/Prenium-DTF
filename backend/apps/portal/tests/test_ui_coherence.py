@@ -1014,6 +1014,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "data-delete-selected",
             "data-batch-delete-url",
             "data-canvas-clear-zone",
+            "data-canvas-scroll",
+            "gang-sheet-canvas-scroll",
             'data-distribute="horizontal"',
             'data-distribute="vertical"',
             "data-selection-gap",
@@ -1032,13 +1034,42 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "function calculateSnapForMove",
             "function renderSnapGuides",
             "function startRectangleSelection",
+            "function canStartRectangleSelection",
+            "function pointerToCanvasPx",
             "function toggleTouchMultiSelect",
             "function distributeSelectedItems",
             "function applyPreciseGap",
+            "function groupSelectedItems",
+            "function ungroupSelectedItems",
+            "function translateSelectionAsGroup",
             "function focusIssue",
             "function fixOverflowIssue",
         ]:
             self.assertIn(marker, runtime)
+
+        self.assertIn('value="others" data-align-reference', editor)
+        self.assertIn("data-group-selection", editor)
+        self.assertIn("data-multi-inspector", editor)
+        self.assertIn("data-rotate-selection", editor)
+        self.assertIn("data-ungroup-selection", editor)
+        self.assertIn('name="lock"', editor)
+        self.assertIn('name="unlock"', editor)
+        self.assertIn("layout_group_id", runtime)
+        self.assertIn("function renderSelectionGroupToolbar", runtime)
+        self.assertIn("data-canvas-group-selection", runtime)
+        self.assertIn("data-canvas-ungroup-selection", runtime)
+        self.assertIn("function createLockIcon", runtime)
+        self.assertIn('attribute: "data-canvas-rotate-item"', runtime)
+        self.assertIn("item.rotation = (Number(item.rotation) + 90) % 360", runtime)
+        self.assertIn("nextCenterX = centerX + dy", runtime)
+        self.assertIn("nextCenterY = centerY - dx", runtime)
+        self.assertIn("Groupe de ${items.length} visuels pivoté de 90°.", runtime)
+        self.assertIn("gang-selection-frame__chrome", runtime)
+        self.assertIn("${countLabel} · ${widthCm}", runtime)
+        self.assertIn("preferBelow: true", runtime)
+        self.assertIn('label: "Pivoter"', runtime)
+        self.assertIn('label: "Supprimer"', runtime)
+        self.assertIn('label: "Grouper"', runtime)
 
         self.assertIn("const HISTORY_LIMIT = 40", runtime)
         self.assertIn("function syncLayoutDirtyState", runtime)
@@ -1055,6 +1086,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("function clearSelectionFromCanvasBackground", runtime)
         self.assertIn('q("[data-canvas-clear-zone]")', runtime)
         self.assertIn(".gang-snap-guide", studio_css)
+        self.assertIn('canvasClearZone.addEventListener("pointerdown", startRectangleSelection)', runtime)
+        self.assertIn("function canStartRectangleSelection", runtime)
         self.assertIn(".gang-selection-marquee", studio_css)
         self.assertIn(".gang-editor__history", studio_css)
         self.assertIn(".gang-editor__selection-tools", studio_css)
@@ -1361,11 +1394,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         self.assertIn('@import "./components/buttons.css";', input_css)
         self.assertIn("--ui-action-min-h", tokens_css)
+        self.assertIn("--ui-action-shadow: 3px 3px 0 var(--ink)", tokens_css)
+        self.assertIn("--ui-action-secondary-border", tokens_css)
         self.assertIn(".ui-btn-primary", buttons_css)
         self.assertIn(".ui-btn-secondary", buttons_css)
-        self.assertIn(".ui-btn-danger", buttons_css)
-        self.assertIn(":focus-visible", buttons_css)
-        self.assertIn("min-height: var(--ui-action-min-h)", buttons_css)
+        self.assertIn("box-shadow: var(--ui-action-shadow)", buttons_css)
 
     def test_saas_views_use_semantic_ui_buttons_for_product_actions(self) -> None:
         paths = [

@@ -1,13 +1,16 @@
-/* Finition Studio sombre — densité calme, outils secondaires compacts. */
+/* Finition Studio — densité calme, tokens portail, canevas clair pour le prépresse. */
 body.product-shell--studio .gang-editor {
   --gang-panel: var(--surface);
   --gang-panel-subtle: var(--surface-raised);
+  --gang-stage: var(--bg-accent);
   --gang-line: var(--line);
   --gang-line-strong: var(--line-strong);
   --gang-ink: var(--ink);
   --gang-muted: var(--muted);
   --gang-accent: var(--brand);
   --gang-accent-strong: var(--brand-strong);
+  --gang-accent-soft: var(--brand-soft);
+  --gang-success: var(--success);
   --gang-focus: var(--focus-ring);
   color: var(--gang-ink);
 }
@@ -18,7 +21,7 @@ body.product-shell--studio .gang-editor__status,
 body.product-shell--studio .gang-workflow,
 body.product-shell--studio .gang-asset-launcher,
 body.product-shell--studio .gang-inspector-panel {
-  border-radius: 1rem;
+  border-radius: var(--radius);
   box-shadow: none;
 }
 
@@ -28,8 +31,19 @@ body.product-shell--studio .gang-editor__header {
 }
 
 body.product-shell--studio .gang-editor__metrics > div {
-  border-radius: 0.875rem;
+  border-radius: var(--radius-sm);
   background: var(--gang-panel-subtle);
+}
+
+body.product-shell--studio .gang-editor__metrics .is-price {
+  background: color-mix(in srgb, var(--gang-accent-soft) 72%, var(--gang-panel));
+}
+
+body.product-shell--studio .gang-editor__title-actions .gang-status-badge {
+  border-color: color-mix(in srgb, var(--gang-line-strong) 34%, transparent);
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 body.product-shell--studio .gang-workflow {
@@ -45,7 +59,15 @@ body.product-shell--studio .gang-workflow button {
 body.product-shell--studio .gang-workflow li[aria-current="step"] button,
 body.product-shell--studio .gang-workflow li.is-active button {
   color: var(--gang-ink);
-  background: color-mix(in srgb, var(--gang-accent) 13%, var(--gang-panel));
+  background: color-mix(in srgb, var(--gang-accent-soft) 58%, var(--gang-panel));
+}
+
+body.product-shell--studio .gang-workflow li.is-complete button {
+  color: var(--gang-ink);
+}
+
+body.product-shell--studio .gang-workflow li[aria-current="step"]::after {
+  background: var(--gang-accent);
 }
 
 body.product-shell--studio .gang-editor__workspace {
@@ -69,52 +91,154 @@ body.product-shell--studio .gang-asset-empty {
   box-shadow: none;
 }
 
-/* La toolbar conserve tous ses contrats mais baisse le bruit visuel. */
+/* Toolbar : hors du scroll canvas — ne bouge jamais au zoom/pan. */
+body.product-shell--studio .gang-editor__stage {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--gang-stage);
+}
+
 body.product-shell--studio .gang-editor__toolbar {
-  gap: 0.4rem;
-  min-height: 3.25rem;
-  padding: 0.45rem 0.55rem;
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 0.75rem;
+  min-height: 3.35rem;
+  padding: 0.5rem 0.7rem;
   border-bottom: 1px solid var(--gang-line);
-  background: var(--gang-panel-subtle);
+  background: var(--gang-panel);
+  overflow: visible;
+  flex-wrap: wrap;
+  z-index: 7;
+  box-shadow: none;
+}
+
+body.product-shell--studio .gang-editor__toolbar-start,
+body.product-shell--studio .gang-editor__toolbar-tools,
+body.product-shell--studio .gang-editor__toolbar-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+body.product-shell--studio .gang-editor__toolbar-tools {
+  flex: 1 1 auto;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+body.product-shell--studio .gang-editor__toolbar-end {
+  margin-left: auto;
+}
+
+body.product-shell--studio .gang-sheet-canvas-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 body.product-shell--studio .gang-editor__toolbar-meta {
-  padding-right: 0.55rem;
+  display: grid;
+  align-content: center;
+  gap: 0.08rem;
+  min-width: 5.5rem;
+  padding: 0.15rem 0.65rem 0.15rem 0.1rem;
+  border-right: 1px solid color-mix(in srgb, var(--gang-line) 78%, transparent);
+  overflow: visible;
 }
 
-body.product-shell--studio .gang-editor__toolbar-meta > strong {
-  font-size: 0.75rem;
+body.product-shell--studio .gang-editor__toolbar-meta-label {
+  color: var(--gang-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+body.product-shell--studio .gang-editor__toolbar-meta > strong,
+body.product-shell--studio .gang-editor__toolbar-meta [data-canvas-format] {
+  color: var(--gang-ink);
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 
 body.product-shell--studio .gang-editor__toolbar-group {
-  gap: 0.18rem;
-  padding: 0.16rem;
-  border: 1px solid color-mix(in srgb, var(--gang-line) 78%, transparent);
-  border-radius: 999px;
-  background: var(--gang-panel);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12rem;
+  min-height: 2.5rem;
+  padding: 0.18rem;
+  border: 1px solid color-mix(in srgb, var(--gang-line) 82%, transparent);
+  border-radius: var(--radius);
+  background: var(--gang-panel-subtle);
+  overflow: visible;
+}
+
+body.product-shell--studio .gang-editor__toolbar-group--impose {
+  border-color: color-mix(in srgb, var(--gang-accent) 34%, var(--gang-line));
+  background: color-mix(in srgb, var(--gang-accent-soft) 42%, var(--gang-panel));
 }
 
 body.product-shell--studio .gang-tool-btn {
-  min-width: 2.3rem;
-  min-height: 2.3rem;
-  padding: 0.4rem 0.55rem;
+  box-sizing: border-box;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  padding: 0.35rem 0.55rem;
   border-color: transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: transparent;
   box-shadow: none;
+  color: var(--gang-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+body.product-shell--studio .gang-tool-btn--icon {
+  width: 2.4rem;
+  padding-inline: 0;
+}
+
+body.product-shell--studio .gang-tool-btn--zoom {
+  min-width: 3.4rem;
+  font-variant-numeric: tabular-nums;
 }
 
 body.product-shell--studio .gang-tool-btn:hover:not(:disabled),
 body.product-shell--studio .gang-tool-btn.is-active {
   border-color: transparent;
-  background: color-mix(in srgb, var(--gang-ink) 9%, var(--gang-panel));
+  background: color-mix(in srgb, var(--gang-ink) 8%, var(--gang-panel));
   box-shadow: none;
   transform: none;
 }
 
+body.product-shell--studio .gang-tool-btn.is-active {
+  background: color-mix(in srgb, var(--gang-accent) 18%, var(--gang-panel));
+  color: var(--gang-ink);
+}
+
 body.product-shell--studio .gang-tool-btn--accent {
-  background: color-mix(in srgb, var(--gang-accent) 14%, var(--gang-panel));
-  color: #ffb5a7;
+  background: transparent;
+  color: var(--gang-ink);
+}
+
+body.product-shell--studio .gang-tool-btn--accent:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gang-accent) 16%, var(--gang-panel));
 }
 
 body.product-shell--studio .gang-editor__selection-tools .gang-tool-btn > span:last-child {
@@ -128,9 +252,45 @@ body.product-shell--studio .gang-editor__selection-tools .gang-tool-btn > span:l
 }
 
 body.product-shell--studio .gang-editor__save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.5rem;
+  padding-inline: 0.9rem;
   border-radius: 999px;
   background: var(--gang-accent);
-  color: #171310;
+  color: var(--action-text);
+  font-weight: 800;
+}
+
+body.product-shell--studio .gang-editor__save.is-saved,
+html[data-theme="prenium"] body.product-shell--studio .gang-editor[data-dirty="false"] [data-save-layout]:disabled {
+  border-color: color-mix(in srgb, var(--gang-success) 36%, var(--gang-line)) !important;
+  background: color-mix(in srgb, var(--gang-success) 12%, var(--gang-panel)) !important;
+  color: var(--gang-success) !important;
+  opacity: 1;
+}
+
+@media (max-width: 72rem) {
+  body.product-shell--studio .gang-editor__toolbar-tools {
+    justify-content: flex-start;
+  }
+
+  body.product-shell--studio .gang-editor__toolbar-end {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  body.product-shell--studio .gang-editor__toolbar-meta {
+    min-width: 0;
+    padding-right: 0.45rem;
+  }
+
+  body.product-shell--studio .gang-tool-btn--accent > span {
+    display: none;
+  }
 }
 
 body.product-shell--studio .gang-editor__status {
@@ -144,9 +304,84 @@ body.product-shell--studio .gang-inspector-panel {
   box-shadow: none;
 }
 
+body.product-shell--studio .gang-inspector-panel--empty {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--gang-panel-subtle) 82%, var(--gang-panel));
+  counter-reset: gang-empty-step;
+}
+
+body.product-shell--studio .gang-inspector-empty-steps {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.product-shell--studio .gang-inspector-empty-steps li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  color: var(--gang-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+body.product-shell--studio .gang-inspector-empty-steps li::before {
+  display: inline-grid;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gang-accent-soft) 70%, var(--gang-panel));
+  color: var(--gang-ink);
+  content: counter(gang-empty-step);
+  counter-increment: gang-empty-step;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+body.product-shell--studio .gang-sheet-canvas {
+  position: relative;
+  overflow: visible;
+  box-shadow: var(--shadow-soft);
+  user-select: none;
+  touch-action: none;
+}
+
+body.product-shell--studio .gang-sheet-canvas.is-marquee-selecting {
+  cursor: crosshair;
+}
+
+body.product-shell--studio .gang-sheet-canvas.is-marquee-selecting .gang-sheet-item {
+  pointer-events: none;
+}
+
+body.product-shell--studio .gang-sheet-canvas__empty strong {
+  text-transform: none;
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+body.product-shell--studio .gang-editor__issue-count:empty {
+  display: none;
+}
+
 body.product-shell--studio .gang-inspector-panel--validation {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin-top: auto;
   border-color: color-mix(in srgb, var(--gang-accent) 46%, var(--gang-line));
   background: color-mix(in srgb, var(--gang-accent) 10%, var(--gang-panel));
+  backdrop-filter: blur(8px);
+}
+
+body.product-shell--studio .gang-editor__inspector {
+  display: flex;
+  flex-direction: column;
 }
 
 body.product-shell--studio .gang-validation-actions {
@@ -157,6 +392,11 @@ body.product-shell--studio .gang-validation-actions > :is(.ui-btn, a) {
   border-radius: 999px;
 }
 
+body.product-shell--studio .gang-validation-actions > [data-validate-sheet] {
+  width: 100%;
+  justify-content: center;
+}
+
 body.product-shell--studio :is(.gang-tool-btn, .gang-workflow button, .gang-editor__mobile-tabs button):focus-visible {
   outline: 3px solid color-mix(in srgb, var(--gang-focus) 72%, transparent);
   outline-offset: 2px;
@@ -164,26 +404,87 @@ body.product-shell--studio :is(.gang-tool-btn, .gang-workflow button, .gang-edit
 
 @media (max-width: 72rem) {
   body.product-shell--studio .gang-editor__toolbar-meta {
+    min-width: 0;
+    padding-right: 0.45rem;
+  }
+
+  body.product-shell--studio .gang-editor__toolbar-meta-label {
     display: none;
   }
 }
 
 @media (max-width: 47.99rem) {
+  body.product-shell--studio .gang-editor {
+    gap: 0.55rem;
+  }
+
   body.product-shell--studio .gang-editor__header,
   body.product-shell--studio .gang-editor__workspace,
   body.product-shell--studio .gang-editor__status,
   body.product-shell--studio .gang-workflow,
   body.product-shell--studio .gang-inspector-panel {
-    border-radius: 0.875rem;
+    border-radius: var(--radius-sm);
+  }
+
+  body.product-shell--studio .gang-editor__heading {
+    padding: 0.55rem 0.7rem;
+  }
+
+  body.product-shell--studio .gang-editor__title-row h1 {
+    font-size: 1.05rem;
+    line-height: 1.2;
+  }
+
+  body.product-shell--studio .gang-editor__title-row p:not(.product-eyebrow) {
+    display: none;
+  }
+
+  body.product-shell--studio .gang-editor__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+    padding: 0.45rem 0.55rem 0.55rem;
+  }
+
+  body.product-shell--studio .gang-editor__metrics > div {
+    padding: 0.4rem 0.5rem;
+  }
+
+  body.product-shell--studio .gang-editor__metrics > div:nth-child(1),
+  body.product-shell--studio .gang-editor__metrics > div:nth-child(4) {
+    display: none;
+  }
+
+  body.product-shell--studio .gang-editor__progress-row {
+    gap: 0.35rem;
+  }
+
+  body.product-shell--studio .gang-workflow--editor li small {
+    display: none;
+  }
+
+  body.product-shell--studio .gang-workflow button {
+    min-height: 2.55rem;
+  }
+
+  body.product-shell--studio .gang-editor__status {
+    min-height: 2.55rem;
+    padding: 0.35rem 0.55rem;
+  }
+
+  body.product-shell--studio .gang-editor__status-detail,
+  body.product-shell--studio .gang-editor__status small {
+    display: none;
   }
 
   body.product-shell--studio .gang-editor__toolbar {
-    overflow-x: auto;
-    scrollbar-width: thin;
+    overflow: visible;
+    flex-wrap: wrap;
   }
 
   body.product-shell--studio .gang-editor__toolbar-group {
     flex: 0 0 auto;
+    overflow: visible;
   }
 
   body.product-shell--studio .gang-editor__selection-tools .gang-tool-btn > span:last-child {
@@ -195,21 +496,24 @@ body.product-shell--studio :is(.gang-tool-btn, .gang-workflow button, .gang-edit
     white-space: normal;
     clip-path: none;
   }
+
+  body.product-shell--studio .gang-editor__workspace {
+    height: max(28rem, calc(100dvh - 11.5rem));
+  }
 }
 
-/* Garde Studio : contrôles et états restent sombres, y compris sur mobile. */
+/* Garde Studio : contrôles alignés shell clair, repères corail sur le canevas. */
 html[data-theme="prenium"] body.product-shell--studio .gang-editor :is(
   input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
   select,
   textarea
 ) {
   border: 1px solid var(--gang-line);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-sm);
   color: var(--gang-ink);
   background: var(--gang-panel);
 }
 
-/* Recadrage et sélection : contrôles sombres, repères corail sur le canevas clair. */
 html[data-theme="prenium"] body.product-shell--studio .gang-crop-box {
   border-color: var(--gang-accent);
   box-shadow:
@@ -225,13 +529,13 @@ html[data-theme="prenium"] body.product-shell--studio .gang-crop-box:focus-visib
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-crop-box [data-crop-handle] {
-  border-color: #171310;
+  border-color: var(--ink);
   background: var(--gang-accent);
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-crop-controls {
   border-color: var(--gang-line);
-  border-radius: 0.875rem;
+  border-radius: var(--radius-sm);
   color: var(--gang-ink);
   background: var(--gang-panel-subtle);
 }
@@ -253,7 +557,7 @@ html[data-theme="prenium"] body.product-shell--studio :is(
   .gang-crop-controls__nav button
 ) {
   border-color: var(--gang-line);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-sm);
   color: var(--gang-ink);
   background: var(--gang-panel);
   box-shadow: none;
@@ -285,20 +589,153 @@ html[data-theme="prenium"] body.product-shell--studio .gang-selection-marquee {
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item.is-selected {
+  z-index: 4;
   border-color: var(--gang-accent);
+  outline: 2px solid var(--gang-accent);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item.is-selected::after {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 2px solid var(--ink);
+  box-shadow: inset 0 0 0 2px var(--gang-accent);
+  pointer-events: none;
+  content: "";
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-selection-frame {
+  position: absolute;
+  z-index: 5;
+  box-sizing: border-box;
+  border: 2px solid var(--gang-accent);
   box-shadow:
-    0 0 0 2px rgba(23, 19, 16, 0.76),
-    0 0 0 4px var(--gang-accent);
+    0 0 0 1px var(--ink),
+    inset 0 0 0 1px var(--ink);
+  pointer-events: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-selection-frame.is-multiple {
+  background: color-mix(in srgb, var(--gang-accent) 10%, transparent);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-selection-frame.is-group {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--gang-accent) 14%, transparent);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-selection-frame__chrome {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  max-width: min(100% + 2rem, 22rem);
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, calc(-100% - 0.4rem));
+  pointer-events: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-selection-frame__badge {
+  position: static;
+  top: auto;
+  left: auto;
+  z-index: 1;
+  max-width: 100%;
+  transform: none;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  background: var(--gang-accent);
+  color: var(--action-text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 0 0 1px var(--ink), 0 4px 10px rgba(23, 19, 16, 0.22);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-selection-frame__size {
+  display: none;
+}
+
+/* En multi-sélection, seule la taille d’ensemble reste lisible. */
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-canvas:has(.gang-selection-frame.is-multiple) .gang-sheet-item.is-selected .gang-sheet-item__label {
+  opacity: 0;
+  visibility: hidden;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item.is-grouped:not(.is-selected) {
+  outline: 1px dashed color-mix(in srgb, var(--gang-accent) 70%, transparent);
+  outline-offset: -1px;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-group-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0.55rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-group-tools__help {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--gang-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item-toolbar--group {
+  z-index: 6;
+  background: var(--ink);
+  box-shadow: var(--shadow-soft);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item-action.is-icon {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.35rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item-action.is-icon svg {
+  display: block;
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item.has-issue {
   box-shadow:
     0 0 0 2px rgba(23, 19, 16, 0.76),
-    0 0 0 4px var(--product-danger, #ff827b);
+    0 0 0 4px var(--danger);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item__label {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item:is(:hover, :focus-within, .is-selected) .gang-sheet-item__label {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item.is-selected .gang-sheet-item__label {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item__label {
+    transition: none;
+  }
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item__resize {
-  border-color: #171310;
+  border-color: var(--ink);
   background: var(--gang-accent);
 }
 
@@ -307,13 +744,282 @@ html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item-action:fo
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--validation li.is-ok {
-  color: #a8e6bd;
-  background: color-mix(in srgb, var(--product-success) 13%, var(--gang-panel));
+  color: var(--gang-success);
+  background: color-mix(in srgb, var(--gang-success) 12%, var(--gang-panel));
+}
+
+/* ——— Réglages : hiérarchie par section ——— */
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector {
+  gap: 0.55rem;
+  padding-bottom: 0.35rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector > .gang-inspector-panel {
+  margin: 0;
+  padding: 0.8rem 0.75rem;
+  border: 1px solid var(--gang-line);
+  border-radius: var(--radius);
+  background: var(--gang-panel);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector > .gang-inspector-panel + .gang-inspector-panel {
+  border-top: 1px solid var(--gang-line);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel__head {
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.7rem;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel__context {
+  margin: 0;
+  color: var(--gang-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel__head h2,
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--item h2,
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--multi h2 {
+  margin: 0;
+  color: var(--gang-ink);
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel__meta {
+  margin: 0.15rem 0 0;
+  color: var(--gang-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel__meta strong {
+  color: var(--gang-ink);
+  font-weight: 800;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-section {
+  display: grid;
+  gap: 0.45rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid color-mix(in srgb, var(--gang-line) 80%, transparent);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel__head + .gang-inspector-section {
+  border-top: 0;
+  padding-top: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-section + .gang-inspector-section {
+  margin-top: 0.55rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-section__title {
+  margin: 0;
+  color: var(--gang-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-grid > label {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+  color: var(--gang-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-grid > label > span {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.5rem;
+  padding: 0 0.55rem 0 0;
+  border: 1px solid var(--gang-line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised, var(--gang-panel-subtle));
+  color: var(--gang-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-grid input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0 0.55rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--gang-ink);
+  font: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-grid input:focus {
+  outline: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-grid > label > span:focus-within {
+  border-color: var(--gang-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gang-focus) 55%, transparent);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-ratio-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--radius-sm);
+  color: var(--gang-ink);
+  background: color-mix(in srgb, var(--gang-panel-subtle) 88%, var(--gang-accent-soft));
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-actions .ui-btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 2.5rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-actions > .gang-inspector-danger {
+  grid-column: 1 / -1;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 2.35rem;
+  margin-top: 0.15rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--gang-line));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 10%, var(--gang-panel));
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-danger:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--gang-focus) 72%, transparent);
+  outline-offset: 2px;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--multi .gang-group-tools {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--multi .gang-action-chip {
+  flex: 1 1 calc(50% - 0.25rem);
+  justify-content: center;
+  min-height: 2.5rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-advanced-tools > summary {
+  gap: 0.55rem;
+  padding: 0.15rem 0;
+  color: var(--gang-ink);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-advanced-tools > summary strong {
+  font-size: 0.86rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-advanced-tools__content {
+  gap: 0.75rem;
+  padding-top: 0.55rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-alignment-reference legend,
+html[data-theme="prenium"] body.product-shell--studio .gang-distribution-tools > span {
+  color: var(--gang-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--validation {
+  padding: 0.85rem 0.8rem;
+  border-color: color-mix(in srgb, var(--gang-accent) 42%, var(--gang-line));
+  background: color-mix(in srgb, var(--gang-accent) 8%, var(--gang-panel));
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-validation-heading h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-validation-heading p {
+  margin: 0.2rem 0 0;
+  color: var(--gang-muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-note {
+  margin: 0.55rem 0 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--gang-panel) 70%, transparent);
+  color: var(--gang-muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-note strong {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--gang-ink);
+  font-size: 0.72rem;
 }
 
 @media (max-width: 47.99rem) {
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__mobile-tabs {
-    border-radius: 0.875rem;
+    border-radius: var(--radius-sm);
     box-shadow: none;
   }
 
