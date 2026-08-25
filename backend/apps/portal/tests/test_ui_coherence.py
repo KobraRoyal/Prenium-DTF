@@ -1174,7 +1174,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("atelier-dashboard-metrics", source)
         self.assertNotIn('class="portal-page-surface atelier-dashboard-metrics', source)
         self.assertIn("atelier-dashboard-stack", source)
-        self.assertNotIn("class=\"atelier-dashboard-panel\"", source)
+        self.assertNotIn('class="atelier-dashboard-panel"', source)
         self.assertNotIn("ui_list_tabs", source)
         self.assertIn("ui_atelier_worklist_table", source)
         worklist_table = template_source("components/tables/atelier_worklist_table.html")
