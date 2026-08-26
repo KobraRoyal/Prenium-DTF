@@ -1,9 +1,8 @@
 import pytest
-
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.b2b_order_projects.services.numbering import (
-    project_number_prefix_for_order_mode,
     B2BOrderProjectNumberService,
+    project_number_prefix_for_order_mode,
 )
 
 
