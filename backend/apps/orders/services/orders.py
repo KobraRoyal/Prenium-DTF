@@ -47,10 +47,10 @@ class OrderService:
 
     def list_staff_orders(self, *, include_cancelled: bool = False):
         queryset = Order.objects.select_related(
-        "customer",
-        "created_by",
-        "source_b2b_order_project",
-    ).prefetch_related(
+            "customer",
+            "created_by",
+            "source_b2b_order_project",
+        ).prefetch_related(
             "items",
             "items__service",
         )

@@ -278,7 +278,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn(">Règlement<", detail)
         self.assertIn("Tarification", detail)
         self.assertIn("Informations transmises", detail)
-        self.assertIn("order_client_label|default:order_display_ref|default:\"Commande\"", detail)
+        self.assertIn('order_client_label|default:order_display_ref|default:"Commande"', detail)
         self.assertIn("order_display_ref", detail)
         self.assertNotIn("order_display_ref|default:order_short_ref", detail)
         self.assertIn("order_requested_date", detail)
