@@ -48,6 +48,21 @@ Homogénéiser toutes les vues Prenium DTF autour d’un shell cohérent : heade
 - [x] `DESIGN.md` — thème clair documenté.
 - [ ] Revue Impeccable complète post-purge physique `product-shell.css` (optionnel, P3).
 
+## Micro-lot — modal de contrôle visuel client (26 août 2026)
+
+La modal de validation des visuels est ramenée à une seule surface Operate : aperçu dominant,
+contrôles techniques compacts et action primaire unique. Les cadres imbriqués du nuancier,
+des dimensions et de la confirmation sont supprimés ; l’action `Supprimer` devient tertiaire
+et le scroll interne de la colonne latérale est remplacé par l’unique scroll vertical du dialogue
+aux petites hauteurs.
+
+- [x] Aucun endpoint, permission, règle métier ou contrat HTMX modifié.
+- [x] Fermeture par icône SVG accessible et cibles tactiles de 44 px.
+- [x] Colonne latérale non scrollable à partir de 960 px ; aucun overflow horizontal attendu.
+- [x] Build des bundles, 133 tests B2B/portail et 98 tests UI ciblés.
+- [ ] Recette authentifiée clavier + largeurs 375 / 768 / 1440 px.
+- [x] Détecteur Impeccable sans alerte et `graphify update .`.
+
 ## Liens
 
 - Supersedes visuellement : [Sprint 46](sprint-46-design-system-sombre-impeccable.md), complète [Sprint 47](sprint-47-coherence-tables-actions-partials.md).

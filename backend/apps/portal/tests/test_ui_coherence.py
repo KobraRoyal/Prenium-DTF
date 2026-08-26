@@ -1665,6 +1665,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "portal/client/partials/order_project_support_color_field.html"
         )
         product_shell = static_source("css/components/product-shell.css")
+        portal_client = static_source("css/entries/portal-client.css")
         header = template_source("components/nav/portal_header.html")
         staff_navigation = template_source("components/nav/portal_staff_navigation.html")
 
@@ -1846,6 +1847,27 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("is-analysis-pending", editor)
         self.assertIn("validation_chrome=True", editor)
         self.assertIn("b2b-dialog-actions--editor", editor)
+        self.assertIn(
+            'button_class="ui-btn ui-btn-ghost b2b-dialog-actions__danger"',
+            editor,
+        )
+        self.assertIn(
+            'button_class="ui-btn ui-btn-ghost b2b-dialog-actions__danger"',
+            validation_panel,
+        )
+        self.assertNotIn(">×</button>", items)
+        self.assertIn('class="b2b-dialog-close__icon"', items)
+        modal_css = portal_client.split(
+            "v160 — Modal commande fichier : une surface, une zone de scroll, zéro cadre parasite."
+        )[-1]
+        self.assertIn("width: min(76rem, calc(100vw - 2rem))", modal_css)
+        self.assertIn(
+            "grid-template-columns: minmax(0, 1fr) minmax(21rem, 22rem)",
+            modal_css,
+        )
+        self.assertIn("overflow: visible !important", modal_css)
+        self.assertIn(".b2b-dialog-actions__danger", modal_css)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", modal_css)
         self.assertIn('placeholder="#HEX"', support_color)
         self.assertIn("Couleur support requise", preview_stage)
         self.assertIn("b2b-quality-review--compact", quality_review)

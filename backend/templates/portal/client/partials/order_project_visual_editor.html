@@ -65,7 +65,7 @@
       <div class="b2b-dialog-actions b2b-dialog-actions--editor">
         <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer{% else %}Valider{% endif %}</button>
         <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-project-item-asset-download' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>
-        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True dialog_prefix="editor-" button_class="ui-btn ui-btn-danger" %}
+        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True dialog_prefix="editor-" button_class="ui-btn ui-btn-ghost b2b-dialog-actions__danger" %}
       </div>
     </form>
     {% else %}

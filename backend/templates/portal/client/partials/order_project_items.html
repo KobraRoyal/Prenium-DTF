@@ -25,7 +25,11 @@
         <div class="b2b-dialog-head__copy">
           <h2 id="add-visual-dialog-title">{% if active_validation_item %}Valider le visuel{% else %}Ajouter un visuel{% endif %}</h2>
         </div>
-        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">×</button>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">
+          <svg class="b2b-dialog-close__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+            <path d="M6.75 6.75 17.25 17.25M17.25 6.75 6.75 17.25"/>
+          </svg>
+        </button>
       </header>
       <div class="b2b-dialog-body" id="add-visual-dialog-body">
         {% if active_validation_item %}
@@ -98,7 +102,14 @@
     {% for item in project.items.all %}
     <dialog class="b2b-configurator-dialog" id="visual-dialog-{{ item.public_id }}" aria-labelledby="visual-dialog-title-{{ item.public_id }}">
       <div class="b2b-dialog-shell">
-        <header class="b2b-dialog-head"><div><h2 id="visual-dialog-title-{{ item.public_id }}">{{ item.name }}</h2></div><button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button></header>
+        <header class="b2b-dialog-head">
+          <div><h2 id="visual-dialog-title-{{ item.public_id }}">{{ item.name }}</h2></div>
+          <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">
+            <svg class="b2b-dialog-close__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+              <path d="M6.75 6.75 17.25 17.25M17.25 6.75 6.75 17.25"/>
+            </svg>
+          </button>
+        </header>
         <div class="b2b-dialog-body">{% include "portal/client/partials/order_project_visual_editor.html" with item=item %}</div>
       </div>
     </dialog>

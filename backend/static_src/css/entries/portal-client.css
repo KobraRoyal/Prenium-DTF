@@ -685,17 +685,123 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   }
 }
 
-/* v151 — Modal commande fichier : chrome outils aperçu (prime unlayered sur ui-btn-secondary). */
+/* v160 — Modal commande fichier : une surface, une zone de scroll, zéro cadre parasite. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog {
+  width: min(76rem, calc(100vw - 2rem)) !important;
+  max-width: none !important;
+  max-height: calc(100dvh - 2rem) !important;
+  overflow: clip !important;
+  border: 0 !important;
+  background: var(--surface-raised) !important;
+  box-shadow: var(--shadow-raised) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-shell {
+  max-height: calc(100dvh - 2rem) !important;
+  background: var(--surface-raised) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-head {
+  min-height: 4.25rem;
+  padding: 0.75rem 1rem !important;
+  background: var(--surface-raised) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-close {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-close:hover,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-close:focus-visible {
+  background: var(--brand-soft) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-close__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-body {
+  min-height: 0;
+  padding: 1rem !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  background: var(--surface-raised) !important;
+  overscroll-behavior: contain;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog :is(
+  .b2b-dialog-editor,
+  .b2b-configurator__workspace,
+  .b2b-configurator__preview,
+  .b2b-visual-card__details,
+  .b2b-configurator__controls
+) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-preview-stage {
+  border: 0 !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-preview-chrome {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0.65rem !important;
+  align-items: center;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog :is(
+  .b2b-quality-overlays,
+  .b2b-background-tools
+) {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-background-tools {
+  justify-self: start;
+  flex-wrap: wrap;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions {
+  display: flex !important;
+  width: 100%;
+  min-width: 0;
+  flex-flow: row wrap !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions .b2b-preview-zoom {
+  width: auto !important;
+  margin-left: auto !important;
+}
+
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-preview-zoom :is(.ui-btn, .ui-btn-secondary, button),
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions > :is(.ui-btn, .ui-btn-secondary, button) {
-  min-height: 2.25rem !important;
-  height: 2.25rem !important;
-  padding: 0 0.7rem !important;
+  width: auto !important;
+  min-height: 2.75rem !important;
+  height: 2.75rem !important;
+  padding: 0 0.75rem !important;
   border: 1px solid var(--line) !important;
   border-radius: var(--radius-sm) !important;
   background: var(--surface-raised) !important;
   color: var(--ink) !important;
   box-shadow: none !important;
+  white-space: nowrap;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions > :is(.ui-btn, .ui-btn-secondary, button).is-active {
@@ -703,28 +809,93 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-con
   background: var(--brand-soft) !important;
 }
 
-/* v157 — Verrou overflow / cohérence modals import + validation. */
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog {
-  width: min(64rem, calc(100vw - 1.25rem)) !important;
-  max-height: calc(100dvh - 1.25rem) !important;
-  overflow: clip !important;
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-swatch-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  flex-basis: 2.75rem;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-body {
-  overflow-x: hidden !important;
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-review {
+  gap: 0.45rem;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-preview-chrome {
-  grid-template-columns: minmax(0, 1fr) !important;
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-review__chips {
+  display: flex;
+  flex-wrap: wrap !important;
+  max-width: 100% !important;
+  gap: 0.4rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-strip {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100% !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-strip__label {
+  display: block;
+  max-width: 13rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-configurator__dimensions {
+  display: grid;
+  grid-template-columns: minmax(0, 6.5rem) minmax(0, 1fr) !important;
+  gap: 0.75rem !important;
+  align-items: stretch;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-configurator__dimensions-info {
+  min-width: 0;
+  padding: 0.25rem 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-configurator__dimensions-values strong {
+  overflow-wrap: anywhere;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-support-color {
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0.2rem 0 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-support-color__alert {
+  margin: 0.15rem 0 0;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--muted) !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-support-color.is-exact-required .b2b-support-color__choices,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-support-color__choices {
   display: grid !important;
-  grid-template-columns: 2.35rem 2.35rem minmax(0, 1fr) !important;
+  grid-template-columns: 2.75rem 2.75rem minmax(0, 1fr) !important;
+  align-items: center;
+  gap: 0.5rem !important;
+  padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
-  padding: 0 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-support-color-hex {
+  display: block;
+  width: 100%;
+  min-width: 0;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-support-color-hex .ui-input {
@@ -733,56 +904,160 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-con
   max-width: 100% !important;
 }
 
-/* v159 — Operate : ombres douces + actions éditeur (gagne sur portal-core unlayered). */
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(.ui-btn, .ui-btn-primary, .ui-btn-secondary, .ui-btn-danger, a.ui-btn),
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(.ui-btn, .ui-btn-primary, .ui-btn-secondary, .ui-btn-danger, a.ui-btn):hover:not(:disabled),
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(.ui-btn, .ui-btn-primary, .ui-btn-secondary, .ui-btn-danger, a.ui-btn):active:not(:disabled) {
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-support-color__status {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-confirm {
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0.35rem 0 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-confirm input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.05rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+  .b2b-add-visual-validation .b2b-dialog-actions--validate,
+  .b2b-dialog-editor .b2b-dialog-actions--editor
+) {
+  position: static !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.5rem !important;
+  align-items: stretch !important;
+  margin: 0 !important;
+  padding: 0.75rem 0 0 !important;
+  border-top: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(
+  .ui-btn,
+  .ui-btn-primary,
+  .ui-btn-secondary,
+  .ui-btn-danger,
+  a.ui-btn
+) {
+  min-width: 0;
+  min-height: 2.75rem;
   transform: none !important;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(.ui-btn, .ui-btn-primary, .ui-btn-secondary, .ui-btn-danger, a.ui-btn) {
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent) !important;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(.ui-btn, .ui-btn-primary, .ui-btn-secondary, .ui-btn-danger, a.ui-btn):hover:not(:disabled) {
-  box-shadow: var(--shadow-soft) !important;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(.ui-btn, .ui-btn-primary, .ui-btn-secondary, .ui-btn-danger, a.ui-btn):active:not(:disabled) {
   box-shadow: none !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-add-visual-validation .b2b-dialog-actions--validate,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-dialog-editor .b2b-dialog-actions--editor {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 0.45rem !important;
-  align-items: stretch !important;
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(
+  .ui-btn,
+  .ui-btn-primary,
+  .ui-btn-secondary,
+  .ui-btn-danger,
+  a.ui-btn
+):hover:not(:disabled) {
+  transform: none !important;
+  box-shadow: var(--shadow-soft) !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-review__chips {
-  flex-wrap: wrap !important;
-  max-width: 100% !important;
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions__danger {
+  grid-column: 1 / -1;
+  justify-self: start;
+  width: auto !important;
+  min-height: 2.5rem !important;
+  padding-inline: 0.25rem !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--danger-text) !important;
+  box-shadow: none !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-strip {
-  max-width: 100% !important;
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions__danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 8%, transparent) !important;
+  box-shadow: none !important;
 }
 
 @media (min-width: 960px) {
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-add-visual-validation .b2b-configurator__workspace:not(.is-analysis-pending),
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-dialog-editor:not(.is-analysis-pending),
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-configurator__new > .b2b-configurator__workspace {
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 18.5rem) !important;
+    grid-template-columns: minmax(0, 1fr) minmax(21rem, 22rem) !important;
+    gap: 1rem !important;
+    align-items: start !important;
   }
 
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-add-visual-validation .b2b-visual-card__details,
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-dialog-editor .b2b-visual-card__details,
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-configurator__controls {
-    max-height: min(34rem, calc(100dvh - 9rem)) !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    align-self: start;
+    overflow: visible !important;
+    padding-right: 0 !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-add-visual-validation .b2b-preview-stage,
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-dialog-editor .b2b-preview-stage,
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-preview-stage {
+    min-height: 15rem !important;
+    height: clamp(15rem, calc(100dvh - 13rem), 28rem) !important;
+    max-height: 28rem !important;
   }
 }
 
+@media (min-width: 1180px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-preview-chrome {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-background-tools {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 959px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog {
+    width: calc(100vw - 0.75rem) !important;
+    max-height: calc(100dvh - 0.75rem) !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-shell {
+    min-height: 0 !important;
+    max-height: calc(100dvh - 0.75rem) !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-body {
+    padding: 0.75rem !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-preview-stage {
+    min-height: 13rem !important;
+    height: min(20rem, 40dvh) !important;
+    max-height: 20rem !important;
+  }
+}
+
+@media (max-width: 39.99rem) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions .b2b-preview-zoom {
+    margin-left: 0 !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+    .b2b-add-visual-validation .b2b-dialog-actions--validate,
+    .b2b-dialog-editor .b2b-dialog-actions--editor
+  ) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions__danger {
+    grid-column: 1;
+  }
+}
 
