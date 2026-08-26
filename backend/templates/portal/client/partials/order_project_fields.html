@@ -1,6 +1,10 @@
-<details class="b2b-project-options" id="order-project-fields">
-  <summary><span>Date et commentaire</span><small>Facultatif</small></summary>
-  <div class="b2b-project-options__body">
+<section class="client-order-project-options" id="order-project-fields">
+  <div class="client-order-project-section-head">
+    <div>
+      <h2 class="font-display text-xl">Date et commentaire</h2>
+      <p class="muted text-sm m-0">Facultatif — utile pour l’atelier.</p>
+    </div>
+  </div>
   {% if form_error %}<div class="alert alert--danger mb-4" role="alert">{{ form_error }}</div>{% endif %}
   {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
   <form
@@ -20,10 +24,11 @@
     </div>
   </form>
   {% elif project.requested_date or project.customer_comment %}
-  <dl class="b2b-project-recap">
+  <dl class="b2b-project-recap client-order-project-recap">
     {% if project.requested_date %}<div><dt class="muted">Date souhaitée</dt><dd>{{ project.requested_date|date:"d/m/Y" }}</dd></div>{% endif %}
     {% if project.customer_comment %}<div class="b2b-project-recap__comment"><dt class="muted">Commentaire</dt><dd>{{ project.customer_comment|linebreaksbr }}</dd></div>{% endif %}
   </dl>
+  {% else %}
+  <p class="muted text-sm m-0">Aucune date ni commentaire renseignés.</p>
   {% endif %}
-  </div>
-</details>
+</section>

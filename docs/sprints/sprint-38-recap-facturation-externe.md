@@ -73,7 +73,7 @@ l’ouverture dans un tableur.
 - [x] Audit génération/export
 - [x] Gel post-récapitulatif
 - [x] Sérialisation tarification/clôture et test PostgreSQL concurrent
-- [x] UI Atelier intégrée à la fiche client
+- [x] UI Atelier intégrée à la fiche client (table/cartes + génération en modale)
 - [x] Tests métier et régressions ciblées
 - [x] Recette navigateur desktop/mobile (1440 px et 390 px, sans débordement)
 - [x] Première revue sécurité et domaine indépendantes

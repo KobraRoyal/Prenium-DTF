@@ -54,6 +54,8 @@
 - [Sprint 46 — Design system sombre Impeccable](sprint-46-design-system-sombre-impeccable.md)
 - [Sprint 47 — Cohérence tables, actions et partials](sprint-47-coherence-tables-actions-partials.md)
 - [Sprint 48 — Shell clair homogène Impeccable](sprint-48-shell-clair-homogene-impeccable.md)
+- [Sprint 49 — Mot de passe oublié](sprint-49-password-reset.md)
+- [Sprint 50 — Page HTTP 404 Operate](sprint-50-page-404.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

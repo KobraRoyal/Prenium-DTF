@@ -25,6 +25,8 @@ urlpatterns = [
     path("", include(("apps.uploads.urls", "uploads"), namespace="uploads")),
 ]
 
+handler404 = "django.views.defaults.page_not_found"
+
 # Prod NAS: serve static from static_src when the shared volume is empty/out of sync.
 # Prefer nginx alias when available; this is the Django fallback.
 _static_root = settings.BASE_DIR / "static_src"

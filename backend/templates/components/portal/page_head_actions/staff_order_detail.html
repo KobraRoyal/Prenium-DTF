@@ -1,0 +1,9 @@
+<div class="staff-order-focus__primary">
+  <a class="ui-btn ui-btn-primary" href="{{ request.path }}?panel={{ staff_order_focus.next_panel }}">{{ staff_order_focus.action_label }}</a>
+  {% if can_price_order and order.pricing_status != "priced" %}
+  <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}" data-submit-loading>
+    {% csrf_token %}
+    <button type="submit" class="ui-btn ui-btn-secondary">Calculer le prix</button>
+  </form>
+  {% endif %}
+</div>

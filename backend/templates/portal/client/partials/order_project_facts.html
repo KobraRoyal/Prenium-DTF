@@ -1,0 +1,33 @@
+{% load portal_tags %}
+<header id="order-project-facts" class="client-order-summary client-order-project-facts client-order-project-identity" aria-label="Résumé de la commande"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+  <dl class="client-order-summary__facts">
+    <div class="client-order-summary__fact">
+      <dt>Date</dt>
+      <dd><time datetime="{{ project.created_at|date:'c' }}">{{ project.created_at|date:"d/m/Y" }}</time></dd>
+    </div>
+    <div class="client-order-summary__fact">
+      <dt>Référence</dt>
+      <dd><span class="client-order-summary__ref">{{ project.project_number }}</span></dd>
+    </div>
+    {% if gang_sheet_quote %}
+    <div class="client-order-summary__fact client-order-summary__fact--pricing">
+      <dt>Montant</dt>
+      <dd><strong>{{ gang_sheet_quote.total_eur }}&nbsp;{{ gang_sheet_quote.currency }} {% if gang_sheet_quote.tax_amount_eur %}TTC{% else %}HT{% endif %}</strong></dd>
+    </div>
+    {% elif customer.default_billing_mode == "deferred" %}
+    <div class="client-order-summary__fact client-order-summary__fact--pricing">
+      <dt>Tarification</dt>
+      <dd>Après contrôle technique</dd>
+    </div>
+    {% else %}
+    <div class="client-order-summary__fact">
+      <dt>Visuels</dt>
+      <dd>{{ project.items.count }}</dd>
+    </div>
+    {% endif %}
+    <div class="client-order-summary__fact">
+      <dt>Règlement</dt>
+      <dd>{{ customer.default_billing_mode|settlement_badge }}</dd>
+    </div>
+  </dl>
+</header>

@@ -4,11 +4,11 @@
 {% block title %}{{ order_client_label|default:order_short_ref }} — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="portal-page portal-page--client client-order-detail">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" title=order_client_label|default:order_short_ref lead_template="components/portal/page_head_leads/client_order_detail.html" %}
+<div class="portal-page portal-page--client client-order-detail client-order-detail-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" head_labelledby="client-order-title" title=order_client_label|default:order_short_ref lead_template="components/portal/page_head_leads/client_order_detail.html" %}
 
 {% if order_status_banner %}
-<div class="alert alert--{{ order_status_banner.tone }} mb-4 client-order-detail-banner" role="status">
+<div class="alert alert--{{ order_status_banner.tone }} client-order-detail-banner" role="status">
   <div class="client-order-detail-banner__content">
     <p>{{ order_status_banner.message }}</p>
     {% if order_status_banner.show_pay_cta %}
@@ -18,39 +18,48 @@
 </div>
 {% endif %}
 
-<section class="portal-page-surface client-order-detail-surface">
-<section class="client-order-summary" aria-label="Résumé de la commande">
-  <dl class="client-order-summary__facts">
-    <div class="client-order-summary__fact">
-      <dt>Commande soumise</dt>
-      <dd><time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y" }}</time></dd>
-    </div>
-    {% if order.pricing_status == "priced" %}
-    <div class="client-order-summary__fact client-order-summary__fact--pricing">
-      <dt>Montant</dt>
-      <dd><strong>{{ order.total_amount }} {{ order.currency }}</strong></dd>
-    </div>
-    {% elif order.billing_mode == "deferred" or order.uses_atelier_pricing %}
-    <div class="client-order-summary__fact client-order-summary__fact--pricing">
-      <dt>Tarification</dt>
-      <dd>Après contrôle technique</dd>
+<section class="portal-page-surface client-order-detail-surface" aria-labelledby="client-order-title">
+  <header class="client-order-summary client-order-detail-identity" aria-labelledby="client-order-title">
+    <dl class="client-order-summary__facts">
+      <div class="client-order-summary__fact">
+        <dt>Date</dt>
+        <dd><time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y" }}</time></dd>
+      </div>
+      <div class="client-order-summary__fact">
+        <dt>Référence</dt>
+        <dd><span class="client-order-summary__ref">{{ order_short_ref }}</span></dd>
+      </div>
+      {% if order.pricing_status == "priced" %}
+      <div class="client-order-summary__fact client-order-summary__fact--pricing">
+        <dt>Montant</dt>
+        <dd><strong>{{ order.total_amount }}&nbsp;{{ order.currency }}</strong></dd>
+      </div>
+      {% else %}
+      <div class="client-order-summary__fact client-order-summary__fact--pricing">
+        <dt>Tarification</dt>
+        <dd>{% if order.billing_mode == "deferred" or order.uses_atelier_pricing %}Après contrôle technique{% else %}{{ order.pricing_status|human_status }}{% endif %}</dd>
+      </div>
+      {% endif %}
+      <div class="client-order-summary__fact">
+        <dt>Règlement</dt>
+        <dd>{{ order.billing_mode|settlement_badge }}</dd>
+      </div>
+    </dl>
+    {% if order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
+    <div class="client-order-summary__alert">
+      <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.get_credit_hold_status_display }}</span>
     </div>
     {% endif %}
-  </dl>
-  {% if order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
-  <div class="client-order-summary__alert">
-    <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.get_credit_hold_status_display }}</span>
+    {% if order.customer_note and order.customer_note != order_client_label %}
+    <div class="client-order-summary__note">
+      <span class="client-order-summary__note-label">Informations transmises</span>
+      <p>{{ order.customer_note }}</p>
+    </div>
+    {% endif %}
+  </header>
+  <div class="client-order-detail-stack">
+    {% order_htmx_tabs "client" %}
   </div>
-  {% endif %}
-  {% if order.customer_note and order.customer_note != order_client_label %}
-  <div class="client-order-summary__note">
-    <span class="client-order-summary__note-label">Informations transmises</span>
-    <p>{{ order.customer_note }}</p>
-  </div>
-  {% endif %}
-</section>
-
-{% order_htmx_tabs "client" %}
 </section>
 </div>
 {% endblock %}

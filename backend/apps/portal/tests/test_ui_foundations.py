@@ -95,6 +95,37 @@ class UiFoundationSourceTests(SimpleTestCase):
         self.assertIn("background: transparent", buttons)
         self.assertIn("box-shadow: none", buttons)
 
+    def test_toast_stack_uses_operate_tokens_not_daisy_alerts(self) -> None:
+        feedback = source(CSS_DIR / "components" / "feedback.css")
+        portal_core = source(CSS_DIR / "entries" / "portal-core.css")
+        toast_tpl = source(TEMPLATES_DIR / "components" / "ui" / "toast_stack.html")
+        toast_js = source(BACKEND_DIR / "static_src" / "js" / "alpine" / "toast-boot.js")
+
+        self.assertIn('class="ui-toast-stack"', toast_tpl)
+        self.assertIn('class="ui-toast"', toast_tpl)
+        self.assertIn("ui-toast__mark", toast_tpl)
+        self.assertNotIn("alert--", toast_tpl)
+        self.assertNotIn("dui-alert", toast_tpl)
+        self.assertNotIn("shadow-lg", toast_tpl)
+
+        for marker in [
+            ".ui-toast--success",
+            ".ui-toast--error",
+            ".ui-toast--warning",
+            ".ui-toast--info",
+            "border-radius: var(--radius-sm)",
+            "var(--success)",
+            "var(--danger)",
+            "var(--shadow-soft)",
+        ]:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, feedback)
+
+        self.assertIn(".ui-toast--success", portal_core)
+        self.assertIn("ui-toast--success", toast_js)
+        self.assertIn("ui-toast--error", toast_js)
+        self.assertNotIn("alert--success", toast_js)
+
     def test_base_body_starts_with_finish_contract(self) -> None:
         base = source(TEMPLATES_DIR / "base.html")
         body = base.split('<body class="{% block body_class %}{% endblock %}">', 1)[1]

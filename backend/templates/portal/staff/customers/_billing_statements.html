@@ -15,70 +15,139 @@
     <span class="staff-customer-workspace__summary-meta">{{ billing_statements|length }} relevé{{ billing_statements|length|pluralize }}</span>
   </summary>
   <div class="staff-customer-workspace__body billing-statement-panel">
+    <section class="staff-orders-results ui-list-results billing-statement-register" aria-labelledby="billing-statements-title">
+      <header class="ui-list-results__head">
+        <div>
+          <p class="muted text-sm m-0">Seuls les mois terminés peuvent être clôturés. Cette action fige les montants rattachés.</p>
+        </div>
+        {% if can_generate_billing_statements and billing_statement_form and billing_statements %}
+        <button class="ui-btn ui-btn-primary" type="button" data-dialog-open="billing-statement-create-dialog" aria-haspopup="dialog">Générer un récapitulatif</button>
+        {% endif %}
+      </header>
 
-  {% if can_generate_billing_statements and billing_statement_form %}
+      {% if billing_statements %}
+      <div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
+        <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
+          <caption class="sr-only">Récapitulatifs de facturation générés</caption>
+          <thead>
+            <tr>
+              <th>Relevé</th>
+              <th>Période</th>
+              <th>Commandes</th>
+              <th>Total HT</th>
+              <th>Statut</th>
+              <th><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for statement in billing_statements %}
+            <tr>
+              <td>
+                <div class="ui-order-primary">
+                  <span class="ui-order-primary__label">Relevé</span>
+                  <span class="ui-table-primary-cell">{{ statement.label }}</span>
+                  <span class="muted text-xs"><code>{{ statement.public_id|short_ref }}</code> · {{ statement.created_at|date:"d/m/Y" }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="ui-order-secondary">
+                  <span class="ui-order-secondary__label">Période</span>
+                  <span class="ui-order-secondary__value">
+                    <time datetime="{{ statement.period_start|date:'Y-m-d' }}">{{ statement.period_start|date:"d/m/Y" }}</time>
+                    –
+                    <time datetime="{{ statement.period_end|date:'Y-m-d' }}">{{ statement.period_end|date:"d/m/Y" }}</time>
+                  </span>
+                </div>
+              </td>
+              <td>{{ statement.order_count }}</td>
+              <td>{{ statement.total_amount }} {{ statement.currency }}</td>
+              <td><span class="badge {{ statement.status|badge_tone }}">{{ statement.get_status_display }}</span></td>
+              <td>
+                <div class="ui-table-actions">
+                  <a
+                    class="ui-btn ui-btn-secondary"
+                    href="{% url 'portal:staff-customer-billing-statement-export' customer_public_id=customer.public_id statement_public_id=statement.public_id %}"
+                    download
+                  >Exporter CSV</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ui-orders-list-mobile grid gap-3 min-[960px]:hidden" aria-label="Récapitulatifs de facturation générés">
+        {% for statement in billing_statements %}
+        <article class="ui-mobile-order-card">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p class="muted text-xs"><code>{{ statement.public_id|short_ref }}</code> · {{ statement.created_at|date:"d/m/Y" }}</p>
+              <p class="text-sm"><strong>{{ statement.label }}</strong></p>
+            </div>
+            <span class="badge {{ statement.status|badge_tone }}">{{ statement.get_status_display }}</span>
+          </div>
+          <p class="mt-2 text-sm">
+            <time datetime="{{ statement.period_start|date:'Y-m-d' }}">{{ statement.period_start|date:"d/m/Y" }}</time>
+            –
+            <time datetime="{{ statement.period_end|date:'Y-m-d' }}">{{ statement.period_end|date:"d/m/Y" }}</time>
+          </p>
+          <p class="muted mt-2 text-xs">{{ statement.order_count }} commande{{ statement.order_count|pluralize }} · {{ statement.total_amount }} {{ statement.currency }}</p>
+          <div class="mt-4">
+            <a
+              class="ui-btn ui-btn-secondary"
+              href="{% url 'portal:staff-customer-billing-statement-export' customer_public_id=customer.public_id statement_public_id=statement.public_id %}"
+              download
+            >Exporter CSV</a>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      {% elif can_generate_billing_statements and billing_statement_form %}
+      {% include "components/ui/empty_state.html" with empty_mark="CSV" title="Aucun récapitulatif généré" message="Le premier relevé apparaîtra ici après la clôture d'un mois contenant des commandes en encours tarifées." cta_button_label="Générer un récapitulatif" cta_button_dialog_open="billing-statement-create-dialog" %}
+      {% else %}
+      {% include "components/ui/empty_state.html" with empty_mark="CSV" title="Aucun récapitulatif généré" message="Le premier relevé apparaîtra ici après la clôture d'un mois contenant des commandes en encours tarifées." %}
+      {% endif %}
+    </section>
+  </div>
+</details>
+
+{% if can_generate_billing_statements and billing_statement_form %}
+<dialog
+  class="b2b-confirm-dialog volume-discount-dialog billing-statement-dialog"
+  id="billing-statement-create-dialog"
+  aria-labelledby="billing-statement-create-dialog-title"
+  aria-describedby="billing-statement-create-dialog-lead"
+  {% if billing_statement_form.errors %}data-dialog-auto-open{% endif %}
+>
   <form
-    class="billing-statement-create"
+    class="b2b-confirm-dialog__shell ui-form-stack"
     method="post"
     action="{% url 'portal:staff-customer-billing-statement-create' customer_public_id=customer.public_id %}"
     data-submit-loading
   >
     {% csrf_token %}
-    <div class="billing-statement-create__copy">
-      <strong>Générer un récapitulatif mensuel</strong>
-      <span>Seuls les mois terminés peuvent être clôturés. Cette action fige les montants rattachés.</span>
-    </div>
-    <div class="ui-field-group billing-statement-create__field">
+    <header class="volume-discount-dialog__head">
+      <div>
+        <h2 id="billing-statement-create-dialog-title">Générer un récapitulatif</h2>
+        <p id="billing-statement-create-dialog-lead">Choisissez un mois civil terminé. Les montants rattachés seront figés pour l’export comptable.</p>
+      </div>
+      <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+    </header>
+    {% if billing_statement_form.non_field_errors %}
+    <div class="alert alert--danger" role="alert"><p>{{ billing_statement_form.non_field_errors|striptags }}</p></div>
+    {% endif %}
+    <div class="ui-field-group">
       <label class="ui-label" for="{{ billing_statement_form.month.id_for_label }}">Mois à clôturer</label>
       {{ billing_statement_form.month }}
       {% if billing_statement_form.month.errors %}
       <p class="error-text ui-error-text" role="alert">{{ billing_statement_form.month.errors|striptags }}</p>
       {% endif %}
     </div>
-    <button class="ui-btn ui-btn-primary" type="submit">Générer le récapitulatif</button>
-    {% if billing_statement_form.non_field_errors %}
-    <p class="error-text ui-error-text billing-statement-create__error" role="alert">
-      {{ billing_statement_form.non_field_errors|striptags }}
-    </p>
-    {% endif %}
+    <footer class="b2b-confirm-dialog__actions">
+      <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+      <button class="ui-btn ui-btn-primary" type="submit">Générer le récapitulatif</button>
+    </footer>
   </form>
-  {% endif %}
-
-  {% if billing_statements %}
-  <div class="billing-statement-list" role="list" aria-label="Récapitulatifs générés">
-    {% for statement in billing_statements %}
-    <article class="billing-statement-row" role="listitem">
-      <div class="billing-statement-row__identity">
-        <strong>{{ statement.label }}</strong>
-        <span><code>{{ statement.public_id|short_ref }}</code> · généré le {{ statement.created_at|date:"d/m/Y" }}</span>
-      </div>
-      <dl class="billing-statement-row__facts">
-        <div>
-          <dt>Période</dt>
-          <dd><time datetime="{{ statement.period_start|date:'Y-m-d' }}">{{ statement.period_start|date:"d/m/Y" }}</time> – <time datetime="{{ statement.period_end|date:'Y-m-d' }}">{{ statement.period_end|date:"d/m/Y" }}</time></dd>
-        </div>
-        <div>
-          <dt>Commandes</dt>
-          <dd>{{ statement.order_count }}</dd>
-        </div>
-        <div>
-          <dt>Total à facturer HT</dt>
-          <dd>{{ statement.total_amount }} {{ statement.currency }}</dd>
-        </div>
-      </dl>
-      <div class="billing-statement-row__action">
-        <span class="badge {{ statement.status|badge_tone }}">{{ statement.get_status_display }}</span>
-        <a
-          class="ui-btn ui-btn-secondary ui-btn-sm"
-          href="{% url 'portal:staff-customer-billing-statement-export' customer_public_id=customer.public_id statement_public_id=statement.public_id %}"
-          download
-        >Exporter CSV</a>
-      </div>
-    </article>
-    {% endfor %}
-  </div>
-  {% else %}
-  {% include "components/ui/empty_state.html" with empty_mark="CSV" title="Aucun récapitulatif généré" message="Le premier relevé apparaîtra ici après la clôture d'un mois contenant des commandes en encours tarifées." %}
-  {% endif %}
-  </div>
-</details>
+</dialog>
+{% endif %}

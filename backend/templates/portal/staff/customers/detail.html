@@ -5,14 +5,11 @@
 
 {% block portal_content %}
 <div class="portal-page portal-page--staff staff-customer-detail-page">
-<div class="portal-page-rail">
-  {% include "components/portal/breadcrumbs/staff_customers.html" %}
-</div>
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_customers.html" head_labelledby="staff-customer-title" title=customer.name subtitle="Règlement, tarifs, remises volume et accès portail." %}
 
-<section class="portal-page-surface staff-customer-detail-identity" aria-labelledby="staff-customer-title">
-  <header class="staff-customer-focus" aria-labelledby="staff-customer-title">
+<section class="portal-page-surface staff-customer-detail-surface" aria-labelledby="staff-customer-title">
+  <header class="staff-customer-focus staff-customer-detail-identity" aria-labelledby="staff-customer-title">
     <div class="staff-customer-focus__identity">
-      <h1 id="staff-customer-title">{{ customer.name }}</h1>
       <div class="staff-customer-focus__statuses" aria-label="État du compte">
         {% if customer.is_active %}
         <span class="badge is-success">Actif</span>
@@ -300,8 +297,7 @@
     <div class="staff-customer-workspace__body volume-discount-panel">
       <div class="volume-discount-panel__tools">
         {% if can_edit_pricing %}
-        <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-default-volume-discount-settings' %}">Voir la grille par défaut</a>
-        <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-default-volume-discount-settings' %}#volume-nudge-copy">Messages dashboard</a>
+        <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-default-volume-discount-settings' %}">Voir la grille par défaut</a>
         {% endif %}
         {% if volume_discount_available %}
         {% if customer.default_billing_mode == "immediate" %}
@@ -381,76 +377,8 @@
         </dl>
       </div>
 
-      <div class="volume-tier-section-head">
-        <div>
-          <h3 class="font-display text-lg">Grille propre au client</h3>
-          <p class="muted text-sm">Préparation fichier et livraison sont exclues du volume et de la remise.</p>
-        </div>
-        <span>{{ volume_discount_tier_rows|length }} palier{{ volume_discount_tier_rows|length|pluralize }}</span>
-      </div>
-
-      {% if volume_discount_tier_rows %}
-      <ol class="volume-tier-list" aria-label="Paliers configurés">
-        {% if can_edit_pricing %}
-        {% for row in volume_discount_tier_rows %}
-          {% url 'portal:staff-customer-volume-discount-tier-update' customer_public_id=customer.public_id tier_public_id=row.tier.public_id as tier_update_url %}
-          {% include "portal/staff/customers/_volume_discount_tier_row.html" with action_url=tier_update_url tier=row.tier form=row.form position=row.position state=row.state state_label=row.state_label state_badge_class=row.state_badge_class %}
-        {% endfor %}
-        {% else %}
-        {% for row in volume_discount_tier_rows %}
-        <li class="volume-tier-item volume-tier-item--{{ row.state }}">
-          <div class="volume-tier-item__summary volume-tier-item__summary--readonly">
-            <span class="volume-tier-item__marker" aria-hidden="true">{{ row.position }}</span>
-            <span class="volume-tier-item__measure"><small>À partir de</small><strong>{{ row.tier.minimum_monthly_linear_m }} m</strong><span>par mois</span></span>
-            <span class="volume-tier-item__benefit"><small>Remise générale</small><strong>−{{ row.tier.discount_percent }} %</strong><span>sur tout le DTF éligible</span></span>
-            <span class="volume-tier-item__status">{% if row.state_label %}<span class="badge {{ row.state_badge_class }}">{{ row.state_label }}</span>{% endif %}{% if not row.tier.is_active %}<span class="badge is-neutral">Désactivé</span>{% endif %}</span>
-          </div>
-        </li>
-        {% endfor %}
-        {% endif %}
-      </ol>
-      {% else %}
-      {% include "components/ui/empty_state.html" with empty_mark="%" title="Aucun palier configuré" message="Le prix DTF négocié ou catalogue s'applique sans remise." %}
-      {% endif %}
-
-      {% if can_edit_pricing %}
-      <form
-        class="volume-tier-create-inline"
-        method="post"
-        action="{% url 'portal:staff-customer-volume-discount-tier-create' customer_public_id=customer.public_id %}"
-        data-submit-loading
-      >
-        {% csrf_token %}
-        <details{% if volume_discount_tier_add_form.errors %} open{% endif %}>
-          <summary>
-            <span>Ajouter un palier</span>
-            <small>Créer un nouveau seuil pour ce client</small>
-          </summary>
-          <div class="volume-tier-create-inline__fields">
-            {% if volume_discount_tier_add_form.non_field_errors %}<p class="error-text ui-error-text volume-tier-item__error" role="alert">{{ volume_discount_tier_add_form.non_field_errors|striptags }}</p>{% endif %}
-            <div class="ui-field-group">
-              <label class="ui-label" for="{{ volume_discount_tier_add_form.minimum_monthly_linear_m.id_for_label }}">Seuil mensuel (m linéaires)</label>
-              {{ volume_discount_tier_add_form.minimum_monthly_linear_m }}
-              <p class="ui-help">Atteint dès que le volume du mois est supérieur ou égal au seuil.</p>
-              {% if volume_discount_tier_add_form.minimum_monthly_linear_m.errors %}<p class="error-text ui-error-text" role="alert">{{ volume_discount_tier_add_form.minimum_monthly_linear_m.errors|striptags }}</p>{% endif %}
-            </div>
-            <div class="ui-field-group">
-              <label class="ui-label" for="{{ volume_discount_tier_add_form.discount_percent.id_for_label }}">Remise générale (%)</label>
-              {{ volume_discount_tier_add_form.discount_percent }}
-              <p class="ui-help">Appliquée à tout le DTF éligible du mois.</p>
-              {% if volume_discount_tier_add_form.discount_percent.errors %}<p class="error-text ui-error-text" role="alert">{{ volume_discount_tier_add_form.discount_percent.errors|striptags }}</p>{% endif %}
-            </div>
-            <div class="volume-tier-create-inline__actions">
-              <div class="ui-checkbox-row volume-tier-toggle">
-                {{ volume_discount_tier_add_form.is_active }}
-                <label for="{{ volume_discount_tier_add_form.is_active.id_for_label }}">Palier actif</label>
-              </div>
-              <button class="ui-btn ui-btn-primary" type="submit">Ajouter à la grille</button>
-            </div>
-          </div>
-        </details>
-      </form>
-      {% elif not can_edit_pricing %}
+      {% include "portal/staff/customers/_volume_discount_tier_register.html" %}
+      {% if not can_edit_pricing %}
       <p class="muted mt-3 mb-0">Permission <code>manage_customer_pricing</code> requise pour modifier les paliers.</p>
       {% endif %}
     {% endif %}
@@ -469,8 +397,11 @@
       </span>
       <span class="staff-customer-workspace__summary-meta">{{ memberships|length }} accès</span>
     </summary>
-    <div class="staff-customer-workspace__body ui-table-shell table-wrap overflow-x-auto">
-    <table class="ui-data-table ui-data-table--compact min-w-[28rem]">
+    <div class="staff-customer-workspace__body">
+    {% if memberships %}
+    <div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
+    <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
+      <caption class="sr-only">Utilisateurs rattachés à ce compte</caption>
       <thead>
         <tr>
           <th>E-mail</th>
@@ -481,15 +412,39 @@
       <tbody>
         {% for membership in memberships %}
         <tr>
-          <td>{{ membership.user.email }}</td>
+          <td>
+            <div class="ui-order-primary">
+              <span class="ui-order-primary__label">E-mail</span>
+              <span class="ui-table-primary-cell">{{ membership.user.email }}</span>
+            </div>
+          </td>
           <td>{{ membership.get_role_display }}</td>
           <td>{% if membership.is_active %}<span class="badge is-success">Actif</span>{% else %}<span class="badge is-neutral">Inactif</span>{% endif %}</td>
         </tr>
-        {% empty %}
-        <tr><td colspan="3">{% include "components/ui/empty_state.html" with title="Aucun utilisateur rattaché" message="Aucun membre actif n’est encore associé à ce compte client." extra_class="py-4" %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
+    <div class="ui-orders-list-mobile grid gap-3 min-[960px]:hidden" aria-label="Utilisateurs rattachés à ce compte">
+      {% for membership in memberships %}
+      <article class="ui-mobile-order-card">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p class="muted text-xs">{{ membership.get_role_display }}</p>
+            <p class="text-sm"><strong>{{ membership.user.email }}</strong></p>
+          </div>
+          {% if membership.is_active %}
+          <span class="badge is-success">Actif</span>
+          {% else %}
+          <span class="badge is-neutral">Inactif</span>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    {% include "components/ui/empty_state.html" with title="Aucun utilisateur rattaché" message="Aucun membre actif n’est encore associé à ce compte client." extra_class="py-4" %}
+    {% endif %}
     </div>
   </details>
     </div>

@@ -82,6 +82,589 @@ function clearConfiguratorPreview(root, title, detail) {
   });
   setPlaceholder(root.querySelector("[data-configurator-placeholder]"), title, detail);
   resetPreviewMediaSizing(root);
+  clearPreflightQuality(root);
+}
+
+function dpiThresholds(root) {
+  const recommended = Number.parseInt(root?.dataset?.recommendedDpi || "300", 10);
+  const minimum = Number.parseInt(root?.dataset?.minAcceptableDpi || "200", 10);
+  return {
+    recommended: Number.isFinite(recommended) && recommended > 0 ? recommended : 300,
+    minimum: Number.isFinite(minimum) && minimum > 0 ? minimum : 200,
+  };
+}
+
+function setQualityStripState(node, level, label, meta) {
+  if (!(node instanceof HTMLElement)) {
+    return;
+  }
+  node.classList.remove("is-good", "is-warning", "is-error", "is-pending");
+  node.classList.add(`is-${level}`);
+  const labelNode = node.querySelector(
+    "[data-preflight-dpi-label], [data-preflight-fade-label], [data-preflight-thin-label]"
+  );
+  const metaNode = node.querySelector(
+    "[data-preflight-dpi-meta], [data-preflight-fade-meta], [data-preflight-thin-meta]"
+  );
+  if (labelNode) labelNode.textContent = label;
+  if (metaNode) metaNode.textContent = meta || "";
+  if (meta) {
+    node.setAttribute("title", meta);
+  } else {
+    node.removeAttribute("title");
+  }
+}
+
+function clearPreflightOverlays(root) {
+  root?.querySelectorAll("[data-preflight-thin-overlay], [data-preflight-fade-overlay]").forEach((node) => {
+    node.remove();
+  });
+  const chrome = root?.querySelector("[data-preflight-overlay-chrome]");
+  if (chrome instanceof HTMLElement) {
+    chrome.hidden = true;
+    chrome.querySelectorAll("[data-preflight-thin-toggle], [data-preflight-fade-toggle]").forEach((button) => {
+      if (button instanceof HTMLButtonElement) {
+        button.hidden = true;
+        button.classList.add("is-active");
+        button.setAttribute("aria-pressed", "true");
+      }
+    });
+  }
+}
+
+function clearPreflightQuality(root) {
+  const panel = root?.querySelector("[data-configurator-preflight]");
+  if (!(panel instanceof HTMLElement)) {
+    return;
+  }
+  panel.hidden = true;
+  setQualityStripState(
+    panel.querySelector("[data-preflight-dpi]"),
+    "pending",
+    "Résolution",
+    ""
+  );
+  setQualityStripState(
+    panel.querySelector("[data-preflight-fade]"),
+    "pending",
+    "Dégradés",
+    ""
+  );
+  setQualityStripState(
+    panel.querySelector("[data-preflight-thin]"),
+    "pending",
+    "Finesse",
+    ""
+  );
+  clearPreflightOverlays(root);
+}
+
+function resolveDpiLevel(dpi, { recommended, minimum }) {
+  if (!(dpi > 0)) {
+    return {
+      level: "warning",
+      label: "Résolution à vérifier",
+      meta: "DPI indisponible avant l’analyse technique.",
+    };
+  }
+  if (dpi >= recommended) {
+    return {
+      level: "good",
+      label: "Résolution OK",
+      meta: `${Math.round(dpi)} DPI · objectif ${recommended} DPI atteint.`,
+    };
+  }
+  if (dpi >= minimum) {
+    return {
+      level: "warning",
+      label: "Résolution acceptable",
+      meta: `${Math.round(dpi)} DPI · objectif ${recommended} DPI.`,
+    };
+  }
+  return {
+    level: "error",
+    label: "Résolution insuffisante",
+    meta: `${Math.round(dpi)} DPI · pixellisation probable sous ${minimum} DPI.`,
+  };
+}
+
+function detectSemiTransparencyFromMedia(media) {
+  const sourceWidth =
+    media instanceof HTMLImageElement
+      ? media.naturalWidth
+      : media instanceof HTMLCanvasElement
+        ? media.width
+        : 0;
+  const sourceHeight =
+    media instanceof HTMLImageElement
+      ? media.naturalHeight
+      : media instanceof HTMLCanvasElement
+        ? media.height
+        : 0;
+  if (!sourceWidth || !sourceHeight) {
+    return { detected: false, skipped: true };
+  }
+
+  const maxSide = 480;
+  const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true, alpha: true });
+  if (!context) {
+    return { detected: false, skipped: true };
+  }
+  context.clearRect(0, 0, width, height);
+  context.drawImage(media, 0, 0, width, height);
+  let data;
+  try {
+    data = context.getImageData(0, 0, width, height).data;
+  } catch (_error) {
+    return { detected: false, skipped: true };
+  }
+
+  const minAlpha = 16;
+  const maxAlpha = 250;
+  const minPixels = 48;
+  const minCoveragePercent = 0.02;
+  let softPixels = 0;
+  let opaqueOrSoft = 0;
+  const softMask = new Uint8Array(width * height);
+  for (let index = 3, pixel = 0; index < data.length; index += 4, pixel += 1) {
+    const alpha = data[index];
+    if (alpha <= 0) continue;
+    opaqueOrSoft += 1;
+    if (alpha >= minAlpha && alpha <= maxAlpha) {
+      softPixels += 1;
+      softMask[pixel] = 1;
+    }
+  }
+  const coverage = opaqueOrSoft > 0 ? (softPixels / opaqueOrSoft) * 100 : 0;
+  return {
+    detected: softPixels >= minPixels && coverage >= minCoveragePercent,
+    coveragePercent: Number(coverage.toFixed(2)),
+    pixelCount: softPixels,
+    skipped: false,
+    width,
+    height,
+    mask: softMask,
+  };
+}
+
+function morphOpenBinaryMask(mask, width, height, radius) {
+  if (radius < 1) {
+    return mask;
+  }
+  const erode = new Uint8Array(mask.length);
+  const opened = new Uint8Array(mask.length);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let keep = 1;
+      for (let dy = -radius; dy <= radius && keep; dy += 1) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= height) {
+          keep = 0;
+          break;
+        }
+        for (let dx = -radius; dx <= radius; dx += 1) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= width || !mask[yy * width + xx]) {
+            keep = 0;
+            break;
+          }
+        }
+      }
+      erode[y * width + x] = keep;
+    }
+  }
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let hit = 0;
+      for (let dy = -radius; dy <= radius && !hit; dy += 1) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= height) continue;
+        for (let dx = -radius; dx <= radius; dx += 1) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= width) continue;
+          if (erode[yy * width + xx]) {
+            hit = 1;
+            break;
+          }
+        }
+      }
+      opened[y * width + x] = hit;
+    }
+  }
+  return opened;
+}
+
+function detectThinZonesFromMedia(media, dpi = 300) {
+  const sourceWidth =
+    media instanceof HTMLImageElement
+      ? media.naturalWidth
+      : media instanceof HTMLCanvasElement
+        ? media.width
+        : 0;
+  const sourceHeight =
+    media instanceof HTMLImageElement
+      ? media.naturalHeight
+      : media instanceof HTMLCanvasElement
+        ? media.height
+        : 0;
+  if (!sourceWidth || !sourceHeight) {
+    return { detected: false, skipped: true };
+  }
+
+  const maxSide = 480;
+  const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true, alpha: true });
+  if (!context) {
+    return { detected: false, skipped: true };
+  }
+  context.clearRect(0, 0, width, height);
+  context.drawImage(media, 0, 0, width, height);
+  let data;
+  try {
+    data = context.getImageData(0, 0, width, height).data;
+  } catch (_error) {
+    return { detected: false, skipped: true };
+  }
+
+  const alphaThreshold = 32;
+  const foreground = new Uint8Array(width * height);
+  let foregroundPixels = 0;
+  for (let index = 3, pixel = 0; index < data.length; index += 4, pixel += 1) {
+    if (data[index] >= alphaThreshold) {
+      foreground[pixel] = 1;
+      foregroundPixels += 1;
+    }
+  }
+  if (!foregroundPixels) {
+    return { detected: false, skipped: false, width, height, mask: foreground, pixelCount: 0 };
+  }
+
+  const safeDpi = dpi > 0 ? dpi : 300;
+  const pixelsPerMm = (safeDpi / 25.4) * scale;
+  const thresholdPixels = pixelsPerMm * 0.5;
+  if (thresholdPixels < 1) {
+    return {
+      detected: false,
+      skipped: false,
+      resolutionLimited: true,
+      width,
+      height,
+      mask: new Uint8Array(width * height),
+      pixelCount: 0,
+    };
+  }
+
+  const radius = Math.max(1, Math.min(8, Math.round((thresholdPixels - 1) / 2)));
+  const opened = morphOpenBinaryMask(foreground, width, height, radius);
+  const thinMask = new Uint8Array(width * height);
+  let thinPixels = 0;
+  for (let index = 0; index < foreground.length; index += 1) {
+    if (foreground[index] && !opened[index]) {
+      thinMask[index] = 1;
+      thinPixels += 1;
+    }
+  }
+  const coverage = foregroundPixels > 0 ? (thinPixels / foregroundPixels) * 100 : 0;
+  return {
+    detected: thinPixels >= 16 && coverage >= 0.05,
+    coveragePercent: Number(coverage.toFixed(2)),
+    pixelCount: thinPixels,
+    skipped: false,
+    width,
+    height,
+    mask: thinMask,
+  };
+}
+
+function paintMaskOverlay(mask, width, height, rgba) {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return null;
+  }
+  const image = context.createImageData(width, height);
+  const [red, green, blue, alpha] = rgba;
+  for (let pixel = 0; pixel < mask.length; pixel += 1) {
+    if (!mask[pixel]) continue;
+    const index = pixel * 4;
+    image.data[index] = red;
+    image.data[index + 1] = green;
+    image.data[index + 2] = blue;
+    image.data[index + 3] = alpha;
+  }
+  context.putImageData(image, 0, 0);
+  return canvas;
+}
+
+function ensurePreflightOverlayChrome(root) {
+  let chrome = root.querySelector("[data-preflight-overlay-chrome]");
+  if (chrome instanceof HTMLElement) {
+    return chrome;
+  }
+  const previewColumn = root.querySelector(".b2b-configurator__preview");
+  if (!(previewColumn instanceof HTMLElement)) {
+    return null;
+  }
+  chrome = document.createElement("div");
+  chrome.className = "b2b-preview-chrome b2b-preflight-overlay-chrome";
+  chrome.dataset.preflightOverlayChrome = "";
+  chrome.hidden = true;
+
+  const overlays = document.createElement("div");
+  overlays.className = "b2b-quality-overlays";
+  overlays.setAttribute("role", "group");
+  overlays.setAttribute("aria-label", "Mise en évidence prévol");
+
+  const actions = document.createElement("div");
+  actions.className = "b2b-quality-overlays__actions";
+
+  const thinToggle = document.createElement("button");
+  thinToggle.type = "button";
+  thinToggle.className = "ui-btn ui-btn-secondary ui-btn-sm is-active";
+  thinToggle.setAttribute("aria-pressed", "true");
+  thinToggle.dataset.preflightThinToggle = "";
+  thinToggle.hidden = true;
+  const thinSwatch = document.createElement("span");
+  thinSwatch.className = "b2b-thin-zone-swatch";
+  thinSwatch.setAttribute("aria-hidden", "true");
+  const thinLabel = document.createElement("span");
+  thinLabel.dataset.preflightThinToggleLabel = "";
+  thinLabel.textContent = "Zones < 0,5 mm";
+  thinToggle.append(thinSwatch, thinLabel);
+
+  const fadeToggle = document.createElement("button");
+  fadeToggle.type = "button";
+  fadeToggle.className = "ui-btn ui-btn-secondary ui-btn-sm is-active";
+  fadeToggle.setAttribute("aria-pressed", "true");
+  fadeToggle.dataset.preflightFadeToggle = "";
+  fadeToggle.hidden = true;
+  const fadeSwatch = document.createElement("span");
+  fadeSwatch.className = "b2b-semi-transparency-swatch";
+  fadeSwatch.setAttribute("aria-hidden", "true");
+  const fadeLabel = document.createElement("span");
+  fadeLabel.dataset.preflightFadeToggleLabel = "";
+  fadeLabel.textContent = "Dégradés";
+  fadeToggle.append(fadeSwatch, fadeLabel);
+
+  actions.append(thinToggle, fadeToggle);
+  overlays.append(actions);
+  chrome.append(overlays);
+
+  const backgroundTools = previewColumn.querySelector(".b2b-background-tools");
+  if (backgroundTools) {
+    previewColumn.insertBefore(chrome, backgroundTools);
+  } else {
+    previewColumn.appendChild(chrome);
+  }
+  return chrome;
+}
+
+function syncPreflightOverlays(root, { thin = null, fade = null } = {}) {
+  clearPreflightOverlays(root);
+  const bounds =
+    root.querySelector("[data-configurator-bounds]:not([hidden])") ||
+    root.querySelector("[data-configurator-bounds][data-configurator-bounds-visible]") ||
+    root.querySelector("[data-configurator-bounds]");
+  if (!(bounds instanceof HTMLElement)) {
+    return;
+  }
+  const chrome = ensurePreflightOverlayChrome(root);
+  const thinDetected = Boolean(thin?.detected && thin.mask);
+  const fadeDetected = Boolean(fade?.detected && fade.mask);
+  if (!thinDetected && !fadeDetected) {
+    if (chrome instanceof HTMLElement) chrome.hidden = true;
+    return;
+  }
+
+  if (thinDetected) {
+    const overlay = paintMaskOverlay(thin.mask, thin.width, thin.height, [239, 44, 72, 170]);
+    if (overlay) {
+      overlay.className = "b2b-thin-zone-overlay";
+      overlay.dataset.preflightThinOverlay = "";
+      overlay.setAttribute("aria-hidden", "true");
+      bounds.appendChild(overlay);
+    }
+  }
+  if (fadeDetected) {
+    const overlay = paintMaskOverlay(fade.mask, fade.width, fade.height, [255, 152, 0, 150]);
+    if (overlay) {
+      overlay.className = "b2b-semi-transparency-overlay";
+      overlay.dataset.preflightFadeOverlay = "";
+      overlay.setAttribute("aria-hidden", "true");
+      bounds.appendChild(overlay);
+    }
+  }
+
+  if (!(chrome instanceof HTMLElement)) {
+    return;
+  }
+  chrome.hidden = false;
+  const thinToggle = chrome.querySelector("[data-preflight-thin-toggle]");
+  const fadeToggle = chrome.querySelector("[data-preflight-fade-toggle]");
+  if (thinToggle instanceof HTMLButtonElement) {
+    thinToggle.hidden = !thinDetected;
+    thinToggle.classList.toggle("is-active", thinDetected);
+    thinToggle.setAttribute("aria-pressed", thinDetected ? "true" : "false");
+  }
+  if (fadeToggle instanceof HTMLButtonElement) {
+    fadeToggle.hidden = !fadeDetected;
+    fadeToggle.classList.toggle("is-active", fadeDetected);
+    fadeToggle.setAttribute("aria-pressed", fadeDetected ? "true" : "false");
+  }
+}
+
+function updatePreflightQuality(root, { dpi = null, estimated = false, media = null, documentKind = "raster" } = {}) {
+  const panel = root?.querySelector("[data-configurator-preflight]");
+  if (!(panel instanceof HTMLElement)) {
+    return;
+  }
+  panel.hidden = false;
+  const thresholds = dpiThresholds(root);
+  const dpiStrip = panel.querySelector("[data-preflight-dpi]");
+  const fadeStrip = panel.querySelector("[data-preflight-fade]");
+  const thinStrip = panel.querySelector("[data-preflight-thin]");
+
+  if (documentKind === "pdf") {
+    setQualityStripState(
+      dpiStrip,
+      "pending",
+      "Résolution à confirmer",
+      "Document PDF · contrôle DPI complet après analyse."
+    );
+    setQualityStripState(
+      fadeStrip,
+      "pending",
+      "Dégradés à confirmer",
+      "Le contrôle des semi-transparences se fait après l’import."
+    );
+    setQualityStripState(
+      thinStrip,
+      "pending",
+      "Finesse à confirmer",
+      "Zones < 0,5 mm contrôlées après l’analyse technique."
+    );
+    clearPreflightOverlays(root);
+    return;
+  }
+
+  if (documentKind === "deferred") {
+    setQualityStripState(
+      dpiStrip,
+      "pending",
+      "Résolution à confirmer",
+      "Aperçu limité · analyse technique après import."
+    );
+    setQualityStripState(
+      fadeStrip,
+      "pending",
+      "Dégradés à confirmer",
+      "Contrôle des semi-transparences après import."
+    );
+    setQualityStripState(
+      thinStrip,
+      "pending",
+      "Finesse à confirmer",
+      "Zones < 0,5 mm après analyse technique."
+    );
+    clearPreflightOverlays(root);
+    return;
+  }
+
+  const dpiState = resolveDpiLevel(dpi, thresholds);
+  if (estimated && dpiState.meta) {
+    dpiState.meta = `${dpiState.meta} Estimation locale.`;
+  }
+  setQualityStripState(dpiStrip, dpiState.level, dpiState.label, dpiState.meta);
+
+  if (!(media instanceof HTMLImageElement || media instanceof HTMLCanvasElement)) {
+    setQualityStripState(
+      fadeStrip,
+      "pending",
+      "Dégradés à confirmer",
+      "Aperçu indisponible pour le contrôle local."
+    );
+    setQualityStripState(
+      thinStrip,
+      "pending",
+      "Finesse à confirmer",
+      "Aperçu indisponible pour le contrôle local."
+    );
+    clearPreflightOverlays(root);
+    return;
+  }
+
+  const fade = detectSemiTransparencyFromMedia(media);
+  if (fade.skipped) {
+    setQualityStripState(
+      fadeStrip,
+      "pending",
+      "Dégradés à confirmer",
+      "Contrôle local indisponible · analyse serveur à l’import."
+    );
+  } else if (fade.detected) {
+    setQualityStripState(
+      fadeStrip,
+      "warning",
+      "Dégradés détectés",
+      "Semi-transparences probables (ombres, anti-alias, dégradés)."
+    );
+  } else {
+    setQualityStripState(
+      fadeStrip,
+      "good",
+      "Pas de dégradé",
+      "Aucune semi-transparence significative détectée en local."
+    );
+  }
+
+  const thin = detectThinZonesFromMedia(media, dpi || 300);
+  if (thin.skipped) {
+    setQualityStripState(
+      thinStrip,
+      "pending",
+      "Finesse à confirmer",
+      "Contrôle local indisponible · analyse serveur à l’import."
+    );
+  } else if (thin.resolutionLimited) {
+    setQualityStripState(
+      thinStrip,
+      "pending",
+      "Finesse à confirmer",
+      "Résolution d’aperçu insuffisante pour mesurer 0,5 mm."
+    );
+  } else if (thin.detected) {
+    setQualityStripState(
+      thinStrip,
+      "warning",
+      "Détails fins",
+      "Zones probablement < 0,5 mm · à vérifier avant production."
+    );
+  } else {
+    setQualityStripState(
+      thinStrip,
+      "good",
+      "Finesse OK",
+      "Pas de zone fine significative détectée en local."
+    );
+  }
+
+  syncPreflightOverlays(root, {
+    thin: thin.skipped || thin.resolutionLimited ? null : thin,
+    fade: fade.skipped ? null : fade,
+  });
 }
 
 function validateConfiguratorFiles(root, input) {
@@ -599,6 +1182,7 @@ async function renderPdfPreview(root, file, canvas, placeholder, renderToken) {
       baseViewport.height,
       `${Math.round(baseViewport.width)} × ${Math.round(baseViewport.height)} pt · ${((baseViewport.width / 72) * 25.4).toFixed(2)} × ${((baseViewport.height / 72) * 25.4).toFixed(2)} mm artboard · analyse complète à l’envoi`
     );
+    updatePreflightQuality(root, { documentKind: "pdf", media: canvas });
     revealConfiguratorParams(root);
     scheduleFitPreviewMedia(root);
     notifyPreviewState(root, "b2b:preview-ready", file, canvas);
@@ -612,6 +1196,7 @@ async function renderPdfPreview(root, file, canvas, placeholder, renderToken) {
       "Aperçu PDF indisponible",
       "Le fichier pourra tout de même être analysé après son ajout."
     );
+    updatePreflightQuality(root, { documentKind: "deferred" });
     notifyPreviewState(root, "b2b:preview-unavailable", file);
   } finally {
     const destroyTarget =
@@ -699,6 +1284,7 @@ async function previewSelectedFile(root, file) {
         ? "Le fichier original restera inchangé pendant la génération de l’aperçu."
         : "Le fichier sera analysé en arrière-plan dès son ajout.";
     }
+    updatePreflightQuality(root, { documentKind: "deferred" });
     revealConfiguratorParams(root);
     notifyPreviewState(root, "b2b:preview-unavailable", file);
     return;
@@ -734,6 +1320,12 @@ async function previewSelectedFile(root, file) {
         detail: `${preview.naturalWidth} × ${preview.naturalHeight} px · ${((preview.naturalWidth * 25.4) / dpi).toFixed(2)} × ${((preview.naturalHeight * 25.4) / dpi).toFixed(2)} mm à ${dpi} DPI${embeddedDpi ? "" : " (estimation)"}`,
       }
     );
+    updatePreflightQuality(root, {
+      dpi,
+      estimated: !embeddedDpi,
+      media: preview,
+      documentKind: "raster",
+    });
     revealConfiguratorParams(root);
     scheduleFitPreviewMedia(root);
     notifyPreviewState(root, "b2b:preview-ready", file, preview);
@@ -815,6 +1407,10 @@ function syncHexColorControlSwatch(control, rawValue) {
   if (trigger instanceof HTMLElement) {
     trigger.style.setProperty("--swatch-color", normalized);
   }
+  const popover =
+    control._hexPopoverEl instanceof HTMLElement
+      ? control._hexPopoverEl
+      : control.querySelector("[data-hex-color-popover]");
   const popoverInput =
     control._hexPopoverInput instanceof HTMLInputElement
       ? control._hexPopoverInput
@@ -829,6 +1425,21 @@ function syncHexColorControlSwatch(control, rawValue) {
   if (nativePicker instanceof HTMLInputElement) {
     nativePicker.value = normalized;
   }
+  const live =
+    (popover instanceof HTMLElement && popover.querySelector("[data-hex-color-live]")) ||
+    control.querySelector("[data-hex-color-live]");
+  if (live instanceof HTMLElement) {
+    live.style.setProperty("--swatch-color", normalized);
+  }
+  const presetRoot = popover instanceof HTMLElement ? popover : control;
+  presetRoot.querySelectorAll("[data-hex-color-preset]").forEach((btn) => {
+    if (!(btn instanceof HTMLButtonElement)) {
+      return;
+    }
+    const active = normalizeHexColor(btn.dataset.hexColorPreset) === normalized;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-pressed", String(active));
+  });
   return normalized;
 }
 
@@ -907,7 +1518,7 @@ function updateSupportColorStatus(fieldset) {
       ? "Multicouleur sélectionné"
       : normalized
         ? `Couleur ${normalized.toUpperCase()} sélectionnée`
-        : "Aucune sélection";
+        : "Aucune couleur n’est présélectionnée";
   }
 }
 
@@ -1003,16 +1614,20 @@ function positionHexPopover(trigger, popover, triggerRect = null) {
   popover.hidden = false;
   popover.style.visibility = "hidden";
   const rect = triggerRect || trigger.getBoundingClientRect();
-  const width = popover.offsetWidth || 152;
-  const height = popover.offsetHeight || 120;
-  const gap = 6;
-  const margin = 8;
+  const width = popover.offsetWidth || 248;
+  const height = popover.offsetHeight || 280;
+  const gap = 8;
+  const margin = 10;
   let top = rect.bottom + gap;
   if (top + height > window.innerHeight - margin) {
     top = rect.top - height - gap;
   }
   top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
   let left = rect.left;
+  // Si le nuancier dépasse à droite, l’aligner sur le bord droit du déclencheur.
+  if (left + width > window.innerWidth - margin) {
+    left = rect.right - width;
+  }
   left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
   popover.style.position = "fixed";
   popover.style.top = `${top}px`;
@@ -1188,6 +1803,17 @@ function initHexColorControl(control) {
       applyColor(nativePicker.value);
     });
   }
+
+  popover.querySelectorAll("[data-hex-color-preset]").forEach((btn) => {
+    if (!(btn instanceof HTMLButtonElement)) {
+      return;
+    }
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      applyColor(btn.dataset.hexColorPreset || "");
+    });
+  });
 }
 
 function initHexColorControls(scope = document, { force = false } = {}) {
@@ -1428,7 +2054,7 @@ function bindOrderStartPickVisual() {
         if (!picker.files?.length) {
           if (hint instanceof HTMLElement) {
             hint.hidden = false;
-            hint.textContent = "Sélectionnez un fichier pour continuer.";
+            hint.textContent = "Choisissez un fichier pour continuer.";
           }
           return;
         }
@@ -1609,12 +2235,30 @@ function bindConfiguratorEvents() {
         overlay.hidden = !willShow;
         thinZoneToggle.setAttribute("aria-pressed", String(willShow));
         thinZoneToggle.classList.toggle("is-active", willShow);
-        const label = thinZoneToggle.querySelector("[data-thin-zone-toggle-label]");
-        if (label) {
-          label.textContent = willShow
-            ? "Zones sous 0,5 mm affichées"
-            : "Zones sous 0,5 mm masquées";
-        }
+      }
+      return;
+    }
+    const preflightThinToggle = target.closest("[data-preflight-thin-toggle]");
+    if (preflightThinToggle instanceof HTMLButtonElement) {
+      const root = findConfiguratorRoot(preflightThinToggle);
+      const overlay = root?.querySelector("[data-preflight-thin-overlay]");
+      if (overlay instanceof HTMLCanvasElement) {
+        const willShow = overlay.hidden;
+        overlay.hidden = !willShow;
+        preflightThinToggle.setAttribute("aria-pressed", String(willShow));
+        preflightThinToggle.classList.toggle("is-active", willShow);
+      }
+      return;
+    }
+    const preflightFadeToggle = target.closest("[data-preflight-fade-toggle]");
+    if (preflightFadeToggle instanceof HTMLButtonElement) {
+      const root = findConfiguratorRoot(preflightFadeToggle);
+      const overlay = root?.querySelector("[data-preflight-fade-overlay]");
+      if (overlay instanceof HTMLCanvasElement) {
+        const willShow = overlay.hidden;
+        overlay.hidden = !willShow;
+        preflightFadeToggle.setAttribute("aria-pressed", String(willShow));
+        preflightFadeToggle.classList.toggle("is-active", willShow);
       }
       return;
     }
@@ -1627,12 +2271,6 @@ function bindConfiguratorEvents() {
         overlay.hidden = !willShow;
         semiTransparencyToggle.setAttribute("aria-pressed", String(willShow));
         semiTransparencyToggle.classList.toggle("is-active", willShow);
-        const label = semiTransparencyToggle.querySelector("[data-semi-transparency-toggle-label]");
-        if (label) {
-          label.textContent = willShow
-            ? "Semi-transparences affichées"
-            : "Semi-transparences masquées";
-        }
       }
       return;
     }

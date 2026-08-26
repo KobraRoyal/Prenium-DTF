@@ -42,13 +42,13 @@
       {% if has_thin %}
       <button class="ui-btn ui-btn-secondary ui-btn-sm is-active" type="button" aria-pressed="true" data-thin-zone-toggle>
         <span class="b2b-thin-zone-swatch" aria-hidden="true"></span>
-        <span data-thin-zone-toggle-label>Zones sous 0,5 mm affichées</span>
+        <span data-thin-zone-toggle-label>Zones &lt; 0,5 mm</span>
       </button>
       {% endif %}
       {% if has_semi %}
       <button class="ui-btn ui-btn-secondary ui-btn-sm is-active" type="button" aria-pressed="true" data-semi-transparency-toggle>
         <span class="b2b-semi-transparency-swatch" aria-hidden="true"></span>
-        <span data-semi-transparency-toggle-label>Semi-transparences affichées</span>
+        <span data-semi-transparency-toggle-label>Dégradés</span>
       </button>
       {% endif %}
       <div class="b2b-preview-zoom" role="group" aria-label="Zoom sur l’aperçu">
@@ -57,11 +57,11 @@
         <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Zoomer" data-preview-zoom-in>+</button>
       </div>
     </div>
-    {% if has_thin %}
+    {% if has_thin and not validation_chrome %}
     {% if item.support_color_hex and not item.support_color_is_multicolor %}
-    <p class="muted">Contour atelier prévu pour la couleur support {{ item.support_color_hex|upper }}.</p>
+    <p class="muted">Contour atelier · support {{ item.support_color_hex|upper }}.</p>
     {% else %}
-    <p><strong>Couleur du support obligatoire.</strong></p>
+    <p class="b2b-preview-chrome__note"><strong>Couleur support requise</strong> pour les zones fines.</p>
     {% endif %}
     {% endif %}
   </div>

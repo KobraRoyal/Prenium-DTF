@@ -12,7 +12,7 @@ from apps.orders.references import order_client_reference, project_client_refere
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260825-sticker-buttons-v95"
+PORTAL_CSS_ASSET_V = "20260826-modal-impeccable-v159"
 
 STATUS_LABELS = {
     "draft": "Brouillon",
@@ -155,6 +155,7 @@ def badge_tone(status):
         "pending_review",
         "pending_email_verification",
         "needs_information",
+        "maintenance",
     }
     negative = {
         "error",

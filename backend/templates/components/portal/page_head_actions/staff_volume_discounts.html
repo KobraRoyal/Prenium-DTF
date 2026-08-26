@@ -1,0 +1,8 @@
+<div class="page-head-actions">
+  {% if perms.notifications.view_emailtemplate %}
+  <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-email-template-edit' event='volume_discount_tier_reached' audience='client' %}">Configurer l’e-mail client</a>
+  {% endif %}
+  <button class="ui-btn ui-btn-primary" type="button" data-dialog-open="volume-tier-create-dialog" aria-haspopup="dialog">
+    Ajouter un palier
+  </button>
+</div>

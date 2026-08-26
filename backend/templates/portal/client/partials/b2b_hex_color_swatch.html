@@ -22,32 +22,51 @@
     class="b2b-hex-color-popover"
     data-hex-color-popover
     role="dialog"
-    aria-label="Saisie couleur HEX"
+    aria-label="Choisir une couleur"
     hidden
   >
     <div class="b2b-hex-color-popover__panel">
+      <p class="b2b-hex-color-popover__title">Nuancier</p>
+
       <label class="b2b-hex-color-popover__native">
-        <span class="product-form-label">Nuancier</span>
+        <span class="ui-sr-only">Sélectionner une couleur</span>
+        <span class="b2b-hex-color-popover__picker-shell" aria-hidden="true"></span>
         <input
           type="color"
           class="b2b-hex-color-popover__picker"
           data-hex-color-native
           value="{{ initial_color|default:'#ffffff' }}"
+          title="Ouvrir le sélecteur système"
         >
       </label>
+
+      <div class="b2b-hex-color-popover__presets" role="group" aria-label="Couleurs fréquentes">
+        <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#ffffff" style="--preset:#ffffff" aria-label="Blanc" title="Blanc" aria-pressed="false"></button>
+        <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#111111" style="--preset:#111111" aria-label="Noir" title="Noir" aria-pressed="false"></button>
+        <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#1e3a5f" style="--preset:#1e3a5f" aria-label="Marine" title="Marine" aria-pressed="false"></button>
+        <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#1565c0" style="--preset:#1565c0" aria-label="Bleu" title="Bleu" aria-pressed="false"></button>
+        <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#c62828" style="--preset:#c62828" aria-label="Rouge" title="Rouge" aria-pressed="false"></button>
+        <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#2e7d32" style="--preset:#2e7d32" aria-label="Vert" title="Vert" aria-pressed="false"></button>
+        <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#f5e6c8" style="--preset:#f5e6c8" aria-label="Beige" title="Beige" aria-pressed="false"></button>
+        <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#6b675c" style="--preset:#6b675c" aria-label="Gris" title="Gris" aria-pressed="false"></button>
+      </div>
+
       <label class="b2b-hex-color-popover__field">
         <span class="product-form-label">Code HEX</span>
-        <input
-          type="text"
-          class="ui-input font-mono uppercase b2b-hex-color-popover__input"
-          data-hex-color-popover-input
-          maxlength="7"
-          placeholder="#FFFFFF"
-          inputmode="text"
-          autocapitalize="characters"
-          spellcheck="false"
-          value="{{ initial_color|default:'#FFFFFF'|upper }}"
-        >
+        <span class="b2b-hex-color-popover__hex-row">
+          <span class="b2b-hex-color-popover__live" data-hex-color-live aria-hidden="true"></span>
+          <input
+            type="text"
+            class="ui-input font-mono uppercase b2b-hex-color-popover__input"
+            data-hex-color-popover-input
+            maxlength="7"
+            placeholder="#FFFFFF"
+            inputmode="text"
+            autocapitalize="characters"
+            spellcheck="false"
+            value="{{ initial_color|default:'#FFFFFF'|upper }}"
+          >
+        </span>
       </label>
     </div>
   </div>

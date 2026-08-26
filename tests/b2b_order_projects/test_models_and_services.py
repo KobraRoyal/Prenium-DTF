@@ -33,8 +33,16 @@ def test_project_service_creates_unique_numbers_and_audit_without_order_or_produ
         customer=customer, actor=user, data={"name": "Série hiver"}, source="test"
     )
 
-    assert first.project_number.startswith("GANG-SHEET-")
+    assert first.project_number.startswith("CMD-")
     assert first.project_number != second.project_number
+
+    gang = service.create_project(
+        customer=customer,
+        actor=user,
+        data={"name": "Planche prête", "order_mode": B2BOrderProject.OrderMode.READY_GANG_SHEET},
+        source="test",
+    )
+    assert gang.project_number.startswith("GANG-SHEET-")
     assert first.converted_order is None
     assert not hasattr(first, "production_job")
     assert AuditLogEntry.objects.filter(

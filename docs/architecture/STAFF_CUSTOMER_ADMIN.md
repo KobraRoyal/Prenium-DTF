@@ -32,6 +32,7 @@ Depuis août 2026, la fiche staff est organisée comme un espace de travail à c
 destinations : **Compte**, **Tarification**, **Remises volume**, **Facturation** et
 **Accès portail**.
 
+- l’en-tête reprend le `page_head` Atelier (fil d’Ariane, titre raison sociale, sous-titre) ;
 - la navigation locale reste visible sur desktop et devient horizontale sur mobile ;
 - chaque destination repose sur un élément natif `<details>` : le contenu reste
   accessible sans JavaScript et utilisable au clavier ;
@@ -43,7 +44,11 @@ destinations : **Compte**, **Tarification**, **Remises volume**, **Facturation**
 - un lien direct avec fragment (`#billing-statements`, par exemple) ouvre la bonne
   destination et la fait défiler dans la zone visible ;
 - une destination contenant des erreurs de formulaire est rendue ouverte côté
-  serveur, y compris pour les adresses, notes et paliers de remise.
+  serveur, y compris pour les adresses, notes et paliers de remise ;
+- les listes (paliers, récapitulatifs, accès) suivent le contrat commandes :
+  table `ui-data-table` ≥ 960 px, cartes `ui-mobile-order-card` en dessous ;
+- création / configuration des paliers et génération d’un récapitulatif passent
+  par une `<dialog>` native, rouverte automatiquement en cas d’erreur de formulaire.
 
 ## Conditions tarifaires gérées
 

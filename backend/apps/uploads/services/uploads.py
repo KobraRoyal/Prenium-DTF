@@ -194,6 +194,9 @@ class OrderUploadService:
                 width_mm=width_mm,
                 height_mm=height_mm,
                 support_color_hex=color,
+                is_production_derivative=False,
+                production_file_sha256=str(getattr(asset_version, "sha256", "") or ""),
+                source_crop_metadata={},
             )
             order_upload.file.name = asset_version.file.name
             order_upload.save()

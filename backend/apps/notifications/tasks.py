@@ -16,6 +16,7 @@ from apps.notifications.services.transactional import (
     send_order_processing_email,
     send_order_ready_to_ship_email,
     send_order_shipped_email,
+    send_password_reset_email,
     send_payment_captured_email,
 )
 from apps.orders.models import Order
@@ -118,6 +119,22 @@ def send_customer_invitation_email_task(invitation_public_id: str) -> None:
 def send_account_activated_email_task(invitation_public_id: str) -> None:
     if invitation := _get_invitation(invitation_public_id):
         send_account_activated_email(invitation=invitation)
+
+
+@shared_task(
+    name="notifications.send_password_reset_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_password_reset_email_task(user_public_id: str, uidb64: str, token: str) -> None:
+    from django.contrib.auth import get_user_model
+
+    user = get_user_model().objects.filter(public_id=user_public_id, is_active=True).first()
+    if user is None:
+        return
+    send_password_reset_email(user=user, uidb64=uidb64, token=token)
 
 
 @shared_task(

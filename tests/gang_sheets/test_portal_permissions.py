@@ -145,14 +145,17 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert 'data-workflow-step="compose"' in content
     assert 'data-workflow-step="control"' in content
     assert 'data-workflow-step="validate"' in content
-    assert "Vos visuels" in content
-    assert "Plan de travail" in content
+    assert "Fichiers" in content
+    assert "Vos visuels" not in content
+    assert "Plan de travail" not in content
+    assert "Composez, contrôlez" not in content
     assert "Contrôler la composition" in content
     assert "Finaliser la planche" in content
-    assert "Rendu de production sécurisé" in content
+    assert "gang-inspector-empty-steps" not in content
     assert 'data-mobile-panel-tab="canvas"' in content
     assert "data-zoom-reset" in content
     assert "data-status-detail" in content
+    assert "data-canvas-format" in content
     assert "Espacement auto-imposition" in content
     assert "data-spacing-x" in content
     assert "data-spacing-y" in content
@@ -189,16 +192,19 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert 'data-max-files="20"' in content
     assert 'data-max-total-bytes="62914560"' in content
     assert 'aria-describedby="gang-asset-files-help gang-asset-files-error"' in content
-    assert "20 Mo maximum par fichier" in content
-    assert "60 Mo maximum par import" in content
+    assert "20 Mo" in content
     assert "data-configurator-file-error" in content
-    assert "Vérifier l’import" in content
-    assert "Recadrage non destructif" in content
+    assert "Importer" in content
+    assert "data-configurator-preflight" in content
+    assert "data-preflight-dpi" in content
+    assert "data-preflight-fade" in content
+    assert 'data-recommended-dpi="' in content
+    assert "Recadrage" in content
     assert 'name="crop_manifest"' in content
     assert "data-gang-crop-box" in content
     assert "data-crop-manual" in content
     assert "data-crop-auto" in content
-    assert "Illustration + pixels" in content
+    assert "Contenu détecté" in content
     assert "gang-editor__delete" in content
     assert "Supprimer cette planche DTF ?" in content
 
@@ -1441,14 +1447,14 @@ def test_client_cannot_download_generated_production_asset_from_order_project(cl
     detail_content = detail_response.content.decode()
     assert detail_response.status_code == 200
     assert "Contrôle du fichier HD" in detail_content
-    assert "PDF HD hybride" in detail_content
+    assert "Planche HD" in detail_content
+    assert "PDF HD hybride" not in detail_content
     assert "Résolution insuffisante" not in detail_content
-    assert "Diagnostic historique erroné" in detail_content
-    assert "Zones sous 0,5 mm affichées" in detail_content
-    assert "Semi-transparences affichées" in detail_content
-    assert "Couleur du support obligatoire" in detail_content
+    assert "Zones &lt; 0,5 mm" in detail_content
+    assert "Dégradés" in detail_content
+    assert "Couleur du support" in detail_content
+    assert "Obligatoire" in detail_content
     assert "optimiser la base blanche" in detail_content
-    assert "améliorer le toucher" in detail_content
     assert "Indiquez la couleur unie exacte du textile" not in detail_content
     assert "Valider pour commander" in detail_content
     assert confirmation_response.status_code == 200

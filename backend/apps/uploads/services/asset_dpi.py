@@ -360,19 +360,28 @@ def should_use_pdf_artboard_dimensions(page, source_metrics: SourceMetrics) -> b
     Intrinsic embedded DPI (pixels ÷ tag) often describes the source file, not the
     size at which the image is placed on the PDF page. For DTF we must follow the
     page geometry shown in the import preview whenever the artwork fills most of
-    the page, including raster-only PDFs.
+    the page, including raster-only PDFs and multi-placement gang sheets.
     """
     page_area = (source_metrics.page_width_in or 0) * (source_metrics.page_height_in or 0)
-    placement_w = source_metrics.placement_width_in
-    placement_h = source_metrics.placement_height_in
-    if not placement_w or not placement_h or page_area <= 0:
+    if page_area <= 0:
         return True
 
-    placement_area = placement_w * placement_h
+    placement_area = _pdf_total_image_placement_area_inches(page)
+    if placement_area <= 0:
+        placement_w = source_metrics.placement_width_in
+        placement_h = source_metrics.placement_height_in
+        if not placement_w or not placement_h:
+            return True
+        placement_area = placement_w * placement_h
+
     if placement_area <= 0:
         return True
 
-    coverage = placement_area / page_area
+    coverage = min(placement_area / page_area, 1.0)
+    placement_count = _pdf_image_placement_count(page)
+    # Multi-pose gang sheets leave gutters; ≥50 % filled with ≥2 poses → page geometry.
+    if placement_count >= 2 and coverage >= 0.5:
+        return True
     # Raster (nearly) full-page → align with PDF.js / MediaBox preview.
     if coverage >= (2.0 / 3.0):
         return True
@@ -382,6 +391,32 @@ def should_use_pdf_artboard_dimensions(page, source_metrics: SourceMetrics) -> b
         return True
 
     return False
+
+
+def _pdf_image_placement_count(page) -> int:
+    try:
+        infos = page.get_image_info(xrefs=True)
+    except (RuntimeError, TypeError, ValueError):
+        return 0
+    return sum(1 for info in infos if isinstance(info, dict) and info.get("bbox"))
+
+
+def _pdf_total_image_placement_area_inches(page) -> float:
+    """Sum placed image areas (multi-copy gang sheets fill the page via several rects)."""
+    total = 0.0
+    try:
+        infos = page.get_image_info(xrefs=True)
+    except (RuntimeError, TypeError, ValueError):
+        infos = []
+    for info in infos:
+        bbox = info.get("bbox") if isinstance(info, dict) else None
+        if not bbox or len(bbox) < 4:
+            continue
+        width_in = abs(float(bbox[2]) - float(bbox[0])) / 72.0
+        height_in = abs(float(bbox[3]) - float(bbox[1])) / 72.0
+        if width_in > 0 and height_in > 0:
+            total += width_in * height_in
+    return total
 
 
 def parse_eps_page_size_inches(content: bytes) -> tuple[float, float] | None:

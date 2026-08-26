@@ -1,128 +1,284 @@
+{% load portal_tags %}
 <div id="machine-fleet-content" class="machine-fleet-content" aria-live="polite">
-  <section class="machine-fleet-summary" aria-labelledby="machine-fleet-summary-title">
+  <div class="machine-fleet-summary ui-list-command" aria-labelledby="machine-fleet-summary-title">
     <h2 class="sr-only" id="machine-fleet-summary-title">État du parc</h2>
-    <dl>
-      <div><dt>Parc enregistré</dt><dd>{{ fleet_summary.total }} machine{{ fleet_summary.total|pluralize }}</dd></div>
+    <dl class="ui-list-command__facts">
+      <div><dt>Parc</dt><dd>{{ fleet_summary.total }}</dd></div>
       <div><dt>Disponibles</dt><dd>{{ fleet_summary.active }}</dd></div>
-      <div><dt>En maintenance</dt><dd>{{ fleet_summary.maintenance }}</dd></div>
+      <div><dt>Maintenance</dt><dd>{{ fleet_summary.maintenance }}</dd></div>
       <div><dt>Retirées</dt><dd>{{ fleet_summary.retired }}</dd></div>
     </dl>
-    <p class="machine-fleet-summary__rule"><strong>Règle Atelier.</strong> Une machine qui porte un dossier actif doit être réattribuée avant sa maintenance ou son retrait.</p>
-  </section>
-
-  {% if form_error %}
-  <div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ form_error }}</p></div>
-  {% endif %}
-
-  <div class="machine-fleet-layout">
-    <section class="machine-fleet-register" aria-labelledby="machine-fleet-register-title">
-      <header>
-        <div><h2 id="machine-fleet-register-title" class="font-display text-lg">Machines enregistrées</h2><p class="muted text-sm">Disponibilité, charge active et historique restent lisibles au même endroit.</p></div>
-        <span class="badge is-neutral">{{ fleet_summary.total }} au total</span>
-      </header>
-      {% if machines %}
-      <div class="machine-register" role="list">
-        {% for machine in machines %}
-        <article class="machine-register-row{% if machine.status != 'active' %} is-muted{% endif %}" role="listitem">
-          <div class="machine-register-row__identity">
-            <code>{{ machine.code }}</code>
-            <div><strong>{{ machine.name }}</strong><span>{% if machine.manufacturer or machine.model_name %}{{ machine.manufacturer }} {{ machine.model_name }}{% else %}Modèle non renseigné{% endif %}</span></div>
-          </div>
-          <div class="machine-register-row__facts">
-            <span class="badge {% if machine.status == 'active' %}is-success{% elif machine.status == 'maintenance' %}is-warning{% else %}is-neutral{% endif %}">{{ machine.get_status_display }}</span>
-            <span><strong>{{ machine.active_job_count }}</strong> dossier{{ machine.active_job_count|pluralize }} actif{{ machine.active_job_count|pluralize }}</span>
-            <span><strong>{{ machine.print_count }}</strong> impression{{ machine.print_count|pluralize }}</span>
-          </div>
-          <div class="machine-register-row__meta">
-            <span>{% if machine.location %}{{ machine.location }}{% else %}Emplacement non renseigné{% endif %}</span>
-            <span>{% if machine.max_print_width_cm %}Laize {{ machine.max_print_width_cm|floatformat:"-1" }} cm{% else %}Laize non renseignée{% endif %}</span>
-          </div>
-          {% if can_manage_machines %}
-          <details class="machine-register-row__edit" {% if edit_machine_public_id == machine.public_id|stringformat:"s" %}open{% endif %}>
-            <summary>Configurer</summary>
-            <form
-              class="ui-form-stack"
-              hx-post="{% url 'portal:staff-machine-update' machine_public_id=machine.public_id %}"
-              hx-target="#machine-fleet-content"
-              hx-swap="outerHTML"
-              hx-indicator="#portal-htmx-indicator"
-              data-submit-loading
-            >
-              {% csrf_token %}
-              <div class="machine-form-grid">
-                <div class="ui-field-group"><label class="ui-label" for="machine-{{ machine.public_id }}-code">Code</label><input class="ui-input" id="machine-{{ machine.public_id }}-code" name="code" value="{{ machine.code }}" maxlength="32" required></div>
-                <div class="ui-field-group"><label class="ui-label" for="machine-{{ machine.public_id }}-name">Nom</label><input class="ui-input" id="machine-{{ machine.public_id }}-name" name="name" value="{{ machine.name }}" maxlength="120" required></div>
-                <div class="ui-field-group"><label class="ui-label" for="machine-{{ machine.public_id }}-status">Disponibilité</label><select class="ui-input" id="machine-{{ machine.public_id }}-status" name="status">{% for status_value, status_label in machine_statuses %}<option value="{{ status_value }}" {% if machine.status == status_value %}selected{% endif %}>{{ status_label }}</option>{% endfor %}</select></div>
-                <div class="ui-field-group"><label class="ui-label" for="machine-{{ machine.public_id }}-location">Emplacement</label><input class="ui-input" id="machine-{{ machine.public_id }}-location" name="location" value="{{ machine.location }}" maxlength="120"></div>
-                <div class="ui-field-group"><label class="ui-label" for="machine-{{ machine.public_id }}-manufacturer">Fabricant</label><input class="ui-input" id="machine-{{ machine.public_id }}-manufacturer" name="manufacturer" value="{{ machine.manufacturer }}" maxlength="80"></div>
-                <div class="ui-field-group"><label class="ui-label" for="machine-{{ machine.public_id }}-model">Modèle</label><input class="ui-input" id="machine-{{ machine.public_id }}-model" name="model_name" value="{{ machine.model_name }}" maxlength="120"></div>
-                <div class="ui-field-group"><label class="ui-label" for="machine-{{ machine.public_id }}-width">Laize maximale (cm)</label><input class="ui-input" id="machine-{{ machine.public_id }}-width" name="max_print_width_cm" value="{% if machine.max_print_width_cm %}{{ machine.max_print_width_cm|floatformat:'-1' }}{% endif %}" inputmode="decimal"></div>
-                <div class="ui-field-group"><label class="ui-label" for="machine-{{ machine.public_id }}-serial">Numéro de série</label><input class="ui-input" id="machine-{{ machine.public_id }}-serial" name="serial_number" value="{{ machine.serial_number }}" maxlength="120" autocomplete="off"></div>
-              </div>
-              <div class="ui-field-group"><label class="ui-label" for="machine-{{ machine.public_id }}-notes">Notes Atelier</label><textarea class="ui-input" id="machine-{{ machine.public_id }}-notes" name="notes" rows="3" maxlength="2000">{{ machine.notes }}</textarea></div>
-              {% include "components/forms/form_actions.html" with primary_label="Enregistrer" htmx_disable=1 form_actions_class="machine-register-row__actions" %}
-            </form>
-          </details>
-          {% endif %}
-        </article>
-        {% endfor %}
-      </div>
-      {% else %}
-      {% include "components/ui/empty_state.html" with title="Aucune imprimante enregistrée" message="Ajoutez la première machine pour commencer à attribuer et tracer les impressions." %}
-      {% endif %}
-    </section>
-
-    {% if can_manage_machines %}
-    <details class="machine-fleet-create" {% if form_error %}open{% endif %}>
-      <summary id="machine-fleet-create-title"><span><strong>Ajouter une imprimante</strong><small>Créer un nouveau poste dans le parc</small></span><span aria-hidden="true">+</span></summary>
-      <p class="machine-fleet-create__intro">Le code reste court et stable : il sera figé dans chaque historique d’impression.</p>
-      <form
-        class="ui-form-stack"
-        hx-post="{% url 'portal:staff-machine-create' %}"
-        hx-target="#machine-fleet-content"
-        hx-swap="outerHTML"
-        hx-indicator="#portal-htmx-indicator"
-        data-submit-loading
-      >
-        {% csrf_token %}
-        <div class="machine-form-grid">
-          <div class="ui-field-group"><label class="ui-label" for="machine-code">Code machine</label><input class="ui-input" id="machine-code" name="code" value="{{ form_values.code|default:'' }}" placeholder="DTF-01" maxlength="32" required></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-name">Nom d’usage</label><input class="ui-input" id="machine-name" name="name" value="{{ form_values.name|default:'' }}" placeholder="Atlas" maxlength="120" required></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-manufacturer">Fabricant</label><input class="ui-input" id="machine-manufacturer" name="manufacturer" value="{{ form_values.manufacturer|default:'' }}" placeholder="Epson, Mimaki…" maxlength="80"></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-model">Modèle</label><input class="ui-input" id="machine-model" name="model_name" value="{{ form_values.model_name|default:'' }}" placeholder="Référence du modèle" maxlength="120"></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-width">Laize maximale</label><div class="machine-width-input"><input class="ui-input" id="machine-width" name="max_print_width_cm" value="{{ form_values.max_print_width_cm|default:'' }}" inputmode="decimal" placeholder="60"><span>cm</span></div></div>
-          <div class="ui-field-group"><label class="ui-label" for="machine-location">Emplacement</label><input class="ui-input" id="machine-location" name="location" value="{{ form_values.location|default:'' }}" placeholder="Atelier nord" maxlength="120"></div>
-        </div>
-        <input type="hidden" name="status" value="active">
-        <div class="ui-field-group"><label class="ui-label" for="machine-serial">Numéro de série <span>(interne)</span></label><input class="ui-input" id="machine-serial" name="serial_number" value="{{ form_values.serial_number|default:'' }}" maxlength="120" autocomplete="off"></div>
-        <div class="ui-field-group"><label class="ui-label" for="machine-notes">Notes Atelier</label><textarea class="ui-input" id="machine-notes" name="notes" rows="3" maxlength="2000" placeholder="Consignes utiles à l’équipe…">{{ form_values.notes|default:'' }}</textarea></div>
-        {% include "components/forms/form_actions.html" with primary_label="Ajouter au parc" htmx_disable=1 form_actions_class="machine-fleet-create__actions" %}
-      </form>
-    </details>
-    {% endif %}
   </div>
 
+  <section class="staff-orders-results ui-list-results machine-fleet-register" aria-labelledby="machine-fleet-register-title">
+    <header class="ui-list-results__head">
+      <div>
+        <h2 class="font-display text-lg" id="machine-fleet-register-title">Machines enregistrées</h2>
+        <p class="machine-fleet-summary__rule">Une machine qui porte un dossier actif doit être réattribuée avant sa maintenance ou son retrait.</p>
+      </div>
+      <span class="badge is-neutral">{{ fleet_summary.total }} au total</span>
+    </header>
+
+    {% if machines %}
+    <div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
+      <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
+        <caption class="sr-only">Liste des imprimantes DTF</caption>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Nom</th>
+            <th>Disponibilité</th>
+            <th>Charge</th>
+            <th>Impressions</th>
+            <th>Emplacement</th>
+            <th>Laize</th>
+            {% if can_manage_machines %}
+            <th><span class="sr-only">Actions</span></th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for machine in machines %}
+          <tr class="{% if machine.status != 'active' %}ui-row-warning{% endif %}">
+            <td>
+              <div class="ui-order-primary">
+                <span class="ui-order-primary__label">Code</span>
+                <code class="ui-table-mono ui-table-primary-cell">{{ machine.code }}</code>
+              </div>
+            </td>
+            <td>
+              <div class="ui-order-secondary">
+                <span class="ui-order-secondary__label">Nom</span>
+                <span class="ui-order-secondary__value">{{ machine.name }}</span>
+              </div>
+              <span class="muted">{% if machine.manufacturer or machine.model_name %}{{ machine.manufacturer }} {{ machine.model_name }}{% else %}Modèle non renseigné{% endif %}</span>
+            </td>
+            <td>
+              <span class="badge {{ machine.status|badge_tone }}">{{ machine.get_status_display }}</span>
+            </td>
+            <td>
+              <div class="ui-order-secondary">
+                <span class="ui-order-secondary__label">Charge</span>
+                <span class="ui-order-secondary__value">{{ machine.active_job_count }} dossier{{ machine.active_job_count|pluralize }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="ui-order-secondary">
+                <span class="ui-order-secondary__label">Impressions</span>
+                <span class="ui-order-secondary__value">{{ machine.print_count }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="ui-order-secondary">
+                <span class="ui-order-secondary__label">Emplacement</span>
+                <span class="ui-order-secondary__value">{% if machine.location %}{{ machine.location }}{% else %}—{% endif %}</span>
+              </div>
+            </td>
+            <td>
+              <div class="ui-order-secondary">
+                <span class="ui-order-secondary__label">Laize</span>
+                <span class="ui-order-secondary__value">{% if machine.max_print_width_cm %}{{ machine.max_print_width_cm|floatformat:"-1" }} cm{% else %}—{% endif %}</span>
+              </div>
+            </td>
+            {% if can_manage_machines %}
+            <td>
+              <div class="ui-table-actions">
+                <button class="ui-btn ui-btn-secondary" type="button" data-dialog-open="machine-edit-dialog-{{ machine.public_id }}" aria-haspopup="dialog">Configurer</button>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ui-orders-list-mobile grid gap-3 min-[960px]:hidden" aria-label="Liste des imprimantes DTF">
+      {% for machine in machines %}
+      <article class="ui-mobile-order-card {% if machine.status != 'active' %}ui-card-warning{% endif %}">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p class="muted text-xs">Code</p>
+            <p class="font-mono text-sm ui-table-mono">{{ machine.code }}</p>
+          </div>
+          <span class="badge {{ machine.status|badge_tone }}">{{ machine.get_status_display }}</span>
+        </div>
+        <p class="mt-2 text-sm"><strong>{{ machine.name }}</strong></p>
+        <p class="muted text-xs">{% if machine.manufacturer or machine.model_name %}{{ machine.manufacturer }} {{ machine.model_name }}{% else %}Modèle non renseigné{% endif %}</p>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <span class="text-sm">{{ machine.active_job_count }} dossier{{ machine.active_job_count|pluralize }} actif{{ machine.active_job_count|pluralize }}</span>
+          <span class="text-sm">{{ machine.print_count }} impression{{ machine.print_count|pluralize }}</span>
+        </div>
+        <p class="muted mt-2 text-xs">{% if machine.location %}{{ machine.location }}{% else %}Emplacement non renseigné{% endif %}{% if machine.max_print_width_cm %} · Laize {{ machine.max_print_width_cm|floatformat:"-1" }} cm{% endif %}</p>
+        {% if can_manage_machines %}
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button class="ui-btn ui-btn-secondary" type="button" data-dialog-open="machine-edit-dialog-{{ machine.public_id }}" aria-haspopup="dialog">Configurer</button>
+        </div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+      {% if can_manage_machines %}
+      {% include "components/ui/empty_state.html" with title="Aucune imprimante enregistrée" message="Ajoutez la première machine pour commencer à attribuer et tracer les impressions." cta_button_label="Ajouter une imprimante" cta_button_dialog_open="machine-create-dialog" %}
+      {% else %}
+      {% include "components/ui/empty_state.html" with title="Aucune imprimante enregistrée" message="Le parc n’est pas encore configuré. Un responsable Atelier pourra y ajouter les imprimantes." %}
+      {% endif %}
+    {% endif %}
+  </section>
+
   {% if can_read_print_ledger %}
-  <section class="machine-print-ledger" aria-labelledby="machine-print-ledger-title">
-    <header>
-      <div><h2 id="machine-print-ledger-title" class="font-display text-lg">Journal des impressions</h2><p class="muted text-sm">Preuve horodatée : dossier, imprimante et opérateur au moment de la confirmation.</p></div>
+  <section class="staff-orders-results ui-list-results machine-print-ledger" aria-labelledby="machine-print-ledger-title">
+    <header class="ui-list-results__head">
+      <div>
+        <h2 class="font-display text-lg" id="machine-print-ledger-title">Journal des impressions</h2>
+        <p>Preuve horodatée : dossier, imprimante et opérateur au moment de la confirmation.</p>
+      </div>
       <span class="badge is-neutral">12 dernières</span>
     </header>
     {% if recent_prints %}
-    <ol class="machine-print-ledger__list">
+    <div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
+      <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
+        <caption class="sr-only">Journal des impressions confirmées</caption>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>OF</th>
+            <th>Imprimante</th>
+            <th>Opérateur</th>
+            <th><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for print in recent_prints %}
+          <tr>
+            <td>
+              <time datetime="{{ print.printed_at|date:'c' }}">{{ print.printed_at|date:"d/m/Y H:i" }}</time>
+            </td>
+            <td>
+              <div class="ui-order-secondary">
+                <span class="ui-order-secondary__label">OF</span>
+                <span class="ui-order-secondary__value">{{ print.manufacturing_order_number_snapshot }}</span>
+              </div>
+              <span class="muted">{{ print.production_job.order.customer.name }}</span>
+            </td>
+            <td>
+              <code class="ui-table-mono">{{ print.machine_code_snapshot }}</code>
+              <span class="muted"> {{ print.machine_name_snapshot }}</span>
+            </td>
+            <td>
+              {% if print.recorded_by %}{{ print.recorded_by.email }}{% else %}Opérateur supprimé{% endif %}
+              {% if print.note %}<span class="muted"> · {{ print.note }}</span>{% endif %}
+            </td>
+            <td>
+              <div class="ui-table-actions">
+                <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=print.order_public_id_snapshot %}?panel=production">Fiche</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="ui-orders-list-mobile grid gap-3 min-[960px]:hidden" aria-label="Journal des impressions">
       {% for print in recent_prints %}
-      <li>
-        <time datetime="{{ print.printed_at|date:'c' }}">{{ print.printed_at|date:"d/m/Y · H:i" }}</time>
-        <div><strong>{{ print.manufacturing_order_number_snapshot }}</strong><span>Commande {{ print.production_job.order.public_id|stringformat:"s"|slice:":8"|upper }} · {{ print.production_job.order.customer.name }}</span></div>
-        <div><code>{{ print.machine_code_snapshot }}</code><span>{{ print.machine_name_snapshot }}</span></div>
-        <div><strong>{% if print.recorded_by %}{{ print.recorded_by.email }}{% else %}Opérateur supprimé{% endif %}</strong>{% if print.note %}<span>{{ print.note }}</span>{% endif %}</div>
-        <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-order-detail' order_public_id=print.order_public_id_snapshot %}?panel=production">Ouvrir l’OF</a>
-      </li>
+      <article class="ui-mobile-order-card">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p class="muted text-xs">OF</p>
+            <p class="text-sm"><strong>{{ print.manufacturing_order_number_snapshot }}</strong></p>
+          </div>
+          <time class="muted text-xs" datetime="{{ print.printed_at|date:'c' }}">{{ print.printed_at|date:"d/m/Y H:i" }}</time>
+        </div>
+        <p class="muted mt-2 text-xs">{{ print.production_job.order.customer.name }}</p>
+        <p class="mt-2 text-sm"><code class="ui-table-mono">{{ print.machine_code_snapshot }}</code> · {{ print.machine_name_snapshot }}</p>
+        <p class="muted mt-2 text-xs">{% if print.recorded_by %}{{ print.recorded_by.email }}{% else %}Opérateur supprimé{% endif %}{% if print.note %} · {{ print.note }}{% endif %}</p>
+        <div class="mt-4">
+          <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=print.order_public_id_snapshot %}?panel=production">Fiche</a>
+        </div>
+      </article>
       {% endfor %}
-    </ol>
+    </div>
     {% else %}
     {% include "components/ui/empty_state.html" with title="Aucune impression confirmée" message="Le journal se remplira depuis le panneau Production de chaque OF." %}
     {% endif %}
   </section>
+  {% endif %}
+
+  {% if can_manage_machines %}
+  <dialog
+    class="b2b-confirm-dialog machine-fleet-dialog"
+    id="machine-create-dialog"
+    aria-labelledby="machine-create-dialog-title"
+    aria-describedby="machine-create-dialog-lead"
+    {% if form_error and not edit_machine_public_id %}data-dialog-auto-open{% endif %}
+  >
+    <form
+      class="b2b-confirm-dialog__shell ui-form-stack"
+      hx-post="{% url 'portal:staff-machine-create' %}"
+      hx-target="#machine-fleet-content"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      data-submit-loading
+    >
+      {% csrf_token %}
+      <header class="machine-fleet-dialog__head">
+        <div>
+          <h2 id="machine-create-dialog-title">Ajouter une imprimante</h2>
+          <p id="machine-create-dialog-lead">Le code reste court et stable : il sera figé dans chaque historique d’impression.</p>
+        </div>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+      </header>
+      {% if form_error and not edit_machine_public_id %}
+      <div class="alert alert--danger" role="alert"><p>{{ form_error }}</p></div>
+      {% endif %}
+      {% include "portal/staff/machines/_machine_fields.html" with id_prefix="machine-create" form_mode="create" code=form_values.code|default:'' name=form_values.name|default:'' location=form_values.location|default:'' manufacturer=form_values.manufacturer|default:'' model_name=form_values.model_name|default:'' max_print_width_cm=form_values.max_print_width_cm|default:'' serial_number=form_values.serial_number|default:'' notes=form_values.notes|default:'' autofocus=1 %}
+      <footer class="b2b-confirm-dialog__actions">
+        <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+        <button class="ui-btn ui-btn-primary" type="submit" hx-disabled-elt="this">Ajouter au parc</button>
+      </footer>
+    </form>
+  </dialog>
+
+  {% for machine in machines %}
+  <dialog
+    class="b2b-confirm-dialog machine-fleet-dialog"
+    id="machine-edit-dialog-{{ machine.public_id }}"
+    aria-labelledby="machine-edit-dialog-title-{{ machine.public_id }}"
+    {% if edit_machine_public_id == machine.public_id|stringformat:"s" %}data-dialog-auto-open{% endif %}
+  >
+    <form
+      class="b2b-confirm-dialog__shell ui-form-stack"
+      hx-post="{% url 'portal:staff-machine-update' machine_public_id=machine.public_id %}"
+      hx-target="#machine-fleet-content"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      data-submit-loading
+    >
+      {% csrf_token %}
+      <header class="machine-fleet-dialog__head">
+        <div>
+          <h2 id="machine-edit-dialog-title-{{ machine.public_id }}">Configurer {{ machine.name }}</h2>
+          <p>Mettez à jour la disponibilité, l’emplacement et les notes utiles à l’atelier.</p>
+        </div>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+      </header>
+      {% if form_error and edit_machine_public_id == machine.public_id|stringformat:"s" %}
+      <div class="alert alert--danger" role="alert"><p>{{ form_error }}</p></div>
+      {% endif %}
+      {% with machine_id=machine.public_id|stringformat:"s" %}
+      {% if edit_machine_public_id == machine_id and form_values %}
+      {% include "portal/staff/machines/_machine_fields.html" with id_prefix=machine_id form_mode="edit" code=form_values.code|default:machine.code name=form_values.name|default:machine.name status=form_values.status|default:machine.status location=form_values.location|default:machine.location manufacturer=form_values.manufacturer|default:machine.manufacturer model_name=form_values.model_name|default:machine.model_name max_print_width_cm=form_values.max_print_width_cm serial_number=form_values.serial_number|default:machine.serial_number notes=form_values.notes|default:machine.notes %}
+      {% else %}
+      {% include "portal/staff/machines/_machine_fields.html" with id_prefix=machine_id form_mode="edit" code=machine.code name=machine.name status=machine.status location=machine.location manufacturer=machine.manufacturer model_name=machine.model_name max_print_width_cm=machine.max_print_width_cm|floatformat:"-1" serial_number=machine.serial_number notes=machine.notes %}
+      {% endif %}
+      {% endwith %}
+      <footer class="b2b-confirm-dialog__actions">
+        <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+        <button class="ui-btn ui-btn-primary" type="submit" hx-disabled-elt="this">Enregistrer</button>
+      </footer>
+    </form>
+  </dialog>
+  {% endfor %}
   {% endif %}
 </div>

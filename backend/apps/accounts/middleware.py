@@ -28,50 +28,93 @@ def _client_ip(request):
     return request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR") or "0.0.0.0"
 
 
-def _is_login_post(request) -> bool:
+def _is_post_path(request, path: str) -> bool:
     if request.method != "POST":
         return False
-    path = request.path.rstrip("/") or "/"
-    return path == "/login"
+    current = request.path.rstrip("/") or "/"
+    return current == path.rstrip("/") or current == path
+
+
+def _is_login_post(request) -> bool:
+    return _is_post_path(request, "/login")
 
 
 class LoginRateLimitMiddleware:
-    """Limite les POST sur /login/ par adresse IP (cache Django)."""
+    """Limite les POST d'authentification par adresse IP (cache Django)."""
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        if _is_login_post(request):
-            max_attempts = getattr(settings, "LOGIN_RATE_LIMIT_MAX_ATTEMPTS", 20)
-            window = getattr(settings, "LOGIN_RATE_LIMIT_WINDOW_SECONDS", 900)
-            ip = _client_ip(request)
-            key = f"login_rl:{ip}"
-            try:
-                current = cache.incr(key)
-            except ValueError:
-                cache.add(key, 1, timeout=window)
-                current = 1
-            if current > max_attempts:
-                logger.warning(
-                    "login_rate_limited",
-                    extra={"client_ip": ip, "attempts": current},
-                )
-                if current == max_attempts + 1:
-                    record_event(
-                        action="security.login_rate_limited",
-                        status=AuditLogEntry.Status.FAILURE,
-                        message="Limite de tentatives de connexion atteinte",
-                        ip_address=_audit_ip(ip),
-                        metadata={
-                            "client_ip": ip,
-                            "max_attempts": max_attempts,
-                            "window_seconds": window,
-                        },
-                    )
-                return HttpResponse(
-                    "Trop de tentatives de connexion. Réessayez plus tard.",
-                    status=429,
-                    content_type="text/plain; charset=utf-8",
-                )
+        blocked = self._blocked_response(request)
+        if blocked is not None:
+            return blocked
         return self.get_response(request)
+
+    def _blocked_response(self, request):
+        if _is_login_post(request):
+            return self._enforce(
+                request,
+                cache_prefix="login_rl",
+                max_attempts=getattr(settings, "LOGIN_RATE_LIMIT_MAX_ATTEMPTS", 20),
+                window=getattr(settings, "LOGIN_RATE_LIMIT_WINDOW_SECONDS", 900),
+                action="security.login_rate_limited",
+                log_event="login_rate_limited",
+                message="Trop de tentatives de connexion. Réessayez plus tard.",
+                audit_message="Limite de tentatives de connexion atteinte",
+            )
+        if _is_post_path(request, "/mot-de-passe-oublie"):
+            return self._enforce(
+                request,
+                cache_prefix="pwd_reset_rl",
+                max_attempts=getattr(settings, "PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS", 5),
+                window=getattr(settings, "PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS", 3600),
+                action="security.password_reset_rate_limited",
+                log_event="password_reset_rate_limited",
+                message="Trop de demandes de réinitialisation. Réessayez plus tard.",
+                audit_message="Limite de demandes de réinitialisation atteinte",
+            )
+        return None
+
+    def _enforce(
+        self,
+        request,
+        *,
+        cache_prefix: str,
+        max_attempts: int,
+        window: int,
+        action: str,
+        log_event: str,
+        message: str,
+        audit_message: str,
+    ):
+        ip = _client_ip(request)
+        key = f"{cache_prefix}:{ip}"
+        try:
+            current = cache.incr(key)
+        except ValueError:
+            cache.add(key, 1, timeout=window)
+            current = 1
+        if current <= max_attempts:
+            return None
+        logger.warning(
+            log_event,
+            extra={"client_ip": ip, "attempts": current},
+        )
+        if current == max_attempts + 1:
+            record_event(
+                action=action,
+                status=AuditLogEntry.Status.FAILURE,
+                message=audit_message,
+                ip_address=_audit_ip(ip),
+                metadata={
+                    "client_ip": ip,
+                    "max_attempts": max_attempts,
+                    "window_seconds": window,
+                },
+            )
+        return HttpResponse(
+            message,
+            status=429,
+            content_type="text/plain; charset=utf-8",
+        )

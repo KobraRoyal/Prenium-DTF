@@ -2599,7 +2599,7 @@
     width: 100%;
   }
 
-  body.product-shell .b2b-order-start-card {
+  body.product-shell .b2b-order-start-surface {
     display: grid;
     gap: 1.4rem;
     width: 100%;
@@ -2607,7 +2607,7 @@
     padding: clamp(1.1rem, 3vw, 1.75rem);
   }
 
-  body.product-shell .b2b-order-start-card__intro {
+  body.product-shell .b2b-order-start-surface__intro {
     display: flex;
     align-items: flex-start;
     gap: 1rem;
@@ -2615,25 +2615,25 @@
     padding-bottom: 1.1rem;
   }
 
-  body.product-shell .b2b-order-start-card__intro h2,
-  body.product-shell .b2b-order-start-card__intro p {
+  body.product-shell .b2b-order-start-surface__intro h2,
+  body.product-shell .b2b-order-start-surface__intro p {
     margin: 0;
   }
 
-  body.product-shell .b2b-order-start-card__intro h2 {
+  body.product-shell .b2b-order-start-surface__intro h2 {
     font-family: "Space Grotesk", system-ui, sans-serif;
     font-size: 1.2rem;
     font-weight: 900;
   }
 
-  body.product-shell .b2b-order-start-card__intro p,
+  body.product-shell .b2b-order-start-surface__intro p,
   body.product-shell .b2b-field-help,
-  body.product-shell .b2b-order-start-card__action > span {
+  body.product-shell .b2b-order-start-surface__action > span {
     color: var(--product-muted);
     font-size: 0.78rem;
   }
 
-  body.product-shell .b2b-order-start-card__intro p {
+  body.product-shell .b2b-order-start-surface__intro p {
     margin-top: 0.25rem;
   }
 
@@ -2641,7 +2641,7 @@
     margin-top: 0.3rem;
   }
 
-  body.product-shell .b2b-order-start-card__action {
+  body.product-shell .b2b-order-start-surface__action {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -6669,8 +6669,8 @@
       width: 100%;
     }
 
-    body.product-shell .b2b-order-start-card__intro,
-    body.product-shell .b2b-order-start-card__action {
+    body.product-shell .b2b-order-start-surface__intro,
+    body.product-shell .b2b-order-start-surface__action {
       align-items: stretch;
       flex-direction: column;
     }
@@ -6683,8 +6683,8 @@
       max-width: none;
     }
 
-    body.product-shell .b2b-order-start-card__action .ui-form-actions,
-    body.product-shell .b2b-order-start-card__action .ui-btn {
+    body.product-shell .b2b-order-start-surface__action .ui-form-actions,
+    body.product-shell .b2b-order-start-surface__action .ui-btn {
       width: 100%;
     }
 

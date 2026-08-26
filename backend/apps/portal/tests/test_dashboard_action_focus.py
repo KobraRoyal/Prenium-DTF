@@ -55,11 +55,17 @@ class DashboardActionFocusTests(SimpleTestCase):
         ).read_text(encoding="utf-8")
         order_detail = (
             Path(settings.BASE_DIR) / "templates/portal/staff/order_detail.html"
+        ).read_text(encoding="utf-8") + (
+            Path(settings.BASE_DIR)
+            / "templates/components/portal/page_head_actions/staff_order_detail.html"
         ).read_text(encoding="utf-8")
 
         self.assertNotIn("Prochain geste", template)
         self.assertNotIn("atelier-next-action", template)
-        self.assertIn("Prochain geste", order_detail)
+        self.assertNotIn("Prochain geste", order_detail)
+        self.assertNotIn("atelier-next-action", order_detail)
+        self.assertIn("page_head_actions/staff_order_detail.html", order_detail)
+        self.assertIn("staff_order_focus.action_label", order_detail)
         self.assertIn("Imprimer le lot", template)
 
     def test_client_dashboard_prioritizes_resume_payment_or_tracking(self) -> None:

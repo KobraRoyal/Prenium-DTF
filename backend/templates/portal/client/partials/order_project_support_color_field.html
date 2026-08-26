@@ -3,13 +3,12 @@
   <legend class="product-form-label">
     Couleur du support <span class="b2b-support-color__badge">Obligatoire</span>
   </legend>
-  <p class="b2b-support-color__intro">Aucune couleur n’est présélectionnée. Choisissez Multicouleur ou une couleur précise.</p>
   {% if exact_color_required %}
   <p class="b2b-support-color__alert">
-    <strong>Détails sous 0,5 mm détectés.</strong>
-    Sélectionnez Multicouleur ou la couleur du textile : cela permet d’optimiser la base blanche pour améliorer le toucher.
+    Zones fines détectées : indiquez Multicouleur ou la couleur du textile pour optimiser la base blanche.
   </p>
-  <p class="b2b-support-color__required-hint">Sans cette indication, l’atelier ne peut pas ajuster correctement la sous-couche blanche sur les zones fines.</p>
+  {% else %}
+  <p class="b2b-support-color__intro">Multicolore ou une teinte précise du textile.</p>
   {% endif %}
   <div class="b2b-support-color__choices">
     <button
@@ -42,7 +41,7 @@
         autocapitalize="characters"
         spellcheck="false"
         maxlength="7"
-        placeholder="#FFFFFF"
+        placeholder="#HEX"
         value="{% if item and item.support_color_hex and not item.support_color_is_multicolor %}{{ item.support_color_hex|upper }}{% endif %}"
         pattern="#[0-9A-Fa-f]{6}"
         required aria-required="true"
@@ -56,7 +55,7 @@
     {% elif item and item.support_color_hex and not item.support_color_is_multicolor %}
       Couleur {{ item.support_color_hex|upper }} sélectionnée
     {% else %}
-      Aucune sélection
+      Aucune couleur n’est présélectionnée
     {% endif %}
   </p>
   <input

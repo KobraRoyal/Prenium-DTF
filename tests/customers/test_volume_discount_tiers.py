@@ -73,6 +73,8 @@ def test_staff_can_create_customer_tier_with_audit_and_see_it_in_atelier():
     assert "volume-discount-overview" in detail.content.decode()
     assert "Prochain objectif" in detail.content.decode()
     assert "volume-tier-item--next" in detail.content.decode()
+    assert "ui-data-table" in detail.content.decode()
+    assert "volume-tier-create-dialog" in detail.content.decode()
     assert "Voir la grille par défaut" in detail.content.decode()
 
 
@@ -180,7 +182,8 @@ def test_staff_configures_default_ladder_with_pricing_permission_only():
     html = client.get(url).content.decode()
     assert 'data-testid="default-volume-discount-settings"' in html
     assert 'data-testid="volume-nudge-copy"' in html
-    assert "volume-tier-list" in html
+    assert "ui-data-table" in html
+    assert "volume-tier-create-dialog" in html
     assert "Copié à la création" in html
     assert "<strong>1</strong>" in html
     assert "palier actif" in html

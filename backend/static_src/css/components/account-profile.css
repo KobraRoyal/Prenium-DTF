@@ -1,92 +1,103 @@
-/* Compte : même page-head et mêmes faits que dashboard / commandes. */
+/* Compte — même shell que fiche commande (rail + une surface, sans cartes imbriquées). */
 
-html body.product-shell .account-profile-page > .page-head--premium {
-  margin: 0;
-  padding: clamp(1.05rem, 2vw, 1.45rem);
-  border: 2px solid var(--product-line);
-  background: var(--product-panel);
-  box-shadow: 5px 5px 0 #0b0b0b;
+body.product-shell .account-profile-page {
+  display: grid;
+  gap: 0;
 }
 
-html body.product-shell .account-profile-page > .page-head--premium h1 {
-  margin-top: 0;
-  font-size: 1.5rem;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  text-transform: uppercase;
+body.product-shell .account-profile-surface {
+  display: grid;
+  gap: 1.25rem;
 }
 
-html body.product-shell .account-profile-page > .page-head--premium .page-head-lead {
-  max-width: 40rem;
-  margin-top: 0.45rem;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-@media (max-width: 767px) {
-  html body.product-shell .account-profile-page > .page-head--premium {
-    box-shadow: 4px 4px 0 #0b0b0b;
-  }
-
-  html body.product-shell .account-profile-page > .page-head--premium h1 {
-    font-size: 1.5rem;
-    line-height: 1.15;
-  }
-}
-
-body.product-shell .account-profile-form .ui-input[readonly] {
-  color: var(--product-muted);
-  background: color-mix(in srgb, var(--product-panel-strong) 55%, var(--product-panel));
-  cursor: default;
+body.product-shell .account-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(12.5rem, 14.5rem) minmax(0, 1fr);
+  gap: clamp(1.25rem, 3vw, 2rem);
+  align-items: start;
 }
 
 body.product-shell .account-profile-main {
   display: grid;
-  gap: 1rem;
+  gap: 1.35rem;
+  min-width: 0;
 }
 
-body.product-shell .account-identity-panel,
-body.product-shell .account-company-panel {
-  contain: layout;
+/* Panneaux aplatis dans la surface unique. */
+body.product-shell .account-profile-surface .account-profile-panel,
+body.product-shell .account-profile-surface .account-team-panel {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  scroll-margin-top: 6rem;
+}
+
+body.product-shell .account-profile-surface .account-profile-panel + .account-profile-panel,
+body.product-shell .account-profile-surface .account-team-panel + .account-profile-panel,
+body.product-shell .account-profile-surface .account-profile-panel + .account-team-panel {
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--product-line);
 }
 
 body.product-shell .account-identity-panel .account-profile-panel__head,
-body.product-shell .account-company-panel .account-profile-panel__head {
+body.product-shell .account-company-panel .account-profile-panel__head,
+body.product-shell .account-team-panel .account-profile-panel__head {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0 0 0.85rem;
+  border-bottom: 1px solid var(--product-line);
+}
+
+body.product-shell .account-profile-surface .account-profile-panel__head h2,
+body.product-shell .account-profile-surface .account-team-panel__head h2 {
+  margin: 0;
+  font-family: var(--ui-font-display);
+  font-size: 1.125rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+body.product-shell .account-profile-surface .account-profile-panel__head p,
+body.product-shell .account-profile-surface .account-team-panel__head p {
+  margin: 0.25rem 0 0;
+  max-width: 62ch;
+  color: var(--product-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 body.product-shell .account-identity-panel .account-profile-panel__head .ui-btn,
 body.product-shell .account-company-panel .account-profile-panel__head .ui-btn {
   margin-left: auto;
-  min-height: 2.75rem;
 }
 
-html body.product-shell .account-profile-identity strong,
-html body.product-shell .account-profile-identity small {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-overflow: unset;
+body.product-shell .account-profile-form .ui-input[readonly] {
+  color: var(--product-muted);
+  background: color-mix(in srgb, var(--bg) 35%, var(--surface-raised));
+  cursor: default;
 }
 
+/* Faits = même rythme que client-order-summary. */
 body.product-shell .account-profile-facts {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
   margin: 0;
-  padding: 0.15rem 1.25rem 1.15rem;
+  padding: 0;
 }
 
 body.product-shell .account-profile-facts > div {
   min-width: 0;
-  padding: 0.85rem 0 0;
+  padding: 0.75rem 0;
 }
 
 body.product-shell .account-profile-facts > div + div {
-  margin-top: 0.85rem;
   border-top: 1px solid var(--product-line);
 }
 
@@ -96,11 +107,10 @@ body.product-shell .account-profile-facts > div + div {
   }
 
   body.product-shell .account-profile-facts > div {
-    padding: 0.9rem 1rem 0.9rem 0;
+    padding: 0.85rem 1rem 0.85rem 0;
   }
 
   body.product-shell .account-profile-facts > div + div {
-    margin-top: 0;
     border-top: 0;
   }
 
@@ -127,10 +137,10 @@ body.product-shell .account-profile-facts dt {
   margin: 0 0 0.25rem;
   color: var(--product-muted);
   font-size: 0.75rem;
-  font-weight: 850;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: 1.3;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 body.product-shell .account-profile-facts dd {
@@ -157,7 +167,7 @@ body.product-shell .account-profile-facts__help {
 }
 
 body.product-shell .account-company-readonly {
-  padding: 0 1.25rem 1.15rem;
+  padding: 0;
 }
 
 body.product-shell .account-company-fieldset {
@@ -192,14 +202,53 @@ body.product-shell .account-company-same input {
   height: 1.15rem;
   margin-top: 0.15rem;
   flex: 0 0 auto;
-  accent-color: var(--product-ink);
+  accent-color: var(--brand);
 }
 
 body.product-shell .account-company-form:has([name="shipping_same_as_billing"]:checked) .account-company-shipping {
   display: none;
 }
 
-body.product-shell .account-company-form .account-profile-form__footer,
-body.product-shell .account-identity-form .account-profile-form__footer {
-  justify-content: flex-end;
+body.product-shell .account-profile-form {
+  display: grid;
+  gap: 1.1rem;
+}
+
+body.product-shell .account-profile-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1rem;
+}
+
+body.product-shell .account-profile-form__footer,
+body.product-shell .ui-form-actions.account-profile-form__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.65rem 0.85rem;
+  margin-top: 0.25rem;
+}
+
+html body.product-shell .account-profile-identity strong,
+html body.product-shell .account-profile-identity small {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: unset;
+}
+
+@media (max-width: 47.99rem) {
+  body.product-shell .account-profile-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.product-shell .account-profile-form__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.product-shell .account-profile-form__footer,
+  body.product-shell .ui-form-actions.account-profile-form__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

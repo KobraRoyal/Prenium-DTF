@@ -91,7 +91,7 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     assert "client-order-detail" in detail_html
     assert "client-order-summary" in detail_html
     assert "client-order-summary__facts" in detail_html
-    assert "Commande soumise" in detail_html
+    assert "Soumise" in detail_html
     assert 'role="tablist"' in detail_html
     assert "client-order-panel" in detail_html
     assert "Visuels" in detail_html
@@ -488,9 +488,11 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
     detail_html = detail_response.content.decode()
-    assert "atelier-next-action" in detail_html
+    assert "page-head" in detail_html
     assert "staff-order-detail-identity" in detail_html
-    assert "Prochain geste" in detail_html
+    assert "staff-order-focus__facts" in detail_html
+    assert "atelier-next-action" not in detail_html
+    assert "Prochain geste" not in detail_html
     assert "Aucun visuel reçu" in detail_html
     assert "Client &amp; références" not in detail_html
     assert "Workflow commande" not in detail_html

@@ -34,7 +34,7 @@
             class="ui-input"
           />
         </div>
-        <div class="ui-field-group">
+        <div class="ui-field-group product-login-password">
           <label class="ui-label" for="id_password">Mot de passe</label>
           <input
             id="id_password"
@@ -45,13 +45,17 @@
             placeholder="Mot de passe"
             class="ui-input"
           />
+          <a class="ui-link product-login-forgot" href="{% url 'portal:password-reset' %}">Mot de passe oublié ?</a>
         </div>
         {% if next %}
         <input type="hidden" name="next" value="{{ next }}">
         {% endif %}
         {% include "components/forms/form_actions.html" with primary_label="Se connecter" primary_class_full="ui-btn ui-btn-primary ui-btn-block" %}
       </form>
-      <p class="product-login-access">Première visite ? <a class="ui-link" href="{% url 'prospects:step1' %}">Demander un accès professionnel</a></p>
+      <footer class="product-login-footer">
+        <p class="product-login-access">Première visite ? <a class="ui-link" href="{% url 'prospects:step1' %}">Demander un accès professionnel</a></p>
+        {% include "portal/partials/auth_support.html" %}
+      </footer>
     </div>
   </section>
 </main>

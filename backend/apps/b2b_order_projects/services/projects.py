@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
-from django.db import models, transaction
+from django.db import connection, models, transaction
 from django.db.models import Max
 from django.utils import timezone
 
@@ -16,6 +16,13 @@ from apps.b2b_order_projects.models import (
 )
 from apps.b2b_order_projects.services.numbering import B2BOrderProjectNumberService
 from apps.b2b_order_projects.services.transitions import B2BOrderProjectTransitionPolicy
+
+# Tables legacy (feature pose/halftone) encore présentes en DB sur certains
+# environnements alors que les modèles Django ne sont plus sur la branche.
+_LEGACY_B2B_ITEM_DEPENDENT_TABLES = (
+    "uploads_assetplacementanalysis",
+    "uploads_assethalftonederivative",
+)
 
 
 @dataclass(frozen=True)
@@ -107,7 +114,7 @@ class B2BOrderProjectService:
         project = B2BOrderProject.objects.create(
             customer=customer,
             created_by=actor,
-            project_number=self.numbering.next_number(),
+            project_number=self.numbering.next_number(order_mode=order_mode),
             name=name,
             customer_reference=str(data.get("customer_reference", "")).strip(),
             end_customer_reference=str(data.get("end_customer_reference", "")).strip(),
@@ -329,6 +336,7 @@ class B2BOrderProjectService:
         self._ensure_item_mutable(item)
         public_id = item.public_id
         position = item.sort_order
+        self._clear_legacy_b2b_item_dependents([item.pk])
         item.delete()
         B2BOrderProjectItem.objects.for_project(locked).filter(sort_order__gt=position).update(
             sort_order=models.F("sort_order") - 1
@@ -496,7 +504,24 @@ class B2BOrderProjectService:
                 "status": locked.status,
             },
         )
+        item_ids = list(locked.items.values_list("id", flat=True))
+        self._clear_legacy_b2b_item_dependents(item_ids)
         locked.delete()
+
+    def _clear_legacy_b2b_item_dependents(self, item_ids: list[int]) -> None:
+        """Supprime les lignes orphelines qui bloquent le DELETE des items B2B."""
+        if not item_ids:
+            return
+        existing_tables = set(connection.introspection.table_names())
+        placeholders = ", ".join(["%s"] * len(item_ids))
+        with connection.cursor() as cursor:
+            for table_name in _LEGACY_B2B_ITEM_DEPENDENT_TABLES:
+                if table_name not in existing_tables:
+                    continue
+                cursor.execute(
+                    f"DELETE FROM {table_name} WHERE b2b_item_id IN ({placeholders})",
+                    item_ids,
+                )
 
     def _apply_transition(self, project, target_status, actor, source):
         previous = project.status

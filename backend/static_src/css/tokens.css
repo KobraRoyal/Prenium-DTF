@@ -27,6 +27,8 @@ html[data-theme="prenium"] {
   --danger: #a33b45;
   --danger-text: #8f3039;
   --focus-ring: var(--accent-strong);
+  /* Anneau unique des champs (pas d’outline + border = double halo). */
+  --field-focus-ring: color-mix(in srgb, var(--brand) 32%, transparent);
   --action-text: #1a1815;
   --radius: 16px;
   --radius-sm: 14px;

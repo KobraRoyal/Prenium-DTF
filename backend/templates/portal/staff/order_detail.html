@@ -1,13 +1,11 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags order_tags %}
 
-{% block title %}Fiche commande Atelier — Prenium DTF{% endblock %}
+{% block title %}{{ staff_order_focus.of_number }} — Prenium DTF{% endblock %}
 
 {% block portal_content %}
 <div class="portal-page portal-page--staff staff-order-detail-page">
-<div class="portal-page-rail">
-  {% include "components/portal/breadcrumbs/staff_order_detail.html" %}
-</div>
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_order_detail.html" head_labelledby="staff-order-title" title=staff_order_focus.of_number subtitle=staff_order_focus.action_message actions_template="components/portal/page_head_actions/staff_order_detail.html" %}
 
 {% if price_error %}
 <div class="alert alert--danger mb-4" role="alert">
@@ -25,61 +23,50 @@
 </div>
 {% endif %}
 
-<section class="portal-page-surface staff-order-detail-identity" aria-labelledby="staff-order-title">
-  <header class="staff-order-focus__header">
+<section class="portal-page-surface staff-order-detail-surface" aria-labelledby="staff-order-title">
+  <header class="staff-order-focus staff-order-detail-identity" aria-labelledby="staff-order-title">
     <div class="staff-order-focus__identity">
-      <h1 id="staff-order-title" class="font-display">
-        {% if production_job %}
-        <span class="staff-order-focus__of">{{ production_job.manufacturing_order_number }}</span>
-        {% else %}
-        OF à générer
-        {% endif %}
-      </h1>
-      <p class="staff-order-focus__meta muted text-sm">
-        <span>Commande <span class="staff-order-focus__ref">{{ staff_order_focus.order_reference }}</span></span>
-        <span aria-hidden="true">·</span>
-        <a class="staff-order-focus__client" href="{% url 'portal:staff-customer-detail' customer_public_id=order.customer.public_id %}">{{ order.customer.name }}</a>
-        <span aria-hidden="true">·</span>
-        <strong>{% if order.pricing_status == "priced" %}{{ order.total_amount }}&nbsp;{{ order.currency }}{% else %}{{ order.pricing_status|human_status }}{% endif %}</strong>
-        {% if order_drive_url %}
-        <span aria-hidden="true">·</span>
-        <a href="{{ order_drive_url }}" target="_blank" rel="noopener noreferrer">Dossier Drive</a>
-        {% endif %}
-      </p>
-      {% if staff_order_focus.review_status != "approved" or not order_payment_captured and order.billing_mode == "immediate" %}
-      <div class="staff-order-focus__statuses" aria-label="Points d’attention">
-        {% if staff_order_focus.review_status != "approved" %}<span class="badge {{ staff_order_focus.review_tone }}">{{ staff_order_focus.review_label }}</span>{% endif %}
+      <div class="staff-order-focus__statuses" aria-label="État de la commande">
+        <span class="badge {{ staff_order_focus.review_tone }}">{{ staff_order_focus.review_label }}</span>
         {% if not order_payment_captured and order.billing_mode == "immediate" %}
         <span class="badge is-warning">À encaisser</span>
         {% endif %}
       </div>
+      {% if can_delete_order %}
+      <div class="staff-order-focus__tools" aria-label="Actions secondaires">
+        {% include "portal/staff/partials/order_delete_button.html" %}
+      </div>
       {% endif %}
     </div>
-    {% if can_delete_order %}
-    <div class="staff-order-focus__tools" aria-label="Actions secondaires">
-      {% include "portal/staff/partials/order_delete_button.html" %}
-    </div>
-    {% endif %}
+    <dl class="staff-order-focus__facts">
+      <div>
+        <dt>Commande</dt>
+        <dd><span class="staff-order-focus__ref">{{ staff_order_focus.order_reference }}</span></dd>
+      </div>
+      <div>
+        <dt>Client</dt>
+        <dd>
+          <a class="staff-order-focus__client" href="{% url 'portal:staff-customer-detail' customer_public_id=order.customer.public_id %}">{{ order.customer.name }}</a>
+        </dd>
+      </div>
+      <div>
+        <dt>Montant</dt>
+        <dd>
+          <strong>{% if order.pricing_status == "priced" %}{{ order.total_amount }}&nbsp;{{ order.currency }}{% else %}{{ order.pricing_status|human_status }}{% endif %}</strong>
+        </dd>
+      </div>
+      <div>
+        <dt>Drive</dt>
+        <dd>
+          {% if order_drive_url %}
+          <a href="{{ order_drive_url }}" target="_blank" rel="noopener noreferrer">Dossier Drive</a>
+          {% else %}
+          <span class="muted">Non lié</span>
+          {% endif %}
+        </dd>
+      </div>
+    </dl>
   </header>
-</section>
-
-<aside class="atelier-next-action" aria-labelledby="staff-order-next-title">
-  <div>
-    <p id="staff-order-next-title">Prochain geste</p>
-    <strong>{{ staff_order_focus.action_message }}</strong>
-  </div>
-  <div class="staff-order-focus__primary">
-    <a class="ui-btn ui-btn-primary" href="{{ request.path }}?panel={{ staff_order_focus.next_panel }}">{{ staff_order_focus.action_label }}</a>
-    {% if can_price_order and order.pricing_status != "priced" %}
-    <form method="post" action="{% url 'portal:staff-order-price' order_public_id=order.public_id %}" data-submit-loading>
-      {% csrf_token %}
-      <button type="submit" class="ui-btn ui-btn-secondary">Calculer le prix</button>
-    </form>
-    {% endif %}
-  </div>
-</aside>
-
-<section class="portal-page-surface staff-order-detail-surface" aria-label="Étapes commande Atelier">
   <div class="staff-order-detail-stack">
     {% order_htmx_tabs "staff" %}
   </div>

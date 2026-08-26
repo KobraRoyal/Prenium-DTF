@@ -1,0 +1,22 @@
+<div class="volume-tier-form-grid">
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ form.minimum_monthly_linear_m.id_for_label }}">Seuil mensuel (m linéaires)</label>
+    {{ form.minimum_monthly_linear_m }}
+    {% if show_help %}
+    <p class="ui-help">Atteint dès que le volume mensuel est supérieur ou égal à ce seuil.</p>
+    {% endif %}
+    {% if form.minimum_monthly_linear_m.errors %}<p class="error-text ui-error-text" role="alert">{{ form.minimum_monthly_linear_m.errors|striptags }}</p>{% endif %}
+  </div>
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ form.discount_percent.id_for_label }}">Remise générale (%)</label>
+    {{ form.discount_percent }}
+    {% if show_help %}
+    <p class="ui-help">Appliquée rétroactivement à tout le DTF éligible du mois.</p>
+    {% endif %}
+    {% if form.discount_percent.errors %}<p class="error-text ui-error-text" role="alert">{{ form.discount_percent.errors|striptags }}</p>{% endif %}
+  </div>
+</div>
+<div class="ui-checkbox-row volume-tier-toggle">
+  {{ form.is_active }}
+  <label for="{{ form.is_active.id_for_label }}">{{ active_label }}</label>
+</div>

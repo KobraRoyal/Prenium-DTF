@@ -34,16 +34,13 @@
         <div class="gang-editor__title-copy">
           <span class="gang-editor__project-ref">{% if sheet.project %}Gang Sheet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</span>
           <h1>{{ sheet.name }}</h1>
-          <p>Composez, contrôlez puis validez votre planche DTF.</p>
         </div>
         <div class="gang-editor__title-actions">
-          <span class="gang-status-badge gang-status-badge--{{ sheet.status }}">{{ sheet.get_status_display }}</span>
           {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="editor" label="Supprimer" button_class="ui-btn ui-btn-ghost ui-btn-sm gang-editor__delete" %}
         </div>
       </div>
     </div>
     <dl class="gang-editor__metrics" aria-label="Indicateurs de la planche" aria-live="polite">
-      <div><dt>Format</dt><dd><strong data-metric-width>—</strong> × <strong data-metric-height>—</strong></dd></div>
       <div><dt>Visuels</dt><dd data-metric-items>0</dd></div>
       <div><dt>Occupation</dt><dd data-metric-usage>0 %</dd></div>
       <div><dt>Surface</dt><dd data-metric-surface>—</dd></div>
@@ -51,6 +48,7 @@
     </dl>
   </header>
 
+  {# Une seule bande : progression + état d’enregistrement (pas de badge métier doublon). #}
   <div class="gang-editor__progress-row">
     <nav class="gang-workflow gang-workflow--editor" aria-label="Progression de la planche">
       <ol>
@@ -71,20 +69,20 @@
     <div class="gang-editor__status" data-editor-status role="status" aria-live="polite">
       <span class="gang-editor__status-dot" aria-hidden="true"></span>
       <span class="gang-editor__status-copy">
-        <strong data-status-text>Brouillon prêt</strong>
-        <small data-status-detail>Vos modifications locales seront signalées ici.</small>
+        <strong data-status-text>Enregistré</strong>
+        <small class="ui-sr-only" data-status-detail>État d’enregistrement de la planche.</small>
       </span>
-      <span class="gang-editor__issue-count" data-issue-count></span>
+      <span class="gang-editor__issue-count" data-issue-count hidden></span>
     </div>
   </div>
 
   <dialog class="b2b-configurator-dialog gang-asset-dialog" id="gang-asset-dialog" aria-labelledby="gang-asset-dialog-title">
     <div class="b2b-dialog-shell">
       <header class="b2b-dialog-head">
-        <div>
-          <h2 id="gang-asset-dialog-title">Vérifier l’import</h2>
+        <div class="b2b-dialog-head__copy">
+          <h2 id="gang-asset-dialog-title">Importer</h2>
         </div>
-        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">×</button>
       </header>
       <div class="b2b-dialog-body">
         <form
@@ -95,7 +93,7 @@
           data-submit-loading
         >
           {% csrf_token %}
-          <div class="b2b-configurator__workspace" data-b2b-configurator>
+          <div class="b2b-configurator__workspace" data-b2b-configurator data-recommended-dpi="{{ b2b_recommended_dpi }}" data-min-acceptable-dpi="{{ b2b_min_acceptable_dpi }}">
             <div class="b2b-configurator__preview">
               <div class="b2b-preview-stage is-checker" data-configurator-stage>
                 <div class="b2b-preview-bounds" data-configurator-bounds hidden>
@@ -113,7 +111,7 @@
                     <span data-crop-handle="se" aria-hidden="true"></span><span data-crop-handle="sw" aria-hidden="true"></span>
                   </div>
                 </div>
-                <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Choisissez un fichier</strong><span>L’aperçu s’affichera avant l’import.</span></div>
+                <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Aucun fichier</strong><span>L’aperçu s’affiche ici.</span></div>
               </div>
               <div class="b2b-background-tools" aria-label="Fond de l’aperçu">
                 <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-configurator-bg="checker" aria-label="Damier" aria-pressed="true" title="Damier"></button>
@@ -122,7 +120,6 @@
               </div>
             </div>
             <div class="b2b-configurator__controls gang-asset-modal-form__controls">
-              <p class="b2b-dialog-kicker">Fichiers à analyser</p>
               <div class="ui-field-group">
                 <label class="ui-label" for="id-gang-asset-files">Fichier(s)</label>
                 <input
@@ -141,17 +138,18 @@
                   required
                 >
               </div>
-              <p class="muted text-sm" id="gang-asset-files-help">
-                PNG, JPG, TIFF, PDF, EPS ou PSD · {{ gang_sheet_upload_max_size_label }} maximum par fichier · {{ gang_sheet_upload_max_files }} fichiers et {{ gang_sheet_upload_max_total_size_label }} maximum par import.
+              <p class="ui-field-help" id="gang-asset-files-help">
+                PNG, JPG, TIFF, PDF, EPS, PSD · {{ gang_sheet_upload_max_size_label }}/fichier · {{ gang_sheet_upload_max_files }} fichiers / {{ gang_sheet_upload_max_total_size_label }} max.
               </p>
               <p class="ui-error-text" id="gang-asset-files-error" data-configurator-file-error role="alert" hidden></p>
               <div class="gang-asset-modal-form__params" data-configurator-params hidden>
                 <input type="hidden" name="crop_manifest" value="[]" data-crop-manifest>
                 <p class="gang-asset-modal-form__selection" data-selected-files-summary aria-live="polite">Aucun fichier sélectionné.</p>
-                <p class="b2b-configurator__file-meta"><span data-configurator-pixels>Les dimensions seront confirmées par l’analyse technique.</span></p>
+                <p class="b2b-configurator__file-meta"><span data-configurator-pixels>—</span></p>
+                {% include "portal/client/partials/b2b_configurator_preflight.html" %}
                 <section class="gang-crop-controls" data-gang-crop-controls aria-labelledby="gang-crop-title">
                   <div class="gang-crop-controls__head">
-                    <div><strong id="gang-crop-title">Recadrage non destructif</strong><span data-crop-status>Visuel complet conservé</span></div>
+                    <div><strong id="gang-crop-title">Recadrage</strong><span data-crop-status>Visuel complet</span></div>
                     <div class="gang-crop-controls__nav" data-crop-file-nav hidden>
                       <button type="button" data-crop-file-previous aria-label="Fichier précédent">‹</button>
                       <span data-crop-file-label></span>
@@ -160,23 +158,19 @@
                   </div>
                   <div class="gang-crop-mode" role="group" aria-label="Mode de recadrage">
                     <button type="button" class="is-active" data-crop-manual aria-pressed="true" disabled><strong>Manuel</strong><span>Cadre libre</span></button>
-                    <button type="button" data-crop-auto aria-pressed="false" disabled><strong>Auto</strong><span>Illustration + pixels</span></button>
+                    <button type="button" data-crop-auto aria-pressed="false" disabled><strong>Auto</strong><span>Contenu détecté</span></button>
                   </div>
                   <div class="gang-crop-controls__actions">
-                    <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" data-crop-reset disabled>Conserver tout le visuel</button>
+                    <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" data-crop-reset disabled>Tout conserver</button>
                   </div>
-                  <p data-crop-help>Choisissez Manuel pour cadrer librement ou Auto pour détecter le contenu du fichier.</p>
+                  <p class="ui-sr-only" data-crop-help>Manuel pour cadrer librement, Auto pour détecter le contenu.</p>
                 </section>
-                <div class="gang-asset-modal-form__notice">
-                  <strong>Après l’import</strong>
-                  <span>Chaque fichier rejoint la galerie privée de cette planche. Il devient ajoutable dès que son contrôle technique est terminé.</span>
-                </div>
                 <div class="b2b-dialog-actions">
                   <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Annuler</button>
                   <button class="ui-btn ui-btn-primary" type="submit" data-configurator-submit {% if not can_edit %}disabled{% endif %}>Importer et analyser</button>
                 </div>
               </div>
-              <p class="muted text-sm" data-configurator-hint>Sélectionnez un fichier pour continuer.</p>
+              <p class="ui-field-help" data-configurator-hint>Choisissez un fichier pour continuer.</p>
             </div>
           </div>
         </form>
@@ -205,15 +199,14 @@
     <aside class="gang-editor__sidebar" id="gang-editor-assets" role="tabpanel" data-editor-panel="assets" aria-label="Bibliothèque de fichiers" aria-labelledby="gang-editor-tab-assets">
       <div class="gang-editor__panel-label">
         <span class="gang-editor__panel-label-icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="files" size="16" %}</span>
-        <div><strong>Fichiers</strong><small>Bibliothèque privée</small></div>
+        <div><strong>Fichiers</strong></div>
       </div>
       <div class="gang-editor__panel-head">
-        <h2>Vos visuels</h2>
-        <p class="gang-editor__panel-lead">Importez, puis placez le nombre d’exemplaires voulu sur la planche.</p>
+        <h2>Fichiers</h2>
       </div>
       <div class="gang-asset-launcher">
         <span class="gang-asset-dropzone__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="upload" size="22" %}</span>
-        <div><strong>Importer des visuels</strong><small>PNG, JPG, PDF, TIFF, PSD, AI ou EPS.</small></div>
+        <div><strong>Importer des visuels</strong></div>
         <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-file-picker-dialog="gang-asset-dialog" aria-controls="gang-asset-dialog" aria-haspopup="dialog" {% if not can_edit %}disabled{% endif %}>
           {% include "portal/client/gang_sheets/partials/icon.html" with name="plus" size="16" %}
           Ajouter des fichiers
@@ -231,8 +224,7 @@
       <div class="gang-editor__toolbar" role="toolbar" aria-label="Outils de composition">
         <div class="gang-editor__toolbar-start">
           <div class="gang-editor__toolbar-meta">
-            <span class="gang-editor__toolbar-meta-label">Plan de travail</span>
-            <strong data-canvas-format>—</strong>
+            <strong data-canvas-format aria-label="Format de la planche">—</strong>
           </div>
           <div class="gang-editor__toolbar-group gang-editor__toolbar-group--impose" role="group" aria-label="Imposition">
             <button type="button" class="gang-tool-btn gang-tool-btn--accent" data-auto-place {% if not can_edit %}disabled{% endif %} title="Réorganiser tous les visuels selon l’espacement défini">
@@ -296,18 +288,13 @@
     <aside class="gang-editor__inspector" id="gang-editor-settings" role="tabpanel" data-editor-panel="settings" aria-label="Propriétés et validation" aria-labelledby="gang-editor-tab-settings">
       <div class="gang-editor__panel-label">
         <span class="gang-editor__panel-label-icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="settings" size="16" %}</span>
-        <div><strong>Réglages</strong><small>Sélection et contrôle</small></div>
+        <div><strong>Réglages</strong></div>
       </div>
 
       <section class="gang-inspector-panel gang-inspector-panel--empty" data-empty-inspector>
         <span class="gang-inspector-panel__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="cursor" size="22" %}</span>
         <h2>Sélectionnez un visuel</h2>
         <p>Cliquez un visuel, ou maintenez le clic et glissez sur la planche. <kbd>Maj</kbd> ou <kbd>⌘</kbd> ajoute à la sélection.</p>
-        <ol class="gang-inspector-empty-steps" aria-label="Parcours rapide">
-          <li>Importer vos fichiers dans la galerie</li>
-          <li>Placer les visuels sur la planche</li>
-          <li>Contrôler puis finaliser ci-dessous</li>
-        </ol>
       </section>
 
       <section class="gang-inspector-panel gang-inspector-panel--item" data-item-inspector hidden>
@@ -497,8 +484,8 @@
         <div class="gang-validation-heading">
           <span class="gang-panel-icon gang-panel-icon--ok" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="check" size="16" %}</span>
           <div>
-            <h2>Finaliser la planche</h2>
-            <p data-validation-lead>Un clic prépare le rendu HD atelier, puis confirme la composition.</p>
+            <h2>Finaliser</h2>
+            <p data-validation-lead>Prépare le rendu HD atelier, puis confirme la composition.</p>
           </div>
         </div>
         <ul data-issues-list><li class="is-ok">Aucune anomalie de placement.</li></ul>
@@ -523,8 +510,7 @@
             >
           </div>
           <aside class="gang-sheet-order-quote" data-sheet-order-quote hidden aria-live="polite">
-            <p class="gang-sheet-order-quote__eyebrow">Total estimé HT</p>
-            <p class="gang-sheet-order-quote__total"><strong data-sheet-order-quote-total>—</strong></p>
+            <p class="gang-sheet-order-quote__total"><strong data-sheet-order-quote-total>—</strong> <span class="muted">HT estimé</span></p>
             <p class="gang-sheet-order-quote__detail muted text-sm" data-sheet-order-quote-detail></p>
           </aside>
           {% if sheet.project %}
@@ -542,7 +528,6 @@
             Télécharger l’aperçu
           </a>
         </div>
-        <p class="gang-inspector-note"><strong>Rendu de production sécurisé</strong> Le fichier HD reste réservé à l’atelier et au workflow de production.</p>
       </section>
     </aside>
   </div>

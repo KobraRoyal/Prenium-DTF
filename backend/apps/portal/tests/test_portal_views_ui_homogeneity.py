@@ -26,8 +26,10 @@ STAFF_PAGE_VIEWS = [
     "portal/staff/dashboard.html",
     "portal/staff/operations/index.html",
     "portal/staff/orders_list.html",
+    "portal/staff/order_detail.html",
     "portal/staff/order_projects_list.html",
     "portal/staff/customers/list.html",
+    "portal/staff/customers/detail.html",
     "portal/staff/access_requests/list.html",
     "portal/staff/machines/index.html",
     "portal/staff/email_templates/list.html",
@@ -38,9 +40,7 @@ STAFF_PAGE_VIEWS = [
 ]
 
 STAFF_FOCUS_VIEWS = [
-    "portal/staff/order_detail.html",
     "portal/staff/order_project_detail.html",
-    "portal/staff/customers/detail.html",
     "portal/staff/access_requests/detail.html",
 ]
 
@@ -111,10 +111,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
 
     def test_staff_focus_pages_use_portal_page_staff_without_page_head(self) -> None:
         focus_markers = (
-            "staff-order-detail-identity",
-            "staff-order-focus__header",
             "staff-project-focus",
-            "staff-customer-focus",
             "staff-access-focus",
         )
         for path in STAFF_FOCUS_VIEWS:
@@ -204,6 +201,15 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
                     f".portal-page-surface.ui-list-section :is(\n  {marker}",
                     css,
                 )
+        # Champ recherche planches = contrôle interactif : garde border + focus brand (pas halo violet).
+        flatten_block = css.split(".portal-page-surface.ui-list-section :is(", 1)[1].split(
+            ") {", 1
+        )[0]
+        self.assertNotIn(".gang-sheet-search", flatten_block)
+        self.assertIn(".portal-page-surface .gang-sheet-search:focus-within", css)
+        self.assertIn("0 0 0 3px var(--field-focus-ring)", css)
+        self.assertIn("outline: none !important", css)
+        self.assertIn(".portal-page-surface .gang-sheet-search :is(input, input:focus, input:focus-visible)", css)
 
     def test_staff_dashboard_uses_page_head_without_legacy_head_wrapper(self) -> None:
         source = staff_dashboard_source()
@@ -227,15 +233,14 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
             "portal/staff/access_requests/detail.html": "staff-access-detail-identity",
         }
         surface_counts = {
-            "portal/staff/order_detail.html": 2,
+            "portal/staff/order_detail.html": 1,
             "portal/staff/order_project_detail.html": 2,
             "portal/staff/customers/detail.html": 2,
             "portal/staff/access_requests/detail.html": 2,
         }
-        for path in STAFF_FOCUS_VIEWS:
+        for path, expected_surfaces in surface_counts.items():
             with self.subTest(path=path):
                 source = template_source(path)
-                expected_surfaces = surface_counts.get(path, 1)
                 self.assertEqual(
                     expected_surfaces,
                     len(re.findall(r"<section[^>]*portal-page-surface", source)),
@@ -248,14 +253,19 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
                 focus_index = source.index(marker)
                 self.assertGreater(focus_index, surface_index, f"{path} : focus hors surface")
 
-    def test_staff_order_detail_matches_dashboard_next_action_layout(self) -> None:
+    def test_staff_order_detail_matches_dashboard_page_head_layout(self) -> None:
         source = template_source("portal/staff/order_detail.html")
+        self.assertIn("page_head.html", source)
+        self.assertIn("page_head_actions/staff_order_detail.html", source)
+        self.assertIn("staff-order-focus", source)
+        self.assertNotIn("atelier-next-action", source)
+        self.assertNotIn("Prochain geste", source)
         identity_index = source.index("staff-order-detail-identity")
-        next_action_index = source.index("atelier-next-action")
         workflow_index = source.index("staff-order-detail-surface")
-        self.assertLess(identity_index, next_action_index)
-        self.assertLess(next_action_index, workflow_index)
-        self.assertNotIn('class="staff-order-focus"', source)
+        stack_index = source.index("staff-order-detail-stack")
+        self.assertLess(source.index("page_head.html"), workflow_index)
+        self.assertLess(workflow_index, identity_index)
+        self.assertLess(identity_index, stack_index)
 
     def test_staff_access_detail_matches_dashboard_next_action_layout(self) -> None:
         source = template_source("portal/staff/access_requests/detail.html")
@@ -361,9 +371,29 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
 
     def test_client_dashboard_uses_single_content_surface(self) -> None:
         source = template_source("portal/client/dashboard.html")
-        self.assertEqual(source.count("client-dashboard-surface"), 1)
+        css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-client.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(source.count("client-dashboard-surface"), 2)
         self.assertIn("{% if not memberships %}", source)
         self.assertIn("client-dashboard-section", source)
+        self.assertLess(source.index("client-dashboard-surface"), source.index("client-dashboard-palier"))
+        self.assertLess(source.index("client-dashboard-palier"), source.index("client-dashboard-focus"))
+        self.assertLess(source.index("client-dashboard-focus"), source.index("client-dashboard-section"))
+        self.assertIn("v123 — Dashboard client", css)
+        self.assertIn(
+            "client-dashboard .client-dashboard-surface .client-dashboard-focus",
+            css,
+        )
+        self.assertIn("@layer utilities", css)
+        core = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-core.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            ".portal-page-surface .client-dashboard-focus",
+            core,
+        )
+        self.assertIn(":not(.client-dashboard-focus)", core)
 
     def test_list_pages_use_ui_list_section(self) -> None:
         for path in (
@@ -480,8 +510,34 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
 
     def test_client_checkout_avoids_nested_product_panel(self) -> None:
         source = template_source("portal/client/checkout.html")
+        css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-client.css").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("client-checkout-intro", source)
         self.assertNotIn("product-panel", source)
+        self.assertIn("client-checkout-surface", source)
+        self.assertIn("v140 — Checkout legacy", css)
+        self.assertIn(
+            "client-checkout-surface .product-checkout-card",
+            css,
+        )
+
+    def test_client_order_project_detail_reuses_order_facts_chrome(self) -> None:
+        source = template_source("portal/client/order_project_detail.html")
+        facts = template_source("portal/client/partials/order_project_facts.html")
+        css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-client.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(1, len(re.findall(r"<section[^>]*portal-page-surface", source)))
+        self.assertIn("client-order-project-identity", facts)
+        self.assertIn(">Date<", facts)
+        self.assertIn(">Référence<", facts)
+        self.assertIn(">Règlement<", facts)
+        self.assertIn("client-order-project-stack", source)
+        self.assertNotIn("stack-lg", source)
+        self.assertIn(":is(.client-order-detail, .client-order-project-detail) .client-order-summary__facts", css)
+        self.assertIn("v140 — Rythme Operate partagé", css)
+        self.assertIn("b2b-order-start-surface", css)
 
     def test_staff_atelier_views_avoid_legacy_visual_patterns(self) -> None:
         for path in STAFF_ATELIER_VIEWS:
@@ -515,8 +571,19 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
 
     def test_staff_machines_use_shared_empty_state(self) -> None:
         source = template_source("portal/staff/machines/_fleet_content.html")
-        self.assertEqual(source.count("empty_state.html"), 2)
+        self.assertGreaterEqual(source.count("empty_state.html"), 2)
         self.assertNotIn("machine-fleet-empty", source)
+
+    def test_staff_machines_use_orders_list_table_and_create_dialog(self) -> None:
+        source = template_source("portal/staff/machines/_fleet_content.html")
+        index = template_source("portal/staff/machines/index.html")
+        self.assertIn("ui-data-table", source)
+        self.assertIn("ui-table-shell", source)
+        self.assertIn("ui-mobile-order-card", source)
+        self.assertIn("machine-create-dialog", source)
+        self.assertIn("machine-fleet-dialog", source)
+        self.assertIn("page_head_actions/staff_machines.html", index)
+        self.assertNotIn("machine-register-row", source)
 
     def test_portal_staff_flattens_machine_fleet_and_gang_settings(self) -> None:
         css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-staff.css").read_text(
@@ -529,10 +596,31 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn("v32 — Parc machines", css)
         self.assertIn(".machine-fleet-surface", css)
 
-    def test_staff_configuration_pages_include_volume_discounts(self) -> None:
+    def test_staff_volume_discounts_use_orders_list_table_and_create_dialog(self) -> None:
         source = template_source("portal/staff/customers/default_volume_discounts.html")
-        self.assertIn("volume-discount-settings-surface", source)
-        self.assertIn("font-display text-lg", source)
+        self.assertIn("ui-data-table", source)
+        self.assertIn("ui-table-shell", source)
+        self.assertIn("ui-mobile-order-card", source)
+        self.assertIn("volume-tier-create-dialog", source)
+        self.assertIn("volume-discount-dialog", source)
+        self.assertIn("page_head_actions/staff_volume_discounts.html", source)
+        self.assertNotIn("volume-tier-create-card", source)
+        self.assertNotIn("volume-tier-list", source)
+
+    def test_staff_customer_detail_uses_orders_list_table_and_create_dialogs(self) -> None:
+        source = template_source("portal/staff/customers/detail.html")
+        register = template_source("portal/staff/customers/_volume_discount_tier_register.html")
+        statements = template_source("portal/staff/customers/_billing_statements.html")
+        combined = f"{source}\n{register}\n{statements}"
+        self.assertIn("_volume_discount_tier_register.html", source)
+        self.assertIn("ui-data-table", combined)
+        self.assertIn("ui-mobile-order-card", combined)
+        self.assertIn("volume-tier-create-dialog", register)
+        self.assertIn("billing-statement-create-dialog", statements)
+        self.assertNotIn("volume-tier-list", combined)
+        self.assertNotIn("volume-tier-create-inline", combined)
+        self.assertNotIn("billing-statement-row", statements)
+        self.assertNotIn("_volume_discount_tier_row.html", source)
 
     def test_staff_atelier_configuration_surfaces_use_flat_typography(self) -> None:
         checks = {
@@ -552,7 +640,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
                 self.assertIn(surface_class, source)
 
     def test_staff_customer_detail_uses_shared_empty_state_for_volume_tiers(self) -> None:
-        source = template_source("portal/staff/customers/detail.html")
+        source = template_source("portal/staff/customers/_volume_discount_tier_register.html")
         self.assertIn("empty_state.html", source)
         self.assertNotIn("volume-tier-empty", source)
 
@@ -564,7 +652,8 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn(".email-template-surface", css)
         self.assertIn(".brand-settings-surface", css)
         self.assertIn(".email-template-editor-surface", css)
-        self.assertIn(".staff-customer-focus .volume-tier-list", css)
+        self.assertIn("v63 — Fiche client", css)
+        self.assertIn(".staff-customer-detail-page .volume-discount-dialog", css)
 
     def test_staff_production_panel_uses_flat_operator_typography(self) -> None:
         source = template_source("portal/staff/panels/production.html")
@@ -586,10 +675,99 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
             encoding="utf-8"
         )
         self.assertIn("staff-order-detail-identity", source)
-        self.assertIn('<aside class="atelier-next-action"', source)
-        self.assertIn("Prochain geste", source)
-        self.assertIn("font-display", source)
+        self.assertIn("page_head.html", source)
+        self.assertIn("staff-order-focus__facts", source)
+        self.assertNotIn("atelier-next-action", source)
         self.assertIn("v35 — Fiche commande Atelier", css)
         self.assertIn("v39 — Même plan que dashboard", css)
         self.assertIn("v41 — Passe homogène fiches focus Atelier", css)
+        self.assertIn("v118 — Verrou pixel fiche commande", css)
+        self.assertIn("v119 — Bat @layer utilities", css)
         self.assertIn(".staff-order-detail-page .staff-order-detail-surface", css)
+        self.assertIn(".staff-order-detail-stack .empty-state", css)
+        self.assertIn(".staff-order-detail-stack .atelier-inspection", css)
+        self.assertIn("--portal-inner-chrome: empty", css)
+        self.assertIn("--portal-inner-chrome: inspection", css)
+
+    def test_staff_customer_detail_surface_flattens_nested_borders(self) -> None:
+        source = template_source("portal/staff/customers/detail.html")
+        css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-staff.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("staff-customer-detail-surface", source)
+        self.assertIn("staff-customer-detail-identity", source)
+        self.assertIn("page_head.html", source)
+        self.assertIn("staff-customer-focus__facts", source)
+        self.assertIn("staff-customer-workspace-surface", source)
+        self.assertIn("v120 — Verrou pixel fiche compte", css)
+        self.assertIn("v121 — Workspace compte", css)
+        self.assertIn(".staff-customer-detail-page .staff-customer-detail-surface", css)
+        self.assertIn("staff-customer-detail-surface > header.staff-customer-focus.staff-customer-detail-identity", css)
+        self.assertIn("staff-customer-workspace-surface .empty-state", css)
+        self.assertIn("staff-customer-workspace__section .empty-state", css)
+        self.assertIn("@layer utilities", css)
+
+    def test_client_order_detail_surface_matches_staff_chrome(self) -> None:
+        source = template_source("portal/client/order_detail.html")
+        css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-client.css").read_text(
+            encoding="utf-8"
+        )
+        core = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-core.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(1, len(re.findall(r"<section[^>]*portal-page-surface", source)))
+        self.assertIn("client-order-detail-identity", source)
+        self.assertIn("client-order-detail-stack", source)
+        self.assertIn("page_head.html", source)
+        self.assertIn("v114 — Fiche commande client", css)
+        self.assertIn("v138 — Verrou pixel fiche commande client", css)
+        self.assertIn(".client-order-detail .client-order-detail-surface", css)
+        self.assertIn(".client-order-detail-stack .empty-state", css)
+        self.assertIn(".client-order-detail-stack .client-order-panel", css)
+        self.assertIn("--portal-inner-chrome: client-panel", css)
+        self.assertIn(
+            "client-order-detail-surface .client-order-detail-stack > .ui-workflow-shell.card",
+            css,
+        )
+        self.assertIn("@layer utilities", css)
+        self.assertIn(".portal-page-surface .workflow-tab-rail", core)
+        identity_index = source.index("client-order-detail-identity")
+        surface_index = source.index("client-order-detail-surface")
+        stack_index = source.index("client-order-detail-stack")
+        self.assertLess(surface_index, identity_index)
+        self.assertLess(identity_index, stack_index)
+
+    def test_account_profile_surface_matches_portal_chrome(self) -> None:
+        source = template_source("portal/profile.html")
+        focus = template_source("portal/partials/profile_staff_focus.html")
+        staff_css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-staff.css").read_text(
+            encoding="utf-8"
+        )
+        client_css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-client.css").read_text(
+            encoding="utf-8"
+        )
+        core = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-core.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(4, len(re.findall(r"<section[^>]*portal-page-surface", source)))
+        self.assertIn("staff-customer-detail-surface", source)
+        self.assertIn("staff-customer-detail-identity", focus)
+        self.assertNotIn("staff-profile-surface", source)
+        self.assertNotIn("staff-profile-stack", source)
+        self.assertIn("client-profile-page", source)
+        self.assertIn("profile_client_focus.html", source)
+        self.assertIn("v125 — Profil client", client_css)
+        self.assertIn(".staff-customer-detail-identity", staff_css)
+        self.assertIn(
+            "staff-profile-page .portal-page-surface.staff-customer-detail-surface > header.staff-customer-focus.staff-customer-detail-identity",
+            staff_css,
+        )
+        self.assertIn("v122 — Profil staff", staff_css)
+        self.assertIn(
+            "client-profile-page .portal-page-surface.staff-customer-detail-surface > header.staff-customer-focus.staff-customer-detail-identity",
+            client_css,
+        )
+        self.assertIn(".portal-page-surface .account-profile-panel", core)
+        self.assertIn("--portal-inner-chrome: profile-panel", core)
+        self.assertLess(source.index("staff-customer-detail-surface"), source.index("data-customer-workspace"))
+        self.assertIn("customer-account-workspace.css", client_css)

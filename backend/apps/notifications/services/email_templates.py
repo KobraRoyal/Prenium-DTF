@@ -108,6 +108,8 @@ EMAIL_TAGS = (
     EmailTag("prospect.siren", "SIREN", "123456789"),
     EmailTag("prospect.vat_number", "N° TVA / fiscal", "BE0123456789"),
     EmailTag("invitation.role", "Rôle invité", "Collaborateur"),
+    EmailTag("user.email", "E-mail du compte", "camille@atelier-demo.fr"),
+    EmailTag("user.first_name", "Prénom du compte", "Camille"),
     EmailTag("action.url", "Lien d'action sécurisé", "https://example.test/activation/"),
 )
 ALLOWED_TAG_KEYS = frozenset(tag.key for tag in EMAIL_TAGS)
@@ -227,6 +229,23 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "avec le rôle {{ invitation.role }}.\n\n"
             "Accepter l'invitation sous 72 heures : {{ action.url }}\n\n"
             "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.\n\n"
+            "Cordialement,\nL'équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.PASSWORD_RESET,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Réinitialisation du mot de passe",
+        audience_label="Compte",
+        description="Lien signé pour choisir un nouveau mot de passe, valable 24 heures.",
+        subject="Réinitialisez votre mot de passe Prenium DTF",
+        body=(
+            "Bonjour,\n\n"
+            "Une demande de réinitialisation a été faite pour {{ user.email }}.\n"
+            "Choisissez un nouveau mot de passe avec ce lien valable 24 heures :\n"
+            "{{ action.url }}\n\n"
+            "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail. "
+            "Votre mot de passe actuel reste inchangé.\n\n"
             "Cordialement,\nL'équipe {{ site.name }}"
         ),
     ),

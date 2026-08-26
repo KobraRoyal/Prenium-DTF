@@ -1,0 +1,14 @@
+{# État terminal : plus de poll HTMX — évite le spinner bloqué après 404 / timeout. #}
+<div id="add-visual-validation-panel" class="b2b-add-visual-validation b2b-add-visual-validation--interrupted" data-add-visual-reset>
+  <div class="b2b-configurator__workspace">
+    <div class="b2b-visual-card__details">
+      <div class="alert alert--warning" role="status">
+        <strong>{{ title|default:"Contrôle interrompu" }}</strong>
+        <p>{{ message|default:"Ce visuel n’est plus disponible pour la validation." }}</p>
+      </div>
+      <div class="b2b-dialog-actions">
+        <button class="ui-btn ui-btn-primary" type="button" data-add-visual-reset data-dialog-close>Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>

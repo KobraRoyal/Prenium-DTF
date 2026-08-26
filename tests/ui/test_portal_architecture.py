@@ -162,7 +162,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
 @pytest.mark.parametrize(
     ("module_name", "max_lines"),
     [
-        ("views_auth", 60),
+        ("views_auth", 120),
         ("views_profile", 220),
         ("views_staff_uploads", 130),
         ("views_staff_reviews", 170),

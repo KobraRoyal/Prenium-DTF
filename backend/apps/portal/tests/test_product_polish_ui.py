@@ -52,7 +52,8 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn("body.product-shell :is(.checkout-dropzone-dui, .dropzone)", polish)
         self.assertIn(".checkout-dui-input", polish)
         self.assertIn("@media (max-width: 39.99rem)", polish)
-        self.assertNotIn("gradient(", polish)
+        # linear-gradient OK pour damier / fade sticky actions ; pas de glow radial décoratif.
+        self.assertNotIn("radial-gradient(", polish)
 
     def test_shared_foundations_own_buttons_tables_and_responsive_cards(self) -> None:
         buttons = source(CSS_DIR / "components/buttons.css")
@@ -120,9 +121,16 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertLess(core.index(polish_import), core.index(auth_import))
         self.assertIn("width: min(100%, 26.5rem)", login_css)
         self.assertIn("grid-template-columns: minmax(0, 1fr)", login_css)
+        self.assertIn("product-login-password", login_css)
+        self.assertIn('grid-template-areas:', login_css)
         self.assertNotIn("product-login-heading", login_css)
         self.assertIn("product-login-card__intro", login)
+        self.assertIn("product-login-password", login)
+        self.assertIn("product-login-footer", login)
         self.assertEqual(login.count("product-auth-card"), 1)
+        self.assertIn("Mot de passe oublié", login)
+        self.assertIn("portal/partials/auth_support.html", login)
+        self.assertGreater(core.rfind("product-login-password"), core.index("@tailwind utilities"))
 
     def test_checkout_and_core_client_views_use_ui_form_contract(self) -> None:
         form_paths = [
@@ -245,7 +253,8 @@ class ProductPolishUITests(SimpleTestCase):
         for marker in [
             ".product-field-input",
             "border-radius: var(--radius-sm)",
-            "outline: 2px solid var(--focus-ring)",
+            "0 0 0 3px var(--field-focus-ring)",
+            "--field-focus-ring",
         ]:
             with self.subTest(marker=marker):
                 self.assertIn(marker, entry)
@@ -309,13 +318,14 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn("Suivre mon colis", shipping)
         self.assertIn('target="_blank" rel="noopener noreferrer"', shipping)
 
-    def test_studio_dialog_uses_b2b_kicker_instead_of_hidden_eyebrow(self) -> None:
+    def test_studio_dialog_uses_b2b_dialog_head_instead_of_hidden_eyebrow(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
         studio_entry = source(CSS_DIR / "entries/studio.css")
 
         self.assertNotIn("product-eyebrow", editor)
-        self.assertIn('class="b2b-dialog-kicker">Fichiers à analyser', editor)
-        self.assertIn(".gang-asset-modal-form__controls > .b2b-dialog-kicker", studio_entry)
+        self.assertIn('id="gang-asset-dialog-title">Importer', editor)
+        self.assertIn("b2b-dialog-head", editor)
+        self.assertIn(".gang-asset-modal-form__controls", studio_entry)
 
     def test_marketing_entry_neutralizes_agency_defaults_on_conversion_pages(self) -> None:
         entry = source(CSS_DIR / "entries/marketing.css")

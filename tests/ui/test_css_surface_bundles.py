@@ -180,7 +180,7 @@ def test_surface_templates_share_css_cache_bust_version() -> None:
     assert "portal_css_asset_v" in surface_styles
     assert "?v={{ asset_v }}" in surface_styles
     assert "portal_css_asset_v" in layout
-    assert expected == "20260825-sticker-buttons-v95"
+    assert expected == "20260826-modal-impeccable-v159"
 
     for path in (
         TEMPLATES_DIR / "portal" / "layout.html",
@@ -238,6 +238,11 @@ def test_portal_core_guards_bem_elements_from_attribute_card_selectors() -> None
 
     assert '[class*="-card"]:not([class*="__"])' in source
     assert '[class*="-row"]:not([class*="__"])' in source
+    assert ".portal-page-surface .empty-state" in source
+    assert ".portal-page-surface .workflow-panel" in source
+    assert ".portal-page-surface .client-order-summary" in source
+    assert ".portal-page-surface .workflow-tab-rail" in source
+    assert "--portal-inner-chrome: empty" in source
 
 
 def test_staff_focus_templates_avoid_legacy_card_wrapper() -> None:

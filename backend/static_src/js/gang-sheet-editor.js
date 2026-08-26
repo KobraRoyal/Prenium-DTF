@@ -490,14 +490,19 @@ if (root) {
   function renderMetrics() {
     const artworkArea = state.items.reduce((total, item) => total + item.width_mm * item.height_mm, 0);
     const usage = state.width_mm * state.height_mm > 0 ? (artworkArea / (state.width_mm * state.height_mm)) * 100 : 0;
-    q("[data-metric-width]").textContent = `${round(state.width_mm / 10, 1)} cm`;
-    q("[data-metric-height]").textContent = `${round(state.height_mm / 10, 1)} cm`;
-    q("[data-metric-items]").textContent = state.items.length;
-    q("[data-metric-usage]").textContent = `${round(usage, 1)} %`;
-    q("[data-metric-surface]").textContent = `${Number(state.surface_sqm).toFixed(4)} m²`;
+    const metricItems = q("[data-metric-items]");
+    const metricUsage = q("[data-metric-usage]");
+    const metricSurface = q("[data-metric-surface]");
+    if (metricItems) metricItems.textContent = String(state.items.length);
+    if (metricUsage) metricUsage.textContent = `${round(usage, 1)} %`;
+    if (metricSurface) metricSurface.textContent = `${Number(state.surface_sqm).toFixed(4)} m²`;
     updateOrderQuoteUi();
-    q("[data-canvas-format]").textContent = `${round(state.width_mm / 10, 1)} × ${round(state.height_mm / 10, 1)} cm`;
-    q("[data-mobile-issue-count]").textContent = state.issues.length;
+    const canvasFormat = q("[data-canvas-format]");
+    if (canvasFormat) {
+      canvasFormat.textContent = `${round(state.width_mm / 10, 1)} × ${round(state.height_mm / 10, 1)} cm`;
+    }
+    const mobileIssueCount = q("[data-mobile-issue-count]");
+    if (mobileIssueCount) mobileIssueCount.textContent = String(state.issues.length);
   }
 
   function renderAssetGallery() {
@@ -716,27 +721,47 @@ if (root) {
 
   function renderStatus() {
     const labels = {
-      draft: "Brouillon modifiable",
+      draft: "Enregistré",
       rendering: "Rendu haute définition en cours…",
       ready: "Rendu prêt — validation possible",
-      validated: "Planche validée pour la production",
+      validated: "Validée pour la production",
       render_failed: state.render_error || "Le rendu a échoué",
     };
-    q("[data-status-text]").textContent = busy
+    const issueCount = state.issues.length;
+    // Un seul message visible : enregistrement / cycle de vie. Les anomalies
+    // n’apparaissent que s’il y en a (sinon le workflow « Contrôler » suffit).
+    let statusText = busy
       ? "Enregistrement en cours…"
       : dirty
         ? "Modifications non enregistrées"
         : labels[state.status] || state.status;
-    q("[data-status-detail]").textContent = dirty
-      ? "Enregistrez pour sécuriser cette version."
-      : state.status === "validated"
-        ? "La composition est verrouillée et prête pour la commande."
-        : "Toutes les modifications sont enregistrées.";
-    q("[data-issue-count]").textContent = state.issues.length
-      ? `${state.issues.length} anomalie${state.issues.length > 1 ? "s" : ""}`
-      : "Placement valide";
+    if (!busy && !dirty && issueCount > 0 && state.status === "draft") {
+      statusText = `${issueCount} anomalie${issueCount > 1 ? "s" : ""} à corriger`;
+    }
+    q("[data-status-text]").textContent = statusText;
+    const detail = q("[data-status-detail]");
+    if (detail) {
+      detail.textContent = busy
+        ? "Enregistrement de la composition en cours."
+        : dirty
+          ? "Enregistrez pour sécuriser cette version."
+          : issueCount > 0
+            ? "Corrigez les anomalies avant de finaliser."
+            : state.status === "validated"
+              ? "La composition est verrouillée et prête pour la commande."
+              : "Composition synchronisée.";
+    }
+    const issueNode = q("[data-issue-count]");
+    if (issueNode) {
+      const showIssues = issueCount > 0 && (busy || dirty || state.status !== "draft");
+      issueNode.hidden = !showIssues;
+      issueNode.textContent = showIssues
+        ? `${issueCount} anomalie${issueCount > 1 ? "s" : ""}`
+        : "";
+    }
     root.dataset.dirty = String(dirty);
     root.dataset.sheetStatus = state.status;
+    root.dataset.hasIssues = String(issueCount > 0);
     const locked = ["rendering", "validated"].includes(state.status);
     qa(
       "[data-add-asset], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection]"
@@ -2147,12 +2172,6 @@ if (root) {
     const items = selectedItems();
     if (!items.length || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
     const itemPublicIds = items.map((item) => item.public_id);
-    if (itemPublicIds.length > 1) {
-      const confirmed = window.confirm(
-        `Supprimer définitivement les ${itemPublicIds.length} visuels sélectionnés de cette planche ?`
-      );
-      if (!confirmed) return;
-    }
     try {
       if (dirty) await saveLayout({ notify: false });
       const payload = await request(root.dataset.batchDeleteUrl, {

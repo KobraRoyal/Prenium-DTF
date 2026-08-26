@@ -100,8 +100,9 @@ body.prospect-journey-page :is(
   .prospect-panel textarea.ui-input.product-field-input:focus,
   .prospect-panel input.ui-input.product-field-input:focus
 ) {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
+  border-color: var(--line);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--brand) 32%, transparent));
 }
 
 body.prospect-journey-page .prospect-panel :is(.product-field-input, .ui-input.product-field-input),
@@ -126,9 +127,9 @@ body.prospect-tunnel-page .prospect-panel :is(.product-field-input)::placeholder
 
 body.prospect-journey-page .prospect-panel :is(.product-field-input):focus,
 body.prospect-tunnel-page .prospect-panel :is(.product-field-input):focus {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-  border-color: var(--line-strong);
+  outline: none;
+  border-color: var(--line);
+  box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--brand) 32%, transparent));
 }
 
 body.prospect-tunnel-page :is(

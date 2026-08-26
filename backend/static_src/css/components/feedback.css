@@ -1,12 +1,12 @@
 @layer components {
   .ui-skeleton {
     display: block;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-sm);
     background: linear-gradient(
       90deg,
-      color-mix(in srgb, var(--line) 40%, white) 0%,
-      color-mix(in srgb, var(--brand) 8%, white) 50%,
-      color-mix(in srgb, var(--line) 40%, white) 100%
+      color-mix(in srgb, var(--line) 40%, var(--surface)) 0%,
+      color-mix(in srgb, var(--brand) 8%, var(--surface)) 50%,
+      color-mix(in srgb, var(--line) 40%, var(--surface)) 100%
     );
     background-size: 200% 100%;
     animation: ui-skeleton-shimmer 1.2s ease-in-out infinite;
@@ -21,46 +21,145 @@
     }
   }
 
+  /* Toasts Operate — surface flottante, tokens DESIGN.md, un anneau sémantique. */
   .ui-toast-stack {
     position: fixed;
-    right: 1rem;
-    top: 1rem;
-    z-index: 50;
+    top: max(1rem, env(safe-area-inset-top, 0px));
+    right: max(1rem, env(safe-area-inset-right, 0px));
+    z-index: 100;
     display: flex;
+    width: min(100vw - 2rem, 24rem);
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
     pointer-events: none;
   }
 
-  .ui-toast-stack > * {
+  .ui-toast {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.7rem;
+    margin: 0;
+    padding: 0.8rem 0.95rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--ink);
+    box-shadow: var(--shadow-soft);
     pointer-events: auto;
+    font-family: var(--ui-font-body, "DM Sans", system-ui, sans-serif);
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .ui-toast__mark {
+    display: block;
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-top: 0.35rem;
+    border-radius: 999px;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .ui-toast__message {
+    margin: 0;
+    color: inherit;
+  }
+
+  .ui-toast--info {
+    border-color: color-mix(in srgb, var(--brand) 32%, var(--line));
+    background: color-mix(in srgb, var(--brand-soft) 55%, var(--surface-raised));
+  }
+
+  .ui-toast--info .ui-toast__mark {
+    background: var(--brand-strong);
+  }
+
+  .ui-toast--success {
+    border-color: color-mix(in srgb, var(--success) 38%, var(--line));
+    background: color-mix(in srgb, var(--success) 10%, var(--surface-raised));
+  }
+
+  .ui-toast--success .ui-toast__mark {
+    background: var(--success);
+  }
+
+  .ui-toast--warning {
+    border-color: color-mix(in srgb, var(--warning) 40%, var(--line));
+    background: color-mix(in srgb, var(--warning) 10%, var(--surface-raised));
+  }
+
+  .ui-toast--warning .ui-toast__mark {
+    background: var(--warning);
+  }
+
+  .ui-toast--error {
+    border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+    background: color-mix(in srgb, var(--danger) 10%, var(--surface-raised));
+    color: var(--danger-text);
+  }
+
+  .ui-toast--error .ui-toast__mark {
+    background: var(--danger);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .ui-toast {
+      animation: ui-toast-enter 220ms var(--transition-base, cubic-bezier(0.22, 1, 0.36, 1));
+    }
+  }
+
+  @keyframes ui-toast-enter {
+    from {
+      opacity: 0;
+      transform: translateY(-0.35rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .ui-local-feedback {
     margin: 0 0 1rem;
     padding: 0.75rem 0.9rem;
-    border-radius: 0.85rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: none;
     transition: opacity 0.2s ease, transform 0.2s ease;
+    font-size: 0.9rem;
+    line-height: 1.45;
   }
 
   .ui-local-feedback p {
     margin: 0;
-    font-size: 0.92rem;
-    line-height: 1.45;
   }
 
   .ui-local-feedback--success,
   .ui-local-feedback--info {
-    border-color: rgba(105, 190, 140, 0.26);
-    background: rgba(90, 160, 120, 0.12);
+    border-color: color-mix(in srgb, var(--success) 35%, var(--line));
+    background: color-mix(in srgb, var(--success) 10%, var(--surface));
+  }
+
+  .ui-local-feedback--info {
+    border-color: color-mix(in srgb, var(--brand) 32%, var(--line));
+    background: color-mix(in srgb, var(--brand-soft) 55%, var(--surface));
+  }
+
+  .ui-local-feedback--warning {
+    border-color: color-mix(in srgb, var(--warning) 40%, var(--line));
+    background: color-mix(in srgb, var(--warning) 10%, var(--surface));
   }
 
   .ui-local-feedback--error {
-    border-color: rgba(220, 100, 100, 0.35);
-    background: rgba(160, 60, 60, 0.16);
+    border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+    background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+    color: var(--danger-text);
   }
 
   .ui-local-feedback.is-fading {
@@ -75,9 +174,9 @@
     gap: 0.85rem;
     min-height: 2.5rem;
     padding: 0.85rem 1rem;
-    border-radius: 0.9rem;
-    border: 1px dashed rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.035);
+    border-radius: var(--radius-sm);
+    border: 1px dashed color-mix(in srgb, var(--line) 70%, var(--ink));
+    background: color-mix(in srgb, var(--bg) 35%, var(--surface));
   }
 
   .workflow-panel-loading__stack {
@@ -91,6 +190,7 @@
     align-items: center;
     gap: 0.55rem;
     font-size: 0.88rem;
+    color: var(--muted);
   }
 
   .workflow-panel-loading__text::before {
@@ -98,7 +198,7 @@
     width: 0.65rem;
     height: 0.65rem;
     border-radius: 999px;
-    background: currentColor;
+    background: var(--brand-strong);
     opacity: 0.75;
     animation: ui-pulse-dot 0.85s ease-in-out infinite alternate;
   }
@@ -108,7 +208,7 @@
   }
 
   .ui-skeleton--panel {
-    border-radius: 0.85rem;
+    border-radius: var(--radius-sm);
   }
 
   .workflow-panel-target.is-loading {

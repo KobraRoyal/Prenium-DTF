@@ -46,6 +46,57 @@ body.product-shell--studio .gang-editor__title-actions .gang-status-badge {
   text-transform: none;
 }
 
+/* Bande progression + enregistrement : un seul chrome, un seul message d’état. */
+body.product-shell--studio .gang-editor__progress-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0;
+  align-items: stretch;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--gang-line-strong) 24%, transparent);
+  border-radius: var(--radius);
+  background: var(--gang-panel);
+}
+
+body.product-shell--studio .gang-editor__progress-row .gang-workflow,
+body.product-shell--studio .gang-editor__progress-row .gang-editor__status {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.product-shell--studio .gang-editor__progress-row .gang-editor__status {
+  align-self: stretch;
+  min-width: 12.5rem;
+  max-width: 18rem;
+  padding: 0.55rem 0.95rem;
+  border-left: 1px solid color-mix(in srgb, var(--gang-line-strong) 18%, transparent);
+}
+
+body.product-shell--studio .gang-editor__status-copy {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+body.product-shell--studio .gang-editor__status-copy strong {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+body.product-shell--studio .gang-editor__status-copy small:not(.ui-sr-only) {
+  display: none;
+}
+
+body.product-shell--studio .gang-editor__issue-count[hidden],
+body.product-shell--studio .gang-editor__issue-count:empty {
+  display: none !important;
+}
+
 body.product-shell--studio .gang-workflow {
   overflow: hidden;
   border: 1px solid var(--gang-line);
@@ -441,7 +492,7 @@ body.product-shell--studio :is(.gang-tool-btn, .gang-workflow button, .gang-edit
 
   body.product-shell--studio .gang-editor__metrics {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.35rem;
     padding: 0.45rem 0.55rem 0.55rem;
   }
@@ -450,13 +501,25 @@ body.product-shell--studio :is(.gang-tool-btn, .gang-workflow button, .gang-edit
     padding: 0.4rem 0.5rem;
   }
 
-  body.product-shell--studio .gang-editor__metrics > div:nth-child(1),
-  body.product-shell--studio .gang-editor__metrics > div:nth-child(4) {
+  /* Surface reste dans le détail devis ; format est dans la toolbar canvas. */
+  body.product-shell--studio .gang-editor__metrics > div:nth-child(3) {
     display: none;
   }
 
+  body.product-shell--studio .gang-editor__metrics > div.is-price {
+    grid-column: 1 / -1;
+  }
+
   body.product-shell--studio .gang-editor__progress-row {
-    gap: 0.35rem;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  body.product-shell--studio .gang-editor__progress-row .gang-editor__status {
+    min-width: 0;
+    max-width: none;
+    border-left: 0;
+    border-top: 1px solid color-mix(in srgb, var(--gang-line-strong) 18%, transparent);
   }
 
   body.product-shell--studio .gang-workflow--editor li small {
@@ -469,11 +532,11 @@ body.product-shell--studio :is(.gang-tool-btn, .gang-workflow button, .gang-edit
 
   body.product-shell--studio .gang-editor__status {
     min-height: 2.55rem;
-    padding: 0.35rem 0.55rem;
+    padding: 0.45rem 0.7rem;
   }
 
   body.product-shell--studio .gang-editor__status-detail,
-  body.product-shell--studio .gang-editor__status small {
+  body.product-shell--studio .gang-editor__status small:not(.ui-sr-only) {
     display: none;
   }
 
@@ -1017,6 +1080,55 @@ html[data-theme="prenium"] body.product-shell--studio .gang-inspector-note stron
   font-size: 0.72rem;
 }
 
+body.product-shell--studio .b2b-configurator-preflight {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.15rem 0 0;
+}
+
+body.product-shell--studio .b2b-configurator-preflight .b2b-quality-strip {
+  flex: 1 1 8.5rem;
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-sm);
+}
+
+body.product-shell--studio .b2b-quality-strip.is-pending {
+  border-color: color-mix(in srgb, var(--gang-accent) 28%, var(--gang-line));
+  background: color-mix(in srgb, var(--gang-accent-soft) 52%, var(--gang-panel));
+}
+
+body.product-shell--studio .b2b-configurator-dialog.gang-asset-dialog {
+  width: min(64rem, calc(100vw - 1.5rem));
+}
+
+body.product-shell--studio .gang-crop-controls {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--gang-line);
+  border-radius: var(--radius-sm);
+  background: var(--gang-panel);
+  box-shadow: none;
+}
+
+body.product-shell--studio .gang-crop-controls__head {
+  gap: 0.45rem;
+}
+
+body.product-shell--studio .gang-crop-controls__head strong {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+body.product-shell--studio .gang-crop-mode button {
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
 @media (max-width: 47.99rem) {
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__mobile-tabs {
     border-radius: var(--radius-sm);
@@ -1041,5 +1153,33 @@ html[data-theme="prenium"] body.product-shell--studio .gang-inspector-note stron
 @media (max-width: 26rem) {
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__mobile-tabs button > svg {
     display: none;
+  }
+}
+
+/* Distill Operate — un titre par panneau, format uniquement sur le canvas. */
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__panel-label {
+  display: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-meta-label {
+  display: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-order-quote__eyebrow {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__panel-label {
+    display: flex;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics > div:first-child {
+    grid-column: auto;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics > div.is-price {
+    grid-column: 1 / -1;
+    border-left: 0;
   }
 }

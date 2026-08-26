@@ -1025,16 +1025,29 @@ def test_generated_hd_pdf_keeps_quality_overlays_without_false_sheet_dpi(monkeyp
         source="test",
     )
     item = project.items.select_related("asset__current_version__analysis").get()
+    metadata = item.asset.current_version.analysis.metadata or {}
     raw_review = AssetService().technical_review_for_item(item=item)
     production_review = AssetService().production_review_for_item(item=item)
 
-    assert raw_review["label"] == "Résolution insuffisante"
+    # Motif 300×150 px sur ~100×50 mm → DPI placement réel (~76), pas le faux DPI page.
+    assert metadata.get("placement_effective_dpi") is not None
+    assert metadata.get("uses_artboard_dimensions") is False
+    assert raw_review["effective_dpi"] == pytest.approx(
+        float(metadata["placement_effective_dpi"]),
+        rel=0.01,
+    )
     assert production_review["label"] == "Contrôle du fichier HD"
-    assert production_review["resolution_display"] == "PDF hybride"
-    assert production_review["effective_dpi"] is None
+    assert str(production_review["resolution_display"]).endswith("DPI")
+    assert production_review["resolution_display"] != "PDF hybride"
+    assert production_review["effective_dpi"] == pytest.approx(
+        float(metadata["placement_effective_dpi"]),
+        rel=0.01,
+    )
     assert production_review["can_confirm"] is True
-    assert "thin_zone" in item.asset.current_version.analysis.metadata
-    assert "semi_transparency" in item.asset.current_version.analysis.metadata
+    assert "thin_zone" in metadata
+    assert "semi_transparency" in metadata
+    assert metadata.get("embedded_width_px")
+    assert item.asset.current_version.analysis.image_width > 0
 
 
 def test_validation_attaches_to_existing_order_and_locks_sheet():

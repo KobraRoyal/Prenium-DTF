@@ -69,10 +69,9 @@
 
   .ui-input:focus,
   .ui-input:focus-visible {
-    border-color: var(--brand-strong);
-    outline: 3px solid color-mix(in srgb, var(--focus-ring) 28%, transparent);
-    outline-offset: 1px;
-    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.2);
+    border-color: var(--line);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--brand) 32%, transparent));
   }
 
   .ui-input--error,

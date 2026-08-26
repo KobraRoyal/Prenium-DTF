@@ -226,6 +226,46 @@ def test_pdf_embedded_soft_png_is_detected():
     assert result.overlay is not None
 
 
+def test_pdf_embedded_aa_fringe_only_is_not_flagged_as_degrades():
+    """Anneau AA soft-mask (PNG opaque + 1 px fringe) ≠ dégradé DTF utile."""
+    png = Image.new("RGBA", (240, 240), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(png)
+    draw.ellipse((40, 40, 200, 200), fill=(20, 20, 20, 255))
+    for alpha in (90, 160, 210):
+        draw.ellipse((39, 39, 201, 201), outline=(20, 20, 20, alpha), width=1)
+    png_buffer = BytesIO()
+    png.save(png_buffer, format="PNG")
+    png.close()
+
+    document = pymupdf.open()
+    page = document.new_page(width=400, height=400)
+    page.insert_image(pymupdf.Rect(40, 40, 360, 360), stream=png_buffer.getvalue())
+    pdf_bytes = document.tobytes()
+    document.close()
+
+    with pymupdf.open(stream=pdf_bytes, filetype="pdf") as rendered_doc:
+        rendered_page = rendered_doc.load_page(0)
+        pixmap = rendered_page.get_pixmap(
+            matrix=pymupdf.Matrix(1.5, 1.5),
+            colorspace=pymupdf.csRGB,
+            alpha=True,
+        )
+        preview = Image.frombytes("RGBA", (pixmap.width, pixmap.height), pixmap.samples)
+
+    result = AssetSemiTransparencyAnalyzer().analyze_pdf_document(
+        content=pdf_bytes,
+        preview_image=preview,
+        page_width_points=400,
+        page_height_points=400,
+        is_pure_vector=False,
+        has_source_opacity=False,
+    )
+    preview.close()
+
+    assert result.detected is False
+    assert result.overlay is None
+
+
 def test_pdf_vector_opacity_fill_is_detected():
     buffer = BytesIO()
     canvas = Canvas(buffer, pagesize=(200, 100))

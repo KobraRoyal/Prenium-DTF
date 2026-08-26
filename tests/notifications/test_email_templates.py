@@ -208,6 +208,7 @@ def test_template_catalog_uses_order_lifecycle_without_redundant_b2b_event():
     events = {definition.event for definition in EMAIL_TEMPLATE_DEFINITIONS}
 
     assert "b2b_order_submitted" not in events
+    assert EmailTemplate.Event.PASSWORD_RESET in events
     assert {
         EmailTemplate.Event.ORDER_CREATED,
         EmailTemplate.Event.ORDER_PROCESSING,

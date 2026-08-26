@@ -94,8 +94,8 @@ html[data-theme="prenium"] body.product-shell :where(
   .page-head,
   .page-head--premium,
   [class*="-card"]:not([class*="__"]),
-  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack),
-  [class*="-focus"]:not([class*="__"]),
+  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack):not(.account-profile-panel):not(.account-team-panel),
+  [class*="-focus"]:not([class*="__"]):not(.client-dashboard-focus),
   .workflow-shell,
   .ui-workflow-shell,
   .ui-panel-shell,
@@ -103,7 +103,7 @@ html[data-theme="prenium"] body.product-shell :where(
   .shipping-form-shell,
   [class*="-head"]:not(.page-head):not([class*="heading"]):not([class*="__"]),
   [class*="-header"]:not([class*="__"]),
-  [class*="-section"]:not([class*="__"]),
+  [class*="-section"]:not([class*="__"]):not(.client-dashboard-section),
   [class*="-block"]:not([class*="__"]),
   [class*="-row"]:not([class*="__"]),
   [class*="-item"]:not([class*="__"]),
@@ -135,14 +135,14 @@ html[data-theme="prenium"] body.product-shell :where(
   .panel,
   .page-head--premium,
   [class*="-card"]:not([class*="__"]),
-  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack),
-  [class*="-focus"]:not([class*="__"]),
+  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack):not(.account-profile-panel):not(.account-team-panel),
+  [class*="-focus"]:not([class*="__"]):not(.client-dashboard-focus),
   .workflow-shell,
   .ui-workflow-shell,
   .ui-panel-shell,
   .workflow-panel-shell,
   .shipping-form-shell,
-  [class*="-section"]:not([class*="__"]),
+  [class*="-section"]:not([class*="__"]):not(.client-dashboard-section),
   [class*="-block"]:not([class*="__"]),
   [class*="-row"]:not([class*="__"]),
   [class*="-item"]:not([class*="__"]),
@@ -230,11 +230,11 @@ html[data-theme="prenium"] body.product-shell .ui-breadcrumb__list {
   font-weight: 650;
 }
 
-/* Unlayered: écrase app-legacy.css (body.landing-saas.portal-shell = toutes les vues portail). */
+/* Unlayered: écrase app-legacy.css (body.landing-saas.portal-shell = toutes les vues portail).
+   Note: .empty-state est exclu — imbriqué dans .portal-page-surface il doit rester plat (v112 / product-polish). */
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
   .card,
   .panel,
-  .empty-state,
   .portal-login-card,
   .product-auth-card,
   .landing-auth-shell,
@@ -242,8 +242,8 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
   .service-card,
   .selectable-card,
   [class*="-card"]:not([class*="__"]),
-  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack),
-  [class*="-focus"]:not([class*="__"]),
+  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack):not(.account-profile-panel):not(.account-team-panel),
+  [class*="-focus"]:not([class*="__"]):not(.client-dashboard-focus),
   .workflow-shell,
   .ui-workflow-shell,
   .ui-panel-shell,
@@ -255,6 +255,119 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
   border-radius: var(--radius) !important;
   color: var(--ink) !important;
   box-shadow: none !important;
+}
+
+/* v111 — Une surface = une carte. Focus / workflow imbriqués sans seconde bordure. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface :is(
+  [class*="-focus"]:not([class*="__"]),
+  .card.workflow-shell,
+  .ui-workflow-shell,
+  .workflow-shell,
+  .ui-panel-shell,
+  .workflow-panel-shell
+) {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* v112 — Sélecteurs directs : un :is() long est fusionné puis tronqué, la 2e carte revient. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .empty-state {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: empty;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .workflow-panel {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: panel;
+}
+
+/* v123 — Dashboard client : sélecteurs directs (évite troncature :is / chrome global -focus). */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .client-dashboard-focus,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .client-dashboard-palier,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .client-dashboard-section {
+  border: 0 !important;
+  border-width: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: dashboard-inner;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .atelier-inspection {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: inspection;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .workflow-panel-target {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: target;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .client-order-summary,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .staff-order-focus,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .staff-customer-focus {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: focus;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .staff-order-detail-stack {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: stack;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .client-order-panel {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: client-panel;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .account-profile-panel,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .account-team-panel,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .account-team-invite {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  --portal-inner-chrome: profile-panel;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.client-profile-surface .account-profile-rail {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: profile-rail;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page .portal-page-surface .ui-table-shell {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  --portal-inner-chrome: table;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
@@ -329,20 +442,69 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
   border-bottom-color: var(--line) !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .alert {
-  border-color: var(--line) !important;
-  box-shadow: none !important;
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .alert--info:not(.ui-toast) {
+  border: 1px solid color-mix(in srgb, var(--brand) 32%, var(--line)) !important;
+  background: color-mix(in srgb, var(--brand-soft) 55%, var(--surface)) !important;
+  color: var(--ink) !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .alert--warning {
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .alert--success:not(.ui-toast) {
+  border: 1px solid color-mix(in srgb, var(--success) 38%, var(--line)) !important;
+  background: color-mix(in srgb, var(--success) 10%, var(--surface)) !important;
+  color: var(--ink) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .alert:not(.ui-toast) {
+  border-color: var(--line) !important;
+  box-shadow: none !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .alert--warning:not(.ui-toast) {
   border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--line)) !important;
   background: color-mix(in srgb, var(--warning) 10%, var(--surface)) !important;
   color: var(--ink) !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .alert--danger {
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .alert--danger:not(.ui-toast) {
   border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line)) !important;
   background: color-mix(in srgb, var(--danger) 10%, var(--surface)) !important;
+  color: var(--danger-text) !important;
+}
+
+/* Toasts Operate — verrou pixel indépendant des alertes inline. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-toast-stack {
+  z-index: 100 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-toast {
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--surface-raised) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-soft) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-toast--info {
+  border-color: color-mix(in srgb, var(--brand) 32%, var(--line)) !important;
+  background: color-mix(in srgb, var(--brand-soft) 55%, var(--surface-raised)) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-toast--success {
+  border-color: color-mix(in srgb, var(--success) 38%, var(--line)) !important;
+  background: color-mix(in srgb, var(--success) 10%, var(--surface-raised)) !important;
+  color: var(--ink) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-toast--warning {
+  border-color: color-mix(in srgb, var(--warning) 40%, var(--line)) !important;
+  background: color-mix(in srgb, var(--warning) 10%, var(--surface-raised)) !important;
+  color: var(--ink) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-toast--error {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line)) !important;
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface-raised)) !important;
   color: var(--danger-text) !important;
 }
 
@@ -387,12 +549,16 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
   .ui-input:focus,
+  .ui-input:focus-visible,
   select.ui-input:focus,
-  textarea.ui-input:focus
+  select.ui-input:focus-visible,
+  textarea.ui-input:focus,
+  textarea.ui-input:focus-visible
 ) {
-  border-color: var(--line-strong) !important;
-  outline: 2px solid var(--focus-ring) !important;
-  outline-offset: 2px;
+  border-color: var(--line) !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: 0 0 0 3px var(--field-focus-ring) !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-field-group .error-text {
@@ -643,7 +809,6 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.ui-list-section :is(
   .gang-sheet-card,
   .gang-sheet-toolbar,
-  .gang-sheet-search,
   .ui-table-shell,
   .ui-data-table,
   .ui-list-section,
@@ -672,9 +837,18 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   .atelier-operation-row,
   .ui-mobile-order-card,
   .ui-data-card
+),
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.client-order-project-surface :is(
+  .b2b-configurator,
+  .b2b-project-options,
+  .client-order-project-visuals,
+  .client-order-project-options,
+  .b2b-project-checkout,
+  .b2b-project-quote
 ) {
   border: 0 !important;
   box-shadow: none !important;
+  background: transparent !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card {
@@ -701,8 +875,26 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-search {
+  border: 1px solid var(--line) !important;
   background: var(--surface) !important;
   border-radius: var(--radius-sm) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-search:focus-within {
+  border-color: var(--line) !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: 0 0 0 3px var(--field-focus-ring) !important;
+}
+
+/* Un seul anneau sur le wrapper : pas d’outline/box-shadow sur l’input interne. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-search :is(input, input:focus, input:focus-visible) {
+  border: 0 !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-filters button.is-active {
@@ -719,11 +911,16 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   background: color-mix(in srgb, var(--brand-soft) 36%, var(--surface)) !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .account-profile-panel,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .account-team-panel {
-  background: color-mix(in srgb, var(--bg) 18%, var(--surface)) !important;
-  border-radius: var(--radius-sm) !important;
-  padding: 0.85rem 1rem !important;
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.account-profile-surface :is(
+  .account-profile-panel,
+  .account-team-panel,
+  .account-team-invite
+) {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .account-team-row + .account-team-row {
@@ -1007,6 +1204,59 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .ui-list-tabs__tab[aria-current="page"],
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .ui-list-tabs__tab[aria-selected="true"] {
   background: color-mix(in srgb, var(--brand) 18%, var(--surface)) !important;
+}
+
+/* v114 — Onglets workflow dans une surface = même chrome que ui-list-tabs. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .workflow-tab-rail {
+  margin: 0 0 0.85rem !important;
+  padding: 0.35rem !important;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: var(--radius-sm, 14px) !important;
+  background: color-mix(in srgb, var(--bg) 38%, var(--surface)) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .workflow-tab-rail .workflow-progress,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .workflow-tab-rail .workflow-tab-group__chips {
+  display: flex !important;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.35rem !important;
+  overflow-x: auto;
+  grid-template-columns: none !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .workflow-tab-rail .ui-tab-chip {
+  flex: 0 0 auto;
+  justify-content: center;
+  min-height: 2.5rem !important;
+  padding: 0.5rem 0.85rem !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+  font-size: 0.82rem !important;
+  font-weight: 650 !important;
+  line-height: 1.2;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .workflow-tab-rail .ui-tab-chip:hover,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .workflow-tab-rail .ui-tab-chip:focus-visible {
+  color: var(--ink) !important;
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface)) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .workflow-tab-rail .ui-tab-chip.is-active,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .workflow-tab-rail .ui-tab-chip[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--line)) !important;
+  background: color-mix(in srgb, var(--brand) 16%, var(--surface)) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
 }
 
 /* v20 — Placement homogène list tabs : bandeau commande → onglets → résultats. */
@@ -1513,4 +1763,57 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell {
     scroll-behavior: auto;
   }
+}
+
+/* Auth login: unlayered post-Tailwind so the password grid beats forms.css. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-card {
+  border-radius: var(--radius-lg) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-card__intro h1 {
+  font-family: var(--ui-font-display) !important;
+  font-size: 1.75rem !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.03em !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-password {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  grid-template-areas:
+    "label forgot"
+    "input input" !important;
+  align-items: center !important;
+  column-gap: 0.75rem !important;
+  row-gap: 0.45rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-password > .ui-label {
+  grid-area: label !important;
+  display: block !important;
+  width: auto !important;
+  margin: 0 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-forgot {
+  grid-area: forgot !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  min-height: 2.75rem !important;
+  white-space: nowrap !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-password > .ui-input {
+  grid-area: input !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-card :is(
+  .ui-input:focus,
+  .ui-input:focus-visible
+) {
+  border-color: var(--line) !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: 0 0 0 3px var(--field-focus-ring) !important;
 }

@@ -13,7 +13,14 @@ from .views_access_management import (
     StaffAccessRequestListView,
     StaffAccessRequestRejectView,
 )
-from .views_auth import PortalLoginView, PortalLogoutView
+from .views_auth import (
+    PortalLoginView,
+    PortalLogoutView,
+    PortalPasswordResetCompleteView,
+    PortalPasswordResetConfirmView,
+    PortalPasswordResetDoneView,
+    PortalPasswordResetRequestView,
+)
 from .views_b2b_order_projects import (
     ClientOrderProjectAutosaveView,
     ClientOrderProjectCancelView,
@@ -147,6 +154,26 @@ app_name = "portal"
 urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
     path("logout/", PortalLogoutView.as_view(), name="logout"),
+    path(
+        "mot-de-passe-oublie/",
+        PortalPasswordResetRequestView.as_view(),
+        name="password-reset",
+    ),
+    path(
+        "mot-de-passe-oublie/envoye/",
+        PortalPasswordResetDoneView.as_view(),
+        name="password-reset-done",
+    ),
+    path(
+        "mot-de-passe-oublie/termine/",
+        PortalPasswordResetCompleteView.as_view(),
+        name="password-reset-complete",
+    ),
+    path(
+        "mot-de-passe-oublie/<uidb64>/<token>/",
+        PortalPasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
     path("account/profile/", PortalProfileView.as_view(), name="profile"),
     path(
         "account/profile/identity/",

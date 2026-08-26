@@ -83,6 +83,8 @@
   revue Impeccable `ship` documentée dans `sprint-46-design-system-sombre-impeccable.md`
 - [x] Lot 48 — Shell clair homogène « Atelier clair et chaleureux », `page_head` DRY, breadcrumbs,
   overrides runtime portail/marketing/prospect, **806 tests verts** — `sprint-48-shell-clair-homogene-impeccable.md`
+- [x] Lot 49 — Mot de passe oublié depuis `/login/`, e-mail signé 24 h, rate-limit et recours support — `sprint-49-password-reset.md`
+- [x] Lot 50 — Page HTTP 404 Operate (`templates/404.html`, handler URLconf, CTAs anonymes/connectés) — `sprint-50-page-404.md`
 
 ## Derniers chantiers transverses
 
@@ -358,6 +360,34 @@
 
 - [x] `page-head` du compte aligné sur dashboard / commandes (carte 2 px + ombre dure)
 - [x] Grille de faits alignée sur la fiche commande (séparateurs 1 px, labels capitales)
+
+## Micro-lot Atelier — profil staff aligné fiche client (2026-08-25)
+
+- [x] `/account/profile/?space=staff` : identité focus + workspace `<details>`
+- [x] En-tête `page_head` aligné tableau de bord / pilotage / commandes (profil staff et fiche client)
+- [x] Édition HTMX conservée ; en-tête identité rafraîchi en OOB
+- [x] CSS staff, cache-bust `20260825-page-head-v109`
+
+## Micro-lot Atelier — fiche commande alignée page_head (2026-08-25)
+
+- [x] `/staff/orders/<uuid>/` : en-tête `page_head` (n° OF, prochain geste en sous-titre, CTA primaire)
+- [x] Carte identité badges + faits 4 colonnes (Commande, Client, Montant, Drive)
+- [x] Onglets HTMX conservés ; bandeau « Prochain geste » retiré
+- [x] CSS staff, cache-bust `20260825-order-detail-v110`
+
+## Micro-lot Atelier — fiche commande chrome portail (2026-08-25)
+
+- [x] Une seule `portal-page-surface` (identité + onglets), même padding/bordure/rayon que machines et listes
+- [x] Onglets alignés `ui-list-tabs` ; plus de double carte ni bandeau plein bord
+- [x] CSS core+staff, cache-bust `20260825-order-detail-v111`
+- [x] v112 : flatten direct empty-state / workflow-panel / inspection (plus de 2e carte)
+- [x] v113 : padding Production aligné sur la surface (plus de double inset)
+- [x] Fiche commande client : même chrome (une surface, flatten, onglets listes), cache-bust `20260825-order-detail-v115`
+
+## Micro-lot portail — profil compte chrome unique (2026-08-25)
+
+- [x] `/account/profile/` client : une surface (flatten panneaux), cache-bust `20260825-profile-v117`
+- [x] `/account/profile/?space=staff` : retour layout 2 surfaces (identité + workspace), sans régression v64
 
 ## Sprint 31 — Gang Sheet Generator Pro (2026-07-15)
 

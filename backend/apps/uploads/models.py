@@ -349,6 +349,12 @@ class OrderUpload(BaseModel):
             )
         ],
     )
+    is_production_derivative = models.BooleanField(
+        default=False,
+        help_text="Le fichier remis à l'atelier est dérivé de la source client immuable.",
+    )
+    production_file_sha256 = models.CharField(max_length=64, blank=True)
+    source_crop_metadata = models.JSONField(default=dict, blank=True)
     meterage_sqm = models.DecimalField(
         max_digits=12,
         decimal_places=4,

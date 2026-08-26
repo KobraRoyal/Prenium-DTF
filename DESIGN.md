@@ -134,6 +134,10 @@ Surface blanche, bordure `line`, rayon 14px, hauteur `2.75rem`. Focus accent ; e
 
 Cartes blanches bordées `1px var(--line)`, rayon 16–18px. Fiches focus staff/client regroupent identité, badges et facts en grille horizontale séparée par lignes verticales fines.
 
+### Pages d’erreur HTTP
+
+`templates/404.html` réutilise le shell auth Operate (`product-shell--auth`, carte `product-error-card`) : code discret brand, titre Space Grotesk, CTAs `ui-btn`, recours support. Handler : `handler404` dans `config/urls.py`. Visible avec `DEBUG=False`.
+
 ### Tables / listes responsives
 
 `shell.css` possède `ui-table-shell`, `ui-data-table`, `ui-data-card`, `ui-mobile-order-card`, `ui-list-pagination`. Breakpoint table/cartes : 960px. `components/portal/pagination.html` et `components/forms/form_actions.html` mutualisent pagination et actions.

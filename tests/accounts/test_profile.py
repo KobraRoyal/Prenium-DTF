@@ -143,6 +143,41 @@ def test_user_can_update_identity_via_htmx():
 
 
 @pytest.mark.django_db
+def test_staff_user_can_update_identity_via_htmx_and_refresh_focus():
+    user = get_user_model().objects.create_user(
+        email="identity-staff@example.com",
+        password="pass",
+        first_name="Ancien",
+        last_name="Nom",
+        is_staff=True,
+    )
+    user.user_permissions.add(Permission.objects.get(codename="access_staff_portal"))
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+    url = reverse("portal:profile-identity")
+
+    response = client.post(
+        url,
+        {
+            "space": "staff",
+            "first_name": "Camille",
+            "last_name": "Martin",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    html = response.content.decode()
+    assert response.status_code == 200
+    assert "Camille" in html
+    assert "Martin" in html
+    assert 'id="staff-profile-focus"' in html
+    assert 'hx-swap-oob="true"' in html
+    assert "Compte staff" in html
+    user.refresh_from_db()
+    assert user.first_name == "Camille"
+    assert user.last_name == "Martin"
+
+
+@pytest.mark.django_db
 def test_profile_page_preserves_authorized_staff_navigation():
     user = get_user_model().objects.create_user(
         email="profile-staff@example.com",
@@ -161,5 +196,15 @@ def test_profile_page_preserves_authorized_staff_navigation():
     assert "Tableau de bord" in html
     assert "Mon compte" in html
     assert "Identité" in html
+    assert "staff-profile-page" in html
+    assert "staff-customer-focus" in html
+    assert 'id="staff-profile-title"' in html
+    assert "data-customer-workspace" in html
+    assert 'id="account-identity"' in html
+    assert "Compte staff" in html
     assert reverse("portal:profile-identity") in html
     assert "space=staff" in html
+    assert "customer-account-workspace.js" in html
+    assert "portal-page-intro" in html
+    assert "Mes informations" in html
+    assert "Identité de connexion pour l’espace Atelier." in html

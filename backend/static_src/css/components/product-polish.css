@@ -60,10 +60,29 @@ body.product-shell :is(.card, .panel, .product-auth-card, .empty-state) {
   box-shadow: var(--product-polish-shadow);
 }
 
-body.product-shell.product-shell :is(.ui-btn, .dui-btn, button, input, select, textarea, summary):focus-visible,
+/* Boutons / liens : outline. Champs texte : anneau unique via box-shadow (--field-focus-ring). */
+body.product-shell.product-shell :is(.ui-btn, .dui-btn, button, summary):focus-visible,
 body.product-shell.product-shell a:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--product-accent) 72%, white) !important;
   outline-offset: 3px;
+}
+
+body.product-shell.product-shell :is(input, select, textarea):focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+body.product-shell.product-shell :is(
+  .ui-input,
+  .dui-input,
+  .dui-select,
+  .dui-textarea,
+  .product-field-input
+):focus-visible {
+  border-color: var(--product-line, var(--line)) !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--brand, var(--product-accent)) 32%, transparent)) !important;
 }
 
 body.product-shell .chip {
@@ -900,11 +919,29 @@ html[data-theme="prenium"] body.product-shell main dd {
   color: var(--product-ink) !important;
 }
 
-html[data-theme="prenium"] body.product-shell :is(.card, .panel, .product-auth-card, .empty-state, .workflow-shell) {
+html[data-theme="prenium"] body.product-shell :is(.card, .panel, .product-auth-card, .workflow-shell) {
   border: 1px solid var(--product-line) !important;
   border-radius: var(--product-polish-radius) !important;
   color: var(--product-ink);
   background: var(--product-panel);
+  box-shadow: none !important;
+}
+
+/* Empty-state : plat dans une surface ; carte légère seulement hors surface. */
+html[data-theme="prenium"] body.product-shell .empty-state {
+  border: 1px solid var(--product-line) !important;
+  border-radius: var(--product-polish-radius) !important;
+  color: var(--product-ink);
+  background: var(--product-panel);
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .portal-page .portal-page-surface .empty-state {
+  border: 0 !important;
+  border-width: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
   box-shadow: none !important;
 }
 
@@ -1301,6 +1338,757 @@ html[data-theme="prenium"] body.product-shell .brand-preview__note {
   }
 
   html[data-theme="prenium"] body.product-shell .brand-settings-actions > * {
+    width: 100%;
+  }
+}
+
+/* Prévol import : résolution + dégradés + finesse (modal galerie / ajout fichier). */
+body.product-shell .b2b-configurator-preflight {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.1rem 0 0;
+}
+
+body.product-shell .b2b-configurator-preflight .b2b-quality-strip {
+  flex: 1 1 8.5rem;
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-sm);
+}
+
+body.product-shell .b2b-configurator-preflight .b2b-quality-strip__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+body.product-shell .b2b-preflight-overlay-chrome {
+  margin-top: 0.45rem;
+}
+
+body.product-shell .b2b-preflight-overlay-chrome .b2b-quality-overlays__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+body.product-shell .b2b-quality-strip.is-pending {
+  border-color: color-mix(in srgb, var(--brand, #ff8775) 28%, var(--product-line, var(--line)));
+  background: color-mix(in srgb, var(--brand-soft, #ffe9e3) 55%, var(--product-panel, var(--surface)));
+}
+
+/* Modals configurateur : chrome Operate (clair, 1px, radius). */
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog {
+  width: min(68rem, calc(100vw - 1.5rem));
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-lg) !important;
+  background: var(--surface-raised) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-raised) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 45%, transparent) !important;
+  backdrop-filter: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-dialog-shell {
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-dialog-head {
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--line) !important;
+  padding: 0.75rem 1rem;
+  background: var(--surface) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-dialog-head h2 {
+  margin: 0;
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-dialog-close {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--surface-raised) !important;
+  color: var(--ink) !important;
+  font-weight: 700;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-dialog-close:hover,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-close:focus-visible {
+  background: var(--brand-soft) !important;
+  border-color: color-mix(in srgb, var(--brand) 40%, var(--line)) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-dialog-body {
+  padding: 0.85rem 1rem 1rem;
+  background: var(--bg);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator__workspace {
+  gap: 0.85rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator__controls {
+  display: grid;
+  gap: 0.65rem;
+  align-content: start;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator__file-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+html[data-theme="prenium"] body.product-shell .gang-asset-modal-form__params,
+html[data-theme="prenium"] body.product-shell .b2b-configurator-params {
+  display: grid;
+  gap: 0.65rem;
+}
+
+html[data-theme="prenium"] body.product-shell .gang-asset-modal-form__selection {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm);
+  background: var(--surface) !important;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 650;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .gang-asset-modal-form__notice {
+  display: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-dialog-actions {
+  gap: 0.55rem;
+  margin-top: 0.15rem;
+  padding-top: 0.15rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-review {
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm);
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-strip {
+  border-width: 1px;
+  box-shadow: none;
+}
+
+/* Modal validation commande fichier : densité Operate. */
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-visual-card__details,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-visual-card__details {
+  display: grid;
+  gap: 0.7rem;
+  align-content: start;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-review {
+  gap: 0.5rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm);
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-review__head {
+  gap: 0.45rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-review__head strong {
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-review__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-review__chips .b2b-quality-strip {
+  flex: 1 1 7.5rem;
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-sm);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-review__lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-review__summary {
+  display: none;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-quality-issues-list {
+  display: none;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator__dimensions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator__dimensions-info {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator__dimensions-label {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator__dimensions-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-support-color__intro {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-support-color.is-exact-required,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-support-color.is-exact-required {
+  border-color: color-mix(in srgb, var(--warning, #8b5d08) 42%, var(--line));
+  background: color-mix(in srgb, var(--warning, #8b5d08) 8%, var(--surface));
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-support-color.is-exact-required .product-form-label,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-support-color.is-exact-required .product-form-label {
+  color: var(--ink);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-support-color__badge,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-support-color__badge {
+  border-color: color-mix(in srgb, var(--warning, #8b5d08) 45%, var(--line));
+  background: color-mix(in srgb, var(--warning, #8b5d08) 12%, var(--surface-raised, #fffdf8));
+  color: var(--warning, #8b5d08);
+  font-weight: 700;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-support-color__alert,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-support-color__alert {
+  border-color: color-mix(in srgb, var(--warning, #8b5d08) 35%, var(--line));
+  background: color-mix(in srgb, var(--warning, #8b5d08) 10%, var(--surface-raised, #fffdf8));
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-confirm {
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-confirm span {
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-preview-chrome {
+  gap: 0.55rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-quality-overlays__actions {
+  gap: 0.4rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-preview-zoom :is(.ui-btn, button) {
+  border-radius: var(--radius-sm) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-dialog-actions,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: 0.25rem;
+  padding: 0.55rem 0 0.1rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 0%, transparent), var(--bg) 28%);
+}
+
+/* Modal validation / éditeur : même chrome aperçu que l’import studio (1px, radius). */
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-dialog-body {
+  padding: 0.85rem 1rem 1rem !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-preview-stage {
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-preview-zoom :is(.ui-btn, button),
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions > :is(.ui-btn, button) {
+  min-height: 2.25rem !important;
+  height: 2.25rem !important;
+  padding: 0 0.7rem !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--surface-raised) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions > :is(.ui-btn, button).is-active {
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--line)) !important;
+  background: var(--brand-soft) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.45rem !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions > :is(.ui-btn, button) {
+  width: fit-content;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions .b2b-preview-zoom {
+  margin-left: 0 !important;
+  justify-self: start;
+}
+
+@media (min-width: 640px) {
+  html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions {
+    grid-template-columns: repeat(auto-fit, minmax(0, max-content));
+    align-items: center;
+  }
+
+  html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions .b2b-preview-zoom {
+    justify-self: end;
+    margin-left: auto !important;
+  }
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-support-color,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-support-color {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+@media (min-width: 960px) {
+  html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-configurator__workspace:not(.is-analysis-pending),
+  html[data-theme="prenium"] body.product-shell .b2b-dialog-editor:not(.is-analysis-pending) {
+    gap: 0.85rem !important;
+  }
+}
+
+/* Nuancier HEX — Operate (modals commande fichier + fond aperçu). */
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__panel {
+  width: min(15.5rem, calc(100vw - 1.5rem));
+  gap: 0.7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm, 14px) !important;
+  background: var(--surface-raised, #fffdf8) !important;
+  box-shadow: 0 10px 28px rgba(83, 67, 43, 0.14) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__title {
+  margin: 0;
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__native {
+  position: relative;
+  display: block;
+  min-width: 0;
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker-shell {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm, 14px);
+  border: 1px solid var(--line);
+  background-image:
+    linear-gradient(45deg, #ddd 25%, transparent 25%),
+    linear-gradient(-45deg, #ddd 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ddd 75%),
+    linear-gradient(-45deg, transparent 75%, #ddd 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  background-color: #fff;
+  pointer-events: none;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 2.85rem;
+  min-height: 2.85rem;
+  padding: 0;
+  border: 0 !important;
+  border-radius: var(--radius-sm, 14px) !important;
+  background: transparent !important;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker::-webkit-color-swatch {
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--line));
+  border-radius: calc(var(--radius-sm, 14px) - 1px);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker::-moz-color-swatch {
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--line));
+  border-radius: calc(var(--radius-sm, 14px) - 1px);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__preset {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 2.1rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ink) 14%, var(--line));
+  border-radius: 10px;
+  background: var(--preset, #fff);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__preset.is-active,
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__preset:focus-visible {
+  outline: 2px solid var(--focus, #770176);
+  outline-offset: 2px;
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__preset[data-hex-color-preset="#ffffff"] {
+  background-image:
+    linear-gradient(45deg, #e8e4da 25%, transparent 25%),
+    linear-gradient(-45deg, #e8e4da 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e8e4da 75%),
+    linear-gradient(-45deg, transparent 75%, #e8e4da 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  background-color: #fff;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__field {
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__hex-row {
+  display: grid;
+  grid-template-columns: 2.35rem minmax(0, 1fr);
+  gap: 0.45rem;
+  align-items: center;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__live {
+  display: block;
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--swatch-color, #fff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__input {
+  min-height: 2.35rem;
+  border-radius: var(--radius-sm, 14px) !important;
+  box-shadow: none !important;
+}
+
+/* v157 — Modals import + validation : cohérence Operate, zéro overflow. */
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog {
+  width: min(64rem, calc(100vw - 1.25rem)) !important;
+  max-height: calc(100dvh - 1.25rem) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-dialog-shell {
+  max-height: calc(100dvh - 1.25rem);
+  min-height: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-dialog-body {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__workspace,
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__new > .b2b-configurator__workspace,
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-dialog-editor {
+  min-width: 0;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__preview,
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__controls,
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-visual-card__details {
+  min-width: 0;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-preview-chrome {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0.5rem !important;
+  align-items: start;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-background-tools {
+  justify-self: start;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-overlays {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions {
+  width: 100%;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-review {
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-review__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-review__chips .b2b-quality-strip {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-strip__label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 12rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__dimensions {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0.5rem !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__dimensions-info {
+  min-width: 0;
+  border-color: var(--line) !important;
+  background: var(--surface) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__dimensions-values {
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__dimensions-values strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-support-color,
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-quality-confirm {
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-support-color.is-exact-required .b2b-support-color__choices,
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-support-color__choices {
+  display: grid !important;
+  grid-template-columns: 2.35rem 2.35rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-support-color-hex {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-support-color-hex .ui-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-support-color__status {
+  margin: 0.35rem 0 0;
+  font-size: 0.74rem;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-support-color__status:empty {
+  display: none;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-dialog-actions {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-dialog-actions--validate,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-dialog-actions--editor {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: stretch;
+  grid-template-columns: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-dialog-actions--validate > .ui-btn-primary,
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-dialog-actions--editor > .ui-btn-primary {
+  grid-column: auto !important;
+  flex: 1 1 8rem;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-dialog-actions--validate > :is(.ui-btn-secondary, .ui-btn-danger, button, a.ui-btn),
+html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-dialog-actions--editor > :is(.ui-btn, a.ui-btn, button) {
+  flex: 1 1 6rem;
+  min-height: 2.75rem;
+}
+
+/* Operate : ombre douce dans les modals (pas d’offset dur). */
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(.ui-btn, .ui-btn-primary, .ui-btn-secondary, .ui-btn-danger, a.ui-btn) {
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent) !important;
+  transform: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(.ui-btn, .ui-btn-primary, .ui-btn-secondary, .ui-btn-danger, a.ui-btn):hover:not(:disabled) {
+  box-shadow: var(--shadow-soft) !important;
+  transform: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-dialog-actions :is(.ui-btn, .ui-btn-primary, .ui-btn-secondary, .ui-btn-danger, a.ui-btn):active:not(:disabled) {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+@media (min-width: 960px) {
+  html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-configurator__workspace:not(.is-analysis-pending),
+  html[data-theme="prenium"] body.product-shell .b2b-dialog-editor:not(.is-analysis-pending),
+  html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__new > .b2b-configurator__workspace {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 18.5rem) !important;
+    gap: 0.85rem !important;
+    align-items: start !important;
+  }
+
+  html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-visual-card__details,
+  html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-visual-card__details,
+  html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__controls {
+    max-height: min(34rem, calc(100dvh - 9rem));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.15rem;
+  }
+
+  html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-preview-stage,
+  html[data-theme="prenium"] body.product-shell .b2b-dialog-editor .b2b-preview-stage,
+  html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-preview-stage {
+    height: min(28rem, 52vh) !important;
+    max-height: min(28rem, 52vh) !important;
+    min-height: 16rem !important;
+  }
+
+  html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-configurator__dimensions {
+    grid-template-columns: minmax(0, 5.75rem) minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 959px) {
+  html[data-theme="prenium"] body.product-shell .b2b-configurator-dialog .b2b-preview-stage {
+    max-height: min(22rem, 42vh);
+  }
+
+  html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-dialog-actions--validate {
+    flex-direction: column;
+  }
+
+  html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-dialog-actions--validate > .ui-btn-primary,
+  html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-dialog-actions--validate > .ui-btn-secondary,
+  html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-dialog-actions--validate > .ui-btn-danger,
+  html[data-theme="prenium"] body.product-shell .b2b-add-visual-validation .b2b-dialog-actions--validate > button {
+    flex: 1 1 auto;
     width: 100%;
   }
 }

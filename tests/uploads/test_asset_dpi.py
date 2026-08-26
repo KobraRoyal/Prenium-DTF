@@ -96,6 +96,27 @@ def test_extract_pdf_source_metrics_tracks_partial_embedded_display_size():
     assert metrics.uses_artboard_dimensions is False
 
 
+def test_extract_pdf_source_metrics_uses_artboard_for_multi_placement_gang_sheet():
+    """Deux poses du même PNG sur une planche : couverture totale ≥ 2/3 → artboard page."""
+    image_buffer = BytesIO()
+    Image.new("RGBA", (400, 500), (255, 0, 0, 255)).save(
+        image_buffer, format="PNG", dpi=(300, 300)
+    )
+    png_bytes = image_buffer.getvalue()
+    document = pymupdf.open()
+    # Page ~550×260 mm (gang sheet landscape)
+    page = document.new_page(width=1559.06, height=737.01)
+    page.insert_image(pymupdf.Rect(40, 30, 760, 700), stream=png_bytes)
+    page.insert_image(pymupdf.Rect(800, 30, 1520, 700), stream=png_bytes)
+    metrics = extract_pdf_source_metrics(document, page)
+    document.close()
+
+    assert metrics.uses_artboard_dimensions is True
+    assert metrics.dimension_basis == "page"
+    assert metrics.placement_effective_dpi is not None
+    assert metrics.artboard_width_mm == pytest.approx(1559.06 / 72 * 25.4, rel=0.01)
+
+
 def test_extract_pdf_artboard_size_mm_rejects_xmp_that_disagrees_with_mediabox():
     document = pymupdf.open()
     page = document.new_page(width=583, height=616)
