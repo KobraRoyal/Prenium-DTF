@@ -440,6 +440,7 @@ if (root) {
       try {
         const parsed = new URL(previewUrl, window.location.href);
         if (parsed.origin === window.location.origin || parsed.protocol === "blob:") {
+          // codeql[js/xss-through-dom] — same-origin / blob preview URLs from editor state only
           image.src = parsed.protocol === "blob:"
             ? parsed.href
             : `${parsed.pathname}${parsed.search}${parsed.hash}`;
