@@ -99,9 +99,7 @@ def test_extract_pdf_source_metrics_tracks_partial_embedded_display_size():
 def test_extract_pdf_source_metrics_uses_artboard_for_multi_placement_gang_sheet():
     """Deux poses du même PNG sur une planche : couverture totale ≥ 2/3 → artboard page."""
     image_buffer = BytesIO()
-    Image.new("RGBA", (400, 500), (255, 0, 0, 255)).save(
-        image_buffer, format="PNG", dpi=(300, 300)
-    )
+    Image.new("RGBA", (400, 500), (255, 0, 0, 255)).save(image_buffer, format="PNG", dpi=(300, 300))
     png_bytes = image_buffer.getvalue()
     document = pymupdf.open()
     # Page ~550×260 mm (gang sheet landscape)

@@ -688,7 +688,7 @@ class AssetService:
         }:
             return review
 
-        metadata = ((getattr(getattr(version, "analysis", None), "metadata", None)) or {})
+        metadata = (getattr(getattr(version, "analysis", None), "metadata", None)) or {}
         has_vector = bool(metadata.get("has_vector_artwork"))
         has_raster = bool(metadata.get("has_raster_artwork"))
         placement_dpi = metadata.get("placement_effective_dpi")

@@ -122,7 +122,7 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn("width: min(100%, 26.5rem)", login_css)
         self.assertIn("grid-template-columns: minmax(0, 1fr)", login_css)
         self.assertIn("product-login-password", login_css)
-        self.assertIn('grid-template-areas:', login_css)
+        self.assertIn("grid-template-areas:", login_css)
         self.assertNotIn("product-login-heading", login_css)
         self.assertIn("product-login-card__intro", login)
         self.assertIn("product-login-password", login)

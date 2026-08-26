@@ -944,7 +944,7 @@ def test_orphan_validate_query_does_not_open_modal():
     assert "data-dialog-auto-open" not in html
     assert "Je confirme" not in html
     assert "Analyse en cours" not in html
-    assert 'data-validate-missing-toast' in html
+    assert "data-validate-missing-toast" in html
     toast = json.loads(response.headers["X-Prenium-Toast"])
     assert toast["variant"] == "warning"
     assert "plus disponible" in toast["message"]
