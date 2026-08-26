@@ -15,7 +15,7 @@ def test_member_can_delete_draft_project_via_api():
     project = B2BOrderProject.objects.create(
         customer=customer,
         created_by=member,
-        project_number="GANG-SHEET-2026-999991",
+        project_number="CMD-2026-999991",
         name="Projet à supprimer",
     )
     detail_url = reverse(
@@ -32,7 +32,7 @@ def test_submitted_project_without_conversion_can_be_deleted():
     _user, customer, client = create_scope("submitted-delete@example.com")
     project = B2BOrderProject.objects.create(
         customer=customer,
-        project_number="GANG-SHEET-2026-999990",
+        project_number="CMD-2026-999990",
         name="Transmise",
         status=B2BOrderProject.Status.SUBMITTED,
     )
@@ -50,7 +50,7 @@ def test_under_review_project_cannot_be_deleted():
     _user, customer, client = create_scope("review-delete@example.com")
     project = B2BOrderProject.objects.create(
         customer=customer,
-        project_number="GANG-SHEET-2026-999989",
+        project_number="CMD-2026-999989",
         name="En contrôle",
         status=B2BOrderProject.Status.UNDER_REVIEW,
     )
@@ -70,7 +70,7 @@ def test_portal_delete_redirects_to_list_with_toast():
     _user, customer, client = create_scope("portal-delete@example.com")
     project = B2BOrderProject.objects.create(
         customer=customer,
-        project_number="GANG-SHEET-2026-999988",
+        project_number="CMD-2026-999988",
         name="Portail",
     )
     delete_url = reverse(
@@ -97,7 +97,7 @@ def test_delete_is_scoped_to_customer():
     project = B2BOrderProject.objects.create(
         customer=customer_a,
         created_by=owner_a,
-        project_number="GANG-SHEET-2026-999987",
+        project_number="CMD-2026-999987",
         name="Scope A",
     )
     detail_url = reverse(

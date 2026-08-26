@@ -42,7 +42,8 @@ def test_project_service_creates_unique_numbers_and_audit_without_order_or_produ
         data={"name": "Planche prête", "order_mode": B2BOrderProject.OrderMode.READY_GANG_SHEET},
         source="test",
     )
-    assert gang.project_number.startswith("GANG-SHEET-")
+    assert gang.project_number.startswith("CMD-")
+    assert gang.project_number != first.project_number
     assert first.converted_order is None
     assert not hasattr(first, "production_job")
     assert AuditLogEntry.objects.filter(

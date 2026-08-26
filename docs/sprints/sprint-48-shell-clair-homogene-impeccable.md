@@ -59,9 +59,53 @@ aux petites hauteurs.
 - [x] Aucun endpoint, permission, règle métier ou contrat HTMX modifié.
 - [x] Fermeture par icône SVG accessible et cibles tactiles de 44 px.
 - [x] Colonne latérale non scrollable à partir de 960 px ; aucun overflow horizontal attendu.
+- [x] Aperçu placé avant les champs et les actions sur mobile afin de préserver la séquence de contrôle.
 - [x] Build des bundles, 133 tests B2B/portail et 98 tests UI ciblés.
-- [ ] Recette authentifiée clavier + largeurs 375 / 768 / 1440 px.
+- [x] Recette authentifiée clavier + largeurs 375 / 768 / 1440 px.
 - [x] Détecteur Impeccable sans alerte et `graphify update .`.
+
+## Micro-lot — fiche commande transmise client (26 août 2026)
+
+La fiche de suivi conserve la surface claire actuelle mais rétablit une identité métier stable :
+le numéro `CMD-…` remplace le suffixe UUID, le fil d’Ariane HTMX garde le nom de la commande
+et les informations transmises ne répètent plus le titre. Les onglets restent tous visibles sur
+mobile et les fichiers utilisent une ligne plate plutôt qu’une carte imbriquée.
+
+- [x] Aucun endpoint, permission, modèle ou transition métier modifié.
+- [x] Référence, note et date demandée présentées depuis les données déjà scopées de la commande.
+- [x] Onglets utilisables au clavier et visibles sans overflow à 375 px.
+- [ ] Build, tests portail/UI et recette authentifiée 375 / 768 / 1440 px.
+- [ ] Détecteur Impeccable et `graphify update .`.
+
+## Micro-lot — références commande et numérotation unifiée (26 août 2026)
+
+Centralisation des règles d’affichage des références commande et unification du numéro métier
+`CMD-YYYY-NNNNNN` pour **tous** les modes (fichiers individuels, gang-sheet prête, réassort).
+
+### Affichage par surface
+
+| Surface | UUID court | N° CMD | Réf. client |
+|---------|:----------:|:------:|:-----------:|
+| Client | Non | Oui | Oui |
+| Staff / listes OPS | Oui | Oui | Oui |
+| Atelier | Oui | Oui | Oui |
+
+Helpers : `backend/apps/orders/references.py` (`order_business_number`, `order_uuid_short`,
+`order_client_reference`). Documentation complète :
+[`docs/architecture/ORDER_REFERENCE_DISPLAY.md`](../architecture/ORDER_REFERENCE_DISPLAY.md).
+
+### Numérotation gang-sheet → CMD
+
+- `numbering.py` : préfixe unique `CMD` ; séquence annuelle partagée.
+- Migration `0011_unify_project_number_cmd_prefix` : renommage rétroactif des projets
+  `ready_gang_sheet` encore en `GANG-SHEET-*`.
+- Checkout : note commande `Commande CMD-…` pour tous les modes.
+
+- [x] Helpers centralisés + templates listes / fiches client / staff / Atelier.
+- [x] Tests anti-régression (`test_references`, `test_client_order_presentation`, cohérence UI).
+- [x] Unification préfixe `CMD-` (code + migration + tests).
+- [x] Documentation architecture `ORDER_REFERENCE_DISPLAY.md`.
+- [ ] Commit + push sur branche PR #13.
 
 ## Liens
 

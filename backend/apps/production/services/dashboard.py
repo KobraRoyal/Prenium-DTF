@@ -9,8 +9,8 @@ from apps.billing.services.production_payment_gate import (
     order_awaits_client_payment,
     production_start_blocked_reason,
 )
-from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
+from apps.orders.references import order_business_number, order_client_reference, order_uuid_short
 from apps.production.models import ProductionJob
 from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 from apps.production.services.workflow import ProductionWorkflowService
@@ -154,7 +154,11 @@ class AtelierDashboardService:
 
         return {
             "order": order,
-            "order_reference": short_public_ref(order.public_id).upper(),
+            "order_uuid_short": order_uuid_short(order),
+            "order_business_number": order_business_number(order),
+            "order_client_label": order_client_reference(order),
+            # Compat listes / breadcrumbs : prioriser le n° métier, sinon UUID court.
+            "order_reference": order_business_number(order) or order_uuid_short(order).upper(),
             "of_number": production_job.manufacturing_order_number
             if production_job is not None
             else "OF à générer",

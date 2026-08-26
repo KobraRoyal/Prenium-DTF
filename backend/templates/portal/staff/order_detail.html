@@ -40,8 +40,28 @@
     </div>
     <dl class="staff-order-focus__facts">
       <div>
-        <dt>Commande</dt>
-        <dd><span class="staff-order-focus__ref">{{ staff_order_focus.order_reference }}</span></dd>
+        <dt>N° commande</dt>
+        <dd>
+          {% if staff_order_focus.order_business_number %}
+          <span class="staff-order-focus__ref">{{ staff_order_focus.order_business_number }}</span>
+          {% else %}
+          <span class="muted">—</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div>
+        <dt>UUID</dt>
+        <dd><code class="staff-order-focus__ref" title="{{ order.public_id }}">{{ staff_order_focus.order_uuid_short }}</code></dd>
+      </div>
+      <div>
+        <dt>Réf. client</dt>
+        <dd>
+          {% if staff_order_focus.order_client_label %}
+          <span>{{ staff_order_focus.order_client_label }}</span>
+          {% else %}
+          <span class="muted">—</span>
+          {% endif %}
+        </dd>
       </div>
       <div>
         <dt>Client</dt>

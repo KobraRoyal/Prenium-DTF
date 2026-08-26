@@ -7,12 +7,17 @@ from apps.b2b_order_projects.permissions import (
     customer_requires_gang_sheet_orders,
 )
 from apps.core.public_refs import short_public_ref
-from apps.orders.references import order_client_reference, project_client_reference
+from apps.orders.references import (
+    order_business_number,
+    order_client_reference,
+    order_uuid_short,
+    project_client_reference,
+)
 
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260826-modal-impeccable-v160"
+PORTAL_CSS_ASSET_V = "20260826-client-order-impeccable-v163"
 
 STATUS_LABELS = {
     "draft": "Brouillon",
@@ -199,6 +204,16 @@ def order_client_ref(order):
 
 
 @register.filter
+def order_business_ref(order):
+    return order_business_number(order)
+
+
+@register.filter
+def order_uuid_ref(order):
+    return order_uuid_short(order)
+
+
+@register.filter
 def project_client_ref(project):
     return project_client_reference(project)
 
@@ -224,10 +239,12 @@ def client_order_panel_label(panel_slug):
 @register.inclusion_tag("components/portal/client_refs.html")
 def client_order_refs(order, variant="row"):
     return {
-        "ids_value": short_public_ref(order.public_id),
+        "ids_label": "N° commande",
+        "ids_value": order_business_number(order),
+        "client_label": "Votre réf.",
         "client_value": order_client_reference(order),
         "variant": variant,
-        "mono_ids": True,
+        "mono_ids": False,
     }
 
 

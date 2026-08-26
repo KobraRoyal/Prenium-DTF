@@ -252,6 +252,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         detail = template_source("portal/client/order_detail.html")
         breadcrumb = template_source("components/portal/breadcrumbs/client_order_detail.html")
         product_css = static_source("css/components/product-shell.css")
+        portal_client_css = static_source("css/entries/portal-client.css")
         panels = "".join(
             template_source(path)
             for path in [
@@ -277,7 +278,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn(">Règlement<", detail)
         self.assertIn("Tarification", detail)
         self.assertIn("Informations transmises", detail)
-        self.assertIn("order_client_label|default:order_short_ref", detail)
+        self.assertIn("order_client_label|default:order_display_ref|default:\"Commande\"", detail)
+        self.assertIn("order_display_ref", detail)
+        self.assertNotIn("order_display_ref|default:order_short_ref", detail)
+        self.assertIn("order_requested_date", detail)
         self.assertNotIn('subtitle_prefix="Votre référence"', detail)
         self.assertNotIn("page-head__eyebrow", detail)
         self.assertIn("client-order-panel", panels)
@@ -314,6 +318,17 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("box-shadow: none !important", product_css)
         self.assertIn("min-height: 2.75rem", product_css)
         self.assertIn("overflow-x: auto", product_css)
+        order_detail_css = portal_client_css.split(
+            "v162 — Fiche commande transmise : identité stable, onglets visibles, "
+            "contenu sans cadres imbriqués."
+        )[-1]
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", order_detail_css)
+        self.assertIn(".product-mobile-file-card", order_detail_css)
+        self.assertIn("border-top: 1px solid var(--line) !important", order_detail_css)
+        self.assertIn(".b2b-support-color-badge.is-rainbow::before", order_detail_css)
+        self.assertNotIn('class="ui-mobile-order-card product-mobile-file-card"', panels)
+        self.assertIn("Recommander", panels)
+        self.assertIn("<th>Action</th>", panels)
 
     def test_product_views_do_not_reintroduce_dark_theme_text_on_light_panels(self) -> None:
         paths = [
@@ -604,6 +619,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         self.assertIn("settlement_badge", orders)
         self.assertIn('variant == "staff"', orders)
+        self.assertIn(">UUID<", orders)
+        self.assertIn("N° commande", orders)
+        self.assertIn("Réf. client", orders)
+        self.assertIn("order_business_ref", orders)
+        self.assertIn("order_uuid_ref", orders)
         self.assertIn("settlement_badge", billing)
         self.assertNotIn("settlement_badge", template_source("portal/staff/panels/production.html"))
 
@@ -1868,6 +1888,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("overflow: visible !important", modal_css)
         self.assertIn(".b2b-dialog-actions__danger", modal_css)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", modal_css)
+        self.assertIn("> .b2b-configurator__preview {\n    order: -1 !important;", modal_css)
+        self.assertIn("> .b2b-visual-card__details {\n    order: 0 !important;", modal_css)
         self.assertIn('placeholder="#HEX"', support_color)
         self.assertIn("Couleur support requise", preview_stage)
         self.assertIn("b2b-quality-review--compact", quality_review)

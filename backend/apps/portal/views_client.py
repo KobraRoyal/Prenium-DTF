@@ -17,9 +17,9 @@ from apps.b2b_order_projects.services import (
     ProjectDomainError,
 )
 from apps.core.public_refs import short_public_ref
-from apps.orders.references import order_client_reference
 from apps.orders.services.client_timeline import build_client_order_status_history
 from apps.portal import dashboard_focus
+from apps.portal.client_order_presentation import client_order_identity
 from apps.portal.views_common import (
     ClientOwnerRequiredMixin,
     ScopedCustomerMixin,
@@ -142,11 +142,16 @@ class ClientOrderContextMixin(ScopedCustomerMixin):
         return order
 
     def client_order_context(self, *, order, **extra):
+        identity = client_order_identity(order)
         context = {
             "customer": self.customer,
             "customer_membership": self.customer_membership,
             "order": order,
             "order_short_ref": short_public_ref(order.public_id),
+            "order_client_label": identity.label,
+            "order_display_ref": identity.reference,
+            "order_note_details": identity.note,
+            "order_requested_date": identity.requested_date,
             "badge_tone_for_status": badge_tone_for_status,
             "status_label": status_label,
         }
@@ -178,7 +183,6 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
                 awaits_client_payment=awaits_client_payment,
             )
             | {
-                "order_client_label": order_client_reference(order),
                 "order_status_banner": client_order_status_banner(
                     awaits_client_payment=awaits_client_payment,
                     query_params=request.GET,

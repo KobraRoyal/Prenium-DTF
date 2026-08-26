@@ -134,7 +134,7 @@ class ManufacturingOrderBatchService:
                 production_job__of_document_issued_at__isnull=True,
             )
             .exclude(production_job__status=ProductionJob.Status.COMPLETED)
-            .select_related("customer", "production_job")
+            .select_related("customer", "production_job", "source_b2b_order_project")
             .prefetch_related(
                 "items",
                 "uploads",

@@ -76,3 +76,16 @@ n'est introduit.
   après analyse de la version courante ;
 - OPS : `accounts.access_staff_portal` + `view_b2borderproject` ;
 - aucun prix ou statut arbitraire accepté en écriture client.
+
+## Numérotation projet
+
+Format unique pour tous les modes (`individual_designs`, `ready_gang_sheet`, `reorder`) :
+
+```text
+CMD-{année}-{séquence 6 chiffres}
+```
+
+Service : `B2BOrderProjectNumberService` (`services/numbering.py`). Séquence annuelle partagée.
+
+Voir [ORDER_REFERENCE_DISPLAY.md](ORDER_REFERENCE_DISPLAY.md) pour les règles d’affichage client /
+Atelier une fois le projet converti en `Order`.

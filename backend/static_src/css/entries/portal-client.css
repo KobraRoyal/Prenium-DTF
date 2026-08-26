@@ -262,6 +262,240 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   }
 }
 
+/* v162 — Fiche commande transmise : identité stable, onglets visibles, contenu sans cadres imbriqués. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-detail-identity {
+  gap: 1rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__note-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.6rem 2rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__note-body > p {
+  flex: 1 1 30rem;
+  max-width: 72ch;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__request {
+  display: grid;
+  flex: 0 1 auto;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__request > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__request dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__request dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .workflow-tab-rail--compact {
+  padding: 0.75rem 0 !important;
+  overflow: visible !important;
+  border-bottom: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .workflow-tab-group__chips--flat {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.35rem !important;
+  width: 100%;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .workflow-shell--compact .ui-tab-chip {
+  min-height: 2.75rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .workflow-shell--compact .ui-tab-chip:is(:hover, :focus-visible) {
+  border-color: color-mix(in srgb, var(--brand) 24%, var(--line)) !important;
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface)) !important;
+  color: var(--ink) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .workflow-shell--compact .ui-tab-chip:is([aria-selected="true"], .is-active) {
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--line)) !important;
+  background: color-mix(in srgb, var(--brand) 16%, var(--surface)) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-panel {
+  padding-top: 0.25rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-uploads-head {
+  margin: 0 0 0.75rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-panel--uploads .ui-table-shell {
+  padding: 0 !important;
+  overflow: visible;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-panel--uploads .ui-data-table thead th {
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 55%, var(--surface));
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-upload-thumb {
+  width: 4.25rem;
+  height: 4.25rem;
+  overflow: hidden;
+  border: 1px solid var(--line) !important;
+  border-radius: 0.65rem;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .b2b-support-color-badge.is-rainbow {
+  gap: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-transform: none;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .b2b-support-color-badge.is-rainbow::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  border-radius: 0.3rem;
+  background: linear-gradient(135deg, #ff3b5c, #ffc928 35%, #25b978 58%, #388cff 78%, #a83bc4);
+}
+
+@media (max-width: 959px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .product-mobile-file-card {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0;
+    padding: 1rem 0 0;
+    border: 0 !important;
+    border-top: 1px solid var(--line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-upload-mobile-head p {
+    font-size: 0.9rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (min-width: 480px) and (max-width: 959px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .product-mobile-file-card {
+    grid-template-columns: minmax(12rem, 1.35fr) minmax(14rem, 1fr) auto;
+    align-items: center;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .product-mobile-file-card > dl,
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .product-mobile-file-card > div:last-child {
+    margin-top: 0 !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .product-mobile-file-card > div:last-child {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 767px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__fact,
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__fact:first-child,
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__fact--pricing {
+    margin: 0 !important;
+    padding: 0.75rem !important;
+    border: 0 !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__fact:nth-child(-n + 2) {
+    padding-top: 0 !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__fact:nth-child(odd) {
+    padding-left: 0 !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__fact:nth-child(even) {
+    padding-right: 0 !important;
+    border-left: 1px solid var(--line) !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__fact:nth-child(n + 3) {
+    border-top: 1px solid var(--line) !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__facts dd {
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: auto;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-summary__note-body {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .workflow-tab-group__chips--flat {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    overflow: visible !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .workflow-tab-group__chips--flat .ui-tab-chip {
+    position: static !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .workflow-tab-group__chips--flat .ui-tab-chip:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .client-order-uploads-head .ui-btn {
+    width: 100%;
+  }
+}
+
 /* v140 — Rythme Operate partagé (listes / start / checkout / projet) : une seule source gap surface. */
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.portal-page--client:is(
   .client-order-project-detail,
@@ -1044,6 +1278,22 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-con
   }
 }
 
+@media (max-width: 767px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+    .b2b-add-visual-validation .b2b-configurator__workspace:not(.is-analysis-pending),
+    .b2b-dialog-editor:not(.is-analysis-pending)
+  ) > .b2b-configurator__preview {
+    order: -1 !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+    .b2b-add-visual-validation .b2b-configurator__workspace:not(.is-analysis-pending),
+    .b2b-dialog-editor:not(.is-analysis-pending)
+  ) > .b2b-visual-card__details {
+    order: 0 !important;
+  }
+}
+
 @media (max-width: 39.99rem) {
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-quality-overlays__actions .b2b-preview-zoom {
     margin-left: 0 !important;
@@ -1060,4 +1310,3 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-con
     grid-column: 1;
   }
 }
-

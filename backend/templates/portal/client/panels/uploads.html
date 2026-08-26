@@ -5,7 +5,7 @@
   <div class="client-order-uploads-head">
     <form method="post" action="{% url 'portal:client-order-reorder' customer_public_id=customer.public_id order_public_id=order.public_id %}">
       {% csrf_token %}
-      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Réassort</button>
+      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Recommander</button>
     </form>
   </div>
   {% endif %}
@@ -24,7 +24,7 @@
           <th>Qté</th>
           <th>Couleur</th>
           <th>Statut</th>
-          <th></th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -62,7 +62,7 @@
 
   <div class="grid gap-3 min-[960px]:hidden" aria-label="Visuels de la commande">
     {% for upload in uploads %}
-    <article class="ui-mobile-order-card product-mobile-file-card">
+    <article class="product-mobile-file-card">
       <div class="client-order-upload-mobile-head">
         <a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
           <img src="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">

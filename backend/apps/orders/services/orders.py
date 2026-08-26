@@ -46,7 +46,11 @@ class OrderService:
         )
 
     def list_staff_orders(self, *, include_cancelled: bool = False):
-        queryset = Order.objects.select_related("customer", "created_by").prefetch_related(
+        queryset = Order.objects.select_related(
+        "customer",
+        "created_by",
+        "source_b2b_order_project",
+    ).prefetch_related(
             "items",
             "items__service",
         )
@@ -56,7 +60,12 @@ class OrderService:
 
     def get_staff_order(self, order_public_id):
         return (
-            Order.objects.select_related("customer", "created_by", "cancelled_by")
+            Order.objects.select_related(
+                "customer",
+                "created_by",
+                "cancelled_by",
+                "source_b2b_order_project",
+            )
             .prefetch_related(
                 "items",
                 "items__service",

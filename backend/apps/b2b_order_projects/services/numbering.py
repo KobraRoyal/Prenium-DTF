@@ -3,16 +3,15 @@ from django.utils import timezone
 
 from apps.b2b_order_projects.models import B2BOrderProject, B2BOrderProjectNumberSequence
 
-PROJECT_NUMBER_PREFIX_GANG_SHEET = "GANG-SHEET"
-PROJECT_NUMBER_PREFIX_FILE_ORDER = "CMD"
-# Conservé pour compatibilité des imports/tests historiques.
-PROJECT_NUMBER_PREFIX = PROJECT_NUMBER_PREFIX_GANG_SHEET
+PROJECT_NUMBER_PREFIX = "CMD"
+# Alias historiques — séquence unique pour tous les modes (fichier, gang-sheet, réassort).
+PROJECT_NUMBER_PREFIX_FILE_ORDER = PROJECT_NUMBER_PREFIX
+PROJECT_NUMBER_PREFIX_GANG_SHEET = PROJECT_NUMBER_PREFIX
 
 
 def project_number_prefix_for_order_mode(order_mode: str) -> str:
-    if order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET:
-        return PROJECT_NUMBER_PREFIX_GANG_SHEET
-    return PROJECT_NUMBER_PREFIX_FILE_ORDER
+    """Retourne le préfixe métier unique, quel que soit le mode de commande."""
+    return PROJECT_NUMBER_PREFIX
 
 
 class B2BOrderProjectNumberService:

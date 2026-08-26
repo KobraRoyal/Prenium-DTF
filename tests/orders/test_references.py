@@ -1,9 +1,29 @@
 import pytest
 from apps.b2b_order_projects.models import B2BOrderProject
+from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer
 from apps.orders.models import Order
 from apps.orders.references import order_client_reference, project_client_reference
 from django.contrib.auth import get_user_model
+
+
+@pytest.mark.django_db
+def test_order_business_number_from_linked_project():
+    user = get_user_model().objects.create_user(email="biz@example.com", password="pass")
+    customer = Customer.objects.create(name="Biz")
+    order = Order.objects.create(customer=customer, created_by=user)
+    B2BOrderProject.objects.create(
+        customer=customer,
+        created_by=user,
+        project_number="CMD-2026-000104",
+        name="Collection été",
+        converted_order=order,
+        status=B2BOrderProject.Status.CONVERTED,
+    )
+    from apps.orders.references import order_business_number, order_uuid_short
+
+    assert order_business_number(order) == "CMD-2026-000104"
+    assert order_uuid_short(order) == short_public_ref(order.public_id)
 
 
 @pytest.mark.django_db
@@ -14,7 +34,7 @@ def test_order_client_reference_from_linked_project():
     B2BOrderProject.objects.create(
         customer=customer,
         created_by=user,
-        project_number="GANG-SHEET-2026-100001",
+        project_number="CMD-2026-100001",
         name="Collection été",
         converted_order=order,
         status=B2BOrderProject.Status.CONVERTED,

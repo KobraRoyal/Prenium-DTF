@@ -833,7 +833,7 @@ def test_portal_cross_tenant_project_is_not_found():
     project = B2BOrderProject.objects.create(
         customer=other,
         created_by=user,
-        project_number="GANG-SHEET-2026-999993",
+        project_number="CMD-2026-999993",
         name="Secret",
     )
     response = client.get(
@@ -872,7 +872,7 @@ def test_delete_confirmation_modal_is_rendered_on_project_list():
     _user, customer, client = portal_scope()
     project = B2BOrderProject.objects.create(
         customer=customer,
-        project_number="GANG-SHEET-2026-999986",
+        project_number="CMD-2026-999986",
         name="Commande test",
     )
     response = client.get(
@@ -899,7 +899,7 @@ def test_validation_poll_stops_when_item_missing():
     _user, customer, client = portal_scope()
     project = B2BOrderProject.objects.create(
         customer=customer,
-        project_number="GANG-SHEET-2026-999985",
+        project_number="CMD-2026-999985",
         name="Projet sans item",
         status=B2BOrderProject.Status.INCOMPLETE,
     )
@@ -927,7 +927,7 @@ def test_orphan_validate_query_does_not_open_modal():
     _user, customer, client = portal_scope()
     project = B2BOrderProject.objects.create(
         customer=customer,
-        project_number="GANG-SHEET-2026-999984",
+        project_number="CMD-2026-999984",
         name="Projet validate orphelin",
         status=B2BOrderProject.Status.INCOMPLETE,
     )

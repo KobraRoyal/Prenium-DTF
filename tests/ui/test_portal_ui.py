@@ -202,7 +202,7 @@ def test_client_dashboard_does_not_repeat_focused_project_in_list():
     B2BOrderProject.objects.create(
         customer=customer,
         created_by=user,
-        project_number="GANG-SHEET-2026-000084",
+        project_number="CMD-2026-000084",
         name="Planche unique",
         status=B2BOrderProject.Status.READY_TO_SUBMIT,
     )
@@ -211,7 +211,7 @@ def test_client_dashboard_does_not_repeat_focused_project_in_list():
 
     html = client.get(reverse("portal:client-dashboard")).content.decode()
 
-    assert html.count("GANG-SHEET-2026-000084") == 1
+    assert html.count("CMD-2026-000084") == 1
     assert 'data-testid="client-dashboard-focus"' in html
     assert "Reprendre" in html
     assert "Commandes à finaliser" not in html

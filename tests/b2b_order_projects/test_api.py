@@ -103,7 +103,7 @@ def test_cross_tenant_access_does_not_reveal_project():
     project = B2BOrderProject.objects.create(
         customer=owner_customer,
         created_by=user,
-        project_number="GANG-SHEET-2026-999991",
+        project_number="CMD-2026-999991",
         name="Secret",
     )
     _other_user, other_customer, other_client = create_scope("other@example.com", "Autre")
@@ -278,7 +278,7 @@ def test_project_list_is_paginated():
         B2BOrderProject.objects.create(
             customer=customer,
             created_by=user,
-            project_number=f"GANG-SHEET-2026-9998{index}",
+            project_number=f"CMD-2026-9998{index}",
             name=f"Projet {index}",
         )
     response = client.get(

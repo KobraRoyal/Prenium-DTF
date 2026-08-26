@@ -1,7 +1,7 @@
 {% load portal_tags %}
 <p class="page-head-lead">
   <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-  {% if order_client_label and order_client_label != order_short_ref %}
-  <span>{{ order_short_ref }}</span>
+  {% if order_client_label and order_display_ref %}
+  <span>{{ order_display_ref }}</span>
   {% endif %}
 </p>
