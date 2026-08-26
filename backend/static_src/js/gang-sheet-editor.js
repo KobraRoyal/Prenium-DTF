@@ -436,7 +436,17 @@ if (root) {
       node.setAttribute("aria-keyshortcuts", "R Delete Backspace Control+D Meta+D");
       node.tabIndex = selectedId === item.public_id || (selectedId === null && state.items[0] === item) ? 0 : -1;
       const image = document.createElement("img");
-      image.src = item.preview_url;
+      const previewUrl = typeof item.preview_url === "string" ? item.preview_url : "";
+      try {
+        const parsed = new URL(previewUrl, window.location.href);
+        if (parsed.origin === window.location.origin || parsed.protocol === "blob:") {
+          image.src = parsed.protocol === "blob:"
+            ? parsed.href
+            : `${parsed.pathname}${parsed.search}${parsed.hash}`;
+        }
+      } catch {
+        // Ignore invalid preview URLs from editor state.
+      }
       image.alt = "";
       image.draggable = false;
       image.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;

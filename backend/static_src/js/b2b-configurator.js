@@ -712,19 +712,48 @@ function notifyPreviewState(root, eventName, file, media = null) {
   );
 }
 
+/** Restrict image URL sinks to blob: / same-origin (CodeQL js/xss-through-dom). */
+function assignTrustedImageSrc(image, rawUrl) {
+  if (!(image instanceof HTMLImageElement) || typeof rawUrl !== "string" || !rawUrl) {
+    return false;
+  }
+  if (rawUrl.startsWith("blob:")) {
+    image.src = rawUrl;
+    return true;
+  }
+  try {
+    const parsed = new URL(rawUrl, window.location.href);
+    if (parsed.protocol === "blob:") {
+      image.src = parsed.href;
+      return true;
+    }
+    if (parsed.origin === window.location.origin) {
+      image.src = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 function setPreviewBackground(root, value, activeControl = null) {
   const stage = root.querySelector("[data-configurator-stage]");
   if (!(stage instanceof HTMLElement)) {
     return;
   }
   const checker = value === "checker";
+  const safeColor =
+    typeof value === "string" && value.startsWith("#") ? normalizeHexColor(value) : null;
   stage.classList.toggle("is-checker", checker);
-  if (checker) {
-    stage.style.removeProperty("background-color");
-    stage.style.setProperty("--b2b-preview-bg", "#ffffff");
+  if (checker || !safeColor) {
+    if (checker) {
+      stage.style.removeProperty("background-color");
+      stage.style.setProperty("--b2b-preview-bg", "#ffffff");
+    }
   } else {
-    stage.style.backgroundColor = value;
-    stage.style.setProperty("--b2b-preview-bg", value);
+    stage.style.backgroundColor = safeColor;
+    stage.style.setProperty("--b2b-preview-bg", safeColor);
   }
   root.querySelectorAll("[data-configurator-bg]").forEach((button) => {
     const active = button === activeControl;
@@ -732,11 +761,11 @@ function setPreviewBackground(root, value, activeControl = null) {
     button.setAttribute("aria-pressed", active ? "true" : "false");
   });
   const customControl = root.querySelector("[data-configurator-custom-bg-control]");
-  const isCustomActive = !checker && activeControl === null;
+  const isCustomActive = !checker && activeControl === null && Boolean(safeColor);
   if (customControl instanceof HTMLElement) {
     customControl.classList.toggle("is-active", isCustomActive);
-    if (!checker && typeof value === "string" && value.startsWith("#")) {
-      syncHexColorControlSwatch(customControl, value);
+    if (safeColor) {
+      syncHexColorControlSwatch(customControl, safeColor);
     }
   }
 }
@@ -1338,7 +1367,7 @@ async function previewSelectedFile(root, file) {
     setPlaceholder(placeholder, "Aperçu indisponible", file.name);
     notifyPreviewState(root, "b2b:preview-unavailable", file);
   };
-  preview.src = objectUrl;
+  assignTrustedImageSrc(preview, objectUrl);
 }
 
 function bindDimensionInputs(root) {
