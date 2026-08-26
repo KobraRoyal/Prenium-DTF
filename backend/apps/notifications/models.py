@@ -34,6 +34,7 @@ class EmailTemplate(BaseModel):
         ACCESS_REQUEST_REJECTED = "access_request_rejected", "Demande d'accès refusée"
         ACCOUNT_ACTIVATED = "account_activated", "Compte activé"
         CUSTOMER_MEMBER_INVITED = "customer_member_invited", "Collaborateur invité"
+        PASSWORD_RESET = "password_reset", "Réinitialisation du mot de passe"
         VOLUME_DISCOUNT_TIER_REACHED = (
             "volume_discount_tier_reached",
             "Palier de remise atteint",

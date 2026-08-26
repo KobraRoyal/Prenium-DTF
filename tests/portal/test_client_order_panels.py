@@ -74,6 +74,7 @@ def test_production_panel_shows_status_history():
         currency="EUR",
         subtotal_amount="10.00",
         total_amount="10.00",
+        customer_note="Collection été\nLivraison avant ouverture",
     )
     job = ProductionJob.objects.create(
         order=order,
@@ -107,10 +108,11 @@ def test_production_panel_shows_status_history():
     assert "Lancement atelier" in html
     assert 'hx-swap-oob="outerHTML:#client-order-breadcrumb"' in html
     assert "Avancement" in html
+    assert "Collection été" in html
 
 
 @pytest.mark.django_db
-def test_owner_shipping_panel_and_order_summary_show_tracking():
+def test_owner_shipping_panel_owns_the_primary_tracking_action():
     from apps.shipping.models import Shipment
     from django.utils import timezone
 
@@ -150,9 +152,8 @@ def test_owner_shipping_panel_and_order_summary_show_tracking():
     )
     detail_html = detail.content.decode()
     assert detail.status_code == 200
-    assert "Expédiée" in detail_html
-    assert "TRK-CLIENT-001" in detail_html
-    assert "Suivre le colis" in detail_html
+    assert "TRK-CLIENT-001" not in detail_html
+    assert "Suivre le colis" not in detail_html
 
     shipping = client.get(
         reverse(
@@ -261,5 +262,5 @@ def test_reorder_from_order_creates_project_with_visuals():
             kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
         )
     )
-    assert "Réassort" in panel.content.decode()
+    assert "Recommander" in panel.content.decode()
     assert "Visuels transmis" not in panel.content.decode()

@@ -13,7 +13,14 @@ from .views_access_management import (
     StaffAccessRequestListView,
     StaffAccessRequestRejectView,
 )
-from .views_auth import PortalLoginView, PortalLogoutView
+from .views_auth import (
+    PortalLoginView,
+    PortalLogoutView,
+    PortalPasswordResetCompleteView,
+    PortalPasswordResetConfirmView,
+    PortalPasswordResetDoneView,
+    PortalPasswordResetRequestView,
+)
 from .views_b2b_order_projects import (
     ClientOrderProjectAutosaveView,
     ClientOrderProjectCancelView,
@@ -87,6 +94,7 @@ from .views_staff_billing_statements import (
     StaffCustomerBillingStatementCreateView,
     StaffCustomerBillingStatementExportView,
 )
+from .views_staff_branding import StaffBrandSettingsView
 from .views_staff_customers import (
     StaffCustomerAccountUpdateView,
     StaffCustomerDetailView,
@@ -115,10 +123,14 @@ from .views_staff_notifications import (
     StaffEmailTemplateListView,
 )
 from .views_staff_operations import (
+    StaffAtelierOperationMachineAssignView,
+    StaffAtelierOperationMeterageView,
+    StaffAtelierOperationPrintConfirmView,
     StaffAtelierOperationShipmentCreateView,
     StaffAtelierOperationShipmentSyncView,
     StaffAtelierOperationsView,
     StaffAtelierOperationTransitionView,
+    StaffAtelierOperationUploadReviewView,
 )
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
@@ -142,6 +154,26 @@ app_name = "portal"
 urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
     path("logout/", PortalLogoutView.as_view(), name="logout"),
+    path(
+        "mot-de-passe-oublie/",
+        PortalPasswordResetRequestView.as_view(),
+        name="password-reset",
+    ),
+    path(
+        "mot-de-passe-oublie/envoye/",
+        PortalPasswordResetDoneView.as_view(),
+        name="password-reset-done",
+    ),
+    path(
+        "mot-de-passe-oublie/termine/",
+        PortalPasswordResetCompleteView.as_view(),
+        name="password-reset-complete",
+    ),
+    path(
+        "mot-de-passe-oublie/<uidb64>/<token>/",
+        PortalPasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
     path("account/profile/", PortalProfileView.as_view(), name="profile"),
     path(
         "account/profile/identity/",
@@ -421,6 +453,26 @@ urlpatterns = [
         name="staff-atelier-operation-transition",
     ),
     path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/review/",
+        StaffAtelierOperationUploadReviewView.as_view(),
+        name="staff-atelier-operation-upload-review",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/machine/",
+        StaffAtelierOperationMachineAssignView.as_view(),
+        name="staff-atelier-operation-machine-assign",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/print/",
+        StaffAtelierOperationPrintConfirmView.as_view(),
+        name="staff-atelier-operation-print-confirm",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/meterage/",
+        StaffAtelierOperationMeterageView.as_view(),
+        name="staff-atelier-operation-meterage",
+    ),
+    path(
         "staff/atelier/pilotage/<uuid:order_public_id>/shipment/create/",
         StaffAtelierOperationShipmentCreateView.as_view(),
         name="staff-atelier-operation-shipment-create",
@@ -509,6 +561,11 @@ urlpatterns = [
         "staff/settings/email-templates/",
         StaffEmailTemplateListView.as_view(),
         name="staff-email-template-list",
+    ),
+    path(
+        "staff/settings/branding/",
+        StaffBrandSettingsView.as_view(),
+        name="staff-brand-settings",
     ),
     path(
         "staff/settings/volume-discounts/",

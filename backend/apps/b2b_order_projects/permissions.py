@@ -45,14 +45,14 @@ def client_new_order_url(*, customer) -> str:
 
 
 class HasB2BOrderProjectFeatureAccess(BasePermission):
-    message = "La fonctionnalité de projets de commande B2B n'est pas activée."
+    message = "La fonctionnalité Gang Sheet n'est pas activée."
 
     def has_permission(self, request, view) -> bool:
         return b2b_order_projects_enabled_for_customer(getattr(view, "customer", None))
 
 
 class HasStaffB2BOrderProjectReadAccess(BasePermission):
-    message = "Accès OPS aux projets B2B refusé."
+    message = "Accès OPS aux Gang Sheets refusé."
 
     def has_permission(self, request, view) -> bool:
         return bool(

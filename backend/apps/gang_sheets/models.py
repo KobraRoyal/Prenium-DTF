@@ -498,6 +498,12 @@ class GangSheetItem(BaseModel):
     )
     rotation = models.PositiveSmallIntegerField(choices=Rotation.choices, default=Rotation.DEG_0)
     z_index = models.PositiveIntegerField(default=1)
+    layout_group_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Identifiant de groupe de composition (déplacement et centrage solidaires).",
+    )
 
     objects = GangSheetItemQuerySet.as_manager()
 
@@ -506,6 +512,10 @@ class GangSheetItem(BaseModel):
         indexes = [
             models.Index(fields=("customer", "sheet", "z_index")),
             models.Index(fields=("customer", "asset_version")),
+            models.Index(
+                fields=("sheet", "layout_group_id"),
+                name="gangitem_sheet_group_idx",
+            ),
         ]
         constraints = [
             models.CheckConstraint(condition=models.Q(width_mm__gt=0), name="gangitem_width_gt_0"),

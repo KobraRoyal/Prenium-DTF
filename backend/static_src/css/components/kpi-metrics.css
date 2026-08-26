@@ -1,0 +1,52 @@
+/* KPI dashboard — sélecteurs explicites pour neutraliser les resets [class*="-card"]. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics :is(
+  .ui-kpi-card__top,
+  .ui-kpi-card__value,
+  .ui-kpi-card__hint,
+  .ui-kpi-card__action,
+  .ui-kpi-card__top .muted
+) {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .client-order-panel--inspection :is(
+  .ui-kpi-card__top,
+  .ui-kpi-card__value,
+  .ui-kpi-card__hint,
+  .ui-kpi-card__action,
+  .ui-kpi-card__top .muted
+) {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-grid {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .client-order-panel--inspection .ui-kpi-grid {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-card {
+  display: grid !important;
+  gap: 0.45rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .client-order-panel--inspection .ui-kpi-card {
+  display: grid !important;
+  gap: 0.45rem !important;
+}

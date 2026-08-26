@@ -1,21 +1,21 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="uploads" %}
-<div class="panel client-order-panel client-order-panel--uploads" aria-label="Visuels">
+<div class="client-order-panel client-order-panel--uploads" aria-label="Visuels">
   {% if reorder_enabled and uploads %}
   <div class="client-order-uploads-head">
     <form method="post" action="{% url 'portal:client-order-reorder' customer_public_id=customer.public_id order_public_id=order.public_id %}">
       {% csrf_token %}
-      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Réassort</button>
+      <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Recommander</button>
     </form>
   </div>
   {% endif %}
 
   {% if request.GET.reorder_error %}
-  <div class="dui-alert dui-alert-error mb-4" role="alert">Impossible de préparer le réassort pour cette commande.</div>
+  <div class="alert alert--danger mb-4" role="alert">Impossible de préparer le réassort pour cette commande.</div>
   {% endif %}
 
   {% if uploads %}
-  <div class="hidden md:block ui-table-shell table-wrap ui-table-shell--comfortable">
+  <div class="hidden min-[960px]:block ui-table-shell table-wrap ui-table-shell--comfortable">
     <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
       <thead>
         <tr>
@@ -24,7 +24,7 @@
           <th>Qté</th>
           <th>Couleur</th>
           <th>Statut</th>
-          <th></th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -40,15 +40,7 @@
           </td>
           <td>{{ upload.quantity }}</td>
           <td>
-            {% if upload.support_color_is_multicolor %}
-            <span class="b2b-support-color-badge is-rainbow">Multicolore</span>
-            {% elif upload.support_color_hex %}
-            <span class="inline-flex items-center gap-2">
-              <span class="product-color-swatch h-4 w-4" style="background: {{ upload.support_color_hex }}" title="{{ upload.support_color_hex }}"></span>
-            </span>
-            {% else %}
-            <span class="muted">—</span>
-            {% endif %}
+            {% include "components/tables/upload_support_color.html" with upload=upload %}
           </td>
           <td>
             {% if upload.inspection %}
@@ -68,9 +60,9 @@
     </table>
   </div>
 
-  <div class="md:hidden space-y-3" aria-label="Visuels de la commande">
+  <div class="grid gap-3 min-[960px]:hidden" aria-label="Visuels de la commande">
     {% for upload in uploads %}
-    <article class="ui-mobile-order-card product-mobile-file-card">
+    <article class="product-mobile-file-card">
       <div class="client-order-upload-mobile-head">
         <a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
           <img src="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
@@ -94,19 +86,10 @@
             {% endif %}
           </dd>
         </div>
-        {% if upload.support_color_is_multicolor %}
+        {% if upload.support_color_is_multicolor or upload.support_color_hex %}
         <div class="col-span-2">
           <dt class="muted text-xs">Couleur</dt>
-          <dd><span class="b2b-support-color-badge is-rainbow">Multicolore</span></dd>
-        </div>
-        {% elif upload.support_color_hex %}
-        <div class="col-span-2">
-          <dt class="muted text-xs">Couleur</dt>
-          <dd>
-            <span class="inline-flex items-center gap-2">
-              <span class="product-color-swatch h-5 w-5" style="background: {{ upload.support_color_hex }}"></span>
-            </span>
-          </dd>
+          <dd>{% include "components/tables/upload_support_color.html" with upload=upload %}</dd>
         </div>
         {% endif %}
       </dl>
@@ -117,9 +100,6 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty-state">
-    <h3>Aucun fichier joint</h3>
-    <p>Cette commande ne contient aucun visuel à consulter.</p>
-  </div>
+  {% include "components/ui/empty_state.html" with title="Aucun fichier joint" message="Cette commande ne contient aucun visuel à consulter." %}
   {% endif %}
 </div>

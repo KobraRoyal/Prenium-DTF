@@ -1,6 +1,190 @@
 /* Studio : couche éditeur uniquement, après app.css puis portal.css. */
 @import "../components/gang-sheet-studio.css";
+@import "../components/studio-polish.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Unlayered: studio aligné shell clair (post gang-sheet-studio, prime sur portal.css). */
+html[data-theme="prenium"] body.product-shell--studio .gang-editor :where(
+  [class*="-card"]:not([class*="__"]),
+  [class*="-panel"]:not([class*="__"]),
+  [class*="-header"]:not([class*="__"]),
+  [class*="-workspace"]:not([class*="__"]),
+  [class*="-sidebar"]:not([class*="__"]),
+  [class*="-inspector"]:not([class*="__"]),
+  [class*="-toolbar"]:not([class*="__"]),
+  [class*="-launcher"]:not([class*="__"]),
+  [class*="-workflow"]:not([class*="__"]),
+  [class*="-status"]:not([class*="__"]),
+  [class*="-stage"]:not([class*="__"]),
+  [class*="-dialog"]:not([class*="__"]),
+  dialog
+) {
+  box-shadow: none !important;
+  border-color: var(--line) !important;
+  border-radius: var(--radius);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-crop-box [data-crop-handle] {
+  border-color: var(--line) !important;
+  background: var(--brand-soft) !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-workflow [data-workflow-marker],
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics .is-price {
+  background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;
+  color: var(--brand-strong) !important;
+  box-shadow: none !important;
+}
+
+/* Boutons Studio : hérite du shell portail, prime sur gang-sheet-studio (#dcff1a). */
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .ui-btn,
+  .btn,
+  .dui-btn,
+  .gang-tool-btn,
+  button.ui-btn
+) {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .ui-btn,
+  .btn,
+  .dui-btn,
+  button.ui-btn
+) {
+  filter: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .ui-btn-primary,
+  .ui-btn.ui-btn-primary,
+  .gang-editor__save
+) {
+  border: var(--ui-action-border-width) solid var(--ink) !important;
+  box-shadow: var(--ui-action-shadow) !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .ui-btn-primary,
+  .ui-btn.ui-btn-primary,
+  .gang-editor__save
+):is(:hover, :focus-visible) {
+  background: var(--brand-strong) !important;
+  border-color: var(--ink) !important;
+  color: var(--action-text) !important;
+  box-shadow: var(--ui-action-shadow-hover) !important;
+  transform: translate(-1px, -1px);
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(
+  .ui-btn-primary,
+  .ui-btn.ui-btn-primary,
+  .gang-editor__save
+):active {
+  background: var(--brand-strong) !important;
+  border-color: var(--ink) !important;
+  color: var(--action-text) !important;
+  box-shadow: var(--ui-action-shadow-active) !important;
+  transform: translate(1px, 1px);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__save.is-saved {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-modal-form__controls > .b2b-dialog-kicker {
+  margin: 0 0 0.25rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-spacing-grid .gang-spacing-input {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-spacing-grid .gang-spacing-input .ui-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-spacing-grid .gang-spacing-unit {
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-canvas__empty strong {
+  text-transform: none !important;
+  font-size: 0.95rem !important;
+  letter-spacing: -0.01em !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor[data-dirty="false"] [data-save-layout]:disabled {
+  border-color: color-mix(in srgb, var(--success) 36%, var(--line)) !important;
+  background: color-mix(in srgb, var(--success) 11%, var(--surface)) !important;
+  color: var(--success) !important;
+  opacity: 1 !important;
+}
+
+/* Anti-clip toolbar + toolbar hors scroll canvas. */
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__stage {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.55rem 0.75rem !important;
+  min-height: 3.35rem !important;
+  padding: 0.5rem 0.7rem !important;
+  overflow: visible !important;
+  flex-wrap: wrap !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-canvas-scroll {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-canvas {
+  position: relative !important;
+  overflow: visible !important;
+  user-select: none !important;
+  touch-action: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-canvas.is-marquee-selecting {
+  cursor: crosshair !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-sheet-canvas.is-marquee-selecting .gang-sheet-item {
+  pointer-events: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-group {
+  align-items: center !important;
+  min-height: 2.5rem !important;
+  border-radius: var(--radius) !important;
+  overflow: visible !important;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar :is(.gang-tool-btn, .ui-btn, .gang-editor__save) {
+  min-height: 2.4rem !important;
+  box-sizing: border-box !important;
+}

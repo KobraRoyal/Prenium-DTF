@@ -2,33 +2,27 @@
 
 {% block body_class %}landing-saas portal-shell product-shell product-shell--auth{% endblock %}
 
-{% block title %}Connexion portail - Prenium DTF{% endblock %}
-
-{% block extra_head %}
-<meta name="color-scheme" content="light">
-{% endblock %}
+{% block title %}Connexion portail — Prenium DTF{% endblock %}
 
 {% block content %}
 {% include "components/nav/auth_header.html" %}
 
 <main class="app-main app-content landing-saas-main ui-shell-main product-layout" id="main-content">
   <section class="product-login-shell" aria-labelledby="login-heading">
-    <div class="product-login-heading">
-      <p class="product-eyebrow">Votre espace Prenium</p>
-      <h1 id="login-heading">Connexion</h1>
-      <p>Retrouvez vos commandes, vos fichiers et vos documents dans un espace unique.</p>
-    </div>
-
     <div class="product-auth-card product-login-card">
+      <header class="product-login-card__intro">
+        <h1 id="login-heading">Connexion</h1>
+        <p>Retrouvez vos commandes, vos fichiers et vos documents dans un espace unique.</p>
+      </header>
       {% if form.errors %}
-      <div class="dui-alert dui-alert-error mb-4 border border-error/35 bg-error/15 text-error-content" role="alert">
+      <div class="alert alert--danger" role="alert">
         <span class="text-sm leading-snug">Email ou mot de passe incorrect. Vérifiez vos informations puis réessayez.</span>
       </div>
       {% endif %}
-      <form method="post" class="flex flex-col gap-5 items-stretch" data-submit-loading>
+      <form method="post" class="ui-form-stack" data-submit-loading>
         {% csrf_token %}
-        <div class="dui-form-control w-full">
-          <label class="product-form-label" for="id_username">Email professionnel</label>
+        <div class="ui-field-group">
+          <label class="ui-label" for="id_username">Email professionnel</label>
           <input
             id="id_username"
             name="username"
@@ -36,12 +30,12 @@
             autocomplete="email"
             required
             autofocus
-            placeholder="Email — vous@entreprise.fr"
-            class="dui-input dui-input-bordered w-full checkout-dui-input"
+            placeholder="vous@entreprise.fr"
+            class="ui-input"
           />
         </div>
-        <div class="dui-form-control w-full">
-          <label class="product-form-label" for="id_password">Mot de passe</label>
+        <div class="ui-field-group product-login-password">
+          <label class="ui-label" for="id_password">Mot de passe</label>
           <input
             id="id_password"
             name="password"
@@ -49,15 +43,19 @@
             autocomplete="current-password"
             required
             placeholder="Mot de passe"
-            class="dui-input dui-input-bordered w-full checkout-dui-input"
+            class="ui-input"
           />
+          <a class="ui-link product-login-forgot" href="{% url 'portal:password-reset' %}">Mot de passe oublié ?</a>
         </div>
         {% if next %}
         <input type="hidden" name="next" value="{{ next }}">
         {% endif %}
-        {% include "components/forms/form_actions.html" with primary_label="Se connecter" primary_class_full="ui-btn ui-btn-primary ui-btn-wide ui-btn-block max-w-xs mx-auto" form_actions_class="justify-center" %}
+        {% include "components/forms/form_actions.html" with primary_label="Se connecter" primary_class_full="ui-btn ui-btn-primary ui-btn-block" %}
       </form>
-      <p class="product-login-access">Première visite ? <a class="ui-link" href="{% url 'prospects:step1' %}">Demander un accès professionnel</a></p>
+      <footer class="product-login-footer">
+        <p class="product-login-access">Première visite ? <a class="ui-link" href="{% url 'prospects:step1' %}">Demander un accès professionnel</a></p>
+        {% include "portal/partials/auth_support.html" %}
+      </footer>
     </div>
   </section>
 </main>

@@ -312,6 +312,34 @@ def send_account_activated_email(*, invitation) -> None:
     )
 
 
+def send_password_reset_email(*, user, uidb64: str, token: str) -> None:
+    from apps.accounts.services.password_reset import password_reset_service
+
+    first_name = (user.first_name or "").strip()
+    context = {
+        "site.name": "Prenium DTF",
+        "user.email": user.email,
+        "user.first_name": first_name,
+        "action.url": _absolute_url(password_reset_service.reset_path(uidb64=uidb64, token=token)),
+    }
+    _send_context_email(
+        event=EmailTemplate.Event.PASSWORD_RESET,
+        audience=EmailTemplate.Audience.CLIENT,
+        recipients=[user.email],
+        context=context,
+    )
+
+
+def schedule_password_reset_email(*, user_public_id, uidb64: str, token: str) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_password_reset_email_task
+
+    transaction.on_commit(
+        lambda: send_password_reset_email_task.delay(str(user_public_id), uidb64, token)
+    )
+
+
 def schedule_access_request_verification_email(*, profile_public_id) -> None:
     from django.db import transaction
 

@@ -237,6 +237,48 @@ def test_assigning_same_machine_is_idempotent():
 
 
 @pytest.mark.django_db
+def test_assign_sole_active_machine_when_unassigned():
+    manager = create_user(
+        "fleet-sole-admin@example.com",
+        permissions=("manage_productionmachine",),
+    )
+    operator = create_user(
+        "fleet-sole-operator@example.com",
+        permissions=(
+            "view_order",
+            "view_productionjob",
+            "assign_productionmachine",
+        ),
+    )
+    order = create_submitted_order(actor=operator)
+    machine = create_machine(actor=manager)
+    create_machine(actor=manager, code="DTF-02", name="Backup")
+    service = ProductionMachineAssignmentService()
+
+    job, assignment, changed = service.assign_sole_active_if_unassigned(
+        order_public_id=order.public_id,
+        actor=operator,
+        source="test",
+    )
+    assert changed is False
+    assert assignment is None
+    assert job.assigned_machine_id is None
+
+    machine.status = ProductionMachine.Status.RETIRED
+    machine.save(update_fields=["status", "updated_at"])
+    remaining = ProductionMachine.objects.get(code="DTF-02")
+    job, assignment, changed = service.assign_sole_active_if_unassigned(
+        order_public_id=order.public_id,
+        actor=operator,
+        source="test",
+    )
+    assert changed is True
+    assert assignment.machine_id == remaining.pk
+    job.refresh_from_db()
+    assert job.assigned_machine_id == remaining.pk
+
+
+@pytest.mark.django_db
 def test_inactive_machine_assignment_is_rejected_and_audited():
     manager = create_user(
         "fleet-inactive-admin@example.com",

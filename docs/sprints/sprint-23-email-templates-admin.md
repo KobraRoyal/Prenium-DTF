@@ -49,6 +49,9 @@ Tags autorisés :
 - `{{ upload.filename }}`
 - `{{ review.reason }}`
 - `{{ review.comment }}`
+- `{{ user.email }}`
+- `{{ user.first_name }}`
+- `{{ action.url }}`
 
 Les instructions Django, commentaires de template, tags inconnus, tags mal formés et retours à la ligne dans l’objet sont refusés.
 

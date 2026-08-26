@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -245,6 +247,11 @@ class ProductionWorkflowService:
             for order_upload in order.uploads.all().order_by("sort_order", "created_at")
         ]
         order_created_at = timezone.localtime(order.created_at)
+        shipping_label = self._shipping_method_label(order=order)
+        requested_date = self._requested_delivery_date(order=order)
+        requested_date_label = (
+            date_format(requested_date, "d/m/Y") if requested_date is not None else ""
+        )
 
         return {
             "document_type": "manufacturing_order_v1",
@@ -264,6 +271,10 @@ class ProductionWorkflowService:
                 "subtotal_amount": f"{order.subtotal_amount:.2f}",
                 "total_amount": f"{order.total_amount:.2f}",
                 "customer_note": order.customer_note,
+                "shipping_method_code": str(order.shipping_method_code or ""),
+                "shipping_method_name": shipping_label,
+                "requested_date": requested_date.isoformat() if requested_date else None,
+                "requested_date_label": requested_date_label,
                 "created_at": order.created_at.isoformat(),
                 "created_at_label": date_format(order_created_at, "d/m/Y H:i"),
             },
@@ -292,6 +303,28 @@ class ProductionWorkflowService:
                 for transition in production_job.transitions.all()
             ],
         }
+
+    def _shipping_method_label(self, *, order: Order) -> str:
+        name = str(getattr(order, "shipping_method_name", "") or "").strip()
+        if name:
+            return name
+        code = str(getattr(order, "shipping_method_code", "") or "").strip()
+        return code or "—"
+
+    def _requested_delivery_date(self, *, order: Order):
+        project = getattr(order, "source_b2b_order_project", None)
+        if project is not None and getattr(project, "requested_date", None):
+            return project.requested_date
+        note = str(getattr(order, "customer_note", "") or "")
+        for line in note.splitlines():
+            cleaned = line.strip()
+            if cleaned.lower().startswith("date souhaitée"):
+                raw = cleaned.split(":", 1)[-1].strip()
+                try:
+                    return date.fromisoformat(raw)
+                except ValueError:
+                    return None
+        return None
 
     def build_scan_payload(self, *, production_job: ProductionJob) -> dict[str, object]:
         return {

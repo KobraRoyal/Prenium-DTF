@@ -1,186 +1,29 @@
 {% extends "portal/layout.html" %}
-{% load ui_tags %}
+{% load ui_tags static portal_tags %}
 
-{% block title %}File Atelier - Prenium DTF{% endblock %}
+{% block title %}Tableau de bord — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<section class="atelier-dashboard-head">
-  {% include "components/portal/page_head.html" with title="File Atelier" subtitle="Traitez la prochaine commande utile et imprimez uniquement les OF validés." %}
-</section>
+<div class="portal-page portal-page--staff atelier-dashboard">
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_atelier_home.html" head_labelledby="staff-dashboard-title" title="Tableau de bord" subtitle="Tour de contrôle Atelier : imprimez les OF non émis, puis contrôlez et produisez dans le pilotage." %}
 
 {% if batch_error %}
-<div class="alert alert--danger" role="alert">
+<div class="alert alert--danger mb-4" role="alert">
   <p><strong>Impression impossible.</strong> {{ batch_error }}</p>
 </div>
 {% endif %}
 
 {% if can_read_worklist %}
-<div class="atelier-dashboard-metrics">
-{% ui_kpi_grid items=kpi_rows %}
-</div>
-
-{% if worklist_rows %}
-<aside class="atelier-next-action" aria-labelledby="atelier-next-action-title">
-  <div>
-    <p id="atelier-next-action-title">Prochain geste</p>
-    <strong>{{ worklist_rows.0.next_action }} la commande #{{ worklist_rows.0.order_reference }}</strong>
-    <span>{{ worklist_rows.0.order.customer.name }} · {{ worklist_rows.0.review_label }}</span>
-  </div>
-  {% if worklist_rows.0.next_via_operations %}
-  <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-atelier-operations' %}?q={{ worklist_rows.0.of_number|urlencode }}">{{ worklist_rows.0.next_action }}</a>
-  {% else %}
-  <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-order-detail' order_public_id=worklist_rows.0.order.public_id %}?panel={{ worklist_rows.0.next_panel }}">{{ worklist_rows.0.next_action }}</a>
-  {% endif %}
-</aside>
-{% endif %}
-
-<form
-  class="atelier-worklist"
-  method="post"
-  action="{% url 'portal:staff-manufacturing-order-batch-pdf' %}"
-  x-data="{ selected: [] }"
->
-  {% csrf_token %}
-  <header class="atelier-worklist__toolbar">
-    <div>
-      <h2>Commandes Atelier</h2>
-      <p>Filtrez la file, contrôlez les visuels puis imprimez les OF validés.</p>
-    </div>
-    <div class="atelier-worklist__batch-actions">
-      <button
-        class="ui-btn ui-btn-primary"
-        type="submit"
-        name="batch_mode"
-        value="selected"
-        x-bind:disabled="selected.length === 0"
-      >
-        <span x-show="selected.length === 0">Imprimer la sélection</span>
-        <span x-show="selected.length > 0" x-text="`Imprimer ${selected.length} OF`"></span>
-      </button>
-      <details class="atelier-worklist__batch-more">
-        <summary class="ui-btn ui-btn-secondary">Autres impressions</summary>
-        <div>
-          <button
-            class="ui-btn ui-btn-ghost"
-            type="button"
-            {% if not printable_count %}disabled{% endif %}
-            @click="selected = Array.from($el.closest('form').querySelectorAll('input[name=order_public_ids]:not(:disabled)')).map((input) => input.value)"
-          >Sélectionner tous les OF imprimables</button>
-          <button
-            class="ui-btn ui-btn-secondary"
-            type="submit"
-            name="batch_mode"
-            value="latest_ready"
-            {% if not ready_to_print_count %}disabled{% endif %}
-          >Imprimer les 5 derniers OF prêts</button>
-        </div>
-      </details>
-    </div>
-  </header>
-
-  <nav class="atelier-worklist__tabs" aria-label="Filtrer la file Atelier">
-    {% for tab in worklist_tabs %}
-    <a
-      class="atelier-worklist__tab{% if tab.is_active %} is-active{% endif %}"
-      href="{% url 'portal:staff-dashboard' %}?queue={{ tab.key }}"
-      {% if tab.is_active %}aria-current="page"{% endif %}
-    >
-      <span>{{ tab.label }}</span>
-      <strong>{{ tab.count }}</strong>
-    </a>
-    {% endfor %}
-  </nav>
-
-  {% if worklist_rows %}
-  <div class="atelier-worklist__legend" aria-hidden="true">
-    <span></span>
-    <span>Réception / références</span>
-    <span>Client</span>
-    <span>Validation fichiers</span>
-    <span>Production</span>
-    <span>Action</span>
-  </div>
-  <ol class="atelier-order-list" aria-label="Commandes de la file sélectionnée">
-    {% for row in worklist_rows %}
-    <li class="atelier-order-row {% if row.ready_to_print %}is-ready{% elif row.review_status == 'changes_requested' or row.review_status == 'missing_files' %}has-issue{% endif %}">
-      <div class="atelier-order-row__select">
-        <label>
-          <span class="sr-only">Sélectionner l’OF {{ row.of_number }}</span>
-          <input
-            type="checkbox"
-            name="order_public_ids"
-            value="{{ row.order.public_id }}"
-            x-model="selected"
-            {% if not row.print_eligible %}disabled aria-describedby="of-print-hint-{{ row.order.public_id }}"{% endif %}
-          >
-        </label>
-        {% if not row.print_eligible %}
-        <p class="atelier-order-row__select-hint" id="of-print-hint-{{ row.order.public_id }}">Fichiers non approuvés</p>
-        {% endif %}
-      </div>
-
-      <div class="atelier-order-row__identity">
-        <p class="atelier-order-row__mobile-label">Réception / références</p>
-        <time datetime="{{ row.order.created_at|date:'c' }}" title="{{ row.order.created_at|date:'d/m/Y H:i' }}">
-          Il y a {{ row.order.created_at|timesince }}
-        </time>
-        <strong>Commande #{{ row.order_reference }}</strong>
-        <code>{{ row.of_number }}</code>
-      </div>
-
-      <div class="atelier-order-row__customer">
-        <p class="atelier-order-row__mobile-label">Client</p>
-        <strong>{{ row.order.customer.name }}</strong>
-      </div>
-
-      <div class="atelier-order-row__review">
-        <p class="atelier-order-row__mobile-label">Validation fichiers</p>
-        <span class="badge {{ row.review_tone }}">{{ row.review_label }}</span>
-        {% if row.approved_count and row.approved_count < row.upload_count %}
-        <small>{{ row.approved_count }}/{{ row.upload_count }} fichier(s) approuvé(s)</small>
-        {% endif %}
-      </div>
-
-      <div class="atelier-order-row__production">
-        <p class="atelier-order-row__mobile-label">Production</p>
-        <strong>{{ row.production_label }}</strong>
-        <span class="atelier-machine-signal{% if row.machine_missing %} is-missing{% endif %}">{% if row.assigned_machine %}<code>{{ row.assigned_machine.code }}</code> {{ row.assigned_machine.name }}{% else %}Machine non attribuée{% endif %}</span>
-        {% if row.ready_to_print %}<small class="atelier-ready-signal">OF prêt à imprimer</small>{% endif %}
-      </div>
-
-      <div class="atelier-order-row__action">
-        {% if row.next_via_operations %}
-        <a
-          class="ui-btn ui-btn-secondary"
-          href="{% url 'portal:staff-atelier-operations' %}?q={{ row.of_number|urlencode }}"
-        >{{ row.next_action }}</a>
-        {% else %}
-        <a
-          class="ui-btn ui-btn-secondary"
-          href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel={{ row.next_panel }}"
-        >{{ row.next_action }}</a>
-        {% endif %}
-      </div>
-    </li>
-    {% endfor %}
-  </ol>
-  {% else %}
-  <div class="atelier-worklist__empty">
-    {% if active_worklist_tab == "to_review" %}
-      {% include "components/ui/empty_state.html" with title="Aucun contrôle en attente" message="Tous les visuels reçus ont été traités." %}
-    {% elif active_worklist_tab == "ready" %}
-      {% include "components/ui/empty_state.html" with title="Aucun OF prêt" message="Les OF apparaîtront ici après validation de tous leurs visuels." %}
-    {% elif active_worklist_tab == "production" %}
-      {% include "components/ui/empty_state.html" with title="Aucune production en cours" message="Lancez un OF validé pour le retrouver dans cette file." %}
-    {% else %}
-      {% include "components/ui/empty_state.html" with title="Aucune commande reçue" message="Les nouvelles commandes soumises apparaîtront ici automatiquement." %}
-    {% endif %}
-  </div>
-  {% endif %}
-</form>
+{% include "portal/staff/partials/dashboard_worklist_panel.html" %}
 {% else %}
-<section class="card">
-  {% include "components/ui/empty_state.html" with title="File Atelier indisponible" message="Les permissions Commandes et Production sont nécessaires pour afficher cette file." %}
+<section class="portal-page-surface ui-list-section atelier-dashboard-surface">
+  {% include "components/ui/empty_state.html" with title="Tableau de bord indisponible" message="Les permissions Commandes et Production sont nécessaires pour afficher cette vue." %}
 </section>
 {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% portal_css_asset_v as asset_v %}
+<script type="module" src="{% static 'js/atelier-dashboard-batch.js' %}?v={{ asset_v }}"></script>
 {% endblock %}

@@ -3,9 +3,9 @@ import "./htmx/feedback.js?v=20260710b";
 import "./landing-motion.js?v=20260710b";
 import "./product-shell.js?v=20260721g";
 import "./product-date-picker.js?v=20260712a";
-import "./b2b-configurator.js?v=20260812-gang-upload-limit";
+import "./b2b-configurator.js?v=20260826-modal-impeccable-v159";
 import "./email-template-editor.js?v=20260813-email-workbench";
-import "./gang-sheet-editor.js?v=20260726-create-order-enable";
+import "./gang-sheet-editor.js?v=20260826-studio-chrome-v3";
 
 window.preniumToast = function (message, variant = "info") {
   window.dispatchEvent(

@@ -1,10 +1,10 @@
 <div class="client-entity-refs client-entity-refs--{{ variant|default:'row' }}" aria-label="Références commande">
   <div class="client-entity-refs__item">
-    <span class="client-entity-refs__label">{{ ids_label|default:"N° IDS" }}</span>
+    <span class="client-entity-refs__label">{{ ids_label|default:"N° commande" }}</span>
     {% if mono_ids %}
-    <code class="client-entity-refs__value client-entity-refs__value--mono">{{ ids_value }}</code>
+    <code class="client-entity-refs__value client-entity-refs__value--mono">{% if ids_value %}{{ ids_value }}{% else %}<span class="muted">—</span>{% endif %}</code>
     {% else %}
-    <span class="client-entity-refs__value client-entity-refs__value--mono">{{ ids_value }}</span>
+    <span class="client-entity-refs__value client-entity-refs__value--mono">{% if ids_value %}{{ ids_value }}{% else %}<span class="muted">—</span>{% endif %}</span>
     {% endif %}
   </div>
   <div class="client-entity-refs__item">

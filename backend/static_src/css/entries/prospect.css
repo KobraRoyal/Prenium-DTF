@@ -1,0 +1,156 @@
+/* Tunnel prospect : parcours d'accès (chargé avec portal-core.css). */
+@import "../components/prospect-journey.css";
+
+/* Unlayered: tunnel prospect aligné sur le shell clair (post prospect-journey/tunnel). */
+body.prospect-journey-page,
+body.prospect-tunnel-page {
+  --journey-ink: var(--ink);
+  --journey-paper: var(--bg);
+  --journey-surface: var(--surface);
+  --journey-muted: var(--muted);
+  --journey-soft: var(--muted-soft);
+  --journey-line: var(--line);
+  --journey-lime: var(--brand-soft);
+  --journey-accent: var(--brand);
+  --journey-error: var(--danger);
+  background-color: var(--bg);
+  background-image: none;
+  color: var(--ink);
+}
+
+body.prospect-journey-page .prospect-journey__frame {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+body.prospect-journey-page .prospect-journey__rail {
+  border-right: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--ink);
+}
+
+body.prospect-journey-page .prospect-journey__rail-inner {
+  color: var(--ink);
+}
+
+body.prospect-journey-page .prospect-shell__eyebrow {
+  border: 1px solid var(--line);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+body.prospect-journey-page .prospect-journey__progress-number strong {
+  color: var(--brand-strong);
+}
+
+body.prospect-journey-page .prospect-tunnel__track-fill {
+  background: var(--brand);
+}
+
+body.prospect-journey-page :is(
+  .prospect-panel,
+  .prospect-summary,
+  .prospect-summary--premium,
+  .prospect-success-card,
+  .prospect-consent-card,
+  .prospect-project-goal__option,
+  .prospect-step1__choice,
+  .prospect-form__section-index,
+  .prospect-summary__check,
+  .prospect-success-card__icon
+) {
+  border-color: var(--line) !important;
+  box-shadow: none !important;
+}
+
+body.prospect-journey-page :is(
+  .prospect-form__section-index,
+  .prospect-summary__check,
+  .prospect-success-card__icon
+) {
+  border: 1px solid var(--line);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+body.prospect-journey-page :is(
+  .prospect-project-goal__option.is-selected,
+  .prospect-step1__choice.is-selected,
+  .prospect-consent-card:has(input:checked)
+) {
+  border-color: var(--brand) !important;
+  background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;
+  box-shadow: none !important;
+}
+
+body.prospect-journey-page :is(
+  .prospect-form__btn-primary,
+  .prospect-form__btn-secondary,
+  .ui-btn.prospect-form__btn-primary,
+  .ui-btn.prospect-form__btn-secondary
+) {
+  box-shadow: none !important;
+}
+
+body.prospect-journey-page :is(
+  .prospect-panel select.ui-input.product-field-input:focus,
+  .prospect-panel textarea.ui-input.product-field-input:focus,
+  .prospect-panel input.ui-input.product-field-input:focus
+) {
+  border-color: var(--line);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--brand) 32%, transparent));
+}
+
+body.prospect-journey-page .prospect-panel :is(.product-field-input, .ui-input.product-field-input),
+body.prospect-tunnel-page .prospect-panel :is(.product-field-input, .ui-input.product-field-input) {
+  min-height: 3.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: none !important;
+}
+
+body.prospect-journey-page .prospect-panel textarea.product-field-input {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+
+body.prospect-journey-page .prospect-panel :is(.product-field-input)::placeholder,
+body.prospect-tunnel-page .prospect-panel :is(.product-field-input)::placeholder {
+  color: var(--muted-soft);
+}
+
+body.prospect-journey-page .prospect-panel :is(.product-field-input):focus,
+body.prospect-tunnel-page .prospect-panel :is(.product-field-input):focus {
+  outline: none;
+  border-color: var(--line);
+  box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--brand) 32%, transparent));
+}
+
+body.prospect-tunnel-page :is(
+  .prospect-summary--premium,
+  .prospect-success-card,
+  .prospect-form__section-index,
+  .prospect-summary__check,
+  .prospect-success-card__icon,
+  .prospect-consent-card
+) {
+  border-color: var(--line) !important;
+  box-shadow: none !important;
+  color: var(--ink);
+}
+
+body.prospect-tunnel-page :is(
+  .prospect-form__section-index,
+  .prospect-summary__check,
+  .prospect-success-card__icon
+) {
+  border: 1px solid var(--line);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}

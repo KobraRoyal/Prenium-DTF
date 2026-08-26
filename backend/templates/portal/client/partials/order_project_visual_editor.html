@@ -3,7 +3,7 @@
   <div class="b2b-configurator__preview">
     {% if item.asset and item.asset.current_version %}
     {% with version=item.asset.current_version %}
-    {% include "portal/client/partials/order_project_preview_stage.html" %}
+    {% include "portal/client/partials/order_project_preview_stage.html" with validation_chrome=True %}
     {% endwith %}
     {% else %}
     <div class="b2b-preview-stage is-checker" data-configurator-stage>
@@ -37,8 +37,8 @@
       {% csrf_token %}
       {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Exemplaires de planche" %}
       {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
-      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié le fichier HD, les détails fins, les semi-transparences et la couleur du support.</span></label>
-      <div class="b2b-dialog-actions">
+      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>Je confirme le contrôle HD (détails, dégradés, support).</span></label>
+      <div class="b2b-dialog-actions b2b-dialog-actions--editor">
         <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer le support{% else %}Valider pour commander{% endif %}</button>
       </div>
     </form>
@@ -61,11 +61,11 @@
       {% include "portal/client/partials/order_project_rotation_hidden.html" %}
       {% include "portal/client/partials/order_project_validation_dimensions_row.html" with quantity=item.quantity width_mm=item.width_mm height_mm=item.height_mm %}
       {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
-      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié les dimensions, la résolution, les détails fins, les semi-transparences et la couleur support.</span></label>
-      <div class="b2b-dialog-actions">
-        <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer{% else %}Valider ce visuel{% endif %}</button>
+      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>Je confirme le contrôle qualité.</span></label>
+      <div class="b2b-dialog-actions b2b-dialog-actions--editor">
+        <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer{% else %}Valider{% endif %}</button>
         <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-project-item-asset-download' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>
-        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True dialog_prefix="editor-" %}
+        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True dialog_prefix="editor-" button_class="ui-btn ui-btn-ghost b2b-dialog-actions__danger" %}
       </div>
     </form>
     {% else %}
@@ -87,7 +87,10 @@
     {% else %}
     <form class="b2b-configurator__controls" method="post" enctype="multipart/form-data" hx-encoding="multipart/form-data" hx-post="{% url 'portal:client-order-project-item-asset' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='attach' %}" hx-target="#order-project-items" hx-swap="outerHTML">
       {% csrf_token %}
-      <label class="dui-form-control"><span class="product-form-label">Fichier</span><input class="dui-file-input dui-file-input-bordered w-full" type="file" name="file" data-configurator-file required></label>
+      <div class="ui-field-group">
+        <label class="ui-label" for="id-visual-editor-file">Fichier</label>
+        <input class="ui-input product-file-input w-full" id="id-visual-editor-file" type="file" name="file" data-configurator-file required>
+      </div>
       <input type="hidden" name="name" value="{{ item.name }}" data-configurator-name>
       <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}" data-configurator-width>
       <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}" data-configurator-height>

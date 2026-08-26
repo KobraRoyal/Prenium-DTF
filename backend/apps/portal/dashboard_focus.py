@@ -6,9 +6,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 
 from apps.b2b_order_projects.models import B2BOrderProject
-from apps.core.public_refs import short_public_ref
 from apps.customers.services.volume_nudge_copy import render_nudge_message
-from apps.orders.references import order_client_reference
+from apps.orders.references import order_business_number, order_client_reference
 from apps.portal.views_common import status_label
 
 ACTIONABLE_PROJECT_STATUSES = {
@@ -136,7 +135,7 @@ def _project_focus(*, customer, project) -> dict[str, str]:
 
 
 def _order_title(order) -> str:
-    return order_client_reference(order) or f"Commande #{short_public_ref(order.public_id)}"
+    return order_client_reference(order) or order_business_number(order) or "Commande"
 
 
 def _order_url(*, customer, order, query: str = "") -> str:

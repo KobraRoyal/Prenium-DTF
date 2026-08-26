@@ -913,6 +913,55 @@ def test_stale_revision_cannot_overwrite_a_newer_draft():
     assert exc.value.code == "STALE_REVISION"
 
 
+def test_save_layout_persists_layout_group_id():
+    user, customer, project = create_customer_scope(email="group-layout@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Groupée")
+    first = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    second = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+    group_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+
+    locked, issues = service.save_layout(
+        sheet=sheet,
+        expected_revision=sheet.revision,
+        payload=[
+            {
+                "public_id": str(first.public_id),
+                "x_mm": "10",
+                "y_mm": "10",
+                "width_mm": "80",
+                "height_mm": "40",
+                "rotation": 0,
+                "layout_group_id": group_id,
+            },
+            {
+                "public_id": str(second.public_id),
+                "x_mm": "100",
+                "y_mm": "10",
+                "width_mm": "80",
+                "height_mm": "40",
+                "rotation": 0,
+                "layout_group_id": group_id,
+            },
+        ],
+        actor=user,
+    )
+
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert str(first.layout_group_id) == group_id
+    assert str(second.layout_group_id) == group_id
+    serialized = service.serialize_sheet(locked, preview_url_resolver=lambda _version: "")
+    assert {item["layout_group_id"] for item in serialized["items"]} == {group_id}
+    assert issues == []
+
+
 def test_render_creates_low_resolution_preview_and_private_production_pdf():
     user, customer, project = create_customer_scope(email="render@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
@@ -976,16 +1025,29 @@ def test_generated_hd_pdf_keeps_quality_overlays_without_false_sheet_dpi(monkeyp
         source="test",
     )
     item = project.items.select_related("asset__current_version__analysis").get()
+    metadata = item.asset.current_version.analysis.metadata or {}
     raw_review = AssetService().technical_review_for_item(item=item)
     production_review = AssetService().production_review_for_item(item=item)
 
-    assert raw_review["label"] == "Résolution insuffisante"
+    # Motif 300×150 px sur ~100×50 mm → DPI placement réel (~76), pas le faux DPI page.
+    assert metadata.get("placement_effective_dpi") is not None
+    assert metadata.get("uses_artboard_dimensions") is False
+    assert raw_review["effective_dpi"] == pytest.approx(
+        float(metadata["placement_effective_dpi"]),
+        rel=0.01,
+    )
     assert production_review["label"] == "Contrôle du fichier HD"
-    assert production_review["resolution_display"] == "PDF hybride"
-    assert production_review["effective_dpi"] is None
+    assert str(production_review["resolution_display"]).endswith("DPI")
+    assert production_review["resolution_display"] != "PDF hybride"
+    assert production_review["effective_dpi"] == pytest.approx(
+        float(metadata["placement_effective_dpi"]),
+        rel=0.01,
+    )
     assert production_review["can_confirm"] is True
-    assert "thin_zone" in item.asset.current_version.analysis.metadata
-    assert "semi_transparency" in item.asset.current_version.analysis.metadata
+    assert "thin_zone" in metadata
+    assert "semi_transparency" in metadata
+    assert metadata.get("embedded_width_px")
+    assert item.asset.current_version.analysis.image_width > 0
 
 
 def test_validation_attaches_to_existing_order_and_locks_sheet():

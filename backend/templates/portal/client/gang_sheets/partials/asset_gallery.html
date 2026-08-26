@@ -83,6 +83,6 @@
     {% endif %}
   </article>
   {% empty %}
-  <div class="empty-state gang-asset-empty"><strong>Galerie vide</strong><p>Choisissez vos premiers fichiers : la fenêtre de vérification s’ouvrira automatiquement.</p><button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-file-picker-dialog="gang-asset-dialog" aria-controls="gang-asset-dialog" aria-haspopup="dialog" {% if not can_edit %}disabled{% endif %}>Ajouter un visuel</button></div>
+  {% include "components/ui/empty_state.html" with extra_class="gang-asset-empty" title="Galerie vide" message="Utilisez « Ajouter des fichiers » ci-dessus pour importer votre premier visuel." %}
   {% endfor %}
 </div>

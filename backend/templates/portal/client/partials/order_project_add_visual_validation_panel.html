@@ -4,16 +4,18 @@
   class="b2b-add-visual-validation"
   {% if item.asset.current_version.analysis_status == "pending" or item.asset.current_version.analysis_status == "processing" %}
   hx-get="{% url 'portal:client-order-project-item-create' customer_public_id=customer.public_id project_public_id=project.public_id %}?item={{ item.public_id }}"
-  hx-trigger="load delay:1400ms"
+  hx-trigger="load delay:1400ms, every 2s"
   hx-target="#add-visual-validation-panel"
   hx-swap="outerHTML"
+  hx-sync="this:replace"
   hx-indicator="#add-visual-validation-panel"
+  data-analysis-poll="1"
   {% endif %}
 >
   <div class="b2b-configurator__workspace{% if item.asset.current_version.analysis_status == 'pending' or item.asset.current_version.analysis_status == 'processing' %} is-analysis-pending{% endif %}" data-b2b-configurator>
     <div class="b2b-configurator__preview">
       {% with version=item.asset.current_version %}
-      {% include "portal/client/partials/order_project_preview_stage.html" %}
+      {% include "portal/client/partials/order_project_preview_stage.html" with validation_chrome=True %}
       {% endwith %}
     </div>
     {% if item.can_replace_asset %}
@@ -22,7 +24,7 @@
     </div>
     {% endif %}
     {% if item.asset.current_version.analysis_status != "pending" and item.asset.current_version.analysis_status != "processing" %}
-    <div class="b2b-visual-card__details">
+    <div class="b2b-visual-card__details b2b-visual-card__details--validate">
       {% with version=item.asset.current_version review=item.technical_review %}
       {% include "portal/client/partials/order_project_quality_review.html" %}
       {% if version.analysis_error %}<p class="b2b-analysis-error">{{ version.analysis_error }}</p>{% endif %}
@@ -45,11 +47,14 @@
         {% include "portal/client/partials/order_project_rotation_hidden.html" %}
         {% include "portal/client/partials/order_project_validation_dimensions_row.html" with quantity=item.quantity width_mm=item.width_mm height_mm=item.height_mm %}
         {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
-        <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required> <span>J’ai vérifié les dimensions, la résolution, les détails fins, les semi-transparences et la couleur support.</span></label>
-        <div class="b2b-dialog-actions">
-          <button class="ui-btn ui-btn-primary" type="submit">Valider ce visuel</button>
+        <label class="b2b-quality-confirm">
+          <input type="checkbox" name="confirm_analysis" required>
+          <span>Je confirme le contrôle qualité.</span>
+        </label>
+        <div class="b2b-dialog-actions b2b-dialog-actions--validate">
+          <button class="ui-btn ui-btn-primary" type="submit">Valider</button>
           <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Plus tard</button>
-          {% include "portal/client/partials/order_project_item_delete_button.html" with dialog_prefix="validate-" %}
+          {% include "portal/client/partials/order_project_item_delete_button.html" with dialog_prefix="validate-" button_class="ui-btn ui-btn-ghost b2b-dialog-actions__danger" %}
         </div>
       </form>
       {% elif review.confirmed %}

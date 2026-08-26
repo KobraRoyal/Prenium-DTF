@@ -33,7 +33,7 @@
 
 <form method="post" class="ui-form-stack prospect-form prospect-review-form text-left" novalidate data-submit-loading>
   {% csrf_token %}
-  {% if messages %}{% for message in messages %}<div class="dui-alert dui-alert-error" role="alert">{{ message }}</div>{% endfor %}{% endif %}
+  {% if messages %}{% for message in messages %}<div class="alert alert--danger" role="alert">{{ message }}</div>{% endfor %}{% endif %}
 
   <section class="prospect-review-confirm" aria-labelledby="confirm-title">
     <h3 id="confirm-title" class="prospect-form__section-title">Confirmer et envoyer</h3>
@@ -42,7 +42,7 @@
       <span class="prospect-consent-card__control" aria-hidden="true">✓</span>
       <span><strong>Je confirme ma demande d’accès professionnel</strong><small>{{ form.terms_accepted.label }}</small></span>
     </label>
-    {% if form.terms_accepted.errors %}<p class="error-text" role="alert">{{ form.terms_accepted.errors.0 }}</p>{% endif %}
+    {% if form.terms_accepted.errors %}<p class="ui-field-error" role="alert">{{ form.terms_accepted.errors.0 }}</p>{% endif %}
   </section>
 
   <div class="prospect-form__footer prospect-journey__footer">

@@ -31,6 +31,9 @@ Réglages de référence : `backend/config/settings/base.py` ; durcissement prod
 - [ ] Variables : `LOGIN_RATE_LIMIT_MAX_ATTEMPTS`, `LOGIN_RATE_LIMIT_WINDOW_SECONDS` (voir `base.py`)
 - [ ] Réponse **HTTP 429** avec message sobre si limite dépassée
 - [ ] **Journalisation** : log applicatif `login_rate_limited` à chaque refus ; **audit** `security.login_rate_limited` (une fois par fenêtre et par IP au premier dépassement) dans `AuditLogEntry`
+- [ ] **Mot de passe oublié** : POST `/mot-de-passe-oublie/` rate-limité (`PASSWORD_RESET_RATE_LIMIT_*`) + plafond par e-mail (`PASSWORD_RESET_EMAIL_*`)
+- [ ] Réponse de demande **identique** qu’un compte existe ou non ; jeton basé sur `public_id`, timeout `PASSWORD_RESET_TIMEOUT`
+- [ ] Recours support visible (`SUPPORT_CONTACT_EMAIL` ou message de repli)
 
 ## 6. Audit métier
 - [ ] Mutations sensibles couvertes par `apps.auditlog` (commandes, paiements, production, uploads, etc.) selon le périmètre livré
@@ -59,9 +62,12 @@ Réglages de référence : `backend/config/settings/base.py` ; durcissement prod
 - Élévation de privilège (client → staff)
 - Transition de statut ou mutation non autorisée
 - Rafale de POST login → **429** puis stabilité du reste du site
+- Demande de reset pour une adresse inconnue → même page de succès, aucun e-mail
+- Réutilisation d’un lien de reset après changement de mot de passe
 - Invitation d’un tenant présentée sur la route équipe d’un autre tenant
 - Réutilisation d’une invitation après acceptation ou révocation
 
 ## Références code
 - Middleware login : `apps/accounts/middleware.py`
 - Tests rate limit : `tests/accounts/test_login_rate_limit.py`
+- Mot de passe oublié : `apps/accounts/services/password_reset.py`, `tests/accounts/test_password_reset.py`

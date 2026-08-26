@@ -1,11 +1,12 @@
 {% extends "portal/layout.html" %}
 
-{% block title %}E-mails Atelier - Prenium DTF{% endblock %}
+{% block title %}E-mails Atelier — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="email-template-page">
+<div class="portal-page portal-page--staff email-template-page">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_email_templates_list.html" title="Modèles d’e-mails" subtitle="Pilotez les messages transactionnels envoyés aux clients et à l’équipe, sans modifier le code applicatif." %}
 
+  <section class="portal-page-surface ui-list-section email-template-surface">
   <section class="email-template-overview" aria-labelledby="email-template-overview-title" data-testid="email-template-overview">
     <h2 class="sr-only" id="email-template-overview-title">État des modèles d’e-mails</h2>
     <dl class="email-template-overview__facts">
@@ -31,8 +32,8 @@
   <section class="email-template-section" aria-labelledby="client-email-templates-heading">
     <header class="email-template-section__head">
       <div>
-        <h2 class="font-display" id="client-email-templates-heading">Messages clients</h2>
-        <p>Confirmations, étapes de commande et informations de compte visibles par vos clients.</p>
+        <h2 class="font-display text-lg" id="client-email-templates-heading">Messages clients</h2>
+        <p class="muted text-sm">Confirmations, étapes de commande et informations de compte visibles par vos clients.</p>
       </div>
       <span class="badge is-neutral">{{ client_templates|length }} modèles</span>
     </header>
@@ -46,8 +47,8 @@
   <section class="email-template-section" aria-labelledby="internal-email-templates-heading">
     <header class="email-template-section__head">
       <div>
-        <h2 class="font-display" id="internal-email-templates-heading">Messages équipe</h2>
-        <p>Alertes opérationnelles adressées aux destinataires internes configurés côté serveur.</p>
+        <h2 class="font-display text-lg" id="internal-email-templates-heading">Messages équipe</h2>
+        <p class="muted text-sm">Alertes opérationnelles adressées aux destinataires internes configurés côté serveur.</p>
       </div>
       <div class="email-template-section__status">
         <span class="badge {% if internal_recipient_count %}is-success{% else %}is-warning{% endif %}">{% if internal_recipient_count %}Diffusion prête{% else %}Diffusion à configurer{% endif %}</span>
@@ -59,6 +60,7 @@
         <div role="listitem">{% include "components/notifications/email_template_card.html" %}</div>
       {% endfor %}
     </div>
+  </section>
   </section>
 </div>
 {% endblock %}

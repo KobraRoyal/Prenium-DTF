@@ -1,32 +1,32 @@
 {% load portal_tags %}
-<aside class="checkout-dui-surface product-checkout-card summary-sticky" id="checkout-summary">
+<aside class="product-checkout-card summary-sticky" id="checkout-summary">
   <div class="product-checkout-card__body gap-4">
     <div>
-      <h3 class="dui-card-title font-display text-lg">Étape 3 — Vérification finale</h3>
+      <h3 class="font-display text-lg">Étape 3 — Vérification finale</h3>
       {% client_order_refs order %}
       {% with client_ref=order|order_client_ref %}
       {% if order.customer_note and order.customer_note.strip != client_ref %}
       <p class="product-text-muted mt-2 text-sm leading-snug">{{ order.customer_note|truncatechars:240 }}</p>
       {% endif %}
       {% endwith %}
-      <p class="mt-2 text-sm opacity-70">Vérifiez les éléments ci-dessous avant d'envoyer la demande en traitement. L'atelier contrôlera ensuite les fichiers avant lancement.</p>
+      <p class="mt-2 muted text-sm">Vérifiez les éléments ci-dessous avant d'envoyer la demande en traitement. L'atelier contrôlera ensuite les fichiers avant lancement.</p>
     </div>
 
     <div class="checkout-summary-box flex flex-col gap-3 p-4 text-sm">
       <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <span class="text-xs uppercase tracking-wide opacity-50">Statut</span>
+        <span class="muted text-xs uppercase tracking-wide">Statut</span>
         {% with tone=order.status|badge_tone %}
         <span class="badge {{ tone }}">{{ order.status|human_status }}</span>
         {% endwith %}
       </div>
-      <div class="dui-divider my-0"></div>
+      <div class="checkout-panel-divider checkout-panel-divider--compact" role="presentation"></div>
       <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <span class="text-xs uppercase tracking-wide opacity-50">Fichiers</span>
+        <span class="muted text-xs uppercase tracking-wide">Fichiers</span>
         <span class="font-medium">{{ uploads|length }}</span>
       </div>
     </div>
 
-    <form method="post" action="{% url 'portal:client-checkout-submit' customer_public_id=customer.public_id %}" class="product-checkout-submit flex flex-col gap-5 pt-5" data-submit-loading>
+    <form method="post" action="{% url 'portal:client-checkout-submit' customer_public_id=customer.public_id %}" class="product-checkout-submit ui-form-stack pt-5" data-submit-loading>
       {% csrf_token %}
       <input type="hidden" name="order_public_id" value="{{ order.public_id }}">
 
@@ -34,10 +34,10 @@
 
       {% include "portal/client/partials/b2b_shipping_choice.html" %}
 
-      <label class="dui-label cursor-pointer flex items-start gap-3">
-        <input id="id_confirm_checkout" type="checkbox" name="confirm_checkout" class="dui-checkbox dui-checkbox-primary mt-0.5">
-        <span class="dui-label-text text-left text-sm leading-snug">Je confirme l'envoi de la demande à l'atelier pour contrôle technique et traitement.</span>
-      </label>
+      <div class="ui-checkbox-row">
+        <input id="id_confirm_checkout" type="checkbox" name="confirm_checkout">
+        <label for="id_confirm_checkout">Je confirme l'envoi de la demande à l'atelier pour contrôle technique et traitement.</label>
+      </div>
 
       {% include "components/forms/form_actions.html" with primary_label="Envoyer à l'atelier" primary_class_full="ui-btn ui-btn-primary ui-btn-wide" %}
     </form>

@@ -1,81 +1,170 @@
 {% extends "portal/layout.html" %}
 
-{% block title %}Remises par défaut - Atelier{% endblock %}
+{% block title %}Remises par défaut — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-{% include "components/portal/page_head.html" with title="Remises volume par défaut" subtitle="Grille copiée sur les nouveaux comptes, et messages du dashboard client. Les comptes existants conservent leurs propres paliers." %}
+<div class="portal-page portal-page--staff volume-discount-settings-page">
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_volume_discounts.html" title="Remises volume par défaut" subtitle="Grille copiée sur les nouveaux comptes, et messages du dashboard client. Les comptes existants conservent leurs propres paliers." actions_template="components/portal/page_head_actions/staff_volume_discounts.html" %}
 
-<div class="volume-discount-settings-page">
-<section class="volume-discount-settings" data-testid="default-volume-discount-settings" aria-labelledby="default-tier-grid-title">
-  <div class="volume-discount-settings__main">
-    <header class="volume-discount-settings__intro">
+<section class="portal-page-surface ui-list-section volume-discount-settings volume-discount-settings-surface" data-testid="default-volume-discount-settings" aria-labelledby="default-tier-grid-title">
+  <div class="volume-discount-summary ui-list-command" aria-labelledby="volume-discount-summary-title">
+    <h2 class="sr-only" id="volume-discount-summary-title">État de la grille</h2>
+    <dl class="ui-list-command__facts">
+      <div><dt>Paliers</dt><dd>{{ tier_rows|length }}</dd></div>
+      <div><dt>Actifs</dt><dd>{{ active_tier_count }}</dd></div>
+      <div><dt>Désactivés</dt><dd>{{ inactive_tier_count }}</dd></div>
+    </dl>
+  </div>
+
+  <section class="staff-orders-results ui-list-results volume-discount-register" aria-labelledby="default-tier-grid-title">
+    <header class="ui-list-results__head">
       <div>
-        <h2 id="default-tier-grid-title">Grille de référence</h2>
+        <h2 class="font-display text-lg" id="default-tier-grid-title">Grille de référence</h2>
         <p>Les seuils sont lus dans l’ordre croissant. La remise doit augmenter avec le volume.</p>
       </div>
-      <div class="volume-discount-settings__tools">
-        <span class="volume-discount-settings__count">
-          <strong>{{ active_tier_count }}</strong>
-          palier{{ active_tier_count|pluralize }} actif{{ active_tier_count|pluralize }}
-        </span>
-        {% if perms.notifications.view_emailtemplate %}
-        <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-email-template-edit' event='volume_discount_tier_reached' audience='client' %}">Configurer l’e-mail client</a>
-        {% endif %}
-      </div>
+      <span class="badge is-neutral"><strong>{{ active_tier_count }}</strong> palier{{ active_tier_count|pluralize }} actif{{ active_tier_count|pluralize }}</span>
     </header>
 
     {% if tier_rows %}
-    <ol class="volume-tier-list" aria-label="Paliers par défaut configurés">
-      {% for row in tier_rows %}
-        {% url 'portal:staff-default-volume-discount-tier-update' tier_public_id=row.tier.public_id as tier_update_url %}
-        {% include "portal/staff/customers/_volume_discount_tier_row.html" with action_url=tier_update_url tier=row.tier form=row.form position=row.position state="default" state_label="Copié à la création" state_badge_class="is-neutral" %}
-      {% endfor %}
-    </ol>
-    <p class="volume-discount-settings__note">
-      Les paliers désactivés restent dans la grille pour référence, mais ne sont pas copiés sur les nouveaux comptes.
-    </p>
-    {% else %}
-    <div class="volume-tier-empty">
-      <div class="volume-tier-empty__marker" aria-hidden="true">%</div>
-      <div>
-        <h3>Aucun palier par défaut</h3>
-        <p>Ajoutez le premier seuil pour préparer automatiquement les nouveaux clients en encours.</p>
-      </div>
+    <div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
+      <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
+        <caption class="sr-only">Paliers de remise volume par défaut</caption>
+        <thead>
+          <tr>
+            <th>Palier</th>
+            <th>Seuil</th>
+            <th>Remise</th>
+            <th>Statut</th>
+            <th>Usage</th>
+            <th><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tier_rows %}
+          <tr class="{% if not row.tier.is_active %}ui-row-warning{% endif %}">
+            <td>
+              <div class="ui-order-primary">
+                <span class="ui-order-primary__label">Palier</span>
+                <span class="ui-table-primary-cell">{{ row.position }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="ui-order-secondary">
+                <span class="ui-order-secondary__label">Seuil</span>
+                <span class="ui-order-secondary__value">{{ row.tier.minimum_monthly_linear_m }} m</span>
+              </div>
+            </td>
+            <td>
+              <div class="ui-order-secondary">
+                <span class="ui-order-secondary__label">Remise</span>
+                <span class="ui-order-secondary__value">−{{ row.tier.discount_percent }} %</span>
+              </div>
+            </td>
+            <td>
+              {% if row.tier.is_active %}
+              <span class="badge is-success">Actif</span>
+              {% else %}
+              <span class="badge is-neutral">Désactivé</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge is-neutral">Copié à la création</span>
+            </td>
+            <td>
+              <div class="ui-table-actions">
+                <button class="ui-btn ui-btn-secondary" type="button" data-dialog-open="volume-tier-edit-dialog-{{ row.tier.public_id }}" aria-haspopup="dialog">Configurer</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    {% endif %}
-  </div>
 
-  <details class="volume-tier-create-card" {% if add_form.errors or not tier_rows %}open{% endif %}>
-    <summary class="volume-tier-create-card__head" id="new-default-tier-title"><span><strong>Ajouter un palier</strong><small>Étendre la grille de référence</small></span><span aria-hidden="true">+</span></summary>
-    <p class="volume-tier-create-card__intro">Définissez le volume mensuel à atteindre, puis la remise appliquée à tout le DTF éligible du mois.</p>
-    <form class="ui-form-stack" method="post" action="{% url 'portal:staff-default-volume-discount-tier-create' %}" data-submit-loading>
+    <div class="ui-orders-list-mobile grid gap-3 min-[960px]:hidden" aria-label="Paliers de remise volume par défaut">
+      {% for row in tier_rows %}
+      <article class="ui-mobile-order-card {% if not row.tier.is_active %}ui-card-warning{% endif %}">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p class="muted text-xs">Palier {{ row.position }}</p>
+            <p class="text-sm"><strong>{{ row.tier.minimum_monthly_linear_m }} m</strong> / mois</p>
+          </div>
+          {% if row.tier.is_active %}
+          <span class="badge is-success">Actif</span>
+          {% else %}
+          <span class="badge is-neutral">Désactivé</span>
+          {% endif %}
+        </div>
+        <p class="mt-2 text-sm">Remise générale <strong>−{{ row.tier.discount_percent }} %</strong></p>
+        <p class="muted mt-2 text-xs">Copié à la création des nouveaux comptes.</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button class="ui-btn ui-btn-secondary" type="button" data-dialog-open="volume-tier-edit-dialog-{{ row.tier.public_id }}" aria-haspopup="dialog">Configurer</button>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <p class="volume-discount-settings__note">Les paliers désactivés restent dans la grille pour référence, mais ne sont pas copiés sur les nouveaux comptes.</p>
+    {% else %}
+    {% include "components/ui/empty_state.html" with title="Aucun palier par défaut" message="Ajoutez le premier seuil pour préparer automatiquement les nouveaux clients en encours." cta_button_label="Ajouter un palier" cta_button_dialog_open="volume-tier-create-dialog" %}
+    {% endif %}
+  </section>
+
+  <dialog
+    class="b2b-confirm-dialog volume-discount-dialog"
+    id="volume-tier-create-dialog"
+    aria-labelledby="volume-tier-create-dialog-title"
+    aria-describedby="volume-tier-create-dialog-lead"
+    {% if add_form.errors %}data-dialog-auto-open{% endif %}
+  >
+    <form class="b2b-confirm-dialog__shell ui-form-stack" method="post" action="{% url 'portal:staff-default-volume-discount-tier-create' %}" data-submit-loading>
       {% csrf_token %}
-      {% if add_form.non_field_errors %}<p class="error-text ui-error-text" role="alert">{{ add_form.non_field_errors|striptags }}</p>{% endif %}
-      <div class="ui-field-group">
-        <label class="ui-label" for="{{ add_form.minimum_monthly_linear_m.id_for_label }}">Seuil mensuel (m linéaires)</label>
-        {{ add_form.minimum_monthly_linear_m }}
-        <p class="ui-help">Atteint dès que le volume mensuel est supérieur ou égal à ce seuil.</p>
-        {% if add_form.minimum_monthly_linear_m.errors %}<p class="error-text ui-error-text" role="alert">{{ add_form.minimum_monthly_linear_m.errors|striptags }}</p>{% endif %}
-      </div>
-      <div class="ui-field-group">
-        <label class="ui-label" for="{{ add_form.discount_percent.id_for_label }}">Remise générale (%)</label>
-        {{ add_form.discount_percent }}
-        <p class="ui-help">Appliquée rétroactivement à tout le DTF éligible du mois.</p>
-        {% if add_form.discount_percent.errors %}<p class="error-text ui-error-text" role="alert">{{ add_form.discount_percent.errors|striptags }}</p>{% endif %}
-      </div>
-      <label class="volume-tier-toggle" for="{{ add_form.is_active.id_for_label }}">
-        {{ add_form.is_active }}
-        <span>Activer et copier ce palier</span>
-      </label>
-      <button class="ui-btn ui-btn-primary" type="submit">Ajouter à la grille</button>
+      <header class="volume-discount-dialog__head">
+        <div>
+          <h2 id="volume-tier-create-dialog-title">Ajouter un palier</h2>
+          <p id="volume-tier-create-dialog-lead">Définissez le volume mensuel à atteindre, puis la remise appliquée à tout le DTF éligible du mois.</p>
+        </div>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+      </header>
+      {% if add_form.non_field_errors %}<div class="alert alert--danger" role="alert"><p>{{ add_form.non_field_errors|striptags }}</p></div>{% endif %}
+      {% include "portal/staff/customers/_volume_discount_tier_fields.html" with form=add_form show_help=1 active_label="Activer et copier ce palier" %}
+      <footer class="b2b-confirm-dialog__actions">
+        <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+        <button class="ui-btn ui-btn-primary" type="submit">Ajouter à la grille</button>
+      </footer>
     </form>
-  </details>
+  </dialog>
+
+  {% for row in tier_rows %}
+  <dialog
+    class="b2b-confirm-dialog volume-discount-dialog"
+    id="volume-tier-edit-dialog-{{ row.tier.public_id }}"
+    aria-labelledby="volume-tier-edit-dialog-title-{{ row.tier.public_id }}"
+    {% if row.form.errors %}data-dialog-auto-open{% endif %}
+  >
+    <form class="b2b-confirm-dialog__shell ui-form-stack" method="post" action="{% url 'portal:staff-default-volume-discount-tier-update' tier_public_id=row.tier.public_id %}" data-submit-loading>
+      {% csrf_token %}
+      <header class="volume-discount-dialog__head">
+        <div>
+          <h2 id="volume-tier-edit-dialog-title-{{ row.tier.public_id }}">Configurer le palier {{ row.position }}</h2>
+          <p>Mettez à jour le seuil, le taux et l’activation. Les comptes existants conservent leurs propres paliers.</p>
+        </div>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+      </header>
+      {% if row.form.non_field_errors %}<div class="alert alert--danger" role="alert"><p>{{ row.form.non_field_errors|striptags }}</p></div>{% endif %}
+      {% include "portal/staff/customers/_volume_discount_tier_fields.html" with form=row.form active_label="Palier actif" %}
+      <footer class="b2b-confirm-dialog__actions">
+        <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+        <button class="ui-btn ui-btn-primary" type="submit">Enregistrer</button>
+      </footer>
+    </form>
+  </dialog>
+  {% endfor %}
 </section>
 
-<section class="volume-nudge-copy" id="volume-nudge-copy" data-testid="volume-nudge-copy" aria-labelledby="volume-nudge-copy-title" x-data="{ audience: '{{ copy_audience|default:'immediate' }}' }">
-  <header class="volume-nudge-copy__intro">
+<section class="portal-page-surface ui-list-section volume-nudge-copy volume-nudge-copy-surface" id="volume-nudge-copy" data-testid="volume-nudge-copy" aria-labelledby="volume-nudge-copy-title" x-data="{ audience: '{{ copy_audience|default:'immediate' }}' }">
+  <header class="ui-list-results__head volume-nudge-copy__intro">
     <div>
-      <h2 id="volume-nudge-copy-title">Messages dashboard client</h2>
+      <h2 id="volume-nudge-copy-title" class="font-display text-lg">Messages dashboard client</h2>
       <p>Un texte par moment du palier. Champ vide = texte Prenium. Le titre du dashboard porte déjà les mètres et le taux : ici, uniquement la règle.</p>
     </div>
     <p class="volume-nudge-copy__tokens">
@@ -92,10 +181,10 @@
     <input type="hidden" name="audience" value="{{ copy_audience|default:'immediate' }}" :value="audience">
     {% if copy_form.non_field_errors %}<p class="error-text ui-error-text" role="alert">{{ copy_form.non_field_errors|striptags }}</p>{% endif %}
 
-    <div class="volume-nudge-copy__tabs" role="tablist" aria-label="Mode de règlement">
-      <button type="button" class="volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'immediate'" :class="{ 'is-active': audience === 'immediate' }" @click="audience = 'immediate'">Comptant CB</button>
-      <button type="button" class="volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'deferred'" :class="{ 'is-active': audience === 'deferred' }" @click="audience = 'deferred'">Encours</button>
-    </div>
+    <nav class="ui-list-tabs volume-nudge-copy__tabs" role="tablist" aria-label="Mode de règlement">
+      <button type="button" class="ui-list-tabs__tab volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'immediate'" :class="{ 'is-active': audience === 'immediate' }" @click="audience = 'immediate'">Comptant CB</button>
+      <button type="button" class="ui-list-tabs__tab volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'deferred'" :class="{ 'is-active': audience === 'deferred' }" @click="audience = 'deferred'">Encours</button>
+    </nav>
 
     <div class="volume-nudge-copy__panel ui-form-stack" role="tabpanel" x-show="audience === 'immediate'" {% if copy_audience != 'immediate' %}x-cloak{% endif %}>
       {% include "portal/staff/customers/_volume_nudge_copy_field.html" with field=copy_form.start_immediate title="Compteur à zéro" hint="Aucune planche comptée ce mois-ci." %}

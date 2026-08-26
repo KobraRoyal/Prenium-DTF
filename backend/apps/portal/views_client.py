@@ -17,9 +17,9 @@ from apps.b2b_order_projects.services import (
     ProjectDomainError,
 )
 from apps.core.public_refs import short_public_ref
-from apps.orders.references import order_client_reference
 from apps.orders.services.client_timeline import build_client_order_status_history
 from apps.portal import dashboard_focus
+from apps.portal.client_order_presentation import client_order_identity
 from apps.portal.views_common import (
     ClientOwnerRequiredMixin,
     ScopedCustomerMixin,
@@ -35,6 +35,29 @@ from apps.uploads.services.assets import AssetService
 project_service = B2BOrderProjectService()
 reorder_service = B2BOrderReorderService()
 asset_service = AssetService()
+
+
+def client_inspection_kpi_rows(inspection_counter: Counter) -> list[dict]:
+    ok = inspection_counter.get("ok", 0)
+    warning = inspection_counter.get("warning", 0)
+    error = inspection_counter.get("error", 0)
+    return [
+        {
+            "label": "Validés",
+            "value": str(ok),
+            "tone": "is-ready" if ok else "",
+        },
+        {
+            "label": "À surveiller",
+            "value": str(warning),
+            "tone": "is-attention" if warning else "",
+        },
+        {
+            "label": "À corriger",
+            "value": str(error),
+            "tone": "is-danger" if error else "",
+        },
+    ]
 
 
 class ClientDashboardView(LoginRequiredMixin, View):
@@ -119,11 +142,16 @@ class ClientOrderContextMixin(ScopedCustomerMixin):
         return order
 
     def client_order_context(self, *, order, **extra):
+        identity = client_order_identity(order)
         context = {
             "customer": self.customer,
             "customer_membership": self.customer_membership,
             "order": order,
             "order_short_ref": short_public_ref(order.public_id),
+            "order_client_label": identity.label,
+            "order_display_ref": identity.reference,
+            "order_note_details": identity.note,
+            "order_requested_date": identity.requested_date,
             "badge_tone_for_status": badge_tone_for_status,
             "status_label": status_label,
         }
@@ -136,8 +164,10 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
 
     def get(self, request, customer_public_id, order_public_id):
         from apps.billing.services.production_payment_gate import order_awaits_client_payment
+        from apps.portal.client_order_presentation import client_order_status_banner
 
         order = self.get_order_or_404(order_public_id)
+        awaits_client_payment = order_awaits_client_payment(order)
         shipment = None
         try:
             shipment = order.shipment
@@ -150,10 +180,13 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
                 order=order,
                 shipment=shipment,
                 active_panel=request.GET.get("panel", ""),
-                awaits_client_payment=order_awaits_client_payment(order),
+                awaits_client_payment=awaits_client_payment,
             )
             | {
-                "order_client_label": order_client_reference(order),
+                "order_status_banner": client_order_status_banner(
+                    awaits_client_payment=awaits_client_payment,
+                    query_params=request.GET,
+                ),
                 "nav_mode": "client",
                 "nav_key": "client-orders",
             },
@@ -200,6 +233,7 @@ class ClientOrderPanelInspectionView(ClientOrderContextMixin, View):
                 "uploads": uploads,
                 "inspections": inspections,
                 "inspection_counter": inspection_counter,
+                "inspection_kpi_rows": client_inspection_kpi_rows(inspection_counter),
                 "badge_tone_for_status": badge_tone_for_status,
                 "status_label": status_label,
             },

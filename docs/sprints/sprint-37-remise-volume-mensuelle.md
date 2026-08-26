@@ -43,7 +43,8 @@ mètres linéaires et un pourcentage de remise. Le meilleur palier atteint appli
 - `backend/apps/orders/services/pricing.py` — agrégation mensuelle et application rétroactive
 - `backend/apps/portal/views_staff_customers.py` — endpoints Atelier scopés par UUID client/palier
 - `backend/apps/notifications/services/transactional.py` — planification et livraison idempotentes
-- `backend/templates/portal/staff/customers/detail.html` — édition des paliers
+- `backend/templates/portal/staff/customers/detail.html` — fiche client, synthèse du mois
+- `backend/templates/portal/staff/customers/_volume_discount_tier_register.html` — table/cartes + modales CRUD
 - `backend/templates/portal/staff/customers/default_volume_discounts.html` — grille globale
 - `backend/templates/portal/client/dashboard.html` — progression du client scopé
 - `tests/orders/test_monthly_volume_discounts.py` — règles financières et isolation
@@ -78,7 +79,8 @@ mètres linéaires et un pourcentage de remise. Le meilleur palier atteint appli
 - [x] barre de progression accessible vers le prochain palier ;
 - [x] paliers présentés comme une grille ordonnée avec états `franchi`, `atteint`, `prochain objectif`
   et `désactivé` ;
-- [x] édition et ajout en divulgation progressive afin de réduire la densité initiale ;
+- [x] édition et ajout dans une modale CRUD, liste table/cartes alignée commandes
+  (grille globale **et** fiche client) ;
 - [x] réglages par défaut séparant clairement la grille de référence, l’e-mail client et la création ;
 - [x] contrôle visuel local desktop et 375 px, sans débordement horizontal ni erreur console ;
 - [x] scan Impeccable exécuté : aucun défaut propre aux composants ajoutés ; les avertissements

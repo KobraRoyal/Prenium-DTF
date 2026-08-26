@@ -1,0 +1,253 @@
+{% load portal_tags ui_tags %}
+<section class="atelier-operator-workflow" aria-labelledby="atelier-operator-workflow-title">
+  <h3 class="sr-only" id="atelier-operator-workflow-title">Pilotage opérateur</h3>
+
+  {% with step_total=operator_steps|length %}
+  <nav class="atelier-stepper" aria-label="Parcours de production">
+    <div class="atelier-stepper__head">
+      <h4 class="atelier-stepper__title">Parcours de production</h4>
+      <p class="atelier-stepper__progress" aria-live="polite">
+        {% for step in operator_steps %}
+          {% if step.key == operator_active_step %}
+            <strong>{{ forloop.counter }}</strong> / {{ step_total }} · {{ step.label }}
+          {% endif %}
+        {% endfor %}
+      </p>
+    </div>
+    <ol class="atelier-stepper__track" style="--step-count: {{ step_total }}">
+      {% for step in operator_steps %}
+      <li
+        class="atelier-stepper__step{% if step.state == 'done' %} is-done{% elif step.state == 'active' %} is-active{% elif step.state == 'blocked' %} is-blocked{% else %} is-pending{% endif %}"
+        aria-current="{% if step.key == operator_active_step %}step{% else %}false{% endif %}"
+      >
+        <span class="atelier-stepper__marker" aria-hidden="true">
+          {% if step.state == 'done' %}
+          <svg class="atelier-stepper__icon" viewBox="0 0 20 20" focusable="false">
+            <path d="M5.2 10.4 8.4 13.6 14.8 6.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          {% elif step.state == 'blocked' %}
+          <svg class="atelier-stepper__icon" viewBox="0 0 20 20" focusable="false">
+            <path d="M10 5.2v6.2M10 14.6h.01" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+          {% else %}
+          <span class="atelier-stepper__index">{{ forloop.counter|stringformat:"02d" }}</span>
+          {% endif %}
+        </span>
+        <span class="atelier-stepper__copy">
+          <strong class="atelier-stepper__label">{{ step.label }}</strong>
+          <span class="atelier-stepper__state">
+            {% if step.state == 'done' %}Fait{% elif step.state == 'active' %}En cours{% elif step.state == 'blocked' %}Bloqué{% else %}À venir{% endif %}
+          </span>
+        </span>
+      </li>
+      {% endfor %}
+    </ol>
+  </nav>
+  {% endwith %}
+
+  {% if operator_active_step == 'control' and uploads %}
+  <section class="atelier-operator-panel atelier-operator-panel--control" aria-labelledby="atelier-operator-control-title">
+    <header class="operator-section-head">
+      <div>
+        <h4 id="atelier-operator-control-title" class="font-display text-lg">Contrôle fichiers</h4>
+        <p class="muted text-sm">Approuvez chaque visuel avant de lancer la production.</p>
+      </div>
+      {% if all_uploads_approved %}
+      <span class="badge is-success">Tous approuvés</span>
+      {% elif pending_review_count %}
+      <span class="badge is-warning">{{ pending_review_count }} à contrôler</span>
+      {% endif %}
+    </header>
+
+    <ul class="atelier-operator-uploads">
+      {% for upload in uploads %}
+      {% with review=upload.atelier_review inspection=upload.inspection %}
+      <li class="atelier-operator-upload{% if review and review.status == 'approved' %} is-approved{% elif review and review.status == 'changes_requested' %} is-rejected{% endif %}">
+        <a class="atelier-operator-upload__preview" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
+          <img src="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="" loading="lazy">
+        </a>
+        <div class="atelier-operator-upload__body">
+          <strong>{{ upload.original_filename }}</strong>
+          <span class="muted">{{ upload.production_specs.dimensions_label }}</span>
+          {% if review and review.status == 'approved' %}
+          <span class="badge is-success">Approuvé</span>
+          {% elif review and review.status == 'changes_requested' %}
+          <span class="badge is-danger">Correction demandée</span>
+          {% elif can_review_uploads %}
+          <form
+            hx-post="{% url 'portal:staff-atelier-operation-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}"
+            hx-target="#atelier-operations-panel"
+            hx-swap="outerHTML"
+            hx-indicator="#portal-htmx-indicator"
+            data-submit-loading
+          >
+            {% csrf_token %}
+            <input type="hidden" name="q" value="{{ query }}">
+            <input type="hidden" name="queue" value="{{ queue }}">
+            <input type="hidden" name="status" value="approved">
+            <button class="ui-btn ui-btn-primary ui-btn-sm" type="submit">Approuver</button>
+          </form>
+          {% else %}
+          <span class="badge is-warning">À contrôler</span>
+          {% endif %}
+        </div>
+      </li>
+      {% endwith %}
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if operator_active_step == 'machine' and require_machine_selection %}
+  <section class="atelier-operator-panel atelier-operator-panel--machine" aria-labelledby="atelier-operator-machine-title">
+    <header class="operator-section-head">
+      <div>
+        <h4 id="atelier-operator-machine-title" class="font-display text-lg">Sélection machine</h4>
+        <p class="muted text-sm">Choisissez l’imprimante du parc avant le métrage et l’impression.</p>
+      </div>
+      {% if job.assigned_machine %}
+      <span class="badge is-success"><code>{{ job.assigned_machine.code }}</code></span>
+      {% else %}
+      <span class="badge is-warning">À attribuer</span>
+      {% endif %}
+    </header>
+
+    {% if machine_error %}<div class="alert alert--danger" role="alert"><p>{{ machine_error }}</p></div>{% endif %}
+
+    {% if can_assign_machine and can_assign_machine_now and active_machines %}
+    <form
+      class="atelier-operator-machine-form ui-form-stack"
+      hx-post="{% url 'portal:staff-atelier-operation-machine-assign' order_public_id=order.public_id %}"
+      hx-target="#atelier-operations-panel"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      data-submit-loading
+    >
+      {% csrf_token %}
+      <input type="hidden" name="q" value="{{ query }}">
+      <input type="hidden" name="queue" value="{{ queue }}">
+      <div class="ui-field-group">
+        <label class="ui-label" for="operator-machine-{{ order.public_id }}">{% if job.assigned_machine %}Changer d’imprimante{% else %}Choisir une imprimante{% endif %}</label>
+        <select class="ui-input" id="operator-machine-{{ order.public_id }}" name="machine_public_id" required>
+          <option value="" disabled {% if not job.assigned_machine %}selected{% endif %} hidden>Sélectionner une machine</option>
+          {% for machine in active_machines %}
+          <option value="{{ machine.public_id }}" {% if job.assigned_machine_id == machine.id %}selected{% endif %}>{{ machine.code }} — {{ machine.name }}{% if machine.location %} · {{ machine.location }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if job.assigned_machine %}
+      <div class="ui-field-group">
+        <label class="ui-label" for="operator-machine-reason-{{ order.public_id }}">Motif de changement</label>
+        <input class="ui-input" id="operator-machine-reason-{{ order.public_id }}" name="machine_reason" maxlength="255" placeholder="Obligatoire si vous changez de machine">
+      </div>
+      {% endif %}
+      <button class="ui-btn ui-btn-secondary" type="submit">{% if job.assigned_machine %}Mettre à jour la machine{% else %}Attribuer la machine{% endif %}</button>
+    </form>
+    {% elif not job.assigned_machine %}
+    <p class="operator-state-note">Aucune machine active dans le parc.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if operator_active_step == 'meterage' and order.uses_atelier_pricing %}
+  <section class="atelier-operator-panel atelier-operator-panel--meterage">
+    {% include "portal/staff/operations/_operator_meterage.html" %}
+  </section>
+  {% endif %}
+
+  {% if operator_active_step == 'production' %}
+  <section class="atelier-operator-panel atelier-operator-panel--print" aria-labelledby="atelier-operator-print-title">
+    <header class="operator-section-head">
+      <div>
+        <h4 id="atelier-operator-print-title" class="font-display text-lg">Impression</h4>
+        <p class="muted text-sm">{% if job.assigned_machine %}Confirmez l’impression sur <code>{{ job.assigned_machine.code }}</code>.{% elif sole_active_machine %}L’unique machine du parc (<code>{{ sole_active_machine.code }}</code>) sera utilisée.{% else %}Attribuez une machine pour confirmer l’impression.{% endif %}</p>
+      </div>
+      {% if print_count %}
+      <span class="badge is-success">{{ print_count }} confirmée{{ print_count|pluralize }}</span>
+      {% endif %}
+    </header>
+
+    {% if print_error %}<div class="alert alert--danger" role="alert"><p>{{ print_error }}</p></div>{% endif %}
+    {% if machine_error %}<div class="alert alert--danger" role="alert"><p>{{ machine_error }}</p></div>{% endif %}
+
+    {% if can_confirm_print and can_confirm_print_now %}{% if job.assigned_machine or sole_active_machine %}
+    <form
+      class="atelier-operator-print-form ui-form-stack"
+      hx-post="{% url 'portal:staff-atelier-operation-print-confirm' order_public_id=order.public_id %}"
+      hx-target="#atelier-operations-panel"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      data-submit-loading
+    >
+      {% csrf_token %}
+      <input type="hidden" name="q" value="{{ query }}">
+      <input type="hidden" name="queue" value="{{ queue }}">
+      <input type="hidden" name="request_token" value="{{ print_request_token }}">
+      <div class="ui-field-group">
+        <label class="ui-label" for="operator-print-note-{{ order.public_id }}">{% if is_reprint %}Motif de réimpression{% else %}Note d’impression{% endif %}</label>
+        <input class="ui-input" id="operator-print-note-{{ order.public_id }}" name="print_note" maxlength="255" placeholder="{% if is_reprint %}Obligatoire{% else %}Optionnel{% endif %}" {% if is_reprint %}required{% endif %}>
+      </div>
+      <button class="ui-btn ui-btn-primary" type="submit">{% if is_reprint %}Confirmer la réimpression{% else %}Confirmer l’impression{% endif %}</button>
+    </form>
+    {% endif %}{% elif print_count and job.assigned_machine %}
+    <p class="operator-state-note">{{ print_count }} impression{{ print_count|pluralize }} confirmée{{ print_count|pluralize }} sur <code>{{ job.assigned_machine.code }}</code>.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if operator_active_step == 'shipping' and focus_row.needs_shipping %}
+  <section class="atelier-operator-panel atelier-operator-panel--shipping" aria-labelledby="atelier-operator-shipping-title">
+    <header class="operator-section-head">
+      <div>
+        <h4 id="atelier-operator-shipping-title" class="font-display text-lg">Expédition Sendcloud</h4>
+        <p class="muted text-sm">Déclarez l’envoi colis pour finaliser la commande.</p>
+      </div>
+      <span class="badge is-warning">À expédier</span>
+    </header>
+    {% if can_create_shipment %}
+      {% with row=focus_row %}{% include "portal/staff/operations/_shipping_form.html" %}{% endwith %}
+    {% else %}
+      <p class="operator-state-note">Permission Sendcloud requise pour déclarer l’expédition.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if can_transition and focus_row.allowed_actions %}
+  <section class="atelier-operator-panel atelier-operator-panel--status" aria-labelledby="atelier-operator-status-title">
+    <header class="operator-section-head">
+      <div>
+        <h4 id="atelier-operator-status-title" class="font-display text-lg">Avancement OF</h4>
+        <p class="muted text-sm">{{ focus_row.workflow_hint }}</p>
+      </div>
+      <span class="badge {{ job.status|badge_tone }}">{{ job.status|human_status }}</span>
+    </header>
+    {% if production_payment_blocked %}
+    <aside class="atelier-operation-prerequisite" role="note">
+      <strong>Démarrage en attente.</strong>
+      <span>{{ production_payment_block_reason }}</span>
+      <a href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=billing">Résoudre le prérequis</a>
+    </aside>
+    {% else %}
+    <form
+      class="atelier-operation-transition"
+      hx-post="{% url 'portal:staff-atelier-operation-transition' order_public_id=order.public_id %}"
+      hx-target="#atelier-operations-panel"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      data-submit-loading
+    >
+      {% csrf_token %}
+      <input type="hidden" name="q" value="{{ query }}">
+      <input type="hidden" name="queue" value="{{ queue }}">
+      <div class="atelier-operation-transition__buttons">
+        {% for action in focus_row.allowed_actions %}
+        <button class="ui-btn {% if action.is_primary %}ui-btn-primary{% else %}ui-btn-secondary{% endif %}{% if action.is_danger %} is-danger{% endif %}" type="submit" name="to_status" value="{{ action.status }}" hx-disabled-elt="this">{{ action.label }}</button>
+        {% endfor %}
+      </div>
+    </form>
+    {% endif %}
+  </section>
+  {% elif not can_transition %}
+  <p class="atelier-operation-row__readonly">Consultation seule</p>
+  {% endif %}
+</section>

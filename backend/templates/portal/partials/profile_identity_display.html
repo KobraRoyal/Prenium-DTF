@@ -4,7 +4,7 @@
   aria-labelledby="personal-information-title"
 >
   <header class="account-profile-panel__head">
-    <h2 id="personal-information-title">Identité</h2>
+    <h2 id="personal-information-title" class="ui-sr-only">Identité</h2>
     <button
       class="ui-btn ui-btn-secondary ui-btn-sm"
       type="button"
@@ -33,4 +33,9 @@
 </section>
 {% if rail_oob %}
 {% include "portal/partials/account_rail_identity_oob.html" %}
+{% if nav_mode == "staff" %}
+{% include "portal/partials/profile_staff_focus.html" with oob=1 %}
+{% elif nav_mode == "client" %}
+{% include "portal/partials/profile_client_focus.html" with oob=1 %}
+{% endif %}
 {% endif %}

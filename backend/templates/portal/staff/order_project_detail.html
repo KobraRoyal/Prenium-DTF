@@ -1,25 +1,28 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags %}
-{% block title %}{{ project.project_number }} OPS - Prenium DTF{% endblock %}
+{% block title %}{{ project.project_number }} OPS — Prenium DTF{% endblock %}
 {% block portal_content %}
-<div class="staff-project-detail">
-  <a class="ui-link staff-project-detail__back" href="{% url 'portal:staff-order-project-list' %}">Retour aux projets B2B</a>
+<div class="portal-page portal-page--staff staff-project-detail-page">
+<div class="portal-page-rail">
+  {% include "components/portal/breadcrumbs/staff_order_project_detail.html" %}
+</div>
 
-  <section class="card staff-project-focus" aria-labelledby="staff-project-title">
-    <div class="staff-project-focus__identity">
-      <div>
-        <h1 id="staff-project-title">{{ project.name }}</h1>
-        <code>{{ project.project_number }}</code>
-      </div>
-      <span class="badge {{ project.status|badge_tone }}">{{ project.get_status_display }}</span>
+<section class="portal-page-surface staff-project-detail-identity" aria-labelledby="staff-project-title">
+  <div class="staff-project-focus__identity">
+    <div>
+      <h1 id="staff-project-title">{{ project.name }}</h1>
+      <code>{{ project.project_number }}</code>
     </div>
-    <dl class="staff-project-focus__facts">
-      <div><dt>Client</dt><dd>{{ project.customer.name }}</dd></div>
-      <div><dt>Créé par</dt><dd>{{ project.created_by.email|default:"Non renseigné" }}</dd></div>
-      <div><dt>Visuels</dt><dd>{{ project.items.count }}</dd></div>
-    </dl>
-  </section>
+    <span class="badge {{ project.status|badge_tone }}">{{ project.get_status_display }}</span>
+  </div>
+  <dl class="staff-project-focus__facts">
+    <div><dt>Client</dt><dd>{{ project.customer.name }}</dd></div>
+    <div><dt>Créé par</dt><dd>{{ project.created_by.email|default:"Non renseigné" }}</dd></div>
+    <div><dt>Visuels</dt><dd>{{ project.items.count }}</dd></div>
+  </dl>
+</section>
 
+<section class="portal-page-surface staff-project-detail-surface" aria-labelledby="staff-project-items-title">
   <section class="staff-project-items" aria-labelledby="staff-project-items-title">
     <header>
       <div><h2 id="staff-project-items-title">Visuels à contrôler</h2><p>Vérifiez le fichier, l’analyse et les dimensions avant traitement.</p></div>
@@ -46,8 +49,9 @@
       {% endfor %}
     </ol>
     {% else %}
-    {% include "components/ui/empty_state.html" with title="Aucun visuel" message="Ce projet ne contient encore aucune ligne à contrôler." %}
+    {% include "components/ui/empty_state.html" with title="Aucun fichier joint" message="Ce projet ne contient encore aucune ligne à contrôler." %}
     {% endif %}
   </section>
+</section>
 </div>
 {% endblock %}

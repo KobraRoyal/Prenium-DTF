@@ -2,7 +2,7 @@
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 testpaths = ["tests", "backend/apps"]
 python_files = ["test_*.py"]
-addopts = "--strict-markers --strict-config"
+addopts = "--strict-markers --strict-config --ds=config.settings.test"
 
 [tool.coverage.run]
 relative_files = true

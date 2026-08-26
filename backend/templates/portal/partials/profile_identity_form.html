@@ -4,7 +4,7 @@
   aria-labelledby="personal-information-title"
 >
   <header class="account-profile-panel__head">
-    <h2 id="personal-information-title">Identité</h2>
+    <h2 id="personal-information-title"{% if nav_mode == "staff" %} class="ui-sr-only"{% endif %}>Identité</h2>
   </header>
 
   <form
@@ -43,7 +43,7 @@
       <p class="ui-help" id="id_login_email-help">Pour le modifier, contactez l’atelier.</p>
     </div>
 
-    <div class="account-profile-form__footer">
+    <div class="ui-form-actions account-profile-form__footer">
       <button
         class="ui-btn ui-btn-secondary"
         type="button"

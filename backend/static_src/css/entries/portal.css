@@ -1,28 +1,5 @@
-/* Portail et tunnel prospect : couche produit partagée au-dessus du socle. */
-@import "../components/prospect-tunnel.css";
-@import "../components/workflow.css";
-@import "../components/product-shell.css";
-@import "../components/client-dashboard.css";
-@import "../components/account-profile.css";
-@import "../components/client-order-detail.css";
-@import "../components/b2b-order-project.css";
-@import "../components/inspection-workbench.css";
-@import "../components/email-template-workbench.css";
-@import "../components/access-request-queue.css";
-@import "../components/billing-statement-panel.css";
-@import "../components/customer-account-workspace.css";
-@import "../components/volume-nudge-copy.css";
+/* Monolith baseline (tests perf) — agrège core + client + staff + prospect. */
+@import "./portal-core.css";
+@import "./portal-client.css";
+@import "./portal-staff.css";
 @import "../components/prospect-journey.css";
-@import "../components/gang-sheet.css";
-@import "../components/atelier-operations.css";
-
-/* Unlayered: beats `body.landing-saas` dark background from app.css. */
-body.product-shell {
-  min-height: 100vh;
-  color: #0b0b0b;
-  background: #f7f5f0;
-}
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;

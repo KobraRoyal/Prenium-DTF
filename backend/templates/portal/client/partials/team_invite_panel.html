@@ -1,8 +1,8 @@
 <aside class="account-profile-panel account-team-invite" id="team-invite-panel" aria-labelledby="team-invite-title">
   <header class="account-profile-panel__head">
     <div>
-      <h2 id="team-invite-title">Inviter un collaborateur</h2>
-      <p>La personne reçoit un lien personnel valable 72 h pour rejoindre l’organisation.</p>
+      <h2 id="team-invite-title" class="ui-sr-only">Inviter un collaborateur</h2>
+      <p class="ui-sr-only">La personne reçoit un lien personnel valable 72 h pour rejoindre l’organisation.</p>
     </div>
   </header>
 
@@ -49,7 +49,7 @@
       </div>
 
       {% if invitation_form.non_field_errors %}
-        <div class="dui-alert dui-alert-error" role="alert">{{ invitation_form.non_field_errors.0 }}</div>
+        <div class="alert alert--danger" role="alert">{{ invitation_form.non_field_errors.0 }}</div>
       {% endif %}
 
       {% include "components/forms/form_actions.html" with primary_label="Envoyer l’invitation" primary_class_full="ui-btn ui-btn-primary" htmx_disable=True %}

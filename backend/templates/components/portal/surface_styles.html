@@ -1,0 +1,11 @@
+{% load static portal_tags %}
+{# Bundles Lot 4 : core + rôle (client | staff | prospect | auth). #}
+{% portal_css_asset_v as asset_v %}
+<link rel="stylesheet" href="{% static 'css/portal-core.css' %}?v={{ asset_v }}">
+{% if portal_surface == "prospect" %}
+<link rel="stylesheet" href="{% static 'css/prospect.css' %}?v={{ asset_v }}">
+{% elif portal_surface == "staff" %}
+<link rel="stylesheet" href="{% static 'css/portal-staff.css' %}?v={{ asset_v }}">
+{% elif portal_surface == "client" %}
+<link rel="stylesheet" href="{% static 'css/portal-client.css' %}?v={{ asset_v }}">
+{% endif %}

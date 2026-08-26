@@ -1,16 +1,18 @@
 <div
-  class="ui-toast-stack pointer-events-none fixed right-4 top-4 z-[100] flex w-[min(100vw-2rem,24rem)] flex-col gap-3"
+  class="ui-toast-stack"
   x-data="toastStack()"
   @prenium-toast.window="push($event.detail)"
   aria-live="polite"
+  aria-relevant="additions"
 >
   <template x-for="t in items" :key="t.id">
     <div
-      class="pointer-events-auto ui-toast dui-alert shadow-lg"
+      class="ui-toast"
       :class="variantClass(t.variant)"
-      role="status"
+      :role="t.variant === 'error' ? 'alert' : 'status'"
     >
-      <span x-text="t.message"></span>
+      <span class="ui-toast__mark" aria-hidden="true"></span>
+      <p class="ui-toast__message" x-text="t.message"></p>
     </div>
   </template>
 </div>

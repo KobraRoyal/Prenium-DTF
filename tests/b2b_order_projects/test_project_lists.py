@@ -18,14 +18,14 @@ def test_converted_projects_are_excluded_from_in_progress_lists():
     active = B2BOrderProject.objects.create(
         customer=customer,
         created_by=user,
-        project_number="DTF-B2B-2026-100001",
+        project_number="CMD-2026-100001",
         name="En cours",
         status=B2BOrderProject.Status.INCOMPLETE,
     )
     converted = B2BOrderProject.objects.create(
         customer=customer,
         created_by=user,
-        project_number="DTF-B2B-2026-100002",
+        project_number="CMD-2026-100002",
         name="Déjà transmise",
         status=B2BOrderProject.Status.CONVERTED,
         converted_at=timezone.now(),

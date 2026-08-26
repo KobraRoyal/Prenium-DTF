@@ -1,0 +1,85 @@
+{% load ui_tags %}
+<div id="atelier-dashboard-panel" class="atelier-dashboard-stack">
+{% if dashboard_kpi_rows %}
+<section class="atelier-dashboard-metrics" aria-label="Indicateurs de la file Atelier">
+  {% ui_kpi_grid dashboard_kpi_rows %}
+</section>
+{% endif %}
+
+<section class="portal-page-surface ui-list-section atelier-dashboard-surface" x-data="{
+  selected: [],
+  isMobile: false,
+  initWorklistViewport() {
+    const mq = window.matchMedia('(max-width: 959px)');
+    this.isMobile = mq.matches;
+    mq.addEventListener('change', (event) => { this.isMobile = event.matches; });
+  }
+}" x-init="initWorklistViewport()">
+  <div class="atelier-worklist-command ui-list-command ui-list-command--compact" aria-labelledby="atelier-worklist-command-title">
+    <div class="atelier-worklist-command__head">
+      <h2 class="font-display" id="atelier-worklist-command-title">OF non imprimés</h2>
+      <span class="badge is-neutral">{{ unprinted_of_total }} en attente</span>
+    </div>
+    <div class="ui-list-command__tools atelier-worklist-command__tools" aria-label="Impression groupée">
+      <button
+        class="ui-btn ui-btn-ghost ui-btn-sm"
+        type="button"
+        {% if not printable_count %}disabled{% endif %}
+        @click="selected = Array.from(document.getElementById('atelier-worklist-form').querySelectorAll('input[name=order_public_ids]:not(:disabled)')).map((input) => input.value)"
+      >Tout cocher</button>
+      <button
+        class="ui-btn ui-btn-secondary ui-btn-sm"
+        type="submit"
+        form="atelier-worklist-form"
+        name="batch_mode"
+        value="selected"
+        x-show="selected.length > 0"
+        x-cloak
+        x-text="`Imprimer la sélection (${selected.length})`"
+      ></button>
+      <button
+        class="ui-btn ui-btn-primary ui-btn-sm"
+        type="submit"
+        form="atelier-worklist-form"
+        name="batch_mode"
+        value="all_unprinted"
+        {% if not unprinted_of_total %}disabled{% endif %}
+        {% if unprinted_of_total > batch_print_limit %}
+        title="{{ unprinted_of_total }} OF en attente — ce lot imprime les {{ batch_print_limit }} plus récentes. Relancez ensuite pour le reste."
+        {% else %}
+        title="Émet le PDF groupé de tous les OF non imprimés."
+        {% endif %}
+      >
+        {% if not unprinted_of_total %}
+        Imprimer le lot
+        {% elif unprinted_of_total > batch_print_limit %}
+        Imprimer le lot ({{ unprinted_of_batch_count }} plus récents)
+        {% else %}
+        Imprimer le lot ({{ unprinted_of_batch_count }})
+        {% endif %}
+      </button>
+    </div>
+  </div>
+
+  <form
+    id="atelier-worklist-form"
+    class="atelier-worklist"
+    method="post"
+    action="{% url 'portal:staff-manufacturing-order-batch-pdf' %}"
+    target="_blank"
+    rel="noopener"
+    data-atelier-batch
+    data-dashboard-refresh-url="{% url 'portal:staff-dashboard' %}"
+    data-batch-print-limit="{{ batch_print_limit }}"
+  >
+    {% csrf_token %}
+    {% if worklist_rows %}
+    {% ui_atelier_worklist_table worklist_rows %}
+    {% else %}
+    <div class="atelier-worklist__empty">
+      {% include "components/ui/empty_state.html" with title="Aucun OF en attente" message="Tous les OF ont été émis. Nouvelles commandes et contrôle : pilotage Atelier." %}
+    </div>
+    {% endif %}
+  </form>
+</section>
+</div>

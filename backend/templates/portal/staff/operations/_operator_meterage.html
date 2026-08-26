@@ -1,0 +1,40 @@
+<section class="staff-meterage-section" aria-labelledby="operator-meterage-heading">
+  <h4 id="operator-meterage-heading" class="font-display text-lg">Métrage linéaire</h4>
+  <p class="muted text-sm">Saisie globale pour la commande (laize {{ dtf_laize_cm }}&nbsp;cm).</p>
+  {% if meterage_form_error %}
+  <div class="alert alert--danger" role="alert"><p>{{ meterage_form_error }}</p></div>
+  {% endif %}
+  {% if can_set_meterage_override %}
+  <form
+    class="staff-meterage-section__form ui-form-stack"
+    hx-post="{% url 'portal:staff-atelier-operation-meterage' order_public_id=order.public_id %}"
+    hx-target="#atelier-operations-panel"
+    hx-swap="outerHTML"
+    hx-indicator="#portal-htmx-indicator"
+    data-submit-loading
+  >
+    {% csrf_token %}
+    <input type="hidden" name="q" value="{{ query }}">
+    <input type="hidden" name="queue" value="{{ queue }}">
+    <div class="ui-field-group">
+      <label class="ui-label" for="operator-order-meterage">Métrage linéaire (m)</label>
+      <input
+        class="ui-input"
+        id="operator-order-meterage"
+        name="order_meterage_override_linear_m"
+        type="text"
+        inputmode="decimal"
+        autocomplete="off"
+        placeholder="Ex. 2,5 — vide = auto"
+        value="{% if order.meterage_override_linear_m %}{{ order.meterage_override_linear_m }}{% endif %}"
+      >
+    </div>
+    {% if order_billable_sqm_preview is not None %}
+    <p class="muted">≈ {{ order_billable_sqm_preview }} m²</p>
+    {% endif %}
+    <button class="ui-btn ui-btn-primary" type="submit">Enregistrer le métrage</button>
+  </form>
+  {% elif order.meterage_override_linear_m %}
+  <p>Métrage saisi : <strong>{{ order.meterage_override_linear_m }}</strong> m</p>
+  {% endif %}
+</section>

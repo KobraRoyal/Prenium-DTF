@@ -1,25 +1,219 @@
-/* Fiche commande à finaliser : retour, pas un kicker au-dessus du titre. */
+/* Fiche commande à finaliser — alignée sur fiche commande transmise. */
 
-body.product-shell .b2b-project-header__intro .ui-breadcrumb {
-  margin: 0 0 0.5rem;
-  color: var(--product-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
+body.product-shell .client-order-project-detail .page-head-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
 }
 
-body.product-shell .b2b-project-header__intro .ui-breadcrumb a {
+body.product-shell .client-order-project-surface {
+  display: grid;
+  gap: 0.85rem;
+}
+
+body.product-shell .client-order-project-stack {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+body.product-shell .client-order-project-facts {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Une seule carte surface : pas de double bordure sur blocs internes. */
+body.product-shell .client-order-project-surface :is(
+  .b2b-configurator,
+  .b2b-project-options,
+  .client-order-project-visuals,
+  .client-order-project-options
+) {
+  border: 0;
+  background: transparent;
   color: var(--product-ink);
-  text-decoration: none;
+  box-shadow: none;
 }
 
-body.product-shell .b2b-project-header__intro .ui-breadcrumb a:hover,
-body.product-shell .b2b-project-header__intro .ui-breadcrumb a:focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
+body.product-shell .client-order-project-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--product-line);
 }
 
+body.product-shell .client-order-project-section-head h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+body.product-shell .client-order-project-section-head .muted {
+  margin: 0.25rem 0 0;
+}
+
+body.product-shell .client-order-project-summary {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 1.15rem 0 0;
+  border-top: 1px solid var(--product-line);
+}
+
+body.product-shell .client-order-project-surface .client-order-project-checkout,
+body.product-shell .client-order-project-surface .b2b-project-checkout {
+  display: grid;
+  gap: 1.1rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body.product-shell .client-order-project-surface .client-order-project-checkout.has-quote,
+body.product-shell .client-order-project-surface .b2b-project-checkout.has-quote {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  body.product-shell .client-order-project-surface .client-order-project-checkout.has-quote,
+  body.product-shell .client-order-project-surface .b2b-project-checkout.has-quote {
+    grid-template-columns: minmax(17rem, 1.2fr) minmax(15rem, 0.85fr);
+    align-items: start;
+    gap: 1.25rem 1.5rem;
+  }
+}
+
+body.product-shell .client-order-project-surface .b2b-project-quote {
+  display: grid;
+  gap: 0.85rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body.product-shell .client-order-project-surface .b2b-project-quote__head {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--product-line) 78%, transparent);
+}
+
+body.product-shell .client-order-project-surface .b2b-project-quote__total {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.2vw, 1.65rem);
+  letter-spacing: -0.02em;
+}
+
+body.product-shell .client-order-project-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.65rem 0.85rem;
+  margin-top: 0.35rem;
+}
+
+body.product-shell .client-order-project-surface .b2b-project-checkout-cta,
+body.product-shell .client-order-project-surface .b2b-project-checkout-actions .ui-btn-primary {
+  width: auto;
+  min-width: min(100%, 14rem);
+  justify-content: center;
+  min-height: 2.85rem;
+  font-size: 0.92rem;
+}
+
+body.product-shell .client-order-project-options {
+  padding: 0;
+  overflow: visible;
+}
+
+body.product-shell .client-order-project-recap {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+body.product-shell .client-order-project-recap dt {
+  margin: 0 0 0.15rem;
+}
+
+body.product-shell .client-order-project-recap dd {
+  margin: 0;
+}
+
+/* Lignes visuels = rythme tableau, pas cartes imbriquées. */
+body.product-shell .client-order-project-surface .b2b-visual-list {
+  gap: 0;
+}
+
+body.product-shell .client-order-project-surface .b2b-visual-list-item {
+  border: 0;
+  border-bottom: 1px solid var(--product-line);
+  border-radius: 0;
+  padding: 0.85rem 0;
+  background: transparent;
+}
+
+body.product-shell .client-order-project-surface .b2b-visual-list-item:first-child {
+  padding-top: 0.15rem;
+}
+
+body.product-shell .client-order-project-surface .b2b-visual-list-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0.15rem;
+}
+
+body.product-shell .client-order-project-surface .b2b-visual-list-item:hover,
+body.product-shell .client-order-project-surface .b2b-visual-list-item:focus-within {
+  background: color-mix(in srgb, var(--brand) 6%, transparent);
+}
+
+body.product-shell .client-order-project-surface .b2b-visual-list-item__actions {
+  gap: 0.45rem;
+}
+
+body.product-shell .client-order-project-surface .b2b-visual-facts > * {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--product-muted);
+  font-size: 0.82rem;
+}
+
+body.product-shell .client-order-project-surface .b2b-visual-facts > * + *::before {
+  content: "·";
+  margin-right: 0.5rem;
+  color: color-mix(in srgb, var(--product-muted) 70%, transparent);
+}
+
+body.product-shell .client-order-project-surface .b2b-quality-review--compact {
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.55rem;
+  background: color-mix(in srgb, var(--success) 10%, var(--surface-raised));
+}
+
+body.product-shell .client-order-project-surface .b2b-quality-review--compact.is-warning {
+  background: color-mix(in srgb, var(--brand) 12%, var(--surface-raised));
+}
+
+body.product-shell .client-order-project-surface .b2b-quality-review--compact.is-error {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface-raised));
+}
+
+body.product-shell .client-order-project-surface .b2b-quality-review--compact.is-pending {
+  background: color-mix(in srgb, var(--muted) 10%, var(--surface-raised));
+}
+
+/* Choix livraison */
 body.product-shell .b2b-shipping-choice {
   display: grid;
   gap: 0.45rem;
@@ -50,6 +244,16 @@ body.product-shell .b2b-shipping-choice__options {
   body.product-shell .b2b-shipping-choice__options {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  body.product-shell .client-order-project-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.product-shell .client-order-project-surface .b2b-project-checkout-cta,
+  body.product-shell .client-order-project-surface .b2b-project-checkout-actions .ui-btn-primary {
+    width: 100%;
+  }
 }
 
 body.product-shell .b2b-shipping-choice__option {
@@ -58,23 +262,25 @@ body.product-shell .b2b-shipping-choice__option {
   gap: 0.2rem;
   margin: 0;
   padding: 0.75rem;
-  border: 2px solid var(--product-line);
+  border: 1px solid var(--product-line);
+  border-radius: var(--radius-sm);
   background: var(--product-panel);
   cursor: pointer;
 }
 
 body.product-shell .b2b-shipping-choice__option:hover {
-  background: color-mix(in srgb, var(--product-accent) 10%, var(--product-panel));
+  background: color-mix(in srgb, var(--brand) 10%, var(--product-panel));
 }
 
 body.product-shell .b2b-shipping-choice__option:has(input:checked) {
-  background: color-mix(in srgb, var(--product-accent) 22%, var(--product-panel));
-  border-color: var(--product-ink);
+  background: color-mix(in srgb, var(--brand) 18%, var(--product-panel));
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--product-line));
 }
 
 body.product-shell .b2b-shipping-choice__option:focus-within {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline: none;
+  outline-offset: 0;
+  box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--brand) 32%, transparent));
 }
 
 body.product-shell .b2b-shipping-choice__name {

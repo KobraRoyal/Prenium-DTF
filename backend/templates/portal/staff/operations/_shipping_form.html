@@ -1,9 +1,9 @@
 <details class="atelier-operation-shipping-form"{% if row.shipment_form_open %} open{% endif %}>
   <summary>
     <span><strong>Déclarer dans Sendcloud</strong><small>Destinataire prérempli · vérification avant envoi</small></span>
-    <span class="ui-btn ui-btn-primary">Préparer l’expédition</span>
+    <span class="ui-btn ui-btn-primary ui-btn-sm">Préparer l’expédition</span>
   </summary>
-  <form hx-post="{% url 'portal:staff-atelier-operation-shipment-create' order_public_id=row.order.public_id %}" hx-target="#atelier-operations-workspace" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+  <form hx-post="{% url 'portal:staff-atelier-operation-shipment-create' order_public_id=row.order.public_id %}" hx-target="#atelier-operations-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
     {% csrf_token %}
     <input type="hidden" name="queue" value="{{ queue }}">
     <input type="hidden" name="q" value="{{ query }}">

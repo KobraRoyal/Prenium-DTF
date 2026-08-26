@@ -83,9 +83,11 @@ class StaffDefaultVolumeDiscountSettingsView(StaffDomainPermissionMixin, View):
         if copy_form is None:
             stored = volume_nudge_copy_service.stored_messages()
             copy_form = StaffVolumeDiscountDashboardCopyForm(initial=stored)
+        active_tier_count = sum(tier.is_active for tier in tiers)
         return {
             "tier_rows": rows,
-            "active_tier_count": sum(tier.is_active for tier in tiers),
+            "active_tier_count": active_tier_count,
+            "inactive_tier_count": len(tiers) - active_tier_count,
             "add_form": add_form or StaffDefaultCustomerVolumeDiscountTierForm(prefix="new"),
             "copy_form": copy_form,
             "copy_audience": copy_audience,

@@ -85,7 +85,9 @@ def test_entrypoint_assets_do_not_depend_on_manual_query_versions() -> None:
     services = _source("backend/templates/shop/services.html")
 
     assert "app.css' %}?v=" not in base
-    assert "app.js' %}?v=" not in base
+    # Entrypoint JS : cache-bust via tag portal (pas de version calendaire en dur).
+    assert "js/app.js' %}?v={{ asset_v }}" in base
+    assert "js/app.js' %}?v=20" not in base
     assert "marketing.js' %}?v=" not in home
     assert "marketing.js' %}?v=" not in services
 

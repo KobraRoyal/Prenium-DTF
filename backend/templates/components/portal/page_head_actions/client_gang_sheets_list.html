@@ -1,0 +1,8 @@
+{% if can_edit %}
+<button class="ui-btn ui-btn-primary gang-library-head__create" type="button" data-dialog-open="create-gang-sheet-dialog" aria-haspopup="dialog">
+  {% include "portal/client/gang_sheets/partials/icon.html" with name="plus" size="16" %}
+  Nouvelle planche
+</button>
+{% else %}
+<span class="product-pill">Consultation seule</span>
+{% endif %}

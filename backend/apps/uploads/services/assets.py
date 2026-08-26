@@ -451,10 +451,14 @@ class AssetService:
             2,
         )
 
-        if metadata.get("uses_artboard_dimensions") and metadata.get("has_vector_artwork"):
-            placement_dpi = metadata.get("placement_effective_dpi") or analysis.dpi_x
-            if placement_dpi:
+        # Prefer placed-motif DPI over page/sheet fill — avoids false low sheet DPI
+        # when artwork covers only part of a gang-sheet artboard.
+        placement_dpi = metadata.get("placement_effective_dpi")
+        if placement_dpi:
+            try:
                 return round(float(placement_dpi), 2)
+            except (TypeError, ValueError):
+                pass
 
         if metadata.get("uses_artboard_dimensions") and analysis.dpi_x:
             return print_effective
@@ -470,10 +474,7 @@ class AssetService:
             ):
                 return round(min(float(analysis.dpi_x), float(analysis.dpi_y)), 2)
 
-        return round(
-            min(analysis.image_width / width_inches, analysis.image_height / height_inches),
-            2,
-        )
+        return print_effective
 
     @staticmethod
     def _print_size_matches(
@@ -536,25 +537,49 @@ class AssetService:
             label = "Résolution à vérifier"
             message = "La résolution effective n’a pas pu être calculée automatiquement."
             resolution_display = "À vérifier"
-        elif metadata.get("uses_artboard_dimensions") and metadata.get("has_vector_artwork"):
+        elif metadata.get("placement_effective_dpi") or (
+            metadata.get("uses_artboard_dimensions") and metadata.get("has_vector_artwork")
+        ):
             raster_dpi = float(metadata.get("placement_effective_dpi") or analysis.dpi_x or 0)
             resolution_display = f"{raster_dpi:.0f} DPI" if raster_dpi else "OK"
-            if raster_dpi >= recommended_dpi:
+            if metadata.get("has_vector_artwork") and metadata.get("has_raster_artwork"):
+                if raster_dpi >= recommended_dpi:
+                    level = "good"
+                    label = "Résolution OK"
+                    message = f"Document mixte · vectoriel net · photo raster {raster_dpi:.0f} DPI."
+                elif raster_dpi >= minimum_dpi:
+                    level = "warning"
+                    label = "Résolution acceptable"
+                    message = (
+                        f"Document mixte · photo raster {raster_dpi:.0f} DPI · "
+                        f"objectif {recommended_dpi} DPI."
+                    )
+                else:
+                    level = "error"
+                    label = "Résolution insuffisante"
+                    message = (
+                        f"Document mixte · photo raster {raster_dpi:.0f} DPI · "
+                        f"pixellisation probable sous {minimum_dpi} DPI."
+                    )
+            elif raster_dpi >= recommended_dpi:
                 level = "good"
-                label = "Résolution OK"
-                message = f"Document mixte · vectoriel net · photo raster {raster_dpi:.0f} DPI."
+                label = "Résolution optimale"
+                message = (
+                    f"{raster_dpi:.0f} DPI effectifs à l’échelle de pose · "
+                    f"objectif {recommended_dpi} DPI atteint."
+                )
             elif raster_dpi >= minimum_dpi:
                 level = "warning"
                 label = "Résolution acceptable"
                 message = (
-                    f"Document mixte · photo raster {raster_dpi:.0f} DPI · "
-                    f"objectif {recommended_dpi} DPI."
+                    f"{raster_dpi:.0f} DPI effectifs à l’échelle de pose · "
+                    f"netteté potentiellement réduite sous {recommended_dpi} DPI."
                 )
             else:
                 level = "error"
                 label = "Résolution insuffisante"
                 message = (
-                    f"Document mixte · photo raster {raster_dpi:.0f} DPI · "
+                    f"{raster_dpi:.0f} DPI effectifs à l’échelle de pose · "
                     f"pixellisation probable sous {minimum_dpi} DPI."
                 )
         elif metadata.get("uses_artboard_dimensions") and analysis and analysis.dpi_x:
@@ -663,16 +688,45 @@ class AssetService:
         }:
             return review
 
+        metadata = (getattr(getattr(version, "analysis", None), "metadata", None)) or {}
+        has_vector = bool(metadata.get("has_vector_artwork"))
+        has_raster = bool(metadata.get("has_raster_artwork"))
+        placement_dpi = metadata.get("placement_effective_dpi")
+        try:
+            placement_dpi_value = float(placement_dpi) if placement_dpi else None
+        except (TypeError, ValueError):
+            placement_dpi_value = None
+
+        if has_vector and has_raster:
+            resolution_display = "PDF hybride"
+            message = (
+                "PDF HD hybride · vectoriel, mixte et raster préservés · contrôlez "
+                "les détails fins, les semi-transparences et la couleur du support."
+            )
+            effective_dpi = None
+        elif placement_dpi_value:
+            dpi_label = f"{placement_dpi_value:.0f}"
+            resolution_display = f"{dpi_label} DPI"
+            message = (
+                f"Planche HD · motifs à {dpi_label} DPI effectifs · "
+                "contrôlez les détails fins, les dégradés et la couleur du support."
+            )
+            effective_dpi = placement_dpi_value
+        else:
+            resolution_display = "Planche HD"
+            message = (
+                "Planche HD verrouillée · contrôlez le rendu, les dégradés "
+                "et la couleur du support avant de commander."
+            )
+            effective_dpi = None
+
         review.update(
             {
                 "level": "warning" if review["issues"] else "good",
                 "label": "Contrôle du fichier HD",
-                "message": (
-                    "PDF HD hybride · vectoriel, mixte et raster préservés · contrôlez "
-                    "les détails fins, les semi-transparences et la couleur du support."
-                ),
-                "effective_dpi": None,
-                "resolution_display": "PDF hybride",
+                "message": message,
+                "effective_dpi": effective_dpi,
+                "resolution_display": resolution_display,
             }
         )
         return review

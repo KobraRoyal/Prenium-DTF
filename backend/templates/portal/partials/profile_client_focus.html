@@ -1,0 +1,25 @@
+<header
+  class="staff-customer-focus staff-customer-detail-identity"
+  id="client-profile-focus"
+  {% if oob %}hx-swap-oob="true"{% endif %}
+  aria-labelledby="client-profile-title"
+>
+  <div class="staff-customer-focus__identity">
+    <p class="staff-customer-focus__name" id="client-profile-title">{% include "portal/partials/account_rail_display_name.html" %}</p>
+    {% if request.user.first_name or request.user.last_name %}
+    <p class="staff-customer-focus__email muted">{{ request.user.email }}</p>
+    {% endif %}
+    {% if customer %}
+    <p class="staff-customer-focus__org muted">{{ customer.name }}</p>
+    {% endif %}
+    <div class="staff-customer-focus__statuses" aria-label="État du compte">
+      {% if selected_membership %}
+      <span class="badge is-neutral">{{ selected_membership.role_label }}</span>
+      {% elif customer_membership %}
+      <span class="badge is-neutral">{{ customer_membership.get_role_display }}</span>
+      {% else %}
+      <span class="badge is-neutral">Compte client</span>
+      {% endif %}
+    </div>
+  </div>
+</header>

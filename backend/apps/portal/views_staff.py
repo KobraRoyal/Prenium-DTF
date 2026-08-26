@@ -17,9 +17,11 @@ from apps.portal.views_common import (
 )
 from apps.production.models import ProductionJob
 from apps.production.services.dashboard import AtelierDashboardService
+from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
 from apps.uploads.models import OrderDriveFolder
 
 atelier_dashboard_service = AtelierDashboardService()
+staff_order_list_filter_service = StaffOrderListFilterService()
 
 
 class StaffOrderPriceView(StaffPortalMixin, View):
@@ -54,8 +56,15 @@ class StaffOrderListView(StaffDomainPermissionMixin, View):
     required_permission = "orders.view_order"
 
     def get(self, request):
+        active_queue = staff_order_list_filter_service.normalize_queue(request.GET.get("queue"))
+        base_queryset = order_service.list_staff_orders()
+        queue_counts = staff_order_list_filter_service.count_by_queue(base_queryset)
+        filtered_queryset = staff_order_list_filter_service.apply_filter(
+            base_queryset,
+            queue=active_queue,
+        )
         page_obj = order_service.paginate_orders(
-            order_service.list_staff_orders(),
+            filtered_queryset,
             page_number=request.GET.get("page"),
             page_size=settings.STAFF_ORDER_LIST_PAGE_SIZE,
         )
@@ -65,6 +74,12 @@ class StaffOrderListView(StaffDomainPermissionMixin, View):
             {
                 "orders": page_obj.object_list,
                 "page_obj": page_obj,
+                "active_queue": active_queue,
+                "active_queue_label": staff_order_list_filter_service.label_for(active_queue),
+                "queue_tabs": staff_order_list_filter_service.build_tabs(
+                    active_queue=active_queue,
+                    counts=queue_counts,
+                ),
                 "nav_mode": "staff",
                 "nav_key": "staff-orders",
                 "badge_tone_for_status": badge_tone_for_status,

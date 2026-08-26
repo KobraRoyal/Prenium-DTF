@@ -3,9 +3,11 @@
 
 {% block title %}Comptes clients — Prenium DTF{% endblock %}
 {% block portal_content %}
-{% include "components/portal/page_head.html" with title="Comptes clients" subtitle="Administrer les entreprises et leurs conditions tarifaires." %}
+<div class="portal-page portal-page--staff staff-customers-page">
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_customers_list.html" title="Comptes clients" subtitle="Administrer les entreprises et leurs conditions tarifaires." %}
 
-<form class="card ui-form-stack mb-4" method="get" role="search">
+<section class="portal-page-surface ui-list-section staff-customers-surface">
+<form class="staff-customers-filters ui-form-stack mb-4" method="get" role="search">
   <div class="flex flex-wrap items-end gap-3">
     <div class="ui-field-group grow min-w-[14rem]">
       <label class="ui-label" for="customer-search">Recherche</label>
@@ -23,9 +25,9 @@
   </div>
 </form>
 
-<section class="card staff-data-list" aria-label="Liste des comptes clients">
-  <div class="staff-data-list__desktop table-wrap hidden min-[960px]:block">
-    <table class="table">
+<div class="staff-data-list" aria-label="Liste des comptes clients">
+  <div class="staff-data-list__desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
+    <table class="ui-data-table ui-data-table--comfortable">
       <thead>
         <tr>
           <th>Entreprise</th>
@@ -84,10 +86,10 @@
     </table>
   </div>
 
-  <div class="staff-data-list__mobile grid gap-0 min-[960px]:hidden" aria-label="Comptes en cartes">
+  <div class="staff-data-list__mobile grid gap-3 min-[960px]:hidden" aria-label="Comptes en cartes">
     {% for customer in page_obj %}
-    <a class="staff-data-card" href="{% url 'portal:staff-customer-detail' customer_public_id=customer.public_id %}">
-      <div class="staff-data-card__head">
+    <a class="ui-data-card" href="{% url 'portal:staff-customer-detail' customer_public_id=customer.public_id %}">
+      <div class="ui-data-card__head">
         <strong>{{ customer.name }}</strong>
         {% if customer.is_active %}
         <span class="badge is-success">Actif</span>
@@ -96,7 +98,7 @@
         {% endif %}
       </div>
       <p class="muted m-0">{{ customer.billing_email|default:"—" }}</p>
-      <dl class="staff-data-card__facts">
+      <dl class="ui-data-card__facts">
         <div><dt>Mode</dt><dd><span class="badge {{ customer.default_billing_mode|badge_tone }}">{{ customer.default_billing_mode|settlement_badge }}</span></dd></div>
         <div><dt>Canal</dt><dd>{{ customer.get_preferred_settlement_method_display }}</dd></div>
         <div>
@@ -104,23 +106,15 @@
           <dd>{% if customer.billing_profile.price_per_sqm_eur %}{{ customer.billing_profile.price_per_sqm_eur }} €/m²{% else %}Catalogue{% endif %}</dd>
         </div>
       </dl>
-      <span class="staff-data-card__cta">Ouvrir le compte</span>
+      <span class="ui-data-card__cta">Ouvrir le compte</span>
     </a>
     {% empty %}
     {% include "components/ui/empty_state.html" with title="Aucun compte" message="Aucun compte client pour ces filtres." %}
     {% endfor %}
   </div>
-</section>
+</div>
 
-{% if page_obj.paginator.num_pages > 1 %}
-<nav class="staff-pagination" aria-label="Pagination comptes clients">
-  {% if page_obj.has_previous %}
-  <a class="ui-btn ui-btn-secondary" href="?q={{ search_query|urlencode }}&status={{ active_status }}&page={{ page_obj.previous_page_number }}">Précédent</a>
-  {% endif %}
-  <span class="muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-  {% if page_obj.has_next %}
-  <a class="ui-btn ui-btn-secondary" href="?q={{ search_query|urlencode }}&status={{ active_status }}&page={{ page_obj.next_page_number }}">Suivant</a>
-  {% endif %}
-</nav>
-{% endif %}
+{% include "components/portal/pagination.html" with pagination_label="Pagination comptes clients" pagination_class="staff-pagination" %}
+</section>
+</div>
 {% endblock %}

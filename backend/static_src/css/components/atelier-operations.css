@@ -1,243 +1,745 @@
 @layer components {
-  body.product-shell .atelier-operations-head,
-  body.product-shell .atelier-operations-workspace {
-    width: min(100%, 92rem);
-    margin-inline: auto;
+  /* Pilotage Atelier — surfaces plates, aligné dashboard / ui-list-section. */
+  body.product-shell .atelier-operations-page .atelier-operations-workspace {
+    width: 100%;
+    margin-inline: 0;
   }
 
-  body.product-shell .atelier-operations-head {
+  body.product-shell .atelier-operations-page .atelier-operations-scan-bar {
     display: grid;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: 0.85rem;
+    margin: 0 0 0.85rem;
+    padding: 1rem clamp(1rem, 2vw, 1.25rem);
+    border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--line));
+    border-radius: var(--radius-sm, 14px);
+    background: color-mix(in srgb, var(--brand) 7%, var(--surface));
   }
 
-  body.product-shell .atelier-operations-head > .page-head {
-    padding: 0 0 0.85rem;
-    border: 0;
-    border-bottom: 2px solid var(--product-line, #201d18);
-    background: transparent;
-    box-shadow: none;
+  body.product-shell .atelier-operations-page .atelier-operations-scan-bar__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    align-items: flex-start;
   }
 
-  body.product-shell .atelier-operations-head > .page-head h1 {
-    margin-top: 0;
-    font-size: clamp(1.85rem, 4vw, 2.75rem);
+  body.product-shell .atelier-operations-page .atelier-operations-scan-bar__head h2 {
+    margin: 0;
+    font-size: clamp(1.05rem, 2.2vw, 1.25rem);
+    line-height: 1.15;
   }
 
-  body.product-shell .atelier-operations-head > .page-head .page-head-lead {
-    margin-top: 0.35rem;
+  body.product-shell .atelier-operations-page .atelier-operations-scan-bar__head p {
+    margin: 0.25rem 0 0;
+    color: var(--muted);
+    font-size: 0.88rem;
     line-height: 1.45;
   }
 
-  body.product-shell .atelier-operations-scan {
-    display: grid;
-    grid-template-columns: minmax(18rem, 1fr) auto auto;
-    gap: 0.75rem;
-    align-items: end;
-    padding: 1rem;
-    border: 2px solid var(--product-ink, #0b0b0b);
-    background: var(--product-paper, #fffdf8);
-  }
-
-  body.product-shell .atelier-operations-scan__field {
+  body.product-shell .atelier-operations-page .atelier-operations-scan-bar__field {
     display: grid;
     gap: 0.35rem;
+    width: 100%;
+    min-width: 0;
   }
 
-  body.product-shell .atelier-operations-scan__field label,
-  body.product-shell .atelier-operation-row__mobile-label {
+  body.product-shell .atelier-operations-page .atelier-operations-scan-bar__field .ui-label {
     font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.055em;
+    font-weight: 650;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
-  body.product-shell .atelier-operations-scan__field .ui-input {
-    min-height: 3.25rem;
-    font-family: var(--ui-font-display);
-    font-size: clamp(1rem, 2vw, 1.35rem);
-    font-weight: 700;
+  body.product-shell .atelier-operations-page .atelier-operations-scan__input {
+    width: 100%;
+    min-height: 3.1rem;
+    font-size: 1.15rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
   }
 
-  body.product-shell .atelier-operations-scan__signal {
-    grid-column: 1 / -1;
+  body.product-shell .atelier-operations-page .atelier-operations-scan-bar__actions {
     display: flex;
-    gap: 0.45rem;
+    flex-wrap: wrap;
+    gap: 0.55rem;
     align-items: center;
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.82rem;
   }
 
-  body.product-shell .atelier-operations-scan__signal > span:first-child {
-    width: 0.55rem;
-    height: 0.55rem;
-    border: 1px solid currentColor;
-    border-radius: 50%;
+  body.product-shell .atelier-operations-page .atelier-operations-focus__tabs {
+    margin: 0 0 0.85rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus__notice {
+    margin: 0 0 0.85rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-empty {
+    padding: 0.5rem 0 1rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-panel:has(.atelier-operations-empty) {
+    padding-top: 0.25rem;
+  }
+
+  body.product-shell .atelier-operations-page .ui-list-command--stats-only {
+    margin-bottom: 0.85rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-scan {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: stretch;
+    padding: 0;
+    border: 0;
     background: transparent;
   }
 
-  body.product-shell .atelier-operations-scan__signal.is-ready {
-    color: var(--success, #1f7a40);
-  }
-
-  body.product-shell .atelier-operations-scan__signal.is-ready > span:first-child {
-    background: currentColor;
-  }
-
-  body.product-shell .atelier-operations-workspace {
+  body.product-shell .atelier-operations-page .atelier-operations-scan__field {
     display: grid;
-    gap: 0.75rem;
+    gap: 0.35rem;
+    min-width: 0;
+    width: 100%;
   }
 
-  body.product-shell .atelier-operations-feedback p {
-    margin: 0;
+  body.product-shell .atelier-operations-page .atelier-operations-scan__input {
+    width: 100%;
+    min-height: 2.85rem;
+    font-size: 1.05rem;
+    font-weight: 650;
   }
 
-  body.product-shell .atelier-operations-tabs {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    border: 1px solid var(--product-line, #201d18);
-    background: var(--product-paper, #fffdf8);
+  body.product-shell .atelier-operations-page .atelier-operations-scan__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
   }
 
-  body.product-shell .atelier-operations-tab {
+  body.product-shell .atelier-operations-page .atelier-operations-scan__actions .ui-btn {
+    flex-shrink: 0;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus {
+    margin: 0 0 1rem;
+    padding: 1rem clamp(1rem, 2vw, 1.25rem);
+    border: 1px solid color-mix(in srgb, var(--brand) 22%, var(--line));
+    border-radius: var(--radius-sm, 14px);
+    background: color-mix(in srgb, var(--brand) 8%, var(--surface));
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus__head {
     display: flex;
     justify-content: space-between;
-    gap: 0.75rem;
-    align-items: center;
-    min-height: 3rem;
-    padding: 0.7rem 0.85rem;
-    border-right: 1px solid var(--product-line, #201d18);
-    color: var(--product-ink, #0b0b0b);
-    text-decoration: none;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 0.85rem;
   }
 
-  body.product-shell .atelier-operations-tab:last-child {
-    border-right: 0;
+  body.product-shell .atelier-operations-page .atelier-operations-focus__head > div {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
   }
 
-  body.product-shell .atelier-operations-tab.is-active {
-    background: var(--brand);
-    color: #fffaf2;
-  }
-
-  body.product-shell .atelier-operations-tab:focus-visible,
-  body.product-shell .atelier-operation-note summary:focus-visible,
-  body.product-shell .atelier-operation-shipping-form summary:focus-visible {
-    outline: 3px solid var(--focus-ring, #00b8ff);
-    outline-offset: 2px;
-  }
-
-  body.product-shell .atelier-operations-query-state {
+  body.product-shell .atelier-operations-page .atelier-operations-focus__head p {
     margin: 0;
     color: var(--muted);
-  }
-
-  body.product-shell .atelier-operations-list-head,
-  body.product-shell .atelier-operation-row > article {
-    display: grid;
-    grid-template-columns: minmax(15rem, 1.25fr) minmax(10rem, 0.85fr) minmax(8rem, 0.65fr) minmax(17rem, 1.35fr);
-    gap: 1rem;
-    align-items: start;
-  }
-
-  body.product-shell .atelier-operations-list-head {
-    padding: 0 1rem;
-    color: var(--muted);
     font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.055em;
+    font-weight: 650;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
-  body.product-shell .atelier-operations-list {
+  body.product-shell .atelier-operations-page .atelier-operations-focus__head strong {
+    font-family: var(--ui-font-display);
+    font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+    line-height: 1.15;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus__head span {
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.65rem 1rem;
+    margin: 0 0 0.85rem;
+    padding: 0;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus__facts > div {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus__facts dt {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus__facts dd {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 650;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus__hint {
+    margin: 0 0 0.75rem;
+    color: var(--ink);
+    font-size: 0.92rem;
+    font-weight: 650;
+    line-height: 1.45;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus__actions {
+    margin-top: 0.85rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-workflow {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0 0 0.85rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper {
     display: grid;
     gap: 0.75rem;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    padding: 0.85rem clamp(0.85rem, 2vw, 1.1rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm, 14px);
+    background: color-mix(in srgb, var(--bg) 22%, var(--surface));
+    overflow: hidden;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.35rem 1rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__title {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__progress {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__progress strong {
+    color: var(--ink);
+    font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__track {
+    --stepper-marker: 2.35rem;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--step-count, 4), minmax(0, 1fr));
+    gap: 0.55rem;
+    min-width: 0;
+    max-width: 100%;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  body.product-shell .atelier-operation-row {
-    border: 1px solid var(--product-line, #201d18);
-    background: var(--product-paper, #fffdf8);
+  body.product-shell .atelier-operations-page .atelier-stepper__track::before {
+    position: absolute;
+    top: calc(var(--stepper-marker) / 2);
+    right: calc(100% / (var(--step-count, 4) * 2));
+    left: calc(100% / (var(--step-count, 4) * 2));
+    height: 2px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--line) 88%, var(--ink));
+    content: "";
+    pointer-events: none;
   }
 
-  body.product-shell .atelier-operation-row.is-blocked {
-    background: color-mix(in srgb, var(--danger) 7%, var(--product-paper, #fffdf8));
-  }
-
-  body.product-shell .atelier-operation-row.is-shipping {
-    background: color-mix(in srgb, var(--success, #1f7a40) 6%, var(--product-paper, #fffdf8));
-  }
-
-  body.product-shell .atelier-operation-row > article {
-    padding: 1rem;
-  }
-
-  body.product-shell .atelier-operation-row__identity,
-  body.product-shell .atelier-operation-row__machine,
-  body.product-shell .atelier-operation-row__state,
-  body.product-shell .atelier-operation-row__actions {
+  body.product-shell .atelier-operations-page .atelier-stepper__step {
+    position: relative;
+    z-index: 1;
     display: grid;
-    gap: 0.3rem;
+    justify-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    text-align: center;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__marker {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: var(--stepper-marker);
+    height: var(--stepper-marker);
+    border: 1.5px solid color-mix(in srgb, var(--line) 70%, var(--ink));
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--muted);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__index {
+    font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__copy {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__label {
+    display: block;
+    overflow-wrap: anywhere;
+    color: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__state {
+    display: block;
+    color: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.2;
+    opacity: 0.92;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-pending {
+    color: var(--muted);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-done {
+    color: var(--success);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-done .atelier-stepper__marker {
+    border-color: color-mix(in srgb, var(--success) 55%, var(--line));
+    background: color-mix(in srgb, var(--success) 16%, var(--surface));
+    color: var(--success);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-active {
+    color: var(--ink);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-active .atelier-stepper__marker {
+    border-color: color-mix(in srgb, var(--brand) 70%, var(--line));
+    background: color-mix(in srgb, var(--brand) 22%, var(--surface));
+    color: var(--ink);
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--brand) 16%, transparent),
+      0 8px 18px color-mix(in srgb, var(--brand) 18%, transparent);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-active .atelier-stepper__state {
+    color: color-mix(in srgb, var(--brand-strong, var(--brand)) 78%, var(--ink));
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-blocked {
+    color: var(--danger);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step.is-blocked .atelier-stepper__marker {
+    border-color: color-mix(in srgb, var(--danger) 55%, var(--line));
+    background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+    color: var(--danger);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-stepper__step[aria-current="step"] .atelier-stepper__marker {
+    outline: 2px solid color-mix(in srgb, var(--focus, #770176) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    body.product-shell .atelier-operations-page .atelier-stepper__step.is-active .atelier-stepper__marker {
+      animation: atelier-stepper-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    }
+  }
+
+  @keyframes atelier-stepper-pulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 4px color-mix(in srgb, var(--brand) 16%, transparent),
+        0 8px 18px color-mix(in srgb, var(--brand) 18%, transparent);
+    }
+    50% {
+      box-shadow:
+        0 0 0 7px color-mix(in srgb, var(--brand) 10%, transparent),
+        0 10px 22px color-mix(in srgb, var(--brand) 22%, transparent);
+    }
+  }
+
+  @media (max-width: 719px) {
+    body.product-shell .atelier-operations-page .atelier-stepper__track {
+      display: flex;
+      gap: 0.65rem;
+      max-width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      padding-bottom: 0.15rem;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__track::before {
+      display: none;
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__step {
+      flex: 0 0 7.5rem;
+      scroll-snap-align: start;
+      padding: 0.55rem 0.45rem 0.45rem;
+      border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__step.is-active {
+      border-color: color-mix(in srgb, var(--brand) 45%, var(--line));
+      background: color-mix(in srgb, var(--brand) 10%, var(--surface));
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__step.is-done {
+      border-color: color-mix(in srgb, var(--success) 35%, var(--line));
+      background: color-mix(in srgb, var(--success) 8%, var(--surface));
+    }
+
+    body.product-shell .atelier-operations-page .atelier-stepper__step.is-blocked {
+      border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+      background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+    }
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-panel {
+    padding: 0.85rem clamp(0.85rem, 2vw, 1rem);
+    border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+    border-radius: var(--radius-sm, 14px);
+    background: color-mix(in srgb, var(--bg) 10%, var(--surface));
+  }
+
+  body.product-shell .atelier-operations-page .operator-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.65rem 1rem;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+  }
+
+  body.product-shell .atelier-operations-page .operator-section-head h4 {
+    margin: 0;
+  }
+
+  body.product-shell .atelier-operations-page .operator-state-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-uploads {
+    display: grid;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-upload {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm, 14px);
+    background: var(--surface);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-upload.is-approved {
+    border-color: color-mix(in srgb, var(--success) 35%, var(--line));
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-upload.is-rejected {
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-upload__preview {
+    display: block;
+    overflow: hidden;
+    border-radius: var(--radius-sm, 14px);
+    aspect-ratio: 1;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-upload__preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-upload__body {
+    display: grid;
+    gap: 0.35rem;
     min-width: 0;
   }
 
-  body.product-shell .atelier-operation-row__identity > strong {
-    font-family: var(--ui-font-display);
-    font-size: 1rem;
+  body.product-shell .atelier-operations-page .atelier-operator-upload__body strong {
+    font-size: 0.9rem;
+    word-break: break-word;
   }
 
-  body.product-shell .atelier-operation-row__identity > span,
-  body.product-shell .atelier-operation-row__machine small,
-  body.product-shell .atelier-operation-row__state time,
-  body.product-shell .atelier-operation-row__state small {
+  body.product-shell .atelier-operations-page .atelier-operator-machine-form,
+  body.product-shell .atelier-operations-page .atelier-operator-print-form,
+  body.product-shell .atelier-operations-page .staff-meterage-section__form {
+    margin-top: 0.65rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operator-panel--shipping .atelier-operation-shipping-form {
+    margin-top: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-focus .atelier-operation-shipment,
+  body.product-shell .atelier-operations-page .atelier-operations-focus .atelier-operation-shipping-form {
+    margin-top: 0.85rem;
+    border-radius: var(--radius-sm, 14px);
+    overflow: hidden;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-scan__signal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 650;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-scan__signal > span:first-child {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--muted) 55%, transparent);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-scan__signal.is-ready {
+    color: var(--success);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-scan__signal.is-ready > span:first-child {
+    background: var(--success);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-feedback p {
+    margin: 0;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row {
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: var(--surface);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row.is-blocked {
+    background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row.is-shipping {
+    background: color-mix(in srgb, var(--success) 5%, var(--surface));
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row.is-active {
+    background: color-mix(in srgb, var(--brand) 5%, var(--surface));
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__main {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1.2fr) minmax(10rem, 0.9fr) minmax(8rem, 0.7fr) minmax(14rem, 1.2fr);
+    grid-template-areas:
+      "identity machine state actions"
+      "workflow workflow workflow workflow";
+    gap: 0.85rem 1rem;
+    padding: 1rem clamp(1rem, 2vw, 1.35rem);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__identity {
+    grid-area: identity;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__machine {
+    grid-area: machine;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__state {
+    grid-area: state;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__actions {
+    grid-area: actions;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__workflow {
+    grid-area: workflow;
+    padding-top: 0.75rem;
+    border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  }
+
+  body.product-shell .atelier-operations-page :is(
+    .atelier-operation-row__identity,
+    .atelier-operation-row__machine,
+    .atelier-operation-row__state,
+    .atelier-operation-row__actions
+  ) {
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__identity > strong {
+    font-family: var(--ui-font-display);
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__identity > span,
+  body.product-shell .atelier-operations-page .atelier-operation-row__machine small,
+  body.product-shell .atelier-operations-page .atelier-operation-row__state time,
+  body.product-shell .atelier-operations-page .atelier-operation-row__state small {
     color: var(--muted);
     font-size: 0.82rem;
   }
 
-  body.product-shell .atelier-operation-row__identity > a {
+  body.product-shell .atelier-operations-page .atelier-operation-row__dossier,
+  body.product-shell .atelier-operations-page .atelier-operation-row__machine small a {
     width: fit-content;
     color: var(--brand-strong);
     font-size: 0.82rem;
     font-weight: 700;
-    text-underline-offset: 0.18em;
+    text-decoration: underline;
+    text-underline-offset: 0.16em;
   }
 
-  body.product-shell .atelier-operation-row__mobile-label {
+  body.product-shell .atelier-operations-page .atelier-operation-row__missing {
+    color: var(--warning);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__hint {
+    margin: 0 0 0.55rem;
+    color: var(--ink);
+    font-size: 0.88rem;
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-workflow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-workflow__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    padding: 0.45rem 0.85rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: background-color 0.16s ease, color 0.16s ease;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-workflow__link:hover,
+  body.product-shell .atelier-operations-page .atelier-operation-workflow__link:focus-visible {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--brand) 8%, var(--surface));
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-workflow__link.is-active {
+    background: color-mix(in srgb, var(--brand) 18%, var(--surface));
+    color: var(--ink);
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-row__mobile-label {
     display: none;
     color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
-  body.product-shell .atelier-operation-transition,
-  body.product-shell .atelier-operation-transition__buttons {
+  body.product-shell .atelier-operations-page .atelier-operation-transition,
+  body.product-shell .atelier-operations-page .atelier-operation-transition__buttons {
     display: flex;
     flex-wrap: wrap;
     gap: 0.45rem;
   }
 
-  body.product-shell .atelier-operation-transition {
+  body.product-shell .atelier-operations-page .atelier-operation-transition {
     align-items: flex-start;
   }
 
-  body.product-shell .atelier-operation-transition .ui-btn {
-    min-height: 2.4rem;
-    padding: 0.5rem 0.7rem;
-    font-size: 0.76rem;
-  }
-
-  body.product-shell .atelier-operation-transition .ui-btn.is-danger {
-    border-color: var(--danger);
-    color: var(--danger);
-  }
-
-  body.product-shell .atelier-operation-note {
+  body.product-shell .atelier-operations-page .atelier-operation-note {
     flex: 1 1 100%;
   }
 
-  body.product-shell .atelier-operation-note summary {
+  body.product-shell .atelier-operations-page .atelier-operation-note summary {
     width: fit-content;
     cursor: pointer;
     color: var(--muted);
@@ -245,69 +747,74 @@
     font-weight: 700;
   }
 
-  body.product-shell .atelier-operation-note .ui-input {
+  body.product-shell .atelier-operations-page .atelier-operation-note .ui-input {
     margin-top: 0.45rem;
   }
 
-  body.product-shell .atelier-operation-row__readonly,
-  body.product-shell .atelier-operation-row__done {
+  body.product-shell .atelier-operations-page .atelier-operation-row__readonly,
+  body.product-shell .atelier-operations-page .atelier-operation-row__done {
     color: var(--muted);
     font-size: 0.86rem;
   }
 
-  body.product-shell .atelier-operation-prerequisite {
+  body.product-shell .atelier-operations-page .atelier-operation-prerequisite {
     display: grid;
-    flex: 1 1 100%;
     gap: 0.2rem;
+    margin-top: 0.65rem;
     padding: 0.65rem 0.75rem;
-    border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--product-line, #201d18));
-    background: color-mix(in srgb, var(--danger) 6%, #fff);
+    border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--line));
+    border-radius: var(--radius-sm, 14px);
+    background: color-mix(in srgb, var(--danger) 6%, var(--surface));
     font-size: 0.78rem;
     line-height: 1.4;
   }
 
-  body.product-shell .atelier-operation-prerequisite > span {
+  body.product-shell .atelier-operations-page .atelier-operation-prerequisite > span {
     color: var(--muted);
   }
 
-  body.product-shell .atelier-operation-prerequisite > a {
+  body.product-shell .atelier-operations-page .atelier-operation-prerequisite > a {
     width: fit-content;
     color: var(--brand-strong);
     font-weight: 800;
     text-underline-offset: 0.18em;
   }
 
-  body.product-shell .atelier-operation-shipment,
-  body.product-shell .atelier-operation-shipping-form {
-    border-top: 1px solid var(--product-line, #201d18);
+  body.product-shell .atelier-operations-page .atelier-operation-shipment,
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form {
+    border-top: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg) 12%, var(--surface));
   }
 
-  body.product-shell .atelier-operation-shipment {
+  body.product-shell .atelier-operations-page .atelier-operation-shipment {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
     align-items: center;
     padding: 0.75rem 1rem;
-    background: color-mix(in srgb, var(--success, #1f7a40) 8%, #fff);
   }
 
-  body.product-shell .atelier-operation-shipment > div:first-child {
+  body.product-shell .atelier-operations-page .atelier-operation-shipment > div:first-child {
     display: grid;
     gap: 0.15rem;
   }
 
-  body.product-shell .atelier-operation-shipment span {
-    color: color-mix(in srgb, var(--success, #1f7a40) 70%, #0b0b0b);
+  body.product-shell .atelier-operations-page .atelier-operation-shipment span {
+    color: var(--muted);
     font-size: 0.82rem;
   }
 
-  body.product-shell .atelier-operation-shipment__actions {
+  body.product-shell .atelier-operations-page .atelier-operation-shipment__actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.45rem;
   }
 
-  body.product-shell .atelier-operation-shipping-form > summary {
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form:not([open]) > form {
+    display: none;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form > summary {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
@@ -315,39 +822,37 @@
     padding: 0.75rem 1rem;
     cursor: pointer;
     list-style: none;
-    background: color-mix(in srgb, var(--brand) 8%, #fff);
   }
 
-  body.product-shell .atelier-operation-shipping-form > summary::-webkit-details-marker {
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form > summary::-webkit-details-marker {
     display: none;
   }
 
-  body.product-shell .atelier-operation-shipping-form > summary > span:first-child {
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form > summary > span:first-child {
     display: grid;
     gap: 0.15rem;
   }
 
-  body.product-shell .atelier-operation-shipping-form > summary small {
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form > summary small {
     color: var(--muted);
   }
 
-  body.product-shell .atelier-operation-shipping-form > form {
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form > form {
     padding: 1rem;
-    border-top: 1px solid var(--product-line, #201d18);
-    background: #fff;
+    border-top: 1px solid var(--line);
   }
 
-  body.product-shell .atelier-operation-shipping-form__grid {
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form__grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.75rem;
   }
 
-  body.product-shell .atelier-operation-shipping-form__street {
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form__street {
     grid-column: span 2;
   }
 
-  body.product-shell .atelier-operation-shipping-form__actions {
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form__actions {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
@@ -357,83 +862,188 @@
     border-top: 1px solid var(--line);
   }
 
-  body.product-shell .atelier-operation-shipping-form__actions p {
+  body.product-shell .atelier-operations-page .atelier-operation-shipping-form__actions p {
     max-width: 65ch;
     margin: 0;
     color: var(--muted);
     font-size: 0.82rem;
   }
 
-  body.product-shell .atelier-operations-pagination {
+  body.product-shell .atelier-operations-page .atelier-operations-pagination {
     display: flex;
     justify-content: center;
     gap: 0.75rem;
     align-items: center;
-    padding: 0.5rem;
+    padding: 0.85rem 1rem 1rem;
+    border-top: 1px solid var(--line);
   }
 
-  @media (max-width: 1024px) {
-    body.product-shell .atelier-operations-list-head {
+  body.product-shell .atelier-operations-page .atelier-operations__legend {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1.2fr) minmax(10rem, 0.9fr) minmax(8rem, 0.7fr) minmax(14rem, 1.2fr);
+    gap: 1rem;
+    padding: 0 1rem 0.45rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  body.product-shell .atelier-operations-page .atelier-operations-next-action {
+    margin-bottom: 0.85rem;
+  }
+
+  @media (max-width: 63.99rem) {
+    body.product-shell .atelier-operations-page .atelier-operations__legend {
       display: none;
     }
 
-    body.product-shell .atelier-operation-row > article {
+    body.product-shell .atelier-operations-page .atelier-operation-row__main {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-areas:
+        "identity identity"
+        "machine state"
+        "actions actions"
+        "workflow workflow";
     }
 
-    body.product-shell .atelier-operation-row__mobile-label {
+    body.product-shell .atelier-operations-page .atelier-operation-row__mobile-label {
       display: block;
-    }
-
-    body.product-shell .atelier-operation-shipping-form__grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  @media (max-width: 640px) {
-    body.product-shell .atelier-operations-scan {
-      grid-template-columns: 1fr;
+  @media (max-width: 39.99rem) {
+    body.product-shell .atelier-operations-page .atelier-operations-scan__actions {
+      flex-direction: column;
+      align-items: stretch;
     }
 
-    body.product-shell .atelier-operations-scan > .ui-btn,
-    body.product-shell .atelier-operations-scan__signal {
-      grid-column: 1;
+    body.product-shell .atelier-operations-page .atelier-operations-scan__actions .ui-btn {
+      width: 100%;
     }
 
-    body.product-shell .atelier-operations-tabs {
+    body.product-shell .atelier-operations-page .atelier-operations-focus__head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    body.product-shell .atelier-operations-page .atelier-operation-row__main {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "identity"
+        "machine"
+        "state"
+        "actions"
+        "workflow";
+    }
+
+    body.product-shell .atelier-operations-page .atelier-operation-shipping-form__grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    body.product-shell .atelier-operations-tab:nth-child(2) {
-      border-right: 0;
+    body.product-shell .atelier-operations-page .atelier-operation-shipping-form__street {
+      grid-column: span 2;
     }
 
-    body.product-shell .atelier-operations-tab:nth-child(-n + 2) {
-      border-bottom: 1px solid var(--product-line, #201d18);
-    }
-
-    body.product-shell .atelier-operation-row > article,
-    body.product-shell .atelier-operation-shipping-form__grid {
-      grid-template-columns: 1fr;
-    }
-
-    body.product-shell .atelier-operation-shipping-form__street {
-      grid-column: auto;
-    }
-
-    body.product-shell .atelier-operation-shipment,
-    body.product-shell .atelier-operation-shipping-form > summary,
-    body.product-shell .atelier-operation-shipping-form__actions {
+    body.product-shell .atelier-operations-page .atelier-operation-shipment,
+    body.product-shell .atelier-operations-page .atelier-operation-shipping-form > summary,
+    body.product-shell .atelier-operations-page .atelier-operation-shipping-form__actions {
       align-items: stretch;
       flex-direction: column;
     }
 
-    body.product-shell .atelier-operation-shipment__actions .ui-btn,
-    body.product-shell .atelier-operation-shipment__actions form,
-    body.product-shell .atelier-operation-shipment__actions form .ui-btn,
-    body.product-shell .atelier-operation-shipping-form > summary .ui-btn,
-    body.product-shell .atelier-operation-shipping-form__actions .ui-btn {
+    body.product-shell .atelier-operations-page .atelier-operation-shipment__actions .ui-btn,
+    body.product-shell .atelier-operations-page .atelier-operation-transition__buttons .ui-btn,
+    body.product-shell .atelier-operations-page .atelier-operation-shipping-form__actions .ui-btn {
       width: 100%;
+    }
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: stretch;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer[hidden] {
+    display: none !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer__backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: color-mix(in srgb, var(--ink) 52%, transparent);
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer__panel {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    width: min(1200px, calc(100vw - 2rem));
+    height: min(92vh, 980px);
+    margin: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md, 16px);
+    background: var(--surface);
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--ink) 24%, transparent);
+    overflow: hidden;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--brand-soft) 36%, var(--surface));
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer__title {
+    margin: 0;
+    font-family: var(--font-display, inherit);
+    font-size: 1rem;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer__frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: color-mix(in srgb, var(--ink) 82%, var(--surface));
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.atelier-batch-pdf-viewer-open {
+    overflow: hidden;
+  }
+
+  @media (max-width: 767px) {
+    html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer__panel {
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      border-radius: 0;
+    }
+
+    html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer__actions {
+      width: 100%;
+    }
+
+    html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-batch-pdf-viewer__actions .ui-btn {
+      flex: 1 1 auto;
     }
   }
 }

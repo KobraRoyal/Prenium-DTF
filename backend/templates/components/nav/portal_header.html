@@ -1,7 +1,7 @@
 {% load portal_tags %}
 {% portal_navigation_access as portal_nav_access %}
 <header class="app-header landing-saas-header product-header">
-  <div class="app-main app-nav landing-saas-nav ui-shell-main product-nav">
+  <div class="app-main app-nav landing-saas-nav ui-shell-main product-nav ui-foundation-nav">
     <div class="product-nav__brand">
       {% if nav_mode == "client" %}
       {% include "components/brand/logo.html" with brand_home_href="portal:client-dashboard" brand_home_label="Retour à l'espace client" %}
@@ -16,7 +16,7 @@
 
     <button
       type="button"
-      class="ui-btn ui-btn-ghost ui-btn-sm product-menu-button"
+      class="ui-btn ui-btn-ghost ui-btn-sm product-menu-button ui-nav-toggle"
       aria-expanded="false"
       aria-controls="portal-primary-nav"
       aria-label="Ouvrir le menu du portail"
@@ -30,7 +30,7 @@
 
     <nav
       id="portal-primary-nav"
-      class="nav-group landing-saas-nav__links product-nav__links"
+      class="nav-group landing-saas-nav__links product-nav__links ui-nav-rail"
       data-product-menu
       aria-label="Navigation principale"
     >
@@ -43,7 +43,7 @@
       </div>
 
       <div class="product-nav__account">
-        <span class="product-nav__section-label">Compte</span>
+        <span class="product-nav__section-label">Votre compte</span>
         {% if request.user.is_authenticated %}
           {% include "components/nav/portal_profile_menu.html" %}
         {% else %}

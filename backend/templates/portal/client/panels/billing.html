@@ -1,6 +1,6 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="billing" %}
-<div class="panel client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}" aria-label="Règlement">
+<div class="client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}" aria-label="Règlement">
   {% if payment and payment.status == "captured" and invoice %}
   <section class="client-billing-success" aria-labelledby="client-billing-success-title">
     <div class="client-billing-success__intro">

@@ -18,10 +18,10 @@ document.addEventListener("alpine:init", () => {
     },
     variantClass(variant) {
       const map = {
-        success: "dui-alert-success",
-        error: "dui-alert-error",
-        warning: "dui-alert-warning",
-        info: "dui-alert-info",
+        success: "ui-toast--success",
+        error: "ui-toast--error",
+        warning: "ui-toast--warning",
+        info: "ui-toast--info",
       };
       return map[variant] || map.info;
     },

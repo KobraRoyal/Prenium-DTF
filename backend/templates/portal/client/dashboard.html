@@ -4,67 +4,59 @@
 {% block title %}Tableau de bord — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="client-dashboard">
-<section class="page-head page-head--premium client-dashboard-head" aria-labelledby="client-dashboard-title">
-  <div class="page-head__content">
-    <h1 class="font-display tracking-tight" id="client-dashboard-title">Tableau de bord</h1>
-    <p class="page-head-lead">{% if customer %}Pilotez les commandes et les productions de {{ customer.name }}.{% else %}Retrouvez ici l’activité de votre espace client.{% endif %}</p>
-  </div>
-  {% if client_focus and client_focus.kind == "start" %}
-  <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">Créer une commande</a>
-  {% endif %}
-</section>
+<div class="portal-page portal-page--client client-dashboard">
+{% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_dashboard.html" head_labelledby="client-dashboard-title" title="Tableau de bord" lead_template="components/portal/page_head_leads/client_dashboard.html" actions_template="components/portal/page_head_actions/client_dashboard.html" %}
 {% if not memberships %}
-<section class="card empty-state">
-  <h2 class="font-display text-lg">Aucun espace client actif</h2>
-  <p class="muted">Votre compte n’est encore rattaché à aucun espace client actif.</p>
+<section class="portal-page-surface client-dashboard-surface">
+  {% include "components/ui/empty_state.html" with title="Aucun espace client actif" message="Votre compte n’est encore rattaché à aucun espace client actif." %}
 </section>
 {% else %}
+<section class="portal-page-surface client-dashboard-surface">
 {% if volume_discount_summary %}
-<section class="client-dashboard-palier" aria-labelledby="client-volume-discount-title" data-testid="client-volume-discount-summary">
-  <div>
-    <h2 id="client-volume-discount-title">{{ volume_discount_summary.nudge_headline }}</h2>
-    {% if volume_discount_summary.nudge_message %}
-    <p>{{ volume_discount_summary.nudge_message }}</p>
-    {% endif %}
-  </div>
-  <span class="client-dashboard-palier__meter" aria-label="Volume DTF du mois">{{ volume_discount_summary.volume_label }} m ce mois</span>
-</section>
+  <section class="client-dashboard-palier" aria-labelledby="client-volume-discount-title" data-testid="client-volume-discount-summary">
+    <div>
+      <h2 id="client-volume-discount-title">{{ volume_discount_summary.nudge_headline }}</h2>
+      {% if volume_discount_summary.nudge_message %}
+      <p>{{ volume_discount_summary.nudge_message }}</p>
+      {% endif %}
+    </div>
+    <span class="client-dashboard-palier__meter" aria-label="Volume DTF du mois">{{ volume_discount_summary.volume_label }} m ce mois</span>
+  </section>
 {% endif %}
 {% if client_focus and client_focus.kind != "start" %}
-<section class="client-dashboard-focus {{ client_focus.tone }}" aria-labelledby="client-dashboard-focus-title" data-testid="client-dashboard-focus">
-  <div>
-    <h2 id="client-dashboard-focus-title">{{ client_focus.title }}</h2>
-    {% if client_focus.detail %}
-    <p class="client-dashboard-focus__detail">{{ client_focus.detail }}</p>
-    {% endif %}
-  </div>
-  <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">{{ client_focus.action_label }}</a>
-</section>
+  <section class="client-dashboard-focus {{ client_focus.tone }}" aria-labelledby="client-dashboard-focus-title" data-testid="client-dashboard-focus">
+    <div>
+      <h2 id="client-dashboard-focus-title">{{ client_focus.title }}</h2>
+      {% if client_focus.detail %}
+      <p class="client-dashboard-focus__detail">{{ client_focus.detail }}</p>
+      {% endif %}
+    </div>
+    <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">{{ client_focus.action_label }}</a>
+  </section>
 {% endif %}
 {% if project_feature_enabled and recent_projects %}
-<section class="card client-dashboard-section" aria-labelledby="client-dashboard-preparations">
-  <div class="client-dashboard-section__head">
-    <h2 class="font-display text-lg" id="client-dashboard-preparations">Commandes à finaliser</h2>
-    {% if projects_in_progress_count > recent_projects|length %}
-    <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-project-list' customer_public_id=customer.public_id %}">Tout voir</a>
-    {% endif %}
+  <div class="client-dashboard-section" aria-labelledby="client-dashboard-preparations">
+    <div class="client-dashboard-section__head">
+      <h2 class="font-display text-lg" id="client-dashboard-preparations">Commandes à finaliser</h2>
+      {% if projects_in_progress_count > recent_projects|length %}
+      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-project-list' customer_public_id=customer.public_id %}">Tout voir</a>
+      {% endif %}
+    </div>
+    {% ui_order_projects_table projects=recent_projects customer=customer show_delete=True %}
   </div>
-  {% ui_order_projects_table projects=recent_projects customer=customer show_delete=True %}
-</section>
 {% endif %}
-
 {% if recent_orders %}
-<section class="card client-dashboard-section" aria-labelledby="client-dashboard-orders">
-  <div class="client-dashboard-section__head">
-    <h2 class="font-display text-lg" id="client-dashboard-orders">Commandes transmises</h2>
-    {% if orders_count > recent_orders|length %}
-    <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Tout voir</a>
-    {% endif %}
+  <div class="client-dashboard-section" aria-labelledby="client-dashboard-orders">
+    <div class="client-dashboard-section__head">
+      <h2 class="font-display text-lg" id="client-dashboard-orders">Commandes transmises</h2>
+      {% if orders_count > recent_orders|length %}
+      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Tout voir</a>
+      {% endif %}
+    </div>
+    {% ui_orders_table orders=recent_orders variant="client" customer=customer %}
   </div>
-  {% ui_orders_table orders=recent_orders variant="client" customer=customer %}
-</section>
 {% endif %}
+</section>
 {% endif %}
 </div>
 {% endblock %}

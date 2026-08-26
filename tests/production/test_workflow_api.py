@@ -190,6 +190,17 @@ def test_staff_with_permission_can_view_workflow_snapshot():
 def test_staff_can_download_manufacturing_order_pdf():
     actor, customer, _membership = create_customer_scope("pdf@example.com", "Acme PDF")
     order = create_order(customer, actor)
+    order.shipping_method_code = "standard"
+    order.shipping_method_name = "Livraison standard"
+    order.customer_note = "Urgent sample\nDate souhaitée : 2026-08-15"
+    order.save(
+        update_fields=[
+            "shipping_method_code",
+            "shipping_method_name",
+            "customer_note",
+            "updated_at",
+        ]
+    )
     upload = create_stored_order_upload(
         order=order,
         actor=actor,
@@ -215,11 +226,13 @@ def test_staff_can_download_manufacturing_order_pdf():
     with pymupdf.open(stream=response.content, filetype="pdf") as document:
         text = "\n".join(page.get_text() for page in document)
 
-    assert "ORDRE DE FABRICATION" in text
     assert job.manufacturing_order_number in text
     assert f"#{short_public_ref(order.public_id).upper()}" in text
+    assert "Livraison standard" in text
+    assert "15/08/2026" in text
+    assert "Urgent sample" in text
+    assert "Date souhaitée : 2026-08-15" not in text
     assert text.count("design.pdf") == 1
-    assert "À contrôler" in text
     assert "TAILLE DEMANDÉE" in text
     assert "120 × 80 mm" in text
     assert "COULEUR DU SUPPORT" in text

@@ -226,7 +226,7 @@ class B2BOrderProjectCheckoutService:
     def _build_order_note(self, project) -> str:
         parts = [project.name.strip()]
         if project.project_number:
-            parts.append(f"Préparation {project.project_number}")
+            parts.append(f"Commande {project.project_number}")
         if project.customer_comment.strip():
             parts.append(project.customer_comment.strip())
         if project.requested_date:

@@ -175,6 +175,30 @@ class ProductionMachineAssignmentService:
             )
             raise
 
+    def assign_sole_active_if_unassigned(
+        self,
+        *,
+        order_public_id,
+        actor,
+        source: str,
+    ) -> tuple[ProductionJob, ProductionJobMachineAssignment | None, bool]:
+        order = Order.objects.filter(public_id=order_public_id).first()
+        if order is None:
+            raise ValidationError("Dossier Atelier introuvable.")
+        job = ProductionWorkflowService().get_or_create_for_order(order=order)
+        if job.assigned_machine_id:
+            return job, None, False
+        machines = list(ProductionMachine.objects.active().order_by("code", "name")[:2])
+        if len(machines) != 1:
+            return job, None, False
+        return self.assign(
+            order_public_id=order_public_id,
+            machine_public_id=machines[0].public_id,
+            actor=actor,
+            source=source,
+            reason="",
+        )
+
     def mark_print_started_for_transition(
         self,
         *,

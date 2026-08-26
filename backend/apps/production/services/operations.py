@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.db.models import Case, Count, IntegerField, Prefetch, Q, When
+from django.urls import reverse
 
 from apps.billing.models import Payment
 from apps.billing.services.production_payment_gate import production_start_blocked_reason
@@ -34,6 +35,12 @@ class AtelierOperationsService:
         ProductionJob.Status.BLOCKED: "Bloquer l'OF",
         ProductionJob.Status.COMPLETED: "Terminer l'OF",
     }
+    workflow_panel_definitions = (
+        ("inspection", "Contrôle", "uploads.view_orderuploadinspection"),
+        ("production", "Production", "production.view_productionjob"),
+        ("shipping", "Expédition", "shipping.view_shipment"),
+        ("billing", "Facturation", "billing.view_invoice"),
+    )
 
     def __init__(self):
         self.workflow_service = ProductionWorkflowService()
@@ -52,11 +59,7 @@ class AtelierOperationsService:
         counts = self._queue_counts(base_queryset)
         filtered = self._filter_queue(base_queryset, normalized_queue)
         if normalized_query:
-            filtered = filtered.filter(
-                Q(manufacturing_order_number__icontains=normalized_query)
-                | Q(scan_identifier__icontains=normalized_query)
-                | Q(order__customer__name__icontains=normalized_query)
-            )
+            filtered = self._filter_scan_query(filtered, normalized_query)
 
         page_obj = Paginator(filtered, self.page_size).get_page(page_number)
         rows = [
@@ -64,11 +67,14 @@ class AtelierOperationsService:
             for job in page_obj.object_list
         ]
         page_obj.object_list = rows
+        focus_row = rows[0] if normalized_query and rows else None
         return {
             "rows": rows,
             "page_obj": page_obj,
             "queue": normalized_queue,
             "query": normalized_query,
+            "focus_row": focus_row,
+            "focus_match_count": len(rows) if normalized_query else 0,
             "tabs": [
                 {
                     "key": key,
@@ -79,6 +85,36 @@ class AtelierOperationsService:
                 for key, label in self.queue_definitions
             ],
         }
+
+    def workflow_panel_tabs(self, *, order, focus_panel: str, user) -> list[dict[str, object]]:
+        detail_url = reverse(
+            "portal:staff-order-detail",
+            kwargs={"order_public_id": order.public_id},
+        )
+        tabs = []
+        for slug, label, permission in self.workflow_panel_definitions:
+            if user.has_perm(permission):
+                tabs.append(
+                    {
+                        "key": slug,
+                        "label": label,
+                        "is_active": slug == focus_panel,
+                        "href": f"{detail_url}?panel={slug}",
+                    }
+                )
+        return tabs
+
+    def _filter_scan_query(self, queryset, query: str):
+        exact = queryset.filter(
+            Q(manufacturing_order_number__iexact=query) | Q(scan_identifier__iexact=query)
+        )
+        if exact.exists():
+            return exact
+        return queryset.filter(
+            Q(manufacturing_order_number__icontains=query)
+            | Q(scan_identifier__icontains=query)
+            | Q(order__customer__name__icontains=query)
+        )
 
     def _base_queryset(self, *, include_shipping: bool):
         select_related = [
@@ -131,6 +167,7 @@ class AtelierOperationsService:
         start_block_reason = None
         if job.status in {ProductionJob.Status.QUEUED, ProductionJob.Status.BLOCKED}:
             start_block_reason = production_start_blocked_reason(job.order)
+        focus_panel = self._focus_panel(job.status)
         return {
             "job": job,
             "order": job.order,
@@ -152,12 +189,47 @@ class AtelierOperationsService:
             ],
             "print_count": job.print_count,
             "start_block_reason": start_block_reason,
+            "focus_panel": focus_panel,
+            "workflow_hint": self._workflow_hint(
+                job=job,
+                print_count=job.print_count,
+            ),
             "needs_shipping": bool(
                 include_shipping
                 and job.status == ProductionJob.Status.READY_TO_SHIP
                 and shipment is None
             ),
         }
+
+    def _focus_panel(self, status: str) -> str:
+        mapping = {
+            ProductionJob.Status.QUEUED: "production",
+            ProductionJob.Status.BLOCKED: "production",
+            ProductionJob.Status.IN_PROGRESS: "production",
+            ProductionJob.Status.READY_TO_SHIP: "shipping",
+            ProductionJob.Status.COMPLETED: "billing",
+        }
+        return mapping.get(status, "production")
+
+    def _workflow_hint(self, *, job: ProductionJob, print_count: int) -> str:
+        if job.status == ProductionJob.Status.QUEUED:
+            if not job.assigned_machine_id:
+                return (
+                    "Contrôlez les fichiers, sélectionnez une machine s’il y en a "
+                    "plusieurs, puis saisissez le métrage."
+                )
+            return "Saisissez le métrage, puis démarrez l’impression."
+        if job.status == ProductionJob.Status.IN_PROGRESS:
+            if print_count == 0:
+                return "Confirmez l’impression après le métrage."
+            return "Avancez le statut ou préparez l’expédition."
+        if job.status == ProductionJob.Status.READY_TO_SHIP:
+            return "Déclarez l’expédition Sendcloud ou terminez l’OF."
+        if job.status == ProductionJob.Status.BLOCKED:
+            return "Levez le blocage ou vérifiez les prérequis métier."
+        if job.status == ProductionJob.Status.COMPLETED:
+            return "Dossier terminé — consultation et facturation."
+        return "Ouvrez le dossier pour l’action suivante."
 
     def _queue_counts(self, queryset) -> dict[str, int]:
         return {

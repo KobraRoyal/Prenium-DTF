@@ -198,7 +198,12 @@ def test_activation_and_collaborator_emails_use_versioned_invitation_link():
     send_account_activated_email(invitation=collaborator)
 
     assert len(mail.outbox) == 3
-    assert all("https://portal.example.test" in message.body for message in mail.outbox)
+    for message in mail.outbox:
+        assert any(
+            token.startswith("https://portal.example.test/")
+            for token in message.body.replace("\r", "\n").split()
+            if "://" in token
+        )
     assert "/acces/invitation/" in mail.outbox[0].body
     assert "/acces/invitation/" in mail.outbox[1].body
     assert "/login/" in mail.outbox[2].body
@@ -208,6 +213,7 @@ def test_template_catalog_uses_order_lifecycle_without_redundant_b2b_event():
     events = {definition.event for definition in EMAIL_TEMPLATE_DEFINITIONS}
 
     assert "b2b_order_submitted" not in events
+    assert EmailTemplate.Event.PASSWORD_RESET in events
     assert {
         EmailTemplate.Event.ORDER_CREATED,
         EmailTemplate.Event.ORDER_PROCESSING,

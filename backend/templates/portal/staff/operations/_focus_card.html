@@ -1,0 +1,69 @@
+{% load portal_tags ui_tags %}
+<section class="atelier-operations-focus" aria-labelledby="atelier-operations-focus-title">
+  <header class="atelier-operations-focus__head">
+    <div>
+      <p id="atelier-operations-focus-title">Commande identifiée</p>
+      <strong>{{ focus_row.job.manufacturing_order_number }}</strong>
+      <span>{{ focus_row.customer.name }} · commande {{ focus_row.order.short_ref|upper }}</span>
+    </div>
+    <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-detail' order_public_id=focus_row.order.public_id %}?panel={{ focus_row.focus_panel }}">Ouvrir le dossier</a>
+  </header>
+
+  <dl class="atelier-operations-focus__facts">
+    <div>
+      <dt>État production</dt>
+      <dd><span class="badge {{ focus_row.job.status|badge_tone }}">{{ focus_row.job.status|human_status }}</span></dd>
+    </div>
+    <div>
+      <dt>Machine</dt>
+      <dd>
+        {% if focus_row.job.assigned_machine %}
+        <code>{{ focus_row.job.assigned_machine.code }}</code> {{ focus_row.job.assigned_machine.name }}
+        {% else %}
+        <span class="badge is-warning">Non attribuée</span>
+        {% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt>Impressions</dt>
+      <dd>{{ focus_row.print_count }} confirmée{{ focus_row.print_count|pluralize }}</dd>
+    </div>
+    {% if focus_row.job.last_transition_at %}
+    <div>
+      <dt>Dernière action</dt>
+      <dd><time datetime="{{ focus_row.job.last_transition_at|date:'c' }}">{{ focus_row.job.last_transition_at|date:"d/m · H:i" }}</time></dd>
+    </div>
+    {% endif %}
+  </dl>
+
+  {% if focus_row.workflow_tabs %}
+  {% ui_list_tabs focus_row.workflow_tabs aria_label="Étapes dossier {{ focus_row.job.manufacturing_order_number }}" extra_class="atelier-operations-focus__tabs" %}
+  {% endif %}
+
+  {% include "portal/staff/operations/_operator_workflow.html" %}
+
+  {% if focus_row.shipment %}
+  <section class="atelier-operation-shipment" aria-label="Suivi Sendcloud">
+    <div>
+      <strong>Sendcloud déclaré</strong>
+      <span>{% if focus_row.shipment.tracking_number %}Suivi {{ focus_row.shipment.tracking_number }}{% else %}Étiquette et suivi en attente{% endif %}</span>
+    </div>
+    <div class="atelier-operation-shipment__actions">
+      {% if focus_row.shipment.label_file %}<a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-shipment-label-download' order_public_id=focus_row.order.public_id %}">Étiquette</a>{% endif %}
+      {% if focus_row.shipment.tracking_url %}<a class="ui-btn ui-btn-secondary ui-btn-sm" href="{{ focus_row.shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre</a>{% endif %}
+      {% if can_view_shipping and focus_row.shipment.status == 'created' and focus_row.shipment.sendcloud_order_id %}
+      <form hx-post="{% url 'portal:staff-atelier-operation-shipment-sync' order_public_id=focus_row.order.public_id %}" hx-target="#atelier-operations-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+        {% csrf_token %}<input type="hidden" name="queue" value="{{ queue }}"><input type="hidden" name="q" value="{{ query }}"><input type="hidden" name="page" value="{{ page_obj.number }}">
+        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit" hx-disabled-elt="this">Actualiser</button>
+      </form>
+      {% endif %}
+    </div>
+  </section>
+  {% elif focus_row.needs_shipping and operator_active_step != 'shipping' %}
+    {% if can_create_shipment %}
+      {% with row=focus_row %}{% include "portal/staff/operations/_shipping_form.html" %}{% endwith %}
+    {% else %}
+      <div class="atelier-operation-shipment atelier-operation-shipment--waiting"><strong>Expédition à déclarer</strong><span>Permission Sendcloud requise.</span></div>
+    {% endif %}
+  {% endif %}
+</section>

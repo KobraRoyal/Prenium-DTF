@@ -97,6 +97,12 @@ class StaffOrderPrintConfirmView(StaffOrderMachinePermissionMixin, StaffOrderCon
         print_error = ""
         created = False
         try:
+            if request.user.has_perm("production.assign_productionmachine"):
+                ProductionMachineAssignmentService().assign_sole_active_if_unassigned(
+                    order_public_id=order_public_id,
+                    actor=request.user,
+                    source="staff_portal",
+                )
             job, _print_record, created = ProductionPrintTrackingService().confirm_print(
                 order_public_id=order_public_id,
                 actor=request.user,

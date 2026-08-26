@@ -23,6 +23,10 @@ class AssetSemiTransparencyAnalyzer:
     min_coverage_percent = 0.02
     max_overlay_side = 480
     overlay_rgb = (255, 152, 0)
+    # Soft-mask fringe (PNG AA) — ignore near-opaque alphas that are not real fades.
+    embedded_soft_mask_max_alpha = 220
+    embedded_soft_mask_erode = 3
+    overlay_dilate = 1
     render_antialias_filter = 3
 
     def analyze(
@@ -192,9 +196,20 @@ class AssetSemiTransparencyAnalyzer:
                     if alpha_max < self.min_alpha or alpha_min >= 255:
                         continue
                     local_mask = alpha.point(
-                        lambda value: (255 if self.min_alpha <= value <= self.max_alpha else 0)
+                        lambda value: (
+                            255
+                            if self.min_alpha <= value <= self.embedded_soft_mask_max_alpha
+                            else 0
+                        )
                     )
                     try:
+                        # Strip 1 px soft-mask anti-alias rings; keep real fades/shadows.
+                        if self.embedded_soft_mask_erode > 1:
+                            eroded = local_mask.filter(
+                                ImageFilter.MinFilter(self.embedded_soft_mask_erode)
+                            )
+                            local_mask.close()
+                            local_mask = eroded
                         if self._count_mask_pixels(local_mask) < 1:
                             continue
                         target = self._bbox_to_preview_box(
@@ -323,13 +338,16 @@ class AssetSemiTransparencyAnalyzer:
         )
 
     def _build_overlay(self, semi_mask: Image.Image) -> bytes:
-        visible_mask = semi_mask.filter(ImageFilter.MaxFilter(3))
+        dilate = max(int(self.overlay_dilate), 1)
+        visible_mask = (
+            semi_mask.filter(ImageFilter.MaxFilter(dilate)) if dilate > 1 else semi_mask.copy()
+        )
         try:
             visible_mask.thumbnail(
                 (self.max_overlay_side, self.max_overlay_side),
                 Image.Resampling.LANCZOS,
             )
-            alpha = visible_mask.point(lambda value: min(210, round(value * 0.82)))
+            alpha = visible_mask.point(lambda value: min(180, round(value * 0.7)))
             try:
                 overlay = Image.new(
                     "RGBA",

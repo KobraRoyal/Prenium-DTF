@@ -1,7 +1,7 @@
 {% if can_delete_order %}
 <button
   type="button"
-  class="ui-btn ui-btn-danger ui-btn-sm"
+  class="ui-btn ui-btn-ghost ui-btn-sm staff-order-focus__delete"
   data-dialog-open="delete-atelier-order-dialog-{{ order.public_id }}"
   aria-haspopup="dialog"
 >
@@ -17,7 +17,7 @@
     <div class="b2b-confirm-dialog__content">
       <h2 id="delete-atelier-order-title-{{ order.public_id }}">Retirer cette commande de la file&nbsp;?</h2>
       <p id="delete-atelier-order-desc-{{ order.public_id }}" class="b2b-confirm-dialog__lead">
-        La commande <strong>{{ staff_order_focus.order_reference }}</strong>
+        La commande <strong>{{ staff_order_focus.order_business_number|default:staff_order_focus.order_reference }}</strong>
         ({{ order.customer.name }}) sera retirée de la file Atelier.
       </p>
       <p class="b2b-confirm-dialog__hint">

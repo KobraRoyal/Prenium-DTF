@@ -2,13 +2,13 @@
   {% if portal_nav_access.project_creation_enabled %}
     {% if portal_nav_access.cash_checkout_requires_gang_sheet %}
     <a
-      class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta {% if nav_key == 'client-gang-sheets' %}is-active{% endif %}"
+      class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta ui-nav-action {% if nav_key == 'client-gang-sheets' %}is-active{% endif %}"
       {% if nav_key == 'client-gang-sheets' %}aria-current="page"{% endif %}
       href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=portal_nav_access.customer_public_id %}"
     >Créer une planche DTF</a>
     {% else %}
     <details class="product-nav__more product-create-menu" data-product-nav-details>
-      <summary class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta product-create-menu__trigger" aria-label="Ouvrir le menu Créer une commande">
+      <summary class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta product-create-menu__trigger ui-nav-action" aria-label="Ouvrir le menu Créer une commande">
         <span>Créer une commande</span>
         <span class="product-nav__chevron" aria-hidden="true"></span>
       </summary>
@@ -25,6 +25,6 @@
     </details>
     {% endif %}
   {% else %}
-  <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta {% if nav_key == 'client-checkout' %}is-active{% endif %}" {% if nav_key == 'client-checkout' %}aria-current="page"{% endif %} href="{% url 'portal:client-checkout' customer_public_id=portal_nav_access.customer_public_id %}">Créer une commande</a>
+  <a class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta ui-nav-action {% if nav_key == 'client-checkout' %}is-active{% endif %}" {% if nav_key == 'client-checkout' %}aria-current="page"{% endif %} href="{% url 'portal:client-checkout' customer_public_id=portal_nav_access.customer_public_id %}">Créer une commande</a>
   {% endif %}
 {% endif %}

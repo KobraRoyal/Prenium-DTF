@@ -11,18 +11,17 @@
     </div>
   </header>
 
-  {% if show_machine_workspace %}
+  {% if require_machine_selection and show_machine_workspace %}
   <section class="operator-machine" aria-labelledby="operator-machine-title">
     <header class="operator-section-head">
       <div>
-        <h4 id="operator-machine-title">Machine et impression</h4>
-        <p>L’attribution et la confirmation constituent l’historique dossier-machine.</p>
+        <h4 id="operator-machine-title" class="font-display text-lg">Sélection machine</h4>
+        <p class="muted text-sm">Choisissez l’imprimante du parc avant le métrage et l’impression.</p>
       </div>
       {% if job.assigned_machine %}<span class="badge {% if job.assigned_machine.status == 'active' %}is-success{% else %}is-warning{% endif %}">{{ job.assigned_machine.get_status_display }}</span>{% else %}<span class="badge is-warning">À attribuer</span>{% endif %}
     </header>
 
     {% if machine_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ machine_error }}</p></div>{% endif %}
-    {% if print_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ print_error }}</p></div>{% endif %}
 
     <div class="operator-machine__workspace{% if not can_assign_machine_now %} is-readonly{% endif %}">
       <div class="operator-machine__current{% if not job.assigned_machine %} is-empty{% endif %}">
@@ -31,11 +30,10 @@
         <div class="operator-machine__identity"><code>{{ job.assigned_machine.code }}</code><div><strong>{{ job.assigned_machine.name }}</strong><small>{% if job.assigned_machine.location %}{{ job.assigned_machine.location }}{% else %}Emplacement non renseigné{% endif %}{% if job.assigned_machine.max_print_width_cm %} · laize {{ job.assigned_machine.max_print_width_cm|floatformat:"-1" }} cm{% endif %}</small></div></div>
         <dl class="operator-machine__facts">
           <div><dt>Attribuée le</dt><dd>{{ job.machine_assigned_at|date:"d/m/Y · H:i" }}</dd></div>
-          <div><dt>Impressions confirmées</dt><dd>{{ print_count }}</dd></div>
         </dl>
         {% else %}
         <strong>Aucune machine sélectionnée</strong>
-        <p>Le workflow reste utilisable, mais aucune preuve machine ne pourra être confirmée tant que l’OF n’est pas attribué.</p>
+        <p>Plusieurs imprimantes sont disponibles : attribuez-en une avant le métrage.</p>
         {% endif %}
       </div>
 
@@ -57,13 +55,56 @@
       <div class="operator-empty-inline"><strong>Attribution en consultation</strong><p>Votre rôle permet de voir la machine et son historique, sans réattribuer l’OF.</p></div>
       {% endif %}
     </div>
+  </section>
+  {% endif %}
+
+  {% if order.uses_atelier_pricing %}
+  <details class="workflow-disclosure production-meterage"{% if order.pricing_status != "priced" %} open{% endif %}>
+    <summary><span>Métrage de production</span><strong>{% if order.meterage_override_linear_m %}{{ order.meterage_override_linear_m }} m{% else %}Estimation automatique{% endif %}</strong></summary>
+    <section id="staff-order-meterage-slot-production" class="staff-meterage-slot" aria-label="Métrage de production">
+      {% include "components/portal/staff_meterage_section.html" %}
+    </section>
+  </details>
+  {% endif %}
+
+  {% if gang_sheets %}
+  <section class="operator-subpanel" aria-labelledby="gang-sheets-production-title">
+    <div class="operator-section-head">
+      <div>
+        <h4 id="gang-sheets-production-title" class="font-display text-lg">Fichiers de production</h4>
+      </div>
+    </div>
+    <div class="gang-sheet-production-list">
+      {% for sheet in gang_sheets %}
+      <article>
+        <div><strong>{{ sheet.name }}</strong><small>{{ sheet.width_mm }} × {{ sheet.height_mm }} mm · {{ sheet.surface_sqm }} m²</small></div>
+        {% if can_download_gang_sheet_final %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-gang-sheet-final-download' sheet_public_id=sheet.public_id %}">Télécharger le PDF HD</a>{% else %}<span class="badge badge--muted">Accès HD restreint</span>{% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if show_machine_workspace %}
+  <section class="operator-machine operator-machine--print" aria-labelledby="operator-print-title">
+    <header class="operator-section-head">
+      <div>
+        <h4 id="operator-print-title" class="font-display text-lg">Impression</h4>
+        <p class="muted text-sm">{% if job.assigned_machine %}La confirmation créera une preuve immuable sur <strong>{{ job.assigned_machine.code }}</strong>.{% elif sole_active_machine %}L’unique machine du parc (<strong>{{ sole_active_machine.code }}</strong>) sera utilisée à la confirmation.{% else %}Attribuez d’abord une machine pour activer la confirmation.{% endif %}</p>
+      </div>
+      {% if print_count %}<span class="badge is-success">{{ print_count }} confirmée{{ print_count|pluralize }}</span>{% endif %}
+    </header>
+
+    {% if print_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ print_error }}</p></div>{% endif %}
 
     <div class="operator-machine__confirm">
       <div>
         <strong>{% if is_reprint %}Confirmer une réimpression{% else %}Confirmer l’impression{% endif %}</strong>
-        <p>{% if job.assigned_machine %}La confirmation créera une preuve immuable sur <strong>{{ job.assigned_machine.code }}</strong>.{% else %}Attribuez d’abord une machine pour activer la confirmation.{% endif %}</p>
+        {% if not require_machine_selection and sole_active_machine and not job.assigned_machine %}
+        <p>Machine du parc : <code>{{ sole_active_machine.code }}</code> — {{ sole_active_machine.name }}</p>
+        {% endif %}
       </div>
-      {% if can_confirm_print and can_confirm_print_now and job.assigned_machine %}
+      {% if can_confirm_print and can_confirm_print_now %}{% if job.assigned_machine or sole_active_machine %}
       <form class="operator-machine__confirm-form" hx-post="{% url 'portal:staff-order-print-confirmation' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
         {% csrf_token %}
         <input type="hidden" name="request_token" value="{{ print_request_token }}">
@@ -71,7 +112,7 @@
         <input class="ui-input" id="print_note" name="print_note" maxlength="255" placeholder="{% if is_reprint %}Motif obligatoire de la réimpression{% else %}Note optionnelle de contrôle{% endif %}" {% if is_reprint %}required{% endif %}>
         <button class="ui-btn ui-btn-primary" type="submit">{% if is_reprint %}Confirmer la réimpression{% else %}Confirmer l’impression{% endif %}</button>
       </form>
-      {% elif not can_confirm_print %}
+      {% endif %}{% elif not can_confirm_print %}
       <span class="badge badge--muted">Confirmation restreinte</span>
       {% elif not can_confirm_print_now %}
       <span class="operator-state-note">Disponible quand l’OF est en production</span>
@@ -106,33 +147,6 @@
   </section>
   {% endif %}
 
-  {% if gang_sheets %}
-  <section class="operator-subpanel" aria-labelledby="gang-sheets-production-title">
-    <div class="operator-section-head">
-      <div>
-        <h4 id="gang-sheets-production-title">Fichiers de production</h4>
-      </div>
-    </div>
-    <div class="gang-sheet-production-list">
-      {% for sheet in gang_sheets %}
-      <article>
-        <div><strong>{{ sheet.name }}</strong><small>{{ sheet.width_mm }} × {{ sheet.height_mm }} mm · {{ sheet.surface_sqm }} m²</small></div>
-        {% if can_download_gang_sheet_final %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-gang-sheet-final-download' sheet_public_id=sheet.public_id %}">Télécharger le PDF HD</a>{% else %}<span class="badge badge--muted">Accès HD restreint</span>{% endif %}
-      </article>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
-
-  {% if order.uses_atelier_pricing %}
-  <details class="workflow-disclosure production-meterage"{% if order.pricing_status != "priced" %} open{% endif %}>
-    <summary><span>Métrage de production</span><strong>{% if order.meterage_override_linear_m %}{{ order.meterage_override_linear_m }} m{% else %}Estimation automatique{% endif %}</strong></summary>
-    <section id="staff-order-meterage-slot-production" class="staff-meterage-slot" aria-label="Métrage de production">
-      {% include "components/portal/staff_meterage_section.html" %}
-    </section>
-  </details>
-  {% endif %}
-
   {% if production_payment_blocked %}
   <div class="alert alert--warning workflow-panel__feedback" role="status">
     <p class="m-0"><strong>Production en attente de paiement.</strong> {{ production_payment_block_reason }}{% if awaits_client_payment %} Le client a reçu (ou recevra) l’e-mail « paiement carte à effectuer ».{% endif %}</p>
@@ -145,7 +159,7 @@
 
   <section class="workflow-form-card operator-action-card" aria-labelledby="staff-production-transition-heading">
     <div class="workflow-form-card__head">
-      <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0">Changer le statut</h4>
+      <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0 font-display text-lg">Changer le statut</h4>
       {% if job.status == "blocked" %}<p class="muted text-sm m-0">L’OF est bloqué : choisissez l’issue adaptée.</p>{% endif %}
     </div>
 
@@ -176,7 +190,7 @@
     <summary><span>Historique de production</span><strong>{{ transition_count }} transition{{ transition_count|pluralize }}</strong></summary>
     <section class="operator-history" aria-labelledby="production-history-title">
       <div class="operator-section-head">
-        <div><h4 id="production-history-title">Dernières transitions</h4></div>
+        <div><h4 id="production-history-title" class="font-display text-lg">Dernières transitions</h4></div>
       </div>
       <ol class="operator-history__list">
         {% for transition in job.transitions.all|slice:":5" %}

@@ -109,6 +109,11 @@ class ProductionJob(BaseModel):
         default=generate_production_scan_identifier,
     )
     status = models.CharField(max_length=32, choices=Status.choices, default=Status.QUEUED)
+    of_document_issued_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Première émission PDF OF depuis la tour de contrôle Atelier.",
+    )
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     last_transition_at = models.DateTimeField(null=True, blank=True)

@@ -5,3 +5,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Unlayered: landing conversion alignée sur la palette claire partagée. */
+body.landing-conversion-page {
+  --conversion-ink: var(--ink);
+  --conversion-paper: var(--bg);
+  --conversion-paper-muted: var(--bg-accent);
+  --conversion-acid: var(--brand-soft);
+  --conversion-acid-strong: var(--brand);
+  --conversion-grey: var(--muted);
+  --conversion-line: var(--line);
+  --conversion-radius: var(--radius);
+  color: var(--ink);
+  background-color: var(--bg);
+}
+
+body.ui-marketing-body.landing-conversion-page .product-header.is-scrolled {
+  border-bottom: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+/* Neutralise les défauts agency-* hérités de landing.css sur les pages conversion. */
+body.ui-marketing-body.landing-conversion-page:not(.portal-shell):not(.prospect-tunnel-page) {
+  color: var(--ink);
+  background-color: var(--bg);
+}

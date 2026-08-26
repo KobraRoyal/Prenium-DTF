@@ -115,7 +115,7 @@ def test_client_can_delete_visual_from_validation_modal_flow():
     assert delete_response.status_code == 200
     project.refresh_from_db()
     assert project.items.count() == 0
-    assert "Aucun visuel" in delete_response.content.decode()
+    assert "Aucun fichier joint" in delete_response.content.decode()
 
 
 @pytest.mark.django_db
@@ -422,7 +422,6 @@ def test_visual_validation_starts_without_support_color_and_requires_a_choice():
     content = panel.content.decode()
     assert panel.status_code == 200
     assert "Aucune couleur n’est présélectionnée" in content
-    assert "Aucune sélection" in content
     assert "data-support-color-required" in content
     assert "data-support-color-exact-required" not in content
     assert 'name="support_color_hex"' in content
@@ -523,11 +522,10 @@ def test_thin_zone_overlay_is_visible_and_tenant_scoped_in_validation_modal():
     )
     content = validation_panel.content.decode()
     assert validation_panel.status_code == 200
-    assert "Zones sous 0,5 mm affichées" in content
+    assert "Zones &lt; 0,5 mm" in content
     assert "data-thin-zone-overlay" in content
-    assert "Couleur du support obligatoire" in content
+    assert "Obligatoire" in content
     assert "optimiser la base blanche" in content
-    assert "améliorer le toucher" in content
     assert "légèrement visible si la couleur du textile" not in content
     assert "Sans cette couleur" not in content
     assert "data-preview-zoom-in" in content
@@ -686,12 +684,12 @@ def test_semi_transparency_overlay_is_visible_and_tenant_scoped_in_validation_mo
     )
     content = validation_panel.content.decode()
     assert validation_panel.status_code == 200
-    assert "Semi-transparences affichées" in content
+    assert "Dégradés détectés" in content
     assert "data-semi-transparency-overlay" in content
-    assert "semi-transparentes ont été détectées" in content
-    assert "les semi-transparences et la couleur support" in content
+    assert "data-semi-transparency-toggle" in content
     assert overlay_url in content
-    assert "Couleur du support obligatoire" not in content
+    assert "Zones fines détectées" not in content
+    assert "is-exact-required" not in content
 
     confirm_url = reverse(
         "portal:client-order-project-item-action",
@@ -835,7 +833,7 @@ def test_portal_cross_tenant_project_is_not_found():
     project = B2BOrderProject.objects.create(
         customer=other,
         created_by=user,
-        project_number="DTF-B2B-2026-999993",
+        project_number="CMD-2026-999993",
         name="Secret",
     )
     response = client.get(
@@ -865,7 +863,7 @@ def test_staff_portal_project_queue_requires_permission():
     staff.user_permissions.add(Permission.objects.get(codename="view_b2borderproject"))
     response = client.get(url)
     assert response.status_code == 200
-    assert b"Projets B2B transmis" in response.content
+    assert b"Gang Sheets transmis" in response.content
 
 
 @pytest.mark.django_db
@@ -874,7 +872,7 @@ def test_delete_confirmation_modal_is_rendered_on_project_list():
     _user, customer, client = portal_scope()
     project = B2BOrderProject.objects.create(
         customer=customer,
-        project_number="DTF-B2B-2026-999986",
+        project_number="CMD-2026-999986",
         name="Commande test",
     )
     response = client.get(
@@ -890,3 +888,109 @@ def test_delete_confirmation_modal_is_rendered_on_project_list():
     assert f'data-dialog-open="delete-project-dialog-{project.public_id}"' in content
     assert f'id="delete-project-dialog-{project.public_id}"' in content
     assert "onsubmit=" not in content
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_validation_poll_stops_when_item_missing():
+    """Un item disparu ne doit plus renvoyer 404 (spinner HTMX bloqué)."""
+    from uuid import uuid4
+
+    _user, customer, client = portal_scope()
+    project = B2BOrderProject.objects.create(
+        customer=customer,
+        project_number="CMD-2026-999985",
+        name="Projet sans item",
+        status=B2BOrderProject.Status.INCOMPLETE,
+    )
+    poll_url = reverse(
+        "portal:client-order-project-item-create",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+        },
+    )
+    response = client.get(f"{poll_url}?item={uuid4()}", HTTP_HX_REQUEST="true")
+    html = response.content.decode()
+    assert response.status_code == 200
+    assert "Visuel introuvable" in html
+    assert "add-visual-validation-panel" in html
+    assert "hx-get=" not in html
+    assert "data-analysis-poll" not in html
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_orphan_validate_query_does_not_open_modal():
+    from uuid import uuid4
+
+    _user, customer, client = portal_scope()
+    project = B2BOrderProject.objects.create(
+        customer=customer,
+        project_number="CMD-2026-999984",
+        name="Projet validate orphelin",
+        status=B2BOrderProject.Status.INCOMPLETE,
+    )
+    detail_url = reverse(
+        "portal:client-order-project-detail",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+        },
+    )
+    response = client.get(f"{detail_url}?validate={uuid4()}")
+    html = response.content.decode()
+    assert response.status_code == 200
+    assert "data-dialog-auto-open" not in html
+    assert "Je confirme" not in html
+    assert "Analyse en cours" not in html
+    assert "data-validate-missing-toast" in html
+    toast = json.loads(response.headers["X-Prenium-Toast"])
+    assert toast["variant"] == "warning"
+    assert "plus disponible" in toast["message"]
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_validation_poll_stops_after_analysis_timeout():
+    from datetime import timedelta
+
+    from apps.uploads.models import AssetVersion
+    from django.utils import timezone
+
+    _user, customer, client = portal_scope()
+    create_url = reverse(
+        "portal:client-order-project-create",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+    response = client.post(
+        create_url,
+        {
+            "name": "Analyse bloquée",
+            "order_mode": "individual_designs",
+            "file": png_upload("stuck.png"),
+        },
+    )
+    assert response.status_code == 302
+    project = B2BOrderProject.objects.get(customer=customer)
+    item = project.items.get()
+    version = item.asset.current_version
+    AssetVersion.objects.filter(pk=version.pk).update(
+        analysis_status=AssetVersion.AnalysisStatus.PROCESSING,
+        updated_at=timezone.now() - timedelta(minutes=3),
+    )
+
+    poll_url = reverse(
+        "portal:client-order-project-item-create",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+        },
+    )
+    poll = client.get(f"{poll_url}?item={item.public_id}", HTTP_HX_REQUEST="true")
+    html = poll.content.decode()
+    assert poll.status_code == 200
+    assert "Analyse trop longue" in html
+    assert "hx-get=" not in html
+    version.refresh_from_db()
+    assert version.analysis_status == AssetVersion.AnalysisStatus.FAILED

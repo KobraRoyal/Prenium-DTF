@@ -1,0 +1,46 @@
+<div class="machine-form-grid">
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ id_prefix }}-code">Code</label>
+    <input class="ui-input" id="{{ id_prefix }}-code" name="code" value="{{ code }}" maxlength="32" required {% if autofocus %}autofocus{% endif %} placeholder="DTF-01">
+  </div>
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ id_prefix }}-name">Nom d’usage</label>
+    <input class="ui-input" id="{{ id_prefix }}-name" name="name" value="{{ name }}" maxlength="120" required placeholder="Atlas">
+  </div>
+  {% if form_mode == "edit" %}
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ id_prefix }}-status">Disponibilité</label>
+    <select class="ui-input" id="{{ id_prefix }}-status" name="status">
+      {% for status_value, status_label in machine_statuses %}
+      <option value="{{ status_value }}" {% if status == status_value %}selected{% endif %}>{{ status_label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% else %}
+  <input type="hidden" name="status" value="active">
+  {% endif %}
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ id_prefix }}-location">Emplacement</label>
+    <input class="ui-input" id="{{ id_prefix }}-location" name="location" value="{{ location }}" maxlength="120" placeholder="Atelier nord">
+  </div>
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ id_prefix }}-manufacturer">Fabricant</label>
+    <input class="ui-input" id="{{ id_prefix }}-manufacturer" name="manufacturer" value="{{ manufacturer }}" maxlength="80" placeholder="Epson, Mimaki…">
+  </div>
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ id_prefix }}-model">Modèle</label>
+    <input class="ui-input" id="{{ id_prefix }}-model" name="model_name" value="{{ model_name }}" maxlength="120" placeholder="Référence du modèle">
+  </div>
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ id_prefix }}-width">Laize maximale (cm)</label>
+    <input class="ui-input" id="{{ id_prefix }}-width" name="max_print_width_cm" value="{{ max_print_width_cm }}" inputmode="decimal" placeholder="60">
+  </div>
+  <div class="ui-field-group">
+    <label class="ui-label" for="{{ id_prefix }}-serial">Numéro de série</label>
+    <input class="ui-input" id="{{ id_prefix }}-serial" name="serial_number" value="{{ serial_number }}" maxlength="120" autocomplete="off">
+  </div>
+</div>
+<div class="ui-field-group">
+  <label class="ui-label" for="{{ id_prefix }}-notes">Notes Atelier</label>
+  <textarea class="ui-input" id="{{ id_prefix }}-notes" name="notes" rows="3" maxlength="2000" placeholder="Consignes utiles à l’équipe…">{{ notes }}</textarea>
+</div>

@@ -1,6 +1,6 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="shipping" %}
-<div class="panel client-order-panel client-order-panel--shipping{% if shipment and shipment.shipped_at %} client-order-panel--shipping-shipped{% endif %}" aria-label="Expédition">
+<div class="client-order-panel client-order-panel--shipping{% if shipment and shipment.shipped_at %} client-order-panel--shipping-shipped{% endif %}" aria-label="Expédition">
   {% if shipment and shipment.shipped_at %}
   <section class="client-shipment-card client-shipment-card--shipped" aria-labelledby="client-shipment-shipped-title">
     <div class="client-shipment-card__intro">
@@ -94,8 +94,6 @@
   {% endif %}
 
   {% else %}
-  <div class="empty-state client-shipment-empty">
-    <p>Le suivi apparaîtra dès l’expédition.</p>
-  </div>
+  {% include "components/ui/empty_state.html" with title="Expédition en préparation" message="Le suivi apparaîtra dès l'expédition de votre commande." %}
   {% endif %}
 </div>

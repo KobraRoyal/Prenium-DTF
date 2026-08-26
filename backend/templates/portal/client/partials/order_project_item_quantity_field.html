@@ -1,1 +1,4 @@
-<label class="dui-form-control"><span class="product-form-label">{{ label|default:"Quantité" }}</span><input class="dui-input dui-input-bordered" name="quantity" type="number" min="1" max="200" step="1" value="{{ quantity|default:1 }}" required></label>
+<div class="ui-field-group">
+  <label class="ui-label" for="{% if field_id %}{{ field_id }}{% else %}id-quantity{% endif %}">{{ label|default:"Quantité" }}</label>
+  <input class="ui-input" id="{% if field_id %}{{ field_id }}{% else %}id-quantity{% endif %}" name="quantity" type="number" min="1" max="200" step="1" value="{{ quantity|default:1 }}" required>
+</div>

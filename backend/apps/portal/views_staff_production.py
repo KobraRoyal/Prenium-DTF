@@ -36,7 +36,7 @@ def production_panel_context(
 
     meterage = meterage_context_for_order(request, order, "")
     payment_block = production_start_blocked_reason(order)
-    active_machines = ProductionMachine.objects.active().order_by("code", "name")
+    active_machines = list(ProductionMachine.objects.active().order_by("code", "name"))
     assignment_count = job.machine_assignments.count()
     print_count = job.print_records.count()
     can_assign_machine_now = job.status in {
@@ -44,6 +44,7 @@ def production_panel_context(
         ProductionJob.Status.IN_PROGRESS,
         ProductionJob.Status.BLOCKED,
     }
+    require_machine_selection = len(active_machines) > 1
     return {
         "order": order,
         "job": job,
@@ -60,6 +61,8 @@ def production_panel_context(
         "print_count": print_count,
         "assignment_count": assignment_count,
         "transition_count": job.transitions.count(),
+        "require_machine_selection": require_machine_selection,
+        "sole_active_machine": active_machines[0] if len(active_machines) == 1 else None,
         "show_machine_workspace": bool(
             can_assign_machine_now or job.assigned_machine_id or assignment_count or print_count
         ),

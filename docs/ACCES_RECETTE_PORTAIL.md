@@ -8,6 +8,7 @@ Document de rappel pour tester l’application avec différents profils (local o
 |--------|-------------|
 | Landing | `http://localhost:8080/` |
 | Services | `http://localhost:8080/services/` |
+| **Page introuvable (404)** | toute URL hors routes (ex. `http://localhost:8080/chemin-introuvable/`) — template Operate `404.html` ; avec `config.settings.dev`, mettre `DJANGO_DEBUG=False` pour la voir (sinon 404 technique Django) |
 | **Connexion portail** (client + staff métier) | `http://localhost:8080/login/` |
 | Espace **client** | `http://localhost:8080/client/` |
 | Backoffice **staff** (portail métier) | `http://localhost:8080/staff/` |
@@ -73,6 +74,7 @@ Voir aussi la vue d’ensemble métier : [architecture/B2B_PRODUCT_AND_OPERATION
 1. Aller sur **`/login/`** (pas sur `/admin/login/` pour le portail applicatif).
 2. Saisir email + mot de passe seed.
 3. Redirection automatique vers **dashboard client** ou **dashboard staff** selon le profil.
+4. Lien **Mot de passe oublié ?** → `/mot-de-passe-oublie/` (e-mail locmem / SMTP selon l’environnement).
 
 ## Rappels sécurité / produit
 
@@ -82,11 +84,16 @@ Voir aussi la vue d’ensemble métier : [architecture/B2B_PRODUCT_AND_OPERATION
 
 ## Après changement de CSS / templates (Docker)
 
-Si la page ne reflète pas les derniers fichiers :
+Nginx sert les statics depuis le volume **`django_static`** (collectstatic), pas directement `static_src/`.
+
+Si la page ne reflète pas les derniers styles (ombres brutalistes, ancien cache-bust `?v=`…) :
 
 ```bash
+cd backend && npm run build:css:docker
 docker compose restart web
 ```
+
+Puis hard-refresh navigateur. Les templates portail chargent `portal.css?v=20260823-brand-light-v7` (ou version courante du sprint).
 
 ## Référence détaillée sprint
 

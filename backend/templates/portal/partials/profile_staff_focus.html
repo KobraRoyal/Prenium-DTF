@@ -1,0 +1,16 @@
+<header
+  class="staff-customer-focus staff-customer-detail-identity"
+  id="staff-profile-focus"
+  {% if oob %}hx-swap-oob="true"{% endif %}
+  aria-labelledby="staff-profile-title"
+>
+  <div class="staff-customer-focus__identity">
+    <p class="staff-customer-focus__name" id="staff-profile-title">{% include "portal/partials/account_rail_display_name.html" %}</p>
+    {% if request.user.first_name or request.user.last_name %}
+    <p class="staff-customer-focus__email muted">{{ request.user.email }}</p>
+    {% endif %}
+    <div class="staff-customer-focus__statuses" aria-label="État du compte">
+      <span class="badge is-neutral">Compte staff</span>
+    </div>
+  </div>
+</header>

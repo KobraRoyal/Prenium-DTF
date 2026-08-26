@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load portal_tags %}
+
+{% block body_class %}landing-saas portal-shell product-shell product-shell--auth product-shell--error{% endblock %}
+
+{% block title %}Page introuvable — Prenium DTF{% endblock %}
+
+{% block content %}
+{% include "components/nav/auth_header.html" %}
+
+<main class="app-main app-content landing-saas-main ui-shell-main product-layout" id="main-content">
+  <section class="product-login-shell product-error-shell" aria-labelledby="error-404-heading">
+    <div class="product-auth-card product-login-card product-error-card">
+      <p class="product-error-card__code" aria-hidden="true">404</p>
+      <header class="product-login-card__intro">
+        <h1 id="error-404-heading">Page introuvable</h1>
+        <p>
+          Cette adresse n’existe pas ou n’est plus disponible.
+          Vérifiez le lien, ou reprenez depuis un point d’entrée connu.
+        </p>
+      </header>
+      <div class="product-error-card__actions">
+        {% if request.user.is_authenticated %}
+        <a class="ui-btn ui-btn-primary ui-btn-block" href="{% brand_home_url %}">Retour à mon espace</a>
+        <a class="ui-btn ui-btn-secondary ui-btn-block" href="{% url 'home' %}">Accueil du site</a>
+        {% else %}
+        <a class="ui-btn ui-btn-primary ui-btn-block" href="{% url 'home' %}">Retour à l’accueil</a>
+        <a class="ui-btn ui-btn-secondary ui-btn-block" href="{% url 'portal:login' %}">Connexion</a>
+        {% endif %}
+      </div>
+      <footer class="product-login-footer">
+        {% include "portal/partials/auth_support.html" %}
+      </footer>
+    </div>
+  </section>
+</main>
+{% endblock %}

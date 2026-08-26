@@ -1,10 +1,16 @@
 {% extends "portal/layout.html" %}
+{% load static %}
 
-{% block title %}Mes informations - Prenium DTF{% endblock %}
+{% block title %}Mes informations — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="account-profile-page">
-  {% include "components/portal/page_head.html" with title="Mes informations" subtitle="Identité de connexion et société de facturation." %}
+{% if nav_mode == "staff" %}
+<div class="portal-page portal-page--staff account-profile-page staff-profile-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_profile.html" head_labelledby="staff-profile-heading" title="Mes informations" subtitle="Identité de connexion pour l’espace Atelier." %}
+{% else %}
+<div class="portal-page portal-page--client account-profile-page client-profile-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_profile.html" head_labelledby="client-profile-heading" title="Mes informations" subtitle="Identité de connexion et société de facturation." %}
+{% endif %}
 
   {% if saved %}
   <p
@@ -15,16 +21,76 @@
   >Vos informations ont été enregistrées.</p>
   {% endif %}
 
-  <div class="account-profile-layout">
+  {% if nav_mode == "staff" %}
+  <section class="portal-page-surface staff-customer-detail-surface" aria-labelledby="staff-profile-heading">
+    {% include "portal/partials/profile_staff_focus.html" %}
+  </section>
+
+  <section
+    class="portal-page-surface staff-customer-workspace staff-customer-workspace-surface account-profile-surface account-profile-layout"
+    data-customer-workspace
+    aria-label="Sections du compte"
+  >
     {% include "components/portal/account_rail.html" with account_section="identity" %}
 
-    <div class="account-profile-main">
-      {% include "portal/partials/profile_identity_display.html" %}
+    <div class="account-profile-main staff-customer-workspace__content">
+      <details id="account-identity" class="staff-customer-workspace__section" data-customer-section open>
+        <summary class="staff-customer-workspace__summary">
+          <span>
+            <h2>Identité</h2>
+            <small>Prénom, nom et e-mail de connexion</small>
+          </span>
+        </summary>
+        <div class="staff-customer-workspace__body">
+          {% include "portal/partials/profile_identity_display.html" %}
+        </div>
+      </details>
+    </div>
+  </section>
+  {% else %}
+  <section class="portal-page-surface staff-customer-detail-surface" aria-labelledby="client-profile-heading">
+    {% include "portal/partials/profile_client_focus.html" %}
+  </section>
 
-      {% if nav_mode == "client" and customer and company_profile %}
-      {% include "portal/client/partials/company_profile_display.html" %}
+  <section
+    class="portal-page-surface staff-customer-workspace staff-customer-workspace-surface account-profile-surface account-profile-layout client-profile-workspace"
+    data-customer-workspace
+    aria-label="Sections du compte"
+  >
+    {% include "components/portal/account_rail.html" with account_section="identity" profile_workspace=1 %}
+
+    <div class="account-profile-main staff-customer-workspace__content">
+      <details id="account-identity" class="staff-customer-workspace__section" data-customer-section open>
+        <summary class="staff-customer-workspace__summary">
+          <span>
+            <h2>Identité</h2>
+            <small>Prénom, nom et e-mail de connexion</small>
+          </span>
+        </summary>
+        <div class="staff-customer-workspace__body">
+          {% include "portal/partials/profile_identity_display.html" %}
+        </div>
+      </details>
+
+      {% if customer and company_profile %}
+      <details id="account-company" class="staff-customer-workspace__section" data-customer-section>
+        <summary class="staff-customer-workspace__summary">
+          <span>
+            <h2>Société</h2>
+            <small>Facturation et adresses</small>
+          </span>
+        </summary>
+        <div class="staff-customer-workspace__body">
+          {% include "portal/client/partials/company_profile_display.html" %}
+        </div>
+      </details>
       {% endif %}
     </div>
-  </div>
+  </section>
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="{% static 'js/customer-account-workspace.js' %}?v=20260826-profile"></script>
 {% endblock %}

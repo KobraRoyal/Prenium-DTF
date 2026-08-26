@@ -1,28 +1,35 @@
 <section
-  class="card b2b-configurator"
+  class="b2b-configurator client-order-project-visuals"
   id="order-project-items"
+  aria-labelledby="order-project-visuals-title"
 >
-  <div class="section-head b2b-visual-list-head">
+  <div class="section-head b2b-visual-list-head client-order-project-section-head">
     <div>
-      <h2 class="font-display text-xl">Visuels</h2>
+      <h2 id="order-project-visuals-title" class="font-display text-xl">Visuels</h2>
     </div>
     <span class="b2b-analysis-live htmx-indicator" id="order-project-analysis-indicator" role="status"><i aria-hidden="true"></i>Analyse…</span>
     {% if not project.has_locked_gang_sheet_output %}
     {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
-    <button class="ui-btn ui-btn-primary" type="button" data-file-picker-dialog="add-visual-dialog" aria-controls="add-visual-dialog" aria-haspopup="dialog">Ajouter un visuel</button>
+    <button class="ui-btn ui-btn-primary ui-btn-sm" type="button" data-file-picker-dialog="add-visual-dialog" aria-controls="add-visual-dialog" aria-haspopup="dialog">Ajouter un visuel</button>
     {% endif %}
     {% endif %}
   </div>
 
-  {% if form_error %}<div class="dui-alert dui-alert-error mb-4" role="alert">{{ form_error }}</div>{% endif %}
+  {% if form_error %}<div class="alert alert--danger mb-4" role="alert">{{ form_error }}</div>{% endif %}
 
   {% if not project.has_locked_gang_sheet_output %}
   {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
   <dialog class="b2b-configurator-dialog" id="add-visual-dialog" aria-labelledby="add-visual-dialog-title" {% if form_error or active_validation_item %}data-dialog-auto-open{% endif %} data-add-visual-dialog>
     <div class="b2b-dialog-shell">
       <header class="b2b-dialog-head">
-        <div><h2 id="add-visual-dialog-title">{% if active_validation_item %}Valider le visuel{% else %}Ajouter un visuel{% endif %}</h2></div>
-        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
+        <div class="b2b-dialog-head__copy">
+          <h2 id="add-visual-dialog-title">{% if active_validation_item %}Valider le visuel{% else %}Ajouter un visuel{% endif %}</h2>
+        </div>
+        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">
+          <svg class="b2b-dialog-close__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+            <path d="M6.75 6.75 17.25 17.25M17.25 6.75 6.75 17.25"/>
+          </svg>
+        </button>
       </header>
       <div class="b2b-dialog-body" id="add-visual-dialog-body">
         {% if active_validation_item %}
@@ -44,7 +51,7 @@
     hx-target="this"
     hx-swap="outerHTML"
     hx-select="#order-project-visuals-state"
-    hx-select-oob="#order-project-summary,#order-project-item-dialogs"
+    hx-select-oob="#order-project-facts,#order-project-summary,#order-project-item-dialogs"
     hx-indicator="#order-project-analysis-indicator"
     {% endif %}
   >
@@ -80,13 +87,13 @@
       {% endif %}
       <div class="ui-table-actions b2b-visual-list-item__actions">
         <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-dialog-open="visual-dialog-{{ item.public_id }}">Ouvrir</button>
-        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True %}
+        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True button_class="ui-btn ui-btn-ghost ui-btn-sm" %}
       </div>
     </article>
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty-state b2b-visual-empty"><h3>Aucun visuel</h3><p>Choisissez votre premier fichier : le configurateur s’ouvrira automatiquement.</p><button class="ui-btn ui-btn-primary" type="button" data-file-picker-dialog="add-visual-dialog" aria-controls="add-visual-dialog" aria-haspopup="dialog">Choisir un fichier</button></div>
+  {% include "components/ui/empty_state.html" with title="Aucun fichier joint" message="Choisissez votre premier visuel : le configurateur s'ouvrira automatiquement." extra_class="b2b-visual-empty" cta_button_label="Choisir un fichier" cta_button_dialog="add-visual-dialog" %}
   {% endif %}
   </div>
 
@@ -95,7 +102,14 @@
     {% for item in project.items.all %}
     <dialog class="b2b-configurator-dialog" id="visual-dialog-{{ item.public_id }}" aria-labelledby="visual-dialog-title-{{ item.public_id }}">
       <div class="b2b-dialog-shell">
-        <header class="b2b-dialog-head"><div><h2 id="visual-dialog-title-{{ item.public_id }}">{{ item.name }}</h2></div><button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button></header>
+        <header class="b2b-dialog-head">
+          <div><h2 id="visual-dialog-title-{{ item.public_id }}">{{ item.name }}</h2></div>
+          <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">
+            <svg class="b2b-dialog-close__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+              <path d="M6.75 6.75 17.25 17.25M17.25 6.75 6.75 17.25"/>
+            </svg>
+          </button>
+        </header>
         <div class="b2b-dialog-body">{% include "portal/client/partials/order_project_visual_editor.html" with item=item %}</div>
       </div>
     </dialog>

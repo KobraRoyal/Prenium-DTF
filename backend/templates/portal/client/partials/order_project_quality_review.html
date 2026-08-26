@@ -1,16 +1,39 @@
-<div class="b2b-quality-review is-{{ review.level }}{% if compact %} b2b-quality-review--compact{% endif %}" aria-live="polite">
+<div
+  class="b2b-quality-review is-{{ review.level }}{% if compact %} b2b-quality-review--compact{% endif %}"
+  aria-live="polite"
+  {% if review.message %}title="{{ review.message }}"{% endif %}
+>
+  {% if compact %}
   <div class="b2b-quality-review__head">
     <strong>{{ review.label }}</strong>
     {% if review.confirmed %}<span class="badge is-success">Validé</span>{% endif %}
   </div>
-  {% if not compact %}
-    {% if review.level == "good" %}
-    <p class="b2b-quality-review__summary">{% if review.message %}{{ review.message }}{% else %}{{ review.resolution_display }}{% endif %}</p>
-    {% elif review.message %}
-    <p class="b2b-quality-review__summary">{{ review.message }}</p>
+  {% else %}
+    {% if review.confirmed %}
+    <div class="b2b-quality-review__head">
+      <span class="badge is-success">Validé</span>
+    </div>
     {% endif %}
-    {% if review.issues %}
-    <ul class="b2b-quality-issues-list">{% for issue in review.issues %}<li>{{ issue }}</li>{% endfor %}</ul>
+    <div class="b2b-quality-review__chips" role="group" aria-label="{{ review.label }}">
+      <p class="b2b-quality-strip is-{{ review.level }}" {% if review.message %}title="{{ review.message }}"{% endif %}>
+        <strong class="b2b-quality-strip__label">
+          {% if review.resolution_display %}{{ review.resolution_display }}{% else %}{{ review.label }}{% endif %}
+        </strong>
+        <span class="ui-sr-only">{% if review.message %}{{ review.message }}{% else %}{{ review.label }}{% endif %}</span>
+      </p>
+      {% if review.thin_zone.detected %}
+      <p class="b2b-quality-strip is-warning" title="Détails inférieurs à 0,5 mm — surlignés en rouge dans l’aperçu.">
+        <strong class="b2b-quality-strip__label">Zones &lt; 0,5 mm</strong>
+      </p>
+      {% endif %}
+      {% if review.semi_transparency %}
+      <p class="b2b-quality-strip {% if review.semi_transparency.detected %}is-warning{% else %}is-good{% endif %}">
+        <strong class="b2b-quality-strip__label">{% if review.semi_transparency.detected %}Dégradés détectés{% else %}Pas de dégradé{% endif %}</strong>
+      </p>
+      {% endif %}
+    </div>
+    {% if review.message and review.level != "good" %}
+    <p class="b2b-quality-review__lead">{{ review.message }}</p>
     {% endif %}
   {% endif %}
 </div>

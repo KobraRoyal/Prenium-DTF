@@ -48,7 +48,8 @@ sans note. Les historiques production sont non supprimables dans l'admin techniq
 ### T3 — Interface Atelier moderne
 
 - route parc : `/staff/machines/` ;
-- création et édition HTMX avec feedback toast ;
+- création et édition HTMX dans une modale (`<dialog>`), CTA unique dans le `page_head` ;
+- liste machines et journal d’impressions sur le même contrat table/cartes que les commandes (`ui-data-table` ≥ 960 px, `ui-mobile-order-card` en dessous) ;
 - synthèse parc actif / maintenance / charge / impressions ;
 - registre machines avec charge courante et journal récent ;
 - signal machine directement dans la file du dashboard Atelier ;

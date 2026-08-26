@@ -50,6 +50,12 @@
 - [Sprint 42 — Parc de machines DTF et historique d'impression](sprint-42-parc-machines-dtf.md)
 - [Sprint 43 — Distillation UI/UX du portail Atelier](sprint-43-distillation-ui-ux-atelier.md)
 - [Sprint 44 — Pilotage Atelier rapide](sprint-44-pilotage-atelier.md)
+- [Sprint 45 — Design system arrondi cohérent](sprint-45-design-system-arrondi-coherent.md)
+- [Sprint 46 — Design system sombre Impeccable](sprint-46-design-system-sombre-impeccable.md)
+- [Sprint 47 — Cohérence tables, actions et partials](sprint-47-coherence-tables-actions-partials.md)
+- [Sprint 48 — Shell clair homogène Impeccable](sprint-48-shell-clair-homogene-impeccable.md)
+- [Sprint 49 — Mot de passe oublié](sprint-49-password-reset.md)
+- [Sprint 50 — Page HTTP 404 Operate](sprint-50-page-404.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

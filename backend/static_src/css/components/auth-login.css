@@ -1,0 +1,164 @@
+/* Connexion : une carte essentielle sur fond crème. Hors layer pour primer sur product-polish. */
+html[data-theme="prenium"] body.product-shell--auth .product-layout {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(100dvh - 5.75rem);
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  width: min(100%, 26.5rem);
+  margin: clamp(1rem, 4vh, 2.25rem) auto;
+  gap: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card {
+  display: grid;
+  gap: 1.35rem;
+  padding: clamp(1.4rem, 3.6vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card__intro {
+  display: grid;
+  gap: 0.45rem;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card__intro h1 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--ui-font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-transform: none;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card__intro p {
+  margin: 0;
+  max-width: none;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card .alert {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card .ui-form-stack {
+  gap: 1.05rem;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-card .ui-form-actions {
+  margin: 0.15rem 0 0;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-password {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label forgot"
+    "input input";
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.45rem;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-password > .ui-label {
+  grid-area: label;
+  display: block;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-forgot {
+  grid-area: forgot;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 2.75rem;
+  margin: -0.7rem 0;
+  padding: 0.7rem 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-underline-offset: 0.18em;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-password > .ui-input {
+  grid-area: input;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-footer {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-access,
+html[data-theme="prenium"] body.product-shell .product-login-support {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-support {
+  font-size: 0.8rem;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-access .ui-link,
+html[data-theme="prenium"] body.product-shell .product-login-support .ui-link {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+/* Page d’erreur HTTP — même carte Operate que l’auth, sans chrome brutaliste. */
+html[data-theme="prenium"] body.product-shell--error .product-error-card {
+  gap: 1.15rem;
+}
+
+html[data-theme="prenium"] body.product-shell--error .product-error-card__code {
+  margin: 0;
+  color: var(--brand-strong);
+  font-family: var(--ui-font-display);
+  font-size: clamp(2.4rem, 8vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+html[data-theme="prenium"] body.product-shell--error .product-error-card__actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+@media (max-width: 39.99rem) {
+  html[data-theme="prenium"] body.product-shell--auth .product-layout {
+    justify-content: flex-start;
+  }
+
+  html[data-theme="prenium"] body.product-shell .product-login-shell {
+    margin-top: 0.75rem;
+  }
+}

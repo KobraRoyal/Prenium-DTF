@@ -1,109 +1,81 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags order_tags %}
 
-{% block title %}{{ order_client_label|default:order_short_ref }} - Prenium DTF{% endblock %}
+{% block title %}{{ order_client_label|default:order_display_ref|default:"Commande" }} — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="client-order-detail">
-  <section class="page-head page-head--premium">
-    {% include "components/portal/breadcrumbs/client_order_detail.html" %}
-    <div class="page-head__content">
-      <h1 class="font-display tracking-tight">{{ order_client_label|default:order_short_ref }}</h1>
-      <p class="page-head-lead">
-        <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-        {% if order_client_label and order_client_label != order_short_ref %}
-        <span>{{ order_short_ref }}</span>
-        {% endif %}
-      </p>
-    </div>
-  </section>
+<div class="portal-page portal-page--client client-order-detail client-order-detail-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" head_labelledby="client-order-title" title=order_client_label|default:order_display_ref|default:"Commande" lead_template="components/portal/page_head_leads/client_order_detail.html" %}
 
-{% if request.GET.checkout == "success" %}
-{% if awaits_client_payment %}
-<div class="dui-alert dui-alert-warning mb-4" role="status">
-  Commande enregistrée — paiement non finalisé.
-  <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
-</div>
-{% else %}
-<div class="dui-alert dui-alert-success mb-4" role="status">Commande transmise.</div>
-{% endif %}
-{% endif %}
-{% if request.GET.paid == "1" %}
-<div class="dui-alert dui-alert-success mb-4" role="status">Paiement confirmé. Le justificatif est dans Règlement.</div>
-{% elif request.GET.cancelled == "1" %}
-<div class="dui-alert dui-alert-warning mb-4" role="status">
-  Paiement non finalisé.
-  <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
+{% if order_status_banner %}
+<div class="alert alert--{{ order_status_banner.tone }} client-order-detail-banner" role="status">
+  <div class="client-order-detail-banner__content">
+    <p>{{ order_status_banner.message }}</p>
+    {% if order_status_banner.show_pay_cta %}
+    <a class="ui-btn ui-btn-primary ui-btn-sm" href="?panel=billing&amp;pay=1">Payer maintenant</a>
+    {% endif %}
+  </div>
 </div>
 {% endif %}
 
-{% if awaits_client_payment and request.GET.checkout != "success" and request.GET.cancelled != "1" and request.GET.paid != "1" %}
-<div class="dui-alert dui-alert-warning mb-4" role="status">
-  Cette commande attend votre paiement.
-  <a class="link font-medium" href="?panel=billing&amp;pay=1">Payer maintenant</a>
-</div>
-{% endif %}
-
-<section class="card client-order-summary" aria-label="Résumé de la commande">
-  <dl class="client-order-summary__facts">
-    <div class="client-order-summary__fact">
-      <dt>Commande soumise</dt>
-      <dd><time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y" }}</time></dd>
-    </div>
-    {% if order.pricing_status == "priced" %}
-    <div class="client-order-summary__fact client-order-summary__fact--pricing">
-      <dt>Montant</dt>
-      <dd><strong>{{ order.total_amount }} {{ order.currency }}</strong></dd>
-    </div>
-    {% elif order.billing_mode == "deferred" or order.uses_atelier_pricing %}
-    <div class="client-order-summary__fact client-order-summary__fact--pricing">
-      <dt>Tarification</dt>
-      <dd>Après contrôle technique</dd>
+<section class="portal-page-surface client-order-detail-surface" aria-labelledby="client-order-title">
+  <header class="client-order-summary client-order-detail-identity" aria-labelledby="client-order-title">
+    <dl class="client-order-summary__facts">
+      <div class="client-order-summary__fact">
+        <dt>Date</dt>
+        <dd><time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y" }}</time></dd>
+      </div>
+      <div class="client-order-summary__fact">
+        <dt>Référence</dt>
+        <dd>
+          {% if order_display_ref %}
+          <span class="client-order-summary__ref">{{ order_display_ref }}</span>
+          {% else %}
+          <span class="muted">—</span>
+          {% endif %}
+        </dd>
+      </div>
+      {% if order.pricing_status == "priced" %}
+      <div class="client-order-summary__fact client-order-summary__fact--pricing">
+        <dt>Montant</dt>
+        <dd><strong>{{ order.total_amount }}&nbsp;{{ order.currency }}</strong></dd>
+      </div>
+      {% else %}
+      <div class="client-order-summary__fact client-order-summary__fact--pricing">
+        <dt>Tarification</dt>
+        <dd>{% if order.billing_mode == "deferred" or order.uses_atelier_pricing %}Après contrôle technique{% else %}{{ order.pricing_status|human_status }}{% endif %}</dd>
+      </div>
+      {% endif %}
+      <div class="client-order-summary__fact">
+        <dt>Règlement</dt>
+        <dd>{{ order.billing_mode|settlement_badge }}</dd>
+      </div>
+    </dl>
+    {% if order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
+    <div class="client-order-summary__alert">
+      <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.get_credit_hold_status_display }}</span>
     </div>
     {% endif %}
-    {% if shipment and shipment.shipped_at %}
-    <div class="client-order-summary__fact client-order-summary__fact--shipping">
-      <dt>Expédition</dt>
-      <dd>
-        <span class="badge is-success">Expédiée</span>
-        {% if shipment.tracking_number %}
-        <span class="client-order-summary__tracking">{{ shipment.tracking_number }}</span>
+    {% if order_note_details or order_requested_date %}
+    <div class="client-order-summary__note">
+      <span class="client-order-summary__note-label">Informations transmises</span>
+      <div class="client-order-summary__note-body">
+        {% if order_note_details %}<p>{{ order_note_details }}</p>{% endif %}
+        {% if order_requested_date %}
+        <dl class="client-order-summary__request">
+          <div>
+            <dt>Date souhaitée</dt>
+            <dd><time datetime="{{ order_requested_date|date:'Y-m-d' }}">{{ order_requested_date|date:"d/m/Y" }}</time></dd>
+          </div>
+        </dl>
         {% endif %}
-      </dd>
-      {% if shipment.tracking_url %}
-      <dd class="client-order-summary__shipping-action">
-        <a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a>
-      </dd>
-      {% endif %}
-    </div>
-    {% elif shipment and shipment.tracking_number %}
-    <div class="client-order-summary__fact client-order-summary__fact--shipping">
-      <dt>Expédition</dt>
-      <dd>
-        <span class="badge is-info">Suivi prêt</span>
-        <span class="client-order-summary__tracking">{{ shipment.tracking_number }}</span>
-      </dd>
-      {% if shipment.tracking_url %}
-      <dd class="client-order-summary__shipping-action">
-        <a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a>
-      </dd>
-      {% endif %}
+      </div>
     </div>
     {% endif %}
-  </dl>
-  {% if order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}
-  <div class="client-order-summary__alert">
-    <span class="badge {{ order.credit_hold_status|badge_tone }}">{{ order.get_credit_hold_status_display }}</span>
+  </header>
+  <div class="client-order-detail-stack">
+    {% order_htmx_tabs "client" %}
   </div>
-  {% endif %}
-  {% if order.customer_note and order.customer_note != order_client_label %}
-  <div class="client-order-summary__note">
-    <span class="client-order-summary__note-label">Informations transmises</span>
-    <p>{{ order.customer_note }}</p>
-  </div>
-  {% endif %}
 </section>
-
-{% order_htmx_tabs "client" %}
 </div>
 {% endblock %}

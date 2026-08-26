@@ -1,11 +1,11 @@
 <details class="product-profile" data-product-nav-details>
-  <summary class="product-profile__trigger" aria-label="Ouvrir le menu Mon compte">
+  <summary class="product-profile__trigger" aria-label="Ouvrir le menu Mon compte" aria-haspopup="true">
     <span class="product-profile__avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
     <span class="product-profile__trigger-label">Mon compte</span>
     <span class="product-nav__chevron" aria-hidden="true"></span>
   </summary>
 
-  <div class="product-profile__menu" aria-label="Menu du compte">
+  <div class="product-profile__menu" aria-label="Menu du compte" role="group">
     <div class="product-profile__identity">
       <span class="product-profile__avatar product-profile__avatar--large" aria-hidden="true">{{ request.user.email|first|upper }}</span>
       <span class="product-profile__identity-copy">

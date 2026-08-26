@@ -1,0 +1,23 @@
+<nav class="ui-breadcrumb" aria-label="Fil d’Ariane">
+  <ol class="ui-breadcrumb__list">
+    <li class="ui-breadcrumb__item">
+      {% if atelier_current %}
+      <span aria-current="page">Accueil Atelier</span>
+      {% else %}
+      <a href="{% url 'portal:staff-dashboard' %}">Accueil Atelier</a>
+      {% endif %}
+    </li>
+    {% if middle_label %}
+    <li class="ui-breadcrumb__item">
+      {% if middle_current or not current_label %}
+      <span aria-current="page">{{ middle_label }}</span>
+      {% else %}
+      <a href="{% url middle_url %}">{{ middle_label }}</a>
+      {% endif %}
+    </li>
+    {% endif %}
+    {% if current_label %}
+    <li class="ui-breadcrumb__item"><span aria-current="page">{{ current_label }}</span></li>
+    {% endif %}
+  </ol>
+</nav>

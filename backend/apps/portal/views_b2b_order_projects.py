@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -5,6 +7,7 @@ from django.core.paginator import Paginator
 from django.http import FileResponse, Http404, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 
 from apps.b2b_order_projects.models import B2BOrderProject
@@ -29,6 +32,7 @@ from apps.portal.views_common import (
     access_scope_service,
     status_label,
 )
+from apps.uploads.models import AssetVersion
 from apps.uploads.services.assets import AssetDomainError, AssetService
 
 project_service = B2BOrderProjectService()
@@ -36,6 +40,8 @@ checkout_service = B2BOrderProjectCheckoutService()
 asset_service = AssetService()
 configurator_service = B2BOrderProjectConfiguratorService()
 order_pricing_service = OrderPricingService()
+
+ANALYSIS_POLL_TIMEOUT = timedelta(minutes=2)
 
 
 def build_gang_sheet_project_quote(
@@ -330,13 +336,16 @@ class ClientOrderProjectDetailView(ClientProjectFeatureMixin, View):
     def get(self, request, customer_public_id, project_public_id):
         project = self.get_project_or_404(project_public_id)
         active_validation_item = None
+        validate_missing = False
         validate_id = (request.GET.get("validate") or "").strip()
         if validate_id:
             active_validation_item = next(
                 (item for item in project.items.all() if str(item.public_id) == validate_id),
                 None,
             )
-        return render(
+            if active_validation_item is None:
+                validate_missing = True
+        response = render(
             request,
             self.template_name,
             self.context(
@@ -344,6 +353,7 @@ class ClientOrderProjectDetailView(ClientProjectFeatureMixin, View):
                 order_modes=B2BOrderProject.OrderMode.choices,
                 form_error="",
                 active_validation_item=active_validation_item,
+                validate_missing=validate_missing,
                 shipping_method_code=(
                     request.GET.get("shipping_method")
                     or request.GET.get("shipping_method_code")
@@ -352,6 +362,15 @@ class ClientOrderProjectDetailView(ClientProjectFeatureMixin, View):
                 or None,
             ),
         )
+        if validate_missing:
+            # Header utile pour HTMX ; le toast visible au full-page load
+            # est déclenché côté template (voir order_project_detail.html).
+            return with_toast(
+                response,
+                "Ce visuel n’est plus disponible pour la validation.",
+                "warning",
+            )
+        return response
 
 
 class ClientOrderProjectAutosaveView(ClientProjectFeatureMixin, View):
@@ -399,7 +418,59 @@ class ClientOrderProjectItemCreateView(ClientProjectFeatureMixin, View):
                 None,
             )
             if item is None:
-                raise Http404
+                # Ne pas renvoyer 404 : le poll HTMX laisserait sinon le spinner « Analyse… »
+                # bloqué dans la modal (pas de swap sur erreur).
+                return render(
+                    request,
+                    "portal/client/partials/order_project_add_visual_validation_interrupted.html",
+                    self.context(
+                        project=project,
+                        title="Visuel introuvable",
+                        message=(
+                            "Ce fichier a été retiré ou n’est plus disponible. "
+                            "Fermez la fenêtre pour continuer."
+                        ),
+                    ),
+                )
+            version = getattr(getattr(item, "asset", None), "current_version", None)
+            if version is not None:
+                version.refresh_from_db(
+                    fields=[
+                        "analysis_status",
+                        "analysis_error",
+                        "updated_at",
+                        "auto_size_requested",
+                    ]
+                )
+                item.analysis_pending = version.analysis_status in {
+                    AssetVersion.AnalysisStatus.PENDING,
+                    AssetVersion.AnalysisStatus.PROCESSING,
+                }
+                poll_deadline = timezone.now() - ANALYSIS_POLL_TIMEOUT
+                if item.analysis_pending and version.updated_at <= poll_deadline:
+                    AssetVersion.objects.filter(pk=version.pk).update(
+                        analysis_status=AssetVersion.AnalysisStatus.FAILED,
+                        analysis_error="Analyse trop longue — réessayez ou remplacez le fichier.",
+                        updated_at=timezone.now(),
+                    )
+                    version.refresh_from_db(
+                        fields=["analysis_status", "analysis_error", "updated_at"]
+                    )
+                    item.analysis_pending = False
+                    item.technical_review = asset_service.technical_review_for_item(item=item)
+                    return render(
+                        request,
+                        "portal/client/partials/order_project_add_visual_validation_interrupted.html",
+                        self.context(
+                            project=project,
+                            item=item,
+                            title="Analyse trop longue",
+                            message=(
+                                "Le contrôle technique n’a pas abouti. "
+                                "Fermez, puis renvoyez le fichier ou contactez l’atelier."
+                            ),
+                        ),
+                    )
             return render(
                 request,
                 "portal/client/partials/order_project_add_visual_validation_panel.html",
