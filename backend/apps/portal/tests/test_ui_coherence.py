@@ -936,7 +936,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn(".staff-profile-page", portal_entrypoint)
         self.assertIn(".staff-customer-detail-identity", portal_entrypoint)
         self.assertIn(
-            "staff-profile-page .portal-page-surface.staff-customer-detail-surface > header.staff-customer-focus.staff-customer-detail-identity",
+            "staff-profile-page .portal-page-surface.staff-customer-detail-surface > "
+            "header.staff-customer-focus.staff-customer-detail-identity",
             portal_entrypoint,
         )
         self.assertIn("width: 100% !important", portal_entrypoint)
@@ -1656,9 +1657,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         validation_panel = template_source(
             "portal/client/partials/order_project_add_visual_validation_panel.html"
         )
-        items_response = template_source(
-            "portal/client/partials/order_project_items_response.html"
-        )
+        items_response = template_source("portal/client/partials/order_project_items_response.html")
         item_delete = template_source(
             "portal/client/partials/order_project_item_delete_button.html"
         )

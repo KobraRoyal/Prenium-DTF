@@ -201,7 +201,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
                     f".portal-page-surface.ui-list-section :is(\n  {marker}",
                     css,
                 )
-        # Champ recherche planches = contrôle interactif : garde border + focus brand (pas halo violet).
+        # Champ recherche planches = contrôle interactif : border + focus brand.
         flatten_block = css.split(".portal-page-surface.ui-list-section :is(", 1)[1].split(
             ") {", 1
         )[0]
@@ -209,7 +209,10 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn(".portal-page-surface .gang-sheet-search:focus-within", css)
         self.assertIn("0 0 0 3px var(--field-focus-ring)", css)
         self.assertIn("outline: none !important", css)
-        self.assertIn(".portal-page-surface .gang-sheet-search :is(input, input:focus, input:focus-visible)", css)
+        self.assertIn(
+            ".portal-page-surface .gang-sheet-search :is(input, input:focus, input:focus-visible)",
+            css,
+        )
 
     def test_staff_dashboard_uses_page_head_without_legacy_head_wrapper(self) -> None:
         source = staff_dashboard_source()
@@ -377,9 +380,18 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertEqual(source.count("client-dashboard-surface"), 2)
         self.assertIn("{% if not memberships %}", source)
         self.assertIn("client-dashboard-section", source)
-        self.assertLess(source.index("client-dashboard-surface"), source.index("client-dashboard-palier"))
-        self.assertLess(source.index("client-dashboard-palier"), source.index("client-dashboard-focus"))
-        self.assertLess(source.index("client-dashboard-focus"), source.index("client-dashboard-section"))
+        self.assertLess(
+            source.index("client-dashboard-surface"),
+            source.index("client-dashboard-palier"),
+        )
+        self.assertLess(
+            source.index("client-dashboard-palier"),
+            source.index("client-dashboard-focus"),
+        )
+        self.assertLess(
+            source.index("client-dashboard-focus"),
+            source.index("client-dashboard-section"),
+        )
         self.assertIn("v123 — Dashboard client", css)
         self.assertIn(
             "client-dashboard .client-dashboard-surface .client-dashboard-focus",
@@ -535,7 +547,10 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn(">Règlement<", facts)
         self.assertIn("client-order-project-stack", source)
         self.assertNotIn("stack-lg", source)
-        self.assertIn(":is(.client-order-detail, .client-order-project-detail) .client-order-summary__facts", css)
+        self.assertIn(
+            ":is(.client-order-detail, .client-order-project-detail) .client-order-summary__facts",
+            css,
+        )
         self.assertIn("v140 — Rythme Operate partagé", css)
         self.assertIn("b2b-order-start-surface", css)
 
@@ -702,7 +717,11 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn("v120 — Verrou pixel fiche compte", css)
         self.assertIn("v121 — Workspace compte", css)
         self.assertIn(".staff-customer-detail-page .staff-customer-detail-surface", css)
-        self.assertIn("staff-customer-detail-surface > header.staff-customer-focus.staff-customer-detail-identity", css)
+        self.assertIn(
+            "staff-customer-detail-surface > header.staff-customer-focus"
+            ".staff-customer-detail-identity",
+            css,
+        )
         self.assertIn("staff-customer-workspace-surface .empty-state", css)
         self.assertIn("staff-customer-workspace__section .empty-state", css)
         self.assertIn("@layer utilities", css)
@@ -743,9 +762,9 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         staff_css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-staff.css").read_text(
             encoding="utf-8"
         )
-        client_css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-client.css").read_text(
-            encoding="utf-8"
-        )
+        client_css = (
+            Path(settings.BASE_DIR) / "static_src/css/entries/portal-client.css"
+        ).read_text(encoding="utf-8")
         core = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-core.css").read_text(
             encoding="utf-8"
         )
@@ -758,16 +777,17 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn("profile_client_focus.html", source)
         self.assertIn("v125 — Profil client", client_css)
         self.assertIn(".staff-customer-detail-identity", staff_css)
-        self.assertIn(
-            "staff-profile-page .portal-page-surface.staff-customer-detail-surface > header.staff-customer-focus.staff-customer-detail-identity",
-            staff_css,
+        profile_identity = (
+            ".portal-page-surface.staff-customer-detail-surface > "
+            "header.staff-customer-focus.staff-customer-detail-identity"
         )
+        self.assertIn(f"staff-profile-page {profile_identity}", staff_css)
         self.assertIn("v122 — Profil staff", staff_css)
-        self.assertIn(
-            "client-profile-page .portal-page-surface.staff-customer-detail-surface > header.staff-customer-focus.staff-customer-detail-identity",
-            client_css,
-        )
+        self.assertIn(f"client-profile-page {profile_identity}", client_css)
         self.assertIn(".portal-page-surface .account-profile-panel", core)
         self.assertIn("--portal-inner-chrome: profile-panel", core)
-        self.assertLess(source.index("staff-customer-detail-surface"), source.index("data-customer-workspace"))
+        self.assertLess(
+            source.index("staff-customer-detail-surface"),
+            source.index("data-customer-workspace"),
+        )
         self.assertIn("customer-account-workspace.css", client_css)

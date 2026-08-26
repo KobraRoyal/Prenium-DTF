@@ -426,19 +426,28 @@ class ClientOrderProjectItemCreateView(ClientProjectFeatureMixin, View):
                     self.context(
                         project=project,
                         title="Visuel introuvable",
-                        message="Ce fichier a été retiré ou n’est plus disponible. Fermez la fenêtre pour continuer.",
+                        message=(
+                            "Ce fichier a été retiré ou n’est plus disponible. "
+                            "Fermez la fenêtre pour continuer."
+                        ),
                     ),
                 )
             version = getattr(getattr(item, "asset", None), "current_version", None)
             if version is not None:
                 version.refresh_from_db(
-                    fields=["analysis_status", "analysis_error", "updated_at", "auto_size_requested"]
+                    fields=[
+                        "analysis_status",
+                        "analysis_error",
+                        "updated_at",
+                        "auto_size_requested",
+                    ]
                 )
                 item.analysis_pending = version.analysis_status in {
                     AssetVersion.AnalysisStatus.PENDING,
                     AssetVersion.AnalysisStatus.PROCESSING,
                 }
-                if item.analysis_pending and version.updated_at <= timezone.now() - ANALYSIS_POLL_TIMEOUT:
+                poll_deadline = timezone.now() - ANALYSIS_POLL_TIMEOUT
+                if item.analysis_pending and version.updated_at <= poll_deadline:
                     AssetVersion.objects.filter(pk=version.pk).update(
                         analysis_status=AssetVersion.AnalysisStatus.FAILED,
                         analysis_error="Analyse trop longue — réessayez ou remplacez le fichier.",
@@ -456,7 +465,10 @@ class ClientOrderProjectItemCreateView(ClientProjectFeatureMixin, View):
                             project=project,
                             item=item,
                             title="Analyse trop longue",
-                            message="Le contrôle technique n’a pas abouti. Fermez, puis renvoyez le fichier ou contactez l’atelier.",
+                            message=(
+                                "Le contrôle technique n’a pas abouti. "
+                                "Fermez, puis renvoyez le fichier ou contactez l’atelier."
+                            ),
                         ),
                     )
             return render(
