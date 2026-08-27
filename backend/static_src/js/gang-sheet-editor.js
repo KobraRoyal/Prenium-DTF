@@ -38,6 +38,17 @@ if (root) {
   const selectedItems = () => state.items.filter((item) => selectedIds.has(item.public_id));
   const effectiveAlignmentReference = () => selectedIds.size > 1 ? alignmentReference : "sheet";
   const HISTORY_LIMIT = 40;
+  const ASSET_VERSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function trustedAssetPreviewSrc(versionPublicId) {
+    if (typeof versionPublicId !== "string" || !ASSET_VERSION_ID_RE.test(versionPublicId)) {
+      return "";
+    }
+    const basePath = window.location.pathname.endsWith("/")
+      ? window.location.pathname
+      : `${window.location.pathname}/`;
+    return `${basePath}assets/${encodeURIComponent(versionPublicId)}/preview/`;
+  }
 
   function layoutSnapshot() {
     return state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id, kind, text_content, text_font, text_size_mm, text_color, text_align, text_bold }) => ({
@@ -759,19 +770,9 @@ if (root) {
         preview.append(rotator);
       } else {
         const image = document.createElement("img");
-        const previewUrl = typeof item.preview_url === "string" ? item.preview_url : "";
-        try {
-          const parsed = new URL(previewUrl, window.location.href);
-          if (parsed.protocol === "blob:") {
-            // codeql[js/xss-through-dom] — blob: URLs from editor state only
-            image.src = parsed.href;
-          } else if (parsed.origin === window.location.origin) {
-            const safePath = `${parsed.pathname}${parsed.search}${parsed.hash}`;
-            // codeql[js/xss-through-dom] — same-origin path only after URL origin check
-            image.src = safePath;
-          }
-        } catch {
-          // Ignore invalid preview URLs from editor state.
+        const previewSrc = trustedAssetPreviewSrc(item.asset_version_public_id);
+        if (previewSrc) {
+          image.src = previewSrc;
         }
         image.alt = "";
         image.draggable = false;

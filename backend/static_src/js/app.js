@@ -5,7 +5,7 @@ import "./product-shell.js?v=20260721g";
 import "./product-date-picker.js?v=20260712a";
 import "./b2b-configurator.js?v=20260826-modal-impeccable-v159";
 import "./email-template-editor.js?v=20260813-email-workbench";
-import "./gang-sheet-editor.js?v=20260827-codeql-img-src-v20";
+import "./gang-sheet-editor.js?v=20260827-codeql-img-src-v21";
 
 window.preniumToast = function (message, variant = "info") {
   window.dispatchEvent(

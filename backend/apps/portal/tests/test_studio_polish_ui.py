@@ -165,3 +165,12 @@ class StudioPolishUITests(SimpleTestCase):
         )
         self.assertIn("Gang Inter", text_css)
         self.assertNotIn("62cqmin", text_css)
+
+    def test_studio_preview_src_does_not_assign_dom_json_url_to_image(self) -> None:
+        editor_js = source(BASE_DIR / "static_src/js/gang-sheet-editor.js")
+        after_helper = editor_js.split("function trustedAssetPreviewSrc", 1)[1]
+
+        self.assertIn("function trustedAssetPreviewSrc(versionPublicId)", editor_js)
+        self.assertIn("encodeURIComponent(versionPublicId)", editor_js)
+        self.assertIn("image.src = previewSrc", editor_js)
+        self.assertNotIn("item.preview_url", after_helper)
