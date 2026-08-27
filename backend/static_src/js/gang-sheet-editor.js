@@ -762,11 +762,13 @@ if (root) {
         const previewUrl = typeof item.preview_url === "string" ? item.preview_url : "";
         try {
           const parsed = new URL(previewUrl, window.location.href);
-          if (parsed.origin === window.location.origin || parsed.protocol === "blob:") {
-            // codeql[js/xss-through-dom] — same-origin / blob preview URLs from editor state only
-            image.src = parsed.protocol === "blob:"
-              ? parsed.href
-              : `${parsed.pathname}${parsed.search}${parsed.hash}`;
+          if (parsed.protocol === "blob:") {
+            // codeql[js/xss-through-dom] — blob: URLs from editor state only
+            image.src = parsed.href;
+          } else if (parsed.origin === window.location.origin) {
+            const safePath = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+            // codeql[js/xss-through-dom] — same-origin path only after URL origin check
+            image.src = safePath;
           }
         } catch {
           // Ignore invalid preview URLs from editor state.
