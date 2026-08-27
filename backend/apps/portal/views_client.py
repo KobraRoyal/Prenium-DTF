@@ -173,6 +173,7 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
             shipment = order.shipment
         except ObjectDoesNotExist:
             shipment = None
+        reorder_enabled = b2b_order_projects_enabled_for_customer(self.customer)
         return render(
             request,
             self.template_name,
@@ -181,6 +182,7 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
                 shipment=shipment,
                 active_panel=request.GET.get("panel", ""),
                 awaits_client_payment=awaits_client_payment,
+                can_reorder=reorder_enabled and order.uploads.exists(),
             )
             | {
                 "order_status_banner": client_order_status_banner(
@@ -208,7 +210,6 @@ class ClientOrderPanelUploadsView(ClientOrderContextMixin, View):
             self.client_order_context(
                 order=order,
                 uploads=uploads,
-                reorder_enabled=b2b_order_projects_enabled_for_customer(self.customer),
                 active_panel="uploads",
             ),
         )

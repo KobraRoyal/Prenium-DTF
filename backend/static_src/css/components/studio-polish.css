@@ -31,12 +31,12 @@ body.product-shell--studio .gang-editor__header {
 }
 
 body.product-shell--studio .gang-editor__metrics > div {
-  border-radius: var(--radius-sm);
-  background: var(--gang-panel-subtle);
+  border-radius: 0;
+  background: transparent;
 }
 
 body.product-shell--studio .gang-editor__metrics .is-price {
-  background: color-mix(in srgb, var(--gang-accent-soft) 72%, var(--gang-panel));
+  background: color-mix(in srgb, var(--gang-accent-soft) 42%, transparent);
 }
 
 body.product-shell--studio .gang-editor__title-actions .gang-status-badge {
@@ -303,22 +303,50 @@ body.product-shell--studio .gang-editor__selection-tools .gang-tool-btn > span:l
 }
 
 body.product-shell--studio .gang-editor__save {
+  width: 2.4rem;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--gang-accent);
+  color: var(--action-text);
+  box-shadow: none;
+}
+
+body.product-shell--studio .gang-editor__save-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  min-height: 2.5rem;
-  padding-inline: 0.9rem;
-  border-radius: 999px;
-  background: var(--gang-accent);
+}
+
+body.product-shell--studio .gang-editor__save-icon--done {
+  display: none;
+}
+
+body.product-shell--studio .gang-editor__save.is-saved .gang-editor__save-icon--idle {
+  display: none;
+}
+
+body.product-shell--studio .gang-editor__save.is-saved .gang-editor__save-icon--done {
+  display: inline-flex;
+}
+
+body.product-shell--studio .gang-editor__save:hover:not(:disabled) {
+  background: var(--gang-accent-strong);
   color: var(--action-text);
-  font-weight: 800;
+  transform: none;
+}
+
+body.product-shell--studio .gang-editor__save:focus-visible {
+  outline: 2px solid var(--gang-focus);
+  outline-offset: 2px;
 }
 
 body.product-shell--studio .gang-editor__save.is-saved,
 html[data-theme="prenium"] body.product-shell--studio .gang-editor[data-dirty="false"] [data-save-layout]:disabled {
-  border-color: color-mix(in srgb, var(--gang-success) 36%, var(--gang-line)) !important;
-  background: color-mix(in srgb, var(--gang-success) 12%, var(--gang-panel)) !important;
+  border-color: color-mix(in srgb, var(--gang-success) 28%, var(--gang-line)) !important;
+  background: color-mix(in srgb, var(--gang-success) 10%, var(--gang-panel)) !important;
   color: var(--gang-success) !important;
   opacity: 1;
 }
@@ -356,9 +384,8 @@ body.product-shell--studio .gang-inspector-panel {
 }
 
 body.product-shell--studio .gang-inspector-panel--empty {
-  border-style: dashed;
-  background: color-mix(in srgb, var(--gang-panel-subtle) 82%, var(--gang-panel));
-  counter-reset: gang-empty-step;
+  border: 0;
+  background: transparent;
 }
 
 body.product-shell--studio .gang-inspector-empty-steps {
@@ -425,9 +452,10 @@ body.product-shell--studio .gang-inspector-panel--validation {
   bottom: 0;
   z-index: 3;
   margin-top: auto;
-  border-color: color-mix(in srgb, var(--gang-accent) 46%, var(--gang-line));
-  background: color-mix(in srgb, var(--gang-accent) 10%, var(--gang-panel));
-  backdrop-filter: blur(8px);
+  border-color: var(--gang-line);
+  background: var(--gang-panel);
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 body.product-shell--studio .gang-editor__inspector {
@@ -798,8 +826,8 @@ html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item:is(:hover
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item__resize {
-  border-color: var(--ink);
-  background: var(--gang-accent);
+  border-color: var(--surface);
+  background: var(--brand);
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-sheet-item-action:focus-visible {
@@ -819,10 +847,11 @@ html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector {
 
 html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector > .gang-inspector-panel {
   margin: 0;
-  padding: 0.8rem 0.75rem;
-  border: 1px solid var(--gang-line);
-  border-radius: var(--radius);
-  background: var(--gang-panel);
+  padding: 0.85rem 0.85rem 0.95rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector > .gang-inspector-panel + .gang-inspector-panel {
@@ -888,17 +917,77 @@ html[data-theme="prenium"] body.product-shell--studio .gang-inspector-section + 
 
 html[data-theme="prenium"] body.product-shell--studio .gang-inspector-section__title {
   margin: 0;
-  color: var(--gang-muted);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  color: var(--gang-ink);
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-transform: none;
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-inspector-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
+  gap: 0.55rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-grid > .ui-field-group {
+  margin: 0;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-unit-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 2.75rem;
+  border: 1px solid var(--gang-line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised, var(--gang-panel-subtle));
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-unit-field .ui-input {
+  min-height: 2.75rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-unit-field .ui-input:focus,
+html[data-theme="prenium"] body.product-shell--studio .gang-unit-field .ui-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-unit-field__unit {
+  padding-right: 0.7rem;
+  color: var(--gang-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-unit-field:focus-within {
+  border-color: var(--gang-line);
+  box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--gang-focus) 28%, transparent));
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector .ui-label {
+  margin: 0;
+  color: var(--gang-ink);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector .ui-field-help,
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector .ui-field-group .ui-field-help {
+  margin: 0.2rem 0 0;
+  color: var(--gang-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-inspector-grid > label {
@@ -1015,20 +1104,39 @@ html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--mul
   margin: 0;
 }
 
-html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--multi .gang-action-chip {
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--multi .gang-group-tools .ui-btn {
   flex: 1 1 calc(50% - 0.25rem);
   justify-content: center;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--multi .gang-group-tools .ui-field-help {
+  flex: 1 1 100%;
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-advanced-tools > summary {
-  gap: 0.55rem;
-  padding: 0.15rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0.1rem 0;
   color: var(--gang-ink);
 }
 
+html[data-theme="prenium"] body.product-shell--studio .gang-advanced-tools > summary .gang-inspector-section__title {
+  flex: 1 1 auto;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-advanced-tools > summary small {
+  color: var(--gang-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 html[data-theme="prenium"] body.product-shell--studio .gang-advanced-tools > summary strong {
-  font-size: 0.86rem;
+  font-size: 0.82rem;
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-advanced-tools__content {
@@ -1038,22 +1146,30 @@ html[data-theme="prenium"] body.product-shell--studio .gang-advanced-tools__cont
 
 html[data-theme="prenium"] body.product-shell--studio .gang-alignment-reference legend,
 html[data-theme="prenium"] body.product-shell--studio .gang-distribution-tools > span {
-  color: var(--gang-muted);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  color: var(--gang-ink);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-alignment-reference > div {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--validation {
-  padding: 0.85rem 0.8rem;
-  border-color: color-mix(in srgb, var(--gang-accent) 42%, var(--gang-line));
-  background: color-mix(in srgb, var(--gang-accent) 8%, var(--gang-panel));
+  padding: 0.85rem 0.85rem 0.95rem;
+  border-color: var(--gang-line);
+  background: transparent;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-validation-heading {
+  display: grid;
+  gap: 0.2rem;
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-validation-heading h2 {
   margin: 0;
-  font-size: 0.95rem;
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-validation-heading p {
@@ -1181,5 +1297,180 @@ html[data-theme="prenium"] body.product-shell--studio .gang-sheet-order-quote__e
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics > div.is-price {
     grid-column: 1 / -1;
     border-left: 0;
+  }
+}
+
+/* Pixel-perfect Operate: un chrome, une grille qui rétrécit, jamais de double cadre. */
+html[data-theme="prenium"] body.product-shell--studio .gang-editor {
+  gap: 0;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor > .portal-page-rail {
+  margin-bottom: 0.65rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__header {
+  min-width: 0;
+  border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics {
+  min-width: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-left: 1px solid color-mix(in srgb, var(--gang-line-strong) 18%, transparent);
+  background: transparent;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__progress-row {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-bottom: 0.7rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__mobile-tabs {
+  margin-bottom: 0.55rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 14.5rem) minmax(0, 1fr) minmax(0, 16.25rem);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "toolbar toolbar toolbar"
+    "sidebar stage inspector";
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--gang-line-strong) 28%, transparent);
+  border-radius: var(--radius);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__sidebar,
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector,
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__stage {
+  min-width: 0;
+  border-top-width: 0;
+  border-bottom-width: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__sidebar {
+  border-left: 0;
+  border-right: 1px solid var(--gang-line);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector {
+  border-right: 0;
+  border-left: 1px solid var(--gang-line);
+  gap: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-start,
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-tools,
+html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-end {
+  flex-wrap: nowrap;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--empty {
+  border-style: none;
+  background: transparent;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--empty h2 {
+  margin: 0 0 0.35rem;
+  color: var(--gang-ink);
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--empty p {
+  margin: 0;
+  color: var(--gang-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-launcher {
+  box-shadow: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__add {
+  display: grid;
+  grid-template-columns: 3.75rem minmax(0, 1fr);
+  align-items: end;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__qty {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__qty .ui-label {
+  margin-bottom: 0.25rem;
+  color: var(--gang-ink);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__qty .ui-input {
+  min-height: 2.75rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__place {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding-inline: 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (min-width: 80rem) {
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
+    grid-template-columns: 15.5rem minmax(0, 1fr) 17.5rem;
+  }
+}
+
+@media (max-width: 78.74rem) {
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics {
+    border-top: 1px solid color-mix(in srgb, var(--gang-line-strong) 18%, transparent);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 980px) {
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
+    display: block;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__sidebar,
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__inspector {
+    border: 0;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar {
+    flex-wrap: wrap;
   }
 }

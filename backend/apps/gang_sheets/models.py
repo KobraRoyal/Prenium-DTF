@@ -481,13 +481,33 @@ class GangSheetItem(BaseModel):
         DEG_180 = 180, "180°"
         DEG_270 = 270, "270°"
 
+    class Kind(models.TextChoices):
+        VISUAL = "visual", "Visuel"
+        TEXT = "text", "Texte"
+
     customer = models.ForeignKey(
         "customers.Customer", on_delete=models.CASCADE, related_name="gang_sheet_items"
     )
     sheet = models.ForeignKey(GangSheet, on_delete=models.CASCADE, related_name="items")
+    kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.VISUAL)
     asset_version = models.ForeignKey(
-        "uploads.AssetVersion", on_delete=models.PROTECT, related_name="gang_sheet_items"
+        "uploads.AssetVersion",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="gang_sheet_items",
     )
+    text_content = models.CharField(max_length=200, blank=True)
+    text_font = models.CharField(max_length=32, blank=True)
+    text_size_mm = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal("12.00"),
+        validators=[MinValueValidator(Decimal("2.00"))],
+    )
+    text_color = models.CharField(max_length=7, blank=True)
+    text_align = models.CharField(max_length=16, blank=True)
+    text_bold = models.BooleanField(default=False)
     x_mm = models.DecimalField(max_digits=9, decimal_places=2, default=ZERO)
     y_mm = models.DecimalField(max_digits=9, decimal_places=2, default=ZERO)
     width_mm = models.DecimalField(
@@ -513,6 +533,10 @@ class GangSheetItem(BaseModel):
             models.Index(fields=("customer", "sheet", "z_index")),
             models.Index(fields=("customer", "asset_version")),
             models.Index(
+                fields=("customer", "sheet", "kind"),
+                name="gangitem_sheet_kind_idx",
+            ),
+            models.Index(
                 fields=("sheet", "layout_group_id"),
                 name="gangitem_sheet_group_idx",
             ),
@@ -523,6 +547,20 @@ class GangSheetItem(BaseModel):
                 condition=models.Q(height_mm__gt=0), name="gangitem_height_gt_0"
             ),
             models.UniqueConstraint(fields=("sheet", "z_index"), name="uniq_gangitem_sheet_z"),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        kind="visual",
+                        asset_version__isnull=False,
+                        text_content="",
+                    )
+                    | (
+                        models.Q(kind="text", asset_version__isnull=True)
+                        & ~models.Q(text_content="")
+                    )
+                ),
+                name="gangitem_kind_payload",
+            ),
         ]
 
     @property
@@ -539,6 +577,13 @@ class GangSheetItem(BaseModel):
             raise ValidationError(
                 {"sheet": "L'occurrence et la planche doivent avoir le même client."}
             )
+        if self.kind == self.Kind.VISUAL and not self.asset_version_id:
+            raise ValidationError({"asset_version": "Un visuel doit référencer un fichier."})
+        if self.kind == self.Kind.TEXT:
+            if self.asset_version_id:
+                raise ValidationError({"asset_version": "Un texte ne référence pas de fichier."})
+            if not (self.text_content or "").strip():
+                raise ValidationError({"text_content": "Saisissez un texte à imprimer."})
         if (
             self.customer_id
             and self.asset_version_id
@@ -548,5 +593,13 @@ class GangSheetItem(BaseModel):
                 {"asset_version": "Le fichier doit appartenir au même client que la planche."}
             )
 
+    @property
+    def is_text(self) -> bool:
+        return self.kind == self.Kind.TEXT
+
     def __str__(self) -> str:
-        return f"{self.asset_version.asset.name} sur {self.sheet.name}"
+        if self.kind == self.Kind.TEXT:
+            first = (self.text_content or "Texte").splitlines()[0].strip()[:48] or "Texte"
+            return f"{first} sur {self.sheet.name}"
+        name = self.asset_version.asset.name if self.asset_version_id else "Visuel"
+        return f"{name} sur {self.sheet.name}"

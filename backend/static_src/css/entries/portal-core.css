@@ -94,7 +94,7 @@ html[data-theme="prenium"] body.product-shell :where(
   .page-head,
   .page-head--premium,
   [class*="-card"]:not([class*="__"]),
-  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack):not(.account-profile-panel):not(.account-team-panel),
+  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack):not(.account-profile-panel):not(.account-team-panel):not(.gang-inspector-panel),
   [class*="-focus"]:not([class*="__"]):not(.client-dashboard-focus),
   .workflow-shell,
   .ui-workflow-shell,
@@ -135,7 +135,7 @@ html[data-theme="prenium"] body.product-shell :where(
   .panel,
   .page-head--premium,
   [class*="-card"]:not([class*="__"]),
-  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack):not(.account-profile-panel):not(.account-team-panel),
+  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack):not(.account-profile-panel):not(.account-team-panel):not(.gang-inspector-panel),
   [class*="-focus"]:not([class*="__"]):not(.client-dashboard-focus),
   .workflow-shell,
   .ui-workflow-shell,
@@ -231,8 +231,10 @@ html[data-theme="prenium"] body.product-shell .ui-breadcrumb__list {
 }
 
 /* Unlayered: écrase app-legacy.css (body.landing-saas.portal-shell = toutes les vues portail).
-   Note: .empty-state est exclu — imbriqué dans .portal-page-surface il doit rester plat (v112 / product-polish). */
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+   :where() obligatoire — un :is() + :not(.gang-inspector-panel) gonfle la spécificité
+   et bat les flatten v111/v112 (double cadre fiche commande / panneau Visuels).
+   .empty-state est exclu — imbriqué dans .portal-page-surface il doit rester plat. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :where(
   .card,
   .panel,
   .portal-login-card,
@@ -242,7 +244,7 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
   .service-card,
   .selectable-card,
   [class*="-card"]:not([class*="__"]),
-  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack):not(.account-profile-panel):not(.account-team-panel),
+  [class*="-panel"]:not([class*="__"]):not(.atelier-dashboard-panel):not(.atelier-dashboard-stack):not(.account-profile-panel):not(.account-team-panel):not(.gang-inspector-panel),
   [class*="-focus"]:not([class*="__"]):not(.client-dashboard-focus),
   .workflow-shell,
   .ui-workflow-shell,

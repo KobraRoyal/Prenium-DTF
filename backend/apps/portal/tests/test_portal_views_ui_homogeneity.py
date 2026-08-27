@@ -738,6 +738,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn("client-order-detail-identity", source)
         self.assertIn("client-order-detail-stack", source)
         self.assertIn("page_head.html", source)
+        self.assertIn("page_head_actions/client_order_detail.html", source)
         self.assertIn("v114 — Fiche commande client", css)
         self.assertIn("v138 — Verrou pixel fiche commande client", css)
         self.assertIn(".client-order-detail .client-order-detail-surface", css)

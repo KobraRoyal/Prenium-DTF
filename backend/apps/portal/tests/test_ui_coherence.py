@@ -327,8 +327,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("border-top: 1px solid var(--line) !important", order_detail_css)
         self.assertIn(".b2b-support-color-badge.is-rainbow::before", order_detail_css)
         self.assertNotIn('class="ui-mobile-order-card product-mobile-file-card"', panels)
-        self.assertIn("Recommander", panels)
+        self.assertNotIn("Recommander", panels)
+        self.assertIn("page_head_actions/client_order_detail.html", detail)
         self.assertIn("<th>Action</th>", panels)
+        self.assertIn("ui-btn-ghost", panels)
+        self.assertIn(".client-order-panel--uploads", portal_client_css)
 
     def test_product_views_do_not_reintroduce_dark_theme_text_on_light_panels(self) -> None:
         paths = [
@@ -1063,7 +1066,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
             canvas_css,
         )
         self.assertIn("function resizeItemFromPointer", runtime)
-        self.assertIn("item.height_mm = Math.max(1, round(start.height + deltaX))", runtime)
+        self.assertIn("nextHeight = Math.max(1, round(start.height + signX * deltaX))", runtime)
         self.assertIn("function renderSelectedItemToolbar", runtime)
         self.assertIn('attribute: "data-canvas-rotate-item"', runtime)
         self.assertIn('attribute: "data-canvas-delete-item"', runtime)
@@ -1076,6 +1079,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("function alignmentBounds", runtime)
         self.assertIn("function alignSelectedItems", runtime)
         self.assertIn('effectiveAlignmentReference() !== "selection"', runtime)
+        self.assertIn("function layoutUnits", runtime)
+        self.assertIn("function alignUnitToBounds", runtime)
+        self.assertIn("function selectedLayoutUnitCount", runtime)
+        self.assertIn("unit.items.length === 1", runtime)
+        self.assertIn("alignUnitToBounds(unit, direction, bounds)", runtime)
+        self.assertIn("selectedLayoutUnitCount() < 3", runtime)
+        self.assertIn("Chaque groupe se comporte comme un seul objet", runtime)
+        self.assertIn("Les visuels groupés comptent comme un seul objet", runtime)
         self.assertIn("event.shiftKey || event.ctrlKey || event.metaKey", runtime)
         self.assertIn("item.x_mm = round(centerX - size.width / 2)", runtime)
         self.assertIn("item.y_mm = round(centerY - size.height / 2)", runtime)
@@ -1088,11 +1099,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn(".gang-alignment-reference", studio_css)
         self.assertIn(".gang-alignment-actions", studio_css)
         self.assertIn(".gang-sheet-item.is-primary .gang-sheet-item__resize", studio_css)
+        self.assertIn("gang-sheet-item__resize--${corner}", runtime)
         self.assertIn(
             "translate(-50%, -50%) rotate(${item.rotation}deg)",
             runtime,
         )
         self.assertIn('window.addEventListener("beforeunload"', runtime)
+        self.assertIn("allowUnload || !dirty", runtime)
+        self.assertIn(".gang-asset-modal-form", runtime)
         self.assertIn("root.dataset.dirty = String(dirty)", runtime)
 
     def test_gang_sheet_editor_exposes_safe_precision_tools(self) -> None:
@@ -1111,6 +1125,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "data-canvas-clear-zone",
             "data-canvas-scroll",
             "gang-sheet-canvas-scroll",
+            "data-zoom-fit",
             'data-distribute="horizontal"',
             'data-distribute="vertical"',
             "data-selection-gap",
@@ -1137,6 +1152,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "function groupSelectedItems",
             "function ungroupSelectedItems",
             "function translateSelectionAsGroup",
+            "function layoutUnits",
+            "function alignUnitToBounds",
+            "function translateItemsBy",
+            "function zoomToFitTarget",
+            "function setZoom",
             "function focusIssue",
             "function fixOverflowIssue",
         ]:
@@ -1156,8 +1176,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("function createLockIcon", runtime)
         self.assertIn('attribute: "data-canvas-rotate-item"', runtime)
         self.assertIn("item.rotation = (Number(item.rotation) + 90) % 360", runtime)
-        self.assertIn("nextCenterX = centerX + dy", runtime)
-        self.assertIn("nextCenterY = centerY - dx", runtime)
+        self.assertIn("nextCenterX = groupCenterX + dy", runtime)
+        self.assertIn("nextCenterY = groupCenterY - dx", runtime)
+        self.assertIn("function clampItemOnSheet", runtime)
         self.assertIn("Groupe de ${items.length} visuels pivoté de 90°.", runtime)
         self.assertIn("gang-selection-frame__chrome", runtime)
         self.assertIn("${countLabel} · ${widthCm}", runtime)

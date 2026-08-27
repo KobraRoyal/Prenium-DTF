@@ -50,10 +50,27 @@ body.product-shell .client-order-summary__facts {
   padding-top: 0;
 }
 
-body.product-shell .client-order-uploads-head {
-  display: flex;
-  justify-content: flex-end;
-  margin: 0 0 0.85rem;
+body.product-shell .client-order-reorder {
+  margin: 0;
+}
+
+body.product-shell .client-order-panel--uploads {
+  display: grid;
+  gap: 0.5rem;
+}
+
+body.product-shell .client-order-panel--uploads .ui-data-table tbody td {
+  vertical-align: middle;
+}
+
+body.product-shell .client-order-panel--uploads .ui-table-actions .ui-btn {
+  min-height: 2.75rem;
+}
+
+/* portal-core pose overflow-x: auto sur les chips ; le spec CSS force alors
+   overflow-y: auto et coupe le rayon 1 px des pills (hover / actif). */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.client-order-detail .workflow-tab-rail .workflow-tab-group__chips--flat {
+  overflow: visible !important;
 }
 
 body.product-shell .client-billing-success__receipt {

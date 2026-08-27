@@ -1,0 +1,12 @@
+{% if can_reorder %}
+<form
+  class="client-order-reorder"
+  method="post"
+  action="{% url 'portal:client-order-reorder' customer_public_id=customer.public_id order_public_id=order.public_id %}"
+>
+  {% csrf_token %}
+  <button class="ui-btn ui-btn-secondary" type="submit" aria-label="Recommander cette commande">
+    Recommander
+  </button>
+</form>
+{% endif %}

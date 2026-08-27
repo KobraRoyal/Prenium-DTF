@@ -21,7 +21,7 @@ class GangSheetSiteSettingsAdmin(admin.ModelAdmin):
 class GangSheetItemInline(admin.TabularInline):
     model = GangSheetItem
     extra = 0
-    readonly_fields = ("public_id", "customer", "asset_version")
+    readonly_fields = ("public_id", "customer", "kind", "asset_version")
 
 
 class GangSheetSourceAssetInline(admin.TabularInline):

@@ -119,6 +119,8 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
         has_pending_assets = False
         usage_by_asset_id = {}
         for item in sheet.items.all():
+            if not item.asset_version_id:
+                continue
             asset_id = item.asset_version.asset_id
             usage_by_asset_id[asset_id] = usage_by_asset_id.get(asset_id, 0) + 1
         can_edit = self.customer_membership.role != CustomerMembership.Role.READONLY
@@ -527,6 +529,26 @@ class ClientGangSheetAddItemView(ClientGangSheetMixin, View):
         self.require_write_access()
         sheet = self.get_sheet_or_404(sheet_public_id)
         try:
+            if request.POST.get("kind") == "text":
+                item = gang_sheet_service.add_text_item(
+                    sheet=sheet,
+                    actor=request.user,
+                    content=request.POST.get("text_content"),
+                    font=request.POST.get("text_font"),
+                    size_mm=request.POST.get("text_size_mm"),
+                    color=request.POST.get("text_color"),
+                    align=request.POST.get("text_align"),
+                    bold=request.POST.get("text_bold"),
+                )
+                return JsonResponse(
+                    {
+                        "ok": True,
+                        "created_count": 1,
+                        "item_public_id": str(item.public_id),
+                        "kind": "text",
+                    },
+                    status=201,
+                )
             items = gang_sheet_service.add_occurrences(
                 sheet=sheet,
                 asset_version_public_id=request.POST.get("asset_version_public_id"),

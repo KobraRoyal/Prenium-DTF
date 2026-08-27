@@ -335,3 +335,29 @@ class ProductPolishUITests(SimpleTestCase):
             entry,
         )
         self.assertIn("Neutralise les défauts agency-*", entry)
+
+    def test_portal_core_card_chrome_uses_where_so_nested_panels_flatten(self) -> None:
+        core = source(CSS_DIR / "entries/portal-core.css")
+        chrome = core.split("écrase app-legacy.css", 1)[1].split("/* v111", 1)[0]
+        selector = chrome.split("html[data-theme", 1)[1]
+        detail = source(CSS_DIR / "components/client-order-detail.css")
+        uploads = source(TEMPLATES_DIR / "portal/client/panels/uploads.html")
+
+        self.assertIn(":where(", selector)
+        self.assertNotIn(":is(", selector)
+        self.assertIn(".portal-page .portal-page-surface .client-order-panel", core)
+        self.assertIn(".portal-page .portal-page-surface .workflow-panel-target", core)
+        self.assertIn(".client-order-panel--uploads", detail)
+        self.assertIn("ui-btn-ghost", uploads)
+        self.assertNotIn("Recommander", uploads)
+        self.assertEqual(uploads.count("ui-btn-ghost"), 2)
+
+        actions = source(TEMPLATES_DIR / "components/portal/page_head_actions/client_order_detail.html")
+        self.assertIn("Recommander", actions)
+        self.assertIn("client-order-reorder", actions)
+        self.assertIn("ui-btn ui-btn-secondary", actions)
+
+    def test_client_order_tab_chips_keep_pill_radius_visible(self) -> None:
+        detail = source(CSS_DIR / "components/client-order-detail.css")
+        chips = detail.split("workflow-tab-group__chips--flat", 1)[1]
+        self.assertIn("overflow: visible !important", chips.split("}", 1)[0])

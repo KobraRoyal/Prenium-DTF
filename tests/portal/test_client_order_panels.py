@@ -262,5 +262,14 @@ def test_reorder_from_order_creates_project_with_visuals():
             kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
         )
     )
-    assert "Recommander" in panel.content.decode()
+    assert "Recommander" not in panel.content.decode()
     assert "Visuels transmis" not in panel.content.decode()
+
+    detail = upload_client.get(
+        reverse(
+            "portal:client-order-detail",
+            kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
+        )
+    )
+    assert "Recommander" in detail.content.decode()
+    assert "client-order-reorder" in detail.content.decode()

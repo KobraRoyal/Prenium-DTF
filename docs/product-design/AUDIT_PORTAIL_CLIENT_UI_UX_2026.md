@@ -299,7 +299,7 @@ Lot du 2026-07-21 :
 - bibliothèque et inspecteur rendus indépendants afin de conserver les outils visibles pendant la composition ;
 - progression synchronisée avec les statuts `draft`, `rendering`, `ready` et `validated` ;
 - modifications locales signalées explicitement, bouton d’enregistrement contextualisé et prévention d’une sortie accidentelle ;
-- zoom accessible à `50`, `75`, `100`, `125` et `150 %`, sans modifier les coordonnées ni les dimensions métier ;
+- zoom accessible de `50 %` à `400 %` par pas de `25 %`, avec cadrage de l’objet ou du groupe sélectionné, sans modifier les coordonnées ni les dimensions métier ;
 - expérience mobile convertie en navigation par sections, `Composition` étant la tâche affichée par défaut ;
 - contrôles de production regroupés et reformulés sans exposer le PDF HD protégé ;
 - endpoints, permissions multi-tenant et règles de validation inchangés.
@@ -332,3 +332,11 @@ Lot du 2026-07-21 :
 - le H1 reprend le rythme du dashboard (carte `page-head--premium`, 1,5 rem, capitales) ; cibles tactiles 44 px sur **Modifier** ;
 - les champs vides disent **À renseigner** ; après enregistrement HTMX, le rail met à jour le nom sans recharger la page ;
 - la grille de faits reprend les séparateurs 1 px de la fiche commande ; même contrat HTMX.
+
+## 19. Mise à jour — panneau Visuels sans cadre imbriqué (2026-08-27)
+
+- le chrome cartes portail utilise `:where()` pour ne plus battre les flatten de `.client-order-panel` / `.workflow-panel-target` ;
+- une seule surface sur la fiche commande transmise ; **Télécharger** en action de ligne ghost ;
+- **Recommander** est l’action de page (en-tête, à droite du titre), visible sur tous les onglets, pas dans le tableau Visuels ;
+- pills d’onglets : `overflow: visible` sur les chips (évite la coupe du rayon au hover, due à `overflow-x: auto`) ;
+- cache CSS `v28` ; Studio inchangé (`:not(.gang-inspector-panel)` conservé).
