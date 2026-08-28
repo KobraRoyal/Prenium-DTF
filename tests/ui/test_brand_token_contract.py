@@ -45,8 +45,8 @@ def test_tailwind_theme_follows_live_brand_tokens() -> None:
     config = _read(BACKEND_DIR / "tailwind.config.js")
     assert 'DEFAULT: "var(--brand)"' in config
     assert 'strong: "var(--brand-strong)"' in config
-    assert "primary: \"#ff8775\"" in config
-    assert "secondary: \"#a83bc4\"" in config
+    assert 'primary: "#ff8775"' in config
+    assert 'secondary: "#a83bc4"' in config
     assert "#8f3d1f" not in config
 
 
