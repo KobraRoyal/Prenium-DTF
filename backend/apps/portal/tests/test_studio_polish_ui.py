@@ -32,15 +32,36 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn(".gang-editor__toolbar", polish)
         self.assertIn(".gang-editor__toolbar-start", polish)
         self.assertIn(".gang-editor__toolbar-tools", polish)
+        self.assertIn(".gang-editor__creation-tools", polish)
         self.assertIn(".gang-editor__save.is-saved", polish)
         self.assertIn(".gang-editor__save-icon--done", polish)
+        self.assertIn(".gang-editor__inspector button", polish)
+        self.assertIn(".gang-sheet-item-action", polish)
+        self.assertIn("background: var(--gang-panel);", polish)
         self.assertIn(".gang-sheet-canvas-scroll", polish)
         self.assertIn("overflow: hidden", polish)
         self.assertIn("minmax(0, 14.5rem) minmax(0, 1fr) minmax(0, 16.25rem)", polish)
-        self.assertIn("repeat(4, minmax(0, 1fr))", polish)
+        self.assertIn("repeat(3, minmax(0, 1fr))", polish)
+        self.assertIn("min(1540px, calc(100vw - 1.5rem))", polish)
+        self.assertIn("height: max(30rem, calc(100dvh - 15.5rem))", polish)
+        self.assertIn("16rem minmax(0, 1fr) 18rem", polish)
+        self.assertIn('@media (min-width: 88rem)', polish)
+        self.assertIn(".gang-editor__overview", polish)
+        self.assertIn('grid-template-areas: "heading workflow metrics status"', polish)
+        self.assertIn("display: contents", polish)
+        self.assertIn("--gang-overview-gutter: 0.75rem", polish)
+        self.assertIn("--gang-overview-section-gap: 0.5rem", polish)
+        self.assertIn("minmax(18rem, 0.88fr)", polish)
+        self.assertIn(".gang-workflow li + li", polish)
+        self.assertIn('"sidebar toolbar inspector"', polish)
+        self.assertIn("grid-column: 2", polish)
+        self.assertIn(".gang-asset-card__usage-state", polish)
         self.assertIn("border-bottom-left-radius: 0", polish)
         self.assertIn(".gang-editor__selection-tools", polish)
         self.assertIn(".gang-inspector-panel--validation", polish)
+        self.assertIn(".gang-sheet-order-quote__summary", polish)
+        self.assertIn(".gang-sheet-order-quote__total", polish)
+        self.assertIn("border-block: 1px solid", polish)
         self.assertIn(".gang-inspector-section__title", polish)
         self.assertIn(".gang-unit-field", polish)
         self.assertIn(".gang-asset-card__place", polish)
@@ -69,6 +90,17 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("@media (max-width: 47.99rem)", polish)
         self.assertNotIn("gradient(", polish)
 
+        editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
+        overview_start = editor.index('<div class="gang-editor__overview">')
+        overview_end = editor.index('<dialog class="b2b-configurator-dialog', overview_start)
+        overview = editor[overview_start:overview_end]
+        self.assertIn('<header class="gang-editor__header">', overview)
+        self.assertIn('<div class="gang-editor__progress-row">', overview)
+        self.assertLess(
+            overview.index('<header class="gang-editor__header">'),
+            overview.index('<div class="gang-editor__progress-row">'),
+        )
+
     def test_studio_polish_is_unlayered_and_owns_interaction_accents(self) -> None:
         polish = source(CSS_DIR / "components/studio-polish.css")
         entry = source(CSS_DIR / "entries/studio.css")
@@ -94,8 +126,16 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertNotIn("#1f66ff", polish)
 
         self.assertIn(".gang-editor__workspace", entry)
+        self.assertIn(".gang-editor__inspector button", entry)
+        self.assertIn("> .gang-inspector-panel--validation", entry)
+        self.assertIn("background: var(--surface) !important", entry)
         self.assertIn("grid-column: 3 !important", entry)
         self.assertIn('"toolbar toolbar toolbar"', entry)
+        self.assertIn(".gang-editor__overview :is(", entry)
+        self.assertIn("border-radius: 0 !important", entry)
+        self.assertIn("border-left: 0 !important", entry)
+        self.assertIn('"sidebar toolbar inspector"', entry)
+        self.assertIn("grid-row: 1 / -1 !important", entry)
         self.assertIn(".is-mobile-active", entry)
         self.assertIn("flex-wrap: nowrap !important", entry)
         self.assertIn(":not(.gang-inspector-panel)", entry)
@@ -118,9 +158,13 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertNotIn("Ajouter un visuel", empty_state)
         for attribute in ["hx-get", "hx-trigger", "hx-target", "hx-swap", "hx-sync"]:
             self.assertIn(attribute, gallery)
+        self.assertIn('class="gang-asset-card__usage-state"', gallery)
+        self.assertNotIn('class="gang-asset-card__remove"\n            disabled', gallery)
 
     def test_final_step_uses_one_confirm_cta(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
+        editor_js = source(BASE_DIR / "static_src/js/gang-sheet-editor.js")
+        app_js = source(BASE_DIR / "static_src/js/app.js")
 
         self.assertIn("Étape 4 — Finaliser la planche", editor)
         self.assertIn("Confirmer la composition", editor)
@@ -137,6 +181,9 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("gang-tool-btn--icon gang-editor__save", editor)
         self.assertIn("gang-editor__save-group", editor)
         self.assertIn("gang-editor__toolbar-start", editor)
+        self.assertIn("gang-editor__creation-tools", editor)
+        self.assertNotIn("gang-editor__toolbar-group--create", editor)
+        self.assertNotIn("gang-editor__toolbar-group--impose", editor)
         self.assertEqual(editor.count('class="gang-editor__toolbar"'), 1)
         self.assertLess(
             editor.index('class="gang-editor__toolbar"'),
@@ -149,7 +196,21 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("gang-unit-field", editor)
         self.assertIn("Aligner et répartir", editor)
         self.assertIn("data-create-order-project", editor)
-        self.assertIn("ui-btn ui-btn-secondary{% if not can_create_order or not can_edit %} is-disabled{% endif %}", editor)
+        self.assertIn(
+            "ui-btn {% if can_create_order and can_edit %}ui-btn-primary{% else %}"
+            "ui-btn-secondary is-disabled{% endif %}",
+            editor,
+        )
+        self.assertNotIn("data-metric-price", editor)
+        self.assertEqual(editor.count("Total estimé HT"), 1)
+        self.assertIn('data-sheet-order-quote role="status" aria-live="polite"', editor)
+        self.assertLess(editor.index("data-sheet-order-quote"), editor.index("data-validate-sheet"))
+        self.assertIn('validateBtn.hidden = state.status === "validated"', editor_js)
+        self.assertIn('link.hidden = !canCreate', editor_js)
+        self.assertIn('link.classList.toggle("ui-btn-primary", canCreate)', editor_js)
+        self.assertIn('const hasEstimate = state.items.length > 0 && quote.surface > 0', editor_js)
+        self.assertNotIn('q("[data-metric-price]")', editor_js)
+        self.assertIn('gang-sheet-editor.js?v=20260828-studio-groups-v23', app_js)
         self.assertNotIn("gang-inspector-panel__context", editor)
         text_css = source(CSS_DIR / "components/gang-sheet-text.css")
         self.assertIn("font-size: 2.18cqw", text_css)

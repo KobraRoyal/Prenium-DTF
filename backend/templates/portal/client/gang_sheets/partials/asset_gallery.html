@@ -34,12 +34,10 @@
             aria-label="Retirer {{ asset.name }} de la galerie"
           >Retirer</button>
           {% else %}
-          <button
-            type="button"
-            class="gang-asset-card__remove"
-            disabled
+          <span
+            class="gang-asset-card__usage-state"
             title="Supprimez d’abord toutes les occurrences de ce visuel"
-          >Utilisé</button>
+          >Utilisé</span>
           {% endif %}
         {% endif %}
       </div>

@@ -107,6 +107,90 @@ Helpers : `backend/apps/orders/references.py` (`order_business_number`, `order_u
 - [x] Documentation architecture `ORDER_REFERENCE_DISPLAY.md`.
 - [ ] Commit + push sur branche PR #13.
 
+## Micro-lot — Studio desktop canvas prioritaire (27 août 2026)
+
+Le Studio client retrouve sa largeur dédiée au-dessus de 980 px malgré la contrainte `1180px`
+du shell partagé. La grille réserve 16rem à la galerie, 18rem à l’inspecteur et donne le reste au
+canvas ; sa hauteur reste contenue dans le viewport aux largeurs desktop. Les outils visibles
+atteignent 44 px et l’état « Utilisé » de la galerie n’est plus exposé comme un faux bouton.
+
+- [x] Aucun endpoint, permission, état métier ou contrat HTMX modifié.
+- [x] Largeur Studio dédiée, canvas prioritaire et absence d’overflow horizontal global.
+- [x] Cibles toolbar 44 px et statut de galerie non interactif.
+- [x] Cache-bust partagé porté à `20260827-studio-desktop-v35`.
+- [x] Build, tests ciblés, recette 884 / 1024 / 1440 px et contrôle clavier.
+- [x] Détecteur Impeccable et `graphify update .`.
+
+## Micro-lot — Studio prix au point de décision (28 août 2026)
+
+L'estimation quitte le bandeau supérieur pour devenir un résumé financier unique et permanent
+dans le panneau « Finaliser ». Le total HT inclut explicitement l'impression et la préparation,
+reste visible pendant la composition et se recalcule avec la quantité après validation. Le CTA
+de commande n'apparaît que lorsqu'il devient disponible.
+
+- [x] Aucun calcul métier, endpoint, permission ou contrat HTMX modifié.
+- [x] Une seule occurrence visuelle du prix, placée avant l'action de confirmation.
+- [x] Prix annoncé en région live et décomposition impression + préparation.
+- [x] Cache-bust CSS `20260828-studio-price-v36` et JS Studio `20260828-studio-price-v22`.
+- [x] Build, tests ciblés et recette 884 / 1024 / 1440 px avec contrôle clavier.
+- [x] Détecteur Impeccable et `graphify update .`.
+
+## Micro-lot — rail d'outils centré sur le canvas (28 août 2026)
+
+Au-dessus de 1408 px, la barre quitte la largeur complète du Studio pour occuper uniquement la
+colonne du canvas. « Texte » et « Auto-imposer » partagent un groupe unique ; historique,
+sélection, zoom et enregistrement restent séparés par fonction et conservent leurs cibles de 44 px.
+Sous ce seuil, le rail reprend la largeur complète afin de ne masquer aucune commande.
+
+- [x] Aucun gestionnaire, raccourci clavier, endpoint ou permission modifié.
+- [x] Barre alignée sur le canvas et groupes de commandes consolidés.
+- [x] Repli pleine largeur sous 1408 px sans overflow global.
+- [x] Cache-bust CSS partagé `20260828-studio-toolbar-v37` ; cache JS Studio inchangé.
+- [x] Build, tests ciblés et recette 884 / 1024 / 1280 / 1440 px avec contrôle clavier.
+- [x] Détecteur Impeccable et `graphify update .`.
+
+## Micro-lot — rail de pilotage Studio sur une ligne (28 août 2026)
+
+À partir de 1408 px, l'identité de la planche, les quatre étapes, les trois métriques et l'état
+d'enregistrement partagent un seul rail. L'ordre visuel suit la tâche — contexte, progression,
+mesure, état — tandis que l'ordre sémantique et les cibles clavier restent inchangés. Sous ce
+seuil, le bandeau conserve ses deux lignes afin de préserver les libellés et les cibles tactiles.
+
+- [x] Aucun gestionnaire, endpoint, permission ou état métier modifié.
+- [x] Un seul cadre et une seule ligne de pilotage sur desktop large.
+- [x] Repli lisible sur deux lignes sous 1408 px, sans masquage ni overflow global.
+- [x] Cache-bust CSS partagé `20260828-studio-overview-v39` ; cache JS Studio inchangé.
+- [x] Build, tests ciblés et recette 884 / 1024 / 1280 / 1408 / 1440 px avec contrôle clavier.
+- [x] Détecteur Impeccable et `graphify update .`.
+
+## Micro-lot — rythme et bordures du rail Studio (28 août 2026)
+
+Le rail desktop large conserve un seul contour périphérique. Les séparateurs et rayons internes
+sont supprimés ; un espace constant de 8 px distingue les quatre groupes, et leurs contenus
+emploient le même retrait horizontal de 12 px. La zone métriques gagne sa largeur minimale pour
+préserver le rythme sans tronquer les libellés.
+
+- [x] Aucun gestionnaire, endpoint, permission ou état métier modifié.
+- [x] Un seul contour perceptible ; état actif conservé comme repère fonctionnel.
+- [x] Échelle d'espacement partagée : 8 px entre groupes, 12 px dans les sections.
+- [x] Cache-bust CSS partagé `20260828-studio-rail-v40` ; cache JS Studio inchangé.
+- [x] Build, tests ciblés et recette 1408 / 1440 px avec contrôle clavier.
+- [x] Détecteur Impeccable et `graphify update .`.
+
+## Micro-lot — action de groupe contextuelle (28 août 2026)
+
+L'inspecteur et la barre flottante partagent une même règle : une sélection entièrement libre
+propose seulement « Grouper » ; dès qu'elle contient un objet déjà groupé, elle propose seulement
+« Dissocier ». Une sélection mixte doit donc libérer ses groupes existants avant d'être regroupée,
+ce qui évite de scinder silencieusement une association mémorisée.
+
+- [x] Aucun endpoint, permission, format de sauvegarde ou contrat métier modifié.
+- [x] Source d'état unique pour l'inspecteur, la barre flottante et les fonctions d'action.
+- [x] Un seul choix réalisable exposé à la souris, au clavier et aux technologies d'assistance.
+- [x] Cache partagé `20260828-studio-groups-v41` et module Studio `20260828-studio-groups-v23`.
+- [x] Tests ciblés et recette sélection libre / groupée / mixte.
+- [x] Détecteur Impeccable, contrôle statique et `graphify update .`.
+
 ## Liens
 
 - Supersedes visuellement : [Sprint 46](sprint-46-design-system-sombre-impeccable.md), complète [Sprint 47](sprint-47-coherence-tables-actions-partials.md).

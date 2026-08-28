@@ -28,51 +28,52 @@
     {% include "components/portal/breadcrumbs/client_gang_sheet_editor.html" %}
   </div>
 
-  <header class="gang-editor__header">
-    <div class="gang-editor__heading">
-      <div class="gang-editor__title-row">
-        <div class="gang-editor__title-copy">
-          <span class="gang-editor__project-ref">{% if sheet.project %}Gang Sheet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</span>
-          <h1>{{ sheet.name }}</h1>
-        </div>
-        <div class="gang-editor__title-actions">
-          {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="editor" label="Supprimer" button_class="ui-btn ui-btn-ghost ui-btn-sm gang-editor__delete" %}
+  <div class="gang-editor__overview">
+    <header class="gang-editor__header">
+      <div class="gang-editor__heading">
+        <div class="gang-editor__title-row">
+          <div class="gang-editor__title-copy">
+            <span class="gang-editor__project-ref">{% if sheet.project %}Gang Sheet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</span>
+            <h1>{{ sheet.name }}</h1>
+          </div>
+          <div class="gang-editor__title-actions">
+            {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="editor" label="Supprimer" button_class="ui-btn ui-btn-ghost ui-btn-sm gang-editor__delete" %}
+          </div>
         </div>
       </div>
-    </div>
-    <dl class="gang-editor__metrics" aria-label="Indicateurs de la planche" aria-live="polite">
-      <div><dt>Visuels</dt><dd data-metric-items>0</dd></div>
-      <div><dt>Occupation</dt><dd data-metric-usage>0 %</dd></div>
-      <div><dt>Surface</dt><dd data-metric-surface>—</dd></div>
-      <div class="is-price"><dt>Estimation HT</dt><dd data-metric-price>—</dd></div>
-    </dl>
-  </header>
+      <dl class="gang-editor__metrics" aria-label="Indicateurs de la planche" aria-live="polite">
+        <div><dt>Visuels</dt><dd data-metric-items>0</dd></div>
+        <div><dt>Occupation</dt><dd data-metric-usage>0 %</dd></div>
+        <div><dt>Surface</dt><dd data-metric-surface>—</dd></div>
+      </dl>
+    </header>
 
-  {# Une seule bande : progression + état d’enregistrement (pas de badge métier doublon). #}
-  <div class="gang-editor__progress-row">
-    <nav class="gang-workflow gang-workflow--editor" aria-label="Progression de la planche">
-      <ol>
-        <li data-workflow-step="import">
-          <button type="button" data-workflow-panel-target="assets" aria-label="Étape 1 — Importer les fichiers"><span data-workflow-marker aria-hidden="true">1</span><span><strong>Importer</strong><small data-workflow-detail>Ajouter vos fichiers</small></span></button>
-        </li>
-        <li data-workflow-step="compose">
-          <button type="button" data-workflow-panel-target="canvas" aria-label="Étape 2 — Composer la planche"><span data-workflow-marker aria-hidden="true">2</span><span><strong>Composer</strong><small data-workflow-detail>Placer les visuels</small></span></button>
-        </li>
-        <li data-workflow-step="control">
-          <button type="button" data-workflow-panel-target="settings" aria-label="Étape 3 — Contrôler la composition"><span data-workflow-marker aria-hidden="true">3</span><span><strong>Contrôler</strong><small data-workflow-detail>Vérifier la composition</small></span></button>
-        </li>
-        <li data-workflow-step="validate">
-          <button type="button" data-workflow-panel-target="settings" aria-label="Étape 4 — Finaliser la planche"><span data-workflow-marker aria-hidden="true">4</span><span><strong>Finaliser</strong><small data-workflow-detail>Confirmer la composition</small></span></button>
-        </li>
-      </ol>
-    </nav>
-    <div class="gang-editor__status" data-editor-status role="status" aria-live="polite">
-      <span class="gang-editor__status-dot" aria-hidden="true"></span>
-      <span class="gang-editor__status-copy">
-        <strong data-status-text>Enregistré</strong>
-        <small class="ui-sr-only" data-status-detail>État d’enregistrement de la planche.</small>
-      </span>
-      <span class="gang-editor__issue-count" data-issue-count hidden></span>
+    {# Un seul rail de pilotage : progression + état, sans badge métier doublon. #}
+    <div class="gang-editor__progress-row">
+      <nav class="gang-workflow gang-workflow--editor" aria-label="Progression de la planche">
+        <ol>
+          <li data-workflow-step="import">
+            <button type="button" data-workflow-panel-target="assets" aria-label="Étape 1 — Importer les fichiers"><span data-workflow-marker aria-hidden="true">1</span><span><strong>Importer</strong><small data-workflow-detail>Ajouter vos fichiers</small></span></button>
+          </li>
+          <li data-workflow-step="compose">
+            <button type="button" data-workflow-panel-target="canvas" aria-label="Étape 2 — Composer la planche"><span data-workflow-marker aria-hidden="true">2</span><span><strong>Composer</strong><small data-workflow-detail>Placer les visuels</small></span></button>
+          </li>
+          <li data-workflow-step="control">
+            <button type="button" data-workflow-panel-target="settings" aria-label="Étape 3 — Contrôler la composition"><span data-workflow-marker aria-hidden="true">3</span><span><strong>Contrôler</strong><small data-workflow-detail>Vérifier la composition</small></span></button>
+          </li>
+          <li data-workflow-step="validate">
+            <button type="button" data-workflow-panel-target="settings" aria-label="Étape 4 — Finaliser la planche"><span data-workflow-marker aria-hidden="true">4</span><span><strong>Finaliser</strong><small data-workflow-detail>Confirmer la composition</small></span></button>
+          </li>
+        </ol>
+      </nav>
+      <div class="gang-editor__status" data-editor-status role="status" aria-live="polite">
+        <span class="gang-editor__status-dot" aria-hidden="true"></span>
+        <span class="gang-editor__status-copy">
+          <strong data-status-text>Enregistré</strong>
+          <small class="ui-sr-only" data-status-detail>État d’enregistrement de la planche.</small>
+        </span>
+        <span class="gang-editor__issue-count" data-issue-count hidden></span>
+      </div>
     </div>
   </div>
 
@@ -201,13 +202,11 @@
         <div class="gang-editor__toolbar-meta">
           <strong data-canvas-format aria-label="Format de la planche">—</strong>
         </div>
-        <div class="gang-editor__toolbar-group gang-editor__toolbar-group--create" role="group" aria-label="Ajouter sur la planche">
+        <div class="gang-editor__toolbar-group gang-editor__creation-tools" role="group" aria-label="Créer et organiser">
           <button type="button" class="gang-tool-btn" data-add-text {% if not can_edit %}disabled{% endif %} title="Ajouter un texte imprimable" aria-label="Ajouter un texte">
             {% include "portal/client/gang_sheets/partials/icon.html" with name="text" size="16" %}
             <span>Texte</span>
           </button>
-        </div>
-        <div class="gang-editor__toolbar-group gang-editor__toolbar-group--impose" role="group" aria-label="Imposition">
           <button type="button" class="gang-tool-btn gang-tool-btn--accent" data-auto-place {% if not can_edit %}disabled{% endif %} title="Réorganiser tous les visuels selon l’espacement défini">
             {% include "portal/client/gang_sheets/partials/icon.html" with name="layout" size="16" %}
             <span>Auto-imposer</span>
@@ -465,7 +464,7 @@
               {% include "portal/client/gang_sheets/partials/icon.html" with name="lock" size="16" %}
               <span>Grouper</span>
             </button>
-            <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-ungroup-selection title="Dissocier le ou les groupes sélectionnés" disabled>
+            <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-ungroup-selection title="Dissocier le ou les groupes sélectionnés" hidden disabled>
               {% include "portal/client/gang_sheets/partials/icon.html" with name="unlock" size="16" %}
               <span>Dissocier</span>
             </button>
@@ -598,10 +597,6 @@
         </div>
         <ul data-issues-list><li class="is-ok">Aucune anomalie de placement.</li></ul>
         <div class="gang-validation-actions">
-          <button type="button" class="ui-btn ui-btn-primary" data-validate-sheet {% if not can_edit %}disabled{% endif %}>
-            {% include "portal/client/gang_sheets/partials/icon.html" with name="check" size="16" %}
-            <span data-validate-label>Confirmer la composition</span>
-          </button>
           <div class="ui-field-group gang-sheet-quantity" data-sheet-quantity-field hidden>
             <label class="ui-label" for="id-sheet-quantity">Exemplaires de planche</label>
             <input
@@ -617,18 +612,25 @@
               aria-label="Nombre d’exemplaires de la planche"
             >
           </div>
-          <aside class="gang-sheet-order-quote" data-sheet-order-quote hidden aria-live="polite">
-            <p class="gang-sheet-order-quote__total"><strong data-sheet-order-quote-total>—</strong> <span class="muted">HT estimé</span></p>
-            <p class="gang-sheet-order-quote__detail muted text-sm" data-sheet-order-quote-detail></p>
-          </aside>
+          <div class="gang-sheet-order-quote" data-sheet-order-quote role="status" aria-live="polite" aria-atomic="true">
+            <div class="gang-sheet-order-quote__summary">
+              <span class="gang-sheet-order-quote__label" data-sheet-order-quote-label>Total estimé HT</span>
+              <strong class="gang-sheet-order-quote__total" data-sheet-order-quote-total>—</strong>
+            </div>
+            <p class="gang-sheet-order-quote__detail" data-sheet-order-quote-detail>Calcul en cours…</p>
+          </div>
+          <button type="button" class="ui-btn ui-btn-primary" data-validate-sheet {% if not can_edit %}disabled{% endif %}{% if sheet.status == 'validated' %} hidden{% endif %}>
+            {% include "portal/client/gang_sheets/partials/icon.html" with name="check" size="16" %}
+            <span data-validate-label>Confirmer la composition</span>
+          </button>
           {% if sheet.project %}
-          <a class="ui-btn ui-btn-secondary" data-open-order-project href="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=sheet.project.public_id %}">Continuer vers la commande →</a>
+          <a class="ui-btn ui-btn-primary" data-open-order-project href="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=sheet.project.public_id %}">Continuer vers la commande →</a>
           {% else %}
           <a
-            class="ui-btn ui-btn-secondary{% if not can_create_order or not can_edit %} is-disabled{% endif %}"
+            class="ui-btn {% if can_create_order and can_edit %}ui-btn-primary{% else %}ui-btn-secondary is-disabled{% endif %}"
             data-create-order-project
             href="{% if can_create_order and can_edit %}{{ create_order_project_url }}{% else %}#{% endif %}"
-            {% if not can_create_order or not can_edit %}aria-disabled="true" tabindex="-1"{% endif %}
+            {% if not can_create_order or not can_edit %}aria-disabled="true" tabindex="-1" hidden{% endif %}
           >Créer la commande →</a>
           {% endif %}
           <a class="ui-btn ui-btn-ghost" data-download-preview href="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}" hidden>

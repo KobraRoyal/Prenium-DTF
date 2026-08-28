@@ -1151,6 +1151,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "function applyPreciseGap",
             "function groupSelectedItems",
             "function ungroupSelectedItems",
+            "function selectionGroupAction",
             "function translateSelectionAsGroup",
             "function layoutUnits",
             "function alignUnitToBounds",
@@ -1185,7 +1186,21 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("preferBelow: true", runtime)
         self.assertIn('label: "Pivoter"', runtime)
         self.assertIn('label: "Supprimer"', runtime)
-        self.assertIn('label: "Grouper"', runtime)
+        self.assertIn('label: groupAction === "ungroup" ? "Dissocier" : "Grouper"', runtime)
+        self.assertIn(
+            'return items.some((item) => Boolean(item.layout_group_id)) ? "ungroup" : "group";',
+            runtime,
+        )
+        self.assertIn('control.hidden = groupAction !== "group"', runtime)
+        self.assertIn('control.hidden = groupAction !== "ungroup"', runtime)
+        self.assertIn("toolbar.append(rotateButton, associationButton, deleteButton)", runtime)
+        self.assertNotIn("toolbar.append(rotateButton, groupButton, ungroupButton", runtime)
+        self.assertIn('toolbar.setAttribute("aria-label", "Actions sur la sélection")', runtime)
+        self.assertIn(
+            'data-ungroup-selection title="Dissocier le ou les groupes '
+            'sélectionnés" hidden disabled',
+            editor,
+        )
 
         self.assertIn("const HISTORY_LIMIT = 40", runtime)
         self.assertIn("function syncLayoutDirtyState", runtime)

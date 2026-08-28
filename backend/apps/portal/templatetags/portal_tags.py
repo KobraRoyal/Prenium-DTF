@@ -17,7 +17,7 @@ from apps.orders.references import (
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260827-order-tabs-clip-v28"
+PORTAL_CSS_ASSET_V = "20260828-studio-groups-v41"
 
 STATUS_LABELS = {
     "draft": "Brouillon",

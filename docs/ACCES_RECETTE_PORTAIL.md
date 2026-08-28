@@ -93,7 +93,9 @@ cd backend && npm run build:css:docker
 docker compose restart web
 ```
 
-Puis hard-refresh navigateur. Les templates portail chargent `portal.css?v=20260823-brand-light-v7` (ou version courante du sprint).
+Puis hard-refresh navigateur. Les templates portail chargent les bundles de surface avec la version
+partagée `?v=20260828-studio-groups-v41` (`portal-core.css`, bundle de rôle, `studio.css` et
+`app.js`). Le cache de `gang-sheet-editor.js` reste versionné séparément dans l'import de `app.js`.
 
 ## Référence détaillée sprint
 

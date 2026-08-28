@@ -33,8 +33,7 @@ html[data-theme="prenium"] body.product-shell--studio .gang-crop-box [data-crop-
   background: var(--brand-soft) !important;
 }
 
-html[data-theme="prenium"] body.product-shell--studio .gang-workflow [data-workflow-marker],
-html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics .is-price {
+html[data-theme="prenium"] body.product-shell--studio .gang-workflow [data-workflow-marker] {
   background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;
   color: var(--brand-strong) !important;
   box-shadow: none !important;
@@ -92,9 +91,9 @@ html[data-theme="prenium"] body.product-shell--studio :is(
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-editor__save {
-  width: 2.4rem !important;
-  min-width: 2.4rem !important;
-  min-height: 2.4rem !important;
+  width: 2.75rem !important;
+  min-width: 2.75rem !important;
+  min-height: 2.75rem !important;
   padding: 0 !important;
   border-width: 1px !important;
   box-shadow: none !important;
@@ -231,7 +230,23 @@ html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-grou
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar :is(.gang-tool-btn, .ui-btn, .gang-editor__save) {
-  min-height: 2.4rem !important;
+  min-height: 2.75rem !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 981px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio main.app-main.product-layout.ui-shell-main {
+    width: min(1540px, calc(100vw - 1.5rem));
+    max-width: none;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
+    height: max(30rem, calc(100dvh - 15.5rem)) !important;
+  }
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio .gang-editor__inspector button {
+  min-height: 2.75rem !important;
   box-sizing: border-box !important;
 }
 
@@ -289,9 +304,13 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-
   border-top: 1px solid var(--line) !important;
 }
 
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio .gang-editor__inspector > .gang-inspector-panel--validation {
+  background: var(--surface) !important;
+}
+
 html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics {
   min-width: 0 !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-editor :is(.ui-btn-primary, .ui-btn.ui-btn-primary) {
@@ -308,7 +327,50 @@ html[data-theme="prenium"] body.product-shell--studio .gang-editor :is(.ui-btn-p
 
 @media (min-width: 80rem) {
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
-    grid-template-columns: 15.5rem minmax(0, 1fr) 17.5rem !important;
+    grid-template-columns: 16rem minmax(0, 1fr) 18rem !important;
+  }
+}
+
+@media (min-width: 88rem) {
+  /* Le rail Studio garde un seul contour : l'espace remplace les séparateurs internes. */
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview :is(
+    .gang-workflow,
+    .gang-editor__metrics,
+    .gang-editor__status
+  ) {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview :is(
+    .gang-workflow li + li,
+    .gang-editor__metrics > div
+  ) {
+    border-left: 0 !important;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
+    grid-template-areas:
+      "sidebar toolbar inspector"
+      "sidebar stage inspector" !important;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace > .gang-editor__toolbar {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    gap: 0.3rem !important;
+    padding-inline: 0.45rem !important;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace > .gang-editor__sidebar,
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace > .gang-editor__inspector {
+    grid-row: 1 / -1 !important;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace > .gang-editor__stage {
+    grid-row: 2 !important;
   }
 }
 

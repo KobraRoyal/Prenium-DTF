@@ -35,10 +35,6 @@ body.product-shell--studio .gang-editor__metrics > div {
   background: transparent;
 }
 
-body.product-shell--studio .gang-editor__metrics .is-price {
-  background: color-mix(in srgb, var(--gang-accent-soft) 42%, transparent);
-}
-
 body.product-shell--studio .gang-editor__title-actions .gang-status-badge {
   border-color: color-mix(in srgb, var(--gang-line-strong) 34%, transparent);
   border-radius: 999px;
@@ -240,15 +236,18 @@ body.product-shell--studio .gang-editor__toolbar-group {
   overflow: visible;
 }
 
-body.product-shell--studio .gang-editor__toolbar-group--impose {
-  border-color: color-mix(in srgb, var(--gang-accent) 34%, var(--gang-line));
+body.product-shell--studio .gang-editor__creation-tools .gang-tool-btn + .gang-tool-btn {
+  border-left: 1px solid color-mix(in srgb, var(--gang-line) 78%, transparent);
+}
+
+body.product-shell--studio .gang-editor__creation-tools [data-auto-place] {
   background: color-mix(in srgb, var(--gang-accent-soft) 42%, var(--gang-panel));
 }
 
 body.product-shell--studio .gang-tool-btn {
   box-sizing: border-box;
-  min-width: 2.4rem;
-  min-height: 2.4rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   padding: 0.35rem 0.55rem;
   border-color: transparent;
   border-radius: var(--radius-sm);
@@ -261,7 +260,7 @@ body.product-shell--studio .gang-tool-btn {
 }
 
 body.product-shell--studio .gang-tool-btn--icon {
-  width: 2.4rem;
+  width: 2.75rem;
   padding-inline: 0;
 }
 
@@ -303,15 +302,20 @@ body.product-shell--studio .gang-editor__selection-tools .gang-tool-btn > span:l
 }
 
 body.product-shell--studio .gang-editor__save {
-  width: 2.4rem;
-  min-width: 2.4rem;
-  min-height: 2.4rem;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   padding: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: var(--gang-accent);
   color: var(--action-text);
   box-shadow: none;
+}
+
+body.product-shell--studio .gang-editor__inspector button,
+body.product-shell--studio .gang-sheet-item-action {
+  min-height: 2.75rem;
 }
 
 body.product-shell--studio .gang-editor__save-icon {
@@ -467,6 +471,53 @@ body.product-shell--studio .gang-validation-actions {
   gap: 0.55rem;
 }
 
+body.product-shell--studio .gang-sheet-order-quote {
+  display: grid;
+  gap: 0.3rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.65rem 0;
+  border: 0;
+  border-block: 1px solid color-mix(in srgb, var(--gang-line-strong) 22%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.product-shell--studio .gang-sheet-order-quote__summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+body.product-shell--studio .gang-sheet-order-quote__label {
+  color: var(--gang-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+body.product-shell--studio .gang-sheet-order-quote__total {
+  margin: 0;
+  color: var(--gang-ink);
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 1.08rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+body.product-shell--studio .gang-sheet-order-quote__detail {
+  margin: 0;
+  color: var(--gang-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
 body.product-shell--studio .gang-validation-actions > :is(.ui-btn, a) {
   border-radius: 999px;
 }
@@ -532,10 +583,6 @@ body.product-shell--studio :is(.gang-tool-btn, .gang-workflow button, .gang-edit
   /* Surface reste dans le détail devis ; format est dans la toolbar canvas. */
   body.product-shell--studio .gang-editor__metrics > div:nth-child(3) {
     display: none;
-  }
-
-  body.product-shell--studio .gang-editor__metrics > div.is-price {
-    grid-column: 1 / -1;
   }
 
   body.product-shell--studio .gang-editor__progress-row {
@@ -1160,7 +1207,7 @@ html[data-theme="prenium"] body.product-shell--studio .gang-alignment-reference 
 html[data-theme="prenium"] body.product-shell--studio .gang-inspector-panel--validation {
   padding: 0.85rem 0.85rem 0.95rem;
   border-color: var(--gang-line);
-  background: transparent;
+  background: var(--gang-panel);
 }
 
 html[data-theme="prenium"] body.product-shell--studio .gang-validation-heading {
@@ -1281,10 +1328,6 @@ html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-meta
   display: none;
 }
 
-html[data-theme="prenium"] body.product-shell--studio .gang-sheet-order-quote__eyebrow {
-  display: none;
-}
-
 @media (max-width: 980px) {
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__panel-label {
     display: flex;
@@ -1294,10 +1337,6 @@ html[data-theme="prenium"] body.product-shell--studio .gang-sheet-order-quote__e
     grid-column: auto;
   }
 
-  html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics > div.is-price {
-    grid-column: 1 / -1;
-    border-left: 0;
-  }
 }
 
 /* Pixel-perfect Operate: un chrome, une grille qui rétrécit, jamais de double cadre. */
@@ -1319,7 +1358,7 @@ html[data-theme="prenium"] body.product-shell--studio .gang-editor__header {
 
 html[data-theme="prenium"] body.product-shell--studio .gang-editor__metrics {
   min-width: 0;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border-left: 1px solid color-mix(in srgb, var(--gang-line-strong) 18%, transparent);
   background: transparent;
 }
@@ -1442,9 +1481,144 @@ html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__place {
   white-space: nowrap;
 }
 
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__usage-state {
+  color: var(--gang-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+@media (min-width: 981px) {
+  html[data-theme="prenium"] body.product-shell.product-shell--studio main.app-main.product-layout.ui-shell-main {
+    width: min(1540px, calc(100vw - 1.5rem));
+    max-width: none;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
+    height: max(30rem, calc(100dvh - 15.5rem));
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__delete {
+    min-height: 2.75rem;
+  }
+}
+
 @media (min-width: 80rem) {
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
-    grid-template-columns: 15.5rem minmax(0, 1fr) 17.5rem;
+    grid-template-columns: 16rem minmax(0, 1fr) 18rem;
+  }
+}
+
+@media (min-width: 88rem) {
+  /* Desktop large : identité, parcours, métriques et sauvegarde sur un rail unique. */
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview {
+    --gang-overview-gutter: 0.75rem;
+    --gang-overview-section-gap: 0.5rem;
+    display: grid;
+    grid-template-columns:
+      minmax(15rem, 0.75fr)
+      minmax(30rem, 1.85fr)
+      minmax(18rem, 0.88fr)
+      minmax(11.5rem, 0.65fr);
+    grid-template-areas: "heading workflow metrics status";
+    column-gap: var(--gang-overview-section-gap);
+    align-items: stretch;
+    min-width: 0;
+    margin-bottom: 0.7rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--gang-line-strong) 24%, transparent);
+    border-radius: var(--radius);
+    background: var(--gang-panel);
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview > :is(
+    .gang-editor__header,
+    .gang-editor__progress-row
+  ) {
+    display: contents;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview .gang-editor__heading {
+    grid-area: heading;
+    padding-inline: var(--gang-overview-gutter);
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview .gang-workflow {
+    grid-area: workflow;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview .gang-workflow li + li {
+    border-left: 0;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview .gang-workflow li > button {
+    padding-inline: var(--gang-overview-gutter);
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview .gang-editor__metrics {
+    grid-area: metrics;
+    border: 0;
+    border-radius: 0;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview .gang-editor__metrics > div {
+    padding-inline: var(--gang-overview-gutter);
+    border-left: 0;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__overview .gang-editor__status {
+    grid-area: status;
+    min-width: 0;
+    max-width: none;
+    padding-inline: var(--gang-overview-gutter);
+    border: 0;
+    border-radius: 0;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
+    grid-template-areas:
+      "sidebar toolbar inspector"
+      "sidebar stage inspector";
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace > .gang-editor__toolbar {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 0.3rem;
+    padding-inline: 0.45rem;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace > .gang-editor__sidebar,
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace > .gang-editor__inspector {
+    grid-row: 1 / -1;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace > .gang-editor__stage {
+    grid-row: 2;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-start,
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-tools,
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-end {
+    flex: 0 0 auto;
+    gap: 0.28rem;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-tools {
+    justify-content: flex-start;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-meta {
+    min-width: 4.7rem;
+    padding-right: 0.45rem;
+  }
+
+  html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar-group {
+    padding: 0.12rem;
   }
 }
 

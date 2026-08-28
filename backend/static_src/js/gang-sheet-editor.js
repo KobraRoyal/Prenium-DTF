@@ -637,19 +637,21 @@ if (root) {
     });
   }
 
+  function selectionGroupAction(items = selectedItems()) {
+    if (items.length < 2) return null;
+    return items.some((item) => Boolean(item.layout_group_id)) ? "ungroup" : "group";
+  }
+
   function renderSelectionGroupToolbar() {
     if (!canEdit || selectedIds.size < 2 || ["rendering", "validated"].includes(state.status)) return;
     const items = selectedItems();
-    const hasGroup = items.some((item) => item.layout_group_id);
-    const allGroupedTogether = Boolean(
-      items[0]?.layout_group_id
-      && items.every((item) => item.layout_group_id === items[0].layout_group_id)
-    );
+    const groupAction = selectionGroupAction(items);
+    if (!groupAction) return;
     const toolbar = document.createElement("div");
     toolbar.className = "gang-sheet-item-toolbar gang-sheet-item-toolbar--group";
     toolbar.dataset.groupToolbar = "";
     toolbar.setAttribute("role", "toolbar");
-    toolbar.setAttribute("aria-label", "Actions sur la sélection groupée");
+    toolbar.setAttribute("aria-label", "Actions sur la sélection");
     toolbar.style.visibility = "hidden";
 
     const rotateButton = createItemAction({
@@ -660,23 +662,23 @@ if (root) {
     rotateButton.setAttribute("aria-label", `Pivoter les ${items.length} visuels de 90 degrés`);
     rotateButton.disabled = busy;
 
-    const groupButton = createItemAction({
-      label: "Grouper",
-      icon: createLockIcon(),
-      attribute: "data-canvas-group-selection",
+    const groupIds = new Set(items.map((item) => item.layout_group_id).filter(Boolean));
+    const associationButton = createItemAction({
+      label: groupAction === "ungroup" ? "Dissocier" : "Grouper",
+      icon: createLockIcon({ open: groupAction === "ungroup" }),
+      attribute: groupAction === "ungroup"
+        ? "data-canvas-ungroup-selection"
+        : "data-canvas-group-selection",
     });
-    groupButton.setAttribute("aria-label", `Grouper ${items.length} visuels`);
-    groupButton.disabled = busy || items.length < 2;
-
-    const ungroupButton = createItemAction({
-      label: "Dissocier",
-      icon: createLockIcon({ open: true }),
-      attribute: "data-canvas-ungroup-selection",
-    });
-    ungroupButton.setAttribute("aria-label", "Dissocier le groupe sélectionné");
-    ungroupButton.disabled = busy || !hasGroup;
-    if (allGroupedTogether) groupButton.hidden = true;
-    else ungroupButton.hidden = !hasGroup;
+    associationButton.setAttribute(
+      "aria-label",
+      groupAction === "ungroup"
+        ? groupIds.size > 1
+          ? `Dissocier les ${groupIds.size} groupes sélectionnés`
+          : "Dissocier le groupe sélectionné"
+        : `Grouper ${items.length} visuels`
+    );
+    associationButton.disabled = busy;
 
     const deleteButton = createItemAction({
       label: "Supprimer",
@@ -687,7 +689,7 @@ if (root) {
     deleteButton.setAttribute("aria-label", `Supprimer les ${items.length} visuels sélectionnés`);
     deleteButton.disabled = busy;
 
-    toolbar.append(rotateButton, groupButton, ungroupButton, deleteButton);
+    toolbar.append(rotateButton, associationButton, deleteButton);
     canvas.append(toolbar);
     window.requestAnimationFrame(positionSelectionGroupToolbar);
   }
@@ -870,22 +872,29 @@ if (root) {
   }
 
   function syncGroupControls({ locked = ["rendering", "validated"].includes(state.status) } = {}) {
-    const selectionCount = selectedIds.size;
+    const items = selectedItems();
+    const groupAction = selectionGroupAction(items);
     const groupIds = new Set(
-      selectedItems().map((item) => item.layout_group_id).filter(Boolean)
+      items.map((item) => item.layout_group_id).filter(Boolean)
     );
     const canMutate = canEdit && !locked && !busy;
     qa("[data-group-selection], [data-canvas-group-selection]").forEach((control) => {
-      control.disabled = !canMutate || selectionCount < 2;
+      control.hidden = groupAction !== "group";
+      control.disabled = !canMutate || groupAction !== "group";
     });
     qa("[data-ungroup-selection], [data-canvas-ungroup-selection]").forEach((control) => {
-      control.disabled = !canMutate || groupIds.size === 0;
+      control.hidden = groupAction !== "ungroup";
+      control.disabled = !canMutate || groupAction !== "ungroup";
     });
     const groupHelp = q("[data-group-help]");
     if (groupHelp) {
-      groupHelp.textContent = groupIds.size
-        ? "Cliquez un membre pour sélectionner tout le groupe. Option + clic isole un visuel."
-        : "Sélectionnez au moins 2 visuels pour créer un groupe mémorisé.";
+      groupHelp.textContent = groupAction === "ungroup"
+        ? groupIds.size > 1
+          ? "Cette sélection contient plusieurs groupes. Dissociez-les avant de les regrouper autrement."
+          : "Cette sélection contient déjà des visuels groupés. Dissociez-les pour les manipuler séparément."
+        : groupAction === "group"
+          ? "Groupez ces visuels pour les déplacer et les aligner comme un seul objet."
+          : "Sélectionnez au moins 2 visuels pour créer un groupe mémorisé.";
     }
   }
 
@@ -1246,6 +1255,7 @@ if (root) {
       ["draft", "render_failed"].includes(state.status);
     const canConfirmReady = canEdit && !busy && state.status === "ready" && state.issues.length === 0;
     if (validateBtn) {
+      validateBtn.hidden = state.status === "validated";
       if (state.status === "rendering" || pendingValidateAfterRender) {
         validateBtn.disabled = true;
         if (validateLabel) validateLabel.textContent = "Rendu HD en cours…";
@@ -1308,17 +1318,18 @@ if (root) {
     const quote = sheetOrderQuote();
     const quoteBox = q("[data-sheet-order-quote]");
     const detail = q("[data-sheet-order-quote-detail]");
+    const label = q("[data-sheet-order-quote-label]");
     const totalEl = q("[data-sheet-order-quote-total]");
-    const showQuote = state.status === "validated";
-    if (quoteBox) quoteBox.hidden = !showQuote;
-    if (totalEl) totalEl.textContent = `${quote.total.toFixed(2)} €`;
+    const hasEstimate = state.items.length > 0 && quote.surface > 0;
+    if (quoteBox) quoteBox.hidden = false;
+    if (label) label.textContent = "Total estimé HT";
+    if (totalEl) totalEl.textContent = hasEstimate ? `${quote.total.toFixed(2)} €` : "—";
     if (detail) {
-      detail.textContent = `${quote.surface.toFixed(4)} m² × ${quote.qty} ex. = ${quote.billable.toFixed(4)} m² · DTF ${quote.dtf.toFixed(2)} € + préparation ${quote.prep.toFixed(2)} €`;
-    }
-    if (showQuote) {
-      q("[data-metric-price]").textContent = `${quote.total.toFixed(2)} €`;
-    } else {
-      q("[data-metric-price]").textContent = `${Number(state.estimated_price_eur).toFixed(2)} €`;
+      const quantity = quote.qty > 1 ? `${quote.qty} exemplaires · ` : "";
+      const preparation = quote.prep > 0 ? ` + préparation ${quote.prep.toFixed(2)} €` : "";
+      detail.textContent = hasEstimate
+        ? `${quantity}Impression ${quote.dtf.toFixed(2)} €${preparation}`
+        : "Ajoutez un visuel pour calculer l’estimation.";
     }
   }
 
@@ -1329,6 +1340,9 @@ if (root) {
     // sinon pointer-events:none laisse le CTA « Créer le projet » inactif.
     const canCreate = canEdit && state.status === "validated";
     link.classList.toggle("is-disabled", !canCreate);
+    link.classList.toggle("ui-btn-primary", canCreate);
+    link.classList.toggle("ui-btn-secondary", !canCreate);
+    link.hidden = !canCreate;
     if (canCreate) {
       link.removeAttribute("aria-disabled");
       link.removeAttribute("tabindex");
@@ -2523,7 +2537,7 @@ if (root) {
 
   function groupSelectedItems() {
     const items = selectedItems();
-    if (items.length < 2 || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
+    if (selectionGroupAction(items) !== "group" || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
       return;
     }
     const before = layoutSnapshot();
@@ -2537,10 +2551,11 @@ if (root) {
   }
 
   function ungroupSelectedItems() {
-    const items = selectedItems().filter((item) => item.layout_group_id);
-    if (!items.length || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
+    const selected = selectedItems();
+    if (selectionGroupAction(selected) !== "ungroup" || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
       return;
     }
+    const items = selected.filter((item) => item.layout_group_id);
     const before = layoutSnapshot();
     const groupIds = new Set(items.map((item) => item.layout_group_id));
     state.items.forEach((item) => {
