@@ -1237,6 +1237,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("restoreFocus && containedFocus", runtime)
         self.assertIn('details.removeAttribute("open")', runtime)
         self.assertIn("data-product-nav-details", runtime)
+        self.assertIn("initInlineRequiredValidation", runtime)
 
     def test_portal_header_and_lists_share_the_tablet_breakpoint(self) -> None:
         header = template_source("components/nav/portal_header.html")
@@ -1331,6 +1332,32 @@ class PortalUiCoherenceTests(SimpleTestCase):
         for forbidden in ["client", "staff", "backend", "permissions", "droits"]:
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, source.lower())
+
+    def test_auth_forms_use_inline_required_errors_not_native_tooltips(self) -> None:
+        runtime = static_source("js/product-shell.js")
+        login_css = static_source("css/components/auth-login.css")
+        login = template_source("portal/login.html")
+
+        for path in (
+            "portal/login.html",
+            "portal/password_reset_request.html",
+            "portal/password_reset_confirm.html",
+        ):
+            with self.subTest(path=path):
+                source = template_source(path)
+                self.assertIn("novalidate", source)
+                self.assertIn("data-inline-required", source)
+                self.assertIn("error-text ui-error-text", source)
+                self.assertIn("data-missing-message", source)
+
+        self.assertIn("form.non_field_errors", login)
+        self.assertNotIn("{% if form.errors %}", login)
+        self.assertIn("Indiquez votre email professionnel.", login)
+        self.assertIn("Indiquez votre mot de passe.", login)
+        self.assertIn('"error error"', login_css)
+        self.assertIn("validateInlineRequiredForm", runtime)
+        self.assertIn("data-inline-required", runtime)
+        self.assertNotIn("validationMessage", runtime)
 
     def test_staff_dashboard_uses_french_premium_copy(self) -> None:
         source = staff_dashboard_markup()

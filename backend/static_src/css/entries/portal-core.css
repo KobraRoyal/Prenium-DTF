@@ -563,7 +563,7 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
   box-shadow: 0 0 0 3px var(--field-focus-ring) !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-field-group .error-text {
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-field-group :is(.error-text, .ui-error-text) {
   color: var(--danger-text) !important;
 }
 
@@ -1784,7 +1784,8 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-
   grid-template-columns: minmax(0, 1fr) auto !important;
   grid-template-areas:
     "label forgot"
-    "input input" !important;
+    "input input"
+    "error error" !important;
   align-items: center !important;
   column-gap: 0.75rem !important;
   row-gap: 0.45rem !important;
@@ -1810,6 +1811,12 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-
   grid-area: input !important;
 }
 
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-password > .error-text {
+  grid-area: error !important;
+  justify-self: start !important;
+  text-align: start !important;
+}
+
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-card :is(
   .ui-input:focus,
   .ui-input:focus-visible
@@ -1818,4 +1825,12 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-
   outline: none !important;
   outline-offset: 0 !important;
   box-shadow: 0 0 0 3px var(--field-focus-ring) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--auth .product-login-card :is(
+  .ui-input--error,
+  .ui-input[aria-invalid="true"]
+):is(:focus, :focus-visible) {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 28%, transparent) !important;
 }

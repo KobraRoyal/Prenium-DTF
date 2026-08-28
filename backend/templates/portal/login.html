@@ -14,12 +14,12 @@
         <h1 id="login-heading">Connexion</h1>
         <p>Retrouvez vos commandes, vos fichiers et vos documents dans un espace unique.</p>
       </header>
-      {% if form.errors %}
+      {% if form.non_field_errors %}
       <div class="alert alert--danger" role="alert">
-        <span class="text-sm leading-snug">Email ou mot de passe incorrect. Vérifiez vos informations puis réessayez.</span>
+        <span class="text-sm leading-snug">{{ form.non_field_errors.0 }}</span>
       </div>
       {% endif %}
-      <form method="post" class="ui-form-stack" data-submit-loading>
+      <form method="post" class="ui-form-stack" novalidate data-inline-required data-submit-loading>
         {% csrf_token %}
         <div class="ui-field-group">
           <label class="ui-label" for="id_username">Email professionnel</label>
@@ -31,8 +31,14 @@
             required
             autofocus
             placeholder="vous@entreprise.fr"
-            class="ui-input"
+            value="{{ form.username.value|default:'' }}"
+            class="ui-input{% if form.username.errors %} ui-input--error{% endif %}"
+            data-missing-message="Indiquez votre email professionnel."
+            data-invalid-message="Indiquez un email valide."
+            aria-describedby="id_username-error"
+            {% if form.username.errors %}aria-invalid="true"{% endif %}
           />
+          <p class="error-text ui-error-text" id="id_username-error" role="alert"{% if not form.username.errors %} hidden{% endif %}>{% if form.username.errors %}{{ form.username.errors.0 }}{% endif %}</p>
         </div>
         <div class="ui-field-group product-login-password">
           <label class="ui-label" for="id_password">Mot de passe</label>
@@ -43,9 +49,13 @@
             autocomplete="current-password"
             required
             placeholder="Mot de passe"
-            class="ui-input"
+            class="ui-input{% if form.password.errors %} ui-input--error{% endif %}"
+            data-missing-message="Indiquez votre mot de passe."
+            aria-describedby="id_password-error"
+            {% if form.password.errors %}aria-invalid="true"{% endif %}
           />
           <a class="ui-link product-login-forgot" href="{% url 'portal:password-reset' %}">Mot de passe oublié ?</a>
+          <p class="error-text ui-error-text" id="id_password-error" role="alert"{% if not form.password.errors %} hidden{% endif %}>{% if form.password.errors %}{{ form.password.errors.0 }}{% endif %}</p>
         </div>
         {% if next %}
         <input type="hidden" name="next" value="{{ next }}">

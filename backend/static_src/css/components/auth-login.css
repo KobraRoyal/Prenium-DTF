@@ -70,7 +70,8 @@ html[data-theme="prenium"] body.product-shell .product-login-password {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "label forgot"
-    "input input";
+    "input input"
+    "error error";
   align-items: center;
   column-gap: 0.75rem;
   row-gap: 0.45rem;
@@ -102,6 +103,10 @@ html[data-theme="prenium"] body.product-shell .product-login-forgot {
 
 html[data-theme="prenium"] body.product-shell .product-login-password > .ui-input {
   grid-area: input;
+}
+
+html[data-theme="prenium"] body.product-shell .product-login-password > .error-text {
+  grid-area: error;
 }
 
 html[data-theme="prenium"] body.product-shell .product-login-footer {

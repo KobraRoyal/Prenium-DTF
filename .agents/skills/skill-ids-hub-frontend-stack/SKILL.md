@@ -14,8 +14,13 @@ description: Stack Tailwind + DaisyUI (préfixe dui-) + Alpine + HTMX pour IDS H
 
 ## DaisyUI
 - Préfixe **`dui-`** pour éviter les collisions avec les classes historiques (ex. `.btn` legacy ≠ `dui-btn`).
-- Thème **`prenium`** : `data-theme="prenium"` sur `<html>` (voir `base.html`).
-- Nouveaux composants : préférer `dui-btn`, `dui-card`, `dui-modal`, etc. Migration progressive des gabarits.
+- Thème **`prenium`** : `data-theme="prenium"` sur `<html>` (voir `base.html`). Snapshot hex des défauts DESIGN.md ; la palette **live** Atelier passe par `--brand` / `--accent`, pas par Daisy.
+- Markup produit : **`ui-btn`**, `ui-card` n’existe pas — cartes via chrome `ui-*` / product-shell. Ne pas introduire `dui-btn` dans les gabarits. `.dui-btn` n’est qu’un alias CSS de `.ui-btn`.
+
+## Tokens et identité Atelier
+- Source : `tokens.css`. Surcharge runtime : `base.html` + `BrandThemeSettings` (`/staff/settings/branding/`).
+- Contrat : `docs/product-design/TOKEN_BRAND_CONTRACT.md`. Test : `tests/ui/test_brand_token_contract.py`.
+- Nouveaux styles d’action : `var(--brand)` / `var(--ui-action-*)`, jamais un hex recopié.
 
 ## Alpine.js
 - Chargé en **defer** après HTMX dans `base.html`.

@@ -56,6 +56,7 @@
 - [Sprint 48 — Shell clair homogène Impeccable](sprint-48-shell-clair-homogene-impeccable.md)
 - [Sprint 49 — Mot de passe oublié](sprint-49-password-reset.md)
 - [Sprint 50 — Page HTTP 404 Operate](sprint-50-page-404.md)
+- [Sprint 51 — Cohérence tokens et identité Atelier](sprint-51-tokens-brand-coherence.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)
