@@ -47,9 +47,9 @@ class GangSheetStudioKeyboardAccessibilityTests(SimpleTestCase):
             encoding="utf-8"
         )
         runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(encoding="utf-8")
-        icons = (
-            TEMPLATES_DIR / "portal/client/gang_sheets/partials/icon.html"
-        ).read_text(encoding="utf-8")
+        icons = (TEMPLATES_DIR / "portal/client/gang_sheets/partials/icon.html").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("data-zoom-fit", editor)
         self.assertIn("data-zoom-in", editor)
@@ -72,7 +72,8 @@ class GangSheetStudioKeyboardAccessibilityTests(SimpleTestCase):
         self.assertIn("Cadrer le groupe sélectionné", runtime)
         self.assertIn("Cadrer la sélection", runtime)
         self.assertNotIn("Math.min(1.5, round(zoom + 0.25, 2))", runtime)
-        self.assertNotIn("item.x_mm", runtime.split("function zoomToFitTarget")[1].split("function ")[0])
+        zoom_fn = runtime.split("function zoomToFitTarget")[1].split("function ")[0]
+        self.assertNotIn("item.x_mm", zoom_fn)
 
     def test_resize_rendering_is_throttled_by_animation_frame(self) -> None:
         runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(encoding="utf-8")
@@ -131,9 +132,9 @@ class GangSheetStudioKeyboardAccessibilityTests(SimpleTestCase):
             encoding="utf-8"
         )
         runtime = (STATIC_SRC_DIR / "js/gang-sheet-editor.js").read_text(encoding="utf-8")
-        icons = (
-            TEMPLATES_DIR / "portal/client/gang_sheets/partials/icon.html"
-        ).read_text(encoding="utf-8")
+        icons = (TEMPLATES_DIR / "portal/client/gang_sheets/partials/icon.html").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("data-add-text", editor)
         self.assertIn('aria-label="Ajouter un texte"', editor)

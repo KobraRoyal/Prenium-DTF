@@ -352,7 +352,9 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertNotIn("Recommander", uploads)
         self.assertEqual(uploads.count("ui-btn-ghost"), 2)
 
-        actions = source(TEMPLATES_DIR / "components/portal/page_head_actions/client_order_detail.html")
+        actions = source(
+            TEMPLATES_DIR / "components/portal/page_head_actions/client_order_detail.html"
+        )
         self.assertIn("Recommander", actions)
         self.assertIn("client-order-reorder", actions)
         self.assertIn("ui-btn ui-btn-secondary", actions)

@@ -51,6 +51,23 @@ def _translate(items, delta_x, delta_y):
         item["y_mm"] = _round(item["y_mm"] + delta_y)
 
 
+def _item(public_id, x_mm, y_mm, width_mm, height_mm, group=None):
+    return {
+        "public_id": public_id,
+        "x_mm": x_mm,
+        "y_mm": y_mm,
+        "width_mm": width_mm,
+        "height_mm": height_mm,
+        "layout_group_id": group,
+    }
+
+
+def _axis_size(unit, *, horizontal):
+    start = unit["bounds"][0] if horizontal else unit["bounds"][1]
+    end = unit["bounds"][2] if horizontal else unit["bounds"][3]
+    return end - start
+
+
 def align_on_selection(items, direction):
     left, top, right, bottom = _bounds(items)
     center_x = (left + right) / 2
@@ -100,10 +117,7 @@ def distribute_axis(items, *, horizontal):
     first, last = sorted_units[0], sorted_units[-1]
     first_start = first["bounds"][0] if horizontal else first["bounds"][1]
     last_end = last["bounds"][2] if horizontal else last["bounds"][3]
-    total_size = sum(
-        (unit["bounds"][2] - unit["bounds"][0]) if horizontal else (unit["bounds"][3] - unit["bounds"][1])
-        for unit in sorted_units
-    )
+    total_size = sum(_axis_size(unit, horizontal=horizontal) for unit in sorted_units)
     gap = (last_end - first_start - total_size) / (len(sorted_units) - 1)
     if gap < 0:
         return False
@@ -112,15 +126,15 @@ def distribute_axis(items, *, horizontal):
         origin = unit["bounds"][0] if horizontal else unit["bounds"][1]
         delta = cursor - origin
         _translate(unit["items"], delta if horizontal else 0, 0 if horizontal else delta)
-        size = (unit["bounds"][2] - unit["bounds"][0]) if horizontal else (unit["bounds"][3] - unit["bounds"][1])
+        size = _axis_size(unit, horizontal=horizontal)
         cursor += size + gap
     return True
 
 
 def test_ungrouped_align_left_still_stacks_individuals():
     items = [
-        {"public_id": "a", "x_mm": 10, "y_mm": 0, "width_mm": 20, "height_mm": 10, "layout_group_id": None},
-        {"public_id": "b", "x_mm": 40, "y_mm": 5, "width_mm": 20, "height_mm": 10, "layout_group_id": None},
+        _item("a", 10, 0, 20, 10),
+        _item("b", 40, 5, 20, 10),
     ]
     align_on_selection(items, "left")
     assert [item["x_mm"] for item in items] == [10, 10]
@@ -128,9 +142,9 @@ def test_ungrouped_align_left_still_stacks_individuals():
 
 def test_grouped_pair_align_left_keeps_internal_gap():
     items = [
-        {"public_id": "a", "x_mm": 10, "y_mm": 0, "width_mm": 20, "height_mm": 10, "layout_group_id": "g1"},
-        {"public_id": "b", "x_mm": 40, "y_mm": 5, "width_mm": 20, "height_mm": 10, "layout_group_id": "g1"},
-        {"public_id": "c", "x_mm": 80, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": None},
+        _item("a", 10, 0, 20, 10, "g1"),
+        _item("b", 40, 5, 20, 10, "g1"),
+        _item("c", 80, 0, 10, 10),
     ]
     align_on_selection(items, "left")
     grouped = [item for item in items if item["layout_group_id"] == "g1"]
@@ -142,9 +156,9 @@ def test_grouped_pair_align_left_keeps_internal_gap():
 
 def test_grouped_pair_align_right_translates_as_one_object():
     items = [
-        {"public_id": "a", "x_mm": 10, "y_mm": 0, "width_mm": 20, "height_mm": 10, "layout_group_id": "g1"},
-        {"public_id": "b", "x_mm": 40, "y_mm": 5, "width_mm": 20, "height_mm": 10, "layout_group_id": "g1"},
-        {"public_id": "c", "x_mm": 80, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": None},
+        _item("a", 10, 0, 20, 10, "g1"),
+        _item("b", 40, 5, 20, 10, "g1"),
+        _item("c", 80, 0, 10, 10),
     ]
     align_on_selection(items, "right")
     assert items[0]["x_mm"] == 40
@@ -155,20 +169,20 @@ def test_grouped_pair_align_right_translates_as_one_object():
 
 def test_layout_units_count_grouped_members_as_one():
     items = [
-        {"public_id": "a", "x_mm": 0, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": "g1"},
-        {"public_id": "b", "x_mm": 20, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": "g1"},
-        {"public_id": "c", "x_mm": 50, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": None},
-        {"public_id": "d", "x_mm": 80, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": None},
+        _item("a", 0, 0, 10, 10, "g1"),
+        _item("b", 20, 0, 10, 10, "g1"),
+        _item("c", 50, 0, 10, 10),
+        _item("d", 80, 0, 10, 10),
     ]
     assert len(layout_units(items)) == 3
 
 
 def test_distribute_horizontal_moves_group_as_block():
     items = [
-        {"public_id": "a", "x_mm": 0, "y_mm": 0, "width_mm": 20, "height_mm": 10, "layout_group_id": "g1"},
-        {"public_id": "b", "x_mm": 10, "y_mm": 12, "width_mm": 15, "height_mm": 8, "layout_group_id": "g1"},
-        {"public_id": "c", "x_mm": 40, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": None},
-        {"public_id": "d", "x_mm": 90, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": None},
+        _item("a", 0, 0, 20, 10, "g1"),
+        _item("b", 10, 12, 15, 8, "g1"),
+        _item("c", 40, 0, 10, 10),
+        _item("d", 90, 0, 10, 10),
     ]
     assert distribute_axis(items, horizontal=True) is True
     assert items[1]["x_mm"] - items[0]["x_mm"] == 10
@@ -180,9 +194,9 @@ def test_distribute_horizontal_moves_group_as_block():
 
 def test_one_group_of_three_is_a_single_distribute_unit():
     items = [
-        {"public_id": "a", "x_mm": 0, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": "g1"},
-        {"public_id": "b", "x_mm": 20, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": "g1"},
-        {"public_id": "c", "x_mm": 40, "y_mm": 0, "width_mm": 10, "height_mm": 10, "layout_group_id": "g1"},
+        _item("a", 0, 0, 10, 10, "g1"),
+        _item("b", 20, 0, 10, 10, "g1"),
+        _item("c", 40, 0, 10, 10, "g1"),
     ]
     assert len(layout_units(items)) == 1
     assert distribute_axis(items, horizontal=True) is False
