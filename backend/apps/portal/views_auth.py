@@ -12,7 +12,11 @@ from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 
-from apps.accounts.forms import PasswordResetRequestForm, PortalSetPasswordForm
+from apps.accounts.forms import (
+    PasswordResetRequestForm,
+    PortalAuthenticationForm,
+    PortalSetPasswordForm,
+)
 from apps.accounts.middleware import _client_ip
 from apps.accounts.services.password_reset import password_reset_service
 from apps.portal.views_common import access_scope_service
@@ -24,6 +28,7 @@ def auth_support_context() -> dict[str, str]:
 
 class PortalLoginView(LoginView):
     template_name = "portal/login.html"
+    authentication_form = PortalAuthenticationForm
     redirect_authenticated_user = True
 
     def get_context_data(self, **kwargs):

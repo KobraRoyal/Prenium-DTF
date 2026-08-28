@@ -13,6 +13,7 @@ from apps.gang_sheets.services.cropping import CropBox, crop_image
 from apps.gang_sheets.services.drive import GangSheetDriveSyncService
 from apps.gang_sheets.services.geometry import GangSheetGeometryService
 from apps.gang_sheets.services.hybrid_pdf import GangSheetHybridPdfComposer
+from apps.gang_sheets.services.text_items import is_text_item, rasterize_text_item
 from apps.uploads.services.asset_preview import AssetPreviewError, AssetPreviewRenderer
 
 
@@ -107,13 +108,22 @@ class GangSheetRenderService:
         for item in items:
             target_width = max(1, round(float(item.width_mm) * scale))
             target_height = max(1, round(float(item.height_mm) * scale))
-            image = self._source_image(
-                item.asset_version,
-                crop=crops.get(item.asset_version.asset_id, CropBox.full()),
-                target_width=target_width,
-                target_height=target_height,
-            )
-            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+            if is_text_item(item):
+                image = rasterize_text_item(
+                    item=item,
+                    target_width=target_width,
+                    target_height=target_height,
+                )
+            else:
+                if item.asset_version_id is None:
+                    raise GangSheetRenderError("Un visuel de la planche n’a pas de fichier.")
+                image = self._source_image(
+                    item.asset_version,
+                    crop=crops.get(item.asset_version.asset_id, CropBox.full()),
+                    target_width=target_width,
+                    target_height=target_height,
+                )
+                image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
             image = self._rotate(image, item.rotation)
             x = round(float(item.x_mm) * scale)
             y = round(float(item.y_mm) * scale)

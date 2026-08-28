@@ -1248,7 +1248,8 @@ def test_used_visual_must_be_removed_from_composition_before_gallery(client):
 
     editor_content = editor_response.content.decode()
     assert editor_response.status_code == 200
-    assert ">Utilisé</button>" in editor_content
+    assert ">Utilisé</span>" in editor_content
+    assert "gang-asset-card__usage-state" in editor_content
     assert "Supprimez d’abord toutes les occurrences" in editor_content
     assert remove_response.status_code == 400
     assert GangSheetSourceAsset.objects.filter(pk=source_asset.pk).exists()

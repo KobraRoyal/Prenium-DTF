@@ -5,7 +5,11 @@
 
 {% block portal_content %}
 <div class="portal-page portal-page--client client-order-detail client-order-detail-page">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" head_labelledby="client-order-title" title=order_client_label|default:order_display_ref|default:"Commande" lead_template="components/portal/page_head_leads/client_order_detail.html" %}
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" head_labelledby="client-order-title" title=order_client_label|default:order_display_ref|default:"Commande" lead_template="components/portal/page_head_leads/client_order_detail.html" actions_template="components/portal/page_head_actions/client_order_detail.html" %}
+
+{% if request.GET.reorder_error %}
+<div class="alert alert--danger client-order-detail-banner" role="alert">Impossible de préparer le réassort pour cette commande.</div>
+{% endif %}
 
 {% if order_status_banner %}
 <div class="alert alert--{{ order_status_banner.tone }} client-order-detail-banner" role="status">

@@ -1,0 +1,321 @@
+/* Texte de composition — Studio Gang Sheet. */
+
+@font-face {
+  font-family: "Gang Inter";
+  src: url("/static/fonts/gang-sheet/inter-400.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gang Inter";
+  src: url("/static/fonts/gang-sheet/inter-700.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gang Montserrat";
+  src: url("/static/fonts/gang-sheet/montserrat-400.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gang Montserrat";
+  src: url("/static/fonts/gang-sheet/montserrat-700.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gang Oswald";
+  src: url("/static/fonts/gang-sheet/oswald-400.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gang Oswald";
+  src: url("/static/fonts/gang-sheet/oswald-700.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gang Playfair";
+  src: url("/static/fonts/gang-sheet/playfair-400.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gang Playfair";
+  src: url("/static/fonts/gang-sheet/playfair-700.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+.gang-editor__toolbar-group--create .gang-tool-btn {
+  gap: 0.35rem;
+  padding: 0 0.7rem;
+}
+
+.gang-sheet-canvas {
+  container-type: inline-size;
+  container-name: gang-sheet;
+}
+
+.gang-sheet-item.is-text .gang-sheet-item__preview {
+  background: transparent;
+  overflow: visible;
+}
+
+.gang-sheet-item__text-rotator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+
+.gang-sheet-item.is-text {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: grab;
+  user-select: none;
+}
+
+.gang-sheet-item.is-text:active,
+.gang-sheet-canvas.is-dragging .gang-sheet-item.is-text {
+  cursor: grabbing;
+}
+
+.gang-sheet-item__text {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0.12em 0.18em;
+  overflow: visible;
+  color: var(--ink, #1a1815);
+  white-space: pre-wrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.05;
+  font-size: 2.18cqw;
+  pointer-events: none;
+}
+
+.gang-sheet-item.is-editing-text {
+  cursor: text;
+}
+
+.gang-sheet-item.is-editing-text .gang-sheet-item__text,
+.gang-sheet-item.is-editing-text .gang-sheet-item__label,
+.gang-sheet-item.is-editing-text .gang-sheet-item__resize {
+  visibility: hidden;
+}
+
+.gang-sheet-item__text.is-placeholder,
+.gang-sheet-item__text-editor.is-placeholder {
+  color: var(--muted, #6b675c);
+}
+
+.gang-sheet-item__text-editor {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0.12em 0.18em;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: inherit;
+  line-height: 1.05;
+  letter-spacing: inherit;
+  text-align: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  resize: none;
+  outline: 1px solid var(--brand, #ff8775);
+  outline-offset: -1px;
+  caret-color: var(--ink, #1a1815);
+  user-select: text;
+  pointer-events: auto;
+}
+
+.gang-sheet-item.is-text.is-selected .gang-sheet-item__preview {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand, #ff8775) 55%, transparent);
+}
+
+.gang-sheet-item.is-text.is-editing-text.is-selected .gang-sheet-item__preview {
+  box-shadow: none;
+}
+
+.gang-sheet-item.is-selected:not(.is-editing-text) .gang-sheet-item__label {
+  visibility: hidden;
+}
+
+.gang-sheet-item.is-selected:not(.is-editing-text) .gang-sheet-item__resize {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 6;
+  width: 18px;
+  height: 18px;
+}
+
+.gang-sheet-item__resize--nw {
+  top: -8px;
+  left: -8px;
+  right: auto;
+  bottom: auto;
+  cursor: nwse-resize;
+}
+
+.gang-sheet-item__resize--ne {
+  top: -8px;
+  right: -8px;
+  left: auto;
+  bottom: auto;
+  cursor: nesw-resize;
+}
+
+.gang-sheet-item__resize--se {
+  top: auto;
+  right: -8px;
+  left: auto;
+  bottom: -8px;
+  cursor: nwse-resize;
+}
+
+.gang-sheet-item__resize--sw {
+  top: auto;
+  left: -8px;
+  right: auto;
+  bottom: -8px;
+  cursor: nesw-resize;
+}
+
+.gang-sheet-canvas.is-dragging .gang-sheet-item {
+  cursor: grabbing;
+}
+
+.gang-sheet-text-hint {
+  display: none;
+  margin: 0;
+  max-width: 11rem;
+  color: var(--muted, #6b675c);
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.gang-sheet-text-hint:not([hidden]) {
+  display: block;
+}
+
+.gang-text-content {
+  min-height: 5.5rem;
+  height: auto;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.gang-text-tools {
+  margin-top: 0.75rem;
+}
+
+.gang-text-font {
+  font-size: 1rem;
+}
+
+.gang-unit-field,
+.gang-text-size {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.gang-unit-field__unit,
+.gang-text-size span {
+  color: var(--muted, #6b675c);
+  font-size: 0.85rem;
+}
+
+.gang-text-color-row {
+  margin-top: 0.75rem;
+}
+
+.gang-text-color {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.gang-text-color input[type="color"] {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line, #e2dccb);
+  border-radius: var(--radius, 14px);
+  background: var(--surface, #fbf6ee);
+  cursor: pointer;
+}
+
+.gang-text-style {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.gang-text-align {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--line, #e2dccb);
+  border-radius: var(--radius, 14px);
+  background: var(--surface, #fbf6ee);
+}
+
+.gang-text-align .gang-action-chip {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.gang-text-align .gang-action-chip + .gang-action-chip {
+  border-left: 1px solid var(--line, #e2dccb);
+}
+
+.gang-text-align .gang-action-chip.is-active {
+  background: color-mix(in srgb, var(--brand, #ff8775) 22%, var(--surface, #fbf6ee));
+}
+
+.gang-text-bold {
+  margin-top: 0;
+}

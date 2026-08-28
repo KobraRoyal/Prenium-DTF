@@ -65,6 +65,14 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   contrôle technique se termine, sans rechargement manuel du studio.
 - Outils de précision P1 : historique local Annuler/Rétablir borné à 40 opérations de composition,
   aimantation avec guides visuels, distribution régulière et écart exact de la sélection.
+- Texte de composition : bouton Texte dans le studio, inspecteur (contenu, police au
+  catalogue, taille en mm, couleur, alignement, gras), géométrie identique aux visuels,
+  cadre shrink-wrap (largeur et hauteur) limité à la planche, retours à la ligne
+  explicites, édition directe sur la planche (clic : écrire, placeholder
+  sélectionné, texte existant au caret, Échap termine), PDF HD vectoriel sans
+  fichier source.
+- Zoom de précision : cadrage de l’objet, du groupe ou de la planche (`Maj+2`),
+  ancrage du zoom +/− sur la sélection, plage 50–400 % sans mutation des mm.
 - Sélection multiple par cadre à la souris et mode multi-tap tactile, avec sélection globale ; les
   anomalies sont focalisables et les débordements corrigeables lorsqu’ils tiennent dans la planche.
 - Suppression atomique de plusieurs occurrences sélectionnées, avec confirmation du nombre,
@@ -73,10 +81,11 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 ## Fichiers principaux
 
 - `backend/apps/gang_sheets/{models,forms,tasks,admin}.py`
-- `backend/apps/gang_sheets/services/{gang_sheets,geometry,rendering,hybrid_pdf}.py`
+- `backend/apps/gang_sheets/services/{gang_sheets,geometry,rendering,hybrid_pdf,text_items}.py`
 - `backend/apps/gang_sheets/migrations/0001_initial.py`
 - `backend/apps/gang_sheets/migrations/0003_gangsheet_production_asset_*.py`
 - `backend/apps/gang_sheets/migrations/0006_gangsheet_axis_spacing.py`
+- `backend/apps/gang_sheets/migrations/0008_gangsheetitem_text_kind.py`
 - `backend/apps/portal/views_gang_sheets.py`
 - `backend/templates/portal/client/gang_sheets/`
 - `backend/templates/portal/staff/gang_sheets/settings.html`
@@ -137,8 +146,16 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   enregistré, anomalies recalculées, ratio physique du canvas et réglages sans overflow à 375 px.
 - [x] Recette navigateur suppression par lot : sélection de trois visuels, confirmation et suppression
   atomique, désélection par clic sur la zone vide, bouton responsive à 375 px et aucune erreur console.
-- [x] Recette UI du nouveau studio : cohérence avec le portail, ordre mobile Galerie → Composition →
-  Contrôle, métriques et états vides lisibles, aucune erreur console.
+- [x] Zoom cadrage sélection/groupe/planche, ancrage visuel, plage 50–400 %, sans mutation mm.
+- [x] Texte studio : corps en `cqw` de planche (plus de lettre unique géante), cadre mesuré
+  en px/mm, quatre poignées d’angle pour agrandir, curseur grab pour déplacer.
+- [x] Barre d’outils Composer : Enregistrer en icône seule (disquette / check), même taille
+  que les outils zoom et historique.
+- [x] Import + recadrage : plus d’alerte « Quitter le site » ; la composition est enregistrée
+  avant le POST du formulaire.
+- [x] Aligner / répartir : un groupe mémorisé se comporte comme un seul objet (écarts internes
+  conservés, visuels isolés inchangés).
+- [x] Inspecteur Réglages : un langage de champs / titres / actions ; bouton « Placer sur la planche » pleine largeur.
 - [x] Recette du sélecteur direct Gang Sheet et Order Project : annulation sans modale, sélection puis
   aperçu automatique, import galerie et modale plein écran sans overflow à 375 px.
 - [x] Tests de suppression : composition et rendus supprimés, sources conservées, statuts liés,
@@ -152,8 +169,9 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   l’état prêt et endpoint strictement tenant-scopé.
 - [x] Tests de transfert HD : analyse planifiée, empreinte et octets préservés, overlays qualité
   conservés, faux DPI neutralisé, validation du support et checkout sur la même version.
-- [x] Tests Drive précommande : octets HD exacts, arborescence, idempotence, nouvelle révision,
-  échec audité, tâche Celery, isolation client et blocage checkout si la sauvegarde est incomplète.
+- [x] Texte de composition : item `kind=text` sans asset, contrainte XOR, audit `text_item_added`.
+- [x] Tests texte : ajout, duplication, layout, police invalide, PDF vectoriel, rendu, lecture seule
+  et isolation inter-clients.
 - [x] PDF contrôlé avec Poppler : une page exacte de 550 × 130 mm, sans script ni chiffrement, rendu visuel conforme.
 - [ ] Test RIP/Atelier du PDF HD sur la machine de production cible.
 

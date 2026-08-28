@@ -1,6 +1,12 @@
 /**
- * Atelier clair et chaleureux partagé par toutes les surfaces Prenium DTF.
- * Les couleurs de marque sont surchargeables par la configuration Atelier.
+ * Atelier clair et chaleureux — source unique des tokens.
+ *
+ * Couche 1 (primitives) : hex ci-dessous = défauts DESIGN.md.
+ * Couche 2 (sémantique) : --brand / --accent ; surcharge runtime via
+ *   style="" sur <html> (BrandThemeSettings, vue Atelier Identité visuelle).
+ * Couche 3 (composants) : --ui-action-* dérive de --brand, jamais d’un hex local.
+ *
+ * Neutres, statuts et typo ne sont pas configurables Atelier.
  */
 :root,
 html[data-theme="prenium"] {
@@ -22,6 +28,7 @@ html[data-theme="prenium"] {
   --accent-strong: #770176;
   --accent-soft: #f3dff6;
   --accent-text: #ffffff;
+  --ui-brand: var(--brand);
   --success: #287451;
   --warning: #8b5d08;
   --danger: #a33b45;

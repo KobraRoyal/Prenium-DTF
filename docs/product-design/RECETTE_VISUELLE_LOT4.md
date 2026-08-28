@@ -8,7 +8,7 @@ Direction : **Atelier clair et chaleureux** (`DESIGN.md`) — fond crème `#f4f0
 - `npm run build:css` exécuté (bundles `portal-core` + rôle).
 - Compte **client** et compte **staff** de test.
 - Viewports : **375**, **768**, **1280** px.
-- Hard refresh (`Cmd+Shift+R`) après déploiement CSS (`v16`).
+- Hard refresh (`Cmd+Shift+R`) après déploiement UI (`20260828-auth-inline-v2`).
 
 ## Grille de validation (cocher en recette)
 
@@ -25,7 +25,7 @@ Légende : ✅ conforme · ⚠️ mineur · ❌ bloquant
 
 | Page | URL | Points de contrôle |
 |------|-----|-------------------|
-| Connexion | `/portal/login/` | Carte auth centrée, `ui-input`, pas de nav client/staff |
+| Connexion | `/login/` | Carte auth centrée, `ui-input`, pas de nav client/staff. Champs vides : message `ui-error-text` sous chaque champ, **pas** de tooltip HTML5. Identifiants faux : bannière unique, champs sans message « manquant ». |
 
 ### Tunnel prospect (`portal-core` + `prospect.css`)
 
@@ -42,7 +42,7 @@ Légende : ✅ conforme · ⚠️ mineur · ❌ bloquant
 | Projet B2B | `…/order-projects/` | Liste paginée, empty state « Créer une commande » |
 | Fiche commande | `…/orders/{id}/` | **Un seul** bandeau statut, onglets HTMX, panels uploads/inspection avec `empty_state` |
 | Planches DTF | `…/gang-sheets/` | Liste paginée, cartes sans ombre dure |
-| Studio | `…/gang-sheets/{id}/edit/` | + `studio.css`, dialogs sans `product-eyebrow`, espacement `ui-label` |
+| Studio | `…/gang-sheets/{id}/edit/` | + `studio.css`, pilotage sur une ligne dès 1408 px, canvas prioritaire, cibles toolbar 44 px, dialogs sans `product-eyebrow` |
 | Équipe | `…/team/` | Empty state partagé, confirmations destructive |
 
 **Header client (régression v15/v16)**  

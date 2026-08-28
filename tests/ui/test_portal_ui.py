@@ -8,6 +8,7 @@ from apps.orders.models import Order
 from apps.production.models import ProductionJob
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.cache import cache
 from django.test import Client, override_settings
 from django.urls import reverse
 
@@ -891,6 +892,43 @@ def test_login_page_uses_minimal_brand_shell_without_internal_roles():
     assert "Commandes et fichiers" not in body
     assert "Ops et production" not in body
     assert "Une seule porte d’entrée" not in body
+    assert 'id="id_username-error" role="alert" hidden' in body
+    assert 'id="id_password-error" role="alert" hidden' in body
+    assert "novalidate" in body
+    assert "data-inline-required" in body
+
+
+@pytest.mark.django_db
+def test_login_empty_fields_show_inline_errors_not_credentials_banner():
+    cache.clear()
+    client = Client()
+    response = client.post(reverse("portal:login"), {"username": "", "password": ""})
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert 'id="id_username-error" role="alert">Indiquez votre email professionnel.</p>' in body
+    assert 'id="id_password-error" role="alert">Indiquez votre mot de passe.</p>' in body
+    assert "ui-input--error" in body
+    assert "Email ou mot de passe incorrect" not in body
+
+
+@pytest.mark.django_db
+def test_login_wrong_password_shows_banner_not_missing_field_copy():
+    cache.clear()
+    get_user_model().objects.create_user(
+        email="login-miss@example.com",
+        password="pass1234",
+    )
+    client = Client()
+    response = client.post(
+        reverse("portal:login"),
+        {"username": "login-miss@example.com", "password": "wrong-password"},
+    )
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "Email ou mot de passe incorrect. Vérifiez vos informations puis réessayez." in body
+    assert 'id="id_username-error" role="alert" hidden' in body
+    assert 'id="id_password-error" role="alert" hidden' in body
+    assert "alert--danger" in body
 
 
 def test_portal_feedback_js_uses_text_nodes_for_local_messages():

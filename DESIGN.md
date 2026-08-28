@@ -79,6 +79,8 @@ La palette est chaude et mate : le crème accueille, le blanc cassé porte, le c
 
 **The Signal Scarcity Rule.** Le corail est réservé aux actions, sélections, focus et marques d’inspection ; il ne remplit pas les surfaces pour les décorer.
 
+**The Brand Override Rule.** Primaire et secondaire d’action sont des variables live (`--brand`, `--accent`) injectées sur `<html>` depuis Identité visuelle Atelier (`/staff/settings/branding/`). Les composants n’écrivent jamais le hex corail ou violet : ils consomment `var(--brand)` / `var(--accent)`. Neutres, statuts et typo ne sont pas configurables Atelier. Détail : `docs/product-design/TOKEN_BRAND_CONTRACT.md`.
+
 ## Typography
 
 **Display Font:** Space Grotesk (avec `system-ui, sans-serif`)
@@ -156,9 +158,10 @@ Canevas clair ; chrome, toolbar et poignées corail. `studio-polish.css` reste p
 
 - **Do** réutiliser `portal/layout.html`, `portal_header.html`, `page_head.html` et les partials breadcrumb.
 - **Do** utiliser `#f4f0e6`, `#fbf6ee`, `#fffdf8` et `#e2dccb` pour organiser les niveaux.
-- **Do** réserver `#ff8775` et `#e65944` aux actions, sélections et repères d’inspection.
+- **Do** réserver `#ff8775` et `#e65944` aux actions, sélections et repères d’inspection — via `var(--brand)`, jamais en hex recopié dans un composant.
 - **Do** vérifier 375px et 1440px, le clavier, les erreurs et `prefers-reduced-motion`.
 - **Don't** réintroduire le thème sombre graphite, le lime acide, les ombres dures offset ou le glassmorphism.
 - **Don't** dupliquer pagination, tables, boutons ou breadcrumbs si le contrat `ui-*` couvre le besoin.
 - **Don't** ajouter gradients décoratifs, eyebrows ou CTA dupliqués sur une même vue.
 - **Don't** créer de styles locaux de table ou header si `shell.css` / `product-polish.css` couvrent déjà le cas.
+- **Don't** hardcoder `#8f3d1f` / `#6f2f17` (ancien brun) ni un second écran de thème à côté d’Identité visuelle.

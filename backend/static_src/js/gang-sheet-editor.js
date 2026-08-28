@@ -16,7 +16,13 @@ if (root) {
   let savedLayoutSignature = "";
   let busy = false;
   let dirty = false;
+  let allowUnload = false;
   let zoom = 1;
+  const ZOOM_MIN = 0.5;
+  const ZOOM_MAX = 4;
+  const ZOOM_STEP = 0.25;
+  const ZOOM_FIT_PADDING = 0.16;
+  let zoomWheelAcc = 0;
   let pollTimer = null;
   let pendingValidateAfterRender = false;
   let resizeFrame = null;
@@ -32,9 +38,20 @@ if (root) {
   const selectedItems = () => state.items.filter((item) => selectedIds.has(item.public_id));
   const effectiveAlignmentReference = () => selectedIds.size > 1 ? alignmentReference : "sheet";
   const HISTORY_LIMIT = 40;
+  const ASSET_VERSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function trustedAssetPreviewSrc(versionPublicId) {
+    if (typeof versionPublicId !== "string" || !ASSET_VERSION_ID_RE.test(versionPublicId)) {
+      return "";
+    }
+    const basePath = window.location.pathname.endsWith("/")
+      ? window.location.pathname
+      : `${window.location.pathname}/`;
+    return `${basePath}assets/${encodeURIComponent(versionPublicId)}/preview/`;
+  }
 
   function layoutSnapshot() {
-    return state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id }) => ({
+    return state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id, kind, text_content, text_font, text_size_mm, text_color, text_align, text_bold }) => ({
       public_id,
       x_mm,
       y_mm,
@@ -42,6 +59,13 @@ if (root) {
       height_mm,
       rotation,
       layout_group_id: layout_group_id || null,
+      kind: kind || "visual",
+      text_content: text_content || "",
+      text_font: text_font || "",
+      text_size_mm: Number(text_size_mm) || 12,
+      text_color: text_color || "",
+      text_align: text_align || "",
+      text_bold: Boolean(text_bold),
     }));
   }
 
@@ -82,6 +106,13 @@ if (root) {
       item.height_mm = saved.height_mm;
       item.rotation = saved.rotation;
       item.layout_group_id = saved.layout_group_id || null;
+      if (saved.kind) item.kind = saved.kind;
+      if ("text_content" in saved) item.text_content = saved.text_content;
+      if ("text_font" in saved) item.text_font = saved.text_font;
+      if ("text_size_mm" in saved) item.text_size_mm = saved.text_size_mm;
+      if ("text_color" in saved) item.text_color = saved.text_color;
+      if ("text_align" in saved) item.text_align = saved.text_align;
+      if ("text_bold" in saved) item.text_bold = Boolean(saved.text_bold);
     });
   }
 
@@ -118,16 +149,148 @@ if (root) {
     root.dataset.dirty = String(dirty);
   }
 
-  function renderZoom() {
+  function canvasScrollElement() {
+    return q("[data-canvas-scroll]");
+  }
+
+  function zoomBaseWidth() {
     const stage = q("[data-editor-panel='canvas']");
-    const scroll = q("[data-canvas-scroll]") || stage;
+    const scroll = canvasScrollElement() || stage;
     const availableWidth = Math.max(320, (scroll?.clientWidth || stage?.clientWidth || 0) - 64);
-    const baseWidth = Math.min(700, availableWidth);
-    canvas.style.width = `${Math.round(baseWidth * zoom)}px`;
-    q("[data-zoom-value]").textContent = `${Math.round(zoom * 100)} %`;
+    return Math.min(700, availableWidth);
+  }
+
+  function selectionCenterMm() {
+    const items = selectedItems();
+    if (!items.length) {
+      return { x_mm: Number(state.width_mm) / 2, y_mm: Number(state.height_mm) / 2 };
+    }
+    const bounds = selectionBounds(items);
+    return {
+      x_mm: (bounds.left + bounds.right) / 2,
+      y_mm: (bounds.top + bounds.bottom) / 2,
+    };
+  }
+
+  function mmPointFromViewportCenter() {
+    const scroll = canvasScrollElement();
+    const widthMm = Number(state.width_mm) || 1;
+    const heightMm = Number(state.height_mm) || 1;
+    if (!scroll || !canvas.clientWidth || !canvas.clientHeight) {
+      return { x_mm: widthMm / 2, y_mm: heightMm / 2 };
+    }
+    const canvasRect = canvas.getBoundingClientRect();
+    const scrollRect = scroll.getBoundingClientRect();
+    const viewCx = scrollRect.left + scroll.clientWidth / 2;
+    const viewCy = scrollRect.top + scroll.clientHeight / 2;
+    return {
+      x_mm: ((viewCx - canvasRect.left) / Math.max(1, canvasRect.width)) * widthMm,
+      y_mm: ((viewCy - canvasRect.top) / Math.max(1, canvasRect.height)) * heightMm,
+    };
+  }
+
+  function mmPointFromClient(clientX, clientY) {
+    const canvasRect = canvas.getBoundingClientRect();
+    const widthMm = Number(state.width_mm) || 1;
+    const heightMm = Number(state.height_mm) || 1;
+    return {
+      x_mm: ((clientX - canvasRect.left) / Math.max(1, canvasRect.width)) * widthMm,
+      y_mm: ((clientY - canvasRect.top) / Math.max(1, canvasRect.height)) * heightMm,
+    };
+  }
+
+  function scrollViewportToMm(xMm, yMm) {
+    const scroll = canvasScrollElement();
+    if (!scroll || !canvas.clientWidth || !canvas.clientHeight) return;
+    const widthMm = Number(state.width_mm) || 1;
+    const heightMm = Number(state.height_mm) || 1;
+    const canvasRect = canvas.getBoundingClientRect();
+    const scrollRect = scroll.getBoundingClientRect();
+    const xPx = canvasRect.left - scrollRect.left + scroll.scrollLeft + (xMm / widthMm) * canvas.clientWidth;
+    const yPx = canvasRect.top - scrollRect.top + scroll.scrollTop + (yMm / heightMm) * canvas.clientHeight;
+    scroll.scrollTo({
+      left: Math.max(0, xPx - scroll.clientWidth / 2),
+      top: Math.max(0, yPx - scroll.clientHeight / 2),
+    });
+  }
+
+  function zoomAnchorMm({ preferSelection = true, clientX = null, clientY = null } = {}) {
+    if (preferSelection && selectedIds.size) return selectionCenterMm();
+    if (Number.isFinite(clientX) && Number.isFinite(clientY)) return mmPointFromClient(clientX, clientY);
+    return mmPointFromViewportCenter();
+  }
+
+  function syncZoomControls() {
+    const zoomOut = q("[data-zoom-out]");
+    const zoomIn = q("[data-zoom-in]");
+    const zoomFit = q("[data-zoom-fit]");
+    if (zoomOut) zoomOut.disabled = zoom <= ZOOM_MIN;
+    if (zoomIn) zoomIn.disabled = zoom >= ZOOM_MAX;
+    if (!zoomFit) return;
+    const items = selectedItems();
+    const grouped = Boolean(
+      items.length > 1
+      && items[0]?.layout_group_id
+      && items.every((item) => item.layout_group_id === items[0].layout_group_id)
+    );
+    let label = "Cadrer la planche";
+    if (items.length === 1) {
+      label = isTextItem(items[0]) ? "Cadrer le texte sélectionné" : "Cadrer le visuel sélectionné";
+    } else if (grouped) {
+      label = "Cadrer le groupe sélectionné";
+    } else if (items.length > 1) {
+      label = "Cadrer la sélection";
+    }
+    zoomFit.setAttribute("aria-label", label);
+    zoomFit.title = `${label} (Maj + 2)`;
+  }
+
+  function renderZoom() {
+    canvas.style.width = `${Math.round(zoomBaseWidth() * zoom)}px`;
+    const value = q("[data-zoom-value]");
+    if (value) value.textContent = `${Math.round(zoom * 100)} %`;
+    syncZoomControls();
     window.requestAnimationFrame(() => {
       positionSelectedItemToolbar();
       positionSelectionGroupToolbar();
+    });
+  }
+
+  function setZoom(nextZoom, { preferSelection = true, clientX = null, clientY = null, anchorMm = null } = {}) {
+    const anchor = anchorMm || zoomAnchorMm({ preferSelection, clientX, clientY });
+    zoom = round(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, nextZoom)), 2);
+    renderZoom();
+    window.requestAnimationFrame(() => {
+      scrollViewportToMm(anchor.x_mm, anchor.y_mm);
+      positionSelectedItemToolbar();
+      positionSelectionGroupToolbar();
+    });
+  }
+
+  function zoomBy(delta, options = {}) {
+    setZoom(zoom + delta, options);
+  }
+
+  function zoomToFitTarget() {
+    const scroll = canvasScrollElement();
+    if (!scroll) return;
+    const items = selectedItems();
+    const bounds = items.length
+      ? selectionBounds(items)
+      : { left: 0, top: 0, right: Number(state.width_mm) || 1, bottom: Number(state.height_mm) || 1 };
+    const targetW = Math.max(1, bounds.right - bounds.left);
+    const targetH = Math.max(1, bounds.bottom - bounds.top);
+    const viewW = Math.max(80, scroll.clientWidth * (1 - 2 * ZOOM_FIT_PADDING));
+    const viewH = Math.max(80, scroll.clientHeight * (1 - 2 * ZOOM_FIT_PADDING));
+    const base = zoomBaseWidth();
+    const zoomW = (viewW * Number(state.width_mm)) / (targetW * base);
+    const zoomH = (viewH * Number(state.width_mm)) / (targetH * base);
+    setZoom(Math.min(zoomW, zoomH), {
+      preferSelection: Boolean(items.length),
+      anchorMm: {
+        x_mm: (bounds.left + bounds.right) / 2,
+        y_mm: (bounds.top + bounds.bottom) / 2,
+      },
     });
   }
 
@@ -173,26 +336,187 @@ if (root) {
     return root?.querySelector("[data-asset-list]")?.dataset.hasPending === "true";
   }
 
+  function isTextItem(item) {
+    return (item?.kind || "visual") === "text";
+  }
+
+  function textAlignItems(align) {
+    if (align === "left") return "flex-start";
+    if (align === "right") return "flex-end";
+    return "center";
+  }
+
+  function fontCssFamily(fontId) {
+    const spec = (state.text_fonts || []).find((font) => font.id === fontId);
+    return spec?.css_family || "Helvetica, Arial, sans-serif";
+  }
+
+  const TEXT_LINE_HEIGHT = 1.05;
+  const TEXT_MAX_LENGTH = 200;
+  const TEXT_MAX_LINES = 20;
+  const TEXT_PLACEHOLDER = "Votre texte";
+  const TEXT_MEASURE_PX_PER_MM = 8;
+  const RESIZE_CORNERS = ["nw", "ne", "se", "sw"];
+  let textMeasureProbe = null;
+  let canvasTextEditor = null;
+  let stoppingCanvasTextEdit = false;
+
+  function isPlaceholderText(value) {
+    return String(value || "").trim() === TEXT_PLACEHOLDER || String(value || "").trim() === "";
+  }
+
+  function textSizeMm(item) {
+    const size = Number(item?.text_size_mm);
+    return Number.isFinite(size) && size > 0 ? size : 12;
+  }
+
+  function textMeasureNode() {
+    if (textMeasureProbe) return textMeasureProbe;
+    textMeasureProbe = document.createElement("div");
+    textMeasureProbe.setAttribute("aria-hidden", "true");
+    textMeasureProbe.style.cssText = "position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:normal;word-break:normal;line-height:1.05;padding:0.12em 0.18em;width:max-content;height:auto;";
+    document.body.append(textMeasureProbe);
+    return textMeasureProbe;
+  }
+
+  function textMaxWidthMm(item) {
+    const margin = Math.max(0, Number(state.margin_mm) || 0);
+    const quarter = [90, 270].includes(Number(item?.rotation) || 0);
+    const sheetLimit = Math.max(
+      5,
+      Number(quarter ? state.height_mm : state.width_mm) || 0
+    );
+    const origin = Number(quarter ? item?.y_mm : item?.x_mm) || 0;
+    const usable = Math.max(5, sheetLimit - margin * 2);
+    const remaining = Math.max(5, sheetLimit - origin - margin);
+    return round(Math.min(usable, remaining), 2);
+  }
+
+  function fittedTextBoxMm(item) {
+    const maxWidth = textMaxWidthMm(item);
+    const size = Math.max(2, Math.min(80, textSizeMm(item)));
+    const probe = textMeasureNode();
+    probe.style.width = "max-content";
+    probe.style.maxWidth = `${maxWidth * TEXT_MEASURE_PX_PER_MM}px`;
+    probe.style.height = "auto";
+    probe.style.fontSize = `${size * TEXT_MEASURE_PX_PER_MM}px`;
+    probe.style.lineHeight = String(TEXT_LINE_HEIGHT);
+    probe.style.fontFamily = fontCssFamily(item.text_font);
+    probe.style.fontWeight = item.text_bold ? "700" : "400";
+    probe.textContent = item.text_content || "Votre texte";
+    return {
+      width: Math.max(5, Math.min(maxWidth, round(probe.offsetWidth / TEXT_MEASURE_PX_PER_MM + 1.2, 2))),
+      height: Math.max(5, round(probe.offsetHeight / TEXT_MEASURE_PX_PER_MM + 0.6, 2)),
+    };
+  }
+
+  function applyFittedTextBox(item) {
+    if (!isTextItem(item)) return false;
+    const box = fittedTextBoxMm(item);
+    let changed = false;
+    if (Math.abs(box.width - Number(item.width_mm)) >= 0.02) {
+      item.width_mm = box.width;
+      changed = true;
+    }
+    if (Math.abs(box.height - Number(item.height_mm)) >= 0.02) {
+      item.height_mm = box.height;
+      changed = true;
+    }
+    return changed;
+  }
+
+  function applyTextPreviewStyle(node, item, { content = true } = {}) {
+    const align = item.text_align || "center";
+    const placeholder = isPlaceholderText(item.text_content);
+    node.classList.toggle("is-placeholder", placeholder);
+    if (content) node.textContent = item.text_content || TEXT_PLACEHOLDER;
+    node.style.fontFamily = fontCssFamily(item.text_font);
+    node.style.fontSize = `${(textSizeMm(item) / Math.max(1, Number(state.width_mm) || 1)) * 100}cqw`;
+    node.style.color = placeholder ? "" : (item.text_color || "#1A1815");
+    node.style.fontWeight = item.text_bold ? "700" : "400";
+    node.style.textAlign = align;
+    node.style.alignItems = textAlignItems(align);
+  }
+
+  function applyItemBoxStyle(node, item) {
+    const size = effectiveSize(item);
+    node.style.left = `${(item.x_mm / state.width_mm) * 100}%`;
+    node.style.top = `${(item.y_mm / state.height_mm) * 100}%`;
+    node.style.width = `${(size.width / state.width_mm) * 100}%`;
+    node.style.height = `${(size.height / state.height_mm) * 100}%`;
+    node.setAttribute(
+      "aria-label",
+      `${item.asset_name}, ${round(item.width_mm / 10, 1)} par ${round(item.height_mm / 10, 1)} centimètres`
+    );
+    const rotator = node.querySelector(".gang-sheet-item__text-rotator");
+    if (rotator) {
+      rotator.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
+      if ([90, 270].includes(Number(item.rotation))) {
+        rotator.style.width = `${(item.width_mm / item.height_mm) * 100}%`;
+        rotator.style.height = `${(item.height_mm / item.width_mm) * 100}%`;
+      } else {
+        rotator.style.width = "";
+        rotator.style.height = "";
+      }
+    }
+    const label = node.querySelector(".gang-sheet-item__label");
+    if (label) label.textContent = `${round(item.width_mm / 10, 1)} × ${round(item.height_mm / 10, 1)} cm`;
+  }
+
   function effectiveSize(item) {
     return [90, 270].includes(Number(item.rotation))
       ? { width: item.height_mm, height: item.width_mm }
       : { width: item.width_mm, height: item.height_mm };
   }
 
-  function resizeItemFromPointer(item, { start, deltaX, deltaY, lockRatio }) {
+  function clampItemOnSheet(item) {
+    const size = effectiveSize(item);
+    item.x_mm = round(Math.max(0, Math.min(item.x_mm, state.width_mm - size.width)));
+    item.y_mm = round(Math.max(0, Math.min(item.y_mm, state.height_mm - size.height)));
+  }
+
+  function resizeItemFromPointer(item, { start, deltaX, deltaY, lockRatio, corner = "se" }) {
+    const fromWest = corner.includes("w");
+    const fromNorth = corner.includes("n");
+    const signX = fromWest ? -1 : 1;
+    const signY = fromNorth ? -1 : 1;
     const quarterTurn = [90, 270].includes(Number(item.rotation));
-    const ratio = start.height / start.width;
+    const ratio = start.height / Math.max(1, start.width);
+    let nextWidth;
+    let nextHeight;
     if (quarterTurn) {
-      item.height_mm = Math.max(1, round(start.height + deltaX));
-      item.width_mm = lockRatio
-        ? Math.max(1, round(item.height_mm / ratio))
-        : Math.max(1, round(start.width + deltaY));
-      return;
+      nextHeight = Math.max(1, round(start.height + signX * deltaX));
+      nextWidth = lockRatio
+        ? Math.max(1, round(nextHeight / ratio))
+        : Math.max(1, round(start.width + signY * deltaY));
+    } else {
+      nextWidth = Math.max(1, round(start.width + signX * deltaX));
+      nextHeight = lockRatio
+        ? Math.max(1, round(nextWidth * ratio))
+        : Math.max(1, round(start.height + signY * deltaY));
     }
-    item.width_mm = Math.max(1, round(start.width + deltaX));
-    item.height_mm = lockRatio
-      ? Math.max(1, round(item.width_mm * ratio))
-      : Math.max(1, round(start.height + deltaY));
+    item.width_mm = nextWidth;
+    item.height_mm = nextHeight;
+    if (fromWest) item.x_mm = round(start.x + start.width - (quarterTurn ? nextHeight : nextWidth));
+    else item.x_mm = start.x;
+    if (fromNorth) item.y_mm = round(start.y + start.height - (quarterTurn ? nextWidth : nextHeight));
+    else item.y_mm = start.y;
+  }
+
+  function scaleTextFromCorner(item, { start, deltaX, deltaY, corner = "se" }) {
+    const fromWest = corner.includes("w");
+    const fromNorth = corner.includes("n");
+    const signX = fromWest ? -1 : 1;
+    const signY = fromNorth ? -1 : 1;
+    const scaleX = (start.width + signX * deltaX) / Math.max(1, start.width);
+    const scaleY = (start.height + signY * deltaY) / Math.max(1, start.height);
+    const scale = Math.max(0.15, Number.isFinite(scaleX) && Math.abs(scaleX - 1) >= Math.abs(scaleY - 1) ? scaleX : scaleY);
+    item.text_size_mm = round(Math.max(2, Math.min(80, start.size * scale)), 2);
+    applyFittedTextBox(item);
+    if (fromWest) item.x_mm = round(start.x + start.width - item.width_mm);
+    else item.x_mm = start.x;
+    if (fromNorth) item.y_mm = round(start.y + start.height - item.height_mm);
+    else item.y_mm = start.y;
   }
 
   function createItemAction({ label, icon, attribute, danger = false, iconOnly = false }) {
@@ -313,19 +637,21 @@ if (root) {
     });
   }
 
+  function selectionGroupAction(items = selectedItems()) {
+    if (items.length < 2) return null;
+    return items.some((item) => Boolean(item.layout_group_id)) ? "ungroup" : "group";
+  }
+
   function renderSelectionGroupToolbar() {
     if (!canEdit || selectedIds.size < 2 || ["rendering", "validated"].includes(state.status)) return;
     const items = selectedItems();
-    const hasGroup = items.some((item) => item.layout_group_id);
-    const allGroupedTogether = Boolean(
-      items[0]?.layout_group_id
-      && items.every((item) => item.layout_group_id === items[0].layout_group_id)
-    );
+    const groupAction = selectionGroupAction(items);
+    if (!groupAction) return;
     const toolbar = document.createElement("div");
     toolbar.className = "gang-sheet-item-toolbar gang-sheet-item-toolbar--group";
     toolbar.dataset.groupToolbar = "";
     toolbar.setAttribute("role", "toolbar");
-    toolbar.setAttribute("aria-label", "Actions sur la sélection groupée");
+    toolbar.setAttribute("aria-label", "Actions sur la sélection");
     toolbar.style.visibility = "hidden";
 
     const rotateButton = createItemAction({
@@ -336,23 +662,23 @@ if (root) {
     rotateButton.setAttribute("aria-label", `Pivoter les ${items.length} visuels de 90 degrés`);
     rotateButton.disabled = busy;
 
-    const groupButton = createItemAction({
-      label: "Grouper",
-      icon: createLockIcon(),
-      attribute: "data-canvas-group-selection",
+    const groupIds = new Set(items.map((item) => item.layout_group_id).filter(Boolean));
+    const associationButton = createItemAction({
+      label: groupAction === "ungroup" ? "Dissocier" : "Grouper",
+      icon: createLockIcon({ open: groupAction === "ungroup" }),
+      attribute: groupAction === "ungroup"
+        ? "data-canvas-ungroup-selection"
+        : "data-canvas-group-selection",
     });
-    groupButton.setAttribute("aria-label", `Grouper ${items.length} visuels`);
-    groupButton.disabled = busy || items.length < 2;
-
-    const ungroupButton = createItemAction({
-      label: "Dissocier",
-      icon: createLockIcon({ open: true }),
-      attribute: "data-canvas-ungroup-selection",
-    });
-    ungroupButton.setAttribute("aria-label", "Dissocier le groupe sélectionné");
-    ungroupButton.disabled = busy || !hasGroup;
-    if (allGroupedTogether) groupButton.hidden = true;
-    else ungroupButton.hidden = !hasGroup;
+    associationButton.setAttribute(
+      "aria-label",
+      groupAction === "ungroup"
+        ? groupIds.size > 1
+          ? `Dissocier les ${groupIds.size} groupes sélectionnés`
+          : "Dissocier le groupe sélectionné"
+        : `Grouper ${items.length} visuels`
+    );
+    associationButton.disabled = busy;
 
     const deleteButton = createItemAction({
       label: "Supprimer",
@@ -363,7 +689,7 @@ if (root) {
     deleteButton.setAttribute("aria-label", `Supprimer les ${items.length} visuels sélectionnés`);
     deleteButton.disabled = busy;
 
-    toolbar.append(rotateButton, groupButton, ungroupButton, deleteButton);
+    toolbar.append(rotateButton, associationButton, deleteButton);
     canvas.append(toolbar);
     window.requestAnimationFrame(positionSelectionGroupToolbar);
   }
@@ -413,58 +739,66 @@ if (root) {
   }
 
   function render() {
+    if (canvasTextEditor) stopCanvasTextEdit({ renderAfter: false });
+    state.items.forEach((item) => applyFittedTextBox(item));
     refreshCalculatedState();
     canvas.style.aspectRatio = `${state.width_mm} / ${state.height_mm}`;
     renderZoom();
     canvas.innerHTML = "";
     const issueIds = new Set(state.issues.flatMap((issue) => issue.item_public_ids));
     state.items.forEach((item) => {
-      const size = effectiveSize(item);
-      const node = document.createElement("button");
-      node.type = "button";
+      const textItem = isTextItem(item);
+      const node = document.createElement(textItem ? "div" : "button");
+      if (!textItem) node.type = "button";
+      else node.setAttribute("role", "button");
       const isSelected = selectedIds.has(item.public_id);
       const isGrouped = Boolean(item.layout_group_id);
       node.className = `gang-sheet-item${isSelected ? " is-selected" : ""}${selectedId === item.public_id ? " is-primary" : ""}${isGrouped ? " is-grouped" : ""}${issueIds.has(item.public_id) ? " has-issue" : ""}`;
       node.dataset.itemId = item.public_id;
       if (item.layout_group_id) node.dataset.layoutGroupId = item.layout_group_id;
-      node.style.left = `${(item.x_mm / state.width_mm) * 100}%`;
-      node.style.top = `${(item.y_mm / state.height_mm) * 100}%`;
-      node.style.width = `${(size.width / state.width_mm) * 100}%`;
-      node.style.height = `${(size.height / state.height_mm) * 100}%`;
-      node.setAttribute("aria-label", `${item.asset_name}, ${round(item.width_mm / 10, 1)} par ${round(item.height_mm / 10, 1)} centimètres`);
       node.setAttribute("aria-pressed", String(isSelected));
       node.setAttribute("aria-keyshortcuts", "R Delete Backspace Control+D Meta+D");
       node.tabIndex = selectedId === item.public_id || (selectedId === null && state.items[0] === item) ? 0 : -1;
-      const image = document.createElement("img");
-      const previewUrl = typeof item.preview_url === "string" ? item.preview_url : "";
-      try {
-        const parsed = new URL(previewUrl, window.location.href);
-        if (parsed.origin === window.location.origin || parsed.protocol === "blob:") {
-          // codeql[js/xss-through-dom] — same-origin / blob preview URLs from editor state only
-          image.src = parsed.protocol === "blob:"
-            ? parsed.href
-            : `${parsed.pathname}${parsed.search}${parsed.hash}`;
-        }
-      } catch {
-        // Ignore invalid preview URLs from editor state.
-      }
-      image.alt = "";
-      image.draggable = false;
-      image.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
-      if ([90, 270].includes(Number(item.rotation))) {
-        image.style.width = `${(item.width_mm / item.height_mm) * 100}%`;
-        image.style.height = `${(item.height_mm / item.width_mm) * 100}%`;
-      }
       const preview = document.createElement("span");
       preview.className = "gang-sheet-item__preview";
-      preview.append(image);
+      if (isTextItem(item)) {
+        node.classList.add("is-text");
+        const rotator = document.createElement("span");
+        rotator.className = "gang-sheet-item__text-rotator";
+        const text = document.createElement("span");
+        text.className = "gang-sheet-item__text";
+        applyTextPreviewStyle(text, item);
+        rotator.append(text);
+        preview.append(rotator);
+      } else {
+        const image = document.createElement("img");
+        const previewSrc = trustedAssetPreviewSrc(item.asset_version_public_id);
+        if (previewSrc) {
+          image.src = previewSrc;
+        }
+        image.alt = "";
+        image.draggable = false;
+        image.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
+        if ([90, 270].includes(Number(item.rotation))) {
+          image.style.width = `${(item.width_mm / item.height_mm) * 100}%`;
+          image.style.height = `${(item.height_mm / item.width_mm) * 100}%`;
+        }
+        preview.append(image);
+      }
       const label = document.createElement("span");
       label.className = "gang-sheet-item__label";
       label.textContent = `${round(item.width_mm / 10, 1)} × ${round(item.height_mm / 10, 1)} cm`;
-      const handle = document.createElement("span");
-      handle.className = "gang-sheet-item__resize";
-      handle.dataset.resizeHandle = "";
-      node.append(preview, label, handle);
+      node.append(preview, label);
+      if (canEdit && !["rendering", "validated"].includes(state.status)) {
+        RESIZE_CORNERS.forEach((corner) => {
+          const handle = document.createElement("span");
+          handle.className = `gang-sheet-item__resize gang-sheet-item__resize--${corner}`;
+          handle.dataset.resizeHandle = corner;
+          handle.setAttribute("aria-hidden", "true");
+          node.append(handle);
+        });
+      }
+      applyItemBoxStyle(node, item);
       node.addEventListener("click", (event) => {
         if (suppressNextItemClick) {
           suppressNextItemClick = false;
@@ -475,6 +809,15 @@ if (root) {
           isolate: event.altKey,
         });
       });
+      if (isTextItem(item)) {
+        node.addEventListener("dblclick", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+          startCanvasTextEdit(item, { selectAll: true });
+          setMobilePanel("canvas");
+        });
+      }
       if (canEdit) {
         node.addEventListener("pointerdown", (event) => startPointerAction(event, item));
       }
@@ -487,7 +830,7 @@ if (root) {
     if (!state.items.length) {
       const empty = document.createElement("div");
       empty.className = "gang-sheet-canvas__empty";
-      empty.innerHTML = "<strong>Votre planche est vide</strong><span>Choisissez un visuel dans la galerie pour démarrer.</span>";
+      empty.innerHTML = "<strong>Votre planche est vide</strong><span>Ajoutez un visuel depuis la galerie, ou un texte depuis la barre d’outils.</span>";
       canvas.append(empty);
     }
     renderMetrics();
@@ -518,6 +861,7 @@ if (root) {
 
   function renderAssetGallery() {
     const counts = state.items.reduce((result, item) => {
+      if (!item.asset_version_public_id) return result;
       result[item.asset_version_public_id] = (result[item.asset_version_public_id] || 0) + 1;
       return result;
     }, {});
@@ -528,22 +872,29 @@ if (root) {
   }
 
   function syncGroupControls({ locked = ["rendering", "validated"].includes(state.status) } = {}) {
-    const selectionCount = selectedIds.size;
+    const items = selectedItems();
+    const groupAction = selectionGroupAction(items);
     const groupIds = new Set(
-      selectedItems().map((item) => item.layout_group_id).filter(Boolean)
+      items.map((item) => item.layout_group_id).filter(Boolean)
     );
     const canMutate = canEdit && !locked && !busy;
     qa("[data-group-selection], [data-canvas-group-selection]").forEach((control) => {
-      control.disabled = !canMutate || selectionCount < 2;
+      control.hidden = groupAction !== "group";
+      control.disabled = !canMutate || groupAction !== "group";
     });
     qa("[data-ungroup-selection], [data-canvas-ungroup-selection]").forEach((control) => {
-      control.disabled = !canMutate || groupIds.size === 0;
+      control.hidden = groupAction !== "ungroup";
+      control.disabled = !canMutate || groupAction !== "ungroup";
     });
     const groupHelp = q("[data-group-help]");
     if (groupHelp) {
-      groupHelp.textContent = groupIds.size
-        ? "Cliquez un membre pour sélectionner tout le groupe. Option + clic isole un visuel."
-        : "Sélectionnez au moins 2 visuels pour créer un groupe mémorisé.";
+      groupHelp.textContent = groupAction === "ungroup"
+        ? groupIds.size > 1
+          ? "Cette sélection contient plusieurs groupes. Dissociez-les avant de les regrouper autrement."
+          : "Cette sélection contient déjà des visuels groupés. Dissociez-les pour les manipuler séparément."
+        : groupAction === "group"
+          ? "Groupez ces visuels pour les déplacer et les aligner comme un seul objet."
+          : "Sélectionnez au moins 2 visuels pour créer un groupe mémorisé.";
     }
   }
 
@@ -585,8 +936,11 @@ if (root) {
         control.checked = control.value === reference;
       });
       const help = q("[data-alignment-help]");
+      const groupedUnit = layoutUnits(selectedItems()).some((unit) => unit.items.length > 1);
       if (reference === "selection") {
-        help.textContent = "Les visuels s’alignent individuellement sur le cadre de la sélection.";
+        help.textContent = groupedUnit
+          ? "Chaque groupe se comporte comme un seul objet. Les visuels isolés s’alignent séparément."
+          : "Les visuels s’alignent individuellement sur le cadre de la sélection.";
       } else if (reference === "others") {
         help.textContent = "Le groupe se déplace d’un bloc pour s’aligner sur le cadre des autres visuels.";
       } else {
@@ -595,11 +949,75 @@ if (root) {
       syncGroupControls();
     }
     if (!item || selectionCount !== 1) return;
+    const textItem = isTextItem(item);
+    const kindLabel = q("[data-selected-kind-label]");
+    if (kindLabel) kindLabel.textContent = textItem ? "Texte sélectionné" : "Visuel sélectionné";
     q("[data-selected-name]").textContent = item.asset_name;
+    const textInspector = q("[data-text-inspector]");
+    if (textInspector) textInspector.hidden = !textItem;
+    syncTextInspector(item);
+    const deleteLabel = q("[data-delete-item-label]");
+    if (deleteLabel) deleteLabel.textContent = textItem ? "Supprimer ce texte" : "Supprimer ce visuel";
     q("[data-input-width]").value = round(item.width_mm / 10, 2);
     q("[data-input-height]").value = round(item.height_mm / 10, 2);
     q("[data-input-x]").value = round(item.x_mm / 10, 2);
     q("[data-input-y]").value = round(item.y_mm / 10, 2);
+    const lockRatio = q("[data-lock-ratio]");
+    if (lockRatio) {
+      lockRatio.disabled = textItem;
+      lockRatio.closest("label")?.classList.toggle("is-disabled", textItem);
+    }
+    const widthInput = q("[data-input-width]");
+    if (widthInput) {
+      widthInput.title = textItem
+        ? "La largeur suit le texte, jusqu’à la largeur utile de la planche."
+        : "";
+    }
+    const dimsHelp = q("[data-text-dims-help]");
+    if (dimsHelp) dimsHelp.hidden = !textItem;
+  }
+
+  function syncTextInspector(item) {
+    const fonts = state.text_fonts || [];
+    const fontSelect = q("[data-text-font]");
+    if (fontSelect && fonts.length) {
+      const current = fontSelect.value;
+      const ids = fonts.map((font) => font.id).join("|");
+      if (fontSelect.dataset.catalog !== ids) {
+        fontSelect.replaceChildren(
+          ...fonts.map((font) => {
+            const option = document.createElement("option");
+            option.value = font.id;
+            option.textContent = font.label;
+            option.style.fontFamily = font.css_family || "";
+            return option;
+          })
+        );
+        fontSelect.dataset.catalog = ids;
+      }
+      fontSelect.value = item?.text_font || current || fonts[0]?.id || "sans";
+      fontSelect.style.fontFamily = fontCssFamily(fontSelect.value);
+    }
+    const sizeField = q("[data-text-size]");
+    if (sizeField && document.activeElement !== sizeField) {
+      sizeField.value = round(textSizeMm(item), 1);
+    }
+    const content = q("[data-text-content]");
+    if (content && document.activeElement !== content) {
+      content.value = item?.text_content || "";
+    }
+    const color = q("[data-text-color]");
+    const hex = q("[data-text-color-hex]");
+    const colorValue = item?.text_color || "#1A1815";
+    if (color) color.value = colorValue.toLowerCase();
+    if (hex) hex.value = colorValue;
+    const bold = q("[data-text-bold]");
+    if (bold) bold.checked = Boolean(item?.text_bold);
+    qa("[data-text-align]").forEach((control) => {
+      const active = control.dataset.textAlign === (item?.text_align || "center");
+      control.classList.toggle("is-active", active);
+      control.setAttribute("aria-pressed", String(active));
+    });
   }
 
   function syncSpacingControls() {
@@ -667,11 +1085,7 @@ if (root) {
       window.preniumToast?.("Ce visuel est plus grand que la planche. Réduisez ses dimensions avant de le replacer.", "error");
       return;
     }
-    affectedItems.forEach((item) => {
-      const size = effectiveSize(item);
-      item.x_mm = round(Math.max(0, Math.min(item.x_mm, state.width_mm - size.width)));
-      item.y_mm = round(Math.max(0, Math.min(item.y_mm, state.height_mm - size.height)));
-    });
+    affectedItems.forEach((item) => clampItemOnSheet(item));
     if (!commitLayoutMutation(before)) return;
     focusIssue(index);
     window.preniumToast?.("Le visuel a été ramené dans la planche.", "success");
@@ -730,6 +1144,22 @@ if (root) {
     });
   }
 
+  function saveStatusText() {
+    return busy ? "Enregistrement…" : dirty ? "Enregistrer" : "Enregistré";
+  }
+
+  function syncSaveControl({ locked = ["rendering", "validated"].includes(state.status) } = {}) {
+    const saveButton = q("[data-save-layout]");
+    if (!saveButton) return;
+    const saveText = saveStatusText();
+    const saveLabel = q("[data-save-label]");
+    if (saveLabel) saveLabel.textContent = saveText;
+    saveButton.disabled = !canEdit || locked || !dirty || busy;
+    saveButton.classList.toggle("is-saved", !dirty && !busy);
+    saveButton.setAttribute("aria-label", saveText);
+    saveButton.title = busy ? saveText : dirty ? "Enregistrer (Ctrl/Cmd + S)" : "Enregistré";
+  }
+
   function renderStatus() {
     const labels = {
       draft: "Enregistré",
@@ -775,21 +1205,20 @@ if (root) {
     root.dataset.hasIssues = String(issueCount > 0);
     const locked = ["rendering", "validated"].includes(state.status);
     qa(
-      "[data-add-asset], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection]"
+      "[data-add-asset], [data-add-text], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection], [data-text-content], [data-text-font], [data-text-size], [data-text-color], [data-text-color-hex], [data-text-align], [data-text-bold]"
     ).forEach((control) => {
       const assetPending = control.matches("[data-add-asset]") && control.dataset.assetReady !== "true";
       control.disabled = !canEdit || locked || assetPending;
     });
+    const widthInput = q("[data-input-width]");
+    if (widthInput && isTextItem(selected())) {
+      widthInput.disabled = true;
+    }
     syncGroupControls({ locked });
     qa("[data-issue-focus]").forEach((control) => {
       control.disabled = busy;
     });
-    q("[data-save-layout]").disabled = !canEdit || locked || !dirty || busy;
-    const saveLabel = q("[data-save-label]");
-    const saveText = busy ? "Enregistrement…" : dirty ? "Enregistrer" : "Enregistré";
-    if (saveLabel) saveLabel.textContent = saveText;
-    else q("[data-save-layout]").textContent = saveText;
-    q("[data-save-layout]")?.classList.toggle("is-saved", !dirty && !busy);
+    syncSaveControl({ locked });
     q("[data-auto-place]").disabled = !canEdit || locked || state.items.length === 0 || busy;
     q("[data-apply-spacing]").disabled = !canEdit || locked || state.items.length === 0 || busy;
     qa("[data-align]").forEach((control) => {
@@ -799,12 +1228,12 @@ if (root) {
       control.disabled = !canEdit || locked || busy || (control.value === "selection" && selectedIds.size < 2);
     });
     qa("[data-distribute]").forEach((control) => {
-      control.disabled = !canEdit || locked || busy || selectedIds.size < 3;
+      control.disabled = !canEdit || locked || busy || selectedLayoutUnitCount() < 3;
     });
     qa("[data-apply-selection-gap]").forEach((control) => {
-      control.disabled = !canEdit || locked || busy || selectedIds.size < 2;
+      control.disabled = !canEdit || locked || busy || selectedLayoutUnitCount() < 2;
     });
-    q("[data-selection-gap]").disabled = !canEdit || locked || busy || selectedIds.size < 2;
+    q("[data-selection-gap]").disabled = !canEdit || locked || busy || selectedLayoutUnitCount() < 2;
     const selectionDeleteControl = q("[data-delete-selected]");
     if (selectionDeleteControl) {
       selectionDeleteControl.disabled = !canEdit || locked || busy || selectedIds.size < 2;
@@ -826,6 +1255,7 @@ if (root) {
       ["draft", "render_failed"].includes(state.status);
     const canConfirmReady = canEdit && !busy && state.status === "ready" && state.issues.length === 0;
     if (validateBtn) {
+      validateBtn.hidden = state.status === "validated";
       if (state.status === "rendering" || pendingValidateAfterRender) {
         validateBtn.disabled = true;
         if (validateLabel) validateLabel.textContent = "Rendu HD en cours…";
@@ -888,17 +1318,18 @@ if (root) {
     const quote = sheetOrderQuote();
     const quoteBox = q("[data-sheet-order-quote]");
     const detail = q("[data-sheet-order-quote-detail]");
+    const label = q("[data-sheet-order-quote-label]");
     const totalEl = q("[data-sheet-order-quote-total]");
-    const showQuote = state.status === "validated";
-    if (quoteBox) quoteBox.hidden = !showQuote;
-    if (totalEl) totalEl.textContent = `${quote.total.toFixed(2)} €`;
+    const hasEstimate = state.items.length > 0 && quote.surface > 0;
+    if (quoteBox) quoteBox.hidden = false;
+    if (label) label.textContent = "Total estimé HT";
+    if (totalEl) totalEl.textContent = hasEstimate ? `${quote.total.toFixed(2)} €` : "—";
     if (detail) {
-      detail.textContent = `${quote.surface.toFixed(4)} m² × ${quote.qty} ex. = ${quote.billable.toFixed(4)} m² · DTF ${quote.dtf.toFixed(2)} € + préparation ${quote.prep.toFixed(2)} €`;
-    }
-    if (showQuote) {
-      q("[data-metric-price]").textContent = `${quote.total.toFixed(2)} €`;
-    } else {
-      q("[data-metric-price]").textContent = `${Number(state.estimated_price_eur).toFixed(2)} €`;
+      const quantity = quote.qty > 1 ? `${quote.qty} exemplaires · ` : "";
+      const preparation = quote.prep > 0 ? ` + préparation ${quote.prep.toFixed(2)} €` : "";
+      detail.textContent = hasEstimate
+        ? `${quantity}Impression ${quote.dtf.toFixed(2)} €${preparation}`
+        : "Ajoutez un visuel pour calculer l’estimation.";
     }
   }
 
@@ -909,6 +1340,9 @@ if (root) {
     // sinon pointer-events:none laisse le CTA « Créer le projet » inactif.
     const canCreate = canEdit && state.status === "validated";
     link.classList.toggle("is-disabled", !canCreate);
+    link.classList.toggle("ui-btn-primary", canCreate);
+    link.classList.toggle("ui-btn-secondary", !canCreate);
+    link.hidden = !canCreate;
     if (canCreate) {
       link.removeAttribute("aria-disabled");
       link.removeAttribute("tabindex");
@@ -1069,7 +1503,7 @@ if (root) {
     if (event.pointerType === "touch" || event.button !== 0) return false;
     const target = event.target;
     if (!(target instanceof Element)) return false;
-    if (target.closest("[data-item-id], [data-item-toolbar], [data-group-toolbar], [data-resize-handle], [data-crop-box]")) {
+    if (target.closest("[data-item-id], [data-item-toolbar], [data-group-toolbar], [data-resize-handle], [data-crop-box], [data-canvas-text-editor]")) {
       return false;
     }
     return target === canvas
@@ -1181,12 +1615,18 @@ if (root) {
 
   function startPointerAction(event, item) {
     if (!canEdit || busy || state.status === "validated" || state.status === "rendering" || event.button !== 0) return;
+    if (event.target.closest("[data-canvas-text-editor]")) return;
+    if (canvasTextEditor) {
+      stopCanvasTextEdit({ renderAfter: true });
+      return;
+    }
     if (event.shiftKey || event.ctrlKey || event.metaKey) return;
     if (touchMultiSelect && event.pointerType === "touch" && !selectedIds.has(item.public_id)) return;
     event.preventDefault();
     const pointerId = event.pointerId;
     canvas.setPointerCapture?.(pointerId);
     const resizing = event.target.closest("[data-resize-handle]");
+    const corner = resizing?.dataset.resizeHandle || "se";
     if (!selectedIds.has(item.public_id) || resizing) {
       if (!resizing && item.layout_group_id) {
         selectedIds = new Set(
@@ -1201,7 +1641,7 @@ if (root) {
     selectedId = item.public_id;
     const startX = event.clientX;
     const startY = event.clientY;
-    const start = { x: item.x_mm, y: item.y_mm, width: item.width_mm, height: item.height_mm };
+    const start = { x: item.x_mm, y: item.y_mm, width: item.width_mm, height: item.height_mm, size: textSizeMm(item) };
     const movingItems = resizing ? [item] : selectedItems();
     const movingStarts = new Map(movingItems.map((movingItem) => [movingItem.public_id, { x: movingItem.x_mm, y: movingItem.y_mm }]));
     const before = layoutSnapshot();
@@ -1215,13 +1655,20 @@ if (root) {
       let deltaY = (moveEvent.clientY - startY) * mmPerPxY;
       moved = moved || Math.abs(moveEvent.clientX - startX) > 2 || Math.abs(moveEvent.clientY - startY) > 2;
       if (!moved) return;
+      canvas.classList.toggle("is-resizing", Boolean(resizing));
+      canvas.classList.add("is-dragging");
       if (resizing) {
-        resizeItemFromPointer(item, {
-          start,
-          deltaX,
-          deltaY,
-          lockRatio: q("[data-lock-ratio]").checked,
-        });
+        if (isTextItem(item)) {
+          scaleTextFromCorner(item, { start, deltaX, deltaY, corner });
+        } else {
+          resizeItemFromPointer(item, {
+            start,
+            deltaX,
+            deltaY,
+            lockRatio: q("[data-lock-ratio]")?.checked !== false,
+            corner,
+          });
+        }
       } else {
         const snapped = calculateSnapForMove(movingItems, movingStarts, deltaX, deltaY);
         deltaX = snapped.deltaX;
@@ -1237,6 +1684,7 @@ if (root) {
       render();
     };
     const cleanup = () => {
+      canvas.classList.remove("is-dragging", "is-resizing");
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", cancel);
@@ -1245,7 +1693,8 @@ if (root) {
     const end = (endEvent) => {
       if (endEvent.pointerId !== pointerId) return;
       cleanup();
-      suppressNextItemClick = moved;
+      const openTextEdit = !moved && !resizing && isTextItem(item);
+      suppressNextItemClick = moved || openTextEdit;
       snapGuides = [];
       if (moved) {
         if (!commitLayoutMutation(before)) setDirty(wasDirty);
@@ -1253,7 +1702,12 @@ if (root) {
         setDirty(wasDirty);
       }
       render();
-      if (moved) window.setTimeout(() => { suppressNextItemClick = false; }, 0);
+      if (openTextEdit) {
+        startCanvasTextEdit(item);
+        setMobilePanel("canvas");
+        window.requestAnimationFrame(() => canvasTextEditor?.editor.focus());
+      }
+      if (suppressNextItemClick) window.setTimeout(() => { suppressNextItemClick = false; }, 0);
     };
     const cancel = (cancelEvent) => {
       if (cancelEvent.pointerId !== pointerId) return;
@@ -1288,7 +1742,10 @@ if (root) {
       });
       const payload = await response.json();
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.error?.message || "L’action n’a pas pu être effectuée.");
+        const error = new Error(payload.error?.message || "L’action n’a pas pu être effectuée.");
+        error.code = payload.error?.code || "";
+        error.details = payload.error || {};
+        throw error;
       }
       return payload;
     } finally {
@@ -1296,13 +1753,14 @@ if (root) {
     }
   }
 
-  async function saveLayout({ notify = true } = {}) {
+  async function saveLayout({ notify = true, retried = false } = {}) {
+    try {
     const payload = await request(root.dataset.layoutUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         revision: state.revision,
-        items: state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id }) => ({
+        items: state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id, kind, text_content, text_font, text_size_mm, text_color, text_align, text_bold }) => ({
           public_id,
           x_mm,
           y_mm,
@@ -1310,6 +1768,13 @@ if (root) {
           height_mm,
           rotation,
           layout_group_id: layout_group_id || null,
+          kind: kind || "visual",
+          text_content: text_content || "",
+          text_font: text_font || "",
+          text_size_mm: Number(text_size_mm) || 12,
+          text_color: text_color || "",
+          text_align: text_align || "",
+          text_bold: Boolean(text_bold),
         })),
       }),
     });
@@ -1324,6 +1789,13 @@ if (root) {
     resetLayoutHistory();
     render();
     if (notify) window.preniumToast?.("Brouillon enregistré.", "success");
+    } catch (error) {
+      if (!retried && error.code === "STALE_REVISION" && error.details?.revision != null) {
+        state.revision = error.details.revision;
+        return saveLayout({ notify, retried: true });
+      }
+      throw error;
+    }
   }
 
   async function reloadState() {
@@ -1346,6 +1818,7 @@ if (root) {
       const payload = await request(url, { method: "POST", body });
       window.preniumToast?.(payload.message, "success");
       if (payload.redirect_url) {
+        allowUnload = true;
         window.location.assign(payload.redirect_url);
         return;
       }
@@ -1760,6 +2233,30 @@ if (root) {
   }
 
   root.addEventListener("click", async (event) => {
+    const addText = event.target.closest("[data-add-text]");
+    if (addText && !addText.disabled) {
+      try {
+        if (state.items.length && dirty) await saveLayout({ notify: false });
+        const body = new FormData();
+        body.append("kind", "text");
+        const payload = await request(root.dataset.addUrl, { method: "POST", body });
+        await reloadState();
+        if (payload.item_public_id) {
+          selectedId = payload.item_public_id;
+          selectedIds = new Set([payload.item_public_id]);
+          render();
+          setMobilePanel("canvas");
+          window.requestAnimationFrame(() => {
+            const created = state.items.find((candidate) => candidate.public_id === payload.item_public_id);
+            if (created) startCanvasTextEdit(created, { selectAll: true });
+          });
+        }
+        window.preniumToast?.("Texte ajouté sur la planche.", "success");
+      } catch (error) {
+        window.preniumToast?.(error.message, "error");
+      }
+      return;
+    }
     const button = event.target.closest("[data-add-asset]");
     if (!button || button.disabled) return;
     const card = button.closest("[data-asset-card]");
@@ -1807,17 +2304,30 @@ if (root) {
   });
 
   q("[data-zoom-out]").addEventListener("click", () => {
-    zoom = Math.max(0.5, round(zoom - 0.25, 2));
-    renderZoom();
+    zoomBy(-ZOOM_STEP);
   });
   q("[data-zoom-reset]").addEventListener("click", () => {
-    zoom = 1;
-    renderZoom();
+    setZoom(1);
   });
   q("[data-zoom-in]").addEventListener("click", () => {
-    zoom = Math.min(1.5, round(zoom + 0.25, 2));
-    renderZoom();
+    zoomBy(ZOOM_STEP);
   });
+  q("[data-zoom-fit]")?.addEventListener("click", () => {
+    zoomToFitTarget();
+  });
+  canvasScrollElement()?.addEventListener("wheel", (event) => {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    event.preventDefault();
+    zoomWheelAcc += event.deltaY;
+    if (Math.abs(zoomWheelAcc) < 40) return;
+    const direction = zoomWheelAcc > 0 ? -1 : 1;
+    zoomWheelAcc = 0;
+    zoomBy(direction * ZOOM_STEP, {
+      preferSelection: selectedIds.size > 0,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+  }, { passive: false });
   q("[data-undo-layout]").addEventListener("click", undoLayoutMutation);
   q("[data-redo-layout]").addEventListener("click", redoLayoutMutation);
   q("[data-snap-toggle]").addEventListener("click", () => {
@@ -1895,6 +2405,51 @@ if (root) {
     }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
   }
 
+  function layoutUnits(items) {
+    const grouped = new Map();
+    const units = [];
+    items.forEach((item) => {
+      const groupId = item.layout_group_id || "";
+      if (!groupId) {
+        units.push({ items: [item] });
+        return;
+      }
+      if (!grouped.has(groupId)) grouped.set(groupId, []);
+      grouped.get(groupId).push(item);
+    });
+    grouped.forEach((members) => {
+      units.push({ items: members });
+    });
+    return units.map((unit) => ({ ...unit, bounds: selectionBounds(unit.items) }));
+  }
+
+  function selectedLayoutUnitCount() {
+    return layoutUnits(selectedItems()).length;
+  }
+
+  function translateItemsBy(items, deltaX, deltaY) {
+    items.forEach((item) => {
+      item.x_mm = round(item.x_mm + deltaX);
+      item.y_mm = round(item.y_mm + deltaY);
+    });
+  }
+
+  function alignUnitToBounds(unit, direction, target) {
+    const centerX = (target.left + target.right) / 2;
+    const centerY = (target.top + target.bottom) / 2;
+    let deltaX = 0;
+    let deltaY = 0;
+    if (direction === "left") deltaX = target.left - unit.bounds.left;
+    else if (direction === "center-x") {
+      deltaX = centerX - (unit.bounds.left + unit.bounds.right) / 2;
+    } else if (direction === "right") deltaX = target.right - unit.bounds.right;
+    else if (direction === "top") deltaY = target.top - unit.bounds.top;
+    else if (direction === "center-y") {
+      deltaY = centerY - (unit.bounds.top + unit.bounds.bottom) / 2;
+    } else if (direction === "bottom") deltaY = target.bottom - unit.bounds.bottom;
+    translateItemsBy(unit.items, deltaX, deltaY);
+  }
+
   function alignmentBounds(items) {
     const reference = effectiveAlignmentReference();
     if (reference === "selection") return selectionBounds(items);
@@ -1911,22 +2466,11 @@ if (root) {
     const items = selectedItems();
     if (!items.length || !canEdit || ["rendering", "validated"].includes(state.status)) return;
     const before = layoutSnapshot();
-    const group = selectionBounds(items);
-    const target = alignmentBounds(items);
-    let deltaX = 0;
-    let deltaY = 0;
-    if (direction === "left") deltaX = target.left - group.left;
-    else if (direction === "center-x") {
-      deltaX = (target.left + target.right) / 2 - (group.left + group.right) / 2;
-    } else if (direction === "right") deltaX = target.right - group.right;
-    else if (direction === "top") deltaY = target.top - group.top;
-    else if (direction === "center-y") {
-      deltaY = (target.top + target.bottom) / 2 - (group.top + group.bottom) / 2;
-    } else if (direction === "bottom") deltaY = target.bottom - group.bottom;
-    items.forEach((item) => {
-      item.x_mm = round(item.x_mm + deltaX);
-      item.y_mm = round(item.y_mm + deltaY);
-    });
+    alignUnitToBounds(
+      { items, bounds: selectionBounds(items) },
+      direction,
+      alignmentBounds(items),
+    );
     const labels = {
       left: "à gauche",
       "center-x": "au centre horizontal",
@@ -1957,14 +2501,20 @@ if (root) {
     const bounds = alignmentBounds(items);
     const centerX = (bounds.left + bounds.right) / 2;
     const centerY = (bounds.top + bounds.bottom) / 2;
-    items.forEach((item) => {
-      const size = effectiveSize(item);
-      if (direction === "left") item.x_mm = round(bounds.left);
-      else if (direction === "center-x") item.x_mm = round(centerX - size.width / 2);
-      else if (direction === "right") item.x_mm = round(bounds.right - size.width);
-      else if (direction === "top") item.y_mm = round(bounds.top);
-      else if (direction === "center-y") item.y_mm = round(centerY - size.height / 2);
-      else if (direction === "bottom") item.y_mm = round(bounds.bottom - size.height);
+    const units = layoutUnits(items);
+    units.forEach((unit) => {
+      if (unit.items.length === 1) {
+        const item = unit.items[0];
+        const size = effectiveSize(item);
+        if (direction === "left") item.x_mm = round(bounds.left);
+        else if (direction === "center-x") item.x_mm = round(centerX - size.width / 2);
+        else if (direction === "right") item.x_mm = round(bounds.right - size.width);
+        else if (direction === "top") item.y_mm = round(bounds.top);
+        else if (direction === "center-y") item.y_mm = round(centerY - size.height / 2);
+        else if (direction === "bottom") item.y_mm = round(bounds.bottom - size.height);
+        return;
+      }
+      alignUnitToBounds(unit, direction, bounds);
     });
     const labels = {
       left: "à gauche",
@@ -1976,15 +2526,18 @@ if (root) {
     };
     commitLayoutMutation(before);
     render();
+    const unitLabel = units.length < items.length
+      ? `${units.length} objet${units.length > 1 ? "s" : ""}`
+      : `${items.length} visuel${items.length > 1 ? "s" : ""}`;
     window.preniumToast?.(
-      `${items.length} visuel${items.length > 1 ? "s" : ""} aligné${items.length > 1 ? "s" : ""} ${labels[direction]} sur la sélection.`,
+      `${unitLabel} aligné${units.length > 1 || items.length > 1 ? "s" : ""} ${labels[direction]} sur la sélection.`,
       "success"
     );
   }
 
   function groupSelectedItems() {
     const items = selectedItems();
-    if (items.length < 2 || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
+    if (selectionGroupAction(items) !== "group" || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
       return;
     }
     const before = layoutSnapshot();
@@ -1998,10 +2551,11 @@ if (root) {
   }
 
   function ungroupSelectedItems() {
-    const items = selectedItems().filter((item) => item.layout_group_id);
-    if (!items.length || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
+    const selected = selectedItems();
+    if (selectionGroupAction(selected) !== "ungroup" || !canEdit || busy || ["rendering", "validated"].includes(state.status)) {
       return;
     }
+    const items = selected.filter((item) => item.layout_group_id);
     const before = layoutSnapshot();
     const groupIds = new Set(items.map((item) => item.layout_group_id));
     state.items.forEach((item) => {
@@ -2016,32 +2570,38 @@ if (root) {
 
   function distributeSelectedItems(axis) {
     const items = selectedItems();
-    if (items.length < 3 || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    if (!canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    const units = layoutUnits(items);
+    if (units.length < 3) {
+      if (items.length >= 3) {
+        window.preniumToast?.("Les visuels groupés comptent comme un seul objet. Il en faut 3 pour répartir.", "error");
+      }
+      return;
+    }
     const before = layoutSnapshot();
     const horizontal = axis === "horizontal";
-    const sorted = [...items].sort((first, second) => horizontal
-      ? first.x_mm - second.x_mm
-      : first.y_mm - second.y_mm);
+    const sorted = [...units].sort((first, second) => horizontal
+      ? first.bounds.left - second.bounds.left
+      : first.bounds.top - second.bounds.top);
     const first = sorted[0];
     const last = sorted.at(-1);
-    const firstStart = horizontal ? first.x_mm : first.y_mm;
-    const lastSize = effectiveSize(last);
-    const lastEnd = (horizontal ? last.x_mm + lastSize.width : last.y_mm + lastSize.height);
-    const totalSize = sorted.reduce((total, item) => {
-      const size = effectiveSize(item);
-      return total + (horizontal ? size.width : size.height);
-    }, 0);
+    const firstStart = horizontal ? first.bounds.left : first.bounds.top;
+    const lastEnd = horizontal ? last.bounds.right : last.bounds.bottom;
+    const totalSize = sorted.reduce((total, unit) => (
+      total + (horizontal ? unit.bounds.right - unit.bounds.left : unit.bounds.bottom - unit.bounds.top)
+    ), 0);
     const gap = (lastEnd - firstStart - totalSize) / (sorted.length - 1);
     if (gap < 0) {
       window.preniumToast?.("La sélection manque d’espace pour être répartie sans chevauchement.", "error");
       return;
     }
     let cursor = firstStart;
-    sorted.forEach((item) => {
-      if (horizontal) item.x_mm = round(cursor);
-      else item.y_mm = round(cursor);
-      const size = effectiveSize(item);
-      cursor += (horizontal ? size.width : size.height) + gap;
+    sorted.forEach((unit) => {
+      const origin = horizontal ? unit.bounds.left : unit.bounds.top;
+      const delta = cursor - origin;
+      translateItemsBy(unit.items, horizontal ? delta : 0, horizontal ? 0 : delta);
+      const size = horizontal ? unit.bounds.right - unit.bounds.left : unit.bounds.bottom - unit.bounds.top;
+      cursor += size + gap;
     });
     commitLayoutMutation(before);
     render();
@@ -2050,30 +2610,38 @@ if (root) {
 
   function applyPreciseGap(axis) {
     const items = selectedItems();
-    if (items.length < 2 || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    if (!canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    const units = layoutUnits(items);
+    if (units.length < 2) {
+      if (items.length >= 2) {
+        window.preniumToast?.("Les visuels groupés comptent comme un seul objet. Dissociez-les ou ajoutez un autre visuel.", "error");
+      }
+      return;
+    }
     const input = q("[data-selection-gap]");
     const gap = Math.max(0, Math.min(1000, Number(input.value) || 0));
     input.value = round(gap, 2);
     const before = layoutSnapshot();
     const horizontal = axis === "horizontal";
-    const sorted = [...items].sort((first, second) => horizontal
-      ? first.x_mm - second.x_mm
-      : first.y_mm - second.y_mm);
-    let cursor = horizontal ? sorted[0].x_mm : sorted[0].y_mm;
-    const requiredSpan = sorted.reduce((total, item) => {
-      const size = effectiveSize(item);
-      return total + (horizontal ? size.width : size.height);
+    const sorted = [...units].sort((first, second) => horizontal
+      ? first.bounds.left - second.bounds.left
+      : first.bounds.top - second.bounds.top);
+    let cursor = horizontal ? sorted[0].bounds.left : sorted[0].bounds.top;
+    const requiredSpan = sorted.reduce((total, unit) => {
+      const size = horizontal ? unit.bounds.right - unit.bounds.left : unit.bounds.bottom - unit.bounds.top;
+      return total + size;
     }, 0) + gap * (sorted.length - 1);
     const placementLimit = horizontal ? state.width_mm : state.maximum_height_mm;
     if (cursor < 0 || cursor + requiredSpan > placementLimit) {
       window.preniumToast?.(`L’écart demandé ferait déborder la sélection ${horizontal ? "de la largeur" : "de la hauteur maximale"} de la planche.`, "error");
       return;
     }
-    sorted.forEach((item) => {
-      if (horizontal) item.x_mm = round(cursor);
-      else item.y_mm = round(cursor);
-      const size = effectiveSize(item);
-      cursor += (horizontal ? size.width : size.height) + gap;
+    sorted.forEach((unit) => {
+      const origin = horizontal ? unit.bounds.left : unit.bounds.top;
+      const delta = cursor - origin;
+      translateItemsBy(unit.items, horizontal ? delta : 0, horizontal ? 0 : delta);
+      const size = horizontal ? unit.bounds.right - unit.bounds.left : unit.bounds.bottom - unit.bounds.top;
+      cursor += size + gap;
     });
     commitLayoutMutation(before);
     render();
@@ -2136,26 +2704,31 @@ if (root) {
     const items = selectedItems();
     if (!items.length || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
     const before = layoutSnapshot();
-    if (items.length === 1) {
-      items[0].rotation = (Number(items[0].rotation) + 90) % 360;
-    } else {
-      const bounds = selectionBounds(items);
-      const centerX = (bounds.left + bounds.right) / 2;
-      const centerY = (bounds.top + bounds.bottom) / 2;
-      items.forEach((item) => {
-        const size = effectiveSize(item);
-        const itemCenterX = item.x_mm + size.width / 2;
-        const itemCenterY = item.y_mm + size.height / 2;
-        const dx = itemCenterX - centerX;
-        const dy = itemCenterY - centerY;
+    const bounds = items.length > 1 ? selectionBounds(items) : null;
+    const groupCenterX = bounds ? (bounds.left + bounds.right) / 2 : null;
+    const groupCenterY = bounds ? (bounds.top + bounds.bottom) / 2 : null;
+    items.forEach((item) => {
+      const size = effectiveSize(item);
+      const itemCenterX = item.x_mm + size.width / 2;
+      const itemCenterY = item.y_mm + size.height / 2;
+      let nextCenterX = itemCenterX;
+      let nextCenterY = itemCenterY;
+      if (bounds) {
+        const dx = itemCenterX - groupCenterX;
+        const dy = itemCenterY - groupCenterY;
         // Pivot horaire 90° du groupe autour de son centre.
-        const nextCenterX = centerX + dy;
-        const nextCenterY = centerY - dx;
-        item.rotation = (Number(item.rotation) + 90) % 360;
-        const nextSize = effectiveSize(item);
-        item.x_mm = round(nextCenterX - nextSize.width / 2);
-        item.y_mm = round(nextCenterY - nextSize.height / 2);
-      });
+        nextCenterX = groupCenterX + dy;
+        nextCenterY = groupCenterY - dx;
+      }
+      item.rotation = (Number(item.rotation) + 90) % 360;
+      const nextSize = effectiveSize(item);
+      item.x_mm = round(nextCenterX - nextSize.width / 2);
+      item.y_mm = round(nextCenterY - nextSize.height / 2);
+    });
+    if (items.length === 1) {
+      clampItemOnSheet(items[0]);
+      applyFittedTextBox(items[0]);
+      clampItemOnSheet(items[0]);
     }
     commitLayoutMutation(before);
     render();
@@ -2237,7 +2810,16 @@ if (root) {
       const item = selected(); if (!item) return;
       const before = layoutSnapshot();
       const next = round(Number(event.target.value) * 10);
-      if (key === "width_mm" && q("[data-lock-ratio]").checked) {
+      if (key === "width_mm" && isTextItem(item)) {
+        const scale = item.width_mm > 0 ? next / item.width_mm : 1;
+        item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
+        applyFittedTextBox(item);
+      } else if (key === "height_mm" && isTextItem(item)) {
+        const previousHeight = item.height_mm;
+        const scale = previousHeight > 0 ? next / previousHeight : 1;
+        item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
+        applyFittedTextBox(item);
+      } else if (key === "width_mm" && q("[data-lock-ratio]").checked) {
         const ratio = item.height_mm / item.width_mm;
         item.width_mm = next;
         item.height_mm = round(next * ratio);
@@ -2253,6 +2835,241 @@ if (root) {
     });
   });
 
+  function updateCanvasTextPreview(item) {
+    const name = q("[data-selected-name]");
+    if (name) name.textContent = item.asset_name;
+    const node = canvas.querySelector(`[data-item-id="${item.public_id}"] .gang-sheet-item__text`);
+    if (node) applyTextPreviewStyle(node, item);
+    syncSaveControl();
+  }
+
+  function setCanvasTextHint(visible) {
+    const hint = q("[data-canvas-text-hint]");
+    if (!hint) return;
+    hint.hidden = !visible;
+  }
+
+  function startCanvasTextEdit(item, { selectAll = isPlaceholderText(item?.text_content) } = {}) {
+    if (!item || !isTextItem(item) || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    if (canvasTextEditor?.item.public_id === item.public_id) {
+      canvasTextEditor.editor.focus();
+      return;
+    }
+    stopCanvasTextEdit({ renderAfter: false });
+    const alreadySolo = selectedId === item.public_id && selectedIds.size === 1;
+    selectedIds = new Set([item.public_id]);
+    selectedId = item.public_id;
+    if (!alreadySolo) render();
+    attachCanvasTextEditor(item, { selectAll });
+  }
+
+  function attachCanvasTextEditor(item, { selectAll = true } = {}) {
+    const host = canvas.querySelector(`[data-item-id="${item.public_id}"]`);
+    const rotator = host?.querySelector(".gang-sheet-item__text-rotator");
+    if (!host || !rotator) return;
+    host.classList.add("is-editing-text");
+    canvas.querySelector("[data-item-toolbar]")?.remove();
+    const editor = document.createElement("textarea");
+    editor.className = "gang-sheet-item__text-editor";
+    editor.dataset.canvasTextEditor = "";
+    editor.setAttribute("aria-label", "Modifier le texte sur la planche");
+    editor.setAttribute("aria-describedby", "gang-sheet-text-edit-hint");
+    editor.maxLength = TEXT_MAX_LENGTH;
+    editor.rows = 1;
+    editor.spellcheck = false;
+    editor.value = item.text_content || "";
+    applyTextPreviewStyle(editor, item, { content: false });
+    rotator.append(editor);
+    canvasTextEditor = {
+      item,
+      editor,
+      before: layoutSnapshot(),
+      originalContent: item.text_content || "Votre texte",
+    };
+    editor.addEventListener("pointerdown", (event) => event.stopPropagation());
+    editor.addEventListener("click", (event) => event.stopPropagation());
+    editor.addEventListener("dblclick", (event) => event.stopPropagation());
+    editor.addEventListener("keyup", (event) => event.stopPropagation());
+    editor.addEventListener("input", onCanvasTextEditorInput);
+    editor.addEventListener("keydown", onCanvasTextEditorKeydown);
+    editor.addEventListener("blur", onCanvasTextEditorBlur);
+    editor.focus();
+    if (selectAll) editor.select();
+    else editor.setSelectionRange(editor.value.length, editor.value.length);
+    setCanvasTextHint(true);
+  }
+
+  function onCanvasTextEditorInput() {
+    if (!canvasTextEditor) return;
+    const { item, editor } = canvasTextEditor;
+    if (editor.value.split("\n").length > TEXT_MAX_LINES) {
+      editor.value = item.text_content || "";
+      window.preniumToast?.(`Le texte est limité à ${TEXT_MAX_LINES} lignes.`, "error");
+      return;
+    }
+    editor.classList.toggle("is-placeholder", isPlaceholderText(editor.value));
+    patchSelectedText({ text_content: editor.value }, { history: false });
+  }
+
+  function insertCanvasTextNewline(editor) {
+    if (editor.value.split("\n").length >= TEXT_MAX_LINES) {
+      window.preniumToast?.(`Le texte est limité à ${TEXT_MAX_LINES} lignes.`, "error");
+      return;
+    }
+    const start = editor.selectionStart ?? editor.value.length;
+    const end = editor.selectionEnd ?? start;
+    const next = `${editor.value.slice(0, start)}\n${editor.value.slice(end)}`;
+    if (next.length > TEXT_MAX_LENGTH) {
+      window.preniumToast?.(`Le texte est limité à ${TEXT_MAX_LENGTH} caractères.`, "error");
+      return;
+    }
+    editor.value = next;
+    editor.setSelectionRange(start + 1, start + 1);
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function onCanvasTextEditorKeydown(event) {
+    event.stopPropagation();
+    if (event.key === "Escape" || ((event.ctrlKey || event.metaKey) && event.key === "Enter")) {
+      event.preventDefault();
+      stopCanvasTextEdit({ renderAfter: true });
+      return;
+    }
+    if (event.key !== "Enter" || event.ctrlKey || event.metaKey || event.altKey) return;
+    event.preventDefault();
+    insertCanvasTextNewline(event.currentTarget);
+  }
+
+  function onCanvasTextEditorBlur() {
+    if (stoppingCanvasTextEdit || !canvasTextEditor) return;
+    stopCanvasTextEdit({ renderAfter: true });
+  }
+
+  function stopCanvasTextEdit({ renderAfter = true } = {}) {
+    if (!canvasTextEditor || stoppingCanvasTextEdit) return;
+    stoppingCanvasTextEdit = true;
+    const { item, editor, before, originalContent } = canvasTextEditor;
+    let next = String(editor.value || "").slice(0, TEXT_MAX_LENGTH);
+    if (next.split("\n").length > TEXT_MAX_LINES) next = originalContent;
+    if (!next.trim()) next = originalContent || TEXT_PLACEHOLDER;
+    item.text_content = next;
+    const firstLine = String(next).split("\n")[0].trim() || "Texte";
+    item.asset_name = firstLine.slice(0, 48);
+    applyFittedTextBox(item);
+    canvasTextEditor = null;
+    editor.remove();
+    setCanvasTextHint(false);
+    if (before) commitLayoutMutation(before);
+    stoppingCanvasTextEdit = false;
+    if (renderAfter) render();
+  }
+
+  function patchSelectedText(partial, { history = true } = {}) {
+    const item = selected();
+    if (!item || !isTextItem(item) || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;
+    const before = history ? layoutSnapshot() : null;
+    Object.assign(item, partial);
+    const firstLine = String(item.text_content || "Texte").split("\n")[0].trim() || "Texte";
+    item.asset_name = firstLine.slice(0, 48);
+    const boxChanged = applyFittedTextBox(item);
+    if (history) commitLayoutMutation(before);
+    else syncLayoutDirtyState();
+    const editing = Boolean(canvasTextEditor && canvasTextEditor.item.public_id === item.public_id);
+    if (editing) {
+      const host = canvas.querySelector(`[data-item-id="${item.public_id}"]`);
+      if (host) applyItemBoxStyle(host, item);
+      applyTextPreviewStyle(canvasTextEditor.editor, item, { content: false });
+      const preview = host?.querySelector(".gang-sheet-item__text");
+      if (preview) applyTextPreviewStyle(preview, item);
+      const name = q("[data-selected-name]");
+      if (name) name.textContent = item.asset_name;
+      const widthInput = q("[data-input-width]");
+      const heightInput = q("[data-input-height]");
+      if (widthInput && document.activeElement !== widthInput) {
+        widthInput.value = round(item.width_mm / 10, 2);
+      }
+      if (heightInput && document.activeElement !== heightInput) {
+        heightInput.value = round(item.height_mm / 10, 2);
+      }
+      const field = q("[data-text-content]");
+      if (field && document.activeElement !== field) field.value = item.text_content || "";
+      syncSaveControl();
+      return;
+    }
+    if (boxChanged) {
+      const field = q("[data-text-content]");
+      const keepFocus = field === document.activeElement;
+      const caret = keepFocus ? field.selectionStart : null;
+      render();
+      if (keepFocus && field && document.activeElement !== field) {
+        field.focus();
+        if (caret !== null) field.setSelectionRange(caret, caret);
+      }
+    } else {
+      updateCanvasTextPreview(item);
+    }
+  }
+
+  let textEditBefore = null;
+  q("[data-text-content]")?.addEventListener("focus", () => {
+    if (canvasTextEditor) stopCanvasTextEdit({ renderAfter: true });
+    textEditBefore = layoutSnapshot();
+  });
+  q("[data-text-content]")?.addEventListener("input", (event) => {
+    patchSelectedText({ text_content: event.target.value }, { history: false });
+  });
+  q("[data-text-content]")?.addEventListener("change", () => {
+    if (textEditBefore) commitLayoutMutation(textEditBefore);
+    textEditBefore = null;
+  });
+  q("[data-text-font]")?.addEventListener("change", (event) => {
+    event.target.style.fontFamily = fontCssFamily(event.target.value);
+    patchSelectedText({ text_font: event.target.value });
+  });
+  q("[data-text-size]")?.addEventListener("change", (event) => {
+    const size = round(Number(event.target.value), 2);
+    if (!Number.isFinite(size) || size < 2 || size > 80) {
+      window.preniumToast?.("La taille doit être comprise entre 2 et 80 mm.", "error");
+      event.target.value = round(textSizeMm(selected() || {}), 1);
+      return;
+    }
+    patchSelectedText({ text_size_mm: size });
+  });
+  q("[data-text-bold]")?.addEventListener("change", (event) => {
+    patchSelectedText({ text_bold: event.target.checked });
+  });
+  q("[data-text-color]")?.addEventListener("input", (event) => {
+    const hex = String(event.target.value || "").toUpperCase();
+    const hexField = q("[data-text-color-hex]");
+    if (hexField) hexField.value = hex;
+    patchSelectedText({ text_color: hex }, { history: false });
+  });
+  q("[data-text-color]")?.addEventListener("change", (event) => {
+    patchSelectedText({ text_color: String(event.target.value || "").toUpperCase() });
+  });
+  q("[data-text-color-hex]")?.addEventListener("change", (event) => {
+    const hex = String(event.target.value || "").trim().toUpperCase();
+    if (!/^#[0-9A-F]{6}$/.test(hex)) {
+      window.preniumToast?.("La couleur doit être un code #RRGGBB.", "error");
+      const item = selected();
+      event.target.value = item?.text_color || "#1A1815";
+      return;
+    }
+    const color = q("[data-text-color]");
+    if (color) color.value = hex.toLowerCase();
+    patchSelectedText({ text_color: hex });
+  });
+  qa("[data-text-align]").forEach((control) => {
+    control.addEventListener("click", () => {
+      qa("[data-text-align]").forEach((button) => {
+        const active = button === control;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      patchSelectedText({ text_align: control.dataset.textAlign });
+    });
+  });
+
   function shouldIgnoreStudioShortcut(event) {
     const target = event.target;
     if (!(target instanceof Element) || !root.contains(target)) return true;
@@ -2260,9 +3077,32 @@ if (root) {
     return true;
   }
 
+  function shouldIgnoreZoomShortcut(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !root.contains(target)) return true;
+    return Boolean(target.closest("input, textarea, select, [contenteditable]"));
+  }
+
   window.addEventListener("keydown", (event) => {
-    if (shouldIgnoreStudioShortcut(event)) return;
     const modifier = event.metaKey || event.ctrlKey;
+    if (!shouldIgnoreZoomShortcut(event) && !modifier) {
+      if (event.code === "Digit2" && event.shiftKey) {
+        event.preventDefault();
+        zoomToFitTarget();
+        return;
+      }
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        zoomBy(ZOOM_STEP);
+        return;
+      }
+      if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        zoomBy(-ZOOM_STEP);
+        return;
+      }
+    }
+    if (shouldIgnoreStudioShortcut(event)) return;
     if (modifier && event.key.toLowerCase() === "y") {
       event.preventDefault();
       redoLayoutMutation();
@@ -2279,6 +3119,9 @@ if (root) {
     } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d" && canEdit && selectedIds.size === 1) {
       event.preventDefault();
       duplicateSelected();
+    } else if (event.key === "Enter" && !modifier && canEdit && selectedIds.size === 1 && isTextItem(selected())) {
+      event.preventDefault();
+      startCanvasTextEdit(selected(), { selectAll: false });
     } else if (event.key.toLowerCase() === "r" && canEdit && selectedIds.size > 0) {
       event.preventDefault();
       rotateSelected();
@@ -2286,15 +3129,42 @@ if (root) {
       event.preventDefault();
       deleteSelected();
     } else if (event.key === "Escape") {
+      if (canvasTextEditor) {
+        event.preventDefault();
+        stopCanvasTextEdit({ renderAfter: true });
+        return;
+      }
       clearSelection();
       render();
     }
   });
 
   window.addEventListener("beforeunload", (event) => {
-    if (!dirty) return;
+    if (allowUnload || !dirty) return;
     event.preventDefault();
     event.returnValue = "";
+  });
+  const uploadForm = q(".gang-asset-modal-form");
+  uploadForm?.addEventListener("submit", async (event) => {
+    if (allowUnload) return;
+    event.preventDefault();
+    const submitter = uploadForm.querySelector("[data-configurator-submit]");
+    if (submitter instanceof HTMLButtonElement) {
+      submitter.classList.add("is-loading");
+      submitter.setAttribute("aria-busy", "true");
+    }
+    try {
+      if (dirty) await saveLayout({ notify: false });
+      allowUnload = true;
+      uploadForm.submit();
+    } catch (error) {
+      allowUnload = false;
+      if (submitter instanceof HTMLButtonElement) {
+        submitter.classList.remove("is-loading");
+        submitter.removeAttribute("aria-busy");
+      }
+      window.preniumToast?.(error.message, "error");
+    }
   });
   window.addEventListener("resize", () => {
     if (resizeFrame !== null) return;
@@ -2307,5 +3177,7 @@ if (root) {
   syncSpacingControls();
   setMobilePanel("canvas");
   render();
+  savedLayoutSignature = layoutSignature();
+  setDirty(false);
   if (state.status === "rendering") startPolling();
 }

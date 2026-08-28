@@ -96,7 +96,9 @@ def test_javascript_module_children_keep_explicit_cache_versions() -> None:
     # Django's stable manifest backend fingerprints entrypoints but does not yet
     # rewrite ES-module imports. Keep child imports versioned until a bundler or
     # a production-proven module-aware storage owns the complete dependency graph.
-    assert "?v=" in _source("backend/static_src/js/app.js")
+    app = _source("backend/static_src/js/app.js")
+    assert "?v=" in app
+    assert "gang-sheet-editor.js?v=20260828-studio-groups-v23" in app
     assert "?v=" in _source("backend/static_src/js/marketing.js")
 
 

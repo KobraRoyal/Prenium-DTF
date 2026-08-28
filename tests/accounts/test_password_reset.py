@@ -40,6 +40,16 @@ def test_login_page_exposes_password_reset_and_support():
 
 
 @pytest.mark.django_db
+def test_password_reset_empty_email_shows_inline_error():
+    cache.clear()
+    response = Client().post(reverse("portal:password-reset"), {"email": ""})
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert 'id="id_email-error" role="alert">Indiquez votre email professionnel.</p>' in html
+    assert "ui-input--error" in html
+
+
+@pytest.mark.django_db
 @override_settings(PUBLIC_BASE_URL="https://portal.example.test")
 def test_unknown_email_does_not_send_mail_and_uses_the_same_success_page(
     django_capture_on_commit_callbacks,

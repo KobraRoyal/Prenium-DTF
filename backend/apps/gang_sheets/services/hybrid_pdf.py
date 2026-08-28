@@ -9,6 +9,7 @@ import pymupdf
 from PIL import Image
 
 from apps.gang_sheets.services.cropping import CropBox, crop_image
+from apps.gang_sheets.services.text_items import draw_text_item, is_text_item
 from apps.uploads.services.asset_preview import AssetPreviewRenderer
 
 MM_TO_POINTS = 72 / 25.4
@@ -48,7 +49,12 @@ class GangSheetHybridPdfComposer:
                 height=float(sheet.height_mm) * MM_TO_POINTS,
             )
             for item in items:
+                if is_text_item(item):
+                    draw_text_item(page=page, item=item, rect=self._item_rect(item))
+                    continue
                 version = item.asset_version
+                if version is None:
+                    raise HybridPdfCompositionError("Un visuel de la planche n’a pas de fichier.")
                 crop = crops.get(version.asset_id, CropBox.full())
                 content = source_contents.get(version.pk)
                 if content is None:

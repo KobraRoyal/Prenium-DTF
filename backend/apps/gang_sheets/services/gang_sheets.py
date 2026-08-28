@@ -32,6 +32,27 @@ from apps.gang_sheets.services.cropping import (
 )
 from apps.gang_sheets.services.drive import GangSheetDriveSyncService
 from apps.gang_sheets.services.geometry import GangSheetGeometryService, normalize_rotation
+from apps.gang_sheets.services.text_items import (
+    DEFAULT_TEXT_ALIGN,
+    DEFAULT_TEXT_COLOR,
+    DEFAULT_TEXT_CONTENT,
+    DEFAULT_TEXT_FONT,
+    DEFAULT_TEXT_SIZE_MM,
+    TextItemValidationError,
+    default_box_mm,
+    default_origin_mm,
+    display_name,
+    fitted_box_mm,
+    is_text_item,
+    normalize_text_align,
+    normalize_text_bold,
+    normalize_text_color,
+    normalize_text_content,
+    normalize_text_font,
+    normalize_text_size_mm,
+    serialized_font_catalog,
+    usable_text_max_width_mm,
+)
 from apps.orders.services.pricing import OrderPricingService
 from apps.uploads.models import AssetVersion
 from apps.uploads.services.assets import AssetDomainError, AssetService
@@ -362,6 +383,7 @@ class GangSheetService:
                 GangSheetItem(
                     customer=locked.customer,
                     sheet=locked,
+                    kind=GangSheetItem.Kind.VISUAL,
                     asset_version=version,
                     x_mm=locked.margin_mm,
                     y_mm=locked.margin_mm,
@@ -398,6 +420,72 @@ class GangSheetService:
             },
         )
         return items
+
+    @transaction.atomic
+    def add_text_item(
+        self,
+        *,
+        sheet,
+        actor,
+        content=None,
+        font=None,
+        size_mm=None,
+        color=None,
+        align=None,
+        bold=False,
+        source="client_portal",
+    ):
+        locked = self._lock_editable(sheet)
+        try:
+            text_content = normalize_text_content(content or DEFAULT_TEXT_CONTENT)
+            text_font = normalize_text_font(font or DEFAULT_TEXT_FONT)
+            text_size_mm = normalize_text_size_mm(size_mm or DEFAULT_TEXT_SIZE_MM)
+            text_color = normalize_text_color(color or DEFAULT_TEXT_COLOR)
+            text_align = normalize_text_align(align or DEFAULT_TEXT_ALIGN)
+            text_bold = normalize_text_bold(bold)
+        except TextItemValidationError as error:
+            raise GangSheetDomainError(error.code, error.message) from error
+        width_mm, height_mm = default_box_mm(
+            sheet_width_mm=locked.width_mm,
+            margin_mm=locked.margin_mm,
+            content=text_content,
+            font=text_font,
+            bold=text_bold,
+            size_mm=text_size_mm,
+        )
+        x_mm, y_mm = default_origin_mm(sheet=locked, width_mm=width_mm, height_mm=height_mm)
+        item = GangSheetItem.objects.create(
+            customer=locked.customer,
+            sheet=locked,
+            kind=GangSheetItem.Kind.TEXT,
+            asset_version=None,
+            text_content=text_content,
+            text_font=text_font,
+            text_size_mm=text_size_mm,
+            text_color=text_color,
+            text_align=text_align,
+            text_bold=text_bold,
+            x_mm=x_mm,
+            y_mm=y_mm,
+            width_mm=width_mm,
+            height_mm=height_mm,
+            z_index=locked.items.count() + 1,
+        )
+        self._refresh_sheet(locked)
+        self._mark_dirty(locked)
+        self._audit(
+            "text_item_added",
+            sheet=locked,
+            actor=actor,
+            source=source,
+            metadata={
+                "item_public_id": str(item.public_id),
+                "font": text_font,
+                "size_mm": str(text_size_mm),
+                "length": len(text_content),
+            },
+        )
+        return item
 
     @transaction.atomic
     def repeat_occurrence_grid(
@@ -462,9 +550,7 @@ class GangSheetService:
                     continue
                 clones.append(
                     GangSheetItem(
-                        customer=locked.customer,
-                        sheet=locked,
-                        asset_version=source_item.asset_version,
+                        **self._clone_item_fields(source_item),
                         x_mm=origin_x + column * (effective_width + spacing_x),
                         y_mm=origin_y + row * (effective_height + spacing_y),
                         width_mm=source_item.width_mm,
@@ -511,9 +597,7 @@ class GangSheetService:
         if source_item is None:
             raise GangSheetDomainError("ITEM_NOT_FOUND", "Occurrence introuvable.")
         item = GangSheetItem.objects.create(
-            customer=locked.customer,
-            sheet=locked,
-            asset_version=source_item.asset_version,
+            **self._clone_item_fields(source_item),
             x_mm=source_item.x_mm + locked.item_spacing_x_mm,
             y_mm=source_item.y_mm + locked.item_spacing_y_mm,
             width_mm=source_item.width_mm,
@@ -725,6 +809,9 @@ class GangSheetService:
                 item.height_mm = self._decimal(row.get("height_mm"))
                 item.rotation = normalize_rotation(row.get("rotation", 0))
                 item.layout_group_id = self._optional_uuid(row.get("layout_group_id"))
+                self._apply_text_layout(item, row, sheet=locked)
+        except TextItemValidationError as error:
+            raise GangSheetDomainError(error.code, error.message) from error
         except (KeyError, TypeError, ValueError, InvalidOperation) as error:
             raise GangSheetDomainError(
                 "INVALID_LAYOUT", str(error) or "Placement invalide."
@@ -738,6 +825,12 @@ class GangSheetService:
                 "height_mm",
                 "rotation",
                 "layout_group_id",
+                "text_content",
+                "text_font",
+                "text_size_mm",
+                "text_color",
+                "text_align",
+                "text_bold",
                 "updated_at",
             ],
         )
@@ -766,7 +859,7 @@ class GangSheetService:
         locked = self._lock_editable(sheet)
         items = list(locked.items.select_for_update())
         if not items:
-            raise GangSheetDomainError("ITEMS_REQUIRED", "Ajoutez au moins un visuel.")
+            raise GangSheetDomainError("ITEMS_REQUIRED", "Ajoutez au moins un visuel ou un texte.")
         spacing_x = self._spacing_decimal(
             locked.item_spacing_x_mm if spacing_x_mm is None else spacing_x_mm
         )
@@ -813,7 +906,7 @@ class GangSheetService:
         items = list(locked.items.select_for_update().select_related("asset_version"))
         issues = self.geometry.issues(sheet=locked, items=items)
         if not items:
-            raise GangSheetDomainError("ITEMS_REQUIRED", "Ajoutez au moins un visuel.")
+            raise GangSheetDomainError("ITEMS_REQUIRED", "Ajoutez au moins un visuel ou un texte.")
         if issues:
             raise GangSheetDomainError(
                 "INVALID_GEOMETRY",
@@ -1031,21 +1124,14 @@ class GangSheetService:
             "surface_sqm": float(sheet.surface_sqm),
             "unit_price_eur": float(sheet.unit_price_eur),
             "estimated_price_eur": float(sheet.estimated_price_eur),
+            "text_fonts": serialized_font_catalog(),
             "issues": issues,
             "items": [
-                {
-                    "public_id": str(item.public_id),
-                    "asset_name": item.asset_version.asset.name,
-                    "asset_version_public_id": str(item.asset_version.public_id),
-                    "preview_url": preview_url_resolver(item.asset_version),
-                    "x_mm": float(item.x_mm),
-                    "y_mm": float(item.y_mm),
-                    "width_mm": float(item.width_mm),
-                    "height_mm": float(item.height_mm),
-                    "rotation": item.rotation,
-                    "layout_group_id": str(item.layout_group_id) if item.layout_group_id else None,
-                    "has_issue": str(item.public_id) in issue_ids,
-                }
+                self._serialize_item(
+                    item,
+                    issues=issue_ids,
+                    preview_url_resolver=preview_url_resolver,
+                )
                 for item in items
             ],
         }
@@ -1134,6 +1220,89 @@ class GangSheetService:
             transaction.on_commit(
                 lambda stored_files=stored_files: self._delete_stored_files(stored_files)
             )
+
+    @staticmethod
+    def _clone_item_fields(source_item) -> dict:
+        return {
+            "customer": source_item.customer,
+            "sheet": source_item.sheet,
+            "kind": source_item.kind,
+            "asset_version": source_item.asset_version,
+            "text_content": source_item.text_content,
+            "text_font": source_item.text_font,
+            "text_size_mm": source_item.text_size_mm,
+            "text_color": source_item.text_color,
+            "text_align": source_item.text_align,
+            "text_bold": source_item.text_bold,
+        }
+
+    @staticmethod
+    def _apply_text_layout(item, row: dict, *, sheet=None) -> None:
+        if not is_text_item(item):
+            return
+        item.text_content = normalize_text_content(
+            row["text_content"] if "text_content" in row else item.text_content
+        )
+        item.text_font = normalize_text_font(
+            row["text_font"] if "text_font" in row else item.text_font
+        )
+        item.text_size_mm = normalize_text_size_mm(
+            row["text_size_mm"] if "text_size_mm" in row else item.text_size_mm
+        )
+        item.text_color = normalize_text_color(
+            row["text_color"] if "text_color" in row else item.text_color
+        )
+        item.text_align = normalize_text_align(
+            row["text_align"] if "text_align" in row else item.text_align
+        )
+        item.text_bold = normalize_text_bold(
+            row["text_bold"] if "text_bold" in row else item.text_bold
+        )
+        board = sheet or item.sheet
+        max_width = usable_text_max_width_mm(
+            sheet_width_mm=board.width_mm,
+            margin_mm=board.margin_mm,
+            x_mm=item.x_mm,
+            sheet_height_mm=board.height_mm,
+            y_mm=item.y_mm,
+            rotation=item.rotation,
+        )
+        item.width_mm, item.height_mm = fitted_box_mm(
+            content=item.text_content,
+            max_width_mm=max_width,
+            font=item.text_font,
+            bold=item.text_bold,
+            size_mm=item.text_size_mm,
+        )
+
+    @staticmethod
+    def _serialize_item(item, *, issues, preview_url_resolver) -> dict:
+        text = is_text_item(item)
+        preview_url = ""
+        asset_version_public_id = None
+        if item.asset_version_id:
+            asset_version_public_id = str(item.asset_version.public_id)
+            preview_url = preview_url_resolver(item.asset_version)
+        return {
+            "public_id": str(item.public_id),
+            "kind": item.kind,
+            "asset_name": display_name(item),
+            "asset_version_public_id": asset_version_public_id,
+            "preview_url": preview_url,
+            "x_mm": float(item.x_mm),
+            "y_mm": float(item.y_mm),
+            "width_mm": float(item.width_mm),
+            "height_mm": float(item.height_mm),
+            "rotation": item.rotation,
+            "layout_group_id": str(item.layout_group_id) if item.layout_group_id else None,
+            "has_issue": str(item.public_id) in issues,
+            "text_content": item.text_content if text else "",
+            "text_font": item.text_font if text else "",
+            "text_size_mm": float(item.text_size_mm) if text else None,
+            "text_color": item.text_color if text else "",
+            "text_align": item.text_align if text else "",
+            "text_bold": bool(item.text_bold) if text else False,
+        }
 
     @staticmethod
     def _normalize_z_indexes(sheet):

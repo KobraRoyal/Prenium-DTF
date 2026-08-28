@@ -3,7 +3,7 @@
 | Document | Description |
 |----------|-------------|
 | [B2B_PRODUCT_AND_OPERATIONS.md](../architecture/B2B_PRODUCT_AND_OPERATIONS.md) | Modèle B2B : facturation périodique, encours, métrage opérateur, laize, grille tarifaire (référence métier). |
-| [UX_FRONT_GUIDE.md](./UX_FRONT_GUIDE.md) | Intentions et règles UX pour le front grand public / portail. |
+| [TOKEN_BRAND_CONTRACT.md](./TOKEN_BRAND_CONTRACT.md) | Contrat tokens CSS + vue Identité visuelle Atelier (primaire / secondaire live). |
 | [UX_BACKOFFICE_GUIDE.md](./UX_BACKOFFICE_GUIDE.md) | Guide UX backoffice / staff. |
 | [RECETTE_VISUELLE_LOT4.md](./RECETTE_VISUELLE_LOT4.md) | Recette visuelle page par page + budget CSS bundles scindés (Lot 4). |
 | [AUDIT_PORTAIL_CLIENT_UI_UX_2026.md](./AUDIT_PORTAIL_CLIENT_UI_UX_2026.md) | Audit détaillé UI/UX portail client (score, bugs, backlog P1–P3, impacts backend). |

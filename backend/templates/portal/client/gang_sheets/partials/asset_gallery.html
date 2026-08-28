@@ -34,18 +34,22 @@
             aria-label="Retirer {{ asset.name }} de la galerie"
           >Retirer</button>
           {% else %}
-          <button
-            type="button"
-            class="gang-asset-card__remove"
-            disabled
+          <span
+            class="gang-asset-card__usage-state"
             title="Supprimez d’abord toutes les occurrences de ce visuel"
-          >Utilisé</button>
+          >Utilisé</span>
           {% endif %}
         {% endif %}
       </div>
       <div class="gang-asset-card__add">
-        <label>Qté<input type="number" min="1" max="200" step="1" value="1" inputmode="numeric" data-asset-quantity></label>
-        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-add-asset="{{ asset.public_id }}" data-asset-ready="{{ asset.is_ready|yesno:'true,false' }}" {% if not can_edit or not asset.is_ready %}disabled{% endif %}>{% if asset.is_ready %}Placer sur la planche{% else %}Analyse en cours{% endif %}</button>
+        <div class="ui-field-group gang-asset-card__qty">
+          <label class="ui-label" for="gang-asset-qty-{{ asset.public_id }}">Qté</label>
+          <input class="ui-input" id="gang-asset-qty-{{ asset.public_id }}" type="number" min="1" max="200" step="1" value="1" inputmode="numeric" data-asset-quantity aria-label="Quantité à placer">
+        </div>
+        <button type="button" class="ui-btn ui-btn-primary gang-asset-card__place" data-add-asset="{{ asset.public_id }}" data-asset-ready="{{ asset.is_ready|yesno:'true,false' }}" {% if not can_edit or not asset.is_ready %}disabled{% endif %} aria-label="{% if asset.is_ready %}Placer sur la planche{% else %}Analyse en cours{% endif %}" title="{% if asset.is_ready %}Placer sur la planche{% else %}Analyse en cours{% endif %}">
+          {% include "portal/client/gang_sheets/partials/icon.html" with name="plus" size="16" %}
+          <span>{% if asset.is_ready %}Placer{% else %}Analyse{% endif %}</span>
+        </button>
       </div>
     </div>
     {% if asset.can_remove %}

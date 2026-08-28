@@ -26,7 +26,7 @@ Rendre la navigation principale des portails client et Atelier plus intuitive, p
 - aperçu de planche affiché via la route backend déjà scopée, en disposition inline privée et sans exposition directe du stockage ;
 - suppression déplacée dans un menu secondaire, avec la confirmation et les refus métier existants conservés.
 - studio Gang Sheet transformé en surface de travail pleine largeur : en-tête compact, métriques condensées, canevas prioritaire et panneaux latéraux indépendants ;
-- progression rendue dynamique selon le statut réel, avec état d’enregistrement local, alerte avant sortie et commandes de zoom de `50 %` à `150 %` ;
+- progression rendue dynamique selon le statut réel, avec état d’enregistrement local, alerte avant sortie et commandes de zoom de `50 %` à `400 %` (cadrage sélection/groupe) ;
 - navigation mobile du studio en trois sections `Fichiers`, `Composition` et `Réglages`, sans empiler l’ensemble des outils dans une page interminable ;
 - hauteur du studio bornée au viewport : le rouleau long défile dans le plan de travail tandis que la bibliothèque et le contrôle restent accessibles ;
 - vocabulaire de validation clarifié et cibles interactives maintenues à `44 px` minimum.

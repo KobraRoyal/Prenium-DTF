@@ -72,7 +72,7 @@ Voir aussi la vue d’ensemble métier : [architecture/B2B_PRODUCT_AND_OPERATION
 ## Comment se connecter
 
 1. Aller sur **`/login/`** (pas sur `/admin/login/` pour le portail applicatif).
-2. Saisir email + mot de passe seed.
+2. Saisir email + mot de passe seed. Champs vides : message rouge sous le champ (pas de bulle « Veuillez renseigner ce champ »). Identifiants incorrects : bannière en tête de formulaire.
 3. Redirection automatique vers **dashboard client** ou **dashboard staff** selon le profil.
 4. Lien **Mot de passe oublié ?** → `/mot-de-passe-oublie/` (e-mail locmem / SMTP selon l’environnement).
 
@@ -93,7 +93,9 @@ cd backend && npm run build:css:docker
 docker compose restart web
 ```
 
-Puis hard-refresh navigateur. Les templates portail chargent `portal.css?v=20260823-brand-light-v7` (ou version courante du sprint).
+Puis hard-refresh navigateur. Les templates portail chargent les bundles de surface avec la version
+partagée `?v=20260828-auth-inline-v2` (`portal-core.css`, bundle de rôle, `studio.css` et
+`app.js`). Le cache de `gang-sheet-editor.js` reste versionné séparément dans l'import de `app.js`.
 
 ## Référence détaillée sprint
 

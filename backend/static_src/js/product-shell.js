@@ -130,6 +130,138 @@ function initProductMenuFallback() {
   });
 }
 
+const INLINE_REQUIRED_MISSING = "Renseignez ce champ.";
+const INLINE_REQUIRED_INVALID = "Indiquez une valeur valide.";
+
+function isInlineRequiredField(field) {
+  if (
+    !(
+      field instanceof HTMLInputElement ||
+      field instanceof HTMLSelectElement ||
+      field instanceof HTMLTextAreaElement
+    )
+  ) {
+    return false;
+  }
+  if (!field.required || field.disabled || field.type === "hidden") {
+    return false;
+  }
+  return true;
+}
+
+function inlineRequiredMessage(field) {
+  if (field.validity.valueMissing) {
+    return field.dataset.missingMessage || INLINE_REQUIRED_MISSING;
+  }
+  if (field.validity.typeMismatch) {
+    return field.dataset.invalidMessage || INLINE_REQUIRED_INVALID;
+  }
+  return "";
+}
+
+function inlineRequiredErrorElement(field) {
+  const describedBy = field.getAttribute("aria-describedby") || "";
+  for (const id of describedBy.split(/\s+/)) {
+    if (!id) {
+      continue;
+    }
+    const candidate = document.getElementById(id);
+    if (candidate?.classList.contains("ui-error-text")) {
+      return candidate;
+    }
+  }
+  return field.closest(".ui-field-group")?.querySelector(".ui-error-text") || null;
+}
+
+function setInlineRequiredError(field, message) {
+  const errorNode = inlineRequiredErrorElement(field);
+  const invalid = Boolean(message);
+
+  field.classList.toggle("ui-input--error", invalid);
+  if (invalid) {
+    field.setAttribute("aria-invalid", "true");
+  } else {
+    field.removeAttribute("aria-invalid");
+  }
+
+  if (!errorNode) {
+    return;
+  }
+
+  if (invalid) {
+    errorNode.textContent = message;
+    errorNode.removeAttribute("hidden");
+  } else {
+    errorNode.textContent = "";
+    errorNode.setAttribute("hidden", "");
+  }
+}
+
+function syncInlineRequiredField(field) {
+  if (!isInlineRequiredField(field)) {
+    return "";
+  }
+  const message = inlineRequiredMessage(field);
+  setInlineRequiredError(field, message);
+  return message;
+}
+
+function validateInlineRequiredForm(form) {
+  const fields = [...form.elements].filter(isInlineRequiredField);
+  let firstInvalid = null;
+
+  for (const field of fields) {
+    if (syncInlineRequiredField(field) && !firstInvalid) {
+      firstInvalid = field;
+    }
+  }
+
+  if (firstInvalid) {
+    const alert = form
+      .closest(".product-auth-card, .product-login-card")
+      ?.querySelector(".alert--danger");
+    if (alert instanceof HTMLElement) {
+      alert.hidden = true;
+    }
+    firstInvalid.focus();
+    return false;
+  }
+
+  return true;
+}
+
+function bindInlineRequiredForm(form) {
+  if (form.dataset.inlineRequiredReady === "true") {
+    return;
+  }
+
+  form.dataset.inlineRequiredReady = "true";
+  form.addEventListener("input", (event) => {
+    const field = event.target;
+    if (isInlineRequiredField(field) && field.getAttribute("aria-invalid") === "true") {
+      syncInlineRequiredField(field);
+    }
+  });
+  form.addEventListener("change", (event) => {
+    const field = event.target;
+    if (isInlineRequiredField(field) && field.getAttribute("aria-invalid") === "true") {
+      syncInlineRequiredField(field);
+    }
+  });
+  form.addEventListener("submit", (event) => {
+    if (event.submitter?.hasAttribute("formnovalidate")) {
+      return;
+    }
+    if (!validateInlineRequiredForm(form)) {
+      event.preventDefault();
+    }
+  });
+}
+
+function initInlineRequiredValidation() {
+  document.querySelectorAll("form[data-inline-required]").forEach(bindInlineRequiredForm);
+}
+
 function initSubmitLoadingState() {
   document.querySelectorAll("form[data-submit-loading]").forEach((form) => {
     if (form.dataset.submitLoadingReady === "true") {
@@ -137,8 +269,15 @@ function initSubmitLoadingState() {
     }
 
     form.dataset.submitLoadingReady = "true";
-    form.addEventListener("submit", () => {
-      const submitter = form.querySelector("[type='submit']");
+    form.addEventListener("submit", (event) => {
+      if (event.defaultPrevented || event.submitter?.hasAttribute("formnovalidate")) {
+        return;
+      }
+      if (form.hasAttribute("data-inline-required") && !validateInlineRequiredForm(form)) {
+        event.preventDefault();
+        return;
+      }
+      const submitter = event.submitter || form.querySelector("[type='submit']");
       if (submitter instanceof HTMLButtonElement) {
         submitter.classList.add("is-loading");
         submitter.setAttribute("aria-busy", "true");
@@ -149,6 +288,7 @@ function initSubmitLoadingState() {
 
 function initProductShell() {
   initProductMenuFallback();
+  initInlineRequiredValidation();
   initSubmitLoadingState();
 }
 

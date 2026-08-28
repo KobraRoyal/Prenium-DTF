@@ -21,8 +21,7 @@
   --ink: #201d18;
   --muted: #6b6254;
   --line: #ddd2c1;
-  --brand: #8f3d1f;
-  --brand-strong: #6f2f17;
+  /* --brand / --brand-strong : tokens.css + surcharge <html> BrandTheme. */
   --success: #1f7a40;
   --warning: #8a5a08;
   --danger: #a11a1a;
@@ -1324,7 +1323,7 @@ body.landing-saas .btn-nav-cta {
   font-weight: 600;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #c95a32 0%, #8f3d1f 55%, #6f2f17 100%);
+  background: linear-gradient(135deg, #c95a32 0%, var(--brand) 55%, var(--brand-strong) 100%);
   color: #fff;
   text-decoration: none;
   box-shadow:
@@ -1527,7 +1526,7 @@ body.landing-saas .btn-saas-primary {
   font-size: 0.95rem;
   border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #f0a87a 0%, #c95a32 45%, #8f3d1f 100%);
+  background: linear-gradient(135deg, #f0a87a 0%, #c95a32 45%, var(--brand) 100%);
   color: #fff;
   text-decoration: none;
   box-shadow:
@@ -1607,7 +1606,7 @@ body.landing-saas .landing-dot {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #f0a87a, #8f3d1f);
+  background: linear-gradient(180deg, #f0a87a, var(--brand));
   box-shadow: 0 0 12px rgba(240, 168, 122, 0.6);
 }
 
@@ -1740,7 +1739,7 @@ body.landing-saas .landing-step-index {
   width: 1.75rem;
   height: 1.75rem;
   font-family: "Outfit", sans-serif;
-  background: linear-gradient(145deg, #c95a32, #6f2f17);
+  background: linear-gradient(145deg, #c95a32, var(--brand-strong));
   box-shadow: 0 4px 12px rgba(143, 61, 31, 0.45);
 }
 
@@ -1852,7 +1851,7 @@ body.landing-saas .landing-final-cta .btn {
 
 body.landing-saas .landing-final-cta .btn:not(.btn-secondary) {
   border: none;
-  background: linear-gradient(135deg, #f0a87a 0%, #8f3d1f 100%);
+  background: linear-gradient(135deg, #f0a87a 0%, var(--brand) 100%);
   color: #fff;
   box-shadow: 0 8px 28px rgba(143, 61, 31, 0.45);
 }

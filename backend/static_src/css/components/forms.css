@@ -86,7 +86,8 @@
     opacity: 1;
   }
 
-  .ui-field-group .error-text {
+  .ui-field-group .error-text,
+  .ui-field-group .ui-error-text {
     margin: 0.1rem 0 0;
     color: var(--danger);
     font-size: 0.82rem;

@@ -1,0 +1,8 @@
+Polices OFL embarquées pour le texte de composition Gang Sheet.
+
+- Inter — SIL Open Font License 1.1 — https://github.com/rsms/inter
+- Montserrat — SIL Open Font License 1.1 — https://github.com/JulietaUla/Montserrat
+- Oswald — SIL Open Font License 1.1 — https://github.com/googlefonts/OswaldFont
+- Playfair Display — SIL Open Font License 1.1 — https://github.com/clauseggers/Playfair-Display
+
+Fichiers latin via Fontsource. Helvetica, Times et Courier restent des polices PDF standard.

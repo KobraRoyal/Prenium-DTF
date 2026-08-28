@@ -62,6 +62,43 @@ rééchantillonnage. Les PNG, JPEG et TIFF sont intégrés avec leurs pixels nat
 et leur profil ICC lorsque le format le fournit. Les formats de travail raster non intégrables
 directement, notamment PSD, utilisent leur composite aplati en PNG sans redimensionnement.
 
+Un `GangSheetItem` peut aussi être un texte de composition, sans fichier source. Le texte est
+validé côté serveur (longueur, police du catalogue, couleur `#RRGGBB`, alignement) puis dessiné
+en vectoriel dans le PDF HD via les polices PDF standard ou des polices OFL embarquées
+(Inter, Montserrat, Oswald, Playfair). La taille du texte est un corps explicite en
+millimètres, indépendant de la largeur du bloc. Le cadre se cale sur le texte
+(largeur et hauteur) ; un retour à la ligne explicite crée une vraie ligne.
+Le wrap n’intervient que si une ligne dépasse la largeur utile de la planche
+(ou la hauteur utile après une rotation 90°/270°). Une rotation compose le
+texte à plat puis le place comme un visuel, sans double pivot. L’aperçu
+studio pivote via un calque rotator distinct du nœud texte, pour que `cqw`
+mesure la boîte logique non tournée ; un item seul est recalé dans la
+planche après pivot. La géométrie
+est recalculée à l’enregistrement, et la planche s’allonge si
+besoin. L’aperçu client reste rasterisé, comme
+pour les diagnostics. Un clic (sans glisser) ouvre l’écriture
+directement sur la planche. Le texte par défaut est sélectionné pour être
+remplacé ; un texte déjà saisi reçoit le caret. Entrée insère un retour à la
+ligne. Échap termine l’écriture sans désélectionner. L’inspecteur reste synchronisé. Le navigateur n’est pas la source d’autorité : police, corps,
+contenu et géométrie sont revalidés à l’enregistrement.
+
+Le zoom studio cadre l’objet, le groupe ou la planche sans modifier les
+coordonnées millimètres. Un groupe mémorisé (`layout_group_id`) se comporte
+comme un seul objet pour Aligner et Répartir : ses membres conservent leurs
+écarts internes ; seuls les visuels isolés et les autres groupes se calent
+indépendamment. La référence Planche / Autres visuels continue de déplacer
+toute la sélection d’un bloc. Les commandes `+` / `−` conservent le centre visé
+(sélection si elle existe, sinon le point sous le curseur ou le centre du
+viewport). **Cadrer** (`Maj+2`) calcule un facteur pour remplir la fenêtre
+avec une marge, borné entre 50 % et 400 %, puis fait défiler jusqu’au
+centre de la cible. Réinitialiser ramène à 100 % en gardant le même ancrage.
+Ctrl/Cmd + molette zoome de la même façon. Aucune mutation de layout n’est
+enregistrée. Le corps du texte studio est un pourcentage de la largeur de
+planche (`cqw` du canvas), pas de la boîte. La mesure du cadre utilise une
+échelle px/mm constante, pour que toute la saisie reste visible. Quatre
+poignées d’angle permettent d’agrandir ; le corps se déplace au curseur
+« grab ».
+
 Le recadrage proposé dans la modal d’import est non destructif. La planche stocke une fenêtre
 normalisée `(x, y, largeur, hauteur)` sur `GangSheetSourceAsset`, tandis que l’`AssetVersion`
 originale reste inchangée. Les dimensions physiques proposées et les aperçus utilisent cette
