@@ -360,6 +360,8 @@ html[data-theme="prenium"] body.product-shell .ui-selection-control {
   background: transparent !important;
   box-shadow: none !important;
   text-decoration: none;
+  touch-action: manipulation;
+  cursor: pointer;
   transform: none !important;
   transition: color var(--ui-action-transition) !important;
 }

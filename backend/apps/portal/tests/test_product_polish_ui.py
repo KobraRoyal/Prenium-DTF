@@ -141,6 +141,7 @@ class ProductPolishUITests(SimpleTestCase):
             "transform: scaleX(0) !important",
             "transform: scaleX(1) !important",
             "transition: none !important",
+            "cursor: pointer",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, buttons)
