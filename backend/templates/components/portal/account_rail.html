@@ -24,31 +24,31 @@
   </div>
   {% endif %}
 
-  <nav class="account-profile-nav" aria-label="Rubriques du compte">
+  <nav class="account-profile-nav ui-selection-rail" aria-label="Rubriques du compte">
     {% if nav_mode == "staff" %}
     <a
-      class="{% if account_section == 'identity' %}is-active{% endif %}"
+      class="ui-selection-control{% if account_section == 'identity' %} is-active{% endif %}"
       href="#account-identity"
       {% if account_section == 'identity' %}aria-current="location"{% endif %}
     >Identité</a>
     {% elif profile_workspace %}
     {% url 'portal:profile' as profile_url %}
     <a
-      class="{% if account_section == 'identity' %}is-active{% endif %}"
+      class="ui-selection-control{% if account_section == 'identity' %} is-active{% endif %}"
       href="{% if account_section == 'team' %}{{ profile_url }}?space=client#account-identity{% else %}#account-identity{% endif %}"
       {% if account_section == 'identity' %}aria-current="location"{% endif %}
     >Identité</a>
     {% if customer %}
     {% if account_section == "team" %}
-    <a href="{{ profile_url }}?space=client#account-company">Société</a>
+    <a class="ui-selection-control" href="{{ profile_url }}?space=client#account-company">Société</a>
     {% elif company_profile %}
-    <a href="#account-company">Société</a>
+    <a class="ui-selection-control" href="#account-company">Société</a>
     {% endif %}
     {% endif %}
     {% if customer %}
       {% if selected_membership.can_manage_team or customer_membership %}
       <a
-        class="{% if account_section == 'team' %}is-active{% endif %}"
+        class="ui-selection-control{% if account_section == 'team' %} is-active{% endif %}"
         href="{% url 'portal:client-team' customer_public_id=customer.public_id %}"
         {% if account_section == 'team' %}aria-current="page"{% endif %}
       >Équipe</a>
@@ -56,14 +56,14 @@
     {% endif %}
     {% else %}
     <a
-      class="{% if account_section == 'identity' %}is-active{% endif %}"
+      class="ui-selection-control{% if account_section == 'identity' %} is-active{% endif %}"
       href="{% url 'portal:profile' %}?space={{ nav_mode|default:'client' }}"
       {% if account_section == 'identity' %}aria-current="page"{% endif %}
     >Mes informations</a>
     {% if nav_mode == "client" and customer %}
       {% if selected_membership.can_manage_team or customer_membership %}
       <a
-        class="{% if account_section == 'team' %}is-active{% endif %}"
+        class="ui-selection-control{% if account_section == 'team' %} is-active{% endif %}"
         href="{% url 'portal:client-team' customer_public_id=customer.public_id %}"
         {% if account_section == 'team' %}aria-current="page"{% endif %}
       >Équipe</a>

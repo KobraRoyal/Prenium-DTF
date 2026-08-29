@@ -267,10 +267,11 @@ class UiFoundationSourceTests(SimpleTestCase):
             "perms.notifications.view_emailtemplate",
             "perms.customers.manage_customer_pricing",
             "perms.gang_sheets.configure_gangsheet",
-            "perms.branding.view_brandthemesettings",
         ]:
             with self.subTest(permission_contract=permission_contract):
                 self.assertIn(permission_contract, staff)
+
+        self.assertNotIn("perms.branding.view_brandthemesettings", staff)
 
         self.assertIn("portal_nav_access.customer_public_id", client)
         self.assertIn("portal_nav_access.project_creation_enabled", client)

@@ -1,7 +1,7 @@
 {% if sheet.can_delete and can_edit %}
 <button
   type="button"
-  class="{{ button_class|default:'ui-btn ui-btn-danger ui-btn-sm' }}"
+  class="ui-destructive-action{% if button_class %} {{ button_class }}{% endif %}"
   data-dialog-open="delete-gang-sheet-dialog-{{ sheet.public_id }}"
   aria-haspopup="dialog"
 >

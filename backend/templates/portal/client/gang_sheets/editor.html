@@ -37,7 +37,7 @@
             <h1>{{ sheet.name }}</h1>
           </div>
           <div class="gang-editor__title-actions">
-            {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="editor" label="Supprimer" button_class="ui-btn ui-btn-ghost ui-btn-sm gang-editor__delete" %}
+            {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="editor" label="Supprimer" button_class="gang-editor__delete" %}
           </div>
         </div>
       </div>
@@ -179,17 +179,17 @@
     </div>
   </dialog>
 
-  <nav class="gang-editor__mobile-tabs" role="tablist" aria-label="Sections du studio">
-    <button id="gang-editor-tab-assets" type="button" role="tab" tabindex="-1" data-mobile-panel-tab="assets" aria-controls="gang-editor-assets" aria-selected="false">
+  <nav class="gang-editor__mobile-tabs ui-selection-rail ui-selection-rail--horizontal" role="tablist" aria-label="Sections du studio">
+    <button id="gang-editor-tab-assets" type="button" class="ui-selection-control" role="tab" tabindex="-1" data-mobile-panel-tab="assets" aria-controls="gang-editor-assets" aria-selected="false">
       {% include "portal/client/gang_sheets/partials/icon.html" with name="files" size="16" %}
       <span>Fichiers</span>
       <span class="gang-editor__mobile-count">{{ assets|length }}</span>
     </button>
-    <button id="gang-editor-tab-canvas" type="button" role="tab" tabindex="0" data-mobile-panel-tab="canvas" aria-controls="gang-editor-canvas" aria-selected="true" class="is-active">
+    <button id="gang-editor-tab-canvas" type="button" role="tab" tabindex="0" data-mobile-panel-tab="canvas" aria-controls="gang-editor-canvas" aria-selected="true" class="ui-selection-control is-active">
       {% include "portal/client/gang_sheets/partials/icon.html" with name="canvas" size="16" %}
       <span>Composition</span>
     </button>
-    <button id="gang-editor-tab-settings" type="button" role="tab" tabindex="-1" data-mobile-panel-tab="settings" aria-controls="gang-editor-settings" aria-selected="false">
+    <button id="gang-editor-tab-settings" type="button" class="ui-selection-control" role="tab" tabindex="-1" data-mobile-panel-tab="settings" aria-controls="gang-editor-settings" aria-selected="false">
       {% include "portal/client/gang_sheets/partials/icon.html" with name="settings" size="16" %}
       <span>Réglages</span>
       <span class="gang-editor__mobile-count" data-mobile-issue-count>0</span>

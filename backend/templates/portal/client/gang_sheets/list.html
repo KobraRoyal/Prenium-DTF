@@ -28,12 +28,12 @@
 
     {% if sheets %}
     <div class="gang-sheet-toolbar" aria-label="Filtrer les planches DTF">
-      <nav class="ui-list-tabs gang-sheet-library__filters" role="tablist" aria-label="Filtrer par statut">
-        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'all'" :aria-selected="filter === 'all'" :class="{ 'is-active': filter === 'all' }"><span class="ui-list-tabs__label">Toutes</span></button>
-        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'draft'" :aria-selected="filter === 'draft'" :class="{ 'is-active': filter === 'draft' }"><span class="ui-list-tabs__label">Brouillons</span></button>
-        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'processing'" :aria-selected="filter === 'processing'" :class="{ 'is-active': filter === 'processing' }"><span class="ui-list-tabs__label">En traitement</span></button>
-        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'validated'" :aria-selected="filter === 'validated'" :class="{ 'is-active': filter === 'validated' }"><span class="ui-list-tabs__label">Validées</span></button>
-        <button type="button" class="ui-list-tabs__tab" role="tab" x-on:click="filter = 'ordered'" :aria-selected="filter === 'ordered'" :class="{ 'is-active': filter === 'ordered' }"><span class="ui-list-tabs__label">Commandées</span></button>
+      <nav class="ui-list-tabs ui-selection-rail ui-selection-rail--horizontal gang-sheet-library__filters" role="tablist" aria-label="Filtrer par statut">
+        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'all'" :aria-selected="filter === 'all'" :class="{ 'is-active': filter === 'all' }"><span class="ui-list-tabs__label">Toutes</span></button>
+        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'draft'" :aria-selected="filter === 'draft'" :class="{ 'is-active': filter === 'draft' }"><span class="ui-list-tabs__label">Brouillons</span></button>
+        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'processing'" :aria-selected="filter === 'processing'" :class="{ 'is-active': filter === 'processing' }"><span class="ui-list-tabs__label">En traitement</span></button>
+        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'validated'" :aria-selected="filter === 'validated'" :class="{ 'is-active': filter === 'validated' }"><span class="ui-list-tabs__label">Validées</span></button>
+        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'ordered'" :aria-selected="filter === 'ordered'" :class="{ 'is-active': filter === 'ordered' }"><span class="ui-list-tabs__label">Commandées</span></button>
       </nav>
       <label class="gang-sheet-search">
         <span class="ui-sr-only">Rechercher une planche DTF</span>

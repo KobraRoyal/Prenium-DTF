@@ -66,7 +66,7 @@
       <div>
         <dt>Client</dt>
         <dd>
-          <a class="staff-order-focus__client" href="{% url 'portal:staff-customer-detail' customer_public_id=order.customer.public_id %}">{{ order.customer.name }}</a>
+          <a class="staff-order-focus__client ui-inline-action" href="{% url 'portal:staff-customer-detail' customer_public_id=order.customer.public_id %}">{{ order.customer.name }}</a>
         </dd>
       </div>
       <div>
@@ -79,7 +79,7 @@
         <dt>Drive</dt>
         <dd>
           {% if order_drive_url %}
-          <a href="{{ order_drive_url }}" target="_blank" rel="noopener noreferrer">Dossier Drive</a>
+          <a class="ui-inline-action" href="{{ order_drive_url }}" target="_blank" rel="noopener noreferrer">Dossier Drive</a>
           {% else %}
           <span class="muted">Non lié</span>
           {% endif %}

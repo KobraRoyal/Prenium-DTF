@@ -28,8 +28,8 @@ class UiListTabsTagTests(SimpleTestCase):
                 }
             )
         )
-        self.assertIn('class="ui-list-tabs"', rendered)
-        self.assertIn('class="ui-list-tabs__tab is-active', rendered)
+        self.assertIn("ui-selection-rail--horizontal", rendered)
+        self.assertIn('class="ui-list-tabs__tab ui-selection-control is-active', rendered)
         self.assertIn("status=pending_review", rendered)
         self.assertIn("q=acme", rendered)
         self.assertIn('aria-current="page"', rendered)

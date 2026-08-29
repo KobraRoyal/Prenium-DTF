@@ -357,7 +357,9 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         source = template_source("components/ui/list_tabs.html")
         for marker in (
             'class="ui-list-tabs',
+            "ui-selection-rail--horizontal",
             "ui-list-tabs__tab",
+            "ui-selection-control",
             "ui-list-tabs__label",
             "ui-list-tabs__count",
             'role="tablist"',
@@ -370,7 +372,12 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
             encoding="utf-8"
         )
         self.assertIn("/* v17 — Onglets / filtres de listes homogènes", css)
-        self.assertIn(".ui-list-tabs__tab.is-active", css)
+        self.assertIn("min-height: var(--ui-action-min-h)", css)
+        self.assertIn(".ui-selection-control:is(", css)
+        list_tabs = css.split("v17 — Onglets / filtres", 1)[1].split(
+            "v114 — Onglets workflow", 1
+        )[0]
+        self.assertNotIn(".ui-list-tabs__tab.is-active", list_tabs)
 
     def test_client_dashboard_uses_single_content_surface(self) -> None:
         source = template_source("portal/client/dashboard.html")

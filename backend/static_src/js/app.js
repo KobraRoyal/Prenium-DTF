@@ -1,4 +1,4 @@
-import "./htmx/swap-state.js?v=20260710b";
+import "./htmx/swap-state.js?v=20260829-order-tabs-v2";
 import "./htmx/feedback.js?v=20260710b";
 import "./landing-motion.js?v=20260710b";
 import "./product-shell.js?v=20260828-inline-required";

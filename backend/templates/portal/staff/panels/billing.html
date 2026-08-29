@@ -83,7 +83,7 @@
       {% endif %}
       {% else %}
       <div class="operator-empty-inline"><strong>Aucun justificatif</strong><p>{% if order.pricing_status != "priced" %}Le prix doit être calculé avant sa création.{% else %}Il sera créé après le paiement.{% endif %}</p></div>
-      {% if order.pricing_status != "priced" %}<a class="ui-btn ui-btn-secondary billing-card__action" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Vérifier le métrage</a>{% endif %}
+      {% if order.pricing_status != "priced" %}<a class="ui-inline-action ui-inline-action--control billing-card__action" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Vérifier le métrage</a>{% endif %}
       {% endif %}
     </section>
   </div>

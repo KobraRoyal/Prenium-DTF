@@ -193,20 +193,6 @@
     color: var(--product-ink);
     font-size: 0.72rem;
     font-weight: 800;
-    text-decoration: underline;
-    text-decoration-color: color-mix(in srgb, var(--product-line) 45%, transparent);
-    text-underline-offset: 0.16em;
-  }
-
-  body.product-shell .atelier-inspection__open-link:hover,
-  body.product-shell .atelier-inspection__open-link:focus-visible {
-    color: var(--brand);
-    text-decoration-color: currentColor;
-  }
-
-  body.product-shell .atelier-inspection__open-link:focus-visible {
-    outline: 2px solid var(--product-blue);
-    outline-offset: 3px;
   }
 
   body.product-shell .atelier-inspection__specs {

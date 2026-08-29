@@ -42,30 +42,30 @@
 </section>
 
 <section class="portal-page-surface staff-customer-workspace staff-customer-workspace-surface" data-customer-workspace aria-label="Sections du compte">
-    <nav class="staff-customer-workspace__nav" aria-label="Sections du compte client">
+    <nav class="staff-customer-workspace__nav ui-selection-rail" aria-label="Sections du compte client">
       <div class="staff-customer-workspace__nav-head">
         <strong>Gérer ce compte</strong>
         <span>Accès direct</span>
       </div>
-      <a href="#customer-account" aria-current="location">
+      <a class="ui-selection-control" href="#customer-account" aria-current="location">
         <span>Compte</span>
         <small>{{ customer.default_billing_mode|settlement_badge }}</small>
       </a>
-      <a href="#customer-pricing">
+      <a class="ui-selection-control" href="#customer-pricing">
         <span>Tarification</span>
         <small>{% if customer.negotiated_file_preparation_fee_eur or billing_profile.price_per_sqm_eur %}Négociée{% else %}Catalogue{% endif %}</small>
       </a>
-      <a href="#customer-volume">
+      <a class="ui-selection-control" href="#customer-volume">
         <span>Remises volume</span>
         <small>{{ volume_discount_tier_rows|length }} palier{{ volume_discount_tier_rows|length|pluralize }}</small>
       </a>
       {% if can_view_billing_statements %}
-      <a href="#billing-statements">
+      <a class="ui-selection-control" href="#billing-statements">
         <span>Facturation</span>
         <small>{{ billing_statements|length }} relevé{{ billing_statements|length|pluralize }}</small>
       </a>
       {% endif %}
-      <a href="#customer-access">
+      <a class="ui-selection-control" href="#customer-access">
         <span>Accès portail</span>
         <small>{{ memberships|length }} utilisateur{{ memberships|length|pluralize }}</small>
       </a>

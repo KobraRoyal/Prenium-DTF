@@ -8,33 +8,30 @@
   {% if perms.customers.view_customer %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-customers' %}is-active{% endif %}" {% if nav_key == 'staff-customers' %}aria-current="page"{% endif %} href="{% url 'portal:staff-customer-list' %}">Comptes</a>
   {% endif %}
-  {% if perms.production.view_productionmachine %}
-  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-machines' %}is-active{% endif %}" {% if nav_key == 'staff-machines' %}aria-current="page"{% endif %} href="{% url 'portal:staff-machine-fleet' %}">Machines DTF</a>
-  {% endif %}
 </div>
 
-{% if perms.prospects.view_prospectprofile or perms.b2b_order_projects.view_b2borderproject or perms.notifications.view_emailtemplate or perms.customers.manage_customer_pricing or perms.gang_sheets.configure_gangsheet or perms.branding.view_brandthemesettings %}
+{% if perms.production.view_productionmachine or perms.prospects.view_prospectprofile or perms.b2b_order_projects.view_b2borderproject or perms.notifications.view_emailtemplate or perms.customers.manage_customer_pricing or perms.gang_sheets.configure_gangsheet %}
 <details class="product-nav__more" data-product-nav-details>
-  <summary class="product-nav__more-trigger {% if nav_key == 'staff-access-requests' or nav_key == 'staff-order-projects' or nav_key == 'staff-email-templates' or nav_key == 'staff-default-volume-discounts' or nav_key == 'staff-gang-sheet-settings' or nav_key == 'staff-brand-settings' %}is-active{% endif %}">
+  <summary class="product-nav__more-trigger {% if nav_key == 'staff-machines' or nav_key == 'staff-access-requests' or nav_key == 'staff-order-projects' or nav_key == 'staff-email-templates' or nav_key == 'staff-default-volume-discounts' or nav_key == 'staff-gang-sheet-settings' %}is-active{% endif %}">
     <span>
-      {% if nav_key == 'staff-access-requests' %}Demandes d’accès
+      {% if nav_key == 'staff-machines' %}Parc machine
+      {% elif nav_key == 'staff-access-requests' %}Demandes d’accès
       {% elif nav_key == 'staff-order-projects' %}Gang Sheets
       {% elif nav_key == 'staff-email-templates' %}E-mails
       {% elif nav_key == 'staff-default-volume-discounts' %}Remises par défaut
       {% elif nav_key == 'staff-gang-sheet-settings' %}Réglages de laize
-      {% elif nav_key == 'staff-brand-settings' %}Identité visuelle
-      {% else %}Outils{% endif %}
+      {% else %}Réglages{% endif %}
     </span>
     <span class="product-nav__chevron" aria-hidden="true"></span>
   </summary>
-  <div class="product-nav__more-menu" aria-label="Outils Atelier">
+  <div class="product-nav__more-menu" aria-label="Réglages Atelier">
     <span class="product-nav__section-label">Administration Atelier</span>
+    {% if perms.production.view_productionmachine %}<a class="product-nav__more-link {% if nav_key == 'staff-machines' %}is-active{% endif %}" {% if nav_key == 'staff-machines' %}aria-current="page"{% endif %} href="{% url 'portal:staff-machine-fleet' %}"><strong>Parc machine</strong><small>Gérer les équipements de production</small></a>{% endif %}
     {% if perms.prospects.view_prospectprofile %}<a class="product-nav__more-link {% if nav_key == 'staff-access-requests' %}is-active{% endif %}" {% if nav_key == 'staff-access-requests' %}aria-current="page"{% endif %} href="{% url 'portal:staff-access-request-list' %}"><strong>Demandes d’accès</strong><small>Valider les nouveaux comptes</small></a>{% endif %}
     {% if b2b_order_projects_globally_enabled and perms.b2b_order_projects.view_b2borderproject %}<a class="product-nav__more-link {% if nav_key == 'staff-order-projects' %}is-active{% endif %}" {% if nav_key == 'staff-order-projects' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-project-list' %}"><strong>Gang Sheets</strong><small>Contrôler les commandes à finaliser</small></a>{% endif %}
     {% if perms.notifications.view_emailtemplate %}<a class="product-nav__more-link {% if nav_key == 'staff-email-templates' %}is-active{% endif %}" {% if nav_key == 'staff-email-templates' %}aria-current="page"{% endif %} href="{% url 'portal:staff-email-template-list' %}"><strong>Modèles d’e-mails</strong><small>Gérer les messages transactionnels</small></a>{% endif %}
     {% if perms.customers.manage_customer_pricing %}<a class="product-nav__more-link {% if nav_key == 'staff-default-volume-discounts' %}is-active{% endif %}" {% if nav_key == 'staff-default-volume-discounts' %}aria-current="page"{% endif %} href="{% url 'portal:staff-default-volume-discount-settings' %}"><strong>Remises par défaut</strong><small>Grille de référence et messages dashboard</small></a>{% endif %}
     {% if perms.gang_sheets.configure_gangsheet %}<a class="product-nav__more-link {% if nav_key == 'staff-gang-sheet-settings' %}is-active{% endif %}" {% if nav_key == 'staff-gang-sheet-settings' %}aria-current="page"{% endif %} href="{% url 'portal:staff-gang-sheet-settings' %}"><strong>Réglages de laize</strong><small>Configurer les planches Atelier</small></a>{% endif %}
-    {% if perms.branding.view_brandthemesettings %}<a class="product-nav__more-link {% if nav_key == 'staff-brand-settings' %}is-active{% endif %}" {% if nav_key == 'staff-brand-settings' %}aria-current="page"{% endif %} href="{% url 'portal:staff-brand-settings' %}"><strong>Identité visuelle</strong><small>Couleurs des espaces Client et Atelier</small></a>{% endif %}
   </div>
 </details>
 {% endif %}

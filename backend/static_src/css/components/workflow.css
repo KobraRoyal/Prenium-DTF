@@ -488,20 +488,6 @@
   .staff-upload-filename-link {
     color: inherit;
     text-decoration: none;
-    border-radius: 0.2rem;
-    outline-offset: 2px;
-    transition: color 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .staff-upload-filename-link:hover {
-    color: var(--brand);
-    text-decoration: underline;
-    text-underline-offset: 0.15em;
-  }
-
-  .staff-upload-filename-link:focus-visible {
-    outline: 2px solid var(--ui-focus-ring, #ffbda8);
-    outline-offset: 2px;
   }
 
   .order-command-bar__ref {

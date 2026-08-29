@@ -87,7 +87,7 @@
       {% endif %}
       <div class="ui-table-actions b2b-visual-list-item__actions">
         <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-dialog-open="visual-dialog-{{ item.public_id }}">Ouvrir</button>
-        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True button_class="ui-btn ui-btn-ghost ui-btn-sm" %}
+        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True %}
       </div>
     </article>
     {% endfor %}

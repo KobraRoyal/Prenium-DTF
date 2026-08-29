@@ -1,4 +1,5 @@
-{% load static %}
+{% load static portal_tags %}
+{% portal_css_asset_v as asset_v %}
 <!doctype html>
 <html
   lang="fr"
@@ -34,8 +35,6 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     {% include "components/ui/toast_stack.html" %}
     {% block content %}{% endblock %}
     {% block runtime_scripts %}
-      {% load portal_tags %}
-      {% portal_css_asset_v as asset_v %}
       <script src="{% static 'vendor/htmx-1.9.12.min.js' %}"></script>
       <script src="{% static 'js/alpine/toast-boot.js' %}?v=20260826-toast-operate-v1"></script>
       <script defer src="{% static 'vendor/alpinejs-3.14.3.min.js' %}"></script>

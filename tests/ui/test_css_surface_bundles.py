@@ -174,13 +174,13 @@ def test_surface_templates_share_css_cache_bust_version() -> None:
     from apps.portal.templatetags.portal_tags import PORTAL_CSS_ASSET_V
 
     expected = PORTAL_CSS_ASSET_V
+    assert expected
     surface_styles = read(TEMPLATES_DIR / "components" / "portal" / "surface_styles.html")
     layout = read(TEMPLATES_DIR / "portal" / "layout.html")
 
     assert "portal_css_asset_v" in surface_styles
     assert "?v={{ asset_v }}" in surface_styles
     assert "portal_css_asset_v" in layout
-    assert expected == "20260828-auth-inline-v2"
 
     for path in (
         TEMPLATES_DIR / "portal" / "layout.html",

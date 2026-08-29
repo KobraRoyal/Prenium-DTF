@@ -7,7 +7,7 @@
     </div>
     <div class="operator-panel-hero__actions">
       <span class="badge {{ job.status|badge_tone }}">{{ job.status|human_status }}</span>
-      <a class="ui-btn ui-btn-secondary" href="{% url 'production:staff-manufacturing-order-pdf' order_public_id=order.public_id %}" target="_blank" rel="noopener noreferrer">Ouvrir l’OF PDF</a>
+      <a class="ui-inline-action ui-inline-action--control" href="{% url 'production:staff-manufacturing-order-pdf' order_public_id=order.public_id %}" target="_blank" rel="noopener noreferrer">Ouvrir l’OF PDF</a>
     </div>
   </header>
 
@@ -78,7 +78,7 @@
       {% for sheet in gang_sheets %}
       <article>
         <div><strong>{{ sheet.name }}</strong><small>{{ sheet.width_mm }} × {{ sheet.height_mm }} mm · {{ sheet.surface_sqm }} m²</small></div>
-        {% if can_download_gang_sheet_final %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-gang-sheet-final-download' sheet_public_id=sheet.public_id %}">Télécharger le PDF HD</a>{% else %}<span class="badge badge--muted">Accès HD restreint</span>{% endif %}
+        {% if can_download_gang_sheet_final %}<a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:staff-gang-sheet-final-download' sheet_public_id=sheet.public_id %}">Télécharger le PDF HD</a>{% else %}<span class="badge badge--muted">Accès HD restreint</span>{% endif %}
       </article>
       {% endfor %}
     </div>

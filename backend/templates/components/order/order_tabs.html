@@ -1,11 +1,11 @@
 <section class="card workflow-shell ui-workflow-shell{% if compact %} workflow-shell--compact{% endif %}{% if distilled %} workflow-shell--distilled workflow-shell--tabs-{{ tabs|length }}{% endif %}">
   <div
-    class="workflow-tab-rail portal-order-tabs ui-tab-rail{% if compact %} workflow-tab-rail--compact{% endif %}"
+    class="workflow-tab-rail portal-order-tabs ui-tab-rail ui-selection-rail ui-selection-rail--horizontal{% if compact %} workflow-tab-rail--compact{% endif %}"
     role="tablist"
     aria-orientation="horizontal"
     aria-label="{{ tablist_label }}"
   >
-    <div class="workflow-tab-group__chips workflow-tab-group__chips--flat{% if not compact %} workflow-progress{% endif %}" role="presentation">
+    <div class="workflow-tab-group__chips workflow-tab-group__chips--flat ui-order-tab-list{% if not compact %} workflow-progress{% endif %}" role="presentation">
       {% for tab in tabs %}
       <button
         type="button"
@@ -14,7 +14,7 @@
         aria-selected="{% if tab.active %}true{% else %}false{% endif %}"
         aria-controls="{{ panel_id }}"
         tabindex="{% if tab.active %}0{% else %}-1{% endif %}"
-        class="chip ui-tab-chip transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c1815]{% if tab.active %} is-active{% endif %}"
+        class="ui-tab-chip ui-selection-control{% if tab.active %} is-active{% endif %}"
         data-panel-slug="{{ tab.slug }}"
         hx-get="{{ tab.url }}"
         hx-target="{{ hx_target }}"

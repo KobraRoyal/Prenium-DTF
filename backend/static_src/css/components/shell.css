@@ -404,7 +404,7 @@ html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-f
 html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__link:focus-visible {
   border: none;
   color: var(--ink);
-  background: var(--bg-accent);
+  background: transparent;
 }
 
 html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-nav__links .product-nav__link.is-active,
@@ -461,12 +461,366 @@ html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-f
 html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__action:hover,
 html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__action:focus-visible {
   color: var(--ink);
+  background: transparent;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav :is(
+  .product-nav__more-link.is-active,
+  .product-nav__more-link[aria-current="page"],
+  .product-profile__action.is-active,
+  .product-profile__action[aria-current="page"]
+) {
   background: color-mix(in srgb, var(--brand) 14%, var(--surface));
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav :is(
+  .product-nav__more-trigger > span:first-child,
+  .product-profile__trigger-label,
+  .product-nav__more-link strong,
+  .product-profile__action strong,
+  .product-profile__logout > span:last-child
+) {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav :is(
+  .product-nav__more-trigger > span:first-child,
+  .product-profile__trigger-label,
+  .product-nav__more-link strong,
+  .product-profile__action strong,
+  .product-profile__logout > span:last-child
+)::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -0.18rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--brand);
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform var(--ui-action-transition);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav :is(
+  .product-nav__more-trigger:hover > span:first-child,
+  .product-nav__more-trigger:focus-visible > span:first-child,
+  .product-nav__more-trigger.is-active > span:first-child,
+  .product-nav__more[open] > .product-nav__more-trigger > span:first-child,
+  .product-profile__trigger:hover .product-profile__trigger-label,
+  .product-profile__trigger:focus-visible .product-profile__trigger-label,
+  .product-profile[open] > .product-profile__trigger .product-profile__trigger-label,
+  .product-nav__more-link:hover strong,
+  .product-nav__more-link:focus-visible strong,
+  .product-nav__more-link.is-active strong,
+  .product-nav__more-link[aria-current="page"] strong,
+  .product-profile__action:hover strong,
+  .product-profile__action:focus-visible strong,
+  .product-profile__action.is-active strong,
+  .product-profile__action[aria-current="page"] strong,
+  .product-profile__logout:hover > span:last-child,
+  .product-profile__logout:focus-visible > span:last-child
+)::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__logout > span:last-child::after {
+  background: var(--danger);
 }
 
 html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav :is(a, button, summary):focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
+}
+
+/* Popovers du header : un contrat commun pour Compte (Client/Atelier) et Création. */
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__panel {
+  width: min(22rem, calc(100vw - (2 * var(--ui-page-pad-x))));
+  max-height: min(72vh, 32rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 1rem;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 20px 48px color-mix(in srgb, var(--ink) 16%, transparent);
+  transform-origin: top right;
+  animation: product-floating-menu-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 1.25rem;
+  z-index: 1;
+  width: 3rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--brand);
+  pointer-events: none;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__menu.product-floating-menu__panel {
+  width: min(22rem, calc(100vw - (2 * var(--ui-page-pad-x))));
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-create-menu__menu.product-floating-menu__panel {
+  width: min(23rem, calc(100vw - (2 * var(--ui-page-pad-x))));
+  gap: 0;
+  padding: 0;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__header {
+  padding: 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  background: color-mix(in srgb, var(--bg-accent) 72%, var(--surface));
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__identity.product-floating-menu__header {
+  gap: 0.8rem;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__avatar--large {
+  width: 2.75rem;
+  height: 2.75rem;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--surface) 82%, transparent);
+  font-size: 0.9rem;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__identity-copy strong {
+  color: var(--ink);
+  font-family: var(--ui-font-display);
+  font-size: 0.84rem;
+  line-height: 1.3;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__identity-copy > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-create-menu__intro {
+  display: grid;
+  gap: 0.25rem;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-create-menu__intro strong {
+  color: var(--ink);
+  font-family: var(--ui-font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-create-menu__intro small {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__list {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.55rem 0.65rem;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action {
+  position: relative;
+  min-height: 3.75rem;
+  padding: 0.65rem 2.4rem 0.65rem 0.55rem;
+  border-radius: 0;
+  background: transparent;
+  transition:
+    color var(--ui-action-transition),
+    transform var(--ui-action-transition);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  opacity: 0.32;
+  transform: translate(-0.2rem, -50%) rotate(45deg);
+  transition:
+    opacity var(--ui-action-transition),
+    transform var(--ui-action-transition);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action:is(:hover, :focus-visible) {
+  color: var(--ink);
+  background: transparent;
+  transform: translateX(0.2rem);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action:is(:hover, :focus-visible)::after {
+  opacity: 0.78;
+  transform: translate(0, -50%) rotate(45deg);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action:is(.is-active, [aria-current="page"])::after {
+  color: var(--brand-strong);
+  opacity: 0.72;
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action :is(
+  .product-profile__icon,
+  .product-create-menu__icon
+) {
+  box-sizing: content-box;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0.48rem;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 0.625rem;
+  color: var(--muted);
+  background: var(--surface);
+  transition:
+    border-color var(--ui-action-transition),
+    color var(--ui-action-transition),
+    transform var(--ui-action-transition);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action .product-profile__icon--profile {
+  border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
+  color: var(--brand-strong);
+  background: color-mix(in srgb, var(--brand) 11%, var(--surface));
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action .product-profile__icon--team {
+  border-color: color-mix(in srgb, var(--success) 30%, var(--line));
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action .product-profile__icon--atelier {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-create-menu__option:first-child .product-create-menu__icon {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--brand) 16%, var(--surface));
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action:is(:hover, :focus-visible) :is(
+  .product-profile__icon,
+  .product-create-menu__icon
+) {
+  border-color: color-mix(in srgb, var(--brand) 70%, var(--line));
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__footer {
+  padding: 0.55rem 0.65rem;
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__footer .product-profile__logout {
+  min-height: 2.875rem;
+  padding: 0.65rem 0.55rem;
+  border-radius: 0;
+  transition:
+    color var(--ui-action-transition),
+    transform var(--ui-action-transition);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__footer .product-profile__icon--logout {
+  box-sizing: content-box;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0.48rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--line));
+  border-radius: 0.625rem;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+  transition:
+    border-color var(--ui-action-transition),
+    color var(--ui-action-transition),
+    transform var(--ui-action-transition);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__footer .product-profile__logout:is(:hover, :focus-visible) {
+  color: var(--danger);
+  background: transparent;
+  transform: translateX(0.2rem);
+}
+
+html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__footer .product-profile__logout:is(:hover, :focus-visible) .product-profile__icon--logout {
+  border-color: color-mix(in srgb, var(--danger) 65%, var(--line));
+  transform: translateY(-1px);
+}
+
+@keyframes product-floating-menu-in {
+  from {
+    opacity: 0.65;
+    transform: translateY(-0.35rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 959px) {
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__panel,
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-profile__menu.product-floating-menu__panel,
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-create-menu__menu.product-floating-menu__panel {
+    width: 100%;
+    max-height: min(62vh, 30rem);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: none;
+    transform-origin: top center;
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__panel::before {
+    right: auto;
+    left: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__panel {
+    animation: none;
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav :is(
+    .product-floating-menu__action,
+    .product-floating-menu__action .product-profile__icon,
+    .product-floating-menu__action .product-create-menu__icon,
+    .product-floating-menu__footer .product-profile__icon,
+    .product-floating-menu__footer .product-profile__logout
+  ) {
+    transition: none;
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav .product-floating-menu__action::after {
+    transition: none;
+  }
+
+  html[data-theme="prenium"] :is(body.product-shell, body.ui-marketing-body) .ui-foundation-nav :is(
+    .product-nav__more-trigger > span:first-child,
+    .product-profile__trigger-label,
+    .product-nav__more-link strong,
+    .product-profile__action strong,
+    .product-profile__logout > span:last-child
+  )::after {
+    transition: none;
+  }
 }
 
 html[data-theme="prenium"] body.ui-marketing-body .agency-header {
