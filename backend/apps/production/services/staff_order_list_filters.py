@@ -67,6 +67,20 @@ class StaffOrderListFilterService:
             return self._filter_approved(unissued)
         return queryset
 
+    def apply_search(self, queryset: QuerySet, *, query: str) -> QuerySet:
+        cleaned = str(query or "").strip()
+        if not cleaned:
+            return queryset
+
+        return queryset.filter(
+            Q(production_job__manufacturing_order_number__icontains=cleaned)
+            | Q(source_b2b_order_project__project_number__icontains=cleaned)
+            | Q(source_b2b_order_project__name__icontains=cleaned)
+            | Q(source_b2b_order_project__customer_reference__icontains=cleaned)
+            | Q(customer__name__icontains=cleaned)
+            | Q(customer_note__icontains=cleaned)
+        ).distinct()
+
     def _unissued_queryset_from(self, queryset: QuerySet) -> QuerySet:
         return (
             queryset.filter(

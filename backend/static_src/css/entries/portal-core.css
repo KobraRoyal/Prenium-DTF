@@ -816,6 +816,7 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   .ui-list-section,
   .staff-data-list,
   .client-dashboard-toolbar,
+  .ui-order-list-toolbar,
   .client-dashboard-section,
   .access-request-command,
   .access-request-results,
@@ -1561,7 +1562,7 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 }
 
 /* v26 — Listes (ui-list-section) : une surface, pas de double cadres ; fiches détail intactes. */
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.ui-list-section .client-dashboard-toolbar {
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.ui-list-section :is(.client-dashboard-toolbar, .ui-order-list-toolbar) {
   margin-bottom: 0.85rem !important;
   padding: 0.65rem 0.75rem !important;
   border-radius: var(--radius-sm) !important;

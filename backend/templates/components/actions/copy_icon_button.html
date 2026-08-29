@@ -1,0 +1,16 @@
+{% if value %}
+<button
+  class="ui-copy-button"
+  type="button"
+  data-clipboard-copy
+  data-copy-value="{{ value }}"
+  data-copy-success="{{ success_message|default:'N° OF copié.' }}"
+  aria-label="Copier {{ label|default:'le N° OF' }} {{ value }}"
+  title="Copier {{ label|default:'le N° OF' }}"
+>
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <rect x="6.25" y="6.25" width="9" height="9" rx="1.5"></rect>
+    <path d="M13.75 6.25V4.75a1.5 1.5 0 0 0-1.5-1.5h-7.5a1.5 1.5 0 0 0-1.5 1.5v7.5a1.5 1.5 0 0 0 1.5 1.5h1.5"></path>
+  </svg>
+</button>
+{% endif %}

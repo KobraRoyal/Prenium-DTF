@@ -1,0 +1,30 @@
+<form
+  class="ui-order-list-toolbar"
+  method="get"
+  action="{{ search_url }}"
+  role="search"
+>
+  {% if preserved_name %}
+  <input name="{{ preserved_name }}" type="hidden" value="{{ preserved_value }}">
+  {% endif %}
+  <div class="ui-field-group ui-order-list-search">
+    <label class="ui-label" for="{{ search_id }}">{{ search_label|default:"Rechercher" }}</label>
+    <input
+      id="{{ search_id }}"
+      class="ui-input w-full"
+      type="search"
+      name="q"
+      value="{{ search_query }}"
+      placeholder="{{ search_placeholder }}"
+      autocomplete="off"
+      spellcheck="false"
+      hx-get="{{ search_url }}"
+      hx-trigger="input changed delay:300ms, search"
+      hx-include="closest form"
+      hx-target="#{{ results_id }}"
+      hx-swap="innerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      aria-controls="{{ results_id }}"
+    >
+  </div>
+</form>

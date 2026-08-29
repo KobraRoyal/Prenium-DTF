@@ -361,3 +361,6 @@ def test_staff_dashboard_hx_returns_worklist_panel_partial():
     assert 'id="atelier-dashboard-panel"' in content
     assert "data-atelier-batch" in content
     assert str(order.public_id) in content
+    assert ">UUID<" not in content
+    assert "data-clipboard-copy" in content
+    assert order.production_job.manufacturing_order_number in content

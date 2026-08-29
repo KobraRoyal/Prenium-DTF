@@ -350,6 +350,8 @@ class ProductPolishUITests(SimpleTestCase):
 
         for path in form_paths:
             markup = source(path)
+            if path.name == "orders_list.html":
+                markup += source(TEMPLATES_DIR / "components" / "forms" / "order_list_search.html")
             with self.subTest(path=path.name):
                 self.assertIn("ui-input", markup)
                 for marker in forbidden:

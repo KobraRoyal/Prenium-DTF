@@ -8,27 +8,8 @@
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_orders_list.html" title="Mes commandes" subtitle_prefix=customer.name subtitle="N° commande et votre référence pour chaque commande transmise." %}
 
 <section class="portal-page-surface ui-list-section client-dashboard-section">
-  <div class="client-dashboard-toolbar">
-    <div class="ui-field-group client-orders-search">
-      <label class="ui-label" for="client-orders-search-input">Rechercher</label>
-      <input
-        id="client-orders-search-input"
-        class="ui-input w-full"
-        type="search"
-        name="q"
-        value="{{ search_query }}"
-        placeholder="N° commande, votre référence, note…"
-        autocomplete="off"
-        spellcheck="false"
-        hx-get="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}"
-        hx-trigger="input changed delay:300ms, search"
-        hx-target="#client-orders-list-results"
-        hx-swap="innerHTML"
-        hx-indicator="#portal-htmx-indicator"
-        aria-controls="client-orders-list-results"
-      >
-    </div>
-  </div>
+  {% url 'portal:client-order-list' customer_public_id=customer.public_id as client_orders_search_url %}
+  {% include "components/forms/order_list_search.html" with search_id="client-orders-search-input" search_url=client_orders_search_url search_query=search_query search_placeholder="N° commande, votre référence, note…" results_id="client-orders-list-results" %}
   <div id="client-orders-list-results" aria-live="polite">
     {% include "portal/client/partials/client_orders_list_results.html" %}
   </div>

@@ -21,6 +21,7 @@ from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
+from apps.orders.references import order_business_number
 from apps.production.models import ProductionJob
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.shipping.models import SendcloudWebhookEvent, Shipment
@@ -265,7 +266,11 @@ class SendcloudGateway:
         weight_value = float(str(weight.get("value") or "1"))
         weight_unit = str(weight.get("unit") or "kg")
         order_id = str(order.public_id)
-        order_number = short_public_ref(order.public_id)
+        order_number = order_business_number(order)
+        if not order_number:
+            raise ValidationError(
+                "Le numéro métier CMD de la commande est requis pour la déclaration Sendcloud."
+            )
         # Date de déclaration (pas Order.created_at) pour apparaître dans les
         # filtres Sendcloud « 7 derniers jours ».
         created_at = timezone.now().isoformat()
@@ -658,13 +663,16 @@ class ShipmentService:
                 if getattr(exc, "status_code", None) != 404:
                     raise
 
-        parcels = gateway.find_parcels_for_order_number(
-            order_number=short_public_ref(order.public_id),
+        parcels: list[dict[str, object]] = []
+        order_numbers = (
+            order_business_number(order),
+            short_public_ref(order.public_id),
+            str(order.public_id),
         )
-        if not parcels:
-            parcels = gateway.find_parcels_for_order_number(
-                order_number=str(order.public_id),
-            )
+        for order_number in dict.fromkeys(filter(None, order_numbers)):
+            parcels = gateway.find_parcels_for_order_number(order_number=order_number)
+            if parcels:
+                break
         if not parcels:
             raise ValidationError(
                 "Aucun colis Sendcloud pour cette commande. "

@@ -8,10 +8,9 @@
         <tr>
           <th class="atelier-worklist-table__select-col" scope="col"><span class="sr-only">Sélection impression</span></th>
           <th scope="col">Client</th>
-          <th scope="col">UUID</th>
           <th scope="col">N° commande</th>
           <th scope="col">Réf. client</th>
-          <th scope="col">OF</th>
+          <th scope="col">N° OF</th>
           <th scope="col">Fichiers</th>
           <th scope="col">Reçue</th>
         </tr>
@@ -44,12 +43,6 @@
             </div>
           </td>
           <td>
-            <div class="ui-order-secondary">
-              <span class="ui-order-secondary__label">UUID</span>
-              <code class="ui-table-mono" title="{{ row.order.public_id }}">{{ row.order_uuid_short }}</code>
-            </div>
-          </td>
-          <td>
             <div class="ui-order-primary">
               <span class="ui-order-primary__label">N° commande</span>
               {% if row.order_business_number %}
@@ -71,8 +64,11 @@
           </td>
           <td>
             <div class="ui-order-secondary">
-              <span class="ui-order-secondary__label">OF</span>
-              <code class="ui-table-mono ui-order-secondary__value">{{ row.of_number }}</code>
+              <span class="ui-order-secondary__label">N° OF</span>
+              <span class="ui-copy-value">
+                <code class="ui-table-mono ui-order-secondary__value">{{ row.of_number }}</code>
+                {% include "components/actions/copy_icon_button.html" with value=row.order.production_job.manufacturing_order_number label="le N° OF" %}
+              </span>
             </div>
           </td>
           <td>
@@ -123,7 +119,10 @@
         <div>
           <p class="muted text-xs">N° commande</p>
           <p class="font-mono text-sm ui-table-mono">{% if row.order_business_number %}{{ row.order_business_number }}{% else %}<span class="muted">—</span>{% endif %}</p>
-          <p class="muted mt-1 text-xs">UUID <code class="ui-table-mono" title="{{ row.order.public_id }}">{{ row.order_uuid_short }}</code></p>
+          <div class="muted mt-1 text-xs ui-copy-value">
+            <span>N° OF <code class="ui-table-mono">{{ row.of_number }}</code></span>
+            {% include "components/actions/copy_icon_button.html" with value=row.order.production_job.manufacturing_order_number label="le N° OF" %}
+          </div>
         </div>
         <div class="text-right">
           <p class="muted text-xs">Client</p>

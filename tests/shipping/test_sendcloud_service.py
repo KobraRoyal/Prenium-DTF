@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
+from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
@@ -34,6 +35,17 @@ def create_order(customer, actor):
         subtotal_amount="25.00",
         total_amount="25.00",
         customer_note="Ship me safely",
+    )
+
+
+def link_business_number(order, *, project_number="CMD-2026-000001"):
+    return B2BOrderProject.objects.create(
+        customer=order.customer,
+        created_by=order.created_by,
+        project_number=project_number,
+        name="Commande Sendcloud",
+        converted_order=order,
+        status=B2BOrderProject.Status.CONVERTED,
     )
 
 
@@ -218,8 +230,6 @@ def test_sync_shipment_tracking_updates_carrier_fields():
 
 @pytest.mark.django_db
 def test_sync_tracking_falls_back_when_stored_parcel_id_is_404():
-    from apps.core.public_refs import short_public_ref
-
     actor, customer, _membership = create_customer_scope("sync-404@example.com", "Acme")
     staff_user = get_user_model().objects.create_user(
         email="staff-sync-404@example.com",
@@ -227,15 +237,15 @@ def test_sync_tracking_falls_back_when_stored_parcel_id_is_404():
         is_staff=True,
     )
     order = create_order(customer, actor)
+    link_business_number(order)
     mark_order_ready_to_ship(order)
-    short_ref = short_public_ref(order.public_id)
     gateway = FakeSendcloudGateway(
         fetch_parcel_error=SendcloudAPIError(
             "Sendcloud request failed with HTTP 404.",
             status_code=404,
         ),
         parcels_by_order_number={
-            short_ref: [
+            "CMD-2026-000001": [
                 {
                     "id": "parcel-real-999",
                     "tracking_number": "TRK-FALLBACK",
@@ -426,12 +436,12 @@ def test_sendcloud_service_get_staff_shipment_records_view_audit():
 )
 def test_build_order_payload_sends_recipient_products_and_order_number_only():
     from apps.catalog.models import CatalogService
-    from apps.core.public_refs import short_public_ref
     from apps.orders.models import OrderLine
     from apps.shipping.services.sendcloud import SendcloudGateway
 
     actor, customer, _membership = create_customer_scope("payload@example.com", "Acme")
     order = create_order(customer, actor)
+    link_business_number(order)
     service = CatalogService.objects.create(
         code="dtf-print",
         name="Impression DTF",
@@ -461,7 +471,7 @@ def test_build_order_payload_sends_recipient_products_and_order_number_only():
     )[0]
 
     assert payload["order_id"] == str(order.public_id)
-    assert payload["order_number"] == short_public_ref(order.public_id)
+    assert payload["order_number"] == "CMD-2026-000001"
     assert payload["shipping_address"]["name"] == "Jean Test"
     assert payload["shipping_address"]["postal_code"] == "75001"
     assert "from_address" not in payload
@@ -477,6 +487,25 @@ def test_build_order_payload_sends_recipient_products_and_order_number_only():
     SENDCLOUD_SECRET_KEY="sk_test",
     SENDCLOUD_INTEGRATION_ID=605520,
 )
+def test_build_order_payload_refuses_uuid_as_order_number():
+    from apps.shipping.services.sendcloud import SendcloudGateway
+
+    actor, customer, _membership = create_customer_scope("missing-ref@example.com", "Acme")
+    order = create_order(customer, actor)
+
+    with pytest.raises(ValidationError, match="numéro métier CMD"):
+        SendcloudGateway().build_order_payload(
+            order=order,
+            shipment_request=build_shipment_payload(),
+        )
+
+
+@pytest.mark.django_db
+@override_settings(
+    SENDCLOUD_PUBLIC_KEY="pk_test",
+    SENDCLOUD_SECRET_KEY="sk_test",
+    SENDCLOUD_INTEGRATION_ID=605520,
+)
 def test_build_order_payload_ceils_fractional_quantities_to_int():
     from apps.catalog.models import CatalogService
     from apps.orders.models import OrderLine
@@ -484,6 +513,7 @@ def test_build_order_payload_ceils_fractional_quantities_to_int():
 
     actor, customer, _membership = create_customer_scope("qty@example.com", "Acme")
     order = create_order(customer, actor)
+    link_business_number(order)
     service = CatalogService.objects.create(
         code="dtf-frac",
         name="DTF fraction",

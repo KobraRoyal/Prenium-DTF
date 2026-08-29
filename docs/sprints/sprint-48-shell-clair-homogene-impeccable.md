@@ -87,7 +87,8 @@ Centralisation des règles d’affichage des références commande et unificatio
 | Surface | UUID court | N° CMD | Réf. client |
 |---------|:----------:|:------:|:-----------:|
 | Client | Non | Oui | Oui |
-| Staff / listes OPS | Oui | Oui | Oui |
+| Staff / liste commandes | Non — N° OF à la place | Oui | Oui |
+| Staff / fiche commande | Oui | Oui | Oui |
 | Atelier | Oui | Oui | Oui |
 
 Helpers : `backend/apps/orders/references.py` (`order_business_number`, `order_uuid_short`,
@@ -106,6 +107,34 @@ Helpers : `backend/apps/orders/references.py` (`order_business_number`, `order_u
 - [x] Unification préfixe `CMD-` (code + migration + tests).
 - [x] Documentation architecture `ORDER_REFERENCE_DISPLAY.md`.
 - [ ] Commit + push sur branche PR #13.
+
+## Micro-lot — recherche commandes staff et repère OF (29 août 2026)
+
+La liste `/staff/orders/` reprend le bandeau de commande des autres vues staff : recherche par
+N° OF, N° `CMD-…`, client, référence client ou note, onglets conservant la recherche et pagination
+conservant recherche + file active. Le N° OF remplace l’UUID visible dans la table desktop et les
+cartes mobiles ; le `public_id` reste uniquement l’identifiant technique des URLs.
+
+- [x] Recherche centralisée dans `StaffOrderListFilterService`, hors de la vue et du template.
+- [x] Chargement `production_job` via `select_related` pour éviter le N+1 sur la liste paginée.
+- [x] UUID retiré de la liste desktop/mobile et remplacé par `manufacturing_order_number`.
+- [x] RBAC `orders.view_order`, files existantes et pagination inchangés.
+- [x] Tests service, vue et contrat UI ciblés.
+- [x] Validation élargie, contrôle de rendu Django et `graphify update .`.
+
+### Alignement client/staff et copie OF
+
+- [x] Champ de recherche extrait dans `components/forms/order_list_search.html` et partagé
+  entre les listes client et staff.
+- [x] Recherche staff alignée sur le comportement client : délai HTMX 300 ms, résultat partiel,
+  pagination partielle et file active conservée.
+- [x] Barre de faits et boutons de recherche staff redondants retirés ; les compteurs restent
+  portés par les onglets de file.
+- [x] Colonne UUID supprimée du dashboard staff, sur table desktop et cartes mobiles.
+- [x] Icône de copie du N° OF partagée entre liste commandes et dashboard, avec feedback toast,
+  focus visible et fallback presse-papiers.
+- [x] Cache-bust portail porté à `20260829-of-copy-v15`.
+- [x] Tests HTMX, rendu, accessibilité et non-régression ajoutés.
 
 ## Micro-lot — Studio desktop canvas prioritaire (27 août 2026)
 

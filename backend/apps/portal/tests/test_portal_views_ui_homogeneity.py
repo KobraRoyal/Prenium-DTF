@@ -37,11 +37,11 @@ STAFF_PAGE_VIEWS = [
     "portal/staff/settings/branding.html",
     "portal/staff/gang_sheets/settings.html",
     "portal/staff/customers/default_volume_discounts.html",
+    "portal/staff/access_requests/detail.html",
 ]
 
 STAFF_FOCUS_VIEWS = [
     "portal/staff/order_project_detail.html",
-    "portal/staff/access_requests/detail.html",
 ]
 
 STAFF_PANEL_VIEWS = [
@@ -275,6 +275,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         identity_index = source.index("staff-access-detail-identity")
         workflow_index = source.index("staff-access-detail-surface")
         self.assertLess(identity_index, workflow_index)
+        self.assertIn("page_head.html", source)
         self.assertIn("atelier-next-action", source)
         self.assertIn("Traiter la demande", source)
 
@@ -348,6 +349,8 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         ):
             with self.subTest(path=path):
                 source = template_source(path)
+                if path == "portal/staff/orders_list.html":
+                    source += template_source("portal/staff/partials/orders_list_results.html")
                 self.assertIn("ui_list_tabs", source)
                 self.assertNotIn("atelier-worklist__tab", source)
                 self.assertNotIn("access-request-status", source)

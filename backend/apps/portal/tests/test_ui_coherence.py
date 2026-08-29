@@ -631,11 +631,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         self.assertIn("settlement_badge", orders)
         self.assertIn('variant == "staff"', orders)
-        self.assertIn(">UUID<", orders)
+        self.assertIn(">N° OF<", orders)
         self.assertIn("N° commande", orders)
         self.assertIn("Réf. client", orders)
         self.assertIn("order_business_ref", orders)
-        self.assertIn("order_uuid_ref", orders)
+        self.assertIn("order.production_job.manufacturing_order_number", orders)
+        self.assertIn("components/actions/copy_icon_button.html", orders)
+        self.assertNotIn(">UUID<", orders)
+        self.assertNotIn("order_uuid_ref", orders)
         self.assertIn("settlement_badge", billing)
         self.assertNotIn("settlement_badge", template_source("portal/staff/panels/production.html"))
 
@@ -1438,6 +1441,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("ui-list-command", source)
         self.assertNotIn("atelier-worklist-results", source)
         self.assertIn("files_to_process_label", worklist_table)
+        self.assertIn(">N° OF<", worklist_table)
+        self.assertIn("components/actions/copy_icon_button.html", worklist_table)
+        self.assertNotIn(">UUID<", worklist_table)
+        self.assertNotIn("order_uuid_short", worklist_table)
         self.assertNotIn("Contrôle dans le pilotage", worklist_table)
         self.assertNotIn(">Production<", worklist_table)
         self.assertIn("is-batch-selected", worklist_table)
@@ -1690,6 +1697,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         client_source = template_source("portal/client/orders_list.html")
         client_results = template_source("portal/client/partials/client_orders_list_results.html")
         staff_source = template_source("portal/staff/orders_list.html")
+        staff_results = template_source("portal/staff/partials/orders_list_results.html")
+        search = template_source("components/forms/order_list_search.html")
 
         self.assertIn("Créer une commande", client_results)
         self.assertIn("portal:client-order-project-create", client_results)
@@ -1698,21 +1707,49 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("b2b_order_projects_globally_enabled", client_results)
         self.assertIn("portal:client-checkout", client_results)
         self.assertIn("client-orders-list-results", client_source)
-        self.assertIn('hx-trigger="input changed delay:300ms, search"', client_source)
+        self.assertIn("components/forms/order_list_search.html", client_source)
+        self.assertIn("components/forms/order_list_search.html", staff_source)
+        self.assertIn('hx-trigger="input changed delay:300ms, search"', search)
+        self.assertIn('hx-include="closest form"', search)
+        self.assertIn('role="search"', search)
+        self.assertIn('class="ui-order-list-toolbar"', search)
+        self.assertIn("ui-order-list-search", search)
         self.assertIn("client_orders_list_results.html", client_source)
-        self.assertIn("Retour au tableau de bord", staff_source)
+        self.assertIn('id="staff-orders-search-input"', staff_source)
+        self.assertIn('results_id="staff-orders-list-results"', staff_source)
+        self.assertIn('preserved_name="queue"', staff_source)
+        self.assertIn('preserve_query="q"', staff_results)
+        self.assertIn('htmx_target="#staff-orders-list-results"', staff_results)
+        self.assertIn("Retour au tableau de bord", staff_results)
         self.assertIn("portal-page-surface", staff_source)
         self.assertIn("ui-list-section", staff_source)
         self.assertNotIn('<section class="card">', staff_source)
-        self.assertIn("portal:staff-dashboard", staff_source)
-        self.assertIn("Aucune commande", staff_source)
-        self.assertNotIn("Aucune commande a afficher.", staff_source)
+        self.assertIn("portal:staff-dashboard", staff_results)
+        self.assertIn("Aucune commande", staff_results)
+        self.assertNotIn("Aucune commande a afficher.", staff_results)
+
+    def test_of_copy_action_is_shared_accessible_and_toasted(self) -> None:
+        button = template_source("components/actions/copy_icon_button.html")
+        runtime = static_source("js/clipboard-copy.js")
+        app = static_source("js/app.js")
+        buttons_css = static_source("css/components/buttons.css")
+
+        self.assertIn("data-clipboard-copy", button)
+        self.assertIn('aria-label="Copier', button)
+        self.assertIn("<svg", button)
+        self.assertIn('closest("[data-clipboard-copy]")', runtime)
+        self.assertIn("navigator.clipboard", runtime)
+        self.assertIn("document.execCommand", runtime)
+        self.assertIn('window.preniumToast(successMessage, "success")', runtime)
+        self.assertIn('window.preniumToast("Copie impossible — réessayez.", "error")', runtime)
+        self.assertIn('import "./clipboard-copy.js', app)
+        self.assertIn(".ui-copy-button", buttons_css)
 
     def test_portal_lists_share_pagination_and_form_action_partials(self) -> None:
         pagination_partial = 'include "components/portal/pagination.html"'
         for path in [
             "portal/client/partials/client_orders_list_results.html",
-            "portal/staff/orders_list.html",
+            "portal/staff/partials/orders_list_results.html",
             "portal/staff/customers/list.html",
             "portal/staff/access_requests/list.html",
             "portal/client/order_projects_list.html",

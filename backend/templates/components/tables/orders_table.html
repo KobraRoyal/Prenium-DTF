@@ -1,6 +1,6 @@
 {% load portal_tags %}
 {# Tableau desktop + cartes empilées — breakpoint tablette 960px (aligné product-shell). #}
-{# Client : N° commande (CMD-…) + réf. client uniquement. Atelier : UUID + N° + réf. client. #}
+{# Client : N° commande (CMD-…) + réf. client. Atelier : N° OF + N° commande + réf. client. #}
 <div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
   <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
     <caption class="sr-only">Liste des commandes</caption>
@@ -8,7 +8,7 @@
       <tr>
         {% if variant == "staff" %}
         <th>Client</th>
-        <th>UUID</th>
+        <th>N° OF</th>
         {% endif %}
         <th>N° commande</th>
         <th>{% if variant == "staff" %}Réf. client{% else %}Votre réf.{% endif %}</th>
@@ -30,8 +30,15 @@
         </td>
         <td>
           <div class="ui-order-secondary">
-            <span class="ui-order-secondary__label">UUID</span>
-            <code class="ui-table-mono" title="{{ order.public_id }}">{{ order|order_uuid_ref }}</code>
+            <span class="ui-order-secondary__label">N° OF</span>
+            {% if order.production_job.manufacturing_order_number %}
+            <span class="ui-copy-value">
+              <span class="ui-table-mono ui-order-secondary__value">{{ order.production_job.manufacturing_order_number }}</span>
+              {% include "components/actions/copy_icon_button.html" with value=order.production_job.manufacturing_order_number label="le N° OF" %}
+            </span>
+            {% else %}
+            <span class="muted">—</span>
+            {% endif %}
           </div>
         </td>
         {% endif %}
@@ -109,7 +116,10 @@
         <p class="muted text-xs">N° commande</p>
         <p class="font-mono text-sm ui-table-mono">{% if order|order_business_ref %}{{ order|order_business_ref }}{% else %}<span class="muted">—</span>{% endif %}</p>
         {% if variant == "staff" %}
-        <p class="muted mt-1 text-xs">UUID <code class="ui-table-mono" title="{{ order.public_id }}">{{ order|order_uuid_ref }}</code></p>
+        <div class="muted mt-1 text-xs ui-copy-value">
+          <span>N° OF <span class="ui-table-mono">{{ order.production_job.manufacturing_order_number|default:"—" }}</span></span>
+          {% include "components/actions/copy_icon_button.html" with value=order.production_job.manufacturing_order_number label="le N° OF" %}
+        </div>
         {% endif %}
       </div>
       <div class="text-right max-w-[55%]">

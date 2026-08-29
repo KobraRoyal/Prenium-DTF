@@ -50,6 +50,7 @@ class OrderService:
             "customer",
             "created_by",
             "source_b2b_order_project",
+            "production_job",
         ).prefetch_related(
             "items",
             "items__service",

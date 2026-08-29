@@ -244,6 +244,8 @@ class Command(BaseCommand):
             "customers.view_customer",
             "customers.change_customer",
             "customers.manage_customer_pricing",
+            "prospects.view_prospectprofile",
+            "prospects.review_prospectprofile",
             "orders.view_order",
             "orders.change_order",
             "orders.delete_atelier_order",

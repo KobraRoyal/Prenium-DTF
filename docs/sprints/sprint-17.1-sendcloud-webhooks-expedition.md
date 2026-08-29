@@ -7,7 +7,7 @@ Remonter automatiquement le statut colis Sendcloud dans Prenium DTF dès qu’un
 - **Déclaration de commande depuis Prenium** via Orders API `POST /orders` (Incoming Orders) — **sans génération d’étiquette**.
 - **Génération d’étiquette par un opérateur** dans le panneau Sendcloud.
 - **Retour d’état via webhook** `parcel status changed` (HMAC `Sendcloud-Signature`), avec **polling Celery** en filet de secours.
-- Matching local : `sendcloud_parcel_id` **ou** `order_number` / `order.public_id` / `sendcloud_order_id`.
+- Matching local : `sendcloud_parcel_id` **ou** `order_number` métier `CMD-…` / anciennes références UUID / `sendcloud_order_id`.
 - Hors périmètre : Shopify, multi-colis, étiquettes retour, génération automatique d’étiquette via `shipments/announce`.
 
 ## Périmètre livré
@@ -40,7 +40,7 @@ Voir `.env.example` :
 ## Données poussées à la déclaration
 - Destinataire (adresse de livraison)
 - Produits / lignes commande
-- N° de commande (`order_number` = référence courte Prenium) comme référence d’expédition
+- N° de commande (`order_number` = numéro métier `CMD-YYYY-NNNNNN`) comme référence d’expédition ; aucun UUID n’est envoyé dans ce champ
 - Poids estimé (indicatif)
 
 ## Tests
@@ -64,6 +64,7 @@ Voir `.env.example` :
 - [ ] Worker Celery actif et connecté au broker Redis
 - [ ] Webhook URL configurée sur l’intégration API PreniumDTF
 - [ ] Déclarer une commande `READY_TO_SHIP` depuis le panneau staff
+- [x] Test automatisé : `order_number` est transmis au format `CMD-YYYY-NNNNNN`, sans fallback UUID
 - [ ] Vérifier l’apparition de la commande Incoming dans Sendcloud
 - [ ] Générer l’étiquette manuellement dans Sendcloud
 - [ ] Faire passer le colis à un statut expédié (ou webhook de test)

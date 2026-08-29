@@ -191,6 +191,54 @@
     width: 100%;
   }
 
+  .ui-copy-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .ui-copy-button {
+    display: inline-grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--line) 82%, var(--ink));
+    border-radius: 0.45rem;
+    color: var(--muted);
+    background: var(--surface);
+    box-shadow: none;
+    cursor: pointer;
+    transition:
+      color var(--ui-action-transition),
+      border-color var(--ui-action-transition),
+      background-color var(--ui-action-transition);
+  }
+
+  .ui-copy-button svg {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
+  .ui-copy-button:is(:hover, :focus-visible) {
+    border-color: var(--brand-strong);
+    color: var(--ink);
+    background: color-mix(in srgb, var(--brand) 10%, var(--surface));
+  }
+
+  .ui-copy-button:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .ui-copy-button.is-copied {
+    border-color: var(--success);
+    color: var(--success-text, var(--ink));
+    background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  }
+
   .ui-btn[disabled],
   .ui-btn[aria-disabled="true"],
   .btn[disabled],

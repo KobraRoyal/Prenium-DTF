@@ -349,6 +349,15 @@ def test_staff_navigation_groups_only_authorized_secondary_tools():
     assert "Demandes d’accès" not in authorized_html
     assert "Réglages de laize" not in authorized_html
 
+    staff_user.user_permissions.add(
+        Permission.objects.get(codename="view_prospectprofile"),
+        Permission.objects.get(codename="review_prospectprofile"),
+    )
+
+    access_html = client.get(reverse("portal:staff-dashboard")).content.decode()
+    assert "Demandes d’accès" in access_html
+    assert reverse("portal:staff-access-request-list") in access_html
+
 
 @pytest.mark.django_db
 def test_client_user_cannot_access_other_customer_scope_in_portal():

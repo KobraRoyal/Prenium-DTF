@@ -60,11 +60,16 @@ Tags template portail : `order_business_ref`, `order_uuid_ref` (`portal_tags.py`
 | Surface | UUID court | N° `CMD-…` | Réf. client |
 |---------|:----------:|:----------:|:-----------:|
 | **Client** (listes, fiche, breadcrumb) | Non | Oui | Oui (si renseignée) |
-| **Staff OPS** (listes, fiche) | Oui | Oui | Oui |
+| **Staff OPS — liste `/staff/orders/`** | Non — remplacé par le N° OF | Oui | Oui |
+| **Staff OPS — dashboard `/staff/`** | Non — remplacé par le N° OF | Oui | Oui |
+| **Staff OPS — fiche commande** | Oui | Oui | Oui |
 | **Atelier / production** | Oui | Oui | Oui (+ client, OF, etc.) |
+| **Sendcloud (`order_number`)** | Non | Oui | Non |
 
 L’UUID (`public_id`) reste l’identifiant technique d’URL et d’API ; il n’est **pas** exposé dans
-l’UI client.
+l’UI client. Dans la liste staff `/staff/orders/`, le N° OF (`OF-…`) est le repère opérationnel
+affiché à la place de l’UUID ; l’UUID reste présent dans l’URL technique de la fiche.
+Le dashboard staff applique la même règle et propose une icône accessible pour copier le N° OF.
 
 ### Templates concernés
 
@@ -94,6 +99,9 @@ Le `project_number` (`CMD-…`) s’affiche tel quel dans les listes et fiches p
 | `backend/apps/portal/tests/test_client_order_presentation.py` | Identité fiche client |
 | `backend/apps/portal/tests/test_ui_coherence.py` | Tags template staff/client |
 | `tests/ui/test_portal_ui.py` | Rendu HTML listes |
+| `tests/production/test_staff_order_list_filters.py` | Recherche staff par OF/CMD/client/référence et conservation des files |
+| `tests/production/test_dashboard_and_batch.py` | Dashboard sans colonne UUID et copie du N° OF |
+| `tests/shipping/test_sendcloud_service.py` | Transmission du n° métier `CMD-…` à Sendcloud, jamais de fallback UUID |
 
 ## Historique
 
@@ -102,6 +110,9 @@ Le `project_number` (`CMD-…`) s’affiche tel quel dans les listes et fiches p
 | Migration `0006` | Préfixe historique `GANG-SHEET-` sur tous les projets |
 | Migration `0009` | Séparation temporaire : fichiers → `CMD-`, gang-sheet → `GANG-SHEET-` |
 | Août 2026 (Sprint 48) | Unification `CMD-` + règles d’affichage client / Atelier documentées ici |
+| 2026-08-29 | Déclaration Sendcloud alignée sur `order_number = CMD-…` ; l’UUID reste réservé à `order_id` technique |
+| 2026-08-29 | `/staff/orders/` : recherche métier ajoutée et UUID visible remplacé par le N° OF |
+| 2026-08-29 | Recherche client/staff mutualisée en HTMX ; dashboard staff sans UUID avec copie du N° OF |
 
 ## Liens
 
