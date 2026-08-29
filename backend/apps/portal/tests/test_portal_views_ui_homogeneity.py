@@ -374,9 +374,9 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn("/* v17 — Onglets / filtres de listes homogènes", css)
         self.assertIn("min-height: var(--ui-action-min-h)", css)
         self.assertIn(".ui-selection-control:is(", css)
-        list_tabs = css.split("v17 — Onglets / filtres", 1)[1].split(
-            "v114 — Onglets workflow", 1
-        )[0]
+        list_tabs = css.split("v17 — Onglets / filtres", 1)[1].split("v114 — Onglets workflow", 1)[
+            0
+        ]
         self.assertNotIn(".ui-list-tabs__tab.is-active", list_tabs)
 
     def test_client_dashboard_uses_single_content_surface(self) -> None:

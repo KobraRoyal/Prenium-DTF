@@ -128,9 +128,7 @@ class ProductPolishUITests(SimpleTestCase):
         atelier_operations = source(CSS_DIR / "components" / "atelier-operations.css")
         volume_nudge = source(CSS_DIR / "components" / "volume-nudge-copy.css")
         product_shell = source(CSS_DIR / "components" / "product-shell.css")
-        account_workspace = source(
-            CSS_DIR / "components" / "customer-account-workspace.css"
-        )
+        account_workspace = source(CSS_DIR / "components" / "customer-account-workspace.css")
 
         for marker in (
             ".ui-selection-rail--horizontal",
@@ -152,16 +150,14 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn("border-radius: 0 !important", bridge)
         self.assertNotIn("color-mix(in srgb, var(--brand)", bridge)
 
-        list_tabs = core.split("v17 — Onglets / filtres", 1)[1].split(
-            "v114 — Onglets workflow", 1
-        )[0]
+        list_tabs = core.split("v17 — Onglets / filtres", 1)[1].split("v114 — Onglets workflow", 1)[
+            0
+        ]
         self.assertIn("min-height: var(--ui-action-min-h)", list_tabs)
         self.assertIn("background: transparent", list_tabs)
         self.assertNotIn(".ui-list-tabs__tab:hover", list_tabs)
         self.assertNotIn(".ui-list-tabs__tab.is-active,", list_tabs)
-        list_tab_rule = list_tabs.split(".ui-list-tabs__tab {", 1)[1].split(
-            "}", 1
-        )[0]
+        list_tab_rule = list_tabs.split(".ui-list-tabs__tab {", 1)[1].split("}", 1)[0]
         self.assertNotIn("border-radius: 999px", list_tab_rule)
 
         workflow_tabs = core.split("v114 — Onglets workflow", 1)[1].split(
@@ -187,12 +183,9 @@ class ProductPolishUITests(SimpleTestCase):
                 self.assertIn("ui-selection-control", template)
                 self.assertIn("ui-selection-rail", template)
 
-        atelier_workflow = source(
-            TEMPLATES_DIR / "portal/staff/operations/_job_row.html"
-        )
+        atelier_workflow = source(TEMPLATES_DIR / "portal/staff/operations/_job_row.html")
         self.assertIn(
-            "atelier-operation-workflow ui-selection-rail "
-            "ui-selection-rail--horizontal",
+            "atelier-operation-workflow ui-selection-rail ui-selection-rail--horizontal",
             atelier_workflow,
         )
 
@@ -227,14 +220,14 @@ class ProductPolishUITests(SimpleTestCase):
                 with self.subTest(stylesheet=stylesheet, marker=marker):
                     self.assertNotIn(marker, css)
 
-        atelier_link = atelier_operations.split(
-            ".atelier-operation-workflow__link {", 1
-        )[1].split("}", 1)[0]
+        atelier_link = atelier_operations.split(".atelier-operation-workflow__link {", 1)[1].split(
+            "}", 1
+        )[0]
         self.assertNotIn("border-radius", atelier_link)
         self.assertIn("min-height: var(--ui-action-min-h)", atelier_link)
-        atelier_surface = atelier_operations.split(
-            ".atelier-operations-surface {", 1
-        )[1].split("}", 1)[0]
+        atelier_surface = atelier_operations.split(".atelier-operations-surface {", 1)[1].split(
+            "}", 1
+        )[0]
         self.assertIn("grid-template-columns: minmax(0, 1fr)", atelier_surface)
         self.assertIn("min-width: 0", atelier_surface)
         self.assertNotIn(
