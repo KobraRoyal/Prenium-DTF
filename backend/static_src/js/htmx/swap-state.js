@@ -1,5 +1,13 @@
-function syncTabsRowChipActive(group, activeEl) {
-  group.querySelectorAll(".chip").forEach((el) => {
+const ORDER_TAB_SELECTOR =
+  '.portal-order-tabs [role="tab"][data-panel-slug]';
+const TAB_CONTROL_SELECTOR = `${ORDER_TAB_SELECTOR}, .tabs-row .chip`;
+
+function syncTabGroupActiveState(group, activeEl) {
+  const controls = group.matches(".portal-order-tabs")
+    ? group.querySelectorAll('[role="tab"][data-panel-slug]')
+    : group.querySelectorAll(".chip");
+
+  controls.forEach((el) => {
     const on = el === activeEl;
     el.classList.toggle("is-active", on);
     if (el.getAttribute("role") === "tab") {
@@ -33,6 +41,32 @@ function syncPanelLabel(activeEl) {
   }
 }
 
+function syncOrderTabsFromPath(path) {
+  let panelSlug;
+  try {
+    const restoredUrl = new URL(
+      path || window.location.href,
+      window.location.origin
+    );
+    panelSlug = restoredUrl.searchParams.get("panel");
+  } catch {
+    return;
+  }
+  if (!panelSlug) {
+    return;
+  }
+
+  document.querySelectorAll(".portal-order-tabs").forEach((group) => {
+    const activeTab = Array.from(
+      group.querySelectorAll('[role="tab"][data-panel-slug]')
+    ).find((tab) => tab.dataset.panelSlug === panelSlug);
+    if (activeTab) {
+      syncTabGroupActiveState(group, activeTab);
+      syncPanelLabel(activeTab);
+    }
+  });
+}
+
 function moveOrderTabFocus(tab, direction) {
   const group = tab.closest(".portal-order-tabs, .tabs-row");
   if (!group) {
@@ -53,18 +87,16 @@ function moveOrderTabFocus(tab, direction) {
 }
 
 document.addEventListener("click", (event) => {
-  const chip = event.target.closest(
-    ".portal-order-tabs .chip, .tabs-row .chip"
-  );
-  if (!chip) {
+  const control = event.target.closest(TAB_CONTROL_SELECTOR);
+  if (!control) {
     return;
   }
-  const group = chip.closest(".portal-order-tabs, .tabs-row");
+  const group = control.closest(".portal-order-tabs, .tabs-row");
   if (!group) {
     return;
   }
-  syncTabsRowChipActive(group, chip);
-  syncPanelLabel(chip);
+  syncTabGroupActiveState(group, control);
+  syncPanelLabel(control);
 });
 
 document.addEventListener("keydown", (event) => {
@@ -97,17 +129,21 @@ document.body.addEventListener("htmx:afterSwap", (event) => {
   if (!target?.id?.endsWith("order-panel")) {
     return;
   }
-  const elt = event.detail?.elt;
-  if (!elt?.classList?.contains("chip")) {
+  const requestControl = event.detail?.requestConfig?.elt;
+  if (!requestControl?.matches?.(ORDER_TAB_SELECTOR)) {
     return;
   }
-  const group = elt.closest(".portal-order-tabs, .tabs-row");
+  const group = requestControl.closest(".portal-order-tabs");
   if (group) {
-    syncTabsRowChipActive(group, elt);
-    syncPanelLabel(elt);
+    syncTabGroupActiveState(group, requestControl);
+    syncPanelLabel(requestControl);
   }
 });
 
 document.body.addEventListener("htmx:responseError", (event) => {
   togglePanelLoading(event.detail?.target, false);
+});
+
+document.body.addEventListener("htmx:historyRestore", (event) => {
+  syncOrderTabsFromPath(event.detail?.path);
 });

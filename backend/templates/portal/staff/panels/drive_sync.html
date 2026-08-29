@@ -22,7 +22,7 @@
         <span class="badge {{ upload.drive_sync.status|badge_tone }}">{{ upload.drive_sync.status|human_status }}</span>
         {% if upload.drive_sync.google_drive_browser_url %}
         <a
-          class="ui-link text-sm font-semibold"
+          class="ui-link ui-inline-action text-sm font-semibold"
           href="{{ upload.drive_sync.google_drive_browser_url }}"
           target="_blank"
           rel="noopener noreferrer"

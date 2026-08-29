@@ -45,7 +45,7 @@
             {% else %}
             <span class="badge is-warning shrink-0">À contrôler</span>
             {% endif %}
-            <a class="atelier-inspection__open-link" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>
+            <a class="atelier-inspection__open-link ui-inline-action" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>
           </div>
         </div>
 

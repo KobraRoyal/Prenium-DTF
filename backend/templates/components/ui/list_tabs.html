@@ -1,11 +1,11 @@
 {# Onglets / filtres de listes portail (liens ou boutons). #}
 {# tabs : {label, count?, href?, is_active, is_empty?, id?, controls?, attrs?} #}
-<nav class="ui-list-tabs{% if extra_class %} {{ extra_class }}{% endif %}" role="tablist" aria-label="{{ aria_label }}">
+<nav class="ui-list-tabs ui-selection-rail ui-selection-rail--horizontal{% if extra_class %} {{ extra_class }}{% endif %}" role="tablist" aria-label="{{ aria_label }}">
   {% for tab in tabs %}
     {% if element == "button" %}
     <button
       type="button"
-      class="ui-list-tabs__tab{% if tab.is_active %} is-active{% endif %}{% if tab.is_empty %} is-empty{% endif %}"
+      class="ui-list-tabs__tab ui-selection-control{% if tab.is_active %} is-active{% endif %}{% if tab.is_empty %} is-empty{% endif %}"
       role="tab"
       aria-selected="{% if tab.is_active %}true{% else %}false{% endif %}"
       {% if tab.id %}id="{{ tab.id }}"{% endif %}
@@ -13,7 +13,7 @@
     >
     {% else %}
     <a
-      class="ui-list-tabs__tab{% if tab.is_active %} is-active{% endif %}{% if tab.is_empty %} is-empty{% endif %}"
+      class="ui-list-tabs__tab ui-selection-control{% if tab.is_active %} is-active{% endif %}{% if tab.is_empty %} is-empty{% endif %}"
       href="{{ tab.href }}"
       role="tab"
       {% if tab.is_active %}aria-current="page" aria-selected="true"{% else %}aria-selected="false"{% endif %}

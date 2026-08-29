@@ -7,20 +7,26 @@
       href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=portal_nav_access.customer_public_id %}"
     >Créer une planche DTF</a>
     {% else %}
-    <details class="product-nav__more product-create-menu" data-product-nav-details>
-      <summary class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta product-create-menu__trigger ui-nav-action" aria-label="Ouvrir le menu Créer une commande">
+    <details class="product-nav__more product-create-menu product-floating-menu product-floating-menu--create" data-product-nav-details>
+      <summary class="ui-btn ui-btn-primary ui-btn-sm product-nav__cta product-create-menu__trigger ui-nav-action" aria-label="Ouvrir le menu Créer une commande" aria-haspopup="true">
         <span>Créer une commande</span>
         <span class="product-nav__chevron" aria-hidden="true"></span>
       </summary>
-      <div class="product-nav__more-menu product-create-menu__menu" aria-label="Créer une commande">
-        <a class="product-nav__more-link product-create-menu__option" href="{% url 'portal:client-order-project-create' customer_public_id=portal_nav_access.customer_public_id %}">
-          {% include "components/nav/creation_icon.html" with name="files" %}
-          <span><strong>À partir de fichiers</strong><small>Importer vos visuels prêts à produire</small></span>
-        </a>
-        <a class="product-nav__more-link product-create-menu__option" href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=portal_nav_access.customer_public_id %}">
-          {% include "components/nav/creation_icon.html" with name="gang-sheet" %}
-          <span><strong>Composer une planche DTF</strong><small>Assembler automatiquement plusieurs visuels</small></span>
-        </a>
+      <div class="product-nav__more-menu product-create-menu__menu product-floating-menu__panel" aria-label="Créer une commande">
+        <div class="product-create-menu__intro product-floating-menu__header">
+          <strong>Comment souhaitez-vous commencer&nbsp;?</strong>
+          <small>Choisissez le parcours adapté à vos fichiers.</small>
+        </div>
+        <div class="product-create-menu__options product-floating-menu__list">
+          <a class="product-nav__more-link product-create-menu__option product-floating-menu__action" href="{% url 'portal:client-order-project-create' customer_public_id=portal_nav_access.customer_public_id %}">
+            {% include "components/nav/creation_icon.html" with name="files" %}
+            <span><strong>À partir de fichiers</strong><small>Importer vos visuels prêts à produire</small></span>
+          </a>
+          <a class="product-nav__more-link product-create-menu__option product-floating-menu__action" href="{% url 'portal:client-gang-sheet-list-create' customer_public_id=portal_nav_access.customer_public_id %}">
+            {% include "components/nav/creation_icon.html" with name="gang-sheet" %}
+            <span><strong>Composer une planche DTF</strong><small>Assembler automatiquement plusieurs visuels</small></span>
+          </a>
+        </div>
       </div>
     </details>
     {% endif %}

@@ -120,18 +120,50 @@
 
   .ui-btn-ghost,
   .dui-btn-ghost {
+    --ui-simple-underline-color: var(--brand);
+    position: relative;
+    overflow: clip;
     border-color: transparent;
     color: var(--ui-action-secondary-text);
     background: transparent;
     box-shadow: none;
   }
 
+  .ui-btn-ghost::before,
+  .dui-btn-ghost::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0.85rem;
+    bottom: 0.38rem;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--ui-simple-underline-color);
+    pointer-events: none;
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform var(--ui-action-transition);
+  }
+
   .ui-btn-ghost:hover,
   .dui-btn-ghost:hover {
-    border-color: color-mix(in srgb, var(--ink) 14%, transparent);
+    border-color: transparent;
     color: var(--ui-action-secondary-text);
-    background: color-mix(in srgb, var(--brand) 10%, transparent);
+    background: transparent;
     box-shadow: none;
+  }
+
+  .ui-btn-ghost:is(:hover, :focus-visible, .is-active, [aria-current="page"])::before,
+  .dui-btn-ghost:is(:hover, :focus-visible, .is-active, [aria-current="page"])::before {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+
+  :is(.ui-btn-ghost, .dui-btn-ghost):is(
+    .ui-btn-danger,
+    [class*="danger"],
+    [class*="delete"]
+  ) {
+    --ui-simple-underline-color: var(--danger);
   }
 
   .ui-btn-danger {
@@ -236,6 +268,11 @@
       transition: none;
     }
 
+    .ui-btn-ghost::before,
+    .dui-btn-ghost::before {
+      transition: none;
+    }
+
     .ui-btn:hover,
     .btn:hover,
     .btn-saas-primary:hover,
@@ -298,4 +335,196 @@ html[data-theme="prenium"] body.product-shell :is(.ui-btn-ghost, .dui-btn-ghost)
   background: color-mix(in srgb, var(--brand) 10%, transparent);
   box-shadow: none;
   transform: none;
+}
+
+/*
+ * Contrat partagé des sélecteurs de navigation (filtres, onglets, sections).
+ * La police et les dimensions restent pilotées par chaque composant métier ;
+ * cette primitive ne possède que la forme, la couleur d'état et le mouvement.
+ */
+html[data-theme="prenium"] body.product-shell .ui-selection-rail--horizontal {
+  border: 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-selection-control {
+  --ui-selection-indicator-color: var(--brand);
+  --ui-underline-color: var(--ui-selection-indicator-color);
+  --ui-underline-inset: 0.45rem;
+  position: relative !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-decoration: none;
+  transform: none !important;
+  transition: color var(--ui-action-transition) !important;
+}
+
+/*
+ * Lien d'action contextuel : navigation vers une fiche, un client ou Drive.
+ * Il partage le moteur de soulignement avec les sélecteurs, sans devenir un CTA.
+ */
+html[data-theme="prenium"] body.product-shell .ui-inline-action {
+  --ui-underline-color: var(--brand);
+  --ui-underline-inset: 0;
+  position: relative !important;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.08rem 0 0.22rem;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: inherit;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-family: inherit;
+  font-weight: 700;
+  line-height: 1.25;
+  text-decoration: none !important;
+  transition: color var(--ui-action-transition) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-inline-action--control {
+  --ui-underline-inset: 0.35rem;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding-inline: 0.35rem;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-inline-action:is(:hover, :focus-visible) {
+  color: var(--brand-strong) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-inline-action:focus-visible {
+  outline: 3px solid var(--ui-focus-ring, color-mix(in srgb, var(--brand) 38%, transparent));
+  outline-offset: 3px;
+}
+
+/*
+ * Déclencheur destructif contextuel : discret tant qu'il n'est pas sollicité,
+ * explicite par sa couleur et son soulignement danger au survol / focus.
+ * Les boutons de confirmation dans les dialogues restent des `.ui-btn-danger`.
+ */
+html[data-theme="prenium"] body.product-shell .ui-destructive-action {
+  --ui-underline-color: var(--danger);
+  --ui-underline-inset: 0.35rem;
+  position: relative !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--ui-action-min-h);
+  max-width: 100%;
+  margin: 0;
+  padding: 0.55rem 0.35rem 0.62rem;
+  border: 0 !important;
+  border-radius: 0 !important;
+  appearance: none;
+  color: var(--danger-text) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-family: var(--ui-font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-align: center;
+  text-decoration: none !important;
+  touch-action: manipulation;
+  cursor: pointer;
+  transform: none !important;
+  transition: color var(--ui-action-transition) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-destructive-action:is(:hover, :focus-visible) {
+  color: var(--danger-text) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell :is(.ui-selection-control, .ui-destructive-action):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-destructive-action:is(:disabled, [aria-disabled="true"]) {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+html[data-theme="prenium"] body.product-shell :is(.ui-selection-control, .ui-inline-action, .ui-destructive-action)::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: auto var(--ui-underline-inset, 0) 0 !important;
+  z-index: 1;
+  display: block !important;
+  width: auto !important;
+  height: 2px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--ui-underline-color, var(--brand)) !important;
+  box-shadow: none !important;
+  pointer-events: none;
+  transform: scaleX(0) !important;
+  transform-origin: right center !important;
+  transition: transform var(--ui-action-transition) !important;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-selection-control:is(
+  :hover,
+  :focus-visible,
+  .is-active,
+  [aria-current="page"],
+  [aria-current="location"],
+  [aria-selected="true"]
+) {
+  border-color: transparent !important;
+  color: var(--ink) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-selection-control:is(
+  .is-active,
+  [aria-current="page"],
+  [aria-current="location"],
+  [aria-selected="true"]
+) {
+  font-weight: 750 !important;
+}
+
+html[data-theme="prenium"] body.product-shell :is(.ui-selection-control, .ui-inline-action, .ui-destructive-action):is(:hover, :focus-visible)::after,
+html[data-theme="prenium"] body.product-shell .ui-selection-control:is(
+  .is-active,
+  [aria-current="page"],
+  [aria-current="location"],
+  [aria-selected="true"]
+)::after {
+  transform: scaleX(1) !important;
+  transform-origin: left center !important;
+}
+
+html[data-theme="prenium"] body.product-shell .ui-selection-control .ui-list-tabs__count {
+  min-width: auto !important;
+  min-height: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  opacity: 0.72;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="prenium"] body.product-shell .ui-selection-control,
+  html[data-theme="prenium"] body.product-shell .ui-inline-action,
+  html[data-theme="prenium"] body.product-shell .ui-destructive-action,
+  html[data-theme="prenium"] body.product-shell :is(.ui-selection-control, .ui-inline-action, .ui-destructive-action)::after {
+    transition: none !important;
+  }
 }

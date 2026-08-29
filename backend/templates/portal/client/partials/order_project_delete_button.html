@@ -1,7 +1,7 @@
 {% if project.can_delete %}
 <button
   type="button"
-  class="{{ button_class|default:'ui-btn ui-btn-danger ui-btn-sm' }}"
+  class="ui-destructive-action{% if button_class %} {{ button_class }}{% endif %}"
   data-dialog-open="delete-project-dialog-{{ project.public_id }}"
   aria-haspopup="dialog"
 >

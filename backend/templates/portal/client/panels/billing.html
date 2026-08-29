@@ -253,7 +253,7 @@
       <span class="badge {{ invoice.status|badge_tone }}">{{ invoice.status|human_status }}</span>
     </div>
     <p class="client-billing-block__action mb-0">
-      <a class="ui-btn ui-btn-secondary" href="{% url 'billing:client-invoice-download' customer_public_id=order.customer.public_id order_public_id=order.public_id %}">
+      <a class="ui-inline-action ui-inline-action--control" href="{% url 'billing:client-invoice-download' customer_public_id=order.customer.public_id order_public_id=order.public_id %}">
         Télécharger le justificatif
       </a>
     </p>

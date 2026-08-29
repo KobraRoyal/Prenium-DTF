@@ -66,7 +66,7 @@
             {% else %}
             <button class="ui-btn ui-btn-primary ui-btn-wide b2b-project-checkout-cta" type="submit">{% if project.status == "submitted" %}Finaliser ma commande{% else %}Confirmer et transmettre{% endif %}</button>
             {% endif %}
-            {% include "portal/client/partials/order_project_delete_button.html" with button_class="ui-btn ui-btn-ghost ui-btn-sm b2b-project-checkout-delete" label="Supprimer la commande" %}
+            {% include "portal/client/partials/order_project_delete_button.html" with button_class="b2b-project-checkout-delete" label="Supprimer la commande" %}
           </div>
           {% if gang_sheet_quote and customer.default_billing_mode == "immediate" %}
           <p class="b2b-project-checkout-hint muted text-sm">La production démarre après règlement.</p>
@@ -79,18 +79,18 @@
       {% elif project.status == "action_required" %}
         <p class="b2b-project-toolbar__hint b2b-summary-alert">Validez chaque visuel pour transmettre.</p>
         <div class="b2b-project-checkout-secondary">
-          {% include "portal/client/partials/order_project_delete_button.html" with button_class="ui-btn ui-btn-ghost ui-btn-sm b2b-project-checkout-delete" label="Supprimer la commande" %}
+          {% include "portal/client/partials/order_project_delete_button.html" with button_class="b2b-project-checkout-delete" label="Supprimer la commande" %}
         </div>
       {% elif project.items.all %}
         {% if project.status == "draft" or project.status == "incomplete" %}
         <p class="b2b-project-toolbar__hint muted text-sm">Complétez chaque visuel pour transmettre.</p>
         {% endif %}
         <div class="b2b-project-checkout-secondary">
-          {% include "portal/client/partials/order_project_delete_button.html" with button_class="ui-btn ui-btn-ghost ui-btn-sm b2b-project-checkout-delete" label="Supprimer la commande" %}
+          {% include "portal/client/partials/order_project_delete_button.html" with button_class="b2b-project-checkout-delete" label="Supprimer la commande" %}
         </div>
       {% else %}
         <div class="b2b-project-checkout-secondary">
-          {% include "portal/client/partials/order_project_delete_button.html" with button_class="ui-btn ui-btn-ghost ui-btn-sm b2b-project-checkout-delete" label="Supprimer la commande" %}
+          {% include "portal/client/partials/order_project_delete_button.html" with button_class="b2b-project-checkout-delete" label="Supprimer la commande" %}
         </div>
       {% endif %}
     </div>

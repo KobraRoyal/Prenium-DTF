@@ -28,7 +28,7 @@
       {% if shipment.label_file %}
       <a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-order-shipment-label-download' order_public_id=order.public_id %}">Télécharger l’étiquette</a>
       {% endif %}
-      {% if shipment.tracking_url %}<a class="ui-btn ui-btn-secondary" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a>{% endif %}
+      {% if shipment.tracking_url %}<a class="ui-inline-action ui-inline-action--control" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre le colis</a>{% endif %}
       {% if shipment.status == "created" %}
         {% if shipment.sendcloud_order_id or shipment.sendcloud_parcel_id %}
       <form hx-post="{% url 'portal:staff-order-panel-shipping-sync' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>{% csrf_token %}<button type="submit" class="ui-btn ui-btn-secondary" hx-disabled-elt="this">Actualiser le suivi</button></form>
@@ -39,7 +39,7 @@
   {% elif not can_create_shipment %}
   <div class="operator-empty-inline operator-empty-inline--large"><strong>Consultation seule</strong><p>Votre rôle permet de consulter la logistique, mais pas de créer une expédition.</p></div>
   {% elif not shipping_ready %}
-  <div class="operator-empty-inline operator-empty-inline--large"><strong>Expédition non disponible</strong><p>L’OF est actuellement « {% if production_job %}{{ production_job.status|human_status }}{% else %}non initialisé{% endif %} ».</p>{% if perms.production.view_productionjob %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Ouvrir Production</a>{% endif %}</div>
+  <div class="operator-empty-inline operator-empty-inline--large"><strong>Expédition non disponible</strong><p>L’OF est actuellement « {% if production_job %}{{ production_job.status|human_status }}{% else %}non initialisé{% endif %} ».</p>{% if perms.production.view_productionjob %}<a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Ouvrir Production</a>{% endif %}</div>
   {% else %}
   <section class="shipping-form-shell" aria-labelledby="staff-shipping-form-heading">
     <div class="operator-section-head">

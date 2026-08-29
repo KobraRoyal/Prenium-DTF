@@ -62,18 +62,18 @@
 
     <div class="atelier-operation-row__workflow">
       <p class="atelier-operation-row__hint">{{ row.workflow_hint }}</p>
-      <nav class="atelier-operation-workflow" aria-label="Étapes dossier {{ row.job.manufacturing_order_number }}">
+      <nav class="atelier-operation-workflow ui-selection-rail ui-selection-rail--horizontal" aria-label="Étapes dossier {{ row.job.manufacturing_order_number }}">
         {% if perms.uploads.view_orderuploadinspection %}
-        <a class="atelier-operation-workflow__link{% if row.focus_panel == 'inspection' %} is-active{% endif %}" href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=inspection">Contrôle</a>
+        <a class="atelier-operation-workflow__link ui-selection-control{% if row.focus_panel == 'inspection' %} is-active{% endif %}" href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=inspection">Contrôle</a>
         {% endif %}
         {% if perms.production.view_productionjob %}
-        <a class="atelier-operation-workflow__link{% if row.focus_panel == 'production' %} is-active{% endif %}" href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=production">Production</a>
+        <a class="atelier-operation-workflow__link ui-selection-control{% if row.focus_panel == 'production' %} is-active{% endif %}" href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=production">Production</a>
         {% endif %}
         {% if perms.shipping.view_shipment %}
-        <a class="atelier-operation-workflow__link{% if row.focus_panel == 'shipping' %} is-active{% endif %}" href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=shipping">Expédition</a>
+        <a class="atelier-operation-workflow__link ui-selection-control{% if row.focus_panel == 'shipping' %} is-active{% endif %}" href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=shipping">Expédition</a>
         {% endif %}
         {% if perms.billing.view_invoice %}
-        <a class="atelier-operation-workflow__link{% if row.focus_panel == 'billing' %} is-active{% endif %}" href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=billing">Facturation</a>
+        <a class="atelier-operation-workflow__link ui-selection-control{% if row.focus_panel == 'billing' %} is-active{% endif %}" href="{% url 'portal:staff-order-detail' order_public_id=row.order.public_id %}?panel=billing">Facturation</a>
         {% endif %}
       </nav>
       {% if row.start_block_reason %}

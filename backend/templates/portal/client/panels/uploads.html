@@ -38,7 +38,7 @@
           </td>
           <td>
             <div class="ui-table-actions">
-              <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
+              <a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
             </div>
           </td>
         </tr>
@@ -81,7 +81,7 @@
         {% endif %}
       </dl>
       <div class="mt-4 flex flex-wrap gap-2">
-        <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
+        <a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
       </div>
     </article>
     {% endfor %}

@@ -231,6 +231,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("conversion-transform__index", partials)
         self.assertIn("min-height: 2.75rem", conversion_css)
         self.assertIn("{% static 'css/app.css' %}", base)
+        self.assertIn("{% static 'css/app.css' %}?v={{ asset_v }}", base)
         self.assertIn("{% static 'js/app.js' %}", base)
         self.assertIn("?v={{ asset_v }}", base)
         self.assertIn("ui-brand-lockup__home", logo)
@@ -330,7 +331,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Recommander", panels)
         self.assertIn("page_head_actions/client_order_detail.html", detail)
         self.assertIn("<th>Action</th>", panels)
-        self.assertIn("ui-btn-ghost", panels)
+        self.assertIn("ui-inline-action ui-inline-action--control", panels)
         self.assertIn(".client-order-panel--uploads", portal_client_css)
 
     def test_product_views_do_not_reintroduce_dark_theme_text_on_light_panels(self) -> None:
@@ -514,6 +515,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("<script>", source)
         self.assertIn("event.detail?.target", runtime)
         self.assertIn("target instanceof HTMLElement", runtime)
+        self.assertIn(
+            '.portal-order-tabs [role="tab"][data-panel-slug]',
+            runtime,
+        )
+        self.assertIn("event.detail?.requestConfig?.elt", runtime)
+        self.assertIn('document.body.addEventListener("htmx:historyRestore"', runtime)
+        self.assertIn("tab.dataset.panelSlug === panelSlug", runtime)
+        self.assertNotIn(".portal-order-tabs .chip", runtime)
 
     def test_scan_is_replaced_by_the_dedicated_operations_console(self) -> None:
         tabs = app_source("apps/portal/templatetags/order_tags.py")
@@ -590,9 +599,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("staff-order-focus__facts", source)
         self.assertIn("staff_order_focus.of_number", source)
         self.assertIn("staff_order_focus.action_message", source)
-        self.assertIn("staff-order-focus__client", source)
+        self.assertIn("staff-order-focus__client ui-inline-action", source)
         self.assertIn("order.total_amount", source)
         self.assertIn("Dossier Drive", source)
+        self.assertIn('class="ui-inline-action" href="{{ order_drive_url }}"', source)
         self.assertNotIn("atelier-next-action", source)
         self.assertNotIn("Prochain geste", source)
         self.assertNotIn("staff-order-focus__header", source)
@@ -797,10 +807,13 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Administration Atelier", staff_nav)
         self.assertIn(">Tableau de bord</a>", staff_nav)
         self.assertIn(">Commandes</a>", staff_nav)
-        self.assertIn("Outils Atelier", staff_nav)
+        self.assertIn("Réglages Atelier", staff_nav)
+        self.assertIn("Parc machine", staff_nav)
         self.assertIn("Demandes d’accès", staff_nav)
         self.assertIn("Modèles d’e-mails", staff_nav)
         self.assertIn("Réglages de laize", staff_nav)
+        self.assertNotIn("Machines DTF", staff_nav)
+        self.assertNotIn("Identité visuelle", staff_nav)
         self.assertIn("Votre compte", header)
         self.assertIn(">Atelier</span>", header)
         self.assertIn("product-menu-button__icon", header)
@@ -812,6 +825,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("product-profile__trigger", profile)
         self.assertIn("product-nav__chevron", profile)
         self.assertIn("product-profile__menu", profile)
+        self.assertIn("product-floating-menu__panel", profile)
+        self.assertIn("product-floating-menu__header", profile)
+        self.assertIn("product-floating-menu__list", profile)
+        self.assertIn("product-floating-menu__action", profile)
+        self.assertIn("product-floating-menu__footer", profile)
         self.assertIn("Mon compte", profile)
         self.assertIn("Mes informations", profile)
         self.assertIn("Se déconnecter", profile)
@@ -831,9 +849,24 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("portal_nav_access.can_manage_team", profile)
         self.assertEqual(profile_icon.count("<svg"), 4)
         self.assertEqual(profile_icon.count('aria-hidden="true"'), 4)
+        self.assertEqual(profile_icon.count('width="20" height="20"'), 4)
+        self.assertEqual(profile_icon.count('stroke-linecap="round"'), 4)
+        self.assertEqual(profile_icon.count('stroke-linejoin="round"'), 4)
+        self.assertEqual(profile_icon.count('focusable="false"'), 4)
+        self.assertIn("product-profile__icon--profile", profile_icon)
+        self.assertIn("product-profile__icon--team", profile_icon)
+        self.assertIn("product-profile__icon--atelier", profile_icon)
+        self.assertIn("product-profile__icon--logout", profile_icon)
         self.assertIn("Créer une commande", create_menu)
         self.assertIn("À partir de fichiers", create_menu)
         self.assertIn("Composer une planche DTF", create_menu)
+        self.assertIn("Comment souhaitez-vous commencer", create_menu)
+        self.assertIn("product-floating-menu--create", create_menu)
+        self.assertIn("product-floating-menu__panel", create_menu)
+        self.assertIn("product-floating-menu__header", create_menu)
+        self.assertIn("product-floating-menu__list", create_menu)
+        self.assertIn("product-floating-menu__action", create_menu)
+        self.assertIn('aria-haspopup="true"', create_menu)
         self.assertIn("Créer une planche DTF", create_menu)
         self.assertIn("portal:client-order-project-create", create_menu)
         self.assertIn("portal:client-gang-sheet-list-create", create_menu)
@@ -846,6 +879,28 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("portal_client_navigation.html", header)
         self.assertIn("portal_staff_navigation.html", header)
         self.assertIn("data-product-nav-details", staff_nav)
+        shell_css = static_source("css/components/shell.css")
+        self.assertIn(".product-floating-menu__panel", shell_css)
+        self.assertIn("@keyframes product-floating-menu-in", shell_css)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", shell_css)
+        self.assertIn("background: var(--brand)", shell_css)
+        self.assertIn(
+            ".product-floating-menu__action .product-profile__icon--profile",
+            shell_css,
+        )
+        self.assertIn(
+            ".product-floating-menu__action .product-profile__icon--team",
+            shell_css,
+        )
+        self.assertIn(
+            ".product-floating-menu__action .product-profile__icon--atelier",
+            shell_css,
+        )
+        self.assertIn("color: var(--accent-strong)", shell_css)
+        self.assertIn(
+            ".product-floating-menu__footer .product-profile__icon--logout",
+            shell_css,
+        )
         self.assertIn('aria-current="page"', client_nav)
         self.assertIn('aria-current="page"', staff_nav)
         self.assertNotIn("Pilotage staff", header)
@@ -1428,6 +1483,18 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertEqual(staff_nav.count("portal:staff-customer-list"), 1)
         self.assertNotIn("Comptes clients", staff_nav)
 
+    def test_staff_navigation_groups_machine_fleet_in_settings_only(self) -> None:
+        staff_nav = template_source("components/nav/portal_staff_navigation.html")
+        primary_navigation, settings_navigation = staff_nav.split("</div>", 1)
+
+        self.assertNotIn("portal:staff-machine-fleet", primary_navigation)
+        self.assertIn("portal:staff-machine-fleet", settings_navigation)
+        self.assertEqual(staff_nav.count("portal:staff-machine-fleet"), 1)
+        self.assertIn("{% else %}Réglages{% endif %}", staff_nav)
+        self.assertIn("nav_key == 'staff-machines'", staff_nav)
+        self.assertNotIn("staff-brand-settings", staff_nav)
+        self.assertNotIn("portal:staff-brand-settings", staff_nav)
+
     def test_staff_views_distill_secondary_actions_and_repeated_information(self) -> None:
         order = template_source("portal/staff/order_detail.html")
         access_list = template_source("portal/staff/access_requests/list.html")
@@ -1931,11 +1998,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("validation_chrome=True", editor)
         self.assertIn("b2b-dialog-actions--editor", editor)
         self.assertIn(
-            'button_class="ui-btn ui-btn-ghost b2b-dialog-actions__danger"',
+            'button_class="b2b-dialog-actions__danger"',
             editor,
         )
         self.assertIn(
-            'button_class="ui-btn ui-btn-ghost b2b-dialog-actions__danger"',
+            'button_class="b2b-dialog-actions__danger"',
             validation_panel,
         )
         self.assertNotIn(">×</button>", items)

@@ -86,6 +86,203 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn(".badge.is-warning", polish)
         self.assertIn(".badge.is-danger", polish)
 
+    def test_simple_actions_share_breadcrumb_inspired_underline_motion(self) -> None:
+        buttons = source(CSS_DIR / "components" / "buttons.css")
+        shell = source(CSS_DIR / "components" / "shell.css")
+        core = source(CSS_DIR / "entries" / "portal-core.css")
+
+        for marker in [
+            "--ui-simple-underline-color: var(--brand)",
+            ".ui-btn-ghost::before",
+            "transform: scaleX(0)",
+            "transform: scaleX(1)",
+            "transform-origin: left center",
+            "prefers-reduced-motion: reduce",
+        ]:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, buttons)
+
+        for marker in [
+            ".product-profile__trigger-label",
+            ".product-nav__more-link strong",
+            ".product-profile__action strong",
+            ".product-profile__logout > span:last-child",
+            "background: var(--brand)",
+            "background: var(--danger)",
+        ]:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, shell)
+
+        ghost_hover_selector = """.ui-btn-ghost,
+  .dui-btn-ghost
+):is(:hover, :focus-visible, :active)"""
+        self.assertIn(ghost_hover_selector, core)
+        ghost_override = core.split(ghost_hover_selector, 1)[1].split("}", 1)[0]
+        self.assertIn("background: transparent !important", ghost_override)
+        self.assertIn("border-color: transparent !important", ghost_override)
+
+    def test_navigation_selections_share_the_active_underline_contract(self) -> None:
+        buttons = source(CSS_DIR / "components" / "buttons.css")
+        core = source(CSS_DIR / "entries" / "portal-core.css")
+        staff = source(CSS_DIR / "entries" / "portal-staff.css")
+        atelier_operations = source(CSS_DIR / "components" / "atelier-operations.css")
+        volume_nudge = source(CSS_DIR / "components" / "volume-nudge-copy.css")
+        product_shell = source(CSS_DIR / "components" / "product-shell.css")
+        account_workspace = source(
+            CSS_DIR / "components" / "customer-account-workspace.css"
+        )
+
+        for marker in (
+            ".ui-selection-rail--horizontal",
+            ":is(.ui-selection-control, .ui-inline-action, .ui-destructive-action)::after",
+            "--ui-selection-indicator-color: var(--brand)",
+            'aria-current="location"',
+            'aria-selected="true"',
+            "transform: scaleX(0) !important",
+            "transform: scaleX(1) !important",
+            "transition: none !important",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, buttons)
+
+        self.assertIn("v52 — Autorité finale des filtres", core)
+        bridge = core.split("v52 — Autorité finale des filtres", 1)[1].split("/* v29", 1)[0]
+        self.assertIn("background: transparent !important", bridge)
+        self.assertIn("border-radius: 0 !important", bridge)
+        self.assertNotIn("color-mix(in srgb, var(--brand)", bridge)
+
+        list_tabs = core.split("v17 — Onglets / filtres", 1)[1].split(
+            "v114 — Onglets workflow", 1
+        )[0]
+        self.assertIn("min-height: var(--ui-action-min-h)", list_tabs)
+        self.assertIn("background: transparent", list_tabs)
+        self.assertNotIn(".ui-list-tabs__tab:hover", list_tabs)
+        self.assertNotIn(".ui-list-tabs__tab.is-active,", list_tabs)
+        list_tab_rule = list_tabs.split(".ui-list-tabs__tab {", 1)[1].split(
+            "}", 1
+        )[0]
+        self.assertNotIn("border-radius: 999px", list_tab_rule)
+
+        workflow_tabs = core.split("v114 — Onglets workflow", 1)[1].split(
+            "v20 — Placement homogène", 1
+        )[0]
+        self.assertIn("min-height: var(--ui-action-min-h)", workflow_tabs)
+        self.assertNotIn(".ui-tab-chip:hover", workflow_tabs)
+        self.assertNotIn(".ui-tab-chip.is-active", workflow_tabs)
+
+        template_paths = (
+            "components/ui/list_tabs.html",
+            "components/order/order_tabs.html",
+            "components/portal/account_rail.html",
+            "portal/client/gang_sheets/list.html",
+            "portal/client/gang_sheets/editor.html",
+            "portal/staff/customers/default_volume_discounts.html",
+            "portal/staff/customers/detail.html",
+            "portal/staff/operations/_job_row.html",
+        )
+        for template_path in template_paths:
+            with self.subTest(template_path=template_path):
+                template = source(TEMPLATES_DIR / template_path)
+                self.assertIn("ui-selection-control", template)
+                self.assertIn("ui-selection-rail", template)
+
+        atelier_workflow = source(
+            TEMPLATES_DIR / "portal/staff/operations/_job_row.html"
+        )
+        self.assertIn(
+            "atelier-operation-workflow ui-selection-rail "
+            "ui-selection-rail--horizontal",
+            atelier_workflow,
+        )
+
+        obsolete_staff_states = {
+            "portal-staff.css": (
+                staff,
+                (
+                    ".volume-nudge-copy__tab.is-active",
+                    '.staff-customer-workspace__nav a[aria-current="location"]',
+                    '.account-profile-nav a[aria-current="location"]',
+                    ".account-profile-nav a:hover",
+                ),
+            ),
+            "atelier-operations.css": (
+                atelier_operations,
+                (
+                    ".atelier-operation-workflow__link:hover",
+                    ".atelier-operation-workflow__link.is-active",
+                ),
+            ),
+            "volume-nudge-copy.css": (
+                volume_nudge,
+                (".volume-nudge-copy__tab.is-active",),
+            ),
+            "customer-account-workspace.css": (
+                account_workspace,
+                ('.staff-customer-workspace__nav a[aria-current="location"]',),
+            ),
+        }
+        for stylesheet, (css, obsolete_markers) in obsolete_staff_states.items():
+            for marker in obsolete_markers:
+                with self.subTest(stylesheet=stylesheet, marker=marker):
+                    self.assertNotIn(marker, css)
+
+        atelier_link = atelier_operations.split(
+            ".atelier-operation-workflow__link {", 1
+        )[1].split("}", 1)[0]
+        self.assertNotIn("border-radius", atelier_link)
+        self.assertIn("min-height: var(--ui-action-min-h)", atelier_link)
+        atelier_surface = atelier_operations.split(
+            ".atelier-operations-surface {", 1
+        )[1].split("}", 1)[0]
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", atelier_surface)
+        self.assertIn("min-width: 0", atelier_surface)
+        self.assertNotIn(
+            ".staff-order-detail-stack .workflow-progress .ui-tab-chip::after",
+            product_shell,
+        )
+
+    def test_order_lists_keep_buttons_and_details_use_inline_actions(self) -> None:
+        buttons = source(CSS_DIR / "components" / "buttons.css")
+
+        for marker in (
+            ".ui-inline-action {",
+            ".ui-inline-action--control",
+            "--ui-underline-color: var(--brand)",
+            "font-family: inherit",
+            "border-radius: 0 !important",
+            ":is(.ui-selection-control, .ui-inline-action, .ui-destructive-action)::after",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, buttons)
+
+        list_templates_and_button_minimums = {
+            "components/tables/orders_table.html": 4,
+            "components/tables/order_projects_table.html": 2,
+            "portal/staff/order_projects_list.html": 1,
+        }
+        for template_path, minimum in list_templates_and_button_minimums.items():
+            with self.subTest(template_path=template_path):
+                template = source(TEMPLATES_DIR / template_path)
+                self.assertGreaterEqual(template.count("ui-btn ui-btn-secondary"), minimum)
+                self.assertNotIn("ui-inline-action", template)
+
+        detail_templates_and_minimums = {
+            "portal/client/panels/production.html": 1,
+            "portal/client/panels/billing.html": 1,
+            "portal/client/panels/uploads.html": 2,
+            "portal/staff/order_detail.html": 2,
+            "portal/staff/panels/drive_sync.html": 1,
+            "portal/staff/panels/uploads.html": 2,
+            "portal/staff/panels/inspection.html": 1,
+            "portal/staff/panels/production.html": 2,
+            "portal/staff/panels/shipping.html": 2,
+            "portal/staff/panels/billing.html": 1,
+        }
+        for template_path, minimum in detail_templates_and_minimums.items():
+            with self.subTest(template_path=template_path):
+                template = source(TEMPLATES_DIR / template_path)
+                self.assertGreaterEqual(template.count("ui-inline-action"), minimum)
+
     def test_priority_product_templates_have_composed_surfaces(self) -> None:
         client_dashboard = source(TEMPLATES_DIR / "portal/client/dashboard.html")
         atelier_dashboard = source(TEMPLATES_DIR / "portal/staff/dashboard.html")
@@ -352,9 +549,9 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn(".portal-page .portal-page-surface .client-order-panel", core)
         self.assertIn(".portal-page .portal-page-surface .workflow-panel-target", core)
         self.assertIn(".client-order-panel--uploads", detail)
-        self.assertIn("ui-btn-ghost", uploads)
+        self.assertIn("ui-inline-action ui-inline-action--control", uploads)
         self.assertNotIn("Recommander", uploads)
-        self.assertEqual(uploads.count("ui-btn-ghost"), 2)
+        self.assertEqual(uploads.count("ui-inline-action ui-inline-action--control"), 2)
 
         actions = source(
             TEMPLATES_DIR / "components/portal/page_head_actions/client_order_detail.html"
@@ -363,7 +560,45 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn("client-order-reorder", actions)
         self.assertIn("ui-btn ui-btn-secondary", actions)
 
-    def test_client_order_tab_chips_keep_pill_radius_visible(self) -> None:
+    def test_client_and_staff_order_tabs_share_the_flat_scrollable_rail(self) -> None:
         detail = source(CSS_DIR / "components/client-order-detail.css")
-        chips = detail.split("workflow-tab-group__chips--flat", 1)[1]
-        self.assertIn("overflow: visible !important", chips.split("}", 1)[0])
+        client = source(CSS_DIR / "entries" / "portal-client.css")
+        core = source(CSS_DIR / "entries" / "portal-core.css")
+        order_tabs = source(TEMPLATES_DIR / "components/order/order_tabs.html")
+
+        self.assertNotIn("workflow-tab-group__chips--flat", detail)
+        self.assertNotIn(
+            ".client-order-detail .workflow-tab-group__chips--flat",
+            client,
+        )
+        self.assertIn(".portal-order-tabs > .ui-order-tab-list", core)
+        self.assertIn("overflow-x: auto !important", core)
+        self.assertIn("flex-wrap: nowrap !important", core)
+        self.assertIn("ui-selection-rail--horizontal", order_tabs)
+        self.assertIn("ui-order-tab-list", order_tabs)
+        self.assertIn("ui-tab-chip ui-selection-control", order_tabs)
+
+    def test_delete_triggers_share_one_destructive_action_contract(self) -> None:
+        buttons = source(CSS_DIR / "components" / "buttons.css")
+        trigger_templates = (
+            "portal/staff/partials/order_delete_button.html",
+            "portal/client/partials/order_project_delete_button.html",
+            "portal/client/partials/order_project_item_delete_button.html",
+            "portal/client/gang_sheets/partials/delete_button.html",
+        )
+
+        for marker in (
+            ".ui-destructive-action {",
+            "--ui-underline-color: var(--danger)",
+            "background: transparent !important",
+            "font-family: var(--ui-font-display)",
+            ":is(.ui-selection-control, .ui-inline-action, .ui-destructive-action)::after",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, buttons)
+
+        for template_path in trigger_templates:
+            with self.subTest(template_path=template_path):
+                template = source(TEMPLATES_DIR / template_path)
+                self.assertIn("ui-destructive-action", template)
+                self.assertIn("ui-btn ui-btn-danger", template)

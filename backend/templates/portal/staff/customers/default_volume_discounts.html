@@ -181,9 +181,9 @@
     <input type="hidden" name="audience" value="{{ copy_audience|default:'immediate' }}" :value="audience">
     {% if copy_form.non_field_errors %}<p class="error-text ui-error-text" role="alert">{{ copy_form.non_field_errors|striptags }}</p>{% endif %}
 
-    <nav class="ui-list-tabs volume-nudge-copy__tabs" role="tablist" aria-label="Mode de règlement">
-      <button type="button" class="ui-list-tabs__tab volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'immediate'" :class="{ 'is-active': audience === 'immediate' }" @click="audience = 'immediate'">Comptant CB</button>
-      <button type="button" class="ui-list-tabs__tab volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'deferred'" :class="{ 'is-active': audience === 'deferred' }" @click="audience = 'deferred'">Encours</button>
+    <nav class="ui-list-tabs ui-selection-rail ui-selection-rail--horizontal volume-nudge-copy__tabs" role="tablist" aria-label="Mode de règlement">
+      <button type="button" class="ui-list-tabs__tab ui-selection-control volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'immediate'" :class="{ 'is-active': audience === 'immediate' }" @click="audience = 'immediate'">Comptant CB</button>
+      <button type="button" class="ui-list-tabs__tab ui-selection-control volume-nudge-copy__tab" role="tab" :aria-selected="audience === 'deferred'" :class="{ 'is-active': audience === 'deferred' }" @click="audience = 'deferred'">Encours</button>
     </nav>
 
     <div class="volume-nudge-copy__panel ui-form-stack" role="tabpanel" x-show="audience === 'immediate'" {% if copy_audience != 'immediate' %}x-cloak{% endif %}>

@@ -54,7 +54,7 @@
         <div class="b2b-dialog-actions b2b-dialog-actions--validate">
           <button class="ui-btn ui-btn-primary" type="submit">Valider</button>
           <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Plus tard</button>
-          {% include "portal/client/partials/order_project_item_delete_button.html" with dialog_prefix="validate-" button_class="ui-btn ui-btn-ghost b2b-dialog-actions__danger" %}
+          {% include "portal/client/partials/order_project_item_delete_button.html" with dialog_prefix="validate-" button_class="b2b-dialog-actions__danger" %}
         </div>
       </form>
       {% elif review.confirmed %}

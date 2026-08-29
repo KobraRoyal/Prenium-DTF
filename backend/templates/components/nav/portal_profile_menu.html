@@ -1,12 +1,12 @@
-<details class="product-profile" data-product-nav-details>
+<details class="product-profile product-floating-menu" data-product-nav-details>
   <summary class="product-profile__trigger" aria-label="Ouvrir le menu Mon compte" aria-haspopup="true">
     <span class="product-profile__avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
     <span class="product-profile__trigger-label">Mon compte</span>
     <span class="product-nav__chevron" aria-hidden="true"></span>
   </summary>
 
-  <div class="product-profile__menu" aria-label="Menu du compte" role="group">
-    <div class="product-profile__identity">
+  <div class="product-profile__menu product-floating-menu__panel" aria-label="Menu du compte" role="group">
+    <div class="product-profile__identity product-floating-menu__header">
       <span class="product-profile__avatar product-profile__avatar--large" aria-hidden="true">{{ request.user.email|first|upper }}</span>
       <span class="product-profile__identity-copy">
         <strong>{{ request.user.email }}</strong>
@@ -18,20 +18,20 @@
       </span>
     </div>
 
-    <div class="product-profile__actions">
-      <a class="product-profile__action {% if nav_key == 'account-profile' %}is-active{% endif %}" {% if nav_key == 'account-profile' %}aria-current="page"{% endif %} href="{% url 'portal:profile' %}?space={{ nav_mode }}">
+    <div class="product-profile__actions product-floating-menu__list">
+      <a class="product-profile__action product-floating-menu__action {% if nav_key == 'account-profile' %}is-active{% endif %}" {% if nav_key == 'account-profile' %}aria-current="page"{% endif %} href="{% url 'portal:profile' %}?space={{ nav_mode }}">
         {% include "components/nav/profile_icon.html" with name="profile" %}
         <span><strong>Mes informations</strong><small>Modifier votre prénom et votre nom</small></span>
       </a>
       {% if nav_mode == "client" and portal_nav_access.customer_public_id %}
         {% if portal_nav_access.can_manage_team %}
-        <a class="product-profile__action" href="{% url 'portal:client-team' customer_public_id=portal_nav_access.customer_public_id %}">
+        <a class="product-profile__action product-floating-menu__action" href="{% url 'portal:client-team' customer_public_id=portal_nav_access.customer_public_id %}">
           {% include "components/nav/profile_icon.html" with name="team" %}
           <span><strong>Gérer l’équipe</strong><small>Membres, rôles et invitations</small></span>
         </a>
         {% endif %}
         {% if request.user.is_staff and perms.accounts.access_staff_portal %}
-        <a class="product-profile__action" href="{% url 'portal:staff-dashboard' %}">
+        <a class="product-profile__action product-floating-menu__action" href="{% url 'portal:staff-dashboard' %}">
           {% include "components/nav/profile_icon.html" with name="atelier" %}
           <span><strong>Ouvrir l’Atelier</strong><small>Passer au pilotage opérationnel</small></span>
         </a>
@@ -39,7 +39,7 @@
       {% endif %}
     </div>
 
-    <form method="post" action="{% url 'portal:logout' %}" class="product-profile__logout-form">
+    <form method="post" action="{% url 'portal:logout' %}" class="product-profile__logout-form product-floating-menu__footer">
       {% csrf_token %}
       <button class="product-profile__logout" type="submit">
         {% include "components/nav/profile_icon.html" with name="logout" %}

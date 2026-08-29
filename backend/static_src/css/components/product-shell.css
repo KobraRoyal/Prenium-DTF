@@ -2202,15 +2202,6 @@
     border-right: 0 !important;
   }
 
-  body.product-shell .staff-order-detail-stack .workflow-progress .ui-tab-chip::after {
-    display: none !important;
-  }
-
-  body.product-shell .staff-order-detail-stack .workflow-progress .ui-tab-chip.is-active,
-  body.product-shell .staff-order-detail-stack .workflow-progress .ui-tab-chip[aria-selected="true"] {
-    box-shadow: inset 0 -3px 0 var(--product-line) !important;
-  }
-
   body.product-shell .staff-order-detail-stack .ui-panel-shell,
   body.product-shell .staff-order-detail-stack .workflow-panel-target,
   body.product-shell .staff-order-detail-stack .workflow-panel,
