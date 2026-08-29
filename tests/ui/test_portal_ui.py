@@ -338,13 +338,13 @@ def test_staff_navigation_groups_only_authorized_secondary_tools():
     assert "Mes informations" in limited_html
     assert "Voir le site" not in limited_html
     assert "Gérer l’équipe" not in limited_html
-    assert "Outils Atelier" not in limited_html
+    assert "Réglages" not in limited_html
     assert "Modèles d’e-mails" not in limited_html
 
     staff_user.user_permissions.add(Permission.objects.get(codename="view_emailtemplate"))
 
     authorized_html = client.get(reverse("portal:staff-dashboard")).content.decode()
-    assert "Outils Atelier" in authorized_html
+    assert "Réglages" in authorized_html
     assert "Modèles d’e-mails" in authorized_html
     assert "Demandes d’accès" not in authorized_html
     assert "Réglages de laize" not in authorized_html

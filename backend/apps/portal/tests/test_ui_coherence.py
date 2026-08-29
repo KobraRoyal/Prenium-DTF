@@ -231,7 +231,6 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("conversion-transform__index", partials)
         self.assertIn("min-height: 2.75rem", conversion_css)
         self.assertIn("{% static 'css/app.css' %}", base)
-        self.assertIn("{% static 'css/app.css' %}?v={{ asset_v }}", base)
         self.assertIn("{% static 'js/app.js' %}", base)
         self.assertIn("?v={{ asset_v }}", base)
         self.assertIn("ui-brand-lockup__home", logo)

@@ -16,7 +16,7 @@
     <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
     <link rel="preload" href="{% static 'vendor/fonts/space-grotesk-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{% static 'vendor/fonts/dm-sans-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ asset_v }}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
     {% block surface_styles %}
     {# Login : socle portail sans surcouche client/staff. #}
     {% include "components/portal/surface_styles.html" %}
