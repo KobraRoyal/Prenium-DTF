@@ -104,6 +104,7 @@ from .views_staff_customers import (
     StaffCustomerDetailView,
     StaffCustomerListView,
     StaffCustomerPricingUpdateView,
+    StaffCustomerProcessingTimeUpdateView,
     StaffCustomerVolumeDiscountTierCreateView,
     StaffCustomerVolumeDiscountTierUpdateView,
     StaffDefaultVolumeDiscountSettingsView,
@@ -650,6 +651,11 @@ urlpatterns = [
         "staff/customers/<uuid:customer_public_id>/pricing/",
         StaffCustomerPricingUpdateView.as_view(),
         name="staff-customer-pricing-update",
+    ),
+    path(
+        "staff/customers/<uuid:customer_public_id>/processing-time/",
+        StaffCustomerProcessingTimeUpdateView.as_view(),
+        name="staff-customer-processing-time-update",
     ),
     path(
         "staff/customers/<uuid:customer_public_id>/pricing/volume-tiers/",

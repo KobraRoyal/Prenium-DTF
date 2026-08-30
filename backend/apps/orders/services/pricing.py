@@ -219,10 +219,13 @@ class OrderPricingService:
         prep_amount: Decimal,
         processing_time_code: str | None = None,
         order=None,
+        customer=None,
     ) -> tuple[Decimal, dict[str, Decimal | str]]:
+        resolved_customer = customer or (getattr(order, "customer", None) if order is not None else None)
         option = self.processing_time_options.resolve_option(
             processing_time_code=processing_time_code,
             order=order,
+            customer=resolved_customer,
         )
         surcharge = self.processing_time_options.compute_surcharge(
             dtf_amount=dtf_amount,
@@ -306,6 +309,7 @@ class OrderPricingService:
             dtf_amount=dtf_amount,
             prep_amount=prep_amount,
             processing_time_code=processing_time_code,
+            customer=customer,
         )
         totals = self.compose_order_totals(
             subtotal_ht=subtotal,

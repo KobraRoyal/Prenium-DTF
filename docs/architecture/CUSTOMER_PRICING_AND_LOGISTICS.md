@@ -23,6 +23,7 @@ Grille de référence (ajustable dans le **catalogue** `CatalogService`, pas par
    - Forfait HT optionnel (express) ajouté en complément, distinct du port.  
    - Seed V1 : standard **0 %** (3 jours ouvrés), rapide **+20 %** (2 jours), express **+40 % + 7 € HT** (demain).  
    - Configuration atelier : **Réglages → Délais de traitement**.
+   - **Dérogation client** : `CustomerProcessingTimeOptionOverride` sur fiche compte Atelier — % / forfait vides = hériter de la grille globale ; option masquable par client.
 
 5. **TVA** : **20 %** (`ORDER_VAT_RATE_IMMEDIATE`) uniquement si `billing_mode=immediate` (comptant CB), sur **sous-total HT + port**.  
    - Encours (`deferred`) : **`total_amount` = HT produit + frais de port** (pas de TVA dans le Hub). La TVA et la facture mensuelle / bimensuelle sont gérées **hors outil** (logiciel de facturation externe).

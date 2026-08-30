@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Protocol
 
 from django.core.exceptions import ValidationError
 
 from apps.processing_time.models import ZERO_AMOUNT, ProcessingTimeOption
+from apps.processing_time.services.customer_overrides import (
+    CustomerProcessingTimeOverrideService,
+    ResolvedProcessingTimeOption,
+)
 
 TWOPLACES = Decimal("0.01")
 
@@ -45,11 +50,26 @@ DEFAULT_OPTION_SEED = (
 )
 
 
+class _PricingOption(Protocol):
+    code: str
+    name: str
+    eta_label: str
+    markup_percent: Decimal
+    flat_fee_eur: Decimal
+
+
 class ProcessingTimeOptionService:
     """Catalogue et résolution des options de délai de traitement."""
 
+    def __init__(self, *, customer_overrides: CustomerProcessingTimeOverrideService | None = None):
+        self.customer_overrides = customer_overrides or CustomerProcessingTimeOverrideService()
+
     def list_active_options(self):
         return list(ProcessingTimeOption.objects.active().order_by("display_order", "name"))
+
+    def list_active_options_for_customer(self, customer) -> list[ResolvedProcessingTimeOption]:
+        self.ensure_default_options()
+        return self.customer_overrides.list_resolved_for_customer(customer)
 
     def ensure_default_options(self) -> list[ProcessingTimeOption]:
         created: list[ProcessingTimeOption] = []
@@ -84,8 +104,14 @@ class ProcessingTimeOptionService:
             raise ValidationError("Choisissez un délai de traitement valide.")
         return option
 
-    def resolve_default_code(self) -> str:
+    def resolve_default_code(self, *, customer=None) -> str:
         self.ensure_default_options()
+        if customer is not None:
+            options = self.list_active_options_for_customer(customer)
+            if not options:
+                raise ValidationError("Aucune option de délai active pour ce client.")
+            default = next((option for option in options if option.is_default), None)
+            return (default or options[0]).code
         default = (
             ProcessingTimeOption.objects.active().filter(is_default=True).order_by("display_order").first()
         )
@@ -101,8 +127,15 @@ class ProcessingTimeOptionService:
         *,
         processing_time_code: str | None = None,
         order=None,
-    ) -> ProcessingTimeOption:
+        customer=None,
+    ) -> _PricingOption:
         self.ensure_default_options()
+        if customer is not None:
+            return self.resolve_option_for_customer(
+                customer=customer,
+                processing_time_code=processing_time_code,
+                order=order,
+            )
         if processing_time_code:
             return self.require_active_by_code(processing_time_code)
         if order is not None and getattr(order, "processing_time_code", ""):
@@ -111,7 +144,35 @@ class ProcessingTimeOptionService:
                 return existing
         return self.require_active_by_code(self.resolve_default_code())
 
-    def snapshot_dict(self, option: ProcessingTimeOption) -> dict[str, object]:
+    def resolve_option_for_customer(
+        self,
+        *,
+        customer,
+        processing_time_code: str | None = None,
+        order=None,
+    ) -> ResolvedProcessingTimeOption:
+        self.ensure_default_options()
+        code = processing_time_code
+        if not code and order is not None and getattr(order, "processing_time_code", ""):
+            code = order.processing_time_code
+        if not code:
+            code = self.resolve_default_code(customer=customer)
+        global_option = self.require_active_by_code(code)
+        resolved = self.customer_overrides.resolve_for_customer(
+            customer=customer,
+            option=global_option,
+        )
+        if not resolved.is_enabled:
+            enabled = self.list_active_options_for_customer(customer)
+            if not enabled:
+                raise ValidationError("Aucune option de délai active pour ce client.")
+            fallback = next((option for option in enabled if option.is_default), enabled[0])
+            if fallback.code == resolved.code:
+                raise ValidationError("Aucune option de délai active pour ce client.")
+            return fallback
+        return resolved
+
+    def snapshot_dict(self, option: _PricingOption) -> dict[str, object]:
         markup_percent = (option.markup_percent or ZERO_AMOUNT).quantize(
             TWOPLACES,
             rounding=ROUND_HALF_UP,
@@ -128,7 +189,7 @@ class ProcessingTimeOptionService:
             "processing_time_flat_fee": flat_fee,
         }
 
-    def apply_snapshot_to_order(self, *, order, option: ProcessingTimeOption) -> None:
+    def apply_snapshot_to_order(self, *, order, option: _PricingOption) -> None:
         snap = self.snapshot_dict(option)
         order.processing_time_code = str(snap["processing_time_code"])
         order.processing_time_name = str(snap["processing_time_name"])
@@ -141,7 +202,7 @@ class ProcessingTimeOptionService:
         self,
         *,
         dtf_amount: Decimal,
-        option: ProcessingTimeOption | None = None,
+        option: _PricingOption | None = None,
         markup_percent: Decimal | None = None,
         flat_fee: Decimal | None = None,
     ) -> dict[str, Decimal]:
@@ -176,18 +237,32 @@ class ProcessingTimeOptionService:
                 "processing_time_flat_fee": ZERO_AMOUNT,
                 "processing_time_surcharge_amount": ZERO_AMOUNT,
             }
-        option = self.get_active_by_code(code)
-        if option is not None:
-            return self.compute_surcharge(dtf_amount=dtf_amount, option=option)
+        if getattr(order, "customer_id", None):
+            global_option = self.get_active_by_code(code)
+            if global_option is not None:
+                resolved = self.customer_overrides.resolve_for_customer(
+                    customer=order.customer,
+                    option=global_option,
+                )
+                return self.compute_surcharge(dtf_amount=dtf_amount, option=resolved)
         return self.compute_surcharge(
             dtf_amount=dtf_amount,
             markup_percent=getattr(order, "processing_time_markup_percent", ZERO_AMOUNT) or ZERO_AMOUNT,
             flat_fee=getattr(order, "processing_time_flat_fee", ZERO_AMOUNT) or ZERO_AMOUNT,
         )
 
-    def checkout_ui_context(self, *, order=None, widget: str = "radios") -> dict:
+    def checkout_ui_context(
+        self,
+        *,
+        customer=None,
+        order=None,
+        widget: str = "radios",
+    ) -> dict:
         self.ensure_default_options()
-        options = self.list_active_options()
+        if customer is not None:
+            options = self.list_active_options_for_customer(customer)
+        else:
+            options = self.list_active_options()
         if not options:
             return {
                 "processing_time_options": [],
@@ -197,6 +272,8 @@ class ProcessingTimeOptionService:
             }
         if order is not None and getattr(order, "processing_time_code", ""):
             selected = order.processing_time_code
+        elif customer is not None:
+            selected = self.resolve_default_code(customer=customer)
         else:
             selected = self.resolve_default_code()
         return {

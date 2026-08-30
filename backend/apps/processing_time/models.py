@@ -78,3 +78,62 @@ class ProcessingTimeOption(BaseModel):
         if self.disclaimer.strip():
             parts.append(f"« {self.disclaimer.strip()} »")
         return " ".join(part for part in parts if part)
+
+
+class CustomerProcessingTimeOptionOverrideQuerySet(models.QuerySet):
+    def for_customer(self, customer):
+        return self.filter(customer=customer)
+
+
+class CustomerProcessingTimeOptionOverride(BaseModel):
+    """Dérogation client sur une option de délai de traitement globale.
+
+    Champs vides (null) = hériter de la grille par défaut atelier.
+    """
+
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.CASCADE,
+        related_name="processing_time_overrides",
+    )
+    option = models.ForeignKey(
+        ProcessingTimeOption,
+        on_delete=models.CASCADE,
+        related_name="customer_overrides",
+    )
+    markup_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Majoration % sur DTF. Vide = grille par défaut.",
+    )
+    flat_fee_eur = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Forfait HT. Vide = grille par défaut.",
+    )
+    is_enabled = models.BooleanField(
+        default=True,
+        help_text="Décochez pour masquer cette option au client.",
+    )
+
+    objects = CustomerProcessingTimeOptionOverrideQuerySet.as_manager()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("customer", "option"),
+                name="proc_time_cust_option_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("customer", "option"), name="proc_time_cust_opt_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.customer_id} — {self.option.code}"

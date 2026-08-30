@@ -385,6 +385,7 @@ class OrderService:
         )
         processing_option = processing_time_service.resolve_option(
             processing_time_code=processing_time_code,
+            customer=customer,
         )
         shipping_snap = shipping_service.snapshot_dict(shipping_method)
         processing_snap = processing_time_service.snapshot_dict(processing_option)
@@ -476,6 +477,7 @@ class OrderService:
 
             option = ProcessingTimeOptionService().resolve_option(
                 processing_time_code=processing_time_code,
+                customer=customer,
             )
             processing_snap = ProcessingTimeOptionService().snapshot_dict(option)
 

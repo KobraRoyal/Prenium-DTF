@@ -234,7 +234,9 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
             if processing_time_code:
                 selected_processing_code = str(processing_time_code).strip().lower()
             else:
-                selected_processing_code = processing_time_service.resolve_default_code()
+                selected_processing_code = processing_time_service.resolve_default_code(
+                    customer=self.customer
+                )
             # Recalcule le devis avec le code réellement applicable (ex. verrou retrait).
             if quote is not None and (
                 locks_pickup
@@ -256,6 +258,7 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
             ctx["shipping_locked_to_pickup"] = locks_pickup
             ctx.update(
                 processing_time_service.checkout_ui_context(
+                    customer=self.customer,
                     widget="radios",
                 )
             )

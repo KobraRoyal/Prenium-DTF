@@ -102,6 +102,7 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
             widget="radios",
         )
         processing_ctx = ProcessingTimeOptionService().checkout_ui_context(
+            customer=self.customer,
             order=order,
             widget="radios",
         )
