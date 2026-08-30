@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from apps.customers.models import Customer, CustomerMembership
+from apps.accounts.models import StaffMembership
 
 
 @dataclass(frozen=True)
@@ -102,6 +103,15 @@ class AccessScopeService:
 
     def can_manage_customer_team(self, user, customer_public_id: UUID | str) -> bool:
         membership = self.get_customer_membership(user, customer_public_id)
+        return membership is not None and membership.can_manage_team
+
+    def get_staff_membership(self, user) -> StaffMembership | None:
+        if not getattr(user, "is_authenticated", False) or not getattr(user, "is_active", False):
+            return None
+        return StaffMembership.objects.active().filter(user=user).first()
+
+    def can_manage_staff_team(self, user) -> bool:
+        membership = self.get_staff_membership(user)
         return membership is not None and membership.can_manage_team
 
     def can_access_staff_portal(self, user) -> bool:

@@ -93,6 +93,8 @@ class PortalProfileView(LoginRequiredMixin, View):
                     ),
                 }
             )
+        elif nav_mode == "staff":
+            context["staff_membership"] = access_scope_service.get_staff_membership(request.user)
         return context
 
 
@@ -140,7 +142,10 @@ class PortalProfileIdentityView(LoginRequiredMixin, View):
         return with_toast(response, "Vos informations ont été enregistrées.")
 
     def _display_context(self, request) -> dict[str, object]:
-        return {"nav_mode": _nav_mode(request)}
+        context: dict[str, object] = {"nav_mode": _nav_mode(request)}
+        if _nav_mode(request) == "staff":
+            context["staff_membership"] = access_scope_service.get_staff_membership(request.user)
+        return context
 
     def _form_context(self, form: ProfileInformationForm) -> dict[str, object]:
         return {

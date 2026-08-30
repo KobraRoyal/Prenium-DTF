@@ -3,6 +3,8 @@ from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
 from django.contrib.auth.forms import UserChangeForm as DjangoUserChangeForm
 from django.contrib.auth.forms import UserCreationForm as DjangoUserCreationForm
 
+from apps.accounts.models import StaffMembership
+
 from .models import User
 
 AUTH_EMAIL_REQUIRED = "Indiquez votre email professionnel."
@@ -10,6 +12,30 @@ AUTH_EMAIL_INVALID = "Indiquez un email valide."
 AUTH_PASSWORD_REQUIRED = "Indiquez votre mot de passe."
 AUTH_PASSWORD_CONFIRM_REQUIRED = "Confirmez votre mot de passe."
 AUTH_INVALID_LOGIN = "Email ou mot de passe incorrect. Vérifiez vos informations puis réessayez."
+
+
+class StaffInvitationForm(forms.Form):
+    email = forms.EmailField(label="E-mail professionnel")
+    role = forms.ChoiceField(
+        label="Rôle",
+        choices=(
+            (StaffMembership.Role.ADMIN, "Administrateur"),
+            (StaffMembership.Role.MEMBER, "Collaborateur"),
+            (StaffMembership.Role.READONLY, "Lecture seule"),
+        ),
+        initial=StaffMembership.Role.MEMBER,
+    )
+
+
+class StaffMemberRoleForm(forms.Form):
+    role = forms.ChoiceField(
+        label="Rôle",
+        choices=(
+            (StaffMembership.Role.ADMIN, "Administrateur"),
+            (StaffMembership.Role.MEMBER, "Collaborateur"),
+            (StaffMembership.Role.READONLY, "Lecture seule"),
+        ),
+    )
 
 
 class UserCreationForm(DjangoUserCreationForm):

@@ -312,6 +312,41 @@ def send_account_activated_email(*, invitation) -> None:
     )
 
 
+def _staff_invitation_context(invitation) -> dict[str, str]:
+    from apps.accounts.services.staff_invitations import make_invitation_token
+
+    return {
+        "site.name": "Prenium DTF",
+        "invitation.role": invitation.get_role_display(),
+        "action.url": _absolute_url(
+            reverse(
+                "portal:staff-invitation-accept",
+                kwargs={"token": make_invitation_token(invitation)},
+            )
+        ),
+    }
+
+
+def send_staff_invitation_email(*, invitation) -> None:
+    _send_context_email(
+        event=EmailTemplate.Event.STAFF_MEMBER_INVITED,
+        audience=EmailTemplate.Audience.INTERNAL,
+        recipients=[invitation.email],
+        context=_staff_invitation_context(invitation),
+    )
+
+
+def send_staff_account_activated_email(*, invitation) -> None:
+    context = _staff_invitation_context(invitation)
+    context["action.url"] = _absolute_url(reverse("portal:login"))
+    _send_context_email(
+        event=EmailTemplate.Event.STAFF_ACCOUNT_ACTIVATED,
+        audience=EmailTemplate.Audience.INTERNAL,
+        recipients=[invitation.email],
+        context=context,
+    )
+
+
 def send_password_reset_email(*, user, uidb64: str, token: str) -> None:
     from apps.accounts.services.password_reset import password_reset_service
 
@@ -387,6 +422,26 @@ def schedule_customer_invitation_email(*, invitation_public_id) -> None:
 
     transaction.on_commit(
         lambda: send_customer_invitation_email_task.delay(str(invitation_public_id))
+    )
+
+
+def schedule_staff_invitation_email(*, invitation_public_id) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_staff_invitation_email_task
+
+    transaction.on_commit(
+        lambda: send_staff_invitation_email_task.delay(str(invitation_public_id))
+    )
+
+
+def schedule_staff_account_activated_email(*, invitation_public_id) -> None:
+    from django.db import transaction
+
+    from apps.notifications.tasks import send_staff_account_activated_email_task
+
+    transaction.on_commit(
+        lambda: send_staff_account_activated_email_task.delay(str(invitation_public_id))
     )
 
 

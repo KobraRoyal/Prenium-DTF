@@ -12,6 +12,8 @@ from .views_access_management import (
     StaffAccessRequestDetailView,
     StaffAccessRequestListView,
     StaffAccessRequestRejectView,
+    StaffInvitationAcceptView,
+    StaffInvitationCompleteView,
 )
 from .views_auth import (
     PortalLoginView,
@@ -95,6 +97,7 @@ from .views_staff_billing_statements import (
     StaffCustomerBillingStatementExportView,
 )
 from .views_staff_branding import StaffBrandSettingsView
+from .views_staff_catalog import StaffDefaultCatalogPricingSettingsView
 from .views_staff_customers import (
     StaffCustomerAccountUpdateView,
     StaffCustomerDetailView,
@@ -159,6 +162,13 @@ from .views_staff_reviews import (
     StaffOrderUploadReviewView,
 )
 from .views_staff_scan import StaffOrderPanelScanView
+from .views_staff_team import (
+    StaffTeamInvitationRevokeView,
+    StaffTeamInviteView,
+    StaffTeamMemberDeactivateView,
+    StaffTeamMemberRoleView,
+    StaffTeamView,
+)
 from .views_staff_shipping import (
     StaffOrderPanelShippingSyncView,
     StaffOrderPanelShippingView,
@@ -214,6 +224,16 @@ urlpatterns = [
         "acces/activation-terminee/",
         CustomerInvitationCompleteView.as_view(),
         name="customer-invitation-complete",
+    ),
+    path(
+        "acces/invitation-atelier/<str:token>/",
+        StaffInvitationAcceptView.as_view(),
+        name="staff-invitation-accept",
+    ),
+    path(
+        "acces/activation-atelier-terminee/",
+        StaffInvitationCompleteView.as_view(),
+        name="staff-invitation-complete",
     ),
     path("client/", ClientDashboardView.as_view(), name="client-dashboard"),
     path(
@@ -588,6 +608,23 @@ urlpatterns = [
         StaffMachineUpdateView.as_view(),
         name="staff-machine-update",
     ),
+    path("staff/team/", StaffTeamView.as_view(), name="staff-team"),
+    path("staff/team/invite/", StaffTeamInviteView.as_view(), name="staff-team-invite"),
+    path(
+        "staff/team/invitations/<uuid:invitation_public_id>/revoke/",
+        StaffTeamInvitationRevokeView.as_view(),
+        name="staff-team-invitation-revoke",
+    ),
+    path(
+        "staff/team/members/<uuid:membership_public_id>/role/",
+        StaffTeamMemberRoleView.as_view(),
+        name="staff-team-member-role",
+    ),
+    path(
+        "staff/team/members/<uuid:membership_public_id>/deactivate/",
+        StaffTeamMemberDeactivateView.as_view(),
+        name="staff-team-member-deactivate",
+    ),
     path(
         "staff/access-requests/",
         StaffAccessRequestListView.as_view(),
@@ -662,6 +699,11 @@ urlpatterns = [
         "staff/settings/volume-discounts/",
         StaffDefaultVolumeDiscountSettingsView.as_view(),
         name="staff-default-volume-discount-settings",
+    ),
+    path(
+        "staff/settings/catalog-pricing/",
+        StaffDefaultCatalogPricingSettingsView.as_view(),
+        name="staff-default-catalog-pricing-settings",
     ),
     path(
         "staff/settings/volume-discounts/messages/",

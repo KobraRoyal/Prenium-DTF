@@ -823,10 +823,13 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Demandes d’accès", staff_nav)
         self.assertIn("Modèles d’e-mails", staff_nav)
         self.assertIn("Réglages de laize", staff_nav)
+        self.assertIn("portal:staff-default-catalog-pricing-settings", staff_nav)
+        self.assertIn("Grille tarifaire", staff_nav)
         self.assertNotIn("Machines DTF", staff_nav)
         self.assertNotIn("Identité visuelle", staff_nav)
         self.assertIn("Votre compte", header)
         self.assertIn(">Atelier</span>", header)
+        self.assertNotIn(">Espace client<", header)
         self.assertIn("product-menu-button__icon", header)
         self.assertIn("ui-btn ui-btn-ghost ui-btn-sm product-menu-button", header)
         self.assertIn("portal_profile_menu.html", header)
@@ -1012,11 +1015,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("staff-customer-workspace__section", profile)
         self.assertIn("js/customer-account-workspace.js", profile)
         self.assertIn('head_labelledby="staff-profile-heading"', profile)
+        self.assertIn("staff-profile-workspace", profile)
+        self.assertIn("staff-customer-focus__org", focus)
+        self.assertIn("?space=staff#account-identity", account_rail)
+        self.assertIn("#account-identity", account_rail)
         self.assertLess(
             profile.index("components/portal/page_head.html"),
             profile.index("profile_staff_focus.html"),
         )
-        self.assertIn('href="#account-identity"', account_rail)
         self.assertIn("staff-customer-workspace__nav", account_rail)
         self.assertLess(
             profile.index("staff-customer-detail-surface"),
@@ -1030,6 +1036,29 @@ class PortalUiCoherenceTests(SimpleTestCase):
             portal_entrypoint,
         )
         self.assertIn("width: 100% !important", portal_entrypoint)
+
+    def test_staff_team_page_matches_client_profile_workspace_pattern(self) -> None:
+        team = template_source("portal/staff/team.html")
+        account_rail = template_source("components/portal/account_rail.html")
+        portal_entrypoint = static_source("css/entries/portal-staff.css")
+
+        self.assertIn("staff-profile-page", team)
+        self.assertIn("account-team-page", team)
+        self.assertIn("staff-profile-workspace", team)
+        self.assertIn('account_section="team"', team)
+        self.assertIn("profile_workspace=1", team)
+        self.assertIn("profile_staff_focus.html", team)
+        self.assertIn("staff-customer-workspace-surface", team)
+        self.assertIn("data-customer-workspace", team)
+        self.assertIn("components/portal/account_rail.html", team)
+        self.assertIn("portal:staff-team", account_rail)
+        self.assertIn("?space=staff#account-identity", account_rail)
+        team_breadcrumb = template_source("components/portal/breadcrumbs/staff_team.html")
+        staff_trail = template_source("components/portal/breadcrumbs/staff_trail.html")
+        self.assertIn("staff_trail.html", team_breadcrumb)
+        self.assertIn("Accueil Atelier", staff_trail)
+        self.assertIn("ui-breadcrumb__list", staff_trail)
+        self.assertIn(".staff-profile-page.account-team-page .account-team-panel", portal_entrypoint)
 
     def test_client_portal_hardening_keeps_actions_named_and_contrasted(self) -> None:
         dashboard = template_source("portal/client/dashboard.html")

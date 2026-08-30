@@ -233,6 +233,36 @@ EMAIL_TEMPLATE_DEFINITIONS = (
         ),
     ),
     _definition(
+        EmailTemplate.Event.STAFF_MEMBER_INVITED,
+        EmailTemplate.Audience.INTERNAL,
+        event_label="Collaborateur Atelier invité",
+        audience_label="Équipe interne",
+        description="Invitation sécurisée à rejoindre l'équipe Atelier.",
+        subject="Invitation à rejoindre l'équipe Atelier Prenium DTF",
+        body=(
+            "Bonjour,\n\n"
+            "Vous êtes invité à rejoindre l'équipe Atelier Prenium DTF "
+            "avec le rôle {{ invitation.role }}.\n\n"
+            "Accepter l'invitation sous 72 heures : {{ action.url }}\n\n"
+            "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.\n\n"
+            "Cordialement,\nL'équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.STAFF_ACCOUNT_ACTIVATED,
+        EmailTemplate.Audience.INTERNAL,
+        event_label="Accès Atelier activé",
+        audience_label="Équipe interne",
+        description="Confirmation après activation d'un accès Atelier.",
+        subject="Bienvenue dans l'espace Atelier",
+        body=(
+            "Bonjour,\n\n"
+            "Votre accès Atelier est maintenant actif avec le rôle {{ invitation.role }}.\n\n"
+            "Connexion : {{ action.url }}\n\n"
+            "Cordialement,\nL'équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
         EmailTemplate.Event.PASSWORD_RESET,
         EmailTemplate.Audience.CLIENT,
         event_label="Réinitialisation du mot de passe",

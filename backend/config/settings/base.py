@@ -156,9 +156,11 @@ DTF_LAIZE_CM = env_int("DTF_LAIZE_CM", 55)
 DTF_METERAGE_AREA_MODE = os.environ.get("DTF_METERAGE_AREA_MODE", "laize_fit")
 # TVA France standard appliquée au paiement comptant CB (sous-total HT + port).
 ORDER_VAT_RATE_IMMEDIATE = Decimal(os.environ.get("ORDER_VAT_RATE_IMMEDIATE", "0.20"))
-# Codes catalogue préférés (évite qu’un service de test active vole le tarif recette).
-# DTF : vide = premier actif par display_order/name (comportement historique).
-CATALOG_PREFERRED_DTF_CODES = env_list("CATALOG_PREFERRED_DTF_CODES", "")
+# Codes catalogue préférés (évite qu’un service de test actif vole le tarif recette).
+CATALOG_PREFERRED_DTF_CODES = env_list(
+    "CATALOG_PREFERRED_DTF_CODES",
+    "seed-dtf-meter,dtf-meter",
+)
 # Préparation fichier : privilégier la recette seed (10 €) avant d’éventuels doublons de test.
 CATALOG_PREFERRED_FILE_PREP_CODES = env_list(
     "CATALOG_PREFERRED_FILE_PREP_CODES",

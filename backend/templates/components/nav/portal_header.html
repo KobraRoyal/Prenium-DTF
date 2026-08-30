@@ -4,8 +4,7 @@
   <div class="app-main app-nav landing-saas-nav ui-shell-main product-nav ui-foundation-nav">
     <div class="product-nav__brand">
       {% if nav_mode == "client" %}
-      {% include "components/brand/logo.html" with brand_home_href="portal:client-dashboard" brand_home_label="Retour à l'espace client" %}
-      <span class="product-nav__workspace"><span aria-hidden="true"></span>Espace client</span>
+      {% include "components/brand/logo.html" with brand_home_href="portal:client-dashboard" brand_home_label="Retour à l'accueil" %}
       {% elif nav_mode == "staff" %}
       {% include "components/brand/logo.html" with brand_home_href="portal:staff-dashboard" brand_home_label="Retour à l'Atelier" %}
       <span class="product-nav__workspace"><span aria-hidden="true"></span>Atelier</span>

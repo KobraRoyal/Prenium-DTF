@@ -1,0 +1,29 @@
+<button
+  class="ui-btn ui-btn-ghost ui-btn-sm account-team-danger-trigger"
+  type="button"
+  data-dialog-open="deactivate-member-dialog-{{ membership.public_id }}"
+  aria-haspopup="dialog"
+>Désactiver</button>
+<dialog
+  class="b2b-confirm-dialog"
+  id="deactivate-member-dialog-{{ membership.public_id }}"
+  aria-labelledby="deactivate-member-title-{{ membership.public_id }}"
+  aria-describedby="deactivate-member-desc-{{ membership.public_id }}"
+>
+  <div class="b2b-confirm-dialog__shell">
+    <div class="b2b-confirm-dialog__content">
+      <h2 id="deactivate-member-title-{{ membership.public_id }}">Désactiver cet accès ?</h2>
+      <p id="deactivate-member-desc-{{ membership.public_id }}" class="b2b-confirm-dialog__lead">
+        <strong>{{ membership.user.get_full_name|default:membership.user.email }}</strong> ne pourra plus accéder au portail Atelier.
+      </p>
+      <p class="b2b-confirm-dialog__hint">Son compte utilisateur n'est pas supprimé. Un administrateur pourra rétablir son accès ultérieurement.</p>
+    </div>
+    <div class="b2b-confirm-dialog__actions">
+      <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Conserver l'accès</button>
+      <form method="post" action="{% url 'portal:staff-team-member-deactivate' membership_public_id=membership.public_id %}">
+        {% csrf_token %}
+        <button class="ui-btn ui-btn-danger" type="submit">Désactiver l'accès</button>
+      </form>
+    </div>
+  </div>
+</dialog>

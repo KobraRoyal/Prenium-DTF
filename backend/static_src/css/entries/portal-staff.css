@@ -240,6 +240,30 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-se
   }
 }
 
+/* v33 — Grille tarifaire catalogue : sections compactes. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .catalog-pricing-settings-page .catalog-pricing-settings-surface {
+  display: grid;
+  gap: 1rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .catalog-pricing-settings-page .catalog-pricing-settings-surface__title {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .catalog-pricing-settings-page .catalog-pricing-settings-surface__form {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .catalog-pricing-settings-page .catalog-pricing-settings-stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .catalog-pricing-settings-page .catalog-pricing-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* v32 — Parc machines : liste ui-data-table alignée commandes + modale CRUD. */
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .machine-fleet-page {
   display: grid;
@@ -2397,4 +2421,17 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.staff-profile-page .staff-customer-workspace__nav,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.staff-profile-page .staff-customer-workspace__section {
   border-radius: var(--radius) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-profile-page.account-team-page .account-team-panel,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-profile-page.account-team-page .account-team-invite {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-profile-page.account-team-page .account-team-invite .account-profile-panel__head {
+  display: none;
 }

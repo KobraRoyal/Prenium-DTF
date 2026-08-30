@@ -303,7 +303,7 @@ class UiFoundationSourceTests(SimpleTestCase):
                 self.assertIn(marker, staff_trail)
 
         for marker in [
-            "Accueil client",
+            "Accueil",
             "portal:client-dashboard",
         ]:
             with self.subTest(marker=marker, trail="client"):

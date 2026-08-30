@@ -1,0 +1,80 @@
+<aside class="account-profile-panel account-team-invite" id="team-invite-panel" aria-labelledby="team-invite-title">
+  <header class="account-profile-panel__head">
+    <div>
+      <h2 id="team-invite-title" class="ui-sr-only">Inviter un collaborateur Atelier</h2>
+      <p class="ui-sr-only">La personne reçoit un lien personnel valable 72 h pour rejoindre l'équipe Atelier.</p>
+    </div>
+  </header>
+
+  <div class="account-team-invite__body">
+    {% if invited_email %}
+      <div class="account-team-invite-success" role="status">
+        <strong>Invitation enregistrée</strong>
+        <span>{{ invited_email }}</span>
+        <small>L'e-mail sécurisé est pris en charge par notre service d'envoi.</small>
+      </div>
+    {% endif %}
+
+    <form
+      class="ui-form-stack account-team-invite-form"
+      method="post"
+      action="{% url 'portal:staff-team-invite' %}"
+      hx-post="{% url 'portal:staff-team-invite' %}"
+      hx-target="#team-invite-panel"
+      hx-swap="outerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      data-submit-loading
+    >
+      {% csrf_token %}
+
+      {% include "components/forms/field_group.html" with label="E-mail professionnel" name="email" id="invite_email" type="email" autocomplete="email" required=True show_label=True placeholder="collaborateur@entreprise.fr" value=invitation_form.email.value error=invitation_form.email.errors.0 help_text="Utilisez l'adresse professionnelle personnelle du collaborateur." %}
+
+      <div class="ui-field-group">
+        <label class="ui-label" for="invite_role">Niveau d'accès</label>
+        <p class="ui-help" id="invite_role-help">Attribuez uniquement les droits nécessaires à son travail.</p>
+        <select
+          class="ui-input{% if invitation_form.role.errors %} ui-input--error{% endif %}"
+          id="invite_role"
+          name="role"
+          aria-describedby="invite_role-help{% if invitation_form.role.errors %} invite_role-error{% endif %}"
+          {% if invitation_form.role.errors %}aria-invalid="true"{% endif %}
+        >
+          {% for value, label in invitation_form.role.field.choices %}
+            <option value="{{ value }}"{% if invitation_form.role.value == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if invitation_form.role.errors %}
+          <p class="error-text ui-error-text" id="invite_role-error" role="alert">{{ invitation_form.role.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      {% if invitation_form.non_field_errors %}
+        <div class="alert alert--danger" role="alert">{{ invitation_form.non_field_errors.0 }}</div>
+      {% endif %}
+
+      {% include "components/forms/form_actions.html" with primary_label="Envoyer l'invitation" primary_class_full="ui-btn ui-btn-primary" htmx_disable=True %}
+    </form>
+
+    <div class="account-team-pending" aria-live="polite">
+      <div class="account-team-pending__head">
+        <h3>Invitations en attente</h3>
+        <span class="account-team-count">{{ invitations|length }}</span>
+      </div>
+      {% if invitations %}
+        <div class="account-team-pending__list">
+          {% for invitation in invitations %}
+            <div class="account-team-pending-row">
+              <span>
+                <strong>{{ invitation.email }}</strong>
+                <small>{{ invitation.get_role_display }} · expire le {{ invitation.expires_at|date:"d/m/Y à H:i" }}</small>
+              </span>
+              {% include "portal/staff/partials/team_invitation_revoke_button.html" with invitation=invitation %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="account-team-pending__empty">Aucune invitation en attente.</p>
+      {% endif %}
+    </div>
+  </div>
+</aside>

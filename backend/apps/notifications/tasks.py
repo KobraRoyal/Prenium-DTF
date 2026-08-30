@@ -1,5 +1,6 @@
 from celery import shared_task
 
+from apps.accounts.models import StaffInvitation
 from apps.customers.models import CustomerInvitation
 from apps.notifications.services.transactional import (
     deliver_volume_discount_tier_notification,
@@ -18,6 +19,8 @@ from apps.notifications.services.transactional import (
     send_order_shipped_email,
     send_password_reset_email,
     send_payment_captured_email,
+    send_staff_account_activated_email,
+    send_staff_invitation_email,
 )
 from apps.orders.models import Order
 from apps.prospects.models import ProspectProfile
@@ -45,6 +48,14 @@ def _get_invitation(invitation_public_id: str) -> CustomerInvitation | None:
     return (
         CustomerInvitation.objects.filter(public_id=invitation_public_id)
         .select_related("customer", "accepted_by")
+        .first()
+    )
+
+
+def _get_staff_invitation(invitation_public_id: str) -> StaffInvitation | None:
+    return (
+        StaffInvitation.objects.filter(public_id=invitation_public_id)
+        .select_related("accepted_by")
         .first()
     )
 
@@ -107,6 +118,30 @@ def send_access_request_rejected_email_task(profile_public_id: str) -> None:
 def send_customer_invitation_email_task(invitation_public_id: str) -> None:
     if invitation := _get_invitation(invitation_public_id):
         send_customer_invitation_email(invitation=invitation)
+
+
+@shared_task(
+    name="notifications.send_staff_invitation_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_staff_invitation_email_task(invitation_public_id: str) -> None:
+    if invitation := _get_staff_invitation(invitation_public_id):
+        send_staff_invitation_email(invitation=invitation)
+
+
+@shared_task(
+    name="notifications.send_staff_account_activated_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_staff_account_activated_email_task(invitation_public_id: str) -> None:
+    if invitation := _get_staff_invitation(invitation_public_id):
+        send_staff_account_activated_email(invitation=invitation)
 
 
 @shared_task(
