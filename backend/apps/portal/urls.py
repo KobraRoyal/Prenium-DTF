@@ -151,6 +151,7 @@ from .views_staff_pod_ops import (
     StaffPodUnitDocumentView,
 )
 from .views_staff_pod_rip import StaffPodRipLotDetailView, StaffPodRipLotListView
+from .views_staff_pod_shopify import StaffPodShopifyStoresView
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
@@ -541,6 +542,11 @@ urlpatterns = [
         "staff/atelier/pod/catalogue/variantes/<uuid:variant_public_id>/config/",
         StaffPodVariantConfigDrawerView.as_view(),
         name="staff-pod-variant-config",
+    ),
+    path(
+        "staff/atelier/pod/boutiques/",
+        StaffPodShopifyStoresView.as_view(),
+        name="staff-pod-shops",
     ),
     path(
         "staff/atelier/pod/lots/",

@@ -11,6 +11,7 @@ from django.db import transaction
 from apps.auditlog.services import record_event
 from apps.pod.models import PodRipWorkItem, ShopifyStore, ShopifyVariant, ShopifyWebhookReceipt
 from apps.pod.services.rip_lots import PodRipLotService
+from apps.pod.services.shopify_connect import hmac_secrets_for_store
 from apps.pod.services.variant_config import CONFIG_STATUS_POD, VariantConfigService
 
 
@@ -26,13 +27,17 @@ class ShopifyFulfillmentIngestService:
         store = ShopifyStore.objects.filter(shop_domain=shop_domain, is_active=True).first()
         if store is None:
             raise ValidationError("Boutique inconnue.")
-        secret = (store.webhook_secret or "").encode()
-        if not secret:
-            raise ValidationError("Secret webhook boutique manquant.")
-        digest = hmac.new(secret, raw_body, hashlib.sha256).digest()
-        expected = base64.b64encode(digest).decode()
         provided = (hmac_header or "").removeprefix("sha256=").strip()
-        if not provided or not hmac.compare_digest(expected, provided):
+        secrets = hmac_secrets_for_store(store)
+        if not secrets or not provided:
+            raise ValidationError("Secret webhook boutique manquant.")
+        matched = False
+        for secret in secrets:
+            expected = base64.b64encode(hmac.new(secret, raw_body, hashlib.sha256).digest()).decode()
+            if hmac.compare_digest(expected, provided):
+                matched = True
+                break
+        if not matched:
             record_event(
                 action="pod.shopify.webhook_rejected",
                 status="failure",

@@ -5,6 +5,7 @@ psycopg[binary]>=3.2,<3.3
 gunicorn>=23.0,<24.0
 google-api-python-client>=2.177,<3.0
 google-auth>=2.40,<3.0
+cryptography>=44.0,<47
 reportlab>=4.2,<5
 Pillow>=12.0,<13
 PyMuPDF>=1.26,<2

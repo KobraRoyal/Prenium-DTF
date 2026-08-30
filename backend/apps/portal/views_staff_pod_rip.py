@@ -88,5 +88,37 @@ class StaffPodRipLotDetailView(StaffPodPermissionMixin, View):
                 "lot": lot,
                 "files": lot.files.select_related("variant", "work_item", "technique"),
                 "units": lot.units.select_related("variant", "work_item"),
+                "can_manage_catalog": request.user.has_perm("pod.manage_pod_catalog"),
+                "form_error": "",
             },
+        )
+
+    def post(self, request, lot_public_id):
+        if request.POST.get("intent") != "sync_drive":
+            raise Http404
+        try:
+            lot = rip_lot_service.sync_lot_drive(
+                actor=request.user, lot_public_id=lot_public_id
+            )
+        except PermissionDenied:
+            raise
+        except ValidationError as exc:
+            try:
+                lot = rip_lot_service.get_lot(actor=request.user, lot_public_id=lot_public_id)
+            except ValidationError as missing:
+                raise Http404(validation_message(missing)) from missing
+            return _render_error(
+                request,
+                self.template_name,
+                {
+                    **_nav(),
+                    "lot": lot,
+                    "files": lot.files.select_related("variant", "work_item", "technique"),
+                    "units": lot.units.select_related("variant", "work_item"),
+                    "can_manage_catalog": request.user.has_perm("pod.manage_pod_catalog"),
+                },
+                exc,
+            )
+        return HttpResponseRedirect(
+            reverse("portal:staff-pod-rip-lot-detail", kwargs={"lot_public_id": lot.public_id})
         )

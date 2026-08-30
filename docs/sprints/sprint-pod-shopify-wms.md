@@ -3,7 +3,7 @@
 **Branche** : `feature/shopify-pod-wms`  
 **ADR** : `docs/architecture/ADR_SHOPIFY_POD_WMS.md`  
 **Prompt maître** : `docs/prompts/PROMPT_SHOPIFY_POD_ORCHESTRATION.md`  
-**Statut** : lots D0–D1–A–B–C–E(webhook)–F–G opérationnels atelier ; OAuth app Shopify et Drive RIP hors livrable local
+**Statut** : lots D0–G opérationnels atelier ; OAuth / token chiffré + import + webhooks + Drive RIP (projection) livrés. App block thème hors scope test boutique.
 
 ## Objectif
 Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS emplacements, **sans** mélanger avec le flux DTF métrage existant.
@@ -74,7 +74,7 @@ Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS empl
 - [x] Export NAS plat `02_rip/` + `00_manifest/manifest.json`
 - [x] Noms ASCII `shop_so_pose_sku.ext` + test collision
 - [x] UI `/staff/atelier/pod/lots/`
-- [ ] Sync Google Drive (projection, pas vérité RIP)
+- [x] Sync Google Drive (projection `POD_RIP/{lot}/`, NAS plat reste vérité)
 
 ## Lot B — statut
 - [x] `PodUnit` (1 pièce / qty) + PDF A4 `03_of/` + étiquette `04_labels/`
@@ -86,7 +86,8 @@ Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS empl
 ## Lot E — statut
 - [x] Webhook HMAC Shopify `webhooks/shopify/pod/fulfillment/` → file RIP
 - [x] Idempotence file QUEUED (même boutique / SO / SKU)
-- [ ] OAuth app install + app block Shopify (hors flux atelier local)
+- [x] OAuth app + token admin chiffré + import catalogue + enregistrement webhook
+- [ ] App block Shopify embarqué (hors flux test boutique)
 
 ## Lot F — statut
 - [x] `prepare_lot(technique_code)` + répertoire plat `02_embroidery/` (seed technique Broderie)

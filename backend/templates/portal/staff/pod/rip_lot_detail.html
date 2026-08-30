@@ -6,8 +6,25 @@
 <div class="portal-page portal-page--staff">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=lot.code title=lot.code subtitle="Répertoire RIP plat — le RIP n’importe que ce dossier." %}
   <section class="portal-page-surface ui-list-section">
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
     <p class="mb-4">Chemin NAS relatif : <code>pod_rip/{{ lot.nas_relative_path }}/{{ lot.technique.rip_directory }}/</code></p>
-    <p class="muted mb-6">Manifest : <code>pod_rip/{{ lot.nas_relative_path }}/00_manifest/manifest.json</code></p>
+    <p class="muted mb-4">Manifest : <code>pod_rip/{{ lot.nas_relative_path }}/00_manifest/manifest.json</code></p>
+    <p class="muted mb-4">
+      Drive :
+      {% if lot.drive_synced_at %}
+        {{ lot.drive_file_count }} fichier(s) · {{ lot.drive_synced_at }}
+      {% elif lot.drive_error %}
+        erreur — {{ lot.drive_error }}
+      {% else %}
+        non synchronisé
+      {% endif %}
+    </p>
+    {% if can_manage_catalog %}
+    <form method="post" class="mb-6">
+      {% csrf_token %}
+      <button class="ui-btn ui-btn-ghost" type="submit" name="intent" value="sync_drive">Synchroniser Drive (projection)</button>
+    </form>
+    {% endif %}
     <div class="ui-table-shell">
       <table class="ui-data-table w-full border-collapse">
         <thead>

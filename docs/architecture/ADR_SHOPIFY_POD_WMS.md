@@ -14,7 +14,7 @@ Référence audit : canvas Cursor `audit-shopify-pod-app` (session locale). Ce d
 ## Décision
 
 ### Canal
-- App Shopify **fulfillment** (OAuth, webhooks, location Prenium) — pas Option B token seul.
+- App Shopify **fulfillment** (OAuth, webhooks, location Prenium). Token Admin d’une app custom autorisé uniquement pour recette locale (même chiffrement).
 
 ### Atelier POD
 - Zone dédiée `/staff/atelier/pod/` — **isolée** du pilotage DTF métrage.
@@ -45,7 +45,7 @@ Référence audit : canvas Cursor `audit-shopify-pod-app` (session locale). Ce d
 - Relecture `ids_security_reviewer` obligatoire sur multi-tenant, webhooks Shopify, fichiers HD, stock.
 
 ## Alternatives rejetées
-- Token Shopify manuel seul (Option B) pour le canal POD.
+- Token Shopify manuel comme canal produit unique (Option B). Recette locale : token app custom chiffré, OAuth reste la cible.
 - Sous-dossiers par commande dans `02_rip/` (casse le watch folder RIP).
 - Logique métier dans templates HTMX / app blocks Shopify.
 - Un seul mode POD sans ON_STOCK / VIRTUAL.

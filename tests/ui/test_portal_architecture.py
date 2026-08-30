@@ -74,6 +74,11 @@ def test_portal_legacy_views_facade_is_removed():
             "apps.portal.views_staff_pod_rip",
         ),
         (
+            "portal:staff-pod-shops",
+            {},
+            "apps.portal.views_staff_pod_shopify",
+        ),
+        (
             "portal:staff-pod-pose-dtf",
             {},
             "apps.portal.views_staff_pod_ops",
@@ -180,6 +185,10 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
             {"apps.portal.views_common", "apps.portal.views_staff_pod"},
         ),
         (
+            "views_staff_pod_shopify",
+            {"apps.portal.views_common", "apps.portal.views_staff_pod"},
+        ),
+        (
             "views_staff_billing",
             {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff"},
         ),
@@ -213,6 +222,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_staff_pod_catalog", 220),
         ("views_staff_pod_rip", 130),
         ("views_staff_pod_ops", 230),
+        ("views_staff_pod_shopify", 160),
         ("views_common", 220),
         ("views_checkout", 270),
         ("views_client", 420),

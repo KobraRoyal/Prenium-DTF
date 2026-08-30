@@ -22,6 +22,11 @@
         <p class="font-display text-2xl">{{ location_count }}</p>
         <p>Zones, bins (ex. A-03-02-B) et emplacement par défaut.</p>
       </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5 md:col-span-3" href="{% url 'portal:staff-pod-shops' %}">
+        <p class="muted">Shopify</p>
+        <p class="font-display text-lg">Boutiques</p>
+        <p>OAuth app ou token admin chiffré, import catalogue, webhook commandes → file RIP.</p>
+      </a>
       <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5 md:col-span-3" href="{% url 'portal:staff-pod-catalog' %}">
         <p class="muted">Catalogue Shopify</p>
         <p class="font-display text-lg">Mapping variantes</p>

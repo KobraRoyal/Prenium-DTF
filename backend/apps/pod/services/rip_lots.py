@@ -66,6 +66,26 @@ class PodRipLotService:
             raise ValidationError("Lot RIP introuvable.")
         return lot
 
+    def sync_lot_drive(self, *, actor, lot_public_id) -> PodRipLot:
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source="pod.rip",
+            action="pod.rip.permission_rejected",
+        )
+        lot = self.get_lot(actor=actor, lot_public_id=lot_public_id)
+        from apps.pod.services.rip_drive import PodRipDriveSyncService
+
+        PodRipDriveSyncService().sync_lot(lot=lot, actor=actor)
+        return lot
+
+    def _enqueue_drive_sync(self, lot: PodRipLot) -> None:
+        if not getattr(settings, "GOOGLE_DRIVE_SYNC_ENABLED", False):
+            return
+        from apps.pod.tasks import sync_pod_rip_lot_to_drive_task
+
+        sync_pod_rip_lot_to_drive_task.delay(str(lot.public_id))
+
     def enqueue(
         self,
         *,
@@ -174,6 +194,7 @@ class PodRipLotService:
                 raise ValidationError(
                     f"Aucun fichier {code.upper()} à exporter (file vide ou variantes NEEDS_CONFIG)."
                 )
+            self._enqueue_drive_sync(lot)
             return lot
         except ValidationError as exc:
             record_event(

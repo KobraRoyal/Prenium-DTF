@@ -45,9 +45,19 @@ class BlankAdmin(admin.ModelAdmin):
 
 @admin.register(ShopifyStore)
 class ShopifyStoreAdmin(admin.ModelAdmin):
-    list_display = ("name", "shop_domain", "slug", "is_active")
-    readonly_fields = ("public_id",)
-    fields = ("name", "slug", "shop_domain", "is_active", "webhook_secret", "public_id")
+    list_display = ("name", "shop_domain", "slug", "is_active", "token_suffix", "connected_at")
+    readonly_fields = ("public_id", "token_suffix", "oauth_scopes", "connected_at")
+    fields = (
+        "name",
+        "slug",
+        "shop_domain",
+        "is_active",
+        "webhook_secret",
+        "token_suffix",
+        "oauth_scopes",
+        "connected_at",
+        "public_id",
+    )
 
 
 @admin.register(ShopifyWebhookReceipt)

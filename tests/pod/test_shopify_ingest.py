@@ -67,3 +67,27 @@ def test_shopify_webhook_queues_pod_sku_and_rejects_bad_hmac():
     )
     assert again.json().get("duplicate") is True or again.json()["queued"] == 0
     assert PodRipWorkItem.objects.filter(shopify_order_number="#1042").count() == 1
+
+
+def test_shopify_webhook_accepts_app_client_secret(settings):
+    actor, _client = staff_client(email="staff-hook-app@example.com", permissions=MANAGE)
+    dtf, _blank, blank_variant, variant = pod_fixture(actor=actor)
+    configure_pod(actor, dtf, blank_variant, variant)
+    store = variant.product.store
+    store.webhook_secret = ""
+    store.save(update_fields=["webhook_secret"])
+    settings.SHOPIFY_POD_API_SECRET = "app-client-secret"
+    payload = {"name": "#1043", "line_items": [{"sku": variant.sku, "quantity": 1}]}
+    raw = json.dumps(payload).encode()
+    from django.test import Client
+
+    ok = Client().post(
+        reverse("pod:shopify-fulfillment-webhook"),
+        data=raw,
+        content_type="application/json",
+        HTTP_X_SHOPIFY_HMAC_SHA256=_sign("app-client-secret", raw),
+        HTTP_X_SHOPIFY_SHOP_DOMAIN=store.shop_domain,
+        HTTP_X_SHOPIFY_WEBHOOK_ID="evt-1043",
+    )
+    assert ok.status_code == 200
+    assert ok.json()["queued"] == 1

@@ -125,6 +125,10 @@ class ShopifyStore(BaseModel):
         default="",
         help_text="Secret HMAC Shopify (jamais exposé en front).",
     )
+    access_token_encrypted = models.TextField(blank=True, default="")
+    token_suffix = models.CharField(max_length=8, blank=True, default="")
+    oauth_scopes = models.CharField(max_length=255, blank=True, default="")
+    connected_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ("name",)
@@ -378,6 +382,10 @@ class PodRipLot(BaseModel):
     )
     prepared_at = models.DateTimeField(null=True, blank=True)
     error_message = models.CharField(max_length=255, blank=True, default="")
+    drive_folder_id = models.CharField(max_length=128, blank=True, default="")
+    drive_file_count = models.PositiveIntegerField(default=0)
+    drive_synced_at = models.DateTimeField(null=True, blank=True)
+    drive_error = models.CharField(max_length=255, blank=True, default="")
 
     class Meta:
         ordering = ("-created_at",)
