@@ -54,6 +54,14 @@ Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS empl
 - [ ] `graphify update .`
 - [ ] Security review si multi-tenant / webhook / fichier / stock
 
+## Lot D0 — statut
+- [x] Apps `pod` + `inventory` (techniques, blanks, warehouse, bins, règles défaut)
+- [x] Services SRP + audit + `public_id`
+- [x] Vues `/staff/atelier/pod/` (hub, techniques, blanks, entrepôt)
+- [x] Tests permissions client/staff + bin par défaut
+- [ ] Mouvements / picking / qty (lot G)
+- [ ] Mapping variante Shopify (lot D1)
+
 ## Hors scope (ne pas toucher)
 - Pricing B2B métrage, gang sheets, Sendcloud (sauf lien expédition POD plus tard)
 - Refonte pilotage DTF métrage

@@ -59,6 +59,8 @@ INSTALLED_APPS = [
     "apps.gang_sheets",
     "apps.orders",
     "apps.production",
+    "apps.pod",
+    "apps.inventory",
     "apps.portal",
     "apps.prospects",
     "apps.shipping",

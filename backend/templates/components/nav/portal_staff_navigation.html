@@ -4,6 +4,9 @@
   {% if perms.orders.view_order and perms.production.view_productionjob and perms.production.scan_productionjob %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-operations' %}is-active{% endif %}" {% if nav_key == 'staff-operations' %}aria-current="page"{% endif %} href="{% url 'portal:staff-atelier-operations' %}">Pilotage</a>
   {% endif %}
+  {% if perms.pod.access_pod_atelier %}
+  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-pod' %}is-active{% endif %}" {% if nav_key == 'staff-pod' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-hub' %}">POD</a>
+  {% endif %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes</a>
   {% if perms.customers.view_customer %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-customers' %}is-active{% endif %}" {% if nav_key == 'staff-customers' %}aria-current="page"{% endif %} href="{% url 'portal:staff-customer-list' %}">Comptes</a>

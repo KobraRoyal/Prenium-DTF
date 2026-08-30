@@ -1,0 +1,60 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Entrepôt POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Entrepôt" title="Plan entrepôt" subtitle="Zones atelier et emplacements de picking (code type A-03-02-B)." %}
+  <section class="portal-page-surface ui-list-section">
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    {% if can_manage_warehouse %}
+    <form class="ui-form-stack mb-8 max-w-2xl" method="post" novalidate>
+      {% csrf_token %}
+      <div class="grid gap-3 sm:grid-cols-3">
+        <p>
+          <label class="ui-label" for="loc-zone">Zone</label>
+          <select class="ui-input" id="loc-zone" name="zone_public_id">
+            {% for zone in zones %}
+            <option value="{{ zone.public_id }}">{{ zone.name }}</option>
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="loc-code">Code</label>
+          <input class="ui-input" id="loc-code" name="code" required placeholder="A-01-01-A">
+        </p>
+        <p>
+          <label class="ui-label" for="loc-label">Libellé</label>
+          <input class="ui-input" id="loc-label" name="label" placeholder="Allée A niveau 1">
+        </p>
+      </div>
+      <button class="ui-btn ui-btn-primary" type="submit">Créer un emplacement</button>
+    </form>
+    {% endif %}
+
+    {% for zone in zones %}
+    <section class="mb-8" aria-labelledby="zone-{{ zone.code }}">
+      <h2 class="font-display text-lg" id="zone-{{ zone.code }}">{{ zone.name }} <span class="muted">{{ zone.get_kind_display }}</span></h2>
+      <div class="ui-table-shell">
+        <table class="ui-data-table w-full border-collapse">
+          <thead>
+            <tr><th>Code</th><th>Libellé</th><th>État</th></tr>
+          </thead>
+          <tbody>
+            {% for location in zone.locations.all %}
+            <tr>
+              <td><a href="{% url 'portal:staff-pod-location-detail' location_public_id=location.public_id %}"><code>{{ location.code }}</code></a></td>
+              <td>{{ location.label|default:"—" }}</td>
+              <td>{% if location.is_active %}Actif{% else %}Inactif{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3">Aucun emplacement dans cette zone.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

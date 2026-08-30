@@ -1,0 +1,28 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}{{ location.code }} — Emplacement{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=location.code title=location.code subtitle=location.zone.name %}
+  <section class="portal-page-surface ui-list-section">
+    <p class="mb-6">{% if location.label %}{{ location.label }} — {% endif %}{{ location.zone.warehouse.name }}</p>
+    <h2 class="font-display text-lg">Règles d’emplacement par défaut</h2>
+    <ul class="mb-6">
+      {% for rule in rules %}
+      <li>{{ rule.get_sku_kind_display }} {% if rule.blank_variant %}{{ rule.blank_variant.sku }}{% endif %} {{ rule.finished_sku }} ({{ rule.get_owner_kind_display }})</li>
+      {% empty %}
+      <li class="muted">Aucune règle sur ce bin.</li>
+      {% endfor %}
+    </ul>
+    <h2 class="font-display text-lg">Stock présent</h2>
+    <ul>
+      {% for balance in balances %}
+      <li>{{ balance.get_sku_kind_display }} {% if balance.blank_variant %}{{ balance.blank_variant.sku }}{% endif %} {{ balance.finished_sku }} — {{ balance.qty_available }} dispo / {{ balance.qty_on_hand }} en stock ({{ balance.get_owner_kind_display }})</li>
+      {% empty %}
+      <li class="muted">Bin vide. Les mouvements et le picking arrivent au lot G.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

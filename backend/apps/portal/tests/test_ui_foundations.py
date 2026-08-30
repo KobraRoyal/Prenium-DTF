@@ -267,6 +267,7 @@ class UiFoundationSourceTests(SimpleTestCase):
             "perms.notifications.view_emailtemplate",
             "perms.customers.manage_customer_pricing",
             "perms.gang_sheets.configure_gangsheet",
+            "perms.pod.access_pod_atelier",
         ]:
             with self.subTest(permission_contract=permission_contract):
                 self.assertIn(permission_contract, staff)

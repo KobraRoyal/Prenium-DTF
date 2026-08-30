@@ -1,0 +1,50 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Supports vierges POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Supports" title="Supports vierges" subtitle="Catalogue blanks : SKU, variantes et poses autorisées." %}
+  <section class="portal-page-surface ui-list-section">
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    {% if can_manage_catalog %}
+    <form class="ui-form-stack mb-8 max-w-xl" method="post" novalidate>
+      {% csrf_token %}
+      <div class="grid gap-3 sm:grid-cols-3">
+        <p>
+          <label class="ui-label" for="blank-sku">SKU</label>
+          <input class="ui-input" id="blank-sku" name="sku" required placeholder="TEE-200">
+        </p>
+        <p>
+          <label class="ui-label" for="blank-name">Nom</label>
+          <input class="ui-input" id="blank-name" name="name" required placeholder="T-shirt 185g">
+        </p>
+        <p>
+          <label class="ui-label" for="blank-brand">Marque</label>
+          <input class="ui-input" id="blank-brand" name="brand" placeholder="Stanley/Stella">
+        </p>
+      </div>
+      <button class="ui-btn ui-btn-primary" type="submit">Créer un support</button>
+    </form>
+    {% endif %}
+    <div class="ui-table-shell">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr><th>SKU</th><th>Nom</th><th>Variantes</th></tr>
+        </thead>
+        <tbody>
+          {% for blank in blanks %}
+          <tr>
+            <td><a href="{% url 'portal:staff-pod-blank-detail' blank_public_id=blank.public_id %}"><code>{{ blank.sku }}</code></a></td>
+            <td>{{ blank.name }}{% if blank.brand %} <span class="muted">{{ blank.brand }}</span>{% endif %}</td>
+            <td>{{ blank.variants.count }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3">Aucun support. Créez le premier blank.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

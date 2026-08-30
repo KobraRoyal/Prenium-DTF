@@ -132,6 +132,14 @@ from .views_staff_operations import (
     StaffAtelierOperationTransitionView,
     StaffAtelierOperationUploadReviewView,
 )
+from .views_staff_pod import (
+    StaffPodBlankDetailView,
+    StaffPodBlankListView,
+    StaffPodHubView,
+    StaffPodLocationDetailView,
+    StaffPodTechniqueListView,
+    StaffPodWarehouseView,
+)
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
@@ -481,6 +489,32 @@ urlpatterns = [
         "staff/atelier/pilotage/<uuid:order_public_id>/shipment/sync/",
         StaffAtelierOperationShipmentSyncView.as_view(),
         name="staff-atelier-operation-shipment-sync",
+    ),
+    path("staff/atelier/pod/", StaffPodHubView.as_view(), name="staff-pod-hub"),
+    path(
+        "staff/atelier/pod/techniques/",
+        StaffPodTechniqueListView.as_view(),
+        name="staff-pod-techniques",
+    ),
+    path(
+        "staff/atelier/pod/blanks/",
+        StaffPodBlankListView.as_view(),
+        name="staff-pod-blanks",
+    ),
+    path(
+        "staff/atelier/pod/blanks/<uuid:blank_public_id>/",
+        StaffPodBlankDetailView.as_view(),
+        name="staff-pod-blank-detail",
+    ),
+    path(
+        "staff/atelier/pod/entrepot/",
+        StaffPodWarehouseView.as_view(),
+        name="staff-pod-warehouse",
+    ),
+    path(
+        "staff/atelier/pod/entrepot/emplacements/<uuid:location_public_id>/",
+        StaffPodLocationDetailView.as_view(),
+        name="staff-pod-location-detail",
     ),
     path(
         "staff/machines/",
