@@ -96,6 +96,8 @@ Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS empl
 - [x] Refus qty dispo insuffisante (POD-18)
 - [x] UI `/staff/atelier/pod/stocks/` (owner atelier)
 - [x] Owner client dédié (chemin atelier livré)
+- [x] SKU fini ON_STOCK (réception / picking zone FINISHED)
+- [x] Contrat mapping marchand (sauf `staff_locked`)
 
 ## Hors scope (ne pas toucher)
 - Pricing B2B métrage, gang sheets, Sendcloud (sauf lien expédition POD plus tard)

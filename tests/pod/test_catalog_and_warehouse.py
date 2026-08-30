@@ -85,6 +85,9 @@ def test_hub_bootstraps_ops_demo_for_managers():
     assert VariantConfigService().configuration_status(config) == "pod"
     assert blanks.list_blanks(actor=actor).count() >= 1
     assert warehouse.list_zones(actor=actor).first().locations.count() >= 1
+    from apps.pod.models import PodRipWorkItem
+
+    assert PodRipWorkItem.objects.filter(shopify_order_number="SO-DEMO-001").exists()
 
 
 def test_staff_cannot_create_technique_without_manage_perm():

@@ -15,7 +15,7 @@ from apps.inventory.models import (
     WarehouseZone,
 )
 from apps.pod.models import BlankVariant
-from apps.pod.services.validation import require_staff_perm, validation_message
+from apps.pod.services.validation import clean_sku, require_staff_perm, validation_message
 
 
 class StockOpsService:
@@ -48,7 +48,9 @@ class StockOpsService:
             actor=actor,
             source=source,
             kind=StockMovement.Kind.RECEIPT,
+            sku_kind=SkuKind.BLANK,
             blank_variant_public_id=blank_variant_public_id,
+            finished_sku="",
             location_public_id=location_public_id,
             scanned_bin_code="",
             quantity=quantity,
@@ -72,7 +74,9 @@ class StockOpsService:
             actor=actor,
             source=source,
             kind=StockMovement.Kind.PICK,
+            sku_kind=SkuKind.BLANK,
             blank_variant_public_id=blank_variant_public_id,
+            finished_sku="",
             location_public_id=None,
             scanned_bin_code=scanned_bin_code,
             quantity=quantity,
@@ -96,13 +100,67 @@ class StockOpsService:
             actor=actor,
             source=source,
             kind=StockMovement.Kind.PUTAWAY,
+            sku_kind=SkuKind.BLANK,
             blank_variant_public_id=blank_variant_public_id,
+            finished_sku="",
             location_public_id=location_public_id,
             scanned_bin_code="",
             quantity=quantity,
             owner_kind=owner_kind,
             customer_public_id=customer_public_id,
             delta=+1,
+        )
+
+    def receive_finished(
+        self,
+        *,
+        actor,
+        source: str,
+        finished_sku: str,
+        location_public_id,
+        quantity: int,
+        owner_kind: str = StockOwnerKind.ATELIER,
+        customer_public_id=None,
+    ) -> StockBalance:
+        return self._move(
+            actor=actor,
+            source=source,
+            kind=StockMovement.Kind.RECEIPT,
+            sku_kind=SkuKind.FINISHED,
+            blank_variant_public_id=None,
+            finished_sku=finished_sku,
+            location_public_id=location_public_id,
+            scanned_bin_code="",
+            quantity=quantity,
+            owner_kind=owner_kind,
+            customer_public_id=customer_public_id,
+            delta=+1,
+        )
+
+    def pick_finished(
+        self,
+        *,
+        actor,
+        source: str,
+        finished_sku: str,
+        scanned_bin_code: str,
+        quantity: int,
+        owner_kind: str = StockOwnerKind.ATELIER,
+        customer_public_id=None,
+    ) -> StockBalance:
+        return self._move(
+            actor=actor,
+            source=source,
+            kind=StockMovement.Kind.PICK,
+            sku_kind=SkuKind.FINISHED,
+            blank_variant_public_id=None,
+            finished_sku=finished_sku,
+            location_public_id=None,
+            scanned_bin_code=scanned_bin_code,
+            quantity=quantity,
+            owner_kind=owner_kind,
+            customer_public_id=customer_public_id,
+            delta=-1,
         )
 
     def _resolve_owner(self, *, owner_kind: str, customer_public_id):
@@ -118,11 +176,19 @@ class StockOpsService:
             raise ValidationError("Type de propriétaire stock invalide.")
         return StockOwnerKind.ATELIER, None
 
-    def _assert_zone(self, *, kind: str, owner_kind: str, location: StorageLocation) -> None:
+    def _assert_zone(
+        self, *, kind: str, owner_kind: str, sku_kind: str, location: StorageLocation
+    ) -> None:
         zone_kind = location.zone.kind
         if kind == StockMovement.Kind.PUTAWAY and zone_kind != WarehouseZone.Kind.RETURNS:
             raise ValidationError("Putaway retour : zone RETURNS requise.")
-        if kind == StockMovement.Kind.RECEIPT:
+        if kind != StockMovement.Kind.RECEIPT:
+            return
+        if sku_kind == SkuKind.FINISHED and zone_kind != WarehouseZone.Kind.FINISHED:
+            raise ValidationError("SKU fini : zone FINISHED requise.")
+        if sku_kind == SkuKind.BLANK and zone_kind == WarehouseZone.Kind.FINISHED:
+            raise ValidationError("Blank : zone FINISHED interdite.")
+        if sku_kind == SkuKind.BLANK:
             if owner_kind == StockOwnerKind.CUSTOMER and zone_kind != WarehouseZone.Kind.CLIENT:
                 raise ValidationError("Stock client : zone CLIENT requise.")
             if owner_kind == StockOwnerKind.ATELIER and zone_kind == WarehouseZone.Kind.CLIENT:
@@ -134,7 +200,9 @@ class StockOpsService:
         actor,
         source: str,
         kind: str,
+        sku_kind: str,
         blank_variant_public_id,
+        finished_sku: str,
         location_public_id,
         scanned_bin_code: str,
         quantity: int,
@@ -155,11 +223,16 @@ class StockOpsService:
                 resolved_owner, customer = self._resolve_owner(
                     owner_kind=owner_kind, customer_public_id=customer_public_id
                 )
-                variant = BlankVariant.objects.select_for_update().filter(
-                    public_id=blank_variant_public_id
-                ).first()
-                if variant is None:
-                    raise ValidationError("Variante blank introuvable.")
+                variant = None
+                sku = ""
+                if sku_kind == SkuKind.FINISHED:
+                    sku = clean_sku(finished_sku, field_label="SKU fini")
+                else:
+                    variant = BlankVariant.objects.select_for_update().filter(
+                        public_id=blank_variant_public_id
+                    ).first()
+                    if variant is None:
+                        raise ValidationError("Variante blank introuvable.")
                 if kind == StockMovement.Kind.PICK:
                     bin_code = (scanned_bin_code or "").strip().upper()
                     if not bin_code:
@@ -177,11 +250,16 @@ class StockOpsService:
                     if location is None:
                         raise ValidationError("Emplacement introuvable.")
                     scanned = location.code
-                    self._assert_zone(kind=kind, owner_kind=resolved_owner, location=location)
+                    self._assert_zone(
+                        kind=kind,
+                        owner_kind=resolved_owner,
+                        sku_kind=sku_kind,
+                        location=location,
+                    )
                 balance, _ = StockBalance.objects.select_for_update().get_or_create(
-                    sku_kind=SkuKind.BLANK,
+                    sku_kind=sku_kind,
                     blank_variant=variant,
-                    finished_sku="",
+                    finished_sku=sku,
                     location=location,
                     owner_kind=resolved_owner,
                     customer=customer,
@@ -195,8 +273,9 @@ class StockOpsService:
                 balance.refresh_from_db()
                 StockMovement.objects.create(
                     kind=kind,
-                    sku_kind=SkuKind.BLANK,
+                    sku_kind=sku_kind,
                     blank_variant=variant,
+                    finished_sku=sku,
                     from_location=location if delta < 0 else None,
                     to_location=location if delta > 0 else None,
                     owner_kind=resolved_owner,

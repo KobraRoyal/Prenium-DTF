@@ -95,6 +95,52 @@
         <button class="ui-btn ui-btn-ghost" type="submit">Ranger</button>
       </form>
     </div>
+    <div class="grid gap-8 lg:grid-cols-2 mt-8">
+      <form class="ui-form-stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="receive_finished">
+        <h2 class="font-display text-lg">Réception produit fini (ON_STOCK)</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="finr" %}
+        <p>
+          <label class="ui-label" for="finr-sku">SKU fini</label>
+          <input class="ui-input" id="finr-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN" value="TEE-WHT-M-FIN">
+        </p>
+        <p>
+          <label class="ui-label" for="finr-loc">Emplacement FINISHED</label>
+          <select class="ui-input" id="finr-loc" name="location_public_id">
+            {% for location in locations %}
+              {% if location.zone.kind == "finished" %}
+              <option value="{{ location.public_id }}">{{ location.code }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="finr-qty">Qté</label>
+          <input class="ui-input" id="finr-qty" name="quantity" type="number" min="1" value="1">
+        </p>
+        <button class="ui-btn ui-btn-primary" type="submit">Réceptionner le fini</button>
+      </form>
+      <form class="ui-form-stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="pick_finished">
+        <h2 class="font-display text-lg">Picking produit fini</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="finp" %}
+        <p>
+          <label class="ui-label" for="finp-sku">SKU fini</label>
+          <input class="ui-input" id="finp-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN" value="TEE-WHT-M-FIN">
+        </p>
+        <p>
+          <label class="ui-label" for="finp-bin">Scan bin (POD-17)</label>
+          <input class="ui-input" id="finp-bin" name="scanned_bin_code" required placeholder="F-01-01-A">
+        </p>
+        <p>
+          <label class="ui-label" for="finp-qty">Qté</label>
+          <input class="ui-input" id="finp-qty" name="quantity" type="number" min="1" value="1">
+        </p>
+        <button class="ui-btn ui-btn-secondary" type="submit">Picker le fini</button>
+      </form>
+    </div>
     {% else %}
     <p class="muted">Consultation seule — la gestion stock demande la permission entrepôt.</p>
     {% endif %}

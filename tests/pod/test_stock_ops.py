@@ -112,6 +112,27 @@ def test_customer_stock_is_isolated_from_atelier_pick():
     )
 
 
+def test_finished_sku_receive_and_pick():
+    actor, _client = staff_client(email="staff-wms-fin@example.com", permissions=MANAGE)
+    pod_fixture(actor=actor)
+    finished_bin = _bin(actor, zone_kind=WarehouseZone.Kind.FINISHED, code="F-01-01-A")
+    stock.receive_finished(
+        actor=actor,
+        source="test",
+        finished_sku="tee-wht-m-fin",
+        location_public_id=finished_bin.public_id,
+        quantity=2,
+    )
+    stock.pick_finished(
+        actor=actor,
+        source="test",
+        finished_sku="TEE-WHT-M-FIN",
+        scanned_bin_code="F-01-01-A",
+        quantity=1,
+    )
+    assert StockBalance.objects.get(finished_sku="TEE-WHT-M-FIN").qty_on_hand == 1
+
+
 def test_view_only_cannot_receive():
     actor, client = staff_client(email="staff-wms-ro@example.com", permissions=VIEW)
     response = client.post(

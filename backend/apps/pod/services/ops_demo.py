@@ -70,6 +70,8 @@ class PodOpsBootstrapService:
                     owner_kind="customer",
                     customer_public_id=customer.public_id,
                 )
+            self._ensure_on_stock(actor=actor, product=product, location=bins["finished"])
+            self._ensure_demo_queue(actor=actor, shopify_variant=shopify_variant)
             return {
                 "blank_variant": blank_variant,
                 "shopify_variant": shopify_variant,
@@ -210,4 +212,51 @@ class PodOpsBootstrapService:
                 ),
             ),
             source="pod_ops_bootstrap",
+        )
+
+    def _ensure_on_stock(self, *, actor, product, location) -> None:
+        from apps.inventory.models import SkuKind, StockBalance, StockOwnerKind
+
+        variant = product.variants.get(sku="TEE-WHT-M")
+        config = self.variant_config.get_or_create_config(variant)
+        if self.variant_config.configuration_status(config) != "on_stock":
+            self.variant_config.save_config(
+                actor=actor,
+                variant_public_id=variant.public_id,
+                payload=VariantConfigPayload(
+                    mode=IdsVariantConfig.Mode.ON_STOCK,
+                    finished_sku="TEE-WHT-M-FIN",
+                ),
+                source="pod_ops_bootstrap",
+            )
+        balance = StockBalance.objects.filter(
+            sku_kind=SkuKind.FINISHED,
+            finished_sku="TEE-WHT-M-FIN",
+            location=location,
+            owner_kind=StockOwnerKind.ATELIER,
+            customer=None,
+        ).first()
+        current = balance.qty_on_hand if balance else 0
+        if current >= 5:
+            return
+        self.stock.receive_finished(
+            actor=actor,
+            source="pod_ops_bootstrap",
+            finished_sku="TEE-WHT-M-FIN",
+            location_public_id=location.public_id,
+            quantity=5 - current,
+        )
+
+    def _ensure_demo_queue(self, *, actor, shopify_variant) -> None:
+        from apps.pod.models import PodRipWorkItem
+        from apps.pod.services.rip_lots import PodRipLotService
+
+        if PodRipWorkItem.objects.filter(status=PodRipWorkItem.Status.QUEUED).exists():
+            return
+        PodRipLotService().enqueue(
+            actor=actor,
+            source="pod_ops_bootstrap",
+            variant_public_id=shopify_variant.public_id,
+            shopify_order_number="SO-DEMO-001",
+            quantity=1,
         )

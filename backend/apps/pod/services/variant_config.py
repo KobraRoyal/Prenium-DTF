@@ -233,13 +233,16 @@ class VariantConfigService:
         merchant_actor=False,
     ) -> IdsVariantConfig:
         if merchant_actor:
-            raise ValidationError("Surface marchand non activée dans ce lot.")
-        require_staff_perm(
-            actor,
-            self.manage_permission,
-            source=source,
-            action="pod.variant_config.permission_rejected",
-        )
+            existing = IdsVariantConfig.objects.filter(variant__public_id=variant_public_id).first()
+            if existing and existing.staff_locked:
+                raise ValidationError("Configuration verrouillée par Prenium.")
+        else:
+            require_staff_perm(
+                actor,
+                self.manage_permission,
+                source=source,
+                action="pod.variant_config.permission_rejected",
+            )
         try:
             with transaction.atomic():
                 variant = ShopifyVariant.objects.select_for_update().get(

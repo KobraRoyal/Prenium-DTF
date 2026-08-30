@@ -19,7 +19,7 @@
           <select class="ui-input" id="rip-variant" name="variant_public_id">
             {% for product in products %}
               {% for variant in product.variants.all %}
-              <option value="{{ variant.public_id }}">{{ product.store.slug }} — {{ variant.sku|default:variant.title }}</option>
+              <option value="{{ variant.public_id }}"{% if variant.sku == "TEE-BLK-M" %} selected{% endif %}>{{ product.store.slug }} — {{ variant.sku|default:variant.title }}</option>
               {% endfor %}
             {% endfor %}
           </select>

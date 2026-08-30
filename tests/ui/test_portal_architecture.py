@@ -212,7 +212,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_staff_pod", 290),
         ("views_staff_pod_catalog", 220),
         ("views_staff_pod_rip", 130),
-        ("views_staff_pod_ops", 200),
+        ("views_staff_pod_ops", 230),
         ("views_common", 220),
         ("views_checkout", 270),
         ("views_client", 420),

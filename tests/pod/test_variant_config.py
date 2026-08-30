@@ -211,3 +211,38 @@ def test_apply_template_configures_variant():
     assert config.mode == IdsVariantConfig.Mode.POD
     assert config.blank_variant_id == blank_variant.id
     assert variant_config.configuration_status(config) == CONFIG_STATUS_POD
+
+
+def test_merchant_can_save_unlocked_config():
+    actor, _client = staff_client(email="staff-lock@example.com", permissions=MANAGE)
+    dtf, _blank, blank_variant, variant = pod_fixture(actor=actor)
+    payload = VariantConfigPayload(
+        mode=IdsVariantConfig.Mode.ON_STOCK,
+        finished_sku="TEE-FIN-1",
+    )
+    variant_config.save_config(
+        actor=None,
+        variant_public_id=variant.public_id,
+        payload=payload,
+        source="merchant_app",
+        merchant_actor=True,
+    )
+    assert variant.ids_config.mode == IdsVariantConfig.Mode.ON_STOCK
+    variant_config.save_config(
+        actor=actor,
+        variant_public_id=variant.public_id,
+        payload=VariantConfigPayload(
+            mode=IdsVariantConfig.Mode.ON_STOCK,
+            finished_sku="TEE-FIN-1",
+            staff_locked=True,
+        ),
+        source="test",
+    )
+    with pytest.raises(ValidationError, match="verrouillée"):
+        variant_config.save_config(
+            actor=None,
+            variant_public_id=variant.public_id,
+            payload=payload,
+            source="merchant_app",
+            merchant_actor=True,
+        )

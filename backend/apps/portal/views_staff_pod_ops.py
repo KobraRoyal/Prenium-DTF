@@ -98,7 +98,25 @@ class StaffPodStockView(StaffPodPermissionMixin, View):
                 "owner_kind": request.POST.get("owner_kind") or "atelier",
                 "customer_public_id": request.POST.get("customer_public_id") or None,
             }
-            if intent == "pick":
+            if intent == "pick_finished":
+                stock_ops.pick_finished(
+                    actor=request.user,
+                    source="staff_pod",
+                    finished_sku=request.POST.get("finished_sku", ""),
+                    scanned_bin_code=request.POST.get("scanned_bin_code", ""),
+                    quantity=qty,
+                    **owner_kwargs,
+                )
+            elif intent == "receive_finished":
+                stock_ops.receive_finished(
+                    actor=request.user,
+                    source="staff_pod",
+                    finished_sku=request.POST.get("finished_sku", ""),
+                    location_public_id=request.POST.get("location_public_id"),
+                    quantity=qty,
+                    **owner_kwargs,
+                )
+            elif intent == "pick":
                 stock_ops.pick_blank(
                     actor=request.user,
                     source="staff_pod",
