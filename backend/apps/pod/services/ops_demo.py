@@ -5,7 +5,13 @@ from django.db import transaction
 from apps.inventory.models import WarehouseZone
 from apps.inventory.services.stock_ops import StockOpsService
 from apps.inventory.services.warehouse import WarehouseLayoutService
-from apps.pod.models import Blank, BlankPlacementCapability, BlankVariant, IdsVariantConfig, PrintTechnique
+from apps.pod.models import (
+    Blank,
+    BlankPlacementCapability,
+    BlankVariant,
+    IdsVariantConfig,
+    PrintTechnique,
+)
 from apps.pod.services.catalog import BlankCatalogService, PrintTechniqueService
 from apps.pod.services.validation import require_staff_perm
 from apps.pod.services.variant_config import ShopifyCatalogService, VariantConfigService
@@ -90,9 +96,7 @@ class PodOpsBootstrapService:
     ) -> None:
         from apps.inventory.models import SkuKind, StockBalance, StockOwnerKind
 
-        owner = (
-            StockOwnerKind.CUSTOMER if owner_kind == "customer" else StockOwnerKind.ATELIER
-        )
+        owner = StockOwnerKind.CUSTOMER if owner_kind == "customer" else StockOwnerKind.ATELIER
         customer = None
         if owner == StockOwnerKind.CUSTOMER:
             from apps.customers.models import Customer
@@ -119,9 +123,7 @@ class PodOpsBootstrapService:
         )
 
     def _ensure_bins(self, *, actor):
-        zones = {
-            zone.kind: zone for zone in self.warehouse.list_zones(actor=actor)
-        }
+        zones = {zone.kind: zone for zone in self.warehouse.list_zones(actor=actor)}
         specs = (
             (WarehouseZone.Kind.BLANKS, "A-01-01-A", "Vierges allée A"),
             (WarehouseZone.Kind.RETURNS, "R-01-01-A", "Retours A"),
@@ -172,9 +174,7 @@ class PodOpsBootstrapService:
             (BlankPlacementCapability.Placement.FRONT, True),
             (BlankPlacementCapability.Placement.LEFT_CHEST, False),
         ):
-            if not blank.placement_capabilities.filter(
-                placement=placement, technique=dtf
-            ).exists():
+            if not blank.placement_capabilities.filter(placement=placement, technique=dtf).exists():
                 self.blanks.add_capability(
                     actor=actor,
                     source="pod_ops_bootstrap",

@@ -33,7 +33,9 @@ class ShopifyFulfillmentIngestService:
             raise ValidationError("Secret webhook boutique manquant.")
         matched = False
         for secret in secrets:
-            expected = base64.b64encode(hmac.new(secret, raw_body, hashlib.sha256).digest()).decode()
+            expected = base64.b64encode(
+                hmac.new(secret, raw_body, hashlib.sha256).digest()
+            ).decode()
             if hmac.compare_digest(expected, provided):
                 matched = True
                 break
@@ -89,9 +91,7 @@ class ShopifyFulfillmentIngestService:
                     skipped += 1
                     continue
                 config = getattr(variant, "ids_config", None)
-                status = (
-                    config_service.configuration_status(config) if config else "unmanaged"
-                )
+                status = config_service.configuration_status(config) if config else "unmanaged"
                 if status != CONFIG_STATUS_POD:
                     skipped += 1
                     continue

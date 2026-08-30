@@ -126,7 +126,9 @@ class ShopifyConnectService:
         self._after_token(store=store)
         return store
 
-    def save_manual_token(self, *, actor, shop_domain: str, token: str, name: str = "") -> ShopifyStore:
+    def save_manual_token(
+        self, *, actor, shop_domain: str, token: str, name: str = ""
+    ) -> ShopifyStore:
         require_staff_perm(
             actor,
             self.manage_permission,
@@ -190,21 +192,27 @@ class ShopifyConnectService:
         )
         created = 0
         for product_payload in data.get("products") or []:
-            handle = slugify(str(product_payload.get("handle") or product_payload.get("title") or "produit"))
+            handle = slugify(
+                str(product_payload.get("handle") or product_payload.get("title") or "produit")
+            )
+            product_external = str(
+                product_payload.get("id") or product_payload.get("admin_graphql_api_id")
+            )[:64]
             product, _ = ShopifyProduct.objects.get_or_create(
                 store=store,
-                external_id=str(product_payload.get("id") or product_payload.get("admin_graphql_api_id"))[:64],
+                external_id=product_external,
                 defaults={
                     "title": str(product_payload.get("title") or "Produit Shopify")[:255],
                     "handle": handle[:255],
                 },
             )
             for variant_payload in product_payload.get("variants") or []:
+                variant_external = str(
+                    variant_payload.get("id") or variant_payload.get("admin_graphql_api_id")
+                )[:64]
                 variant, was_created = ShopifyVariant.objects.get_or_create(
                     product=product,
-                    external_id=str(variant_payload.get("id") or variant_payload.get("admin_graphql_api_id"))[
-                        :64
-                    ],
+                    external_id=variant_external,
                     defaults={
                         "title": str(variant_payload.get("title") or "")[:255],
                         "sku": str(variant_payload.get("sku") or "")[:80],
@@ -246,7 +254,9 @@ class ShopifyConnectService:
         self.install_webhooks(store=store)
         self.import_catalog(store=store)
 
-    def _persist_token(self, *, shop: str, token: str, scopes: str, source: str, name: str = "") -> ShopifyStore:
+    def _persist_token(
+        self, *, shop: str, token: str, scopes: str, source: str, name: str = ""
+    ) -> ShopifyStore:
         encrypted = encrypt_shopify_token(token)
         slug = slugify(shop.replace(".myshopify.com", ""))[:64] or "shopify-store"
         store, _ = ShopifyStore.objects.get_or_create(
@@ -287,11 +297,7 @@ class ShopifyConnectService:
         provided = str(query.get("hmac") or "")
         if not secret or not provided:
             raise ValidationError("HMAC OAuth Shopify manquant.")
-        pairs = [
-            f"{key}={query[key]}"
-            for key in sorted(query)
-            if key not in {"hmac", "signature"}
-        ]
+        pairs = [f"{key}={query[key]}" for key in sorted(query) if key not in {"hmac", "signature"}]
         digest = hmac.new(secret, "&".join(pairs).encode(), hashlib.sha256).hexdigest()
         if not hmac.compare_digest(digest, provided):
             raise ValidationError("HMAC OAuth Shopify invalide.")

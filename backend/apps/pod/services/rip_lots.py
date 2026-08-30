@@ -150,8 +150,14 @@ class PodRipLotService:
                     raise ValidationError("Répertoire RIP invalide (doit commencer par 02_).")
                 if code == "dtf" and technique.rip_directory != "02_rip":
                     raise ValidationError("Technique DTF inactive ou répertoire RIP invalide.")
-                queue = list(
+                locked_ids = list(
                     PodRipWorkItem.objects.select_for_update()
+                    .filter(status=PodRipWorkItem.Status.QUEUED)
+                    .order_by("created_at")
+                    .values_list("pk", flat=True)
+                )
+                queue = list(
+                    PodRipWorkItem.objects.filter(pk__in=locked_ids)
                     .select_related(
                         "store",
                         "variant",
@@ -160,7 +166,6 @@ class PodRipLotService:
                         "variant__ids_config__blank_variant",
                     )
                     .prefetch_related("variant__ids_config__recipe__slots__technique")
-                    .filter(status=PodRipWorkItem.Status.QUEUED)
                     .order_by("created_at")
                 )
                 if not queue:
@@ -192,7 +197,8 @@ class PodRipLotService:
                     )
             if lot is None:
                 raise ValidationError(
-                    f"Aucun fichier {code.upper()} à exporter (file vide ou variantes NEEDS_CONFIG)."
+                    f"Aucun fichier {code.upper()} à exporter "
+                    "(file vide ou variantes NEEDS_CONFIG)."
                 )
             self._enqueue_drive_sync(lot)
             return lot

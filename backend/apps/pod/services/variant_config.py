@@ -140,11 +140,7 @@ class VariantConfigService:
         if config.mode == IdsVariantConfig.Mode.VIRTUAL:
             return CONFIG_STATUS_VIRTUAL
         if config.mode == IdsVariantConfig.Mode.ON_STOCK:
-            return (
-                CONFIG_STATUS_ON_STOCK
-                if config.finished_sku
-                else CONFIG_STATUS_NEEDS_CONFIG
-            )
+            return CONFIG_STATUS_ON_STOCK if config.finished_sku else CONFIG_STATUS_NEEDS_CONFIG
         if config.mode == IdsVariantConfig.Mode.POD:
             return CONFIG_STATUS_POD if self.is_pod_ready(config) else CONFIG_STATUS_NEEDS_CONFIG
         return CONFIG_STATUS_NEEDS_CONFIG
@@ -177,13 +173,17 @@ class VariantConfigService:
         config = self.get_or_create_config(variant)
         if config.mode == IdsVariantConfig.Mode.POD and not hasattr(config, "recipe"):
             PodRecipe.objects.get_or_create(variant_config=config)
-            config = IdsVariantConfig.objects.select_related(
-                "blank_variant__blank",
-                "recipe",
-            ).prefetch_related(
-                "recipe__slots__technique",
-                "blank_variant__blank__placement_capabilities__technique",
-            ).get(pk=config.pk)
+            config = (
+                IdsVariantConfig.objects.select_related(
+                    "blank_variant__blank",
+                    "recipe",
+                )
+                .prefetch_related(
+                    "recipe__slots__technique",
+                    "blank_variant__blank__placement_capabilities__technique",
+                )
+                .get(pk=config.pk)
+            )
         capabilities = []
         if config.blank_variant_id:
             capabilities = list(

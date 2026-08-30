@@ -4,11 +4,11 @@ import uuid
 from io import BytesIO
 from pathlib import Path
 
+from django.core.exceptions import ValidationError
 from reportlab.graphics.barcode import code128
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen.canvas import Canvas
-from django.core.exceptions import ValidationError
 
 from apps.pod.models import PodRipLot, PodUnit
 from apps.pod.services.rip_naming import ascii_token

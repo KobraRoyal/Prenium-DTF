@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
-from apps.pod.models import BlankPlacementCapability, IdsVariantConfig, PodRipWorkItem, PrintTechnique
+from apps.pod.models import (
+    BlankPlacementCapability,
+    IdsVariantConfig,
+    PodRipWorkItem,
+    PrintTechnique,
+)
 from apps.pod.services import PodRipLotService, VariantConfigService
 from apps.pod.services.rip_naming import rip_filename
 from apps.pod.services.variant_config_contract import VariantConfigPayload, VariantSlotPayload

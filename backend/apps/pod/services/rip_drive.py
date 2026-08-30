@@ -34,7 +34,9 @@ class PodRipDriveSyncService:
                     relative = path.relative_to(lot_root)
                     for part in relative.parts[:-1]:
                         parent_id = client.ensure_folder(parent_id=parent_id, name=part)
-                    mime = "application/json" if path.suffix == ".json" else "application/octet-stream"
+                    mime = (
+                        "application/json" if path.suffix == ".json" else "application/octet-stream"
+                    )
                     client.upload_file(
                         parent_id=parent_id,
                         name=path.name,
