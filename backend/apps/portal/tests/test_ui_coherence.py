@@ -1050,6 +1050,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("components/portal/account_rail.html", team)
         self.assertIn("portal:staff-team", account_rail)
         self.assertIn("?space=staff#account-identity", account_rail)
+        team_breadcrumb = template_source("components/portal/breadcrumbs/staff_team.html")
+        staff_trail = template_source("components/portal/breadcrumbs/staff_trail.html")
+        self.assertIn("staff_trail.html", team_breadcrumb)
+        self.assertIn("Accueil Atelier", staff_trail)
+        self.assertIn("ui-breadcrumb__list", staff_trail)
         self.assertIn(".staff-profile-page.account-team-page .account-team-panel", portal_entrypoint)
 
     def test_client_portal_hardening_keeps_actions_named_and_contrasted(self) -> None:
