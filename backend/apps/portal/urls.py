@@ -98,6 +98,7 @@ from .views_staff_billing_statements import (
 )
 from .views_staff_branding import StaffBrandSettingsView
 from .views_staff_catalog import StaffDefaultCatalogPricingSettingsView
+from .views_staff_processing_time import StaffProcessingTimeSettingsView
 from .views_staff_customers import (
     StaffCustomerAccountUpdateView,
     StaffCustomerDetailView,
@@ -704,6 +705,11 @@ urlpatterns = [
         "staff/settings/catalog-pricing/",
         StaffDefaultCatalogPricingSettingsView.as_view(),
         name="staff-default-catalog-pricing-settings",
+    ),
+    path(
+        "staff/settings/processing-time/",
+        StaffProcessingTimeSettingsView.as_view(),
+        name="staff-processing-time-settings",
     ),
     path(
         "staff/settings/volume-discounts/messages/",

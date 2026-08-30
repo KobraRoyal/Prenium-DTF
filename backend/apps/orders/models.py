@@ -83,6 +83,44 @@ class Order(BaseModel):
         validators=[MinValueValidator(ZERO_AMOUNT)],
         help_text="Frais d’expédition HT figés (0 si retrait atelier).",
     )
+    processing_time_code = models.SlugField(
+        max_length=64,
+        blank=True,
+        help_text="Snapshot code délai de traitement (standard / fast / express).",
+    )
+    processing_time_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Snapshot libellé délai de traitement au moment du choix.",
+    )
+    processing_time_markup_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Majoration % sur DTF figée au choix client.",
+    )
+    processing_time_markup_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Montant HT de la majoration % sur DTF.",
+    )
+    processing_time_flat_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Forfait HT express figé au choix client.",
+    )
+    processing_time_surcharge_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=ZERO_AMOUNT,
+        validators=[MinValueValidator(ZERO_AMOUNT)],
+        help_text="Total HT majoration délai (markup + forfait).",
+    )
     tax_rate = models.DecimalField(
         max_digits=5,
         decimal_places=4,

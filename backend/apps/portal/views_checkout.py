@@ -93,10 +93,15 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
                 order_public_id=order.public_id,
             )
             uploads = list(uploads_qs)
+        from apps.processing_time.services.options import ProcessingTimeOptionService
         from apps.shipping.services.methods import ShippingMethodService
 
         shipping_ctx = ShippingMethodService().checkout_ui_context(
             customer=self.customer,
+            order=order,
+            widget="radios",
+        )
+        processing_ctx = ProcessingTimeOptionService().checkout_ui_context(
             order=order,
             widget="radios",
         )
@@ -111,6 +116,7 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
             "badge_tone_for_status": badge_tone_for_status,
             "status_label": status_label,
             **shipping_ctx,
+            **processing_ctx,
         }
 
 
@@ -247,6 +253,8 @@ class ClientCheckoutSubmitView(ScopedCustomerMixin, View):
                     or getattr(self.customer, "default_billing_mode", "deferred")
                 ).strip(),
                 shipping_method_code=(request.POST.get("shipping_method_code") or "").strip()
+                or None,
+                processing_time_code=(request.POST.get("processing_time_code") or "").strip()
                 or None,
             )
         except ValidationError:

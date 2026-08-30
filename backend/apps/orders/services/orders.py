@@ -13,7 +13,7 @@ from apps.accounts.services.access import AccessScopeService
 from apps.auditlog.services import record_event
 from apps.catalog.services.catalog import CatalogQueryService
 from apps.catalog.services.pricing import PricingService
-from apps.orders.models import Order, OrderLine
+from apps.orders.models import ZERO_AMOUNT, Order, OrderLine
 
 
 @dataclass(frozen=True)
@@ -363,6 +363,7 @@ class OrderService:
         source: str = "client_portal",
         billing_mode: str | None = None,
         shipping_method_code: str | None = None,
+        processing_time_code: str | None = None,
     ) -> Order:
         validated_membership = self._validate_customer_actor_scope(
             customer=customer,
@@ -373,14 +374,20 @@ class OrderService:
             customer=customer,
             billing_mode=billing_mode,
         )
+        from apps.processing_time.services.options import ProcessingTimeOptionService
         from apps.shipping.services.methods import ShippingMethodService
 
         shipping_service = ShippingMethodService()
+        processing_time_service = ProcessingTimeOptionService()
         shipping_method = shipping_service.resolve_method_for_customer(
             customer=customer,
             shipping_method_code=shipping_method_code,
         )
+        processing_option = processing_time_service.resolve_option(
+            processing_time_code=processing_time_code,
+        )
         shipping_snap = shipping_service.snapshot_dict(shipping_method)
+        processing_snap = processing_time_service.snapshot_dict(processing_option)
 
         with transaction.atomic():
             order = Order.objects.create(
@@ -392,6 +399,10 @@ class OrderService:
                 shipping_method_code=str(shipping_snap["shipping_method_code"]),
                 shipping_method_name=str(shipping_snap["shipping_method_name"]),
                 shipping_amount=shipping_snap["shipping_amount"],
+                processing_time_code=str(processing_snap["processing_time_code"]),
+                processing_time_name=str(processing_snap["processing_time_name"]),
+                processing_time_markup_percent=processing_snap["processing_time_markup_percent"],
+                processing_time_flat_fee=processing_snap["processing_time_flat_fee"],
                 tax_rate=Decimal("0.00"),
                 tax_amount=Decimal("0.00"),
                 total_amount=Decimal("0.00"),
@@ -428,6 +439,7 @@ class OrderService:
         source: str = "client_portal",
         billing_mode: str | None = None,
         shipping_method_code: str | None = None,
+        processing_time_code: str | None = None,
     ) -> Order:
         validated_membership = self._validate_customer_actor_scope(
             customer=customer,
@@ -450,6 +462,7 @@ class OrderService:
         )
 
         shipping_snap = None
+        processing_snap = None
         if shipping_method_code is not None:
             from apps.shipping.services.methods import ShippingMethodService
 
@@ -458,6 +471,13 @@ class OrderService:
                 shipping_method_code=shipping_method_code,
             )
             shipping_snap = ShippingMethodService().snapshot_dict(method)
+        if processing_time_code is not None:
+            from apps.processing_time.services.options import ProcessingTimeOptionService
+
+            option = ProcessingTimeOptionService().resolve_option(
+                processing_time_code=processing_time_code,
+            )
+            processing_snap = ProcessingTimeOptionService().snapshot_dict(option)
 
         with transaction.atomic():
             order_locked = Order.objects.select_for_update().get(pk=order.pk)
@@ -475,6 +495,25 @@ class OrderService:
                         "shipping_method_code",
                         "shipping_method_name",
                         "shipping_amount",
+                    ]
+                )
+            if processing_snap is not None:
+                order_locked.processing_time_code = str(processing_snap["processing_time_code"])
+                order_locked.processing_time_name = str(processing_snap["processing_time_name"])
+                order_locked.processing_time_markup_percent = processing_snap[
+                    "processing_time_markup_percent"
+                ]
+                order_locked.processing_time_flat_fee = processing_snap["processing_time_flat_fee"]
+                order_locked.processing_time_markup_amount = ZERO_AMOUNT
+                order_locked.processing_time_surcharge_amount = ZERO_AMOUNT
+                update_fields.extend(
+                    [
+                        "processing_time_code",
+                        "processing_time_name",
+                        "processing_time_markup_percent",
+                        "processing_time_markup_amount",
+                        "processing_time_flat_fee",
+                        "processing_time_surcharge_amount",
                     ]
                 )
             order_locked.save(update_fields=update_fields)

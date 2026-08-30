@@ -1,0 +1,51 @@
+{% extends "portal/layout.html" %}
+{% load l10n %}
+
+{% block title %}Délais de traitement — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff processing-time-settings-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_processing_time.html" title="Délais de traitement" subtitle="Majorations tarifaires selon le délai de production atelier." %}
+
+  <form method="post" class="processing-time-settings-stack" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="alert alert--danger" role="alert">
+      {% for error in form.non_field_errors %}<p class="m-0">{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% for row in option_forms %}
+    <section class="portal-page-surface processing-time-settings-surface" data-testid="processing-time-option-{{ row.option.code }}">
+      <h2 class="font-display text-lg processing-time-settings-surface__title">{{ row.option.name }} <span class="muted text-sm">({{ row.option.code }})</span></h2>
+      <div class="ui-form-stack processing-time-settings-surface__form">
+        {% for field in row.fields %}
+        <div class="ui-field-group{% if field.field.widget.input_type == 'checkbox' %} ui-checkbox-row{% endif %}">
+          {% if field.field.widget.input_type == 'checkbox' %}
+          {{ field }}
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {% else %}
+          <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <input
+            class="ui-input{% if field.errors %} ui-input--error{% endif %}"
+            type="{% if field.field.widget.input_type == 'number' %}number{% else %}text{% endif %}"
+            name="{{ field.name }}"
+            id="{{ field.id_for_label }}"
+            value="{{ field.value|default_if_none:''|unlocalize }}"
+            {% if field.field.widget.input_type == 'number' %}step="{% if 'percent' in field.name or 'fee' in field.name %}0.01{% else %}1{% endif %}" min="0"{% endif %}
+            {% if field.errors %}aria-invalid="true"{% endif %}
+          >
+          {% endif %}
+          {% for error in field.errors %}<p class="ui-field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endfor %}
+
+    <div class="processing-time-settings-actions">
+      {% include "components/forms/form_actions.html" with primary_label="Enregistrer" %}
+    </div>
+  </form>
+</div>
+{% endblock %}

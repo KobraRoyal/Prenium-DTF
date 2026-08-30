@@ -23,6 +23,7 @@ from apps.customers.services.volume_discounts import (
     quote_volume_and_tier,
 )
 from apps.orders.models import ZERO_AMOUNT, Order, OrderLine
+from apps.processing_time.services.options import ProcessingTimeOptionService
 from apps.shipping.services.methods import ShippingMethodService
 
 TWOPLACES = Decimal("0.01")
@@ -72,8 +73,14 @@ class OrderPricingService:
       (comptant = TTC Stripe ; encours = HT + port)
     """
 
-    def __init__(self, *, shipping_methods: ShippingMethodService | None = None):
+    def __init__(
+        self,
+        *,
+        shipping_methods: ShippingMethodService | None = None,
+        processing_time_options: ProcessingTimeOptionService | None = None,
+    ):
         self.shipping_methods = shipping_methods or ShippingMethodService()
+        self.processing_time_options = processing_time_options or ProcessingTimeOptionService()
         self.catalog_bootstrap = DefaultCatalogService()
 
     def _pick_preferred_catalog_service(
@@ -205,6 +212,31 @@ class OrderPricingService:
             "total_amount": total,
         }
 
+    def _apply_processing_time_to_subtotal(
+        self,
+        *,
+        dtf_amount: Decimal,
+        prep_amount: Decimal,
+        processing_time_code: str | None = None,
+        order=None,
+    ) -> tuple[Decimal, dict[str, Decimal | str]]:
+        option = self.processing_time_options.resolve_option(
+            processing_time_code=processing_time_code,
+            order=order,
+        )
+        surcharge = self.processing_time_options.compute_surcharge(
+            dtf_amount=dtf_amount,
+            option=option,
+        )
+        subtotal = (
+            dtf_amount
+            + prep_amount
+            + surcharge["processing_time_surcharge_amount"]
+        ).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        snapshot = self.processing_time_options.snapshot_dict(option)
+        snapshot.update(surcharge)
+        return subtotal, snapshot
+
     def estimate_gang_sheet_quote(
         self,
         *,
@@ -213,6 +245,7 @@ class OrderPricingService:
         quantity: int = 1,
         file_count: int = 1,
         shipping_method_code: str | None = None,
+        processing_time_code: str | None = None,
         billing_mode: str | None = None,
     ) -> dict[str, object]:
         """Devis avant transmission : produit HT + port + TVA (si comptant)."""
@@ -269,6 +302,11 @@ class OrderPricingService:
                     rounding=ROUND_HALF_UP,
                 )
                 subtotal = (dtf_amount + prep_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        subtotal, processing_snap = self._apply_processing_time_to_subtotal(
+            dtf_amount=dtf_amount,
+            prep_amount=prep_amount,
+            processing_time_code=processing_time_code,
+        )
         totals = self.compose_order_totals(
             subtotal_ht=subtotal,
             shipping_ht=Decimal(str(shipping_snap["shipping_amount"])),
@@ -299,6 +337,12 @@ class OrderPricingService:
             "volume_discount_threshold_linear_m": volume_discount_threshold,
             "paid_monthly_volume_linear_m": paid_monthly_volume,
             "monthly_volume_linear_m": monthly_volume,
+            "processing_time_code": processing_snap["processing_time_code"],
+            "processing_time_name": processing_snap["processing_time_name"],
+            "processing_time_markup_percent": processing_snap["processing_time_markup_percent"],
+            "processing_time_markup_amount": processing_snap["processing_time_markup_amount"],
+            "processing_time_flat_fee": processing_snap["processing_time_flat_fee"],
+            "processing_time_surcharge_amount": processing_snap["processing_time_surcharge_amount"],
         }
 
     def estimate_reorder_quote(
@@ -307,6 +351,7 @@ class OrderPricingService:
         customer,
         items: list[dict],
         shipping_method_code: str | None = None,
+        processing_time_code: str | None = None,
         billing_mode: str | None = None,
     ) -> dict[str, object]:
         """Devis réassort : somme des surfaces déclarées (mm) × quantités."""
@@ -338,6 +383,7 @@ class OrderPricingService:
             quantity=1,
             file_count=len(items),
             shipping_method_code=shipping_method_code,
+            processing_time_code=processing_time_code,
             billing_mode=billing_mode,
         )
 
@@ -767,9 +813,16 @@ class OrderPricingService:
                 upload.line_total_eur = discounted_line_total
                 upload.save(update_fields=["unit_price_eur", "line_total_eur", "updated_at"])
 
-            subtotal = sum((line.line_total for line in all_lines), ZERO_AMOUNT).quantize(
+            dtf_type = CatalogService.ServiceType.DTF_TRANSFER
+            prep_lines = [line for line in all_lines if line.service_type != dtf_type]
+            prep_subtotal = sum((line.line_total for line in prep_lines), ZERO_AMOUNT).quantize(
                 TWOPLACES,
                 rounding=ROUND_HALF_UP,
+            )
+            subtotal, processing_snap = self._apply_processing_time_to_subtotal(
+                dtf_amount=discounted_dtf_amount,
+                prep_amount=prep_subtotal,
+                order=monthly_order,
             )
             totals = self.compose_order_totals(
                 subtotal_ht=subtotal,
@@ -799,6 +852,12 @@ class OrderPricingService:
             monthly_order.volume_discount_percent = discount_percent
             monthly_order.volume_discount_amount = discount_amount
             monthly_order.volume_discount_base_unit_price_eur = base_unit_price
+            monthly_order.processing_time_markup_amount = processing_snap[
+                "processing_time_markup_amount"
+            ]
+            monthly_order.processing_time_surcharge_amount = processing_snap[
+                "processing_time_surcharge_amount"
+            ]
             monthly_order.save(
                 update_fields=[
                     "subtotal_amount",
@@ -811,6 +870,8 @@ class OrderPricingService:
                     "volume_discount_percent",
                     "volume_discount_amount",
                     "volume_discount_base_unit_price_eur",
+                    "processing_time_markup_amount",
+                    "processing_time_surcharge_amount",
                     "updated_at",
                 ]
             )
@@ -1081,7 +1142,11 @@ class OrderPricingService:
                 )
                 priced_lines = discounted_lines
                 dtf_subtotal = discounted_dtf
-        subtotal = (dtf_subtotal + prep_line_total).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        subtotal, processing_snap = self._apply_processing_time_to_subtotal(
+            dtf_amount=dtf_subtotal,
+            prep_amount=prep_line_total,
+            order=order,
+        )
         shipping_ht = self.shipping_methods.resolve_shipping_amount_for_order(order)
         totals = self.compose_order_totals(
             subtotal_ht=subtotal,
@@ -1155,6 +1220,18 @@ class OrderPricingService:
             order_locked.volume_discount_percent = volume_discount_percent
             order_locked.volume_discount_amount = volume_discount_amount
             order_locked.volume_discount_base_unit_price_eur = unit_price
+            order_locked.processing_time_code = str(processing_snap["processing_time_code"])
+            order_locked.processing_time_name = str(processing_snap["processing_time_name"])
+            order_locked.processing_time_markup_percent = processing_snap[
+                "processing_time_markup_percent"
+            ]
+            order_locked.processing_time_markup_amount = processing_snap[
+                "processing_time_markup_amount"
+            ]
+            order_locked.processing_time_flat_fee = processing_snap["processing_time_flat_fee"]
+            order_locked.processing_time_surcharge_amount = processing_snap[
+                "processing_time_surcharge_amount"
+            ]
             order_locked.save(
                 update_fields=[
                     "subtotal_amount",
@@ -1171,6 +1248,12 @@ class OrderPricingService:
                     "volume_discount_percent",
                     "volume_discount_amount",
                     "volume_discount_base_unit_price_eur",
+                    "processing_time_code",
+                    "processing_time_name",
+                    "processing_time_markup_percent",
+                    "processing_time_markup_amount",
+                    "processing_time_flat_fee",
+                    "processing_time_surcharge_amount",
                     "updated_at",
                 ]
             )

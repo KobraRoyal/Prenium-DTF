@@ -49,6 +49,7 @@ def build_gang_sheet_project_quote(
     project,
     customer,
     shipping_method_code: str | None = None,
+    processing_time_code: str | None = None,
     billing_mode: str | None = None,
 ):
     """Devis produit + port + TVA (si comptant) pour Gang Sheet ou réassort."""
@@ -77,6 +78,7 @@ def build_gang_sheet_project_quote(
                     for item in items
                 ],
                 shipping_method_code=shipping_method_code,
+                processing_time_code=processing_time_code,
                 billing_mode=resolved_billing,
             )
         except ValidationError:
@@ -193,6 +195,7 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
         if project is not None:
             ctx["project_client_label"] = project_client_reference(project)
             shipping_method_code = extra.get("shipping_method_code")
+            processing_time_code = extra.get("processing_time_code")
             billing_mode = extra.get(
                 "billing_mode",
                 getattr(self.customer, "default_billing_mode", Order.BillingMode.DEFERRED),
@@ -203,13 +206,17 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                     project=project,
                     customer=self.customer,
                     shipping_method_code=shipping_method_code,
+                    processing_time_code=processing_time_code,
                     billing_mode=billing_mode,
                 )
             ctx["gang_sheet_quote"] = quote
+            from apps.processing_time.services.options import ProcessingTimeOptionService
             from apps.shipping.services.methods import ShippingMethodService
 
             shipping_service = ShippingMethodService()
+            processing_time_service = ProcessingTimeOptionService()
             shipping_service.ensure_default_methods()
+            processing_time_service.ensure_default_options()
             locks_pickup = shipping_service.customer_locks_shipping_to_pickup(self.customer)
             if locks_pickup:
                 selected_shipping_code = "pickup"
@@ -224,15 +231,21 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                     )
                 shipping_choice_widget = "radios"
                 show_shipping_choice = True
+            if processing_time_code:
+                selected_processing_code = str(processing_time_code).strip().lower()
+            else:
+                selected_processing_code = processing_time_service.resolve_default_code()
             # Recalcule le devis avec le code réellement applicable (ex. verrou retrait).
             if quote is not None and (
                 locks_pickup
                 or str(quote.get("shipping_method_code") or "") != selected_shipping_code
+                or str(quote.get("processing_time_code") or "") != selected_processing_code
             ):
                 quote = build_gang_sheet_project_quote(
                     project=project,
                     customer=self.customer,
                     shipping_method_code=selected_shipping_code,
+                    processing_time_code=selected_processing_code,
                     billing_mode=billing_mode,
                 )
                 ctx["gang_sheet_quote"] = quote
@@ -241,6 +254,12 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
             ctx["show_shipping_choice"] = show_shipping_choice
             ctx["shipping_choice_widget"] = shipping_choice_widget
             ctx["shipping_locked_to_pickup"] = locks_pickup
+            ctx.update(
+                processing_time_service.checkout_ui_context(
+                    widget="radios",
+                )
+            )
+            ctx["selected_processing_time_code"] = selected_processing_code
             ctx["cash_checkout_requires_gang_sheet"] = customer_requires_gang_sheet_orders(
                 self.customer
             )
@@ -357,6 +376,12 @@ class ClientOrderProjectDetailView(ClientProjectFeatureMixin, View):
                 shipping_method_code=(
                     request.GET.get("shipping_method")
                     or request.GET.get("shipping_method_code")
+                    or ""
+                ).strip()
+                or None,
+                processing_time_code=(
+                    request.GET.get("processing_time")
+                    or request.GET.get("processing_time_code")
                     or ""
                 ).strip()
                 or None,
@@ -741,6 +766,8 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                     or getattr(self.customer, "default_billing_mode", "deferred")
                 ).strip(),
                 shipping_method_code=(request.POST.get("shipping_method_code") or "").strip()
+                or None,
+                processing_time_code=(request.POST.get("processing_time_code") or "").strip()
                 or None,
             )
         except ProjectDomainError as error:

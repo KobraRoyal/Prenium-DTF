@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "apps.portal",
     "apps.prospects",
     "apps.shipping",
+    "apps.processing_time",
     "apps.uploads",
 ]
 
