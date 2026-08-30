@@ -1,0 +1,10 @@
+{# Badge priorité délai de traitement — express / rapide / standard. #}
+{% if code == "express" or order.processing_time_code == "express" %}
+<span class="badge is-danger processing-time-badge processing-time-badge--express" title="Délai express — priorité maximale">Express</span>
+{% elif code == "fast" or order.processing_time_code == "fast" %}
+<span class="badge is-warning processing-time-badge processing-time-badge--fast" title="Délai rapide">Rapide</span>
+{% elif name or order.processing_time_name %}
+<span class="badge is-neutral processing-time-badge processing-time-badge--standard" title="Délai standard">{{ name|default:order.processing_time_name }}</span>
+{% else %}
+<span class="badge is-neutral processing-time-badge processing-time-badge--standard" title="Délai standard">Standard</span>
+{% endif %}

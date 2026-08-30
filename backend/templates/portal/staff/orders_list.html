@@ -14,8 +14,7 @@
 {% endif %}
 
 <section class="portal-page-surface ui-list-section">
-  {% url 'portal:staff-order-list' as staff_orders_search_url %}
-  {% include "components/forms/order_list_search.html" with search_id="staff-orders-search-input" search_url=staff_orders_search_url search_query=search_query search_placeholder="N° OF, N° commande, client ou référence…" results_id="staff-orders-list-results" preserved_name="queue" preserved_value=active_queue %}
+  {% include "portal/staff/partials/orders_list_toolbar.html" %}
   <div id="staff-orders-list-results" aria-live="polite">
     {% include "portal/staff/partials/orders_list_results.html" %}
   </div>

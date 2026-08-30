@@ -61,3 +61,29 @@ class UiListTabsTagTests(SimpleTestCase):
         self.assertIn('hx-indicator="#portal-htmx-indicator"', rendered)
         self.assertIn('hx-push-url="true"', rendered)
         self.assertIn("queue=active", rendered)
+
+    def test_ui_list_tabs_preserves_multiple_query_params(self) -> None:
+        request = HttpRequest()
+        request.GET = {"q": "acme", "queue": "unprinted"}
+        template = Template(
+            "{% load ui_tags %}"
+            '{% ui_list_tabs tabs aria_label="Filtrer" url_name="portal:staff-order-list" '
+            'query_param="period" preserve_query="q,queue" %}'
+        )
+        rendered = template.render(
+            Context(
+                {
+                    "request": request,
+                    "tabs": [
+                        {
+                            "key": "7d",
+                            "label": "7 jours",
+                            "is_active": True,
+                        }
+                    ],
+                }
+            )
+        )
+        self.assertIn("period=7d", rendered)
+        self.assertIn("q=acme", rendered)
+        self.assertIn("queue=unprinted", rendered)

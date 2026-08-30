@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer
 from apps.orders.models import Order
 from apps.production.services.dashboard import AtelierDashboardService
-from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
+from apps.production.services.staff_order_list_filters import (
+    StaffOrderListFilterService,
+    order_by_operational_priority,
+)
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUpload, OrderUploadReview
 from django.contrib.auth import get_user_model
@@ -15,7 +20,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 
-def create_order(*, customer, actor, status=Order.Status.SUBMITTED):
+def create_order(*, customer, actor, status=Order.Status.SUBMITTED, processing_time_code=""):
     order = Order.objects.create(
         customer=customer,
         created_by=actor,
@@ -24,6 +29,7 @@ def create_order(*, customer, actor, status=Order.Status.SUBMITTED):
         currency="EUR",
         subtotal_amount="0.00",
         total_amount="0.00",
+        processing_time_code=processing_time_code,
     )
     if status == Order.Status.SUBMITTED:
         ProductionWorkflowService().get_or_create_for_order(order=order)
@@ -224,7 +230,9 @@ def test_staff_order_list_search_preserves_queue_and_displays_of_instead_of_uuid
     assert 'hx-trigger="input changed delay:300ms, search"' in html
     assert 'hx-target="#staff-orders-list-results"' in html
     assert 'hx-include="closest form"' in html
-    assert f"q={matching_of}" in html
+    from urllib.parse import urlencode
+
+    assert urlencode({"q": matching_of}) in html.replace("&amp;", "&")
     assert matching_of in html
     assert other_of not in html
     assert "N° OF" in html
@@ -243,3 +251,83 @@ def test_staff_order_list_search_preserves_queue_and_displays_of_instead_of_uuid
     assert "portal-page--staff" not in partial_html
     assert matching_of in partial_html
     assert other_of not in partial_html
+
+
+@pytest.mark.django_db
+def test_operational_priority_orders_express_fast_standard_then_date_desc():
+    actor = get_user_model().objects.create_user(email="priority@example.com", password="pass")
+    customer = Customer.objects.create(name="Priority Client")
+    standard_new = create_order(customer=customer, actor=actor, processing_time_code="standard")
+    express_old = create_order(customer=customer, actor=actor, processing_time_code="express")
+    fast = create_order(customer=customer, actor=actor, processing_time_code="fast")
+    legacy = create_order(customer=customer, actor=actor)
+    express_new = create_order(customer=customer, actor=actor, processing_time_code="express")
+
+    now = timezone.now()
+    Order.objects.filter(pk=express_old.pk).update(created_at=now - timedelta(hours=4))
+    Order.objects.filter(pk=express_new.pk).update(created_at=now - timedelta(hours=1))
+    Order.objects.filter(pk=fast.pk).update(created_at=now - timedelta(minutes=30))
+    Order.objects.filter(pk=standard_new.pk).update(created_at=now)
+    Order.objects.filter(pk=legacy.pk).update(created_at=now - timedelta(minutes=15))
+
+    from apps.orders.services.orders import OrderService
+
+    ordered_ids = list(
+        order_by_operational_priority(OrderService().list_staff_orders()).values_list(
+            "public_id",
+            flat=True,
+        )
+    )
+    assert ordered_ids.index(express_new.public_id) < ordered_ids.index(express_old.public_id)
+    assert ordered_ids.index(express_old.public_id) < ordered_ids.index(fast.public_id)
+    assert ordered_ids.index(fast.public_id) < ordered_ids.index(standard_new.public_id)
+    assert ordered_ids.index(standard_new.public_id) < ordered_ids.index(legacy.public_id)
+
+
+@pytest.mark.django_db
+def test_period_filter_limits_orders_by_created_at():
+    actor = get_user_model().objects.create_user(email="period@example.com", password="pass")
+    customer = Customer.objects.create(name="Period Client")
+    recent = create_order(customer=customer, actor=actor)
+    older = create_order(customer=customer, actor=actor)
+    Order.objects.filter(pk=older.pk).update(created_at=timezone.now() - timedelta(days=10))
+
+    from apps.orders.services.orders import OrderService
+
+    base = OrderService().list_staff_orders()
+    service = StaffOrderListFilterService()
+
+    assert recent.pk in service.apply_period_filter(base, period="7d").values_list("pk", flat=True)
+    assert older.pk not in service.apply_period_filter(base, period="7d").values_list("pk", flat=True)
+    assert older.pk in service.apply_period_filter(base, period="30d").values_list("pk", flat=True)
+
+
+@pytest.mark.django_db
+def test_staff_order_list_renders_period_filter_and_priority_column():
+    actor = get_user_model().objects.create_user(email="period-ui@example.com", password="pass")
+    customer = Customer.objects.create(name="Period UI Client")
+    create_order(customer=customer, actor=actor, processing_time_code="express")
+
+    client = create_staff_client(email="staff-period-ui@example.com")
+    response = client.get(reverse("portal:staff-order-list"), {"period": "7d", "queue": "unprinted"})
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert 'aria-label="Filtrer par date de commande"' in html
+    assert "staff-orders-period-toolbar" in html
+    assert "7 jours" in html
+    assert "Priorité" in html
+    assert "processing-time-badge--express" in html
+
+
+@pytest.mark.django_db
+def test_dashboard_worklist_sorted_by_processing_priority():
+    actor = get_user_model().objects.create_user(email="dash-priority@example.com", password="pass")
+    customer = Customer.objects.create(name="Dash Priority Client")
+    create_order(customer=customer, actor=actor, processing_time_code="standard")
+    create_order(customer=customer, actor=actor, processing_time_code="express")
+    create_order(customer=customer, actor=actor, processing_time_code="fast")
+
+    dashboard = AtelierDashboardService().build_dashboard()
+    priorities = [row["processing_time_priority"] for row in dashboard["rows"]]
+    assert priorities == sorted(priorities)

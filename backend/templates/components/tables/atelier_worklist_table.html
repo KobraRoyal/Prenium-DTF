@@ -7,6 +7,7 @@
       <thead>
         <tr>
           <th class="atelier-worklist-table__select-col" scope="col"><span class="sr-only">Sélection impression</span></th>
+          <th scope="col">Priorité</th>
           <th scope="col">Client</th>
           <th scope="col">N° commande</th>
           <th scope="col">Réf. client</th>
@@ -18,7 +19,7 @@
       <tbody>
         {% for row in rows %}
         <tr
-          class="atelier-worklist-table__row{% if row.review_status == 'changes_requested' or row.review_status == 'missing_files' %} ui-row-anomaly{% elif row.review_status == 'pending' %} ui-row-warning{% endif %}"
+          class="atelier-worklist-table__row{% if row.processing_time_code == 'express' %} atelier-row-priority-express{% elif row.processing_time_code == 'fast' %} atelier-row-priority-fast{% endif %}{% if row.review_status == 'changes_requested' or row.review_status == 'missing_files' %} ui-row-anomaly{% elif row.review_status == 'pending' %} ui-row-warning{% endif %}"
           data-worklist-order-id="{{ row.order.public_id }}"
           data-review-status="{{ row.review_status }}"
           x-bind:class="{ 'is-batch-selected': selected.includes('{{ row.order.public_id }}') }"
@@ -35,6 +36,9 @@
                 {% if not row.print_eligible %}disabled{% else %}:disabled="isMobile"{% endif %}
               >
             </label>
+          </td>
+          <td>
+            {% include "components/ui/processing_time_priority_badge.html" with order=row.order code=row.processing_time_code name=row.processing_time_name %}
           </td>
           <td>
             <div class="ui-order-secondary">
@@ -94,7 +98,7 @@
   <div class="staff-data-list__mobile ui-orders-list-mobile grid gap-3" aria-label="Commandes de la file en cartes">
     {% for row in rows %}
     <article
-      class="ui-mobile-order-card atelier-worklist-table__card{% if row.review_status == 'changes_requested' or row.review_status == 'missing_files' %} ui-card-anomaly{% elif row.review_status == 'pending' %} ui-card-warning{% endif %}"
+      class="ui-mobile-order-card atelier-worklist-table__card{% if row.processing_time_code == 'express' %} atelier-row-priority-express{% elif row.processing_time_code == 'fast' %} atelier-row-priority-fast{% endif %}{% if row.review_status == 'changes_requested' or row.review_status == 'missing_files' %} ui-card-anomaly{% elif row.review_status == 'pending' %} ui-card-warning{% endif %}"
       data-worklist-order-id="{{ row.order.public_id }}"
       data-review-status="{{ row.review_status }}"
       x-bind:class="{ 'is-batch-selected': selected.includes('{{ row.order.public_id }}') }"
@@ -132,6 +136,7 @@
         </div>
       </div>
       <div class="mt-3 flex flex-wrap items-center gap-2">
+        {% include "components/ui/processing_time_priority_badge.html" with order=row.order code=row.processing_time_code name=row.processing_time_name %}
         <span class="badge {{ row.review_tone }}">{{ row.files_to_process_label }}</span>
         {% if row.upload_count %}
         <span class="ui-inline-flag">{{ row.upload_count }} fichier{{ row.upload_count|pluralize }}</span>

@@ -1737,6 +1737,92 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier
   margin-top: 0.12rem;
 }
 
+/* v115 — Priorité délai de traitement + filtre période liste commandes Atelier. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 14px);
+  background: color-mix(in srgb, var(--bg-accent) 42%, var(--surface));
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-toolbar__label {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-soft);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-tabs.ui-list-tabs {
+  flex: 1 1 12rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  gap: 0.35rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-tabs .ui-list-tabs__tab {
+  min-height: 2rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-tabs .ui-list-tabs__tab.is-active {
+  border-color: var(--line-strong);
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-soft);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+  .ui-data-table tbody tr.atelier-row-priority-express,
+  tr.atelier-row-priority-express.atelier-worklist-table__row
+) {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface)) !important;
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+  .ui-data-table tbody tr.atelier-row-priority-fast,
+  tr.atelier-row-priority-fast.atelier-worklist-table__row
+) {
+  background: color-mix(in srgb, var(--warning) 9%, var(--surface)) !important;
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+  .ui-mobile-order-card.atelier-row-priority-express,
+  .atelier-worklist-table__card.atelier-row-priority-express
+) {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line)) !important;
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface)) !important;
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+  .ui-mobile-order-card.atelier-row-priority-fast,
+  .atelier-worklist-table__card.atelier-row-priority-fast
+) {
+  border-color: color-mix(in srgb, var(--warning) 38%, var(--line)) !important;
+  background: color-mix(in srgb, var(--warning) 6%, var(--surface)) !important;
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 /* v61 — Fiche client : cases à cocher ui-checkbox-row (pas le rendu champ texte brutaliste). */
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .ui-checkbox-row {
   align-items: center;

@@ -62,7 +62,7 @@ def ui_list_tabs(
 ):
     preserve = preserve_query or ()
     if isinstance(preserve, str):
-        preserve = (preserve,)
+        preserve = tuple(part.strip() for part in preserve.split(",") if part.strip())
     return {
         "tabs": _normalize_list_tabs(
             context,

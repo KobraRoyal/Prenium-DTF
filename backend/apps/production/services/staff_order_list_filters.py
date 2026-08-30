@@ -1,10 +1,34 @@
 from __future__ import annotations
 
-from django.db.models import Count, Exists, OuterRef, Q, QuerySet
+from datetime import timedelta
+
+from django.db.models import Case, Count, Exists, IntegerField, OuterRef, Q, QuerySet, Value, When
+from django.utils import timezone
 
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
 from apps.uploads.models import OrderUpload, OrderUploadReview
+
+
+def annotate_processing_time_priority(queryset: QuerySet) -> QuerySet:
+    """Priorité opérationnelle : express (0) → rapide (1) → standard (2) → legacy (3)."""
+    return queryset.annotate(
+        processing_time_priority=Case(
+            When(processing_time_code="express", then=Value(0)),
+            When(processing_time_code="fast", then=Value(1)),
+            When(processing_time_code="standard", then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField(),
+        )
+    )
+
+
+def order_by_operational_priority(queryset: QuerySet) -> QuerySet:
+    """Tri file atelier : délai le plus urgent d'abord, puis date commande décroissante."""
+    return annotate_processing_time_priority(queryset).order_by(
+        "processing_time_priority",
+        "-created_at",
+    )
 
 
 class StaffOrderListFilterService:
@@ -18,11 +42,39 @@ class StaffOrderListFilterService:
         ("changes", "Corrections"),
         ("approved", "Fichiers validés"),
     )
+    default_period = ""
+    period_definitions = (
+        ("", "Toutes dates"),
+        ("today", "Aujourd'hui"),
+        ("7d", "7 jours"),
+        ("30d", "30 jours"),
+    )
 
     def normalize_queue(self, queue: str | None) -> str:
         allowed = {key for key, _label in self.queue_definitions}
         cleaned = str(queue or "").strip()
         return cleaned if cleaned in allowed else self.default_queue
+
+    def normalize_period(self, period: str | None) -> str:
+        allowed = {key for key, _label in self.period_definitions}
+        cleaned = str(period or "").strip()
+        return cleaned if cleaned in allowed else self.default_period
+
+    def label_for_period(self, period: str) -> str:
+        for key, label in self.period_definitions:
+            if key == period:
+                return label
+        return self.period_definitions[0][1]
+
+    def build_period_tabs(self, *, active_period: str) -> list[dict[str, object]]:
+        return [
+            {
+                "key": key,
+                "label": label,
+                "is_active": key == active_period,
+            }
+            for key, label in self.period_definitions
+        ]
 
     def label_for(self, queue: str) -> str:
         for key, label in self.queue_definitions:
@@ -81,6 +133,24 @@ class StaffOrderListFilterService:
             | Q(customer__name__icontains=cleaned)
             | Q(customer_note__icontains=cleaned)
         ).distinct()
+
+    def apply_period_filter(self, queryset: QuerySet, *, period: str) -> QuerySet:
+        normalized = self.normalize_period(period)
+        if not normalized:
+            return queryset
+        now = timezone.now()
+        if normalized == "today":
+            start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif normalized == "7d":
+            start = now - timedelta(days=7)
+        elif normalized == "30d":
+            start = now - timedelta(days=30)
+        else:
+            return queryset
+        return queryset.filter(created_at__gte=start)
+
+    def apply_operational_order(self, queryset: QuerySet) -> QuerySet:
+        return order_by_operational_priority(queryset)
 
     def _unissued_queryset_from(self, queryset: QuerySet) -> QuerySet:
         return self._active_queryset_from(queryset).filter(
