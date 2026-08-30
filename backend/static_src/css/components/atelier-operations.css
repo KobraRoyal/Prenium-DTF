@@ -81,10 +81,6 @@
     align-items: center;
   }
 
-  body.product-shell .atelier-operations-page .atelier-operations-focus__tabs {
-    margin: 0 0 0.85rem;
-  }
-
   body.product-shell .atelier-operations-page .atelier-operations-focus__notice {
     margin: 0 0 0.85rem;
   }

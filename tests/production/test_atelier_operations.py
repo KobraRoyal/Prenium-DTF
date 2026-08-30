@@ -11,10 +11,13 @@ from apps.production.models import ProductionJob
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.shipping.models import Shipment
 from apps.shipping.services.sendcloud import SendcloudOrderResult, ShipmentService
+from apps.uploads.models import OrderUpload, OrderUploadDriveSync, OrderUploadReview
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 
 
 class FakeSendcloudGateway:
@@ -137,7 +140,8 @@ def test_console_lists_jobs_and_searches_by_of_without_detail_navigation():
     assert "Consultation seule" in html
     assert "Commande identifiée" in html
     assert "atelier-operations-focus" in html
-    assert "ui-list-tabs" in html
+    assert "ui-list-tabs" not in html
+    assert "Parcours de production" in html
     assert "atelier-operations-list" not in html
 
     partial = client.get(
@@ -170,6 +174,170 @@ def test_console_explains_payment_prerequisite_instead_of_offering_start():
     assert "Démarrage en attente" in html
     assert "Résoudre le prérequis" in html
     assert "Démarrer la production" not in html
+
+
+@pytest.mark.django_db
+def test_control_step_exposes_synced_hd_drive_file_and_correction_action():
+    actor, client = staff_client(
+        email="file-control-operations@example.com",
+        permissions=(*BASE_PERMISSIONS, "view_orderupload", "review_orderupload"),
+    )
+    order, job = create_order(actor=actor)
+    job.of_document_issued_at = timezone.now()
+    job.save(update_fields=("of_document_issued_at", "updated_at"))
+    upload = OrderUpload.objects.create(
+        order=order,
+        file=SimpleUploadedFile("visuel-hd.png", b"hd-file", content_type="image/png"),
+        original_filename="visuel-hd.png",
+        mime_type="image/png",
+        size_bytes=7,
+    )
+    OrderUploadDriveSync.objects.create(
+        order_upload=upload,
+        status=OrderUploadDriveSync.Status.SYNCED,
+        drive_file_id="drive-hd-file-001",
+    )
+
+    response = client.get(
+        reverse("portal:staff-atelier-operations"),
+        {"q": job.scan_identifier},
+    )
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Contrôle fichiers" in html
+    assert "Ouvrir le HD dans Drive" in html
+    assert 'href="https://drive.google.com/file/d/drive-hd-file-001/view"' in html
+    assert "Demander une correction au client" in html
+    assert "Le client sera notifié par e-mail" in html
+    assert "Sélectionner un motif" in html
+    assert (
+        reverse(
+            "portal:staff-atelier-operation-upload-review",
+            kwargs={"order_public_id": order.public_id, "upload_public_id": upload.public_id},
+        )
+        in html
+    )
+
+
+@pytest.mark.django_db
+def test_control_step_hides_drive_link_without_upload_view_permission():
+    actor, client = staff_client(
+        email="file-control-no-drive@example.com",
+        permissions=(*BASE_PERMISSIONS, "review_orderupload"),
+    )
+    order, job = create_order(actor=actor)
+    job.of_document_issued_at = timezone.now()
+    job.save(update_fields=("of_document_issued_at", "updated_at"))
+    upload = OrderUpload.objects.create(
+        order=order,
+        file=SimpleUploadedFile("visuel-hd.png", b"hd-file", content_type="image/png"),
+        original_filename="visuel-hd.png",
+        mime_type="image/png",
+        size_bytes=7,
+    )
+    OrderUploadDriveSync.objects.create(
+        order_upload=upload,
+        status=OrderUploadDriveSync.Status.SYNCED,
+        drive_file_id="private-drive-file",
+    )
+
+    response = client.get(
+        reverse("portal:staff-atelier-operations"),
+        {"q": job.scan_identifier},
+    )
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Ouvrir le HD dans Drive" not in html
+    assert "private-drive-file" not in html
+
+
+@pytest.mark.django_db
+def test_control_step_requests_client_correction_and_schedules_notification(
+    monkeypatch,
+):
+    actor, client = staff_client(
+        email="file-correction-operations@example.com",
+        permissions=(*BASE_PERMISSIONS, "review_orderupload"),
+    )
+    order, job = create_order(actor=actor)
+    job.of_document_issued_at = timezone.now()
+    job.save(update_fields=("of_document_issued_at", "updated_at"))
+    upload = OrderUpload.objects.create(
+        order=order,
+        file=SimpleUploadedFile("a-corriger.png", b"file", content_type="image/png"),
+        original_filename="a-corriger.png",
+        mime_type="image/png",
+        size_bytes=4,
+    )
+    scheduled = []
+    monkeypatch.setattr(
+        "apps.portal.views_staff_operations.schedule_file_correction_requested_email",
+        lambda **kwargs: scheduled.append(kwargs),
+    )
+
+    response = client.post(
+        reverse(
+            "portal:staff-atelier-operation-upload-review",
+            kwargs={"order_public_id": order.public_id, "upload_public_id": upload.public_id},
+        ),
+        {
+            "q": job.scan_identifier,
+            "queue": "active",
+            "status": OrderUploadReview.Status.CHANGES_REQUESTED,
+            "reason_code": OrderUploadReview.Reason.LOW_RESOLUTION,
+            "comment": "Merci de fournir un fichier HD en 300 DPI.",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    review = OrderUploadReview.objects.get(order_upload=upload)
+    assert review.status == OrderUploadReview.Status.CHANGES_REQUESTED
+    assert review.reason_code == OrderUploadReview.Reason.LOW_RESOLUTION
+    assert scheduled == [{"review_public_id": review.public_id}]
+    toast = json.loads(response["X-Prenium-Toast"])
+    assert toast["variant"] == "success"
+    assert toast["message"].startswith("Correction enregistrée")
+    assert "Correction demandée" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_control_step_cannot_review_an_upload_from_another_order():
+    actor, client = staff_client(
+        email="file-correction-scope@example.com",
+        permissions=(*BASE_PERMISSIONS, "review_orderupload"),
+    )
+    order_a, _job_a = create_order(actor=actor, customer_name="Atelier A")
+    order_b, job_b = create_order(actor=actor, customer_name="Atelier B")
+    job_b.of_document_issued_at = timezone.now()
+    job_b.save(update_fields=("of_document_issued_at", "updated_at"))
+    upload_b = OrderUpload.objects.create(
+        order=order_b,
+        file=SimpleUploadedFile("client-b.png", b"file", content_type="image/png"),
+        original_filename="client-b.png",
+        mime_type="image/png",
+        size_bytes=4,
+    )
+
+    response = client.post(
+        reverse(
+            "portal:staff-atelier-operation-upload-review",
+            kwargs={
+                "order_public_id": order_a.public_id,
+                "upload_public_id": upload_b.public_id,
+            },
+        ),
+        {
+            "status": OrderUploadReview.Status.CHANGES_REQUESTED,
+            "reason_code": OrderUploadReview.Reason.LOW_RESOLUTION,
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 404
+    assert not OrderUploadReview.objects.exists()
 
 
 @pytest.mark.django_db

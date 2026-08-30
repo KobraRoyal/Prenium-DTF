@@ -12,7 +12,9 @@
   </header>
 
   {% if uploads %}
-  {% if not can_review_uploads %}
+  {% if review_blocked_before_of %}
+  <div class="alert alert--warning mt-4" role="status"><p>Imprimez d’abord l’OF. Le contrôle Atelier sera disponible dès que son émission sera enregistrée.</p></div>
+  {% elif not has_review_permission %}
   <div class="alert alert--info mt-4" role="status"><p>Vous pouvez consulter les contrôles, mais votre rôle ne permet pas de prendre une décision Atelier.</p></div>
   {% endif %}
 
@@ -127,33 +129,8 @@
         </div>
 
         {% if can_review_uploads %}
-        <details class="atelier-inspection__correction"{% if error_upload_id == upload_id %} open{% endif %}>
-          <summary>
-            <span>Demander une correction au client</span>
-            <small>Le client sera notifié par e-mail</small>
-          </summary>
-          <form class="ui-form-stack" method="post" action="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-post="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-target="#staff-order-inspection-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="changes_requested">
-            {% if form_error and error_upload_id == upload_id %}<div class="alert alert--danger" role="alert"><p>{{ form_error }}</p></div>{% endif %}
-            <div class="ui-field-group">
-              <label class="ui-label" for="review-reason-{{ upload.public_id }}">Motif de la correction</label>
-              <select class="ui-input" id="review-reason-{{ upload.public_id }}" name="reason_code" required>
-                <option value="">Sélectionner un motif</option>
-                {% for value, label in review_reasons %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="ui-field-group">
-              <label class="ui-label" for="review-comment-{{ upload.public_id }}">Précision pour le client</label>
-              <p class="ui-help">Facultatif, sauf si le motif est « Autre ».</p>
-              <textarea class="ui-input" id="review-comment-{{ upload.public_id }}" name="comment" maxlength="2000" rows="3" placeholder="Expliquez clairement ce qui doit être corrigé."></textarea>
-            </div>
-            <div class="atelier-inspection__correction-footer">
-              <p>Le message utilisera le modèle d’e-mail client personnalisable.</p>
-              <button class="ui-btn ui-btn-danger" type="submit" data-htmx-disable>Enregistrer et notifier</button>
-            </div>
-          </form>
-        </details>
+        {% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id as review_action_url %}
+        {% include "portal/staff/components/upload_correction_form.html" with review_hx_target="#staff-order-inspection-panel" %}
         {% endif %}
       </div>
     </article>

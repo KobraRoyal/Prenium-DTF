@@ -13,6 +13,7 @@ from apps.orders.models import Order
 from apps.orders.references import order_business_number, order_client_reference, order_uuid_short
 from apps.production.models import ProductionJob
 from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
+from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUploadDriveSync, OrderUploadReview
 
@@ -25,9 +26,10 @@ class AtelierDashboardService:
     def build_dashboard(self) -> dict[str, object]:
         all_orders = list(self._unissued_orders_queryset())
         rows = [self._serialize_order(order=order) for order in all_orders]
-        metrics = self._build_metrics(rows)
+        queue_counts = StaffOrderListFilterService().count_by_queue(Order.objects.all())
+        metrics = self._build_metrics(queue_counts)
         batch_service = ManufacturingOrderBatchService()
-        unprinted_total = batch_service.count_unissued_orders()
+        unprinted_total = metrics["unprinted"]
         return {
             "rows": rows,
             "metrics": metrics,
@@ -41,16 +43,12 @@ class AtelierDashboardService:
             "batch_print_limit": batch_service.max_batch_size,
         }
 
-    def _build_metrics(self, all_rows: list[dict[str, object]]) -> dict[str, int]:
+    def _build_metrics(self, queue_counts: dict[str, int]) -> dict[str, int]:
         return {
-            "unprinted": len(all_rows),
-            "pending_review": sum(
-                row["review_status"] in {"missing_files", "pending"} for row in all_rows
-            ),
-            "changes_requested": sum(
-                row["review_status"] == "changes_requested" for row in all_rows
-            ),
-            "files_validated": sum(row["review_status"] == "approved" for row in all_rows),
+            "unprinted": queue_counts["unprinted"],
+            "pending_review": queue_counts["to_review"],
+            "changes_requested": queue_counts["changes"],
+            "files_validated": queue_counts["approved"],
         }
 
     def _build_kpi_rows(
@@ -71,21 +69,21 @@ class AtelierDashboardService:
             {
                 "label": "À contrôler",
                 "value": metrics["pending_review"],
-                "hint": "Fichiers à valider dans le pilotage.",
+                "hint": "OF émis, fichiers à valider dans le pilotage.",
                 "tone": "is-attention" if metrics["pending_review"] else "",
                 "card_href": f"{orders_url}?queue=to_review",
             },
             {
                 "label": "Corrections client",
                 "value": metrics["changes_requested"],
-                "hint": "Visuels à corriger avant le pilotage.",
+                "hint": "OF émis, visuels à corriger par le client.",
                 "tone": "is-danger" if metrics["changes_requested"] else "",
                 "card_href": f"{orders_url}?queue=changes",
             },
             {
                 "label": "Fichiers validés",
                 "value": metrics["files_validated"],
-                "hint": "Prêts pour le pilotage après impression OF.",
+                "hint": "OF émis et tous les fichiers approuvés.",
                 "tone": "" if not metrics["files_validated"] else "is-ready",
                 "card_href": f"{orders_url}?queue=approved",
             },

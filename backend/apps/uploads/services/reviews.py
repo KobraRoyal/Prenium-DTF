@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.uploads.models import OrderUpload, OrderUploadReview
 
@@ -16,7 +17,6 @@ class OrderUploadReviewService:
     permission_name = "uploads.review_orderupload"
     max_comment_length = 2000
 
-    @transaction.atomic
     def review_upload(
         self,
         *,
@@ -34,13 +34,28 @@ class OrderUploadReviewService:
             raise PermissionDenied
 
         order_upload = (
-            OrderUpload.objects.select_for_update()
-            .for_order(order)
-            .filter(public_id=upload_public_id)
-            .first()
+            OrderUpload.objects.for_order(order).filter(public_id=upload_public_id).first()
         )
         if order_upload is None:
             raise OrderUploadReviewTargetNotFound
+
+        if not self._of_document_is_issued(order=order):
+            message = "Imprimez d’abord l’OF avant de contrôler les fichiers."
+            record_event(
+                action="order_upload.review_rejected",
+                actor=actor,
+                target=order_upload,
+                status=AuditLogEntry.Status.FAILURE,
+                message=message,
+                metadata={
+                    "order_public_id": str(order.public_id),
+                    "customer_public_id": str(order.customer.public_id),
+                    "order_upload_public_id": str(order_upload.public_id),
+                    "reason": "manufacturing_order_not_issued",
+                    "source": source,
+                },
+            )
+            raise ValidationError(message)
 
         normalized_status = str(status or "").strip()
         allowed_statuses = {
@@ -67,16 +82,47 @@ class OrderUploadReviewService:
             normalized_reason = ""
             normalized_comment = ""
 
+        return self._persist_review(
+            order=order,
+            order_upload=order_upload,
+            actor=actor,
+            status=normalized_status,
+            reason_code=normalized_reason,
+            comment=normalized_comment,
+            source=source,
+        )
+
+    @transaction.atomic
+    def _persist_review(
+        self,
+        *,
+        order,
+        order_upload,
+        actor,
+        status: str,
+        reason_code: str,
+        comment: str,
+        source: str,
+    ) -> OrderUploadReview:
+        order_upload = (
+            OrderUpload.objects.select_for_update()
+            .for_order(order)
+            .filter(pk=order_upload.pk)
+            .first()
+        )
+        if order_upload is None:
+            raise OrderUploadReviewTargetNotFound
+
         review, _created = OrderUploadReview.objects.select_for_update().get_or_create(
             order_upload=order_upload
         )
         previous_status = review.status
-        review.status = normalized_status
-        review.reason_code = normalized_reason
-        review.comment = normalized_comment
+        review.status = status
+        review.reason_code = reason_code
+        review.comment = comment
         review.reviewed_by = actor
         review.reviewed_at = timezone.now()
-        if normalized_status == OrderUploadReview.Status.CHANGES_REQUESTED:
+        if status == OrderUploadReview.Status.CHANGES_REQUESTED:
             review.client_notified_at = None
         review.full_clean()
         review.save()
@@ -96,6 +142,13 @@ class OrderUploadReviewService:
             },
         )
         return review
+
+    def _of_document_is_issued(self, *, order) -> bool:
+        try:
+            production_job = order.production_job
+        except ObjectDoesNotExist:
+            return False
+        return production_job.of_document_issued_at is not None
 
     @transaction.atomic
     def mark_client_notified(self, *, review_public_id) -> OrderUploadReview | None:

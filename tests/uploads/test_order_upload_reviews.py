@@ -4,6 +4,7 @@ import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer
 from apps.orders.models import Order
+from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUpload, OrderUploadInspection, OrderUploadReview
 from apps.uploads.services.reviews import (
     OrderUploadReviewService,
@@ -14,6 +15,7 @@ from django.contrib.auth.models import Permission
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 
 
 def _staff(*codenames: str):
@@ -27,9 +29,18 @@ def _staff(*codenames: str):
     return user
 
 
-def _order_with_upload(*, customer_name: str = "Client A", support_color="#112233"):
+def _order_with_upload(
+    *,
+    customer_name: str = "Client A",
+    support_color="#112233",
+    of_document_issued: bool = True,
+):
     customer = Customer.objects.create(name=customer_name, billing_email="client@example.com")
     order = Order.objects.create(customer=customer, status=Order.Status.SUBMITTED)
+    production_job = ProductionWorkflowService().get_or_create_for_order(order=order)
+    if of_document_issued:
+        production_job.of_document_issued_at = timezone.now()
+        production_job.save(update_fields=["of_document_issued_at", "updated_at"])
     upload = OrderUpload.objects.create(
         order=order,
         file=SimpleUploadedFile("visuel.png", b"fake-png", content_type="image/png"),
@@ -71,6 +82,26 @@ def test_review_service_keeps_human_approval_separate_and_audited():
     assert audit.metadata["order_upload_public_id"] == str(upload.public_id)
     assert audit.metadata["review_status"] == "approved"
     assert "comment" not in audit.metadata
+
+
+@pytest.mark.django_db
+def test_review_service_rejects_control_before_of_document_is_issued():
+    actor = _staff("review_orderupload")
+    order, upload = _order_with_upload(of_document_issued=False)
+
+    with pytest.raises(ValidationError, match="Imprimez d’abord l’OF"):
+        OrderUploadReviewService().review_upload(
+            order=order,
+            upload_public_id=upload.public_id,
+            actor=actor,
+            status=OrderUploadReview.Status.APPROVED,
+            source="test",
+        )
+
+    assert not OrderUploadReview.objects.filter(order_upload=upload).exists()
+    rejection = AuditLogEntry.objects.get(action="order_upload.review_rejected")
+    assert rejection.status == AuditLogEntry.Status.FAILURE
+    assert rejection.metadata["reason"] == "manufacturing_order_not_issued"
 
 
 @pytest.mark.django_db
@@ -141,6 +172,27 @@ def test_staff_inspection_panel_uses_clear_machine_and_human_labels(client):
     assert "#112233" in html
     assert ">Valide<" not in html
     assert "warning / erreur" not in html
+
+
+@pytest.mark.django_db
+def test_staff_inspection_panel_blocks_review_actions_before_of_is_issued(client):
+    actor = _staff(
+        "view_order",
+        "view_orderupload",
+        "view_orderuploadinspection",
+        "review_orderupload",
+    )
+    order, _upload = _order_with_upload(of_document_issued=False)
+    client.force_login(actor)
+
+    response = client.get(
+        reverse("portal:staff-order-panel-inspection", kwargs={"order_public_id": order.public_id})
+    )
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Imprimez d’abord l’OF" in html
+    assert "Approuver pour production" not in html
 
 
 @pytest.mark.django_db

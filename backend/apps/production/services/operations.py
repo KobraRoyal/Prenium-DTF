@@ -3,7 +3,6 @@ from __future__ import annotations
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.db.models import Case, Count, IntegerField, Prefetch, Q, When
-from django.urls import reverse
 
 from apps.billing.models import Payment
 from apps.billing.services.production_payment_gate import production_start_blocked_reason
@@ -35,12 +34,6 @@ class AtelierOperationsService:
         ProductionJob.Status.BLOCKED: "Bloquer l'OF",
         ProductionJob.Status.COMPLETED: "Terminer l'OF",
     }
-    workflow_panel_definitions = (
-        ("inspection", "Contrôle", "uploads.view_orderuploadinspection"),
-        ("production", "Production", "production.view_productionjob"),
-        ("shipping", "Expédition", "shipping.view_shipment"),
-        ("billing", "Facturation", "billing.view_invoice"),
-    )
 
     def __init__(self):
         self.workflow_service = ProductionWorkflowService()
@@ -85,24 +78,6 @@ class AtelierOperationsService:
                 for key, label in self.queue_definitions
             ],
         }
-
-    def workflow_panel_tabs(self, *, order, focus_panel: str, user) -> list[dict[str, object]]:
-        detail_url = reverse(
-            "portal:staff-order-detail",
-            kwargs={"order_public_id": order.public_id},
-        )
-        tabs = []
-        for slug, label, permission in self.workflow_panel_definitions:
-            if user.has_perm(permission):
-                tabs.append(
-                    {
-                        "key": slug,
-                        "label": label,
-                        "is_active": slug == focus_panel,
-                        "href": f"{detail_url}?panel={slug}",
-                    }
-                )
-        return tabs
 
     def _filter_scan_query(self, queryset, query: str):
         exact = queryset.filter(

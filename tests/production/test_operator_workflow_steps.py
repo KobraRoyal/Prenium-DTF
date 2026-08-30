@@ -18,11 +18,12 @@ def _job(*, assigned=None, status=ProductionJob.Status.QUEUED):
     return SimpleNamespace(assigned_machine_id=assigned, status=status)
 
 
-def _inspection(*, approved=True, blocked=False, uploads=True):
+def _inspection(*, approved=True, blocked=False, uploads=True, of_document_issued=True):
     return {
         "uploads": [object()] if uploads else [],
         "all_uploads_approved": approved,
         "changes_requested_count": 1 if blocked else 0,
+        "of_document_issued": of_document_issued,
     }
 
 
@@ -76,3 +77,16 @@ def test_control_stays_first_when_files_are_pending():
     )
     assert active_operator_step(steps) == "control"
     assert steps[0]["label"] == "Contrôle fichier"
+
+
+def test_control_is_blocked_until_of_document_is_issued():
+    steps = build_operator_steps(
+        order=_order(),
+        job=_job(),
+        inspection=_inspection(approved=False, of_document_issued=False),
+        production=_production(),
+    )
+
+    assert active_operator_step(steps) == "control"
+    assert steps[0]["state"] == "blocked"
+    assert all(step["state"] == "pending" for step in steps[1:])

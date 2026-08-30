@@ -44,12 +44,13 @@ class StaffOrderListFilterService:
     def count_by_queue(self, queryset: QuerySet) -> dict[str, int]:
         base = queryset.exclude(status=Order.Status.CANCELLED)
         unissued = self._unissued_queryset_from(base)
+        issued = self._issued_queryset_from(base)
         return {
             "": base.count(),
             "unprinted": unissued.count(),
-            "to_review": self._filter_to_review(unissued).count(),
-            "changes": self._filter_changes(unissued).count(),
-            "approved": self._filter_approved(unissued).count(),
+            "to_review": self._filter_to_review(issued).count(),
+            "changes": self._filter_changes(issued).count(),
+            "approved": self._filter_approved(issued).count(),
         }
 
     def apply_filter(self, queryset: QuerySet, *, queue: str) -> QuerySet:
@@ -58,13 +59,13 @@ class StaffOrderListFilterService:
             return queryset
         if normalized == "unprinted":
             return self._unissued_queryset_from(queryset)
-        unissued = self._unissued_queryset_from(queryset)
+        issued = self._issued_queryset_from(queryset)
         if normalized == "to_review":
-            return self._filter_to_review(unissued)
+            return self._filter_to_review(issued)
         if normalized == "changes":
-            return self._filter_changes(unissued)
+            return self._filter_changes(issued)
         if normalized == "approved":
-            return self._filter_approved(unissued)
+            return self._filter_approved(issued)
         return queryset
 
     def apply_search(self, queryset: QuerySet, *, query: str) -> QuerySet:
@@ -82,10 +83,19 @@ class StaffOrderListFilterService:
         ).distinct()
 
     def _unissued_queryset_from(self, queryset: QuerySet) -> QuerySet:
+        return self._active_queryset_from(queryset).filter(
+            production_job__of_document_issued_at__isnull=True,
+        )
+
+    def _issued_queryset_from(self, queryset: QuerySet) -> QuerySet:
+        return self._active_queryset_from(queryset).filter(
+            production_job__of_document_issued_at__isnull=False,
+        )
+
+    def _active_queryset_from(self, queryset: QuerySet) -> QuerySet:
         return (
             queryset.filter(
                 status=Order.Status.SUBMITTED,
-                production_job__of_document_issued_at__isnull=True,
             )
             .exclude(production_job__status=ProductionJob.Status.COMPLETED)
             .distinct()

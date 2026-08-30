@@ -1,16 +1,6 @@
 const BATCH_HEADER = "X-Atelier-Batch";
-const BATCH_ORDER_IDS_HEADER = "X-Prenium-Batch-Order-Ids";
 const PANEL_ID = "atelier-dashboard-panel";
 const VIEWER_ID = "atelier-batch-pdf-viewer";
-
-const EMPTY_WORKLIST_HTML = `
-  <div class="atelier-worklist__empty">
-    <div class="empty-state text-center">
-      <h3 class="mt-0 font-display text-lg text-[color:var(--ink)]">Aucun OF en attente</h3>
-      <p class="muted mt-2">Tous les OF ont été émis. Nouvelles commandes et contrôle : pilotage Atelier.</p>
-    </div>
-  </div>
-`;
 
 let activeBlobUrl = null;
 let viewerEscapeHandler = null;
@@ -169,137 +159,16 @@ function setBatchPrintingState(panel, printing) {
   });
 }
 
-function parsePrintedOrderIds(response, formData) {
-  const raw = response.headers.get(BATCH_ORDER_IDS_HEADER);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.map(String);
-      }
-    } catch {
-      /* Fallback sur la sélection envoyée. */
-    }
-  }
-  return formData.getAll("order_public_ids").map(String);
-}
-
-function collectWorklistMetrics(panel) {
-  const metrics = {
-    unprinted: 0,
-    pending_review: 0,
-    changes_requested: 0,
-    files_validated: 0,
-  };
-  const seen = new Set();
-  panel.querySelectorAll("[data-worklist-order-id]").forEach((element) => {
-    const orderId = element.dataset.worklistOrderId;
-    if (!orderId || seen.has(orderId)) {
-      return;
-    }
-    seen.add(orderId);
-    metrics.unprinted += 1;
-    const status = element.dataset.reviewStatus;
-    if (status === "missing_files" || status === "pending") {
-      metrics.pending_review += 1;
-    }
-    if (status === "changes_requested") {
-      metrics.changes_requested += 1;
-    }
-    if (status === "approved") {
-      metrics.files_validated += 1;
-    }
-  });
-  return metrics;
-}
-
-function updateKpiValue(panel, label, value) {
-  panel.querySelectorAll(".ui-kpi-card").forEach((card) => {
-    const cardLabel = card.querySelector(".ui-kpi-card__top .muted")?.textContent?.trim();
-    if (cardLabel !== label) {
-      return;
-    }
-    const valueNode = card.querySelector(".ui-kpi-card__value");
-    if (valueNode) {
-      valueNode.textContent = String(value);
-    }
-    card.classList.toggle("is-ready", label === "OF non imprimés" && value > 0);
-    card.classList.toggle("is-attention", label === "À contrôler" && value > 0);
-    card.classList.toggle("is-danger", label === "Corrections client" && value > 0);
-    if (label === "Fichiers validés") {
-      card.classList.toggle("is-ready", value > 0);
-    }
-  });
-}
-
-function syncWorklistCommandUi(panel, form, metrics) {
-  const badge = panel.querySelector(".atelier-worklist-command__head .badge");
-  if (badge) {
-    badge.textContent = `${metrics.unprinted} en attente`;
-  }
-
-  const batchLimit = Number.parseInt(form.dataset.batchPrintLimit || "20", 10);
-  const batchCount = Math.min(metrics.unprinted, Number.isFinite(batchLimit) ? batchLimit : 20);
-  const selectAllButton = panel.querySelector(
-    ".atelier-worklist-command__tools button[type='button']"
-  );
-  if (selectAllButton instanceof HTMLButtonElement) {
-    selectAllButton.disabled = metrics.unprinted === 0;
-  }
-
-  const batchButton = panel.querySelector("[form='atelier-worklist-form'][name='batch_mode'][value='all_unprinted']");
-  if (batchButton instanceof HTMLButtonElement) {
-    batchButton.disabled = metrics.unprinted === 0;
-    if (metrics.unprinted === 0) {
-      batchButton.textContent = "Imprimer le lot";
-      batchButton.removeAttribute("title");
-    } else if (metrics.unprinted > batchCount) {
-      batchButton.textContent = `Imprimer le lot (${batchCount} plus récents)`;
-      batchButton.title = `${metrics.unprinted} OF en attente — ce lot imprime les ${batchCount} plus récentes. Relancez ensuite pour le reste.`;
-    } else {
-      batchButton.textContent = `Imprimer le lot (${metrics.unprinted})`;
-      batchButton.title = "Émet le PDF groupé de tous les OF non imprimés.";
-    }
-  }
-}
-
-function ensureEmptyWorklist(form) {
-  if (form.querySelector("[data-worklist-order-id]")) {
+function refreshDashboardPanel(form) {
+  const refreshUrl = form.dataset.dashboardRefreshUrl;
+  if (refreshUrl && window.htmx && typeof window.htmx.ajax === "function") {
+    window.htmx.ajax("GET", refreshUrl, {
+      target: `#${PANEL_ID}`,
+      swap: "outerHTML",
+    });
     return;
   }
-  form.querySelector(".atelier-worklist-table")?.remove();
-  if (!form.querySelector(".atelier-worklist__empty")) {
-    form.insertAdjacentHTML("beforeend", EMPTY_WORKLIST_HTML);
-  }
-}
-
-function clearAlpineSelection(panel) {
-  const surface = panel.querySelector(".atelier-dashboard-surface");
-  if (!surface || !window.Alpine) {
-    return;
-  }
-  const data = window.Alpine.$data(surface);
-  if (data && Array.isArray(data.selected)) {
-    data.selected = [];
-  }
-}
-
-function purgePrintedOrdersFromWorklist(panel, form, printedIds) {
-  const idSet = new Set(printedIds.map(String));
-  panel.querySelectorAll("[data-worklist-order-id]").forEach((element) => {
-    if (idSet.has(element.dataset.worklistOrderId || "")) {
-      element.remove();
-    }
-  });
-
-  ensureEmptyWorklist(form);
-  const metrics = collectWorklistMetrics(panel);
-  updateKpiValue(panel, "OF non imprimés", metrics.unprinted);
-  updateKpiValue(panel, "À contrôler", metrics.pending_review);
-  updateKpiValue(panel, "Corrections client", metrics.changes_requested);
-  updateKpiValue(panel, "Fichiers validés", metrics.files_validated);
-  syncWorklistCommandUi(panel, form, metrics);
-  clearAlpineSelection(panel);
+  window.location.reload();
 }
 
 async function handleBatchSubmit(event) {
@@ -332,12 +201,9 @@ async function handleBatchSubmit(event) {
 
     if (response.ok && contentType.includes("application/pdf")) {
       const blob = await response.blob();
-      const printedIds = parsePrintedOrderIds(response, formData);
       openPdfPreview(blob, filenameFromDisposition(response.headers.get("Content-Disposition")));
       parseToastHeader(response);
-      if (panel && printedIds.length) {
-        purgePrintedOrdersFromWorklist(panel, form, printedIds);
-      }
+      refreshDashboardPanel(form);
       return;
     }
 

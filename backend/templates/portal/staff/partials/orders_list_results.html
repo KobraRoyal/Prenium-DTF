@@ -11,11 +11,11 @@
         {% elif active_queue == "unprinted" %}
           Commandes soumises dont le PDF OF n'a pas encore été émis.
         {% elif active_queue == "to_review" %}
-          OF non émis — visuels encore à contrôler dans le pilotage.
+          OF émis — visuels à contrôler dans le pilotage.
         {% elif active_queue == "changes" %}
-          OF non émis — corrections client en attente.
+          OF émis — corrections client en attente.
         {% elif active_queue == "approved" %}
-          OF non émis — fichiers validés, prêts pour le pilotage.
+          OF émis — tous les fichiers sont validés pour la production.
         {% else %}
           Toutes les commandes Atelier actives.
         {% endif %}

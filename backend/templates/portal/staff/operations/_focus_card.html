@@ -1,4 +1,4 @@
-{% load portal_tags ui_tags %}
+{% load portal_tags %}
 <section class="atelier-operations-focus" aria-labelledby="atelier-operations-focus-title">
   <header class="atelier-operations-focus__head">
     <div>
@@ -35,10 +35,6 @@
     </div>
     {% endif %}
   </dl>
-
-  {% if focus_row.workflow_tabs %}
-  {% ui_list_tabs focus_row.workflow_tabs aria_label="Étapes dossier {{ focus_row.job.manufacturing_order_number }}" extra_class="atelier-operations-focus__tabs" %}
-  {% endif %}
 
   {% include "portal/staff/operations/_operator_workflow.html" %}
 

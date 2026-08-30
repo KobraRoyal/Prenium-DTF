@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.http import FileResponse, Http404
 from django.shortcuts import render
 from django.views import View
@@ -17,7 +17,7 @@ from apps.portal.views_common import (
     upload_service,
 )
 from apps.portal.views_staff import StaffOrderContextMixin
-from apps.uploads.models import OrderUploadReview
+from apps.uploads.models import OrderUploadDriveSync, OrderUploadReview
 from apps.uploads.services.assets import AssetService
 from apps.uploads.services.production_specs import OrderUploadProductionSpecService
 from apps.uploads.services.reviews import (
@@ -32,10 +32,25 @@ production_spec_service = OrderUploadProductionSpecService()
 
 def _inspection_context(request, *, order, form_error: str = "", error_upload_id=""):
     uploads = list(upload_service.list_order_uploads(order=order))
+    try:
+        of_document_issued = order.production_job.of_document_issued_at is not None
+    except ObjectDoesNotExist:
+        of_document_issued = False
+    has_review_permission = request.user.has_perm("uploads.review_orderupload")
+    has_upload_view_permission = request.user.has_perm("uploads.view_orderupload")
     review_counter = Counter()
     automatic_attention_count = 0
     for upload in uploads:
         upload.production_specs = production_spec_service.serialize(order_upload=upload)
+        drive_sync = getattr(upload, "drive_sync", None)
+        upload.drive_hd_url = (
+            drive_sync.google_drive_browser_url()
+            if has_upload_view_permission
+            and drive_sync is not None
+            and drive_sync.status == OrderUploadDriveSync.Status.SYNCED
+            and drive_sync.drive_file_id
+            else None
+        )
         inspection = getattr(upload, "inspection", None)
         if inspection is None or inspection.status in {"warning", "error"}:
             automatic_attention_count += 1
@@ -54,7 +69,11 @@ def _inspection_context(request, *, order, form_error: str = "", error_upload_id
         "all_uploads_approved": bool(uploads)
         and review_counter[OrderUploadReview.Status.APPROVED] == len(uploads),
         "review_reasons": OrderUploadReview.Reason.choices,
-        "can_review_uploads": request.user.has_perm("uploads.review_orderupload"),
+        "of_document_issued": of_document_issued,
+        "has_review_permission": has_review_permission,
+        "has_upload_view_permission": has_upload_view_permission,
+        "can_review_uploads": has_review_permission and of_document_issued,
+        "review_blocked_before_of": has_review_permission and not of_document_issued,
         "form_error": form_error,
         "error_upload_id": str(error_upload_id or ""),
         "badge_tone_for_status": badge_tone_for_status,

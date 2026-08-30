@@ -54,6 +54,11 @@ def add_upload(*, order, actor, filename: str, approved: bool):
     return upload
 
 
+def mark_of_issued(order):
+    order.production_job.of_document_issued_at = timezone.now()
+    order.production_job.save(update_fields=["of_document_issued_at", "updated_at"])
+
+
 def create_staff_client(*, email: str, permissions: list[str]):
     user = get_user_model().objects.create_user(
         email=email,
@@ -79,8 +84,7 @@ def test_atelier_dashboard_shows_only_unissued_orders():
     add_upload(order=unissued, actor=actor, filename="open.pdf", approved=False)
     add_upload(order=issued, actor=actor, filename="issued.pdf", approved=True)
     add_upload(order=completed, actor=actor, filename="done.pdf", approved=True)
-    issued.production_job.of_document_issued_at = timezone.now()
-    issued.production_job.save(update_fields=["of_document_issued_at", "updated_at"])
+    mark_of_issued(issued)
     completed.production_job.status = ProductionJob.Status.COMPLETED
     completed.production_job.save(update_fields=["status", "updated_at"])
 
@@ -91,7 +95,7 @@ def test_atelier_dashboard_shows_only_unissued_orders():
 
 
 @pytest.mark.django_db
-def test_atelier_dashboard_lists_all_unissued_orders_without_filters():
+def test_atelier_dashboard_separates_unprinted_worklist_from_post_issue_kpis():
     actor = get_user_model().objects.create_user(email="tabs@example.com", password="pass")
     customer = Customer.objects.create(name="Tabs Client")
     pending_order = create_order(customer=customer, actor=actor)
@@ -108,10 +112,47 @@ def test_atelier_dashboard_lists_all_unissued_orders_without_filters():
     }
     assert dashboard["metrics"] == {
         "unprinted": 2,
-        "pending_review": 1,
+        "pending_review": 0,
         "changes_requested": 0,
+        "files_validated": 0,
+    }
+
+
+@pytest.mark.django_db
+def test_atelier_dashboard_kpis_follow_exclusive_workflow_stages():
+    actor = get_user_model().objects.create_user(email="workflow-kpis@example.com", password="pass")
+    customer = Customer.objects.create(name="Workflow KPI Client")
+    unprinted_order = create_order(customer=customer, actor=actor)
+    pending_order = create_order(customer=customer, actor=actor)
+    changes_order = create_order(customer=customer, actor=actor)
+    approved_order = create_order(customer=customer, actor=actor)
+    add_upload(order=unprinted_order, actor=actor, filename="unprinted.pdf", approved=False)
+    add_upload(order=pending_order, actor=actor, filename="pending.pdf", approved=False)
+    changes_upload = add_upload(
+        order=changes_order,
+        actor=actor,
+        filename="changes.pdf",
+        approved=False,
+    )
+    OrderUploadReview.objects.create(
+        order_upload=changes_upload,
+        status=OrderUploadReview.Status.CHANGES_REQUESTED,
+        reviewed_by=actor,
+    )
+    add_upload(order=approved_order, actor=actor, filename="approved.pdf", approved=True)
+    mark_of_issued(pending_order)
+    mark_of_issued(changes_order)
+    mark_of_issued(approved_order)
+
+    dashboard = AtelierDashboardService().build_dashboard()
+
+    assert dashboard["metrics"] == {
+        "unprinted": 1,
+        "pending_review": 1,
+        "changes_requested": 1,
         "files_validated": 1,
     }
+    assert [row["order"].public_id for row in dashboard["rows"]] == [unprinted_order.public_id]
 
 
 @pytest.mark.django_db
@@ -134,7 +175,7 @@ def test_atelier_dashboard_files_to_process_summary():
 
     assert row["files_to_process_count"] == 1
     assert row["files_to_process_label"] == "1 à traiter"
-    assert changes_dashboard["metrics"]["changes_requested"] == 1
+    assert changes_dashboard["metrics"]["changes_requested"] == 0
 
 
 @pytest.mark.django_db
@@ -184,6 +225,13 @@ def test_batch_service_merges_one_of_per_order_and_marks_issued():
     second.production_job.refresh_from_db()
     assert first.production_job.of_document_issued_at is not None
     assert second.production_job.of_document_issued_at is not None
+    assert not OrderUploadReview.objects.filter(order_upload__order=first).exists()
+    assert OrderUploadReview.objects.get(order_upload__order=second).status == (
+        OrderUploadReview.Status.APPROVED
+    )
+    metrics = AtelierDashboardService().build_dashboard()["metrics"]
+    assert metrics["pending_review"] == 1
+    assert metrics["files_validated"] == 1
     audit = AuditLogEntry.objects.get(action="production.manufacturing_orders_batch_downloaded")
     assert audit.actor == actor
     assert AuditLogEntry.objects.filter(

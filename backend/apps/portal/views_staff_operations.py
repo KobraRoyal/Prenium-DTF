@@ -90,11 +90,6 @@ class StaffAtelierOperationsContextMixin(StaffAtelierOperationsPermissionMixin):
         )
         submitted_order_public_id = str(shipment_error_order_public_id or "")
         for row in workspace["rows"]:
-            row["workflow_tabs"] = atelier_operations_service.workflow_panel_tabs(
-                order=row["order"],
-                focus_panel=row["focus_panel"],
-                user=request.user,
-            )
             row["shipment_form_open"] = submitted_order_public_id == str(row["order"].public_id)
             if row["needs_shipping"] and can_create_shipment:
                 submitted_data = None

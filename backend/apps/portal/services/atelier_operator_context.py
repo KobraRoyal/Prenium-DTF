@@ -26,8 +26,14 @@ def build_operator_steps(
 ) -> list[dict[str, str]]:
     uploads = inspection.get("uploads") or []
     control_required = bool(uploads)
-    control_done = not control_required or inspection.get("all_uploads_approved")
-    control_blocked = inspection.get("changes_requested_count", 0) > 0
+    of_document_issued = bool(inspection.get("of_document_issued"))
+    control_done = bool(
+        not control_required or (of_document_issued and inspection.get("all_uploads_approved"))
+    )
+    control_blocked = bool(
+        control_required
+        and (not of_document_issued or inspection.get("changes_requested_count", 0) > 0)
+    )
     control_active = control_required and not control_done and not control_blocked
     prerequisites_done = control_done and not control_blocked
 

@@ -61,7 +61,7 @@ class ManufacturingOrderBatchService:
         finally:
             output.close()
 
-        self._mark_of_documents_issued(orders=orders, actor=actor, source=source)
+        self.mark_of_documents_issued(orders=orders, actor=actor, source=source)
         record_event(
             action="production.manufacturing_orders_batch_downloaded",
             actor=actor,
@@ -158,7 +158,7 @@ class ManufacturingOrderBatchService:
             return False
         return order.status == Order.Status.SUBMITTED
 
-    def _mark_of_documents_issued(self, *, orders: list[Order], actor, source: str) -> None:
+    def mark_of_documents_issued(self, *, orders: list[Order], actor, source: str) -> None:
         now = timezone.now()
         job_ids = []
         for order in orders:

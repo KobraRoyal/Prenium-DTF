@@ -43,6 +43,8 @@
         form="atelier-worklist-form"
         name="batch_mode"
         value="all_unprinted"
+        x-show="selected.length === 0"
+        x-cloak
         {% if not unprinted_of_total %}disabled{% endif %}
         {% if unprinted_of_total > batch_print_limit %}
         title="{{ unprinted_of_total }} OF en attente — ce lot imprime les {{ batch_print_limit }} plus récentes. Relancez ensuite pour le reste."

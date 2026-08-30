@@ -238,6 +238,12 @@ def test_staff_can_download_manufacturing_order_pdf():
     assert "COULEUR DU SUPPORT" in text
     assert "#112233" in text
     assert "Total TTC" not in text
+    job.refresh_from_db()
+    assert job.of_document_issued_at is not None
+    assert AuditLogEntry.objects.filter(
+        action="production.manufacturing_orders_marked_issued",
+        actor=_staff_user,
+    ).exists()
     assert "Sync Drive" not in text
     assert "Aperçu\nindisponible" in text
 

@@ -1,0 +1,40 @@
+<details class="atelier-inspection__correction"{% if error_upload_id == upload_id %} open{% endif %}>
+  <summary>
+    <span>Demander une correction au client</span>
+    <small>Le client sera notifié par e-mail</small>
+  </summary>
+  <form
+    class="ui-form-stack"
+    method="post"
+    action="{{ review_action_url }}"
+    hx-post="{{ review_action_url }}"
+    hx-target="{{ review_hx_target }}"
+    hx-swap="outerHTML"
+    hx-indicator="#portal-htmx-indicator"
+    data-submit-loading
+  >
+    {% csrf_token %}
+    {% if preserve_operator_filters %}
+    <input type="hidden" name="q" value="{{ query }}">
+    <input type="hidden" name="queue" value="{{ queue }}">
+    {% endif %}
+    <input type="hidden" name="status" value="changes_requested">
+    {% if form_error and error_upload_id == upload_id %}<div class="alert alert--danger" role="alert"><p>{{ form_error }}</p></div>{% endif %}
+    <div class="ui-field-group">
+      <label class="ui-label" for="review-reason-{{ upload.public_id }}">Motif de la correction</label>
+      <select class="ui-input" id="review-reason-{{ upload.public_id }}" name="reason_code" required>
+        <option value="">Sélectionner un motif</option>
+        {% for value, label in review_reasons %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="ui-field-group">
+      <label class="ui-label" for="review-comment-{{ upload.public_id }}">Précision pour le client</label>
+      <p class="ui-help">Facultatif, sauf si le motif est « Autre ».</p>
+      <textarea class="ui-input" id="review-comment-{{ upload.public_id }}" name="comment" maxlength="2000" rows="3" placeholder="Expliquez clairement ce qui doit être corrigé."></textarea>
+    </div>
+    <div class="atelier-inspection__correction-footer">
+      <p>Le message utilisera le modèle d’e-mail client personnalisable.</p>
+      <button class="ui-btn ui-btn-danger" type="submit" data-htmx-disable>Enregistrer et notifier</button>
+    </div>
+  </form>
+</details>

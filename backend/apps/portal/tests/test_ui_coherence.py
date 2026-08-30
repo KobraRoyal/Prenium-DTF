@@ -28,7 +28,9 @@ def app_source(relative_path: str) -> str:
 
 class PortalUiCoherenceTests(SimpleTestCase):
     def test_staff_inspection_separates_automatic_analysis_from_atelier_decision(self):
-        source = template_source("portal/staff/panels/inspection.html")
+        source = template_source("portal/staff/panels/inspection.html") + template_source(
+            "portal/staff/components/upload_correction_form.html"
+        )
 
         self.assertIn("Analyse automatique", source)
         self.assertIn("Décision Atelier", source)
@@ -547,8 +549,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('id="atelier-operations-panel"', workspace)
         self.assertIn("En attente de scan", workspace)
         self.assertIn("focus_row", workspace)
-        self.assertIn("ui_list_tabs", focus_card)
-        self.assertIn("atelier-operations-focus__tabs", focus_card)
+        self.assertNotIn("ui_list_tabs", focus_card)
+        self.assertNotIn("atelier-operations-focus__tabs", focus_card)
         self.assertIn("atelier-operations-focus", focus_card)
         self.assertIn("Commande identifiée", focus_card)
         self.assertIn("_operator_workflow.html", focus_card)
@@ -561,6 +563,13 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("ui-tab-chip", operator_workflow)
         self.assertNotIn("atelier-operator-steps", operator_workflow)
         self.assertIn("staff-atelier-operation-upload-review", operator_workflow)
+        correction_form = template_source("portal/staff/components/upload_correction_form.html")
+        inspection_panel = template_source("portal/staff/panels/inspection.html")
+        self.assertIn("upload_correction_form.html", operator_workflow)
+        self.assertIn("upload_correction_form.html", inspection_panel)
+        self.assertIn('name="reason_code"', correction_form)
+        self.assertIn("Le client sera notifié par e-mail", correction_form)
+        self.assertIn("Ouvrir le HD dans Drive", operator_workflow)
         self.assertIn("staff-atelier-operation-machine-assign", operator_workflow)
         self.assertIn("staff-atelier-operation-print-confirm", operator_workflow)
         self.assertIn("require_machine_selection", operator_workflow)
@@ -1455,6 +1464,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         dashboard_css = static_source("css/components/product-shell.css")
         self.assertNotIn("--product-paper", dashboard_css)
         self.assertIn("Imprimer le lot", source)
+        self.assertIn('x-show="selected.length > 0"', source)
+        self.assertIn('x-show="selected.length === 0"', source)
         self.assertIn('value="all_unprinted"', source)
         self.assertIn("data-atelier-batch", source)
         self.assertIn('id="atelier-dashboard-panel"', source)
@@ -1537,7 +1548,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Sprint 4", project)
 
     def test_staff_inspection_uses_compact_summary_without_nested_metric_cards(self) -> None:
-        source = template_source("portal/staff/panels/inspection.html")
+        source = template_source("portal/staff/panels/inspection.html") + template_source(
+            "portal/staff/components/upload_correction_form.html"
+        )
         portal_entry = static_source("css/entries/portal-staff.css")
         inspection_css = static_source("css/components/inspection-workbench.css")
 

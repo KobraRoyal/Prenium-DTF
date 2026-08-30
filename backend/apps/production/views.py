@@ -11,12 +11,14 @@ from apps.accounts.permissions import (
     HasStaffProductionScanTransitionAccess,
     HasStaffProductionTransitionAccess,
 )
+from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 from apps.production.services.manufacturing_order_pdf import render_manufacturing_order_pdf_bytes
 from apps.production.services.scans import ProductionScanService
 from apps.production.services.workflow import ProductionWorkflowService
 
 production_scan_service = ProductionScanService()
 production_workflow_service = ProductionWorkflowService()
+manufacturing_order_batch_service = ManufacturingOrderBatchService()
 
 
 def raise_api_validation_error(error: DjangoValidationError):
@@ -67,6 +69,11 @@ class StaffManufacturingOrderPdfView(APIView):
         if order is None or job is None:
             raise Http404
         pdf_bytes = render_manufacturing_order_pdf_bytes(order=order, production_job=job)
+        manufacturing_order_batch_service.mark_of_documents_issued(
+            orders=[order],
+            actor=request.user,
+            source="staff_api.manufacturing_order_pdf",
+        )
         filename = f"{job.manufacturing_order_number}.pdf"
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{filename}"'

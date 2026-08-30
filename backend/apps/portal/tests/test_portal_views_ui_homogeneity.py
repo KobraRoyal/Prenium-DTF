@@ -478,7 +478,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         panel_index = operations_index.index("atelier-operations-panel")
         self.assertLess(scan_index, panel_index)
         self.assertIn("focus_row", operations_workspace)
-        self.assertIn("ui_list_tabs", focus_card)
+        self.assertNotIn("ui_list_tabs", focus_card)
         self.assertNotIn("atelier-operations-results", operations_workspace)
 
     def test_portal_core_styles_list_tabs_placement(self) -> None:
@@ -499,7 +499,6 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         for marker in (
             ".atelier-operation-row__workflow",
             ".atelier-operation-workflow__link",
-            ".atelier-operations-focus__tabs",
             ".atelier-operations-focus",
             ".atelier-operations-scan-bar",
             ".atelier-operations-scan__input",
@@ -507,6 +506,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, css)
+        self.assertNotIn(".atelier-operations-focus__tabs", css)
 
     def test_client_order_panels_avoid_legacy_panel_wrapper(self) -> None:
         for path in CLIENT_ORDER_PANELS:

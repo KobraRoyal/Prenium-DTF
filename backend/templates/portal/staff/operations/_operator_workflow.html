@@ -59,9 +59,13 @@
       {% endif %}
     </header>
 
+    {% if review_blocked_before_of %}
+    <div class="alert alert--warning" role="status"><p>Imprimez d’abord l’OF depuis le tableau de bord avant de valider les fichiers.</p></div>
+    {% endif %}
+
     <ul class="atelier-operator-uploads">
       {% for upload in uploads %}
-      {% with review=upload.atelier_review inspection=upload.inspection %}
+      {% with review=upload.atelier_review inspection=upload.inspection upload_id=upload.public_id|stringformat:"s" %}
       <li class="atelier-operator-upload{% if review and review.status == 'approved' %} is-approved{% elif review and review.status == 'changes_requested' %} is-rejected{% endif %}">
         <a class="atelier-operator-upload__preview" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
           <img src="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="" loading="lazy">
@@ -69,6 +73,19 @@
         <div class="atelier-operator-upload__body">
           <strong>{{ upload.original_filename }}</strong>
           <span class="muted">{{ upload.production_specs.dimensions_label }}</span>
+          {% if upload.drive_hd_url %}
+          <a
+            class="ui-inline-action"
+            href="{{ upload.drive_hd_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Ouvrir le fichier HD {{ upload.original_filename }} dans Google Drive"
+          >Ouvrir le HD dans Drive</a>
+          {% elif has_upload_view_permission and upload.drive_sync.status == 'failed' %}
+          <span class="badge is-danger">HD Drive indisponible</span>
+          {% elif has_upload_view_permission %}
+          <span class="badge is-neutral">HD Drive en attente</span>
+          {% endif %}
           {% if review and review.status == 'approved' %}
           <span class="badge is-success">Approuvé</span>
           {% elif review and review.status == 'changes_requested' %}
@@ -89,6 +106,10 @@
           </form>
           {% else %}
           <span class="badge is-warning">À contrôler</span>
+          {% endif %}
+          {% if can_review_uploads %}
+          {% url 'portal:staff-atelier-operation-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id as review_action_url %}
+          {% include "portal/staff/components/upload_correction_form.html" with review_hx_target="#atelier-operations-panel" preserve_operator_filters=True %}
           {% endif %}
         </div>
       </li>

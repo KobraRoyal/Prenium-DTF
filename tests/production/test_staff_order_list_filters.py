@@ -48,6 +48,11 @@ def add_upload(*, order, actor, filename: str, approved: bool):
     return upload
 
 
+def mark_of_issued(order):
+    order.production_job.of_document_issued_at = timezone.now()
+    order.production_job.save(update_fields=["of_document_issued_at", "updated_at"])
+
+
 def create_staff_client(*, email: str):
     user = get_user_model().objects.create_user(
         email=email,
@@ -68,7 +73,7 @@ def test_staff_order_list_filter_service_matches_dashboard_segments():
     pending_order = create_order(customer=customer, actor=actor)
     approved_order = create_order(customer=customer, actor=actor)
     changes_order = create_order(customer=customer, actor=actor)
-    issued_order = create_order(customer=customer, actor=actor)
+    unprinted_order = create_order(customer=customer, actor=actor)
     add_upload(order=pending_order, actor=actor, filename="pending.pdf", approved=False)
     add_upload(order=approved_order, actor=actor, filename="approved.pdf", approved=True)
     upload = add_upload(order=changes_order, actor=actor, filename="changes.pdf", approved=False)
@@ -78,9 +83,10 @@ def test_staff_order_list_filter_service_matches_dashboard_segments():
         status=OrderUploadReview.Status.CHANGES_REQUESTED,
         reviewed_by=actor,
     )
-    add_upload(order=issued_order, actor=actor, filename="issued.pdf", approved=True)
-    issued_order.production_job.of_document_issued_at = timezone.now()
-    issued_order.production_job.save(update_fields=["of_document_issued_at", "updated_at"])
+    add_upload(order=unprinted_order, actor=actor, filename="unprinted.pdf", approved=False)
+    mark_of_issued(pending_order)
+    mark_of_issued(approved_order)
+    mark_of_issued(changes_order)
 
     from apps.orders.services.orders import OrderService
 
@@ -88,7 +94,7 @@ def test_staff_order_list_filter_service_matches_dashboard_segments():
     service = StaffOrderListFilterService()
     counts = service.count_by_queue(base)
 
-    assert counts["unprinted"] == 3
+    assert counts["unprinted"] == 1
     assert counts["to_review"] == 1
     assert counts["changes"] == 1
     assert counts["approved"] == 1
@@ -96,11 +102,16 @@ def test_staff_order_list_filter_service_matches_dashboard_segments():
     unprinted_ids = set(
         service.apply_filter(base, queue="unprinted").values_list("public_id", flat=True)
     )
-    assert unprinted_ids == {
-        pending_order.public_id,
-        approved_order.public_id,
-        changes_order.public_id,
+    assert unprinted_ids == {unprinted_order.public_id}
+    assert set(
+        service.apply_filter(base, queue="to_review").values_list("public_id", flat=True)
+    ) == {pending_order.public_id}
+    assert set(service.apply_filter(base, queue="changes").values_list("public_id", flat=True)) == {
+        changes_order.public_id
     }
+    assert set(
+        service.apply_filter(base, queue="approved").values_list("public_id", flat=True)
+    ) == {approved_order.public_id}
 
 
 @pytest.mark.django_db
@@ -177,6 +188,7 @@ def test_staff_order_list_renders_queue_filter_tabs():
     customer = Customer.objects.create(name="List Client")
     order = create_order(customer=customer, actor=actor)
     add_upload(order=order, actor=actor, filename="open.pdf", approved=False)
+    mark_of_issued(order)
 
     client = create_staff_client(email="staff-list@example.com")
     response = client.get(reverse("portal:staff-order-list"), {"queue": "to_review"})
