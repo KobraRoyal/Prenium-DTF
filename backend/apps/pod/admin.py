@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from apps.pod.models import Blank, BlankPlacementCapability, BlankVariant, PrintTechnique
+from apps.pod.models import (
+    Blank,
+    BlankPlacementCapability,
+    BlankVariant,
+    IdsVariantConfig,
+    PodRecipeTemplate,
+    PrintTechnique,
+    ShopifyProduct,
+    ShopifyStore,
+    ShopifyVariant,
+)
 
 
 @admin.register(PrintTechnique)
@@ -28,3 +38,35 @@ class BlankAdmin(admin.ModelAdmin):
     search_fields = ("sku", "name")
     readonly_fields = ("public_id",)
     inlines = (BlankVariantInline, BlankPlacementInline)
+
+
+@admin.register(ShopifyStore)
+class ShopifyStoreAdmin(admin.ModelAdmin):
+    list_display = ("name", "shop_domain", "slug", "is_active")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(ShopifyProduct)
+class ShopifyProductAdmin(admin.ModelAdmin):
+    list_display = ("title", "store", "external_id", "public_id")
+    search_fields = ("title", "external_id")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(ShopifyVariant)
+class ShopifyVariantAdmin(admin.ModelAdmin):
+    list_display = ("title", "sku", "product", "public_id")
+    search_fields = ("title", "sku")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(IdsVariantConfig)
+class IdsVariantConfigAdmin(admin.ModelAdmin):
+    list_display = ("variant", "mode", "blank_variant", "finished_sku", "staff_locked")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(PodRecipeTemplate)
+class PodRecipeTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name", "blank", "store")
+    readonly_fields = ("public_id",)

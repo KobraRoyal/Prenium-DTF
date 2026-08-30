@@ -140,6 +140,11 @@ from .views_staff_pod import (
     StaffPodTechniqueListView,
     StaffPodWarehouseView,
 )
+from .views_staff_pod_catalog import (
+    StaffPodCatalogListView,
+    StaffPodCatalogProductView,
+    StaffPodVariantConfigDrawerView,
+)
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
@@ -515,6 +520,21 @@ urlpatterns = [
         "staff/atelier/pod/entrepot/emplacements/<uuid:location_public_id>/",
         StaffPodLocationDetailView.as_view(),
         name="staff-pod-location-detail",
+    ),
+    path(
+        "staff/atelier/pod/catalogue/",
+        StaffPodCatalogListView.as_view(),
+        name="staff-pod-catalog",
+    ),
+    path(
+        "staff/atelier/pod/catalogue/<uuid:product_public_id>/",
+        StaffPodCatalogProductView.as_view(),
+        name="staff-pod-catalog-product",
+    ),
+    path(
+        "staff/atelier/pod/catalogue/variantes/<uuid:variant_public_id>/config/",
+        StaffPodVariantConfigDrawerView.as_view(),
+        name="staff-pod-variant-config",
     ),
     path(
         "staff/machines/",

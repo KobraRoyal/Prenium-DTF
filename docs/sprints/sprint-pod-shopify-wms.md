@@ -60,7 +60,14 @@ Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS empl
 - [x] Vues `/staff/atelier/pod/` (hub, techniques, blanks, entrepôt)
 - [x] Tests permissions client/staff + bin par défaut
 - [ ] Mouvements / picking / qty (lot G)
-- [ ] Mapping variante Shopify (lot D1)
+
+## Lot D1 — statut
+- [x] Modèles Shopify mirror + `IdsVariantConfig` + `PodRecipe`/`PodRecipeSlot` + templates
+- [x] `VariantConfigPayload` (contrat staff / future app Shopify)
+- [x] Catalogue staff + drawer HTMX `/staff/atelier/pod/catalogue/`
+- [x] Badges `needs_config` / mix techniques / ON_STOCK / VIRTUAL
+- [x] Tests permissions + save POD + apply template
+- [ ] App block Shopify embarqué (lot E ou extension D1-bis)
 
 ## Hors scope (ne pas toucher)
 - Pricing B2B métrage, gang sheets, Sendcloud (sauf lien expédition POD plus tard)
