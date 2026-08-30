@@ -71,6 +71,22 @@ def test_hub_seeds_dtf_and_warehouse_zones():
     assert warehouse.list_zones(actor=_user).count() == 5
 
 
+def test_hub_bootstraps_ops_demo_for_managers():
+    from apps.pod.models import Blank, ShopifyVariant
+    from apps.pod.services.variant_config import VariantConfigService
+
+    actor, client = staff_client(email="staff-pod-boot@example.com", permissions=MANAGE)
+    response = client.get(reverse("portal:staff-pod-hub"))
+    assert response.status_code == 200
+    assert Blank.objects.filter(sku="TEE-POD").exists()
+    assert StorageLocation.objects.filter(code="A-01-01-A").exists()
+    variant = ShopifyVariant.objects.get(sku="TEE-BLK-M")
+    config = VariantConfigService().get_or_create_config(variant)
+    assert VariantConfigService().configuration_status(config) == "pod"
+    assert blanks.list_blanks(actor=actor).count() >= 1
+    assert warehouse.list_zones(actor=actor).first().locations.count() >= 1
+
+
 def test_staff_cannot_create_technique_without_manage_perm():
     _user, client = staff_client(email="staff-pod-ro@example.com", permissions=VIEW)
     response = client.post(
@@ -88,7 +104,7 @@ def test_create_blank_variant_capability_and_default_bin():
         {"sku": "tee-200", "name": "T-shirt 185g", "brand": "Stanley"},
     )
     assert create_blank.status_code == 302
-    blank_public_id = blanks.list_blanks(actor=actor).get().public_id
+    blank_public_id = blanks.list_blanks(actor=actor).get(sku="TEE-200").public_id
     detail = reverse("portal:staff-pod-blank-detail", kwargs={"blank_public_id": blank_public_id})
     variant_response = client.post(
         detail,
@@ -122,7 +138,7 @@ def test_create_blank_variant_capability_and_default_bin():
     )
     assert location_response.status_code == 302
     location = StorageLocation.objects.get(code="A-03-02-B")
-    variant = blanks.list_blanks(actor=actor).get().variants.get()
+    variant = blanks.list_blanks(actor=actor).get(sku="TEE-200").variants.get()
     rule_response = client.post(
         detail,
         {
@@ -132,7 +148,7 @@ def test_create_blank_variant_capability_and_default_bin():
         },
     )
     assert rule_response.status_code == 302
-    rule = ProductLocationRule.objects.get()
+    rule = ProductLocationRule.objects.get(blank_variant=variant)
     assert rule.sku_kind == SkuKind.BLANK
     assert rule.owner_kind == StockOwnerKind.ATELIER
     assert rule.location_id == location.pk

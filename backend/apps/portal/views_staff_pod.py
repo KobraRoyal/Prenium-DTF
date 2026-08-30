@@ -11,12 +11,14 @@ from apps.auditlog.services import record_event
 from apps.inventory.services import WarehouseLayoutService
 from apps.pod.models import BlankPlacementCapability
 from apps.pod.services import BlankCatalogService, PrintTechniqueService
+from apps.pod.services.ops_demo import PodOpsBootstrapService
 from apps.pod.services.validation import validation_message
 from apps.portal.views_common import StaffPortalMixin, access_scope_service
 
 print_technique_service = PrintTechniqueService()
 blank_catalog_service = BlankCatalogService()
 warehouse_layout_service = WarehouseLayoutService()
+ops_bootstrap_service = PodOpsBootstrapService()
 
 
 class StaffPodPermissionMixin(StaffPortalMixin):
@@ -58,6 +60,10 @@ class StaffPodHubView(StaffPodPermissionMixin, View):
     def get(self, request):
         print_technique_service.ensure_dtf_technique(actor=request.user)
         warehouse_layout_service.ensure_default_layout(actor=request.user)
+        if request.user.has_perm("pod.manage_pod_catalog") and request.user.has_perm(
+            "inventory.manage_warehouse"
+        ):
+            ops_bootstrap_service.ensure_ready(actor=request.user)
         return render(
             request,
             self.template_name,

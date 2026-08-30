@@ -50,6 +50,7 @@ def test_shopify_webhook_queues_pod_sku_and_rejects_bad_hmac():
         content_type="application/json",
         HTTP_X_SHOPIFY_HMAC_SHA256=_sign("hook-secret", raw),
         HTTP_X_SHOPIFY_SHOP_DOMAIN=store.shop_domain,
+        HTTP_X_SHOPIFY_WEBHOOK_ID="evt-1042",
     )
     assert ok.status_code == 200
     body = ok.json()
@@ -62,6 +63,7 @@ def test_shopify_webhook_queues_pod_sku_and_rejects_bad_hmac():
         content_type="application/json",
         HTTP_X_SHOPIFY_HMAC_SHA256=_sign("hook-secret", raw),
         HTTP_X_SHOPIFY_SHOP_DOMAIN=store.shop_domain,
+        HTTP_X_SHOPIFY_WEBHOOK_ID="evt-1042",
     )
-    assert again.json()["queued"] == 0
+    assert again.json().get("duplicate") is True or again.json()["queued"] == 0
     assert PodRipWorkItem.objects.filter(shopify_order_number="#1042").count() == 1

@@ -133,6 +133,18 @@ class ShopifyStore(BaseModel):
         return self.name
 
 
+class ShopifyWebhookReceipt(BaseModel):
+    webhook_id = models.CharField(max_length=128, unique=True)
+    shop_domain = models.CharField(max_length=255)
+    topic = models.CharField(max_length=64, default="orders/create")
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return self.webhook_id
+
+
 class ShopifyProduct(BaseModel):
     store = models.ForeignKey(ShopifyStore, on_delete=models.CASCADE, related_name="products")
     external_id = models.CharField(max_length=64)

@@ -76,6 +76,42 @@ def test_receive_pick_putaway_and_pod_18(tmp_path, settings):
     assert b"Picking" in page.content
 
 
+def test_customer_stock_is_isolated_from_atelier_pick():
+    from apps.customers.models import Customer
+
+    actor, _client = staff_client(email="staff-wms-client@example.com", permissions=MANAGE)
+    _dtf, _blank, blank_variant, _variant = pod_fixture(actor=actor)
+    client_bin = _bin(actor, zone_kind=WarehouseZone.Kind.CLIENT, code="C-01-01-A")
+    customer = Customer.objects.create(name="Owner Client Stock")
+    stock.receive_blank(
+        actor=actor,
+        source="test",
+        blank_variant_public_id=blank_variant.public_id,
+        location_public_id=client_bin.public_id,
+        quantity=2,
+        owner_kind="customer",
+        customer_public_id=customer.public_id,
+    )
+    with pytest.raises(ValidationError, match="POD-18"):
+        stock.pick_blank(
+            actor=actor,
+            source="test",
+            blank_variant_public_id=blank_variant.public_id,
+            scanned_bin_code="C-01-01-A",
+            quantity=1,
+            owner_kind="atelier",
+        )
+    stock.pick_blank(
+        actor=actor,
+        source="test",
+        blank_variant_public_id=blank_variant.public_id,
+        scanned_bin_code="C-01-01-A",
+        quantity=1,
+        owner_kind="customer",
+        customer_public_id=customer.public_id,
+    )
+
+
 def test_view_only_cannot_receive():
     actor, client = staff_client(email="staff-wms-ro@example.com", permissions=VIEW)
     response = client.post(

@@ -80,6 +80,7 @@ class StaffPodStockView(StaffPodPermissionMixin, View):
             **_nav(),
             "blanks": blank_catalog_service.list_blanks(actor=request.user),
             "locations": locations,
+            "customers": stock_ops.eligible_customers(actor=request.user),
             "can_manage_warehouse": request.user.has_perm("inventory.manage_warehouse"),
             "form_error": form_error,
         }
@@ -93,6 +94,10 @@ class StaffPodStockView(StaffPodPermissionMixin, View):
         intent = request.POST.get("intent", "receive")
         try:
             qty = int(request.POST.get("quantity") or 0)
+            owner_kwargs = {
+                "owner_kind": request.POST.get("owner_kind") or "atelier",
+                "customer_public_id": request.POST.get("customer_public_id") or None,
+            }
             if intent == "pick":
                 stock_ops.pick_blank(
                     actor=request.user,
@@ -100,6 +105,7 @@ class StaffPodStockView(StaffPodPermissionMixin, View):
                     blank_variant_public_id=request.POST.get("blank_variant_public_id"),
                     scanned_bin_code=request.POST.get("scanned_bin_code", ""),
                     quantity=qty,
+                    **owner_kwargs,
                 )
             elif intent == "putaway":
                 stock_ops.putaway_return(
@@ -108,6 +114,7 @@ class StaffPodStockView(StaffPodPermissionMixin, View):
                     blank_variant_public_id=request.POST.get("blank_variant_public_id"),
                     location_public_id=request.POST.get("location_public_id"),
                     quantity=qty,
+                    **owner_kwargs,
                 )
             else:
                 stock_ops.receive_blank(
@@ -116,6 +123,7 @@ class StaffPodStockView(StaffPodPermissionMixin, View):
                     blank_variant_public_id=request.POST.get("blank_variant_public_id"),
                     location_public_id=request.POST.get("location_public_id"),
                     quantity=qty,
+                    **owner_kwargs,
                 )
         except PermissionDenied:
             raise

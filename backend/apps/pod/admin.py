@@ -12,6 +12,7 @@ from apps.pod.models import (
     ShopifyProduct,
     ShopifyStore,
     ShopifyVariant,
+    ShopifyWebhookReceipt,
 )
 
 
@@ -47,6 +48,13 @@ class ShopifyStoreAdmin(admin.ModelAdmin):
     list_display = ("name", "shop_domain", "slug", "is_active")
     readonly_fields = ("public_id",)
     fields = ("name", "slug", "shop_domain", "is_active", "webhook_secret", "public_id")
+
+
+@admin.register(ShopifyWebhookReceipt)
+class ShopifyWebhookReceiptAdmin(admin.ModelAdmin):
+    list_display = ("webhook_id", "shop_domain", "topic", "created_at")
+    readonly_fields = ("public_id", "webhook_id", "shop_domain", "topic")
+    search_fields = ("webhook_id", "shop_domain")
 
 
 @admin.register(ShopifyProduct)

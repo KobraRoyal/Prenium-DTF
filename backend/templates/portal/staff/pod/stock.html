@@ -4,7 +4,7 @@
 
 {% block portal_content %}
 <div class="portal-page portal-page--staff">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Stocks" title="Mouvements WMS" subtitle="Réception, picking (scan bin obligatoire) et putaway retours — owner atelier." %}
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Stocks" title="Mouvements WMS" subtitle="Réception, picking (scan bin) et putaway — owner atelier ou client isolé." %}
   <section class="portal-page-surface ui-list-section">
     {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
     {% if can_manage_warehouse %}
@@ -13,6 +13,7 @@
         {% csrf_token %}
         <input type="hidden" name="intent" value="receive">
         <h2 class="font-display text-lg">Réception</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="recv" %}
         <p>
           <label class="ui-label" for="recv-variant">Variante blank</label>
           <select class="ui-input" id="recv-variant" name="blank_variant_public_id">
@@ -41,6 +42,7 @@
         {% csrf_token %}
         <input type="hidden" name="intent" value="pick">
         <h2 class="font-display text-lg">Picking</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="pick" %}
         <p>
           <label class="ui-label" for="pick-variant">Variante blank</label>
           <select class="ui-input" id="pick-variant" name="blank_variant_public_id">
@@ -65,6 +67,7 @@
         {% csrf_token %}
         <input type="hidden" name="intent" value="putaway">
         <h2 class="font-display text-lg">Putaway retours</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="put" %}
         <p>
           <label class="ui-label" for="put-variant">Variante blank</label>
           <select class="ui-input" id="put-variant" name="blank_variant_public_id">

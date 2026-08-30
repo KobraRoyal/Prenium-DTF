@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.auditlog.services import record_event
-from apps.pod.models import PodRipWorkItem, ShopifyStore, ShopifyVariant
+from apps.pod.models import PodRipWorkItem, ShopifyStore, ShopifyVariant, ShopifyWebhookReceipt
 from apps.pod.services.rip_lots import PodRipLotService
 from apps.pod.services.variant_config import CONFIG_STATUS_POD, VariantConfigService
 
@@ -21,6 +21,7 @@ class ShopifyFulfillmentIngestService:
         raw_body: bytes,
         hmac_header: str,
         shop_domain: str,
+        webhook_id: str = "",
     ) -> dict:
         store = ShopifyStore.objects.filter(shop_domain=shop_domain, is_active=True).first()
         if store is None:
@@ -39,6 +40,14 @@ class ShopifyFulfillmentIngestService:
                 metadata={"shop": shop_domain},
             )
             raise ValidationError("HMAC Shopify invalide.")
+        event_id = (webhook_id or "").strip()
+        if event_id:
+            _receipt, created = ShopifyWebhookReceipt.objects.get_or_create(
+                webhook_id=event_id,
+                defaults={"shop_domain": shop_domain, "topic": "orders/create"},
+            )
+            if not created:
+                return {"queued": 0, "skipped": 0, "order": "", "duplicate": True}
         try:
             payload = json.loads(raw_body.decode("utf-8") or "{}")
         except json.JSONDecodeError as exc:
