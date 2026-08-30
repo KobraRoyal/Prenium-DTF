@@ -2,9 +2,9 @@
   <ol class="ui-breadcrumb__list">
     <li class="ui-breadcrumb__item">
       {% if client_current %}
-      <span aria-current="page">Accueil client</span>
+      <span aria-current="page">Accueil</span>
       {% else %}
-      <a href="{% url 'portal:client-dashboard' %}">Accueil client</a>
+      <a href="{% url 'portal:client-dashboard' %}">Accueil</a>
       {% endif %}
     </li>
     {% if current_label %}

@@ -14,7 +14,8 @@
         <span>
           {% if nav_mode == "staff" %}Équipe Atelier
           {% elif portal_nav_access.role_label %}{{ portal_nav_access.role_label }} · {{ portal_nav_access.customer_name }}
-          {% else %}Espace client{% endif %}
+          {% elif portal_nav_access.customer_name %}{{ portal_nav_access.customer_name }}
+          {% endif %}
         </span>
       </span>
     </div>

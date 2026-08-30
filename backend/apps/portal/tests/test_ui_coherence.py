@@ -827,6 +827,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Identité visuelle", staff_nav)
         self.assertIn("Votre compte", header)
         self.assertIn(">Atelier</span>", header)
+        self.assertNotIn(">Espace client<", header)
         self.assertIn("product-menu-button__icon", header)
         self.assertIn("ui-btn ui-btn-ghost ui-btn-sm product-menu-button", header)
         self.assertIn("portal_profile_menu.html", header)
