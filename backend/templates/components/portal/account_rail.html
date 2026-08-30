@@ -26,10 +26,12 @@
   {% endif %}
 
   <nav class="account-profile-nav ui-selection-rail" aria-label="Rubriques du compte">
+    {% if profile_workspace or nav_mode == "staff" %}
+    {% url 'portal:profile' as profile_url %}
     {% if nav_mode == "staff" %}
     <a
       class="ui-selection-control{% if account_section == 'identity' %} is-active{% endif %}"
-      href="#account-identity"
+      href="{% if account_section == 'team' %}{{ profile_url }}?space=staff#account-identity{% else %}#account-identity{% endif %}"
       {% if account_section == 'identity' %}aria-current="location"{% endif %}
     >Identité</a>
     {% can_manage_staff_team as staff_can_manage_team %}
@@ -40,8 +42,7 @@
       {% if account_section == 'team' %}aria-current="page"{% endif %}
     >Équipe</a>
     {% endif %}
-    {% elif profile_workspace %}
-    {% url 'portal:profile' as profile_url %}
+    {% else %}
     <a
       class="ui-selection-control{% if account_section == 'identity' %} is-active{% endif %}"
       href="{% if account_section == 'team' %}{{ profile_url }}?space=client#account-identity{% else %}#account-identity{% endif %}"
@@ -62,6 +63,7 @@
         {% if account_section == 'team' %}aria-current="page"{% endif %}
       >Équipe</a>
       {% endif %}
+    {% endif %}
     {% endif %}
     {% else %}
     <a
