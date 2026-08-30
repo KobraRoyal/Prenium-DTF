@@ -171,7 +171,7 @@ def test_staff_user_can_update_identity_via_htmx_and_refresh_focus():
     assert "Martin" in html
     assert 'id="staff-profile-focus"' in html
     assert 'hx-swap-oob="true"' in html
-    assert "Compte staff" in html
+    assert "Compte Atelier" in html
     user.refresh_from_db()
     assert user.first_name == "Camille"
     assert user.last_name == "Martin"
@@ -201,7 +201,7 @@ def test_profile_page_preserves_authorized_staff_navigation():
     assert 'id="staff-profile-title"' in html
     assert "data-customer-workspace" in html
     assert 'id="account-identity"' in html
-    assert "Compte staff" in html
+    assert "Compte Atelier" in html
     assert reverse("portal:profile-identity") in html
     assert "space=staff" in html
     assert "customer-account-workspace.js" in html

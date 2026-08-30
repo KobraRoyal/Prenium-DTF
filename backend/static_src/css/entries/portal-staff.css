@@ -2398,3 +2398,16 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.staff-profile-page .staff-customer-workspace__section {
   border-radius: var(--radius) !important;
 }
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-profile-page.account-team-page .account-team-panel,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-profile-page.account-team-page .account-team-invite {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-profile-page.account-team-page .account-team-invite .account-profile-panel__head {
+  display: none;
+}

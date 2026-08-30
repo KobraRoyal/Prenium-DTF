@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from apps.auditlog.admin import AdminAuditMixin
 
 from .forms import UserChangeForm, UserCreationForm
-from .models import User
+from .models import StaffInvitation, StaffMembership, User
 
 
 @admin.register(User)
@@ -72,3 +72,19 @@ class UserAdmin(AdminAuditMixin, DjangoUserAdmin):
         ),
     )
     readonly_fields = ("public_id", "last_login", "date_joined")
+
+
+@admin.register(StaffMembership)
+class StaffMembershipAdmin(AdminAuditMixin, admin.ModelAdmin):
+    list_display = ("user", "role", "is_active", "created_at")
+    list_filter = ("role", "is_active")
+    search_fields = ("user__email",)
+    readonly_fields = ("public_id", "created_at", "updated_at")
+
+
+@admin.register(StaffInvitation)
+class StaffInvitationAdmin(AdminAuditMixin, admin.ModelAdmin):
+    list_display = ("email", "role", "status", "expires_at", "created_at")
+    list_filter = ("status", "role")
+    search_fields = ("email",)
+    readonly_fields = ("public_id", "created_at", "updated_at", "accepted_at", "revoked_at")

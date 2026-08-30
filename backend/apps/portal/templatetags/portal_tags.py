@@ -126,6 +126,14 @@ def portal_navigation_access(context) -> dict[str, object]:
     }
 
 
+@register.simple_tag(takes_context=True)
+def can_manage_staff_team(context) -> bool:
+    request = context.get("request")
+    if request is None or not getattr(request.user, "is_authenticated", False):
+        return False
+    return access_scope_service.can_manage_staff_team(request.user)
+
+
 @register.filter
 def badge_tone(status):
     status = str(status)

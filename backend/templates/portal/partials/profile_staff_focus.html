@@ -9,8 +9,13 @@
     {% if request.user.first_name or request.user.last_name %}
     <p class="staff-customer-focus__email muted">{{ request.user.email }}</p>
     {% endif %}
+    <p class="staff-customer-focus__org muted">Équipe Atelier IDS</p>
     <div class="staff-customer-focus__statuses" aria-label="État du compte">
-      <span class="badge is-neutral">Compte staff</span>
+      {% if staff_membership %}
+      <span class="badge is-neutral">{{ staff_membership.get_role_display }}</span>
+      {% else %}
+      <span class="badge is-neutral">Compte Atelier</span>
+      {% endif %}
     </div>
   </div>
 </header>

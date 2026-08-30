@@ -11,6 +11,11 @@ from django.views import View
 
 from apps.customers.forms import CustomerInvitationForm, CustomerMemberRoleForm
 from apps.customers.models import CustomerInvitation, CustomerMembership
+from apps.accounts.services.staff_invitations import (
+    ExistingAccountLoginRequired as StaffExistingAccountLoginRequired,
+    StaffInvitationError,
+    StaffInvitationService,
+)
 from apps.customers.services.invitations import (
     CustomerInvitationError,
     CustomerInvitationService,
@@ -28,6 +33,7 @@ from apps.prospects.services.onboarding import ProspectOnboardingError, Prospect
 
 User = get_user_model()
 invitation_service = CustomerInvitationService()
+staff_invitation_service = StaffInvitationService()
 review_service = ProspectReviewService()
 
 
@@ -245,6 +251,69 @@ class CustomerInvitationAcceptView(View):
 class CustomerInvitationCompleteView(View):
     def get(self, request):
         return render(request, "portal/access/invitation_complete.html")
+
+
+class StaffInvitationAcceptView(View):
+    template_name = "portal/access/staff_invitation_accept.html"
+
+    def get(self, request, token):
+        try:
+            invitation = staff_invitation_service.resolve_token(token)
+        except StaffInvitationError as exc:
+            return render(
+                request,
+                self.template_name,
+                {"error": str(exc)},
+                status=400,
+            )
+        existing_user = User.objects.filter(email__iexact=invitation.email).first()
+        return render(
+            request,
+            self.template_name,
+            {
+                "invitation": invitation,
+                "token": token,
+                "existing_account": existing_user is not None,
+                "email_matches": bool(
+                    existing_user is not None
+                    and request.user.is_authenticated
+                    and request.user.pk == existing_user.pk
+                ),
+                "form": ProspectActivationForm() if existing_user is None else None,
+            },
+        )
+
+    def post(self, request, token):
+        try:
+            invitation = staff_invitation_service.resolve_token(token)
+        except StaffInvitationError as exc:
+            return render(request, self.template_name, {"error": str(exc)}, status=400)
+        existing_user = User.objects.filter(email__iexact=invitation.email).first()
+        form = ProspectActivationForm(request.POST) if existing_user is None else None
+        if form is not None and not form.is_valid():
+            return render(
+                request,
+                self.template_name,
+                {"invitation": invitation, "token": token, "form": form},
+            )
+        try:
+            staff_invitation_service.accept(
+                token=token,
+                authenticated_user=request.user,
+                password=form.cleaned_data["password"] if form is not None else None,
+                ip_address=_client_ip(request),
+            )
+        except StaffExistingAccountLoginRequired:
+            login_url = reverse("portal:login")
+            return redirect(f"{login_url}?next={request.path}")
+        except StaffInvitationError as exc:
+            return render(request, self.template_name, {"error": str(exc)}, status=400)
+        return redirect("portal:staff-invitation-complete")
+
+
+class StaffInvitationCompleteView(View):
+    def get(self, request):
+        return render(request, "portal/access/staff_invitation_complete.html")
 
 
 class ClientTeamView(ClientTeamManagerRequiredMixin, View):
