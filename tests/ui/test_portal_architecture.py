@@ -69,6 +69,11 @@ def test_portal_legacy_views_facade_is_removed():
             "apps.portal.views_staff_pod_catalog",
         ),
         (
+            "portal:staff-pod-rip-lots",
+            {},
+            "apps.portal.views_staff_pod_rip",
+        ),
+        (
             "portal:staff-manufacturing-order-batch-pdf",
             {},
             "apps.portal.views_staff_documents",
@@ -162,6 +167,10 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
             {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff_pod"},
         ),
         (
+            "views_staff_pod_rip",
+            {"apps.portal.views_common", "apps.portal.views_staff_pod"},
+        ),
+        (
             "views_staff_billing",
             {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff"},
         ),
@@ -193,6 +202,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_staff_operations", 400),
         ("views_staff_pod", 280),
         ("views_staff_pod_catalog", 220),
+        ("views_staff_pod_rip", 100),
         ("views_common", 220),
         ("views_checkout", 270),
         ("views_client", 420),

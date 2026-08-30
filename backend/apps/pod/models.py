@@ -304,3 +304,98 @@ class PodRecipeTemplateSlot(BaseModel):
                 name="pod_recipe_template_slot_uniq",
             ),
         ]
+
+
+class PodRipWorkItem(BaseModel):
+    class Status(models.TextChoices):
+        QUEUED = "queued", "En file RIP"
+        INCLUDED = "included", "Inclus dans un lot"
+        SKIPPED = "skipped", "Ignoré (config incomplète)"
+
+    store = models.ForeignKey(
+        "ShopifyStore",
+        on_delete=models.CASCADE,
+        related_name="rip_work_items",
+    )
+    variant = models.ForeignKey(
+        ShopifyVariant,
+        on_delete=models.PROTECT,
+        related_name="rip_work_items",
+    )
+    shopify_order_number = models.CharField(max_length=64)
+    quantity = models.PositiveIntegerField(default=1)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED)
+    skip_reason = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=("status", "created_at")),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.shopify_order_number} {self.variant}"
+
+
+class PodRipLot(BaseModel):
+    class Status(models.TextChoices):
+        PREPARED = "prepared", "Prêt RIP"
+        FAILED = "failed", "Échec préparation"
+
+    code = models.CharField(max_length=48, unique=True)
+    technique = models.ForeignKey(
+        PrintTechnique,
+        on_delete=models.PROTECT,
+        related_name="rip_lots",
+    )
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PREPARED)
+    nas_relative_path = models.CharField(max_length=255)
+    file_count = models.PositiveIntegerField(default=0)
+    prepared_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="prepared_pod_rip_lots",
+    )
+    prepared_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return self.code
+
+
+class PodRipLotFile(BaseModel):
+    lot = models.ForeignKey(PodRipLot, on_delete=models.CASCADE, related_name="files")
+    work_item = models.ForeignKey(
+        PodRipWorkItem,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rip_files",
+    )
+    variant = models.ForeignKey(
+        ShopifyVariant,
+        on_delete=models.PROTECT,
+        related_name="rip_lot_files",
+    )
+    placement = models.CharField(max_length=32)
+    technique = models.ForeignKey(PrintTechnique, on_delete=models.PROTECT, related_name="+")
+    filename = models.CharField(max_length=255)
+    source_print_reference = models.CharField(max_length=255)
+    checksum_sha256 = models.CharField(max_length=64, blank=True, default="")
+
+    class Meta:
+        ordering = ("filename",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("lot", "filename"),
+                name="pod_rip_lot_filename_uniq",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.filename

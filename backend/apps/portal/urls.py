@@ -145,6 +145,7 @@ from .views_staff_pod_catalog import (
     StaffPodCatalogProductView,
     StaffPodVariantConfigDrawerView,
 )
+from .views_staff_pod_rip import StaffPodRipLotDetailView, StaffPodRipLotListView
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
@@ -535,6 +536,16 @@ urlpatterns = [
         "staff/atelier/pod/catalogue/variantes/<uuid:variant_public_id>/config/",
         StaffPodVariantConfigDrawerView.as_view(),
         name="staff-pod-variant-config",
+    ),
+    path(
+        "staff/atelier/pod/lots/",
+        StaffPodRipLotListView.as_view(),
+        name="staff-pod-rip-lots",
+    ),
+    path(
+        "staff/atelier/pod/lots/<uuid:lot_public_id>/",
+        StaffPodRipLotDetailView.as_view(),
+        name="staff-pod-rip-lot-detail",
     ),
     path(
         "staff/machines/",

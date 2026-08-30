@@ -69,6 +69,14 @@ Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS empl
 - [x] Tests permissions + save POD + apply template
 - [ ] App block Shopify embarqué (lot E ou extension D1-bis)
 
+## Lot A — statut
+- [x] File RIP (`PodRipWorkItem`) + `PodRipLot` / `PodRipLotFile`
+- [x] Export NAS plat `02_rip/` + `00_manifest/manifest.json`
+- [x] Noms ASCII `shop_so_pose_sku.ext` + test collision
+- [x] UI `/staff/atelier/pod/lots/`
+- [ ] Sync Google Drive (projection, pas vérité RIP)
+- [ ] OF / étiquettes (lot B)
+
 ## Hors scope (ne pas toucher)
 - Pricing B2B métrage, gang sheets, Sendcloud (sauf lien expédition POD plus tard)
 - Refonte pilotage DTF métrage

@@ -6,6 +6,7 @@ from apps.pod.models import (
     BlankVariant,
     IdsVariantConfig,
     PodRecipeTemplate,
+    PodRipLot,
     PrintTechnique,
     ShopifyProduct,
     ShopifyStore,
@@ -69,4 +70,10 @@ class IdsVariantConfigAdmin(admin.ModelAdmin):
 @admin.register(PodRecipeTemplate)
 class PodRecipeTemplateAdmin(admin.ModelAdmin):
     list_display = ("name", "blank", "store")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(PodRipLot)
+class PodRipLotAdmin(admin.ModelAdmin):
+    list_display = ("code", "technique", "status", "file_count", "public_id")
     readonly_fields = ("public_id",)

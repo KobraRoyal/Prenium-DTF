@@ -271,6 +271,9 @@ class Command(BaseCommand):
             "billing.mark_invoice_paid",
             "billing.view_billingstatement",
             "billing.add_billingstatement",
+            "pod.access_pod_atelier",
+            "pod.manage_pod_catalog",
+            "inventory.manage_warehouse",
         ]
 
     def _seed_customers_and_memberships(self, users: SeedUsers):
