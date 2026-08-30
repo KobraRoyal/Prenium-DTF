@@ -1,3 +1,4 @@
+{% load portal_tags %}
 <details class="product-profile product-floating-menu" data-product-nav-details>
   <summary class="product-profile__trigger" aria-label="Ouvrir le menu Mon compte" aria-haspopup="true">
     <span class="product-profile__avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
@@ -34,6 +35,14 @@
         <a class="product-profile__action product-floating-menu__action" href="{% url 'portal:staff-dashboard' %}">
           {% include "components/nav/profile_icon.html" with name="atelier" %}
           <span><strong>Ouvrir l’Atelier</strong><small>Passer au pilotage opérationnel</small></span>
+        </a>
+        {% endif %}
+      {% elif nav_mode == "staff" %}
+        {% can_manage_staff_team as staff_can_manage_team %}
+        {% if staff_can_manage_team %}
+        <a class="product-profile__action product-floating-menu__action {% if nav_key == 'staff-team' %}is-active{% endif %}" {% if nav_key == 'staff-team' %}aria-current="page"{% endif %} href="{% url 'portal:staff-team' %}">
+          {% include "components/nav/profile_icon.html" with name="team" %}
+          <span><strong>Gérer l'équipe</strong><small>Membres, rôles et invitations Atelier</small></span>
         </a>
         {% endif %}
       {% endif %}

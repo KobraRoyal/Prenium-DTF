@@ -1,3 +1,4 @@
+{% load portal_tags %}
 {# Rail partagé Identité / Équipe — account_section: "identity" | "team" #}
 {# profile_workspace=1 : chrome Atelier (nav + ancres) aussi côté client profil / équipe. #}
 <aside class="account-profile-rail{% if nav_mode == 'staff' or profile_workspace %} staff-customer-workspace__nav{% endif %}" aria-label="{% if nav_mode == 'staff' or profile_workspace %}Sections du compte{% else %}Navigation du compte{% endif %}">
@@ -31,6 +32,14 @@
       href="#account-identity"
       {% if account_section == 'identity' %}aria-current="location"{% endif %}
     >Identité</a>
+    {% can_manage_staff_team as staff_can_manage_team %}
+    {% if staff_can_manage_team %}
+    <a
+      class="ui-selection-control{% if account_section == 'team' %} is-active{% endif %}"
+      href="{% url 'portal:staff-team' %}"
+      {% if account_section == 'team' %}aria-current="page"{% endif %}
+    >Équipe</a>
+    {% endif %}
     {% elif profile_workspace %}
     {% url 'portal:profile' as profile_url %}
     <a

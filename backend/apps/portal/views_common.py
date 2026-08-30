@@ -194,6 +194,15 @@ class StaffPortalMixin(LoginRequiredMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
+class StaffTeamManagerRequiredMixin(StaffPortalMixin):
+    def dispatch(self, request, *args, **kwargs):
+        membership = access_scope_service.get_staff_membership(request.user)
+        if membership is None or not membership.can_manage_team:
+            raise PermissionDenied
+        self.staff_membership = membership
+        return super().dispatch(request, *args, **kwargs)
+
+
 class StaffDomainPermissionMixin(StaffPortalMixin):
     required_permission = ""
 

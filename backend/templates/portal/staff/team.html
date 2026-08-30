@@ -1,0 +1,103 @@
+{% extends "portal/layout.html" %}
+{% load static %}
+
+{% block title %}Équipe Atelier — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff account-profile-page staff-profile-page account-team-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_team.html" head_labelledby="staff-team-heading" title="Équipe Atelier" subtitle="Membres actifs et invitations pour l'espace Atelier." %}
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert {% if message.tags == 'success' %}alert--success{% else %}alert--danger{% endif %}" role="status">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <section class="portal-page-surface staff-customer-detail-surface" aria-labelledby="staff-team-heading">
+    {% include "portal/partials/profile_staff_focus.html" %}
+  </section>
+
+  <section
+    class="portal-page-surface staff-customer-workspace staff-customer-workspace-surface account-profile-surface account-profile-layout"
+    data-customer-workspace
+    aria-label="Sections du compte"
+  >
+    {% include "components/portal/account_rail.html" with account_section="team" profile_workspace=1 %}
+
+    <div class="account-profile-main staff-customer-workspace__content account-team-main">
+      <details id="account-team-members" class="staff-customer-workspace__section" data-customer-section open>
+        <summary class="staff-customer-workspace__summary">
+          <span>
+            <h2 id="team-members-title">Membres</h2>
+            <small>Rôles et accès actifs</small>
+          </span>
+          <span class="staff-customer-workspace__summary-meta">{{ memberships|length }} accès</span>
+        </summary>
+        <div class="staff-customer-workspace__body">
+          <section class="account-profile-panel account-team-panel" aria-labelledby="team-members-title">
+            <div class="account-team-list">
+              {% for membership in memberships %}
+                <article class="account-team-row">
+                  <div class="account-team-row__identity">
+                    <strong>{{ membership.user.get_full_name|default:membership.user.email }}</strong>
+                    {% if membership.user.get_full_name %}
+                    <p>{{ membership.user.email }}</p>
+                    {% endif %}
+                    <span class="account-team-status {% if membership.is_active %}is-active{% else %}is-inactive{% endif %}">
+                      {% if membership.is_active %}Actif{% else %}Désactivé{% endif %}
+                    </span>
+                  </div>
+
+                  <div class="account-team-row__controls">
+                    {% if membership.role == 'owner' %}
+                      <span class="account-team-role-badge">Propriétaire</span>
+                    {% elif membership.user != request.user %}
+                      <form
+                        method="post"
+                        action="{% url 'portal:staff-team-member-role' membership_public_id=membership.public_id %}"
+                        class="account-team-row__actions"
+                      >
+                        {% csrf_token %}
+                        <label class="ui-sr-only" for="member-role-{{ membership.public_id }}">Rôle de {{ membership.user.email }}</label>
+                        <select class="ui-input" id="member-role-{{ membership.public_id }}" name="role">
+                          {% for value, label in role_choices %}
+                            <option value="{{ value }}"{% if membership.role == value %} selected{% endif %}>{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Modifier</button>
+                      </form>
+                      {% if membership.is_active %}
+                        {% include "portal/staff/partials/team_member_deactivate_button.html" with membership=membership %}
+                      {% endif %}
+                    {% else %}
+                      <span class="account-team-role-badge">{{ membership.get_role_display }}</span>
+                    {% endif %}
+                  </div>
+                </article>
+              {% empty %}
+                {% include "components/ui/empty_state.html" with title="Aucun membre actif" message="Aucun membre actif dans l'équipe Atelier." %}
+              {% endfor %}
+            </div>
+          </section>
+        </div>
+      </details>
+
+      <details id="account-team-invite" class="staff-customer-workspace__section" data-customer-section open>
+        <summary class="staff-customer-workspace__summary">
+          <span>
+            <h2>Invitation</h2>
+            <small>Lien personnel valable 72 h</small>
+          </span>
+        </summary>
+        <div class="staff-customer-workspace__body">
+          {% include "portal/staff/partials/team_invite_panel.html" %}
+        </div>
+      </details>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="{% static 'js/customer-account-workspace.js' %}?v=20260826-profile"></script>
+{% endblock %}
