@@ -73,6 +73,44 @@ def test_estimate_gang_sheet_quote_applies_processing_time_surcharge():
     assert fast["processing_time_markup_percent"] == Decimal("20.00")
     assert fast["processing_time_markup_amount"] == Decimal("20.00")
     assert fast["subtotal_eur"] == Decimal("130.00")
+    assert fast["prep_amount_eur"] == Decimal("10.00")
+
+
+@pytest.mark.django_db
+def test_processing_time_markup_excludes_prep_and_shipping():
+    """La majoration % ne porte que sur le DTF ; préparation et port restent inchangés."""
+    user = get_user_model().objects.create_user(email="scope@example.com", password="pass")
+    customer = Customer.objects.create(name="Scope")
+    CustomerMembership.objects.create(customer=customer, user=user)
+    _seed_catalog()
+    ProcessingTimeOptionService().ensure_default_options()
+    from apps.shipping.models import ShippingMethod
+
+    ShippingMethod.objects.update_or_create(
+        code="standard",
+        defaults={
+            "name": "Standard",
+            "base_price": Decimal("8.00"),
+            "is_pickup": False,
+            "is_active": True,
+            "currency": "EUR",
+            "display_order": 20,
+        },
+    )
+
+    quote = OrderPricingService().estimate_gang_sheet_quote(
+        customer=customer,
+        surface_sqm=Decimal("1.0000"),
+        file_count=3,
+        processing_time_code="fast",
+        shipping_method_code="standard",
+    )
+
+    assert quote["dtf_amount_eur"] == Decimal("100.00")
+    assert quote["prep_amount_eur"] == Decimal("30.00")
+    assert quote["processing_time_markup_amount"] == Decimal("20.00")
+    assert quote["subtotal_eur"] == Decimal("150.00")
+    assert quote["shipping_amount_eur"] == Decimal("8.00")
 
 
 class ProcessingTimeSettingsFormTests(TestCase):

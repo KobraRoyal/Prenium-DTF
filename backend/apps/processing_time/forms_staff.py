@@ -39,8 +39,8 @@ class StaffProcessingTimeSettingsForm(forms.Form):
                 min_value=0,
                 initial=option.business_days,
             )
-            self.fields[f"{prefix}__markup_percent"] = forms.DecimalField(
-                label="Majoration % sur DTF",
+            self.fields[            f"{prefix}__markup_percent"] = forms.DecimalField(
+                label="Majoration % sur DTF uniquement",
                 min_value=Decimal("0.00"),
                 max_digits=5,
                 decimal_places=2,
