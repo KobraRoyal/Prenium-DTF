@@ -31,8 +31,7 @@ class StaffPodPoseDtfView(StaffPodPermissionMixin, View):
             "lookup": lookup,
             "form_error": form_error,
             "can_manage_catalog": request.user.has_perm("pod.manage_pod_catalog"),
-            "scan_identifier": request.POST.get("scan_identifier")
-            or request.GET.get("scan", ""),
+            "scan_identifier": request.POST.get("scan_identifier") or request.GET.get("scan", ""),
         }
 
     def get(self, request):
@@ -42,9 +41,7 @@ class StaffPodPoseDtfView(StaffPodPermissionMixin, View):
             try:
                 lookup = pose_service.lookup(actor=request.user, scan_identifier=scan)
             except ValidationError as exc:
-                return _render_error(
-                    request, self.template_name, self._context(request), exc
-                )
+                return _render_error(request, self.template_name, self._context(request), exc)
         return render(request, self.template_name, self._context(request, lookup=lookup))
 
     def post(self, request):

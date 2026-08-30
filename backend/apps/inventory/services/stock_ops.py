@@ -166,9 +166,7 @@ class StockOpsService:
     def _resolve_owner(self, *, owner_kind: str, customer_public_id):
         kind = (owner_kind or StockOwnerKind.ATELIER).strip().lower()
         if kind == StockOwnerKind.CUSTOMER:
-            customer = Customer.objects.filter(
-                public_id=customer_public_id, is_active=True
-            ).first()
+            customer = Customer.objects.filter(public_id=customer_public_id, is_active=True).first()
             if customer is None:
                 raise ValidationError("Client introuvable pour le stock propriétaire.")
             return StockOwnerKind.CUSTOMER, customer
@@ -228,25 +226,31 @@ class StockOpsService:
                 if sku_kind == SkuKind.FINISHED:
                     sku = clean_sku(finished_sku, field_label="SKU fini")
                 else:
-                    variant = BlankVariant.objects.select_for_update().filter(
-                        public_id=blank_variant_public_id
-                    ).first()
+                    variant = (
+                        BlankVariant.objects.select_for_update()
+                        .filter(public_id=blank_variant_public_id)
+                        .first()
+                    )
                     if variant is None:
                         raise ValidationError("Variante blank introuvable.")
                 if kind == StockMovement.Kind.PICK:
                     bin_code = (scanned_bin_code or "").strip().upper()
                     if not bin_code:
                         raise ValidationError("Scan du bin obligatoire (POD-17).")
-                    location = StorageLocation.objects.select_for_update().filter(
-                        code__iexact=bin_code, is_active=True
-                    ).first()
+                    location = (
+                        StorageLocation.objects.select_for_update()
+                        .filter(code__iexact=bin_code, is_active=True)
+                        .first()
+                    )
                     if location is None:
                         raise ValidationError("Bin scanné introuvable.")
                     scanned = bin_code
                 else:
-                    location = StorageLocation.objects.select_for_update().filter(
-                        public_id=location_public_id, is_active=True
-                    ).first()
+                    location = (
+                        StorageLocation.objects.select_for_update()
+                        .filter(public_id=location_public_id, is_active=True)
+                        .first()
+                    )
                     if location is None:
                         raise ValidationError("Emplacement introuvable.")
                     scanned = location.code

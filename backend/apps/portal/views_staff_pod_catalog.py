@@ -109,10 +109,8 @@ class StaffPodVariantConfigDrawerView(StaffPodPermissionMixin, View):
                             "placement": placement,
                             "technique_public_id": technique_id,
                             "print_reference": reference,
-                            "is_enabled": key in enabled_flags or request.POST.get(
-                                f"slot_required_{index}"
-                            )
-                            == "1",
+                            "is_enabled": key in enabled_flags
+                            or request.POST.get(f"slot_required_{index}") == "1",
                             "display_order": index,
                         }
                     )

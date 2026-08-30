@@ -97,9 +97,7 @@ class StaffPodRipLotDetailView(StaffPodPermissionMixin, View):
         if request.POST.get("intent") != "sync_drive":
             raise Http404
         try:
-            lot = rip_lot_service.sync_lot_drive(
-                actor=request.user, lot_public_id=lot_public_id
-            )
+            lot = rip_lot_service.sync_lot_drive(actor=request.user, lot_public_id=lot_public_id)
         except PermissionDenied:
             raise
         except ValidationError as exc:
