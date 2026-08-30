@@ -1,0 +1,65 @@
+{% extends "portal/layout.html" %}
+{% load l10n %}
+
+{% block title %}Grille tarifaire par défaut — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff catalog-pricing-settings-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_catalog_pricing.html" title="Grille tarifaire par défaut" subtitle="Tarifs catalogue de référence." %}
+
+  <form method="post" class="catalog-pricing-settings-stack" novalidate>
+    {% csrf_token %}
+
+    <section class="portal-page-surface catalog-pricing-settings-surface" data-testid="default-catalog-pricing-settings">
+      <h2 class="font-display text-lg catalog-pricing-settings-surface__title">Production</h2>
+      <div class="ui-form-stack catalog-pricing-settings-surface__form">
+        {% for field in production_fields %}
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <input
+            class="ui-input{% if field.errors %} ui-input--error{% endif %}"
+            type="number"
+            name="{{ field.name }}"
+            id="{{ field.id_for_label }}"
+            value="{{ field.value|default_if_none:''|unlocalize }}"
+            step="0.01"
+            min="0"
+            required
+            {% if field.errors %}aria-invalid="true"{% endif %}
+          >
+          {% for error in field.errors %}<p class="ui-field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="portal-page-surface catalog-pricing-settings-surface catalog-pricing-settings-surface--shipping" data-testid="default-shipping-pricing-settings">
+      <h2 class="font-display text-lg catalog-pricing-settings-surface__title">Transport</h2>
+      <div class="ui-form-stack catalog-pricing-settings-surface__form">
+        {% for field in shipping_fields %}
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <input
+            class="ui-input{% if field.errors %} ui-input--error{% endif %}"
+            type="number"
+            name="{{ field.name }}"
+            id="{{ field.id_for_label }}"
+            value="{{ field.value|default_if_none:''|unlocalize }}"
+            step="0.01"
+            min="0"
+            {% if not field.field.disabled %}required{% else %}readonly{% endif %}
+            {% if field.field.disabled %}disabled{% endif %}
+            {% if field.errors %}aria-invalid="true"{% endif %}
+          >
+          {% for error in field.errors %}<p class="ui-field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <div class="catalog-pricing-settings-actions">
+      {% include "components/forms/form_actions.html" with primary_label="Enregistrer" %}
+    </div>
+  </form>
+</div>
+{% endblock %}

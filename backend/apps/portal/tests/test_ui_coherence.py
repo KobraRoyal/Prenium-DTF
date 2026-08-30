@@ -823,6 +823,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Demandes d’accès", staff_nav)
         self.assertIn("Modèles d’e-mails", staff_nav)
         self.assertIn("Réglages de laize", staff_nav)
+        self.assertIn("portal:staff-default-catalog-pricing-settings", staff_nav)
+        self.assertIn("Grille tarifaire", staff_nav)
         self.assertNotIn("Machines DTF", staff_nav)
         self.assertNotIn("Identité visuelle", staff_nav)
         self.assertIn("Votre compte", header)

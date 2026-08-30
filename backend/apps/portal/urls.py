@@ -97,6 +97,7 @@ from .views_staff_billing_statements import (
     StaffCustomerBillingStatementExportView,
 )
 from .views_staff_branding import StaffBrandSettingsView
+from .views_staff_catalog import StaffDefaultCatalogPricingSettingsView
 from .views_staff_customers import (
     StaffCustomerAccountUpdateView,
     StaffCustomerDetailView,
@@ -607,6 +608,11 @@ urlpatterns = [
         "staff/settings/volume-discounts/",
         StaffDefaultVolumeDiscountSettingsView.as_view(),
         name="staff-default-volume-discount-settings",
+    ),
+    path(
+        "staff/settings/catalog-pricing/",
+        StaffDefaultCatalogPricingSettingsView.as_view(),
+        name="staff-default-catalog-pricing-settings",
     ),
     path(
         "staff/settings/volume-discounts/messages/",

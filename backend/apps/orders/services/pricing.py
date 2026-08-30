@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from apps.auditlog.services import record_event
 from apps.catalog.models import CatalogService
+from apps.catalog.services.default_catalog import DefaultCatalogService
 from apps.customers.models import (
     Customer,
     CustomerBillingProfile,
@@ -73,6 +74,7 @@ class OrderPricingService:
 
     def __init__(self, *, shipping_methods: ShippingMethodService | None = None):
         self.shipping_methods = shipping_methods or ShippingMethodService()
+        self.catalog_bootstrap = DefaultCatalogService()
 
     def _pick_preferred_catalog_service(
         self,
@@ -99,28 +101,58 @@ class OrderPricingService:
         return service
 
     def get_default_dtf_service(self) -> CatalogService:
-        return self._pick_preferred_catalog_service(
-            queryset=CatalogService.objects.active().filter(
-                service_type=CatalogService.ServiceType.DTF_TRANSFER,
-                unit=CatalogService.Unit.LINEAR_METER,
-            ),
-            preferred_codes=list(getattr(settings, "CATALOG_PREFERRED_DTF_CODES", []) or []),
-            missing_message="Aucun service DTF au mètre actif dans le catalogue.",
-            prefer_seed_fallback=False,
-        )
+        try:
+            return self._pick_preferred_catalog_service(
+                queryset=CatalogService.objects.active().filter(
+                    service_type=CatalogService.ServiceType.DTF_TRANSFER,
+                    unit=CatalogService.Unit.LINEAR_METER,
+                ),
+                preferred_codes=list(getattr(settings, "CATALOG_PREFERRED_DTF_CODES", []) or []),
+                missing_message="Aucun service DTF au mètre actif dans le catalogue.",
+                prefer_seed_fallback=False,
+            )
+        except ValidationError:
+            self.catalog_bootstrap.ensure_default_services()
+            return self._pick_preferred_catalog_service(
+                queryset=CatalogService.objects.active().filter(
+                    service_type=CatalogService.ServiceType.DTF_TRANSFER,
+                    unit=CatalogService.Unit.LINEAR_METER,
+                ),
+                preferred_codes=list(getattr(settings, "CATALOG_PREFERRED_DTF_CODES", []) or []),
+                missing_message="Aucun service DTF au mètre actif dans le catalogue.",
+                prefer_seed_fallback=False,
+            )
 
     def get_default_file_preparation_service(self) -> CatalogService:
-        return self._pick_preferred_catalog_service(
-            queryset=CatalogService.objects.active().filter(
-                service_type=CatalogService.ServiceType.FILE_PREPARATION,
-                unit=CatalogService.Unit.FIXED,
-            ),
-            preferred_codes=list(getattr(settings, "CATALOG_PREFERRED_FILE_PREP_CODES", []) or []),
-            missing_message=(
-                "Aucun service « Préparation fichier » (forfait) actif dans le catalogue."
-            ),
-            prefer_seed_fallback=True,
-        )
+        try:
+            return self._pick_preferred_catalog_service(
+                queryset=CatalogService.objects.active().filter(
+                    service_type=CatalogService.ServiceType.FILE_PREPARATION,
+                    unit=CatalogService.Unit.FIXED,
+                ),
+                preferred_codes=list(
+                    getattr(settings, "CATALOG_PREFERRED_FILE_PREP_CODES", []) or []
+                ),
+                missing_message=(
+                    "Aucun service « Préparation fichier » (forfait) actif dans le catalogue."
+                ),
+                prefer_seed_fallback=True,
+            )
+        except ValidationError:
+            self.catalog_bootstrap.ensure_default_services()
+            return self._pick_preferred_catalog_service(
+                queryset=CatalogService.objects.active().filter(
+                    service_type=CatalogService.ServiceType.FILE_PREPARATION,
+                    unit=CatalogService.Unit.FIXED,
+                ),
+                preferred_codes=list(
+                    getattr(settings, "CATALOG_PREFERRED_FILE_PREP_CODES", []) or []
+                ),
+                missing_message=(
+                    "Aucun service « Préparation fichier » (forfait) actif dans le catalogue."
+                ),
+                prefer_seed_fallback=True,
+            )
 
     def resolve_unit_price_per_sqm(self, *, customer) -> Decimal:
         """Prix au m² DTF.
