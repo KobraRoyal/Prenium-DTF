@@ -98,8 +98,12 @@ class ShopifyCatalogService:
             defaults={
                 "name": "Boutique démo",
                 "shop_domain": "demo-boutique.myshopify.com",
+                "webhook_secret": "local-pod-webhook-secret",
             },
         )
+        if not store.webhook_secret:
+            store.webhook_secret = "local-pod-webhook-secret"
+            store.save(update_fields=["webhook_secret", "updated_at"])
         product, _ = ShopifyProduct.objects.get_or_create(
             store=store,
             external_id="gid://shopify/Product/1001",

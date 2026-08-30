@@ -28,9 +28,19 @@
         <p>POD · ON_STOCK · VIRTUAL · NEEDS_CONFIG — drawer staff (même contrat que l’app Shopify).</p>
       </a>
       <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5 md:col-span-3" href="{% url 'portal:staff-pod-rip-lots' %}">
-        <p class="muted">Impression DTF</p>
+        <p class="muted">Impression</p>
         <p class="font-display text-lg">Lots RIP</p>
-        <p>File d’attente puis export plat 02_rip/ + manifest (NAS, hors Drive).</p>
+        <p>File d’attente puis export plat 02_rip/ (ou 02_embroidery/) + OF / étiquettes.</p>
+      </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-pose-dtf' %}">
+        <p class="muted">Poste pose</p>
+        <p class="font-display text-lg">Scan DTF</p>
+        <p>OF / étiquette → mockup, slots, confirmation pose.</p>
+      </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-stock' %}">
+        <p class="muted">WMS</p>
+        <p class="font-display text-lg">Réception & picking</p>
+        <p>Scan bin obligatoire, refus si qty dispo = 0.</p>
       </a>
     </div>
   </section>

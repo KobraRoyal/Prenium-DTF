@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
-from apps.pod.models import BlankPlacementCapability, IdsVariantConfig, PodRipWorkItem
+from apps.pod.models import BlankPlacementCapability, IdsVariantConfig, PodRipWorkItem, PrintTechnique
 from apps.pod.services import PodRipLotService, VariantConfigService
 from apps.pod.services.rip_naming import rip_filename
 from apps.pod.services.variant_config_contract import VariantConfigPayload, VariantSlotPayload
@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.test import Client
 from django.urls import reverse
 
-from tests.pod.test_variant_config import MANAGE, VIEW, pod_fixture, staff_client
+from tests.pod.test_variant_config import MANAGE, VIEW, catalog, pod_fixture, staff_client
 
 pytestmark = pytest.mark.django_db
 
@@ -79,6 +79,19 @@ def test_prepare_lot_writes_flat_rip_and_manifest(tmp_path, settings):
     assert manifest.is_file()
     assert "02_rip" in manifest.read_text()
     assert AuditLogEntry.objects.filter(action="pod.rip.lot_prepared").exists()
+    of_dir = Path(tmp_path) / "pod_rip" / lot.nas_relative_path / "03_of"
+    label_dir = Path(tmp_path) / "pod_rip" / lot.nas_relative_path / "04_labels"
+    assert list(of_dir.glob("*.pdf"))
+    assert list(label_dir.glob("*.pdf"))
+    unit = lot.units.get()
+    pdf = client.get(
+        reverse(
+            "portal:staff-pod-unit-document",
+            kwargs={"unit_public_id": unit.public_id, "document_kind": "of"},
+        )
+    )
+    assert pdf.status_code == 200
+    assert pdf["Content-Type"].startswith("application/pdf") or pdf.content[:4] == b"%PDF"
 
 
 def test_collision_same_shop_so_placement_sku_is_rejected(tmp_path, settings):
@@ -132,3 +145,44 @@ def test_view_only_staff_cannot_prepare():
     actor, client = staff_client(email="staff-rip-ro@example.com", permissions=VIEW)
     response = client.post(reverse("portal:staff-pod-rip-lots"), {"intent": "prepare"})
     assert response.status_code == 403
+
+
+def test_embroidery_lot_writes_flat_technique_directory(tmp_path, settings):
+    settings.MEDIA_ROOT = tmp_path
+    actor, _client = staff_client(email="staff-rip-emb@example.com", permissions=MANAGE)
+    dtf, blank, blank_variant, variant = pod_fixture(actor=actor)
+    embroidery = PrintTechnique.objects.get(code="embroidery")
+    catalog.add_capability(
+        actor=actor,
+        source="test",
+        blank_public_id=blank.public_id,
+        data={
+            "placement": BlankPlacementCapability.Placement.FRONT,
+            "technique_public_id": str(embroidery.public_id),
+            "is_required": False,
+        },
+    )
+    configure_pod(
+        actor,
+        dtf,
+        blank_variant,
+        variant,
+        extra_slots=(
+            VariantSlotPayload(
+                placement=BlankPlacementCapability.Placement.FRONT,
+                technique_public_id=str(embroidery.public_id),
+                print_reference="chest.dst",
+            ),
+        ),
+    )
+    rip.enqueue(
+        actor=actor,
+        source="test",
+        variant_public_id=variant.public_id,
+        shopify_order_number="SO-EMB",
+    )
+    lot = rip.prepare_lot(actor=actor, source="test", technique_code="embroidery")
+    rip_dir = Path(tmp_path) / "pod_rip" / lot.nas_relative_path / "02_embroidery"
+    assert rip_dir.is_dir()
+    assert not any(p.is_dir() for p in rip_dir.iterdir())
+    assert list(rip_dir.glob("*.png"))

@@ -7,6 +7,7 @@ from apps.pod.models import (
     IdsVariantConfig,
     PodRecipeTemplate,
     PodRipLot,
+    PodUnit,
     PrintTechnique,
     ShopifyProduct,
     ShopifyStore,
@@ -45,6 +46,7 @@ class BlankAdmin(admin.ModelAdmin):
 class ShopifyStoreAdmin(admin.ModelAdmin):
     list_display = ("name", "shop_domain", "slug", "is_active")
     readonly_fields = ("public_id",)
+    fields = ("name", "slug", "shop_domain", "is_active", "webhook_secret", "public_id")
 
 
 @admin.register(ShopifyProduct)
@@ -76,4 +78,11 @@ class PodRecipeTemplateAdmin(admin.ModelAdmin):
 @admin.register(PodRipLot)
 class PodRipLotAdmin(admin.ModelAdmin):
     list_display = ("code", "technique", "status", "file_count", "public_id")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(PodUnit)
+class PodUnitAdmin(admin.ModelAdmin):
+    list_display = ("scan_identifier", "status", "lot", "variant")
+    search_fields = ("scan_identifier",)
     readonly_fields = ("public_id",)

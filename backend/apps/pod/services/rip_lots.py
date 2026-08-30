@@ -17,11 +17,11 @@ from apps.pod.models import (
     PrintTechnique,
     ShopifyVariant,
 )
+from apps.pod.services.documents import PodUnitDocumentService
 from apps.pod.services.rip_naming import ascii_token, rip_filename
 from apps.pod.services.validation import require_staff_perm, validation_message
 from apps.pod.services.variant_config import VariantConfigService
 
-DTF_RIP_DIRECTORY = "02_rip"
 MANIFEST_DIRECTORY = "00_manifest"
 
 
@@ -74,13 +74,15 @@ class PodRipLotService:
         variant_public_id,
         shopify_order_number: str,
         quantity: int = 1,
+        trusted_source: bool = False,
     ) -> PodRipWorkItem:
-        require_staff_perm(
-            actor,
-            self.manage_permission,
-            source=source,
-            action="pod.rip.permission_rejected",
-        )
+        if not trusted_source:
+            require_staff_perm(
+                actor,
+                self.manage_permission,
+                source=source,
+                action="pod.rip.permission_rejected",
+            )
         order_number = (shopify_order_number or "").strip()
         if not order_number:
             raise ValidationError("Le numéro de commande Shopify est obligatoire.")
@@ -108,19 +110,25 @@ class PodRipLotService:
         return item
 
     def prepare_dtf_lot(self, *, actor, source: str) -> PodRipLot:
+        return self.prepare_lot(actor=actor, source=source, technique_code="dtf")
+
+    def prepare_lot(self, *, actor, source: str, technique_code: str = "dtf") -> PodRipLot:
         require_staff_perm(
             actor,
             self.manage_permission,
             source=source,
             action="pod.rip.permission_rejected",
         )
+        code = (technique_code or "dtf").strip().lower()
         try:
             lot = None
             with transaction.atomic():
-                technique = PrintTechnique.objects.filter(
-                    code="dtf", is_active=True, rip_directory=DTF_RIP_DIRECTORY
-                ).first()
+                technique = PrintTechnique.objects.filter(code=code, is_active=True).first()
                 if technique is None:
+                    raise ValidationError("Technique inactive ou introuvable.")
+                if not technique.rip_directory.startswith("02_"):
+                    raise ValidationError("Répertoire RIP invalide (doit commencer par 02_).")
+                if code == "dtf" and technique.rip_directory != "02_rip":
                     raise ValidationError("Technique DTF inactive ou répertoire RIP invalide.")
                 queue = list(
                     PodRipWorkItem.objects.select_for_update()
@@ -151,6 +159,7 @@ class PodRipLotService:
                         file_count=len(planned),
                     )
                     self._write_nas_lot(lot=lot, planned=planned)
+                    PodUnitDocumentService().create_units_for_lot(lot=lot, planned=planned)
                     for item in queue:
                         if item.status == PodRipWorkItem.Status.QUEUED:
                             item.status = PodRipWorkItem.Status.INCLUDED
@@ -163,7 +172,7 @@ class PodRipLotService:
                     )
             if lot is None:
                 raise ValidationError(
-                    "Aucun fichier DTF à exporter (file vide ou variantes NEEDS_CONFIG)."
+                    f"Aucun fichier {code.upper()} à exporter (file vide ou variantes NEEDS_CONFIG)."
                 )
             return lot
         except ValidationError as exc:
@@ -193,7 +202,7 @@ class PodRipLotService:
             ]
             if not slots:
                 item.status = PodRipWorkItem.Status.SKIPPED
-                item.skip_reason = "Aucun slot DTF avec fichier HD."
+                item.skip_reason = f"Aucun slot {technique.code} avec fichier HD."
                 item.save(update_fields=["status", "skip_reason", "updated_at"])
                 continue
             sku = item.variant.sku or config.blank_variant.sku
@@ -226,7 +235,7 @@ class PodRipLotService:
 
     def _write_nas_lot(self, *, lot: PodRipLot, planned: list[dict]) -> None:
         lot_root = self.nas_root() / lot.nas_relative_path
-        rip_dir = lot_root / DTF_RIP_DIRECTORY
+        rip_dir = lot_root / lot.technique.rip_directory
         manifest_dir = lot_root / MANIFEST_DIRECTORY
         rip_dir.mkdir(parents=True, exist_ok=True)
         manifest_dir.mkdir(parents=True, exist_ok=True)
@@ -268,7 +277,7 @@ class PodRipLotService:
         manifest = {
             "lot_code": lot.code,
             "technique": lot.technique.code,
-            "rip_directory": DTF_RIP_DIRECTORY,
+            "rip_directory": lot.technique.rip_directory,
             "flat": True,
             "files": manifest_files,
         }
@@ -278,4 +287,4 @@ class PodRipLotService:
         )
         nested = [p for p in rip_dir.iterdir() if p.is_dir()]
         if nested:
-            raise ValidationError("02_rip/ doit rester strictement plat.")
+            raise ValidationError(f"{lot.technique.rip_directory}/ doit rester strictement plat.")

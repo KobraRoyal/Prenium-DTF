@@ -145,6 +145,11 @@ from .views_staff_pod_catalog import (
     StaffPodCatalogProductView,
     StaffPodVariantConfigDrawerView,
 )
+from .views_staff_pod_ops import (
+    StaffPodPoseDtfView,
+    StaffPodStockView,
+    StaffPodUnitDocumentView,
+)
 from .views_staff_pod_rip import StaffPodRipLotDetailView, StaffPodRipLotListView
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
@@ -546,6 +551,21 @@ urlpatterns = [
         "staff/atelier/pod/lots/<uuid:lot_public_id>/",
         StaffPodRipLotDetailView.as_view(),
         name="staff-pod-rip-lot-detail",
+    ),
+    path(
+        "staff/atelier/pod/pose/dtf/",
+        StaffPodPoseDtfView.as_view(),
+        name="staff-pod-pose-dtf",
+    ),
+    path(
+        "staff/atelier/pod/stocks/",
+        StaffPodStockView.as_view(),
+        name="staff-pod-stock",
+    ),
+    path(
+        "staff/atelier/pod/pieces/<uuid:unit_public_id>/<str:document_kind>/",
+        StaffPodUnitDocumentView.as_view(),
+        name="staff-pod-unit-document",
     ),
     path(
         "staff/machines/",

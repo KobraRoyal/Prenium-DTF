@@ -6,12 +6,13 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
-from apps.pod.services import PodRipLotService, ShopifyCatalogService
+from apps.pod.services import PodRipLotService, PrintTechniqueService, ShopifyCatalogService
 from apps.pod.services.validation import validation_message
 from apps.portal.views_staff_pod import StaffPodPermissionMixin, _nav, _render_error
 
 rip_lot_service = PodRipLotService()
 shopify_catalog_service = ShopifyCatalogService()
+print_technique_service = PrintTechniqueService()
 
 
 class StaffPodRipLotListView(StaffPodPermissionMixin, View):
@@ -23,18 +24,24 @@ class StaffPodRipLotListView(StaffPodPermissionMixin, View):
             "queue": rip_lot_service.list_queue(actor=request.user),
             "lots": rip_lot_service.list_lots(actor=request.user),
             "products": shopify_catalog_service.list_products(actor=request.user),
+            "techniques": print_technique_service.list_techniques(actor=request.user),
             "can_manage_catalog": request.user.has_perm("pod.manage_pod_catalog"),
             "form_error": form_error,
         }
 
     def get(self, request):
+        print_technique_service.ensure_dtf_technique(actor=request.user)
         return render(request, self.template_name, self._context(request))
 
     def post(self, request):
         intent = request.POST.get("intent", "enqueue")
         try:
             if intent == "prepare":
-                lot = rip_lot_service.prepare_dtf_lot(actor=request.user, source="staff_pod")
+                lot = rip_lot_service.prepare_lot(
+                    actor=request.user,
+                    source="staff_pod",
+                    technique_code=request.POST.get("technique_code") or "dtf",
+                )
                 return HttpResponseRedirect(
                     reverse(
                         "portal:staff-pod-rip-lot-detail",
@@ -80,5 +87,6 @@ class StaffPodRipLotDetailView(StaffPodPermissionMixin, View):
                 **_nav(),
                 "lot": lot,
                 "files": lot.files.select_related("variant", "work_item", "technique"),
+                "units": lot.units.select_related("variant", "work_item"),
             },
         )

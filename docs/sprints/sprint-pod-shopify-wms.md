@@ -3,7 +3,7 @@
 **Branche** : `feature/shopify-pod-wms`  
 **ADR** : `docs/architecture/ADR_SHOPIFY_POD_WMS.md`  
 **Prompt maître** : `docs/prompts/PROMPT_SHOPIFY_POD_ORCHESTRATION.md`  
-**Statut** : kickoff docs — code feature à venir lot par lot
+**Statut** : lots D0–D1–A–B–C–E(webhook)–F–G opérationnels atelier ; OAuth app Shopify et Drive RIP hors livrable local
 
 ## Objectif
 Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS emplacements, **sans** mélanger avec le flux DTF métrage existant.
@@ -59,7 +59,7 @@ Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS empl
 - [x] Services SRP + audit + `public_id`
 - [x] Vues `/staff/atelier/pod/` (hub, techniques, blanks, entrepôt)
 - [x] Tests permissions client/staff + bin par défaut
-- [ ] Mouvements / picking / qty (lot G)
+- [x] Mouvements / picking / qty (lot G)
 
 ## Lot D1 — statut
 - [x] Modèles Shopify mirror + `IdsVariantConfig` + `PodRecipe`/`PodRecipeSlot` + templates
@@ -75,7 +75,27 @@ Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS empl
 - [x] Noms ASCII `shop_so_pose_sku.ext` + test collision
 - [x] UI `/staff/atelier/pod/lots/`
 - [ ] Sync Google Drive (projection, pas vérité RIP)
-- [ ] OF / étiquettes (lot B)
+
+## Lot B — statut
+- [x] `PodUnit` (1 pièce / qty) + PDF A4 `03_of/` + étiquette `04_labels/`
+- [x] Même identifiant scan OF / étiquette + téléchargement médié
+
+## Lot C — statut
+- [x] Poste `/staff/atelier/pod/pose/dtf/` scan → slots recette → confirmer pose + audit
+
+## Lot E — statut
+- [x] Webhook HMAC Shopify `webhooks/shopify/pod/fulfillment/` → file RIP
+- [x] Idempotence file QUEUED (même boutique / SO / SKU)
+- [ ] OAuth app install + app block Shopify (hors flux atelier local)
+
+## Lot F — statut
+- [x] `prepare_lot(technique_code)` + répertoire plat `02_embroidery/` (seed technique Broderie)
+
+## Lot G — statut
+- [x] Réception / picking (scan bin POD-17) / putaway RETURNS
+- [x] Refus qty dispo insuffisante (POD-18)
+- [x] UI `/staff/atelier/pod/stocks/` (owner atelier)
+- [ ] Owner client dédié (chemin atelier livré)
 
 ## Hors scope (ne pas toucher)
 - Pricing B2B métrage, gang sheets, Sendcloud (sauf lien expédition POD plus tard)

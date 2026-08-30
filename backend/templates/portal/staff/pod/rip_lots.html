@@ -38,7 +38,15 @@
     <form method="post" class="mb-8">
       {% csrf_token %}
       <input type="hidden" name="intent" value="prepare">
-      <button class="ui-btn ui-btn-primary" type="submit">Préparer le lot RIP DTF</button>
+      <p class="mb-3 max-w-xs">
+        <label class="ui-label" for="rip-tech">Technique</label>
+        <select class="ui-input" id="rip-tech" name="technique_code">
+          {% for technique in techniques %}
+          <option value="{{ technique.code }}">{{ technique.name }} ({{ technique.rip_directory }})</option>
+          {% endfor %}
+        </select>
+      </p>
+      <button class="ui-btn ui-btn-primary" type="submit">Préparer le lot RIP</button>
     </form>
     {% endif %}
 
@@ -73,7 +81,7 @@
           <tr>
             <td><a href="{% url 'portal:staff-pod-rip-lot-detail' lot_public_id=lot.public_id %}"><code>{{ lot.code }}</code></a></td>
             <td>{{ lot.file_count }}</td>
-            <td><code>{{ lot.nas_relative_path }}/02_rip/</code></td>
+            <td><code>{{ lot.nas_relative_path }}/{{ lot.technique.rip_directory }}/</code></td>
           </tr>
           {% empty %}
           <tr><td colspan="3">Aucun lot.</td></tr>

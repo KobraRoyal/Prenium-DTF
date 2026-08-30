@@ -20,7 +20,7 @@
       {% for balance in balances %}
       <li>{{ balance.get_sku_kind_display }} {% if balance.blank_variant %}{{ balance.blank_variant.sku }}{% endif %} {{ balance.finished_sku }} — {{ balance.qty_available }} dispo / {{ balance.qty_on_hand }} en stock ({{ balance.get_owner_kind_display }})</li>
       {% empty %}
-      <li class="muted">Bin vide. Les mouvements et le picking arrivent au lot G.</li>
+      <li class="muted">Bin vide. Réception / picking : écran Stocks POD.</li>
       {% endfor %}
     </ul>
   </section>

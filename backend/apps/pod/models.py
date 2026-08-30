@@ -119,6 +119,12 @@ class ShopifyStore(BaseModel):
     name = models.CharField(max_length=160)
     shop_domain = models.CharField(max_length=255, unique=True)
     is_active = models.BooleanField(default=True)
+    webhook_secret = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        help_text="Secret HMAC Shopify (jamais exposé en front).",
+    )
 
     class Meta:
         ordering = ("name",)
@@ -399,3 +405,51 @@ class PodRipLotFile(BaseModel):
 
     def __str__(self) -> str:
         return self.filename
+
+
+class PodUnit(BaseModel):
+    class Status(models.TextChoices):
+        WAITING_PRESS = "waiting_press", "Attente pose"
+        PRESSED = "pressed", "Posé"
+        ISSUE = "issue", "Incident"
+
+    lot = models.ForeignKey(PodRipLot, on_delete=models.CASCADE, related_name="units")
+    work_item = models.ForeignKey(
+        PodRipWorkItem,
+        on_delete=models.PROTECT,
+        related_name="units",
+    )
+    variant = models.ForeignKey(
+        ShopifyVariant,
+        on_delete=models.PROTECT,
+        related_name="pod_units",
+    )
+    sequence = models.PositiveIntegerField(default=1)
+    scan_identifier = models.CharField(max_length=32, unique=True, db_index=True)
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.WAITING_PRESS,
+    )
+    of_relative_path = models.CharField(max_length=255, blank=True, default="")
+    label_relative_path = models.CharField(max_length=255, blank=True, default="")
+    pressed_at = models.DateTimeField(null=True, blank=True)
+    pressed_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pressed_pod_units",
+    )
+
+    class Meta:
+        ordering = ("scan_identifier",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("work_item", "sequence"),
+                name="pod_unit_work_item_sequence_uniq",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.scan_identifier

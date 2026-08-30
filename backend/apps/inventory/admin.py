@@ -3,6 +3,7 @@ from django.contrib import admin
 from apps.inventory.models import (
     ProductLocationRule,
     StockBalance,
+    StockMovement,
     StorageLocation,
     Warehouse,
     WarehouseZone,
@@ -40,6 +41,12 @@ class WarehouseZoneAdmin(admin.ModelAdmin):
 @admin.register(ProductLocationRule)
 class ProductLocationRuleAdmin(admin.ModelAdmin):
     list_display = ("sku_kind", "blank_variant", "finished_sku", "location", "owner_kind")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(StockMovement)
+class StockMovementAdmin(admin.ModelAdmin):
+    list_display = ("kind", "blank_variant", "quantity", "scanned_bin_code", "created_at")
     readonly_fields = ("public_id",)
 
 

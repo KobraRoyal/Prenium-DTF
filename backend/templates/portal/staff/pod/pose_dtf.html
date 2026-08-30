@@ -1,0 +1,47 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Pose DTF — Atelier POD{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Pose DTF" title="Poste pose DTF" subtitle="Scannez le code-barres OF / étiquette, vérifiez mockup et slots, confirmez la pose." %}
+  <section class="portal-page-surface ui-list-section">
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    <form class="ui-form-stack mb-8 max-w-xl" method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="lookup">
+      <p>
+        <label class="ui-label" for="scan-id">Identifiant pièce</label>
+        <input class="ui-input" id="scan-id" name="scan_identifier" value="{{ scan_identifier }}" required placeholder="POD-…" autofocus>
+      </p>
+      <button class="ui-btn ui-btn-secondary" type="submit">Afficher la pièce</button>
+    </form>
+    {% if lookup %}
+    <article class="rounded-xl border border-[color:var(--ui-border)] p-5 mb-6">
+      <p class="muted">{{ lookup.unit.get_status_display }}</p>
+      <p class="font-display text-xl"><code>{{ lookup.unit.scan_identifier }}</code></p>
+      <p>SO {{ lookup.unit.work_item.shopify_order_number }} — SKU {{ lookup.unit.variant.sku }}</p>
+      {% if lookup.config.blank_variant %}
+      <p>Blank : <code>{{ lookup.config.blank_variant.sku }}</code></p>
+      {% endif %}
+      <h2 class="font-display text-lg mt-4">Slots recette</h2>
+      <ul>
+        {% for slot in lookup.slots %}
+        <li>{{ slot.get_placement_display }} — {{ slot.technique.name }} — <code>{{ slot.print_reference }}</code></li>
+        {% empty %}
+        <li class="muted">Aucun slot.</li>
+        {% endfor %}
+      </ul>
+      {% if can_manage_catalog and lookup.unit.status != "pressed" %}
+      <form method="post" class="mt-4">
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="press">
+        <input type="hidden" name="scan_identifier" value="{{ lookup.unit.scan_identifier }}">
+        <button class="ui-btn ui-btn-primary" type="submit">Confirmer la pose</button>
+      </form>
+      {% endif %}
+    </article>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

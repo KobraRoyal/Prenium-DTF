@@ -186,3 +186,58 @@ class StockBalance(BaseModel):
     @property
     def qty_available(self) -> int:
         return max(self.qty_on_hand - self.qty_reserved, 0)
+
+
+class StockMovement(BaseModel):
+    class Kind(models.TextChoices):
+        RECEIPT = "receipt", "Réception"
+        PICK = "pick", "Picking"
+        PUTAWAY = "putaway", "Rangement"
+        TRANSFER = "transfer", "Transfert"
+        ADJUSTMENT = "adjustment", "Ajustement"
+
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    sku_kind = models.CharField(max_length=16, choices=SkuKind.choices)
+    blank_variant = models.ForeignKey(
+        BlankVariant,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="stock_movements",
+    )
+    finished_sku = models.CharField(max_length=80, blank=True, default="")
+    from_location = models.ForeignKey(
+        StorageLocation,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="outbound_movements",
+    )
+    to_location = models.ForeignKey(
+        StorageLocation,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="inbound_movements",
+    )
+    owner_kind = models.CharField(
+        max_length=16,
+        choices=StockOwnerKind.choices,
+        default=StockOwnerKind.ATELIER,
+    )
+    quantity = models.PositiveIntegerField()
+    scanned_bin_code = models.CharField(max_length=64, blank=True, default="")
+    note = models.CharField(max_length=255, blank=True, default="")
+    actor = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="stock_movements",
+    )
+
+    class Meta:
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=("kind", "created_at")),
+        ]

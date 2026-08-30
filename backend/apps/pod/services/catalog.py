@@ -45,6 +45,16 @@ class PrintTechniqueService:
                 "is_active": True,
             },
         )
+        PrintTechnique.objects.get_or_create(
+            code="embroidery",
+            defaults={
+                "name": "Broderie",
+                "rip_directory": "02_embroidery",
+                "export_extension": ".png",
+                "display_order": 20,
+                "is_active": True,
+            },
+        )
         return technique
 
     def create_technique(self, *, actor, source: str, data: dict) -> PrintTechnique:
