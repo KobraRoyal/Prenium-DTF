@@ -97,8 +97,7 @@ def test_prospect_step2_selected_service_card_keeps_readable_light_theme():
 
     assert ".prospect-project-option:has(input:checked)" in css
     assert (
-        "background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;"
-        in css
+        "background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;" in css
     )
     assert ".prospect-project-option__copy strong" in css
     assert "color: var(--ink) !important;" in css
@@ -122,11 +121,7 @@ def test_prospect_step3_review_keeps_light_shell_and_balanced_summary():
         / "prospect.css"
     ).read_text()
     step3 = (
-        Path(__file__).resolve().parents[2]
-        / "backend"
-        / "templates"
-        / "prospects"
-        / "step3.html"
+        Path(__file__).resolve().parents[2] / "backend" / "templates" / "prospects" / "step3.html"
     ).read_text()
 
     assert "body.product-shell.prospect-journey-page .prospect-review" in css
