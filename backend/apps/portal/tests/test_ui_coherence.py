@@ -1739,6 +1739,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         client_source = template_source("portal/client/orders_list.html")
         client_results = template_source("portal/client/partials/client_orders_list_results.html")
         staff_source = template_source("portal/staff/orders_list.html")
+        staff_toolbar = template_source("portal/staff/partials/orders_list_toolbar.html")
         staff_results = template_source("portal/staff/partials/orders_list_results.html")
         search = template_source("components/forms/order_list_search.html")
 
@@ -1750,17 +1751,17 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("portal:client-checkout", client_results)
         self.assertIn("client-orders-list-results", client_source)
         self.assertIn("components/forms/order_list_search.html", client_source)
-        self.assertIn("components/forms/order_list_search.html", staff_source)
+        self.assertIn("components/forms/order_list_search.html", staff_toolbar)
         self.assertIn('hx-trigger="input changed delay:300ms, search"', search)
         self.assertIn('hx-include="closest form"', search)
         self.assertIn('role="search"', search)
         self.assertIn('class="ui-order-list-toolbar"', search)
         self.assertIn("ui-order-list-search", search)
         self.assertIn("client_orders_list_results.html", client_source)
-        self.assertIn('id="staff-orders-search-input"', staff_source)
-        self.assertIn('results_id="staff-orders-list-results"', staff_source)
-        self.assertIn('preserved_name="queue"', staff_source)
-        self.assertIn('preserve_query="q"', staff_results)
+        self.assertIn('id="staff-orders-search-input"', staff_toolbar)
+        self.assertIn('results_id="staff-orders-list-results"', staff_toolbar)
+        self.assertIn('preserved_name="queue"', staff_toolbar)
+        self.assertIn('preserve_query="q,period"', staff_results)
         self.assertIn('htmx_target="#staff-orders-list-results"', staff_results)
         self.assertIn("Retour au tableau de bord", staff_results)
         self.assertIn("portal-page-surface", staff_source)
@@ -1804,7 +1805,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         customer_detail = template_source("portal/staff/customers/detail.html")
         self.assertEqual(
             customer_detail.count('include "components/forms/form_actions.html"'),
-            2,
+            3,
         )
         self.assertNotIn('class="form-actions"', customer_detail)
 
