@@ -656,6 +656,45 @@ def test_owner_can_apply_axis_spacing_through_the_scoped_workflow_action(client)
     assert sheet.item_spacing_y_mm == Decimal("9.25")
 
 
+def test_owner_can_request_render_as_json(
+    client,
+    monkeypatch,
+    django_capture_on_commit_callbacks,
+):
+    user, customer, project = create_customer_scope(email="render-action-owner@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Rendu portail")
+    service.add_occurrence(sheet=sheet, asset_version_public_id=version.public_id, actor=user)
+    sheet.refresh_from_db()
+    service.auto_place(sheet=sheet, actor=user)
+
+    scheduled = []
+    monkeypatch.setattr(
+        "apps.gang_sheets.tasks.render_gang_sheet_task.delay",
+        lambda sheet_public_id: scheduled.append(sheet_public_id),
+    )
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = client.post(
+            reverse(
+                "portal:client-gang-sheet-workflow-action",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "sheet_public_id": sheet.public_id,
+                    "action": "render",
+                },
+            )
+        )
+
+    sheet.refresh_from_db()
+    assert response.status_code == 200
+    assert response.json()["message"] == "Rendu haute définition lancé."
+    assert sheet.status == GangSheet.Status.RENDERING
+    assert scheduled == [str(sheet.public_id)]
+
+
 def test_axis_spacing_action_is_readonly_protected_and_tenant_scoped(client):
     owner_a, customer_a, project_a = create_customer_scope(email="spacing-a@example.com")
     _asset_a, version_a = attach_png_asset(

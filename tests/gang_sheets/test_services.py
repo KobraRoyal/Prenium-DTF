@@ -962,6 +962,31 @@ def test_save_layout_persists_layout_group_id():
     assert issues == []
 
 
+def test_request_render_locks_items_with_nullable_asset_version(
+    monkeypatch,
+    django_capture_on_commit_callbacks,
+):
+    user, customer, project = create_customer_scope(email="request-render@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Rendu demandé")
+    service.add_occurrence(sheet=sheet, asset_version_public_id=version.public_id, actor=user)
+    sheet.refresh_from_db()
+    service.auto_place(sheet=sheet, actor=user)
+
+    scheduled = []
+    monkeypatch.setattr(
+        "apps.gang_sheets.tasks.render_gang_sheet_task.delay",
+        lambda sheet_public_id: scheduled.append(sheet_public_id),
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        requested = service.request_render(sheet=sheet, actor=user, source="test")
+
+    assert requested.status == GangSheet.Status.RENDERING
+    assert scheduled == [str(sheet.public_id)]
+
+
 def test_render_creates_low_resolution_preview_and_private_production_pdf():
     user, customer, project = create_customer_scope(email="render@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
