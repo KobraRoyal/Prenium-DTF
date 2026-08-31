@@ -3,7 +3,9 @@
 
 /* Unlayered: tunnel prospect aligné sur le shell clair (post prospect-journey/tunnel). */
 body.prospect-journey-page,
-body.prospect-tunnel-page {
+body.prospect-tunnel-page,
+body.product-shell.prospect-journey-page,
+body.product-shell.prospect-tunnel-page {
   --journey-ink: var(--ink);
   --journey-paper: var(--bg);
   --journey-surface: var(--surface);
@@ -46,6 +48,10 @@ body.prospect-journey-page .prospect-journey__progress-number strong {
   color: var(--brand-strong);
 }
 
+body.prospect-journey-page .prospect-journey__progress-number span {
+  color: var(--muted) !important;
+}
+
 body.prospect-journey-page .prospect-tunnel__track-fill {
   background: var(--brand);
 }
@@ -77,6 +83,7 @@ body.prospect-journey-page :is(
 }
 
 body.prospect-journey-page :is(
+  .prospect-project-option:has(input:checked),
   .prospect-project-goal__option.is-selected,
   .prospect-step1__choice.is-selected,
   .prospect-consent-card:has(input:checked)
@@ -86,6 +93,19 @@ body.prospect-journey-page :is(
   box-shadow: none !important;
 }
 
+body.prospect-journey-page .prospect-project-option:has(input:checked) .prospect-project-option__copy strong {
+  color: var(--ink) !important;
+}
+
+body.prospect-journey-page :is(
+  .prospect-step1__activity-card,
+  .prospect-project-option,
+  .prospect-consent-card
+):focus-within {
+  outline: 3px solid var(--focus-ring) !important;
+  outline-offset: 3px;
+}
+
 body.prospect-journey-page :is(
   .prospect-form__btn-primary,
   .prospect-form__btn-secondary,
@@ -93,6 +113,12 @@ body.prospect-journey-page :is(
   .ui-btn.prospect-form__btn-secondary
 ) {
   box-shadow: none !important;
+}
+
+@media (max-width: 767px) {
+  body.prospect-journey-page .prospect-project-options--compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 body.prospect-journey-page :is(
@@ -153,4 +179,110 @@ body.prospect-tunnel-page :is(
   border: 1px solid var(--line);
   background: var(--brand-soft);
   color: var(--brand-strong);
+}
+
+/* Étape 3 : récapitulatif aligné sur les cartes claires de l’étape 2. */
+body.product-shell.prospect-journey-page .prospect-review {
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-lg) !important;
+  background: var(--surface-raised) !important;
+  box-shadow: none !important;
+}
+
+body.product-shell.prospect-journey-page .prospect-review__header {
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface-raised));
+  color: var(--ink);
+}
+
+body.product-shell.prospect-journey-page .prospect-review__header .prospect-summary__title {
+  color: var(--ink) !important;
+  font-family: var(--ui-font-display);
+}
+
+body.product-shell.prospect-journey-page .prospect-review__header a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  color: var(--brand-strong) !important;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+body.product-shell.prospect-journey-page .prospect-review__header a:hover,
+body.product-shell.prospect-journey-page .prospect-review__header a:focus-visible {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--ink) !important;
+}
+
+body.product-shell.prospect-journey-page .prospect-review__item {
+  border-color: var(--line);
+  background: transparent;
+}
+
+body.product-shell.prospect-journey-page .prospect-review__item--accent {
+  background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface-raised));
+}
+
+body.product-shell.prospect-journey-page .prospect-review__item dt {
+  color: var(--muted);
+}
+
+body.product-shell.prospect-journey-page .prospect-review__item dd {
+  color: var(--ink);
+}
+
+body.product-shell.prospect-journey-page .prospect-review-confirm {
+  border-color: var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+body.product-shell.prospect-journey-page .prospect-review-confirm .prospect-form__section-title {
+  color: var(--ink);
+  font-family: var(--ui-font-display);
+}
+
+body.product-shell.prospect-journey-page .prospect-consent-card {
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius) !important;
+  background: var(--surface-raised) !important;
+  box-shadow: none !important;
+}
+
+body.product-shell.prospect-journey-page .prospect-consent-card:has(input:checked) {
+  border-color: var(--brand) !important;
+  background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface-raised)) !important;
+}
+
+body.product-shell.prospect-journey-page .prospect-consent-card:focus-within {
+  outline: 3px solid var(--focus-ring) !important;
+  outline-offset: 3px;
+}
+
+body.product-shell.prospect-journey-page .prospect-consent-card__control {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+
+body.product-shell.prospect-journey-page .prospect-consent-card:has(input:checked) .prospect-consent-card__control {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface);
+}
+
+body.product-shell.prospect-journey-page .prospect-consent-card strong {
+  color: var(--ink) !important;
+}
+
+body.product-shell.prospect-journey-page .prospect-consent-card small {
+  color: var(--muted);
 }
