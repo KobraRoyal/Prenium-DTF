@@ -96,7 +96,10 @@ def test_prospect_step2_selected_service_card_keeps_readable_light_theme():
     ).read_text()
 
     assert ".prospect-project-option:has(input:checked)" in css
-    assert "background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;" in css
+    assert (
+        "background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface)) !important;"
+        in css
+    )
     assert ".prospect-project-option__copy strong" in css
     assert "color: var(--ink) !important;" in css
     assert "body.product-shell.prospect-journey-page" in css
