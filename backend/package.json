@@ -22,14 +22,14 @@
     "build:css:docker": "npm run build:css && npm run collectstatic:docker"
   },
   "devDependencies": {
-    "@fontsource-variable/dm-sans": "^5.2.8",
-    "@fontsource-variable/space-grotesk": "^5.2.10",
-    "alpinejs": "3.14.3",
-    "autoprefixer": "^10.4.20",
-    "daisyui": "^4.12.14",
-    "htmx.org": "1.9.12",
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
+    "alpinejs": "3.16.3",
+    "autoprefixer": "^10.5.4",
+    "daisyui": "^5.7.22",
+    "htmx.org": "2.0.10",
     "pdfjs-dist": "^6.2.108",
     "postcss": "^8.5.23",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^4.3.3"
   }
 }
