@@ -109,7 +109,6 @@ def test_only_standard_enabled_hides_processing_time_ui_for_customer():
 def test_customer_override_service_clears_row_when_back_to_global_defaults():
     customer = Customer.objects.create(name="Reset client")
     ProcessingTimeOptionService().ensure_default_options()
-    fast = ProcessingTimeOption.objects.get(code="fast")
     service = CustomerProcessingTimeOverrideService()
 
     service.update_for_customer(

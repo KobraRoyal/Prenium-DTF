@@ -117,7 +117,10 @@ class ProcessingTimeOptionService:
             default = next((option for option in options if option.is_default), None)
             return (default or options[0]).code
         default = (
-            ProcessingTimeOption.objects.active().filter(is_default=True).order_by("display_order").first()
+            ProcessingTimeOption.objects.active()
+            .filter(is_default=True)
+            .order_by("display_order")
+            .first()
         )
         if default is not None:
             return default.code
@@ -251,7 +254,8 @@ class ProcessingTimeOptionService:
                 return self.compute_surcharge(dtf_amount=dtf_amount, option=resolved)
         return self.compute_surcharge(
             dtf_amount=dtf_amount,
-            markup_percent=getattr(order, "processing_time_markup_percent", ZERO_AMOUNT) or ZERO_AMOUNT,
+            markup_percent=getattr(order, "processing_time_markup_percent", ZERO_AMOUNT)
+            or ZERO_AMOUNT,
             flat_fee=getattr(order, "processing_time_flat_fee", ZERO_AMOUNT) or ZERO_AMOUNT,
         )
 

@@ -29,11 +29,11 @@ from apps.customers.services.volume_nudge_copy import (
     NUDGE_COPY_STAGES,
     VolumeDiscountDashboardCopyService,
 )
+from apps.portal.htmx import with_toast
+from apps.portal.views_common import StaffDomainPermissionMixin
 from apps.processing_time.forms_staff import StaffCustomerProcessingTimeOverridesForm
 from apps.processing_time.services.customer_overrides import CustomerProcessingTimeOverrideService
 from apps.processing_time.services.staff_ui import build_customer_override_cards
-from apps.portal.htmx import with_toast
-from apps.portal.views_common import StaffDomainPermissionMixin
 
 customer_admin_service = CustomerAdministrationService()
 volume_discount_service = CustomerVolumeDiscountTierService()
@@ -334,7 +334,9 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
         )
         processing_time_rows = processing_time_override_service.rows_for_staff_form(customer)
         processing_time_cards = (
-            build_customer_override_cards(form=resolved_processing_time_form, rows=processing_time_rows)
+            build_customer_override_cards(
+                form=resolved_processing_time_form, rows=processing_time_rows
+            )
             if resolved_processing_time_form is not None
             else []
         )
@@ -372,8 +374,8 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
             "processing_time_form": resolved_processing_time_form,
             "processing_time_rows": processing_time_rows,
             "processing_time_cards": processing_time_cards,
-            "processing_time_has_customizations": processing_time_override_service.customer_has_customizations(
-                customer
+            "processing_time_has_customizations": (
+                processing_time_override_service.customer_has_customizations(customer)
             ),
             "can_edit_account": can_edit_account,
             "can_edit_pricing": can_edit_pricing,
@@ -485,7 +487,9 @@ class StaffCustomerProcessingTimeUpdateView(StaffDomainPermissionMixin, View):
         customer = customer_admin_service.get_customer(customer_public_id=customer_public_id)
         if customer is None:
             raise Http404
-        form = StaffCustomerProcessingTimeOverridesForm(request.POST, rows=processing_time_override_service.rows_for_staff_form(customer))
+        form = StaffCustomerProcessingTimeOverridesForm(
+            request.POST, rows=processing_time_override_service.rows_for_staff_form(customer)
+        )
         detail_url = reverse(
             "portal:staff-customer-detail",
             kwargs={"customer_public_id": customer.public_id},

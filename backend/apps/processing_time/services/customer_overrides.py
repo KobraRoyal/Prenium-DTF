@@ -123,11 +123,7 @@ class CustomerProcessingTimeOverrideService:
             markup = payload.get("markup_percent")
             flat_fee = payload.get("flat_fee_eur")
             is_enabled = bool(payload.get("is_enabled", True))
-            inherits_global = (
-                is_enabled
-                and markup is None
-                and flat_fee is None
-            )
+            inherits_global = is_enabled and markup is None and flat_fee is None
             existing = (
                 CustomerProcessingTimeOptionOverride.objects.select_for_update()
                 .filter(customer=customer, option=option)

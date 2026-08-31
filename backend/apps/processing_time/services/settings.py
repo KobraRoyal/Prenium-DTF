@@ -14,9 +14,7 @@ class ProcessingTimeSettingsService:
 
     def list_options(self):
         self.options_service.ensure_default_options()
-        return list(
-            ProcessingTimeOption.objects.all().order_by("display_order", "name")
-        )
+        return list(ProcessingTimeOption.objects.all().order_by("display_order", "name"))
 
     @transaction.atomic
     def update(

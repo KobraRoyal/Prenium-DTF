@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from apps.customers.models import Customer, CustomerMembership
 from apps.accounts.models import StaffMembership
+from apps.customers.models import Customer, CustomerMembership
 
 
 @dataclass(frozen=True)

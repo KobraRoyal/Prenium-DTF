@@ -903,9 +903,7 @@ class GangSheetService:
     @transaction.atomic
     def request_render(self, *, sheet, actor, source="client_portal"):
         locked = self._lock_editable(sheet)
-        items = list(
-            locked.items.select_for_update(of=("self",)).select_related("asset_version")
-        )
+        items = list(locked.items.select_for_update(of=("self",)).select_related("asset_version"))
         issues = self.geometry.issues(sheet=locked, items=items)
         if not items:
             raise GangSheetDomainError("ITEMS_REQUIRED", "Ajoutez au moins un visuel ou un texte.")

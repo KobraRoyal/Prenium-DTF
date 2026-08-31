@@ -3,7 +3,6 @@ from decimal import Decimal
 import pytest
 from apps.catalog.models import CatalogService
 from apps.customers.models import Customer, CustomerMembership
-from apps.orders.models import Order
 from apps.orders.services.pricing import OrderPricingService
 from apps.processing_time.models import ProcessingTimeOption
 from apps.processing_time.services.options import ProcessingTimeOptionService

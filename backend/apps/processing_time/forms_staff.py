@@ -96,7 +96,9 @@ class StaffProcessingTimeSettingsForm(forms.Form):
         if cleaned is None:
             return cleaned
         payloads = self.cleaned_option_payloads()
-        default_count = sum(1 for payload in payloads if payload["is_default"] and payload["is_active"])
+        default_count = sum(
+            1 for payload in payloads if payload["is_default"] and payload["is_active"]
+        )
         if default_count != 1:
             raise forms.ValidationError(
                 "Exactement une option active doit être définie comme option par défaut."

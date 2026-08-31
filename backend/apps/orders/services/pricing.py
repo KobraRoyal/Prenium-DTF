@@ -221,7 +221,9 @@ class OrderPricingService:
         order=None,
         customer=None,
     ) -> tuple[Decimal, dict[str, Decimal | str]]:
-        resolved_customer = customer or (getattr(order, "customer", None) if order is not None else None)
+        resolved_customer = customer or (
+            getattr(order, "customer", None) if order is not None else None
+        )
         option = self.processing_time_options.resolve_option(
             processing_time_code=processing_time_code,
             order=order,
@@ -232,9 +234,7 @@ class OrderPricingService:
             option=option,
         )
         subtotal = (
-            dtf_amount
-            + prep_amount
-            + surcharge["processing_time_surcharge_amount"]
+            dtf_amount + prep_amount + surcharge["processing_time_surcharge_amount"]
         ).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         snapshot = self.processing_time_options.snapshot_dict(option)
         snapshot.update(surcharge)

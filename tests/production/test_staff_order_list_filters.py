@@ -339,7 +339,9 @@ def test_staff_order_list_renders_sortable_column_headers():
     create_order(customer=customer, actor=actor, processing_time_code="express")
 
     client = create_staff_client(email="staff-sort-ui@example.com")
-    response = client.get(reverse("portal:staff-order-list"), {"queue": "unprinted", "sort": "priority", "dir": "asc"})
+    response = client.get(
+        reverse("portal:staff-order-list"), {"queue": "unprinted", "sort": "priority", "dir": "asc"}
+    )
 
     assert response.status_code == 200
     html = response.content.decode()
@@ -379,7 +381,9 @@ def test_staff_order_list_queue_tabs_use_innerHTML_for_htmx_swap():
 
 @pytest.mark.django_db
 def test_staff_order_list_sort_header_toggles_direction():
-    actor = get_user_model().objects.create_user(email="sort-toggle-actor@example.com", password="pass")
+    actor = get_user_model().objects.create_user(
+        email="sort-toggle-actor@example.com", password="pass"
+    )
     customer = Customer.objects.create(name="Sort Toggle Client")
     create_order(customer=customer, actor=actor)
 

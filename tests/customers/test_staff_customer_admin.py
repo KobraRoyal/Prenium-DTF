@@ -1,5 +1,6 @@
-import pytest
 from decimal import Decimal
+
+import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer, CustomerBillingProfile, CustomerMembership
 from apps.customers.services.administration import CustomerAdministrationService
@@ -212,7 +213,10 @@ def test_staff_processing_time_update_rejects_all_disabled_options():
 
 @pytest.mark.django_db
 def test_staff_can_update_processing_time_overrides():
-    from apps.processing_time.models import CustomerProcessingTimeOptionOverride, ProcessingTimeOption
+    from apps.processing_time.models import (
+        CustomerProcessingTimeOptionOverride,
+        ProcessingTimeOption,
+    )
     from apps.processing_time.services.options import ProcessingTimeOptionService
 
     staff = _staff_user(

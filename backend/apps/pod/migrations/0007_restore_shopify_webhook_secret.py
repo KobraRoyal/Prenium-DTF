@@ -19,23 +19,40 @@ def _fernet():
     return Fernet(key)
 
 
-def restore_webhook_secret_column(apps, schema_editor):
+def _table_has_column(schema_editor, table_name: str, column_name: str) -> bool:
     connection = schema_editor.connection
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name = 'pod_shopifystore' AND column_name = 'webhook_secret'
-            """
+        if connection.vendor == "postgresql":
+            cursor.execute(
+                """
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = %s AND column_name = %s
+                """,
+                [table_name, column_name],
+            )
+            return cursor.fetchone() is not None
+        description = connection.introspection.get_table_description(cursor, table_name)
+        return any(field.name == column_name for field in description)
+
+
+def restore_webhook_secret_column(apps, schema_editor):
+    table_name = "pod_shopifystore"
+    column_name = "webhook_secret"
+    if _table_has_column(schema_editor, table_name, column_name):
+        return
+
+    if schema_editor.connection.vendor == "sqlite":
+        schema_editor.execute(
+            f"ALTER TABLE {table_name} "
+            f"ADD COLUMN {column_name} varchar(128) NOT NULL DEFAULT ''"
         )
-        if cursor.fetchone():
-            return
-        cursor.execute(
-            """
-            ALTER TABLE pod_shopifystore
-            ADD COLUMN webhook_secret varchar(128) NOT NULL DEFAULT ''
-            """
+    elif schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute(
+            f"ALTER TABLE {table_name} "
+            f"ADD COLUMN {column_name} varchar(128) NOT NULL DEFAULT ''"
         )
+    else:
+        return
 
     ShopifyStore = apps.get_model("pod", "ShopifyStore")
     field_names = {field.name for field in ShopifyStore._meta.get_fields()}

@@ -131,7 +131,6 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
                 "apps.portal.client_order_presentation",
                 "apps.portal.dashboard_focus",
                 "apps.portal.views_common",
-                "apps.portal.views_payments",
             },
         ),
         ("views_checkout", {"apps.portal.htmx", "apps.portal.views_common"}),

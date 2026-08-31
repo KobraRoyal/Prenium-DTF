@@ -14,14 +14,14 @@ if _current_settings in ("", "config.settings.dev"):
 os.environ.setdefault("DJANGO_SECRET_KEY", "test-secret-key")
 os.environ.setdefault("POSTGRES_PASSWORD", "test-password")
 
-import pytest
+import pytest  # noqa: E402
 
 CATALOG_SEED_CODES = ("seed-dtf-meter", "seed-file-prep")
 
 
 @pytest.fixture(autouse=True)
 def isolate_catalog_seed_services(db):
-  """Les services seedés par migration ne doivent pas polluer les fixtures de test."""
-  from apps.catalog.models import CatalogService
+    """Les services seedés par migration ne doivent pas polluer les fixtures de test."""
+    from apps.catalog.models import CatalogService
 
-  CatalogService.objects.filter(code__in=CATALOG_SEED_CODES).delete()
+    CatalogService.objects.filter(code__in=CATALOG_SEED_CODES).delete()

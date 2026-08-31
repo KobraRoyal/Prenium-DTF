@@ -14,8 +14,8 @@ from apps.production.models import ProductionJob
 from apps.production.services.manufacturing_order_pdf import (
     render_manufacturing_order_pdf_bytes,
 )
-from apps.production.services.workflow import ProductionWorkflowService
 from apps.production.services.staff_order_list_filters import order_by_operational_priority
+from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUploadReview
 
 

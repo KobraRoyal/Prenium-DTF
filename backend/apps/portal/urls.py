@@ -1,5 +1,26 @@
 from django.urls import path
 
+from apps.portal.views_checkout import (
+    ClientCheckoutSubmitView,
+    ClientCheckoutView,
+)
+from apps.portal.views_checkout_partials import (
+    ClientCheckoutSummaryPartialView,
+    ClientCheckoutUploadPartialView,
+)
+from apps.portal.views_client import (
+    ClientDashboardView,
+    ClientOrderDetailView,
+    ClientOrderListView,
+    ClientOrderPanelInspectionView,
+    ClientOrderPanelProductionView,
+    ClientOrderPanelShippingView,
+    ClientOrderPanelUploadsView,
+    ClientOrderReorderView,
+    ClientOrderUploadDownloadView,
+    ClientOrderUploadPreviewView,
+)
+
 from .views_access_management import (
     ClientTeamInvitationRevokeView,
     ClientTeamInviteView,
@@ -41,25 +62,7 @@ from .views_b2b_order_projects import (
     StaffOrderProjectItemAssetDownloadView,
     StaffOrderProjectListView,
 )
-from .views_checkout import (
-    ClientCheckoutSubmitView,
-    ClientCheckoutSummaryPartialView,
-    ClientCheckoutUploadPartialView,
-    ClientCheckoutView,
-)
-from .views_client import (
-    ClientDashboardView,
-    ClientOrderDetailView,
-    ClientOrderListView,
-    ClientOrderPanelBillingView,
-    ClientOrderPanelInspectionView,
-    ClientOrderPanelProductionView,
-    ClientOrderPanelShippingView,
-    ClientOrderPanelUploadsView,
-    ClientOrderReorderView,
-    ClientOrderUploadDownloadView,
-    ClientOrderUploadPreviewView,
-)
+from .views_client_billing import ClientOrderPanelBillingView
 from .views_gang_sheets import (
     ClientGangSheetAddItemView,
     ClientGangSheetAssetGalleryView,
@@ -92,7 +95,6 @@ from .views_profile import (
 from .views_staff import (
     StaffOrderDeleteView,
     StaffOrderDetailView,
-    StaffOrderListView,
     StaffOrderPriceView,
 )
 from .views_staff_billing import StaffInvoiceMarkPaidView, StaffOrderPanelBillingView
@@ -102,7 +104,6 @@ from .views_staff_billing_statements import (
 )
 from .views_staff_branding import StaffBrandSettingsView
 from .views_staff_catalog import StaffDefaultCatalogPricingSettingsView
-from .views_staff_processing_time import StaffProcessingTimeSettingsView
 from .views_staff_customers import (
     StaffCustomerAccountUpdateView,
     StaffCustomerDetailView,
@@ -141,6 +142,7 @@ from .views_staff_operations import (
     StaffAtelierOperationTransitionView,
     StaffAtelierOperationUploadReviewView,
 )
+from .views_staff_orders import StaffOrderListView
 from .views_staff_pod import (
     StaffPodBlankDetailView,
     StaffPodBlankListView,
@@ -161,6 +163,7 @@ from .views_staff_pod_ops import (
 )
 from .views_staff_pod_rip import StaffPodRipLotDetailView, StaffPodRipLotListView
 from .views_staff_pod_shopify import StaffPodShopifyStoresView
+from .views_staff_processing_time import StaffProcessingTimeSettingsView
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
@@ -168,17 +171,17 @@ from .views_staff_reviews import (
     StaffOrderUploadReviewView,
 )
 from .views_staff_scan import StaffOrderPanelScanView
+from .views_staff_shipping import (
+    StaffOrderPanelShippingSyncView,
+    StaffOrderPanelShippingView,
+    StaffOrderShipmentLabelDownloadView,
+)
 from .views_staff_team import (
     StaffTeamInvitationRevokeView,
     StaffTeamInviteView,
     StaffTeamMemberDeactivateView,
     StaffTeamMemberRoleView,
     StaffTeamView,
-)
-from .views_staff_shipping import (
-    StaffOrderPanelShippingSyncView,
-    StaffOrderPanelShippingView,
-    StaffOrderShipmentLabelDownloadView,
 )
 from .views_staff_uploads import (
     StaffOrderPanelDriveSyncView,

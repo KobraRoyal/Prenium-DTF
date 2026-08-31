@@ -5,7 +5,7 @@ from decimal import Decimal
 import pymupdf
 import pytest
 from apps.customers.models import CustomerMembership
-from apps.gang_sheets.models import GangSheet, GangSheetItem
+from apps.gang_sheets.models import GangSheet, GangSheetItem, GangSheetSourceAsset
 from apps.gang_sheets.services import GangSheetDomainError, GangSheetRenderService, GangSheetService
 from apps.gang_sheets.services.hybrid_pdf import GangSheetHybridPdfComposer
 from apps.gang_sheets.services.text_items import (
@@ -355,10 +355,23 @@ def test_hybrid_pdf_draws_text_as_vector_without_raster_image():
 
 
 def test_request_render_locks_mixed_text_and_visual_items():
-    user, customer, _project = create_customer_scope(email="text-render-lock@example.com")
+    user, customer, project = create_customer_scope(email="text-render-lock@example.com")
     service = GangSheetService()
     sheet = service.create_sheet(customer=customer, actor=user, name="Mixte")
-    attach_png_asset(sheet=sheet, actor=user)
+    asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset,
+        added_by=user,
+        width_mm="100.00",
+        height_mm="50.00",
+    )
+    service.add_occurrence(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        actor=user,
+    )
     service.add_text_item(sheet=sheet, actor=user, content="Atelier")
 
     service.request_render(sheet=sheet, actor=user)

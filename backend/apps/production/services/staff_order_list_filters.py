@@ -70,7 +70,9 @@ class StaffOrderListFilterService:
             return cleaned
         return self.default_dir_by_sort.get(sort, "asc")
 
-    def next_sort_params(self, *, column: str, active_sort: str, active_dir: str) -> tuple[str, str]:
+    def next_sort_params(
+        self, *, column: str, active_sort: str, active_dir: str
+    ) -> tuple[str, str]:
         if column == active_sort:
             return column, "desc" if active_dir == "asc" else "asc"
         return column, self.default_dir_by_sort.get(column, "asc")
@@ -131,7 +133,11 @@ class StaffOrderListFilterService:
 
     def sort_summary(self, *, sort: str, direction: str) -> str:
         if sort == self.SORT_CREATED_AT:
-            return "Date de commande la plus récente en premier" if direction == "desc" else "Date de commande la plus ancienne en premier"
+            return (
+                "Date de commande la plus récente en premier"
+                if direction == "desc"
+                else "Date de commande la plus ancienne en premier"
+            )
         return (
             "Priorité express → rapide → standard"
             if direction == "asc"
