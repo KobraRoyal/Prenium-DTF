@@ -1058,7 +1058,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("staff_trail.html", team_breadcrumb)
         self.assertIn("Accueil Atelier", staff_trail)
         self.assertIn("ui-breadcrumb__list", staff_trail)
-        self.assertIn(".staff-profile-page.account-team-page .account-team-panel", portal_entrypoint)
+        self.assertIn(
+            ".staff-profile-page.account-team-page .account-team-panel", portal_entrypoint
+        )
 
     def test_client_portal_hardening_keeps_actions_named_and_contrasted(self) -> None:
         dashboard = template_source("portal/client/dashboard.html")

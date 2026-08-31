@@ -430,9 +430,7 @@ def schedule_staff_invitation_email(*, invitation_public_id) -> None:
 
     from apps.notifications.tasks import send_staff_invitation_email_task
 
-    transaction.on_commit(
-        lambda: send_staff_invitation_email_task.delay(str(invitation_public_id))
-    )
+    transaction.on_commit(lambda: send_staff_invitation_email_task.delay(str(invitation_public_id)))
 
 
 def schedule_staff_account_activated_email(*, invitation_public_id) -> None:

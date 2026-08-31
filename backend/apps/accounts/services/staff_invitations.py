@@ -223,8 +223,7 @@ class StaffInvitationService:
         ):
             raise PermissionDenied
         if actor_membership.role == StaffMembership.Role.ADMIN and (
-            membership.role == StaffMembership.Role.ADMIN
-            or role == StaffMembership.Role.ADMIN
+            membership.role == StaffMembership.Role.ADMIN or role == StaffMembership.Role.ADMIN
         ):
             raise PermissionDenied
         if role not in StaffMembership.Role.values:

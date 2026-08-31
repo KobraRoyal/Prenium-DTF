@@ -9,13 +9,15 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
 
-from apps.customers.forms import CustomerInvitationForm, CustomerMemberRoleForm
-from apps.customers.models import CustomerInvitation, CustomerMembership
 from apps.accounts.services.staff_invitations import (
     ExistingAccountLoginRequired as StaffExistingAccountLoginRequired,
+)
+from apps.accounts.services.staff_invitations import (
     StaffInvitationError,
     StaffInvitationService,
 )
+from apps.customers.forms import CustomerInvitationForm, CustomerMemberRoleForm
+from apps.customers.models import CustomerInvitation, CustomerMembership
 from apps.customers.services.invitations import (
     CustomerInvitationError,
     CustomerInvitationService,

@@ -142,17 +142,17 @@ from .views_staff_reviews import (
     StaffOrderUploadReviewView,
 )
 from .views_staff_scan import StaffOrderPanelScanView
+from .views_staff_shipping import (
+    StaffOrderPanelShippingSyncView,
+    StaffOrderPanelShippingView,
+    StaffOrderShipmentLabelDownloadView,
+)
 from .views_staff_team import (
     StaffTeamInvitationRevokeView,
     StaffTeamInviteView,
     StaffTeamMemberDeactivateView,
     StaffTeamMemberRoleView,
     StaffTeamView,
-)
-from .views_staff_shipping import (
-    StaffOrderPanelShippingSyncView,
-    StaffOrderPanelShippingView,
-    StaffOrderShipmentLabelDownloadView,
 )
 from .views_staff_uploads import (
     StaffOrderPanelDriveSyncView,

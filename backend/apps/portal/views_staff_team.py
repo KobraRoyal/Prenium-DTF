@@ -33,9 +33,8 @@ class StaffTeamView(StaffTeamManagerRequiredMixin, View):
     template_name = "portal/staff/team.html"
 
     def get(self, request):
-        memberships = (
-            StaffMembership.objects.select_related("user")
-            .order_by("-is_active", "role", "user__email")
+        memberships = StaffMembership.objects.select_related("user").order_by(
+            "-is_active", "role", "user__email"
         )
         return render(
             request,

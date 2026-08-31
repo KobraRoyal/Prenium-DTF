@@ -36,7 +36,9 @@ class StaffDefaultCatalogPricingSettingsView(StaffDomainPermissionMixin, View):
                 actor=request.user,
                 source="staff_portal",
             )
-            response = HttpResponseRedirect(reverse("portal:staff-default-catalog-pricing-settings"))
+            response = HttpResponseRedirect(
+                reverse("portal:staff-default-catalog-pricing-settings")
+            )
             return with_toast(response, "Grille tarifaire par défaut enregistrée.", "success")
         return render(
             request,
