@@ -200,6 +200,73 @@ def test_gang_sheet_quote_is_available_before_transmit():
 
 
 @pytest.mark.django_db
+@override_settings(
+    B2B_DTF_ORDER_PROJECT_ENABLED=True,
+    GOOGLE_DRIVE_SYNC_ENABLED=False,
+    PAYPAL_CLIENT_ID="paypal-test-id",
+    PAYPAL_CLIENT_SECRET="paypal-test-secret",
+    STRIPE_SECRET_KEY="",
+    STRIPE_PUBLISHABLE_KEY="",
+)
+def test_immediate_submit_opens_pay_dialog_instead_of_paypal_redirect():
+    _seed_catalog()
+    user = get_user_model().objects.create_user(email="paypal-dialog@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="PayPal Dialog Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
+    )
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=user,
+        role=CustomerMembership.Role.OWNER,
+    )
+    project, _sheet = _prepare_gang_sheet_project(
+        customer=customer,
+        user=user,
+        surface_sqm="1.1000",
+    )
+
+    client = Client()
+    assert client.login(email="paypal-dialog@example.com", password="pass")
+    response = client.post(
+        reverse(
+            "portal:client-order-project-submit",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        )
+    )
+    assert response.status_code == 302
+    assert "panel=billing" in response.url
+    assert "checkout=success" in response.url
+    assert "pay=1" in response.url
+    assert "paypal" not in response.url.lower()
+
+    project.refresh_from_db()
+    order = project.converted_order
+    billing = client.get(
+        reverse(
+            "portal:client-order-panel-billing",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+        + "?pay=1",
+        HTTP_HX_REQUEST="true",
+    )
+    assert billing.status_code == 200
+    body = billing.content.decode()
+    assert "pay-order-dialog-" in body
+    assert "data-dialog-auto-open" in body
+    assert "data-paypal-button-container" in body
+    assert "data-paypal-client-id" in body
+
+
+@pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
 def test_validated_sheet_editor_enables_create_order_cta_for_cash_client():
     """Planche validée + PDF final : le CTA ne doit pas rester aria-disabled / href=#."""

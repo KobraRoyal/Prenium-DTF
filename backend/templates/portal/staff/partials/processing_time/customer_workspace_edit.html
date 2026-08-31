@@ -1,0 +1,18 @@
+<div class="volume-discount-panel__tools customer-processing-time-panel__tools">
+  <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-processing-time-settings' %}">Voir la grille atelier</a>
+</div>
+<div class="alert alert--info processing-time-settings__intro" role="note">
+  <p class="m-0"><strong>Dérogation par compte :</strong> décochez «&nbsp;Proposer au client&nbsp;» pour masquer une option au checkout. Laissez les montants vides pour hériter de la grille atelier. Au moins une option doit rester active.</p>
+</div>
+<form class="processing-time-settings-stack" method="post" action="{% url 'portal:staff-customer-processing-time-update' customer_public_id=customer.public_id %}" data-submit-loading novalidate>
+  {% csrf_token %}
+  {% include "portal/staff/partials/processing_time/form_non_field_errors.html" with form=processing_time_form %}
+  <div class="processing-time-settings-grid">
+    {% for card in processing_time_cards %}
+    {% include "portal/staff/partials/processing_time/customer_option_card.html" %}
+    {% endfor %}
+  </div>
+  <div class="processing-time-settings-actions">
+    {% include "components/forms/form_actions.html" with primary_label="Enregistrer les délais client" %}
+  </div>
+</form>

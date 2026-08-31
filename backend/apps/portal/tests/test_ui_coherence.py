@@ -304,6 +304,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Paiement non finalisé", panels)
         self.assertNotIn("Relancer le paiement", panels)
         self.assertNotIn("Reprendre le paiement en cours", panels)
+        self.assertIn("data-paypal-button-container", panels)
         self.assertIn("Continuer vers le paiement", panels)
         self.assertIn("order_status_banner", detail)
         self.assertIn("client-order-detail-banner", detail)

@@ -31,6 +31,8 @@ from apps.customers.services.volume_nudge_copy import (
 )
 from apps.processing_time.forms_staff import StaffCustomerProcessingTimeOverridesForm
 from apps.processing_time.services.customer_overrides import CustomerProcessingTimeOverrideService
+from apps.processing_time.services.staff_ui import build_customer_override_cards
+from apps.portal.htmx import with_toast
 from apps.portal.views_common import StaffDomainPermissionMixin
 
 customer_admin_service = CustomerAdministrationService()
@@ -331,20 +333,11 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
             else None
         )
         processing_time_rows = processing_time_override_service.rows_for_staff_form(customer)
-        processing_time_option_forms = []
-        if resolved_processing_time_form is not None:
-            for row in processing_time_rows:
-                code = row["option"].code.replace("-", "_")
-                processing_time_option_forms.append(
-                    {
-                        "row": row,
-                        "fields": [
-                            resolved_processing_time_form[f"{code}__is_enabled"],
-                            resolved_processing_time_form[f"{code}__markup_percent"],
-                            resolved_processing_time_form[f"{code}__flat_fee_eur"],
-                        ],
-                    }
-                )
+        processing_time_cards = (
+            build_customer_override_cards(form=resolved_processing_time_form, rows=processing_time_rows)
+            if resolved_processing_time_form is not None
+            else []
+        )
         resolved_tier_add_form = tier_add_form or StaffCustomerVolumeDiscountTierForm(prefix="new")
         resolved_billing_statement_form = (
             billing_statement_form or BillingStatementMonthForm(prefix="statement")
@@ -378,7 +371,7 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
             "pricing_form": resolved_pricing_form,
             "processing_time_form": resolved_processing_time_form,
             "processing_time_rows": processing_time_rows,
-            "processing_time_option_forms": processing_time_option_forms,
+            "processing_time_cards": processing_time_cards,
             "processing_time_has_customizations": processing_time_override_service.customer_has_customizations(
                 customer
             ),

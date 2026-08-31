@@ -1,0 +1,4 @@
+{% load l10n %}
+<p class="processing-time-option-card__reference m-0{% if extra_class %} {{ extra_class }}{% endif %}">
+  +{{ markup_percent|unlocalize }}&nbsp;% sur DTF{% if flat_fee_eur %} · +{{ flat_fee_eur|unlocalize }}&nbsp;€ HT{% endif %}{% if suffix %} {{ suffix }}{% endif %}
+</p>

@@ -47,6 +47,24 @@ def test_processing_time_service_compute_surcharge_percent_and_flat_fee():
 
 
 @pytest.mark.django_db
+def test_checkout_ui_context_hides_choice_when_single_option_enabled():
+    customer = Customer.objects.create(name="Single delay client")
+    ProcessingTimeOptionService().ensure_default_options()
+    express = ProcessingTimeOption.objects.get(code="express")
+    fast = ProcessingTimeOption.objects.get(code="fast")
+    express.is_active = False
+    express.save(update_fields=["is_active"])
+    fast.is_active = False
+    fast.save(update_fields=["is_active"])
+
+    ctx = ProcessingTimeOptionService().checkout_ui_context(customer=customer, widget="radios")
+    assert ctx["show_processing_time_choice"] is False
+    assert ctx["show_processing_time_quote_row"] is False
+    assert ctx["selected_processing_time_code"] == "standard"
+    assert len(ctx["processing_time_options"]) == 1
+
+
+@pytest.mark.django_db
 def test_estimate_gang_sheet_quote_applies_processing_time_surcharge():
     user = get_user_model().objects.create_user(email="quote@example.com", password="pass")
     customer = Customer.objects.create(name="Quote")

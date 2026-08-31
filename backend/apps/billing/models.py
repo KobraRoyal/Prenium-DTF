@@ -109,6 +109,7 @@ class Payment(BaseModel):
         PENDING = "pending", "Pending"
         APPROVED = "approved", "Approved"
         CAPTURED = "captured", "Captured"
+        CAPTURED_REVIEW = "captured_review", "Capture à vérifier"
         FAILED = "failed", "Failed"
         CANCELLED = "cancelled", "Cancelled"
 
@@ -167,6 +168,11 @@ class Payment(BaseModel):
                 condition=~Q(stripe_payment_intent_id=""),
                 name="uniq_payment_stripe_payment_intent_id_non_empty",
             ),
+            models.UniqueConstraint(
+                fields=("order",),
+                condition=Q(status__in=("captured", "captured_review")),
+                name="uniq_financial_settlement_per_order",
+            ),
         ]
         indexes = [
             models.Index(fields=("order", "status", "created_at")),
@@ -192,6 +198,11 @@ class Payment(BaseModel):
     @property
     def checkout_url(self) -> str:
         return self.approval_url
+
+    @property
+    def capture_resolution_required(self) -> bool:
+        snapshot = self.request_snapshot if isinstance(self.request_snapshot, dict) else {}
+        return bool(snapshot.get("capture_resolution_required"))
 
 
 class InvoiceQuerySet(models.QuerySet):

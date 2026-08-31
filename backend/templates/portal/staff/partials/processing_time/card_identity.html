@@ -1,0 +1,9 @@
+<div class="processing-time-option-card__identity">
+  <p class="processing-time-option-card__code">{{ option.code }}</p>
+  {% if title_tag == "h2" %}
+  <h2 class="font-display processing-time-option-card__title">{{ title|default:option.name }}</h2>
+  {% else %}
+  <h3 class="font-display processing-time-option-card__title">{{ title|default:option.name }}</h3>
+  {% endif %}
+  {% include "components/ui/processing_time_priority_badge.html" with code=option.code name=option.name %}
+</div>

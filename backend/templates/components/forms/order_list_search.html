@@ -7,8 +7,11 @@
   {% if preserved_name %}
   <input name="{{ preserved_name }}" type="hidden" value="{{ preserved_value }}">
   {% endif %}
-  {% if preserved_period %}
-  <input name="period" type="hidden" value="{{ preserved_period }}">
+  {% if preserved_sort %}
+  <input name="sort" type="hidden" value="{{ preserved_sort }}">
+  {% endif %}
+  {% if preserved_sort_dir %}
+  <input name="dir" type="hidden" value="{{ preserved_sort_dir }}">
   {% endif %}
   <div class="ui-field-group ui-order-list-search">
     <label class="ui-label" for="{{ search_id }}">{{ search_label|default:"Rechercher" }}</label>

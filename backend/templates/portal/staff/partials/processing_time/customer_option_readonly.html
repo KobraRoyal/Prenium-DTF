@@ -1,0 +1,38 @@
+{# Carte délai — fiche client (lecture seule). #}
+<article
+  class="portal-page-surface processing-time-option-card processing-time-option-card--customer processing-time-option-card--{{ row.option.code }}{% if not row.is_enabled %} processing-time-option-card--inactive{% endif %}"
+  data-testid="customer-processing-time-readonly-{{ row.option.code }}"
+>
+  <header class="processing-time-option-card__head">
+    {% include "portal/staff/partials/processing_time/card_identity.html" with option=row.option %}
+    <div class="processing-time-option-card__status">
+      {% if row.override and not row.is_enabled %}
+      <span class="badge is-neutral">Masqué</span>
+      {% elif row.markup_percent is not None or row.flat_fee_eur is not None %}
+      <span class="badge is-warning">Personnalisé</span>
+      {% else %}
+      <span class="badge is-success">Grille atelier</span>
+      {% endif %}
+    </div>
+  </header>
+
+  {% include "portal/staff/partials/processing_time/card_preview.html" with preview_text=row.option.client_label %}
+
+  <div class="processing-time-option-card__body">
+    <section class="processing-time-option-card__section">
+      <h4 class="processing-time-option-card__section-title">Tarif appliqué</h4>
+      {% if row.override and not row.is_enabled %}
+      <p class="processing-time-option-card__reference m-0 muted">Non proposé au checkout client.</p>
+      {% elif row.markup_percent is not None or row.flat_fee_eur is not None %}
+      {% if row.markup_percent is not None %}
+      {% include "portal/staff/partials/processing_time/pricing_line.html" with markup_percent=row.markup_percent flat_fee_eur=row.flat_fee_eur %}
+      {% else %}
+      {% include "portal/staff/partials/processing_time/pricing_line.html" with markup_percent=row.option.markup_percent flat_fee_eur=row.flat_fee_eur %}
+      {% endif %}
+      {% else %}
+      {% include "portal/staff/partials/processing_time/pricing_line.html" with markup_percent=row.option.markup_percent flat_fee_eur=row.option.flat_fee_eur %}
+      <span class="muted text-sm"> — grille atelier</span>
+      {% endif %}
+    </section>
+  </div>
+</article>

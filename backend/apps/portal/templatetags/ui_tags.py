@@ -86,12 +86,15 @@ def ui_kpi_grid(items):
     return {"items": items or []}
 
 
-@register.inclusion_tag("components/tables/orders_table.html")
-def ui_orders_table(orders, variant, customer=None):
+@register.inclusion_tag("components/tables/orders_table.html", takes_context=True)
+def ui_orders_table(context, orders, variant, customer=None, sortable=False):
     return {
         "orders": orders,
         "variant": variant,
         "customer": customer,
+        "sortable": sortable,
+        "sort_header_priority": context.get("sort_header_priority"),
+        "sort_header_created_at": context.get("sort_header_created_at"),
     }
 
 

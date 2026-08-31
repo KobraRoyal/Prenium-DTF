@@ -282,6 +282,7 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
             available_payment_providers,
             can_pay_online,
             default_online_provider,
+            paypal_sdk_context,
             redirect_full_page_billing_panel_to_shell,
         )
 
@@ -320,6 +321,16 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
                 }
             )
         )
+        can_resume_online_payment = bool(
+            payment is not None
+            and payment.approval_url
+            and payment.status
+            not in {
+                Payment.Status.CAPTURED,
+                Payment.Status.CAPTURED_REVIEW,
+            }
+            and can_pay_online(order.customer)
+        )
         return render(
             request,
             self.template_name,
@@ -329,11 +340,14 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
                 invoice=invoice,
                 active_panel="billing",
                 show_pay_cta=show_pay_cta,
+                show_pay_dialog=show_pay_cta or can_resume_online_payment,
                 awaits_client_payment=awaits_payment,
                 payment_providers=providers,
                 online_provider=default_online_provider(order.customer) if show_pay_cta else "",
                 settlement_method=settlement,
-                open_pay_dialog=show_pay_cta and str(request.GET.get("pay", "")).strip() == "1",
+                open_pay_dialog=(show_pay_cta or can_resume_online_payment)
+                and str(request.GET.get("pay", "")).strip() == "1",
+                **paypal_sdk_context(order=order, payment_providers=providers),
             ),
         )
 

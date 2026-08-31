@@ -5,9 +5,9 @@
     {% if page_obj.has_previous %}
     <a
       class="ui-btn ui-btn-secondary ui-btn-sm"
-      href="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_queue %}queue={{ active_queue|urlencode }}&amp;{% elif active_status %}status={{ active_status|urlencode }}&amp;{% endif %}{% if active_period %}period={{ active_period|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
+      href="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_queue %}queue={{ active_queue|urlencode }}&amp;{% elif active_status %}status={{ active_status|urlencode }}&amp;{% endif %}{% if active_sort %}sort={{ active_sort|urlencode }}&amp;{% endif %}{% if active_sort_dir %}dir={{ active_sort_dir|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
       {% if htmx_target %}
-      hx-get="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_queue %}queue={{ active_queue|urlencode }}&amp;{% elif active_status %}status={{ active_status|urlencode }}&amp;{% endif %}{% if active_period %}period={{ active_period|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
+      hx-get="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_queue %}queue={{ active_queue|urlencode }}&amp;{% elif active_status %}status={{ active_status|urlencode }}&amp;{% endif %}{% if active_sort %}sort={{ active_sort|urlencode }}&amp;{% endif %}{% if active_sort_dir %}dir={{ active_sort_dir|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}"
       hx-target="{{ htmx_target }}"
       hx-swap="innerHTML"
       hx-indicator="#portal-htmx-indicator"
@@ -17,9 +17,9 @@
     {% if page_obj.has_next %}
     <a
       class="ui-btn ui-btn-secondary ui-btn-sm"
-      href="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_queue %}queue={{ active_queue|urlencode }}&amp;{% elif active_status %}status={{ active_status|urlencode }}&amp;{% endif %}{% if active_period %}period={{ active_period|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
+      href="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_queue %}queue={{ active_queue|urlencode }}&amp;{% elif active_status %}status={{ active_status|urlencode }}&amp;{% endif %}{% if active_sort %}sort={{ active_sort|urlencode }}&amp;{% endif %}{% if active_sort_dir %}dir={{ active_sort_dir|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
       {% if htmx_target %}
-      hx-get="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_queue %}queue={{ active_queue|urlencode }}&amp;{% elif active_status %}status={{ active_status|urlencode }}&amp;{% endif %}{% if active_period %}period={{ active_period|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
+      hx-get="{{ pagination_base_url|default:request.path }}?{% if search_query %}q={{ search_query|urlencode }}&amp;{% endif %}{% if active_queue %}queue={{ active_queue|urlencode }}&amp;{% elif active_status %}status={{ active_status|urlencode }}&amp;{% endif %}{% if active_sort %}sort={{ active_sort|urlencode }}&amp;{% endif %}{% if active_sort_dir %}dir={{ active_sort_dir|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}"
       hx-target="{{ htmx_target }}"
       hx-swap="innerHTML"
       hx-indicator="#portal-htmx-indicator"

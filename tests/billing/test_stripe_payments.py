@@ -17,6 +17,7 @@ from rest_framework.test import APIClient
 from tests.billing.test_billing_api import (
     FakeStripeGateway,
     client_online_initiate_route,
+    create_customer_owner_scope,
     create_customer_scope,
     create_order,
 )
@@ -32,7 +33,9 @@ def _stripe_signature(*, payload: bytes, secret: str, timestamp: int | None = No
 @pytest.mark.django_db
 @override_settings(STRIPE_SECRET_KEY="sk_test_dummy", PUBLIC_BASE_URL="http://localhost:8080")
 def test_client_can_initiate_stripe_payment(monkeypatch):
-    user, customer = create_customer_scope(email="stripe-a@example.com", customer_name="Stripe A")
+    user, customer = create_customer_owner_scope(
+        email="stripe-a@example.com", customer_name="Stripe A"
+    )
     customer.preferred_settlement_method = Customer.PreferredSettlementMethod.STRIPE
     customer.save(update_fields=["preferred_settlement_method", "updated_at"])
     order = create_order(customer, user)
@@ -61,7 +64,9 @@ def test_client_can_initiate_stripe_payment(monkeypatch):
 @pytest.mark.django_db
 @override_settings(STRIPE_SECRET_KEY="sk_test_dummy")
 def test_deferred_order_cannot_initiate_stripe(monkeypatch):
-    user, customer = create_customer_scope(email="stripe-b@example.com", customer_name="Stripe B")
+    user, customer = create_customer_owner_scope(
+        email="stripe-b@example.com", customer_name="Stripe B"
+    )
     customer.preferred_settlement_method = Customer.PreferredSettlementMethod.STRIPE
     customer.save(update_fields=["preferred_settlement_method", "updated_at"])
     order = create_order(customer, user)
@@ -114,6 +119,8 @@ def test_stripe_webhook_captures_and_creates_invoice(monkeypatch):
                 "id": payment.stripe_checkout_session_id,
                 "payment_status": "paid",
                 "payment_intent": "pi_test_captured",
+                "amount_total": 2500,
+                "currency": "eur",
             }
         },
     }
@@ -133,6 +140,74 @@ def test_stripe_webhook_captures_and_creates_invoice(monkeypatch):
     assert payment.stripe_payment_intent_id == "pi_test_captured"
     assert Invoice.objects.filter(order=order).exists()
     assert AuditLogEntry.objects.filter(action="billing.payment_captured").exists()
+
+
+@pytest.mark.django_db
+@override_settings(
+    STRIPE_SECRET_KEY="sk_test_dummy",
+    STRIPE_WEBHOOK_SECRET="whsec_test",
+)
+@pytest.mark.parametrize(
+    "event_overrides",
+    [
+        {"amount_total": 2499},
+        {"currency": "usd"},
+        {"payment_intent": ""},
+    ],
+)
+def test_stripe_webhook_anomaly_requires_review_without_invoice(
+    monkeypatch,
+    event_overrides,
+):
+    user, customer = create_customer_scope(
+        email=f"stripe-review-{sorted(event_overrides)[0]}@example.com",
+        customer_name="Stripe Webhook Review",
+    )
+    order = create_order(customer, user)
+    service = PaymentService(gateway=FakeStripeGateway())
+    monkeypatch.setattr(billing_views, "payment_service", service)
+    _order, payment = service.initiate_payment_for_customer_order(
+        customer=customer,
+        order_public_id=order.public_id,
+        actor=user,
+        source="test",
+        provider=Payment.Provider.STRIPE,
+        success_url="http://localhost/success",
+        cancel_url="http://localhost/cancel",
+    )
+    payment.stripe_payment_intent_id = ""
+    payment.save(update_fields=["stripe_payment_intent_id", "updated_at"])
+    data_object = {
+        "id": payment.stripe_checkout_session_id,
+        "payment_status": "paid",
+        "payment_intent": "pi_test_review",
+        "amount_total": 2500,
+        "currency": "eur",
+        **event_overrides,
+    }
+    event = {
+        "id": "evt_test_review",
+        "type": "checkout.session.completed",
+        "data": {"object": data_object},
+    }
+    raw = json.dumps(event).encode()
+    signature = _stripe_signature(payload=raw, secret="whsec_test")
+
+    response = APIClient().post(
+        reverse("billing:backend-stripe-webhook"),
+        data=raw,
+        content_type="application/json",
+        HTTP_STRIPE_SIGNATURE=signature,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    payment.refresh_from_db()
+    assert payment.status == Payment.Status.CAPTURED_REVIEW
+    assert Invoice.objects.filter(order=order).count() == 0
+    assert AuditLogEntry.objects.filter(
+        action="billing.payment_capture_review_required",
+        target_public_id=payment.public_id,
+    ).exists()
 
 
 @pytest.mark.django_db

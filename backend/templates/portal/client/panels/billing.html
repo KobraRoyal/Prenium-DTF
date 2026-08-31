@@ -1,6 +1,17 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="billing" %}
-<div class="client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}" aria-label="Règlement">
+<div
+  class="client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}"
+  aria-label="Règlement"
+  data-client-billing-pay-root
+  data-billing-shell-url="{% url 'portal:client-order-detail' customer_public_id=order.customer.public_id order_public_id=order.public_id %}"
+  {% if paypal_sdk_enabled %}
+  data-paypal-client-id="{{ paypal_client_id }}"
+  data-paypal-currency="{{ paypal_sdk_currency }}"
+  data-paypal-initiate-url="{% url 'portal:client-order-payment-initiate' customer_public_id=order.customer.public_id order_public_id=order.public_id %}"
+  data-paypal-capture-url="{% url 'portal:client-order-payment-capture' customer_public_id=order.customer.public_id order_public_id=order.public_id %}"
+  {% endif %}
+>
   {% if payment and payment.status == "captured" and invoice %}
   <section class="client-billing-success" aria-labelledby="client-billing-success-title">
     <div class="client-billing-success__intro">
@@ -41,7 +52,9 @@
   {% else %}
 
   <p class="client-order-panel__lead">
-    {% if awaits_client_payment or show_pay_cta %}
+    {% if payment and payment.status == "captured_review" %}
+    Capture reçue et mise en vérification. Aucun nouveau paiement ne doit être lancé ; notre équipe contrôle le règlement.
+    {% elif awaits_client_payment or show_pay_cta %}
     Paiement non finalisé — réglez pour confirmer la commande et lancer la production.
     {% elif order.billing_mode == "deferred" %}
     Facturation différée selon votre encours. Aucun paiement en ligne ici.
@@ -158,7 +171,9 @@
       </button>
     </div>
   </section>
+  {% endif %}
 
+  {% if show_pay_dialog %}
   <dialog
     class="b2b-confirm-dialog client-billing-pay-dialog"
     id="pay-order-dialog-{{ order.public_id }}"
@@ -172,15 +187,29 @@
           Montant à régler :
           <strong>{{ order.total_amount }}&nbsp;{{ order.currency }}</strong>
         </p>
+        {% if payment and payment.capture_resolution_required %}
         <p class="muted text-sm m-0">
-          Vous serez redirigé vers le prestataire, puis ramené ici une fois le règlement confirmé.
+          La confirmation du paiement précédent est en cours de rapprochement.
+          Reprenez uniquement cette tentative ; aucun autre débit ne sera lancé entre-temps.
         </p>
+        {% elif payment and payment.approval_url and payment.status != "captured" %}
+        <p class="muted text-sm m-0">
+          Un paiement
+          {% if payment.provider == "paypal" %}PayPal{% elif payment.provider == "stripe" %}carte bancaire{% else %}en ligne{% endif %}
+          est déjà en cours. Reprenez-le ou choisissez un autre moyen ci-dessous.
+        </p>
+        {% else %}
+        <p class="muted text-sm m-0">
+          PayPal ou carte bancaire via PayPal dans une fenêtre sécurisée. Stripe redirige vers sa page carte.
+        </p>
+        {% endif %}
       </div>
       <form
         method="post"
         action="{% url 'portal:client-order-payment-initiate' customer_public_id=order.customer.public_id order_public_id=order.public_id %}"
         class="ui-form-stack client-billing-pay__form"
         data-submit-loading
+        data-client-billing-pay-form
       >
         {% csrf_token %}
         {% if payment_providers|length > 1 %}
@@ -193,7 +222,8 @@
                 type="radio"
                 name="provider"
                 value="{{ provider.id }}"
-                {% if online_provider == provider.id or payment_providers|length == 1 %}checked{% endif %}
+                {% if payment and payment.provider == provider.id %}checked{% elif online_provider == provider.id or payment_providers|length == 1 %}checked{% endif %}
+                {% if payment and payment.capture_resolution_required and payment.provider != provider.id %}disabled{% endif %}
                 required
               >
               <span>
@@ -202,7 +232,7 @@
                   {% if provider.id == "stripe" %}
                   Carte bancaire sécurisée.
                   {% elif provider.id == "paypal" %}
-                  Compte PayPal sécurisé.
+                  Compte PayPal ou carte bancaire sécurisée.
                   {% else %}
                   Paiement en ligne sécurisé.
                   {% endif %}
@@ -218,9 +248,35 @@
           Via {{ payment_providers.0.label }}.
         </p>
         {% endif %}
+        {% if paypal_sdk_enabled %}
+        <div
+          class="client-billing-pay-dialog__paypal"
+          data-paypal-button-host
+          {% if payment_providers|length > 1 %}hidden{% elif payment_providers.0.id != "paypal" %}hidden{% endif %}
+          aria-live="polite"
+        >
+          <div data-paypal-button-container class="client-billing-pay-dialog__paypal-buttons"></div>
+          <p class="client-billing-pay-dialog__paypal-hint muted text-sm m-0">
+            PayPal ou carte bancaire — vous restez sur cette page.
+          </p>
+        </div>
+        {% endif %}
         <div class="b2b-confirm-dialog__actions">
           <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
-          <button type="submit" class="ui-btn ui-btn-primary">Continuer vers le paiement</button>
+          {% if not paypal_sdk_enabled or payment_providers|length != 1 or payment_providers.0.id != "paypal" %}
+          <button
+            type="submit"
+            class="ui-btn ui-btn-primary"
+            data-client-billing-stripe-submit
+            {% if paypal_sdk_enabled and payment_providers|length > 1 %}hidden{% endif %}
+          >
+            {% if payment_providers|length == 1 and payment_providers.0.id == "stripe" %}
+            Continuer vers le paiement carte
+            {% else %}
+            Continuer vers le paiement
+            {% endif %}
+          </button>
+          {% endif %}
         </div>
       </form>
     </div>
@@ -237,9 +293,16 @@
     {% if payment.last_error_message %}
     <div class="alert alert--danger" role="alert"><p class="m-0">{{ payment.last_error_message }}</p></div>
     {% endif %}
-    {% if payment.status != "captured" and payment.approval_url and not show_pay_cta %}
+    {% if payment.status != "captured" and payment.approval_url and not show_pay_cta and show_pay_dialog %}
     <p class="client-billing-block__action mb-0">
-      <a class="ui-btn ui-btn-primary" href="{{ payment.approval_url }}">Payer maintenant</a>
+      <button
+        type="button"
+        class="ui-btn ui-btn-primary"
+        data-dialog-open="pay-order-dialog-{{ order.public_id }}"
+        aria-haspopup="dialog"
+      >
+        {% if payment.provider == "paypal" %}Reprendre le paiement PayPal{% else %}Reprendre le paiement{% endif %}
+      </button>
     </p>
     {% endif %}
   </section>

@@ -58,7 +58,11 @@ class StaffOrderListView(StaffDomainPermissionMixin, View):
 
     def get(self, request):
         active_queue = staff_order_list_filter_service.normalize_queue(request.GET.get("queue"))
-        active_period = staff_order_list_filter_service.normalize_period(request.GET.get("period"))
+        active_sort = staff_order_list_filter_service.normalize_sort(request.GET.get("sort"))
+        active_sort_dir = staff_order_list_filter_service.normalize_dir(
+            active_sort,
+            request.GET.get("dir"),
+        )
         search_query = request.GET.get("q", "").strip()[:120]
         base_queryset = order_service.list_staff_orders()
         queue_counts = staff_order_list_filter_service.count_by_queue(base_queryset)
@@ -66,16 +70,14 @@ class StaffOrderListView(StaffDomainPermissionMixin, View):
             base_queryset,
             queue=active_queue,
         )
-        filtered_queryset = staff_order_list_filter_service.apply_period_filter(
-            filtered_queryset,
-            period=active_period,
-        )
         filtered_queryset = staff_order_list_filter_service.apply_search(
             filtered_queryset,
             query=search_query,
         )
-        filtered_queryset = staff_order_list_filter_service.apply_operational_order(
-            filtered_queryset
+        filtered_queryset = staff_order_list_filter_service.apply_sort(
+            filtered_queryset,
+            sort=active_sort,
+            direction=active_sort_dir,
         )
         page_obj = order_service.paginate_orders(
             filtered_queryset,
@@ -86,16 +88,33 @@ class StaffOrderListView(StaffDomainPermissionMixin, View):
             "orders": page_obj.object_list,
             "page_obj": page_obj,
             "active_queue": active_queue,
-            "active_period": active_period,
+            "active_sort": active_sort,
+            "active_sort_dir": active_sort_dir,
             "active_queue_label": staff_order_list_filter_service.label_for(active_queue),
-            "active_period_label": staff_order_list_filter_service.label_for_period(active_period),
+            "active_sort_summary": staff_order_list_filter_service.sort_summary(
+                sort=active_sort,
+                direction=active_sort_dir,
+            ),
             "search_query": search_query,
             "queue_tabs": staff_order_list_filter_service.build_tabs(
                 active_queue=active_queue,
                 counts=queue_counts,
             ),
-            "period_tabs": staff_order_list_filter_service.build_period_tabs(
-                active_period=active_period,
+            "sort_header_priority": staff_order_list_filter_service.build_sort_header(
+                column=StaffOrderListFilterService.SORT_PRIORITY,
+                label="Priorité",
+                active_sort=active_sort,
+                active_dir=active_sort_dir,
+                queue=active_queue,
+                search=search_query,
+            ),
+            "sort_header_created_at": staff_order_list_filter_service.build_sort_header(
+                column=StaffOrderListFilterService.SORT_CREATED_AT,
+                label="Créée le",
+                active_sort=active_sort,
+                active_dir=active_sort_dir,
+                queue=active_queue,
+                search=search_query,
             ),
             "nav_mode": "staff",
             "nav_key": "staff-orders",

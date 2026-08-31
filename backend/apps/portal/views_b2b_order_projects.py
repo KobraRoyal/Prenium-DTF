@@ -102,6 +102,7 @@ def build_gang_sheet_project_quote(
             quantity=quantity,
             file_count=1,
             shipping_method_code=shipping_method_code,
+            processing_time_code=processing_time_code,
             billing_mode=resolved_billing,
         )
     except ValidationError:
@@ -201,15 +202,6 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                 getattr(self.customer, "default_billing_mode", Order.BillingMode.DEFERRED),
             )
             quote = extra.get("gang_sheet_quote")
-            if quote is None and "gang_sheet_quote" not in extra:
-                quote = build_gang_sheet_project_quote(
-                    project=project,
-                    customer=self.customer,
-                    shipping_method_code=shipping_method_code,
-                    processing_time_code=processing_time_code,
-                    billing_mode=billing_mode,
-                )
-            ctx["gang_sheet_quote"] = quote
             from apps.processing_time.services.options import ProcessingTimeOptionService
             from apps.shipping.services.methods import ShippingMethodService
 
@@ -231,13 +223,39 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                     )
                 shipping_choice_widget = "radios"
                 show_shipping_choice = True
-            if processing_time_code:
-                selected_processing_code = str(processing_time_code).strip().lower()
+            explicit_processing = (
+                str(processing_time_code).strip().lower()
+                if processing_time_code is not None and str(processing_time_code).strip()
+                else ""
+            )
+            if explicit_processing:
+                selected_processing_code = explicit_processing
+                processing_time_auto_from_date = False
+            elif project.requested_date:
+                selected_processing_code = processing_time_service.resolve_code_for_requested_date(
+                    customer=self.customer,
+                    requested_date=project.requested_date,
+                )
+                processing_time_auto_from_date = True
             else:
                 selected_processing_code = processing_time_service.resolve_default_code(
                     customer=self.customer
                 )
-            # Recalcule le devis avec le code réellement applicable (ex. verrou retrait).
+                processing_time_auto_from_date = False
+            selected_processing_code = processing_time_service.clamp_code_for_customer(
+                customer=self.customer,
+                code=selected_processing_code,
+            )
+            if explicit_processing and selected_processing_code != explicit_processing:
+                processing_time_auto_from_date = False
+            if quote is None and "gang_sheet_quote" not in extra:
+                quote = build_gang_sheet_project_quote(
+                    project=project,
+                    customer=self.customer,
+                    shipping_method_code=selected_shipping_code,
+                    processing_time_code=selected_processing_code,
+                    billing_mode=billing_mode,
+                )
             if quote is not None and (
                 locks_pickup
                 or str(quote.get("shipping_method_code") or "") != selected_shipping_code
@@ -250,7 +268,7 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                     processing_time_code=selected_processing_code,
                     billing_mode=billing_mode,
                 )
-                ctx["gang_sheet_quote"] = quote
+            ctx["gang_sheet_quote"] = quote
             ctx["shipping_methods"] = shipping_service.list_active_methods()
             ctx["selected_shipping_method_code"] = selected_shipping_code
             ctx["show_shipping_choice"] = show_shipping_choice
@@ -263,6 +281,7 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                 )
             )
             ctx["selected_processing_time_code"] = selected_processing_code
+            ctx["processing_time_auto_from_date"] = processing_time_auto_from_date
             ctx["cash_checkout_requires_gang_sheet"] = customer_requires_gang_sheet_orders(
                 self.customer
             )
@@ -402,10 +421,11 @@ class ClientOrderProjectDetailView(ClientProjectFeatureMixin, View):
 
 
 class ClientOrderProjectAutosaveView(ClientProjectFeatureMixin, View):
-    template_name = "portal/client/partials/order_project_fields.html"
+    template_name = "portal/client/partials/order_project_fields_response.html"
 
     def post(self, request, customer_public_id, project_public_id):
         project = self.get_project_or_404(project_public_id)
+        old_requested_date = project.requested_date
         form_error = ""
         try:
             project = project_service.update_project(
@@ -417,14 +437,32 @@ class ClientOrderProjectAutosaveView(ClientProjectFeatureMixin, View):
         except ProjectDomainError as error:
             form_error = error.message
             project.refresh_from_db()
+        date_changed = (
+            not form_error
+            and "requested_date" in request.POST
+            and project.requested_date != old_requested_date
+        )
+        context_extra = {
+            "project": project,
+            "order_modes": B2BOrderProject.OrderMode.choices,
+            "form_error": form_error,
+            "refresh_summary": date_changed,
+        }
+        if not date_changed:
+            shipping_code = (
+                request.POST.get("shipping_method_code")
+                or request.POST.get("shipping_method")
+                or ""
+            ).strip()
+            if shipping_code:
+                context_extra["shipping_method_code"] = shipping_code
+            processing_code = (request.POST.get("processing_time_code") or "").strip()
+            if processing_code:
+                context_extra["processing_time_code"] = processing_code
         response = render(
             request,
             self.template_name,
-            self.context(
-                project=project,
-                order_modes=B2BOrderProject.OrderMode.choices,
-                form_error=form_error,
-            ),
+            self.context(**context_extra),
             status=400 if form_error else 200,
         )
         return with_toast(
@@ -834,44 +872,9 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
             order.billing_mode == Order.BillingMode.IMMEDIATE
             and order.pricing_status == Order.PricingStatus.PRICED
         ):
-            from apps.portal.views_common import billing_service
             from apps.portal.views_payments import available_payment_providers
 
-            providers = available_payment_providers()
-            if len(providers) == 1:
-                provider = providers[0]["id"]
-                success_path = reverse(
-                    "portal:client-order-payment-return",
-                    kwargs={
-                        "customer_public_id": self.customer.public_id,
-                        "order_public_id": order.public_id,
-                    },
-                )
-                from django.conf import settings as dj_settings
-
-                base = dj_settings.PUBLIC_BASE_URL.rstrip("/")
-                if provider == "stripe":
-                    success_url = (
-                        f"{base}{success_path}?status=success&session_id={{CHECKOUT_SESSION_ID}}"
-                    )
-                else:
-                    success_url = f"{base}{success_path}?status=success"
-                cancel_url = f"{base}{success_path}?status=cancel"
-                try:
-                    _order, payment = billing_service.initiate_payment_for_customer_order(
-                        customer=self.customer,
-                        order_public_id=order.public_id,
-                        actor=request.user,
-                        provider=provider,
-                        success_url=success_url,
-                        cancel_url=cancel_url,
-                        source="client_portal.b2b_checkout_pay",
-                    )
-                    if payment is not None and payment.approval_url:
-                        return HttpResponseRedirect(payment.approval_url)
-                except ValidationError:
-                    pass
-            return HttpResponseRedirect(
+            billing_detail_url = (
                 reverse(
                     "portal:client-order-detail",
                     kwargs={
@@ -879,8 +882,11 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                         "order_public_id": order.public_id,
                     },
                 )
-                + "?panel=billing&checkout=success&pay=1"
+                + "?panel=billing&checkout=success"
             )
+            if available_payment_providers():
+                billing_detail_url += "&pay=1"
+            return HttpResponseRedirect(billing_detail_url)
         return HttpResponseRedirect(
             reverse(
                 "portal:client-order-detail",

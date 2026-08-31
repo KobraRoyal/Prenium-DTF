@@ -23,6 +23,17 @@ def order_has_captured_payment(order: Order) -> bool:
     ).exists()
 
 
+def order_has_financial_settlement(order: Order) -> bool:
+    """Fonds confirmés ou potentiellement encaissés en attente de revue."""
+    return Payment.objects.filter(
+        order_id=order.pk,
+        status__in={
+            Payment.Status.CAPTURED,
+            Payment.Status.CAPTURED_REVIEW,
+        },
+    ).exists()
+
+
 def order_awaits_client_payment(order: Order) -> bool:
     """Commande tarifée comptant CB, en attente du règlement client."""
     if not requires_captured_payment_before_production(order):
@@ -31,7 +42,7 @@ def order_awaits_client_payment(order: Order) -> bool:
         return False
     if order.total_amount is None or order.total_amount <= Decimal("0.00"):
         return False
-    return not order_has_captured_payment(order)
+    return not order_has_financial_settlement(order)
 
 
 def attach_awaits_client_payment(orders: list[Order]) -> list[Order]:
@@ -39,14 +50,17 @@ def attach_awaits_client_payment(orders: list[Order]) -> list[Order]:
     order_list = list(orders)
     if not order_list:
         return order_list
-    captured_ids = set(
+    settled_ids = set(
         Payment.objects.filter(
             order_id__in=[order.pk for order in order_list],
-            status=Payment.Status.CAPTURED,
+            status__in={
+                Payment.Status.CAPTURED,
+                Payment.Status.CAPTURED_REVIEW,
+            },
         ).values_list("order_id", flat=True)
     )
     for order in order_list:
-        if order.pk in captured_ids:
+        if order.pk in settled_ids:
             order.awaits_client_payment = False
             continue
         if not requires_captured_payment_before_production(order):
@@ -66,9 +80,12 @@ def count_orders_awaiting_client_payment(customer) -> int:
     """Nombre de commandes client encore à régler (comptant CB atelier)."""
     from django.db.models import Exists, OuterRef
 
-    captured = Payment.objects.filter(
+    settled = Payment.objects.filter(
         order_id=OuterRef("pk"),
-        status=Payment.Status.CAPTURED,
+        status__in={
+            Payment.Status.CAPTURED,
+            Payment.Status.CAPTURED_REVIEW,
+        },
     )
     candidates = list(
         Order.objects.for_customer(customer)
@@ -77,8 +94,8 @@ def count_orders_awaiting_client_payment(customer) -> int:
             pricing_status=Order.PricingStatus.PRICED,
             total_amount__gt=Decimal("0.00"),
         )
-        .annotate(_has_captured_payment=Exists(captured))
-        .filter(_has_captured_payment=False)
+        .annotate(_has_financial_settlement=Exists(settled))
+        .filter(_has_financial_settlement=False)
         .prefetch_related("items", "uploads")
     )
     return sum(1 for order in candidates if order.uses_atelier_pricing())

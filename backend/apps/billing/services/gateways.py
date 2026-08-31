@@ -46,9 +46,15 @@ class PaymentGateway(Protocol):
         order: Order,
         success_url: str,
         cancel_url: str,
+        idempotency_key: str = "",
     ) -> CheckoutCreateResult: ...
 
-    def confirm_checkout(self, *, provider_payment_id: str) -> CheckoutConfirmResult: ...
+    def confirm_checkout(
+        self,
+        *,
+        provider_payment_id: str,
+        idempotency_key: str = "",
+    ) -> CheckoutConfirmResult: ...
 
 
 def configured_online_providers() -> list[str]:

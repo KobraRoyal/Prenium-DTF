@@ -3,7 +3,8 @@ from __future__ import annotations
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.http import Http404, HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect, JsonResponse
+from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
@@ -21,6 +22,48 @@ from apps.portal.views_common import (
 
 def _absolute_portal_url(path: str) -> str:
     return f"{settings.PUBLIC_BASE_URL.rstrip('/')}{path}"
+
+
+def _wants_json_response(request) -> bool:
+    accept = str(request.headers.get("Accept", "")).lower()
+    return (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in accept
+    )
+
+
+def _popup_return_requested(request) -> bool:
+    if request.method == "POST":
+        return str(request.POST.get("popup", "")).strip() == "1"
+    return str(request.GET.get("popup", "")).strip() == "1"
+
+
+def _sdk_flow_requested(request) -> bool:
+    if request.method == "POST":
+        return str(request.POST.get("sdk", "")).strip() == "1"
+    return False
+
+
+def _append_query_param(url: str, key: str, value: str) -> str:
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}{key}={value}"
+
+
+def _render_payment_popup_return(
+    request,
+    *,
+    popup_status: str,
+    fallback_url: str,
+    popup_message: str = "",
+):
+    return render(
+        request,
+        "portal/client/payment_return_popup.html",
+        {
+            "popup_status": popup_status,
+            "popup_message": popup_message,
+            "fallback_url": fallback_url,
+        },
+    )
 
 
 def client_order_billing_landing_url(
@@ -113,8 +156,12 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
             if len(available_ids) == 1:
                 provider = next(iter(available_ids))
             else:
-                messages.error(request, "Choisissez un moyen de paiement.")
+                message = "Choisissez un moyen de paiement."
+                if _wants_json_response(request):
+                    return JsonResponse({"ok": False, "error": message}, status=400)
+                messages.error(request, message)
                 return HttpResponseRedirect(billing_url)
+        popup_requested = _popup_return_requested(request) and provider == Payment.Provider.PAYPAL
         success_path = reverse(
             "portal:client-order-payment-return",
             kwargs={
@@ -129,7 +176,10 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
             )
         else:
             success_url = _absolute_portal_url(f"{success_path}?status=success")
-        cancel_url = _absolute_portal_url(f"{success_path}?status=cancel")
+        cancel_url = _absolute_portal_url(f"{success_path}?status=cancel&provider={provider}")
+        if popup_requested:
+            success_url = _append_query_param(success_url, "popup", "1")
+            cancel_url = _append_query_param(cancel_url, "popup", "1")
 
         try:
             _order, payment = billing_service.initiate_payment_for_customer_order(
@@ -143,13 +193,96 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
             )
         except DjangoValidationError as error:
             message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+            if _wants_json_response(request):
+                return JsonResponse({"ok": False, "error": message}, status=400)
             messages.error(request, message)
             response = HttpResponseRedirect(billing_url)
             return with_toast(response, message=message, variant="error")
 
         if payment is None or not payment.approval_url:
             raise Http404
+        if _wants_json_response(request):
+            payload: dict[str, str | bool] = {
+                "ok": True,
+                "provider": payment.provider,
+            }
+            if payment.provider == Payment.Provider.PAYPAL and _sdk_flow_requested(request):
+                if not payment.paypal_order_id:
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "error": "Identifiant PayPal indisponible.",
+                        },
+                        status=500,
+                    )
+                payload["paypal_order_id"] = payment.paypal_order_id
+            else:
+                payload["approval_url"] = payment.approval_url
+            return JsonResponse(payload)
         return HttpResponseRedirect(payment.approval_url)
+
+
+class ClientOrderPaymentCaptureView(ClientOwnerRequiredMixin, _ClientOrderLookupMixin, View):
+    """Capture PayPal après approbation via le SDK JavaScript (Smart Buttons)."""
+
+    def post(self, request, customer_public_id, order_public_id):
+        order = self.get_order_or_404(order_public_id)
+        paypal_order_id = str(request.POST.get("paypal_order_id", "")).strip()
+        billing_url = client_order_billing_landing_url(
+            customer_public_id=customer_public_id,
+            order_public_id=order_public_id,
+            pay=True,
+        )
+        if not paypal_order_id:
+            message = "Identifiant PayPal manquant."
+            if _wants_json_response(request):
+                return JsonResponse({"ok": False, "error": message}, status=400)
+            messages.error(request, message)
+            return HttpResponseRedirect(billing_url)
+
+        try:
+            _order, payment, _invoice = billing_service.confirm_capture(
+                order_public_id=order.public_id,
+                paypal_order_id=paypal_order_id,
+                expected_provider=Payment.Provider.PAYPAL,
+                actor=request.user,
+                source="client_portal_sdk",
+            )
+        except DjangoValidationError as error:
+            message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+            if _wants_json_response(request):
+                return JsonResponse({"ok": False, "error": message}, status=400)
+            messages.error(request, message)
+            response = HttpResponseRedirect(billing_url)
+            return with_toast(response, message=message, variant="error")
+
+        if payment is None:
+            raise Http404
+        if payment.status == Payment.Status.CAPTURED:
+            redirect_url = client_order_billing_landing_url(
+                customer_public_id=customer_public_id,
+                order_public_id=order_public_id,
+                paid=True,
+            )
+            if _wants_json_response(request):
+                return JsonResponse(
+                    {
+                        "ok": True,
+                        "status": "captured",
+                        "redirect_url": redirect_url,
+                    }
+                )
+            messages.success(
+                request,
+                "Paiement confirmé. Votre justificatif de paiement est disponible.",
+            )
+            return HttpResponseRedirect(redirect_url)
+
+        message = "Paiement en cours de confirmation."
+        if _wants_json_response(request):
+            return JsonResponse({"ok": False, "error": message}, status=409)
+        messages.info(request, message)
+        return HttpResponseRedirect(billing_url)
 
 
 class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupMixin, View):
@@ -162,25 +295,40 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
             customer_public_id=customer_public_id,
             order_public_id=order_public_id,
         )
-
-        if status == "cancel":
-            Payment.objects.filter(
-                order_id=order.pk,
-                status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
-            ).update(status=Payment.Status.CANCELLED)
-            messages.info(request, "Paiement non validé. Vous pouvez reprendre le règlement.")
-            return HttpResponseRedirect(
-                client_order_billing_landing_url(
-                    customer_public_id=customer_public_id,
-                    order_public_id=order_public_id,
-                    cancelled=True,
-                    pay=True,
-                )
-            )
-
+        popup_return = _popup_return_requested(request)
         paypal_token = str(request.GET.get("token", "")).strip()
         session_id = str(request.GET.get("session_id", "")).strip()
         payment_public_id = str(request.GET.get("payment", "")).strip() or None
+
+        if status == "cancel":
+            requested_provider = ""
+            if paypal_token:
+                requested_provider = Payment.Provider.PAYPAL
+            elif session_id:
+                requested_provider = Payment.Provider.STRIPE
+            provider_payment_id = paypal_token or session_id
+            if requested_provider and provider_payment_id:
+                billing_service.cancel_open_payment_for_order(
+                    order_public_id=order.public_id,
+                    provider=requested_provider,
+                    provider_payment_id=provider_payment_id,
+                    actor=request.user,
+                    source="client_portal_return",
+                )
+            fallback_url = client_order_billing_landing_url(
+                customer_public_id=customer_public_id,
+                order_public_id=order_public_id,
+                cancelled=True,
+                pay=True,
+            )
+            if popup_return:
+                return _render_payment_popup_return(
+                    request,
+                    popup_status="cancel",
+                    fallback_url=fallback_url,
+                )
+            messages.info(request, "Paiement non validé. Vous pouvez reprendre le règlement.")
+            return HttpResponseRedirect(fallback_url)
 
         try:
             if session_id and session_id != "{CHECKOUT_SESSION_ID}":
@@ -188,6 +336,7 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
                     order_public_id=order.public_id,
                     provider_payment_id=session_id,
                     payment_public_id=payment_public_id,
+                    expected_provider=Payment.Provider.STRIPE,
                     actor=request.user,
                     source="client_portal_return",
                 )
@@ -196,18 +345,33 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
                     order_public_id=order.public_id,
                     paypal_order_id=paypal_token,
                     payment_public_id=payment_public_id,
+                    expected_provider=Payment.Provider.PAYPAL,
                     actor=request.user,
                     source="client_portal_return",
                 )
             else:
-                messages.warning(
-                    request,
+                message = (
                     "Retour de paiement incomplet. "
-                    "Si le débit a été effectué, contactez le support.",
+                    "Si le débit a été effectué, contactez le support."
                 )
+                if popup_return:
+                    return _render_payment_popup_return(
+                        request,
+                        popup_status="error",
+                        popup_message=message,
+                        fallback_url=billing_url,
+                    )
+                messages.warning(request, message)
                 return HttpResponseRedirect(billing_url)
         except DjangoValidationError as error:
             message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+            if popup_return:
+                return _render_payment_popup_return(
+                    request,
+                    popup_status="error",
+                    popup_message=message,
+                    fallback_url=billing_url,
+                )
             messages.error(request, message)
             response = HttpResponseRedirect(billing_url)
             return with_toast(response, message=message, variant="error")
@@ -215,16 +379,28 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
         if payment is None:
             raise Http404
         if payment.status == Payment.Status.CAPTURED:
+            fallback_url = client_order_billing_landing_url(
+                customer_public_id=customer_public_id,
+                order_public_id=order_public_id,
+                paid=True,
+            )
+            if popup_return:
+                return _render_payment_popup_return(
+                    request,
+                    popup_status="success",
+                    fallback_url=fallback_url,
+                )
             messages.success(
                 request,
                 "Paiement confirmé. Votre justificatif de paiement est disponible.",
             )
-            return HttpResponseRedirect(
-                client_order_billing_landing_url(
-                    customer_public_id=customer_public_id,
-                    order_public_id=order_public_id,
-                    paid=True,
-                )
+            return HttpResponseRedirect(fallback_url)
+        if popup_return:
+            return _render_payment_popup_return(
+                request,
+                popup_status="error",
+                popup_message="Paiement en cours de confirmation.",
+                fallback_url=billing_url,
             )
         messages.info(request, "Paiement en cours de confirmation.")
         return HttpResponseRedirect(billing_url)
@@ -258,3 +434,20 @@ def default_online_provider(customer: Customer) -> str:
     if preferred in providers:
         return preferred
     return providers[0]
+
+
+def paypal_sdk_context(*, order, payment_providers: list[dict[str, str]]) -> dict[str, object]:
+    """Config front PayPal JS SDK (Smart Buttons) pour la modale client."""
+    has_paypal = any(item["id"] == Payment.Provider.PAYPAL for item in payment_providers)
+    client_id = settings.PAYPAL_CLIENT_ID if has_paypal else ""
+    if not client_id:
+        return {
+            "paypal_sdk_enabled": False,
+            "paypal_client_id": "",
+            "paypal_sdk_currency": "",
+        }
+    return {
+        "paypal_sdk_enabled": True,
+        "paypal_client_id": client_id,
+        "paypal_sdk_currency": str(order.currency or "EUR").upper(),
+    }

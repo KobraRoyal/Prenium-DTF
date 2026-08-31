@@ -1,0 +1,30 @@
+{# Carte délai — dérogation fiche client (édition). #}
+<article
+  class="portal-page-surface processing-time-option-card processing-time-option-card--customer processing-time-option-card--{{ card.option.code }}{% if card.inactive %} processing-time-option-card--inactive{% endif %}"
+  data-testid="customer-processing-time-{{ card.option.code }}"
+>
+  <header class="processing-time-option-card__head">
+    {% include "portal/staff/partials/processing_time/card_identity.html" with option=card.option %}
+    <div class="processing-time-option-card__toggles">
+      {% include "components/forms/processing_time_settings_field.html" with field=card.fields.is_enabled %}
+    </div>
+  </header>
+
+  {% include "portal/staff/partials/processing_time/card_preview.html" with preview_text=card.option.client_label %}
+
+  <div class="processing-time-option-card__body">
+    <section class="processing-time-option-card__section" aria-labelledby="customer-processing-time-ref-{{ card.option.code }}">
+      <h4 class="processing-time-option-card__section-title" id="customer-processing-time-ref-{{ card.option.code }}">Grille atelier</h4>
+      {% include "portal/staff/partials/processing_time/pricing_line.html" with markup_percent=card.option.markup_percent flat_fee_eur=card.option.flat_fee_eur %}
+    </section>
+
+    <section class="processing-time-option-card__section" aria-labelledby="customer-processing-time-override-{{ card.option.code }}">
+      <h4 class="processing-time-option-card__section-title" id="customer-processing-time-override-{{ card.option.code }}">Dérogation client</h4>
+      <p class="ui-field-help m-0">Laissez vide pour hériter de la grille atelier.</p>
+      <div class="processing-time-option-card__fields processing-time-option-card__fields--pair">
+        {% include "components/forms/processing_time_settings_field.html" with field=card.fields.markup_percent %}
+        {% include "components/forms/processing_time_settings_field.html" with field=card.fields.flat_fee_eur %}
+      </div>
+    </section>
+  </div>
+</article>

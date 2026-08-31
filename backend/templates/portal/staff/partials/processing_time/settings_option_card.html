@@ -1,0 +1,42 @@
+{# Carte délai — grille atelier globale. #}
+<article
+  class="portal-page-surface processing-time-option-card processing-time-option-card--settings processing-time-option-card--{{ card.option.code }}{% if card.inactive %} processing-time-option-card--inactive{% endif %}"
+  data-testid="processing-time-option-{{ card.option.code }}"
+>
+  <header class="processing-time-option-card__head">
+    {% include "portal/staff/partials/processing_time/card_identity.html" with option=card.option title=card.fields.name.value title_tag="h2" %}
+    <div class="processing-time-option-card__toggles">
+      {% include "components/forms/processing_time_settings_field.html" with field=card.fields.is_active %}
+      {% include "components/forms/processing_time_settings_field.html" with field=card.fields.is_default %}
+    </div>
+  </header>
+
+  {% include "portal/staff/partials/processing_time/card_preview.html" with preview_text=card.preview_text %}
+
+  <div class="processing-time-option-card__body">
+    <section class="processing-time-option-card__section" aria-labelledby="processing-time-pricing-{{ card.option.code }}">
+      <h3 class="processing-time-option-card__section-title" id="processing-time-pricing-{{ card.option.code }}">Majoration tarifaire</h3>
+      <div class="processing-time-option-card__fields processing-time-option-card__fields--pair">
+        {% include "components/forms/processing_time_settings_field.html" with field=card.fields.markup_percent %}
+        {% include "components/forms/processing_time_settings_field.html" with field=card.fields.flat_fee_eur %}
+      </div>
+    </section>
+
+    <section class="processing-time-option-card__section" aria-labelledby="processing-time-logistics-{{ card.option.code }}">
+      <h3 class="processing-time-option-card__section-title" id="processing-time-logistics-{{ card.option.code }}">Délai &amp; ordre</h3>
+      <div class="processing-time-option-card__fields processing-time-option-card__fields--pair">
+        {% include "components/forms/processing_time_settings_field.html" with field=card.fields.business_days %}
+        {% include "components/forms/processing_time_settings_field.html" with field=card.fields.display_order %}
+      </div>
+    </section>
+
+    <section class="processing-time-option-card__section" aria-labelledby="processing-time-copy-{{ card.option.code }}">
+      <h3 class="processing-time-option-card__section-title" id="processing-time-copy-{{ card.option.code }}">Libellés</h3>
+      <div class="processing-time-option-card__fields">
+        {% include "components/forms/processing_time_settings_field.html" with field=card.fields.name %}
+        {% include "components/forms/processing_time_settings_field.html" with field=card.fields.eta_label %}
+        {% include "components/forms/processing_time_settings_field.html" with field=card.fields.disclaimer %}
+      </div>
+    </section>
+  </div>
+</article>

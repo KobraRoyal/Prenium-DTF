@@ -1,0 +1,183 @@
+/* Réglages atelier — délais de traitement (grille + cartes option). */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-settings-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-settings-page .processing-time-settings__intro {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-settings-stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-settings-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 960px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-settings-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 18px);
+  background: var(--raised, #fffdf8);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card--inactive {
+  opacity: 0.72;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 88%, var(--brand) 12%);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__identity {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__code {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin-inline-start: auto;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__preview {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__preview-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__preview-text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__body {
+  display: grid;
+  gap: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__section {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.95rem 1.1rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__section + .processing-time-option-card__section {
+  border-top: 1px solid var(--line);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__section-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__fields--pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 639px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__fields--pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card .ui-checkbox-row {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .customer-processing-time-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .customer-processing-time-panel__tools {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__reference {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .processing-time-option-card__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .customer-processing-time-panel .processing-time-settings-grid {
+  margin-top: 0.15rem;
+}
+
+@media (max-width: 1100px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .customer-processing-time-panel .processing-time-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

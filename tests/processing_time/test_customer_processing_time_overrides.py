@@ -78,11 +78,31 @@ def test_disabled_processing_time_option_hidden_for_customer():
         is_enabled=False,
     )
 
-    options = ProcessingTimeOptionService().list_active_options_for_customer(customer)
+    service = ProcessingTimeOptionService()
+    options = service.list_active_options_for_customer(customer)
     codes = {option.code for option in options}
     assert "express" not in codes
     assert "standard" in codes
     assert "fast" in codes
+    assert service.clamp_code_for_customer(customer=customer, code="express") == "standard"
+
+
+@pytest.mark.django_db
+def test_only_standard_enabled_hides_processing_time_ui_for_customer():
+    customer = Customer.objects.create(name="Standard only")
+    ProcessingTimeOptionService().ensure_default_options()
+    for code in ("fast", "express"):
+        CustomerProcessingTimeOptionOverride.objects.create(
+            customer=customer,
+            option=ProcessingTimeOption.objects.get(code=code),
+            is_enabled=False,
+        )
+
+    ctx = ProcessingTimeOptionService().checkout_ui_context(customer=customer, widget="radios")
+    assert len(ctx["processing_time_options"]) == 1
+    assert ctx["show_processing_time_choice"] is False
+    assert ctx["show_processing_time_quote_row"] is False
+    assert ctx["selected_processing_time_code"] == "standard"
 
 
 @pytest.mark.django_db

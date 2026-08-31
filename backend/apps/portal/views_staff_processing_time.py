@@ -9,6 +9,7 @@ from apps.portal.htmx import with_toast
 from apps.portal.views_common import StaffDomainPermissionMixin
 from apps.processing_time.forms_staff import StaffProcessingTimeSettingsForm
 from apps.processing_time.services.settings import ProcessingTimeSettingsService
+from apps.processing_time.services.staff_ui import build_global_settings_cards
 
 processing_time_settings_service = ProcessingTimeSettingsService()
 
@@ -49,28 +50,9 @@ class StaffProcessingTimeSettingsView(StaffDomainPermissionMixin, View):
         return StaffProcessingTimeSettingsForm(data, options=tuple(options))
 
     def _context(self, *, form, options):
-        option_forms = []
-        for option in options:
-            prefix = option.code.replace("-", "_")
-            option_forms.append(
-                {
-                    "option": option,
-                    "fields": [
-                        form[f"{prefix}__name"],
-                        form[f"{prefix}__eta_label"],
-                        form[f"{prefix}__disclaimer"],
-                        form[f"{prefix}__business_days"],
-                        form[f"{prefix}__markup_percent"],
-                        form[f"{prefix}__flat_fee_eur"],
-                        form[f"{prefix}__is_default"],
-                        form[f"{prefix}__is_active"],
-                        form[f"{prefix}__display_order"],
-                    ],
-                }
-            )
         return {
             "form": form,
-            "option_forms": option_forms,
+            "processing_time_cards": build_global_settings_cards(form=form, options=options),
             "nav_mode": "staff",
             "nav_key": "staff-processing-time-settings",
         }

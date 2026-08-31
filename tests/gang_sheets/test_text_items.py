@@ -354,6 +354,19 @@ def test_hybrid_pdf_draws_text_as_vector_without_raster_image():
         assert page.get_images(full=True) == []
 
 
+def test_request_render_locks_mixed_text_and_visual_items():
+    user, customer, _project = create_customer_scope(email="text-render-lock@example.com")
+    service = GangSheetService()
+    sheet = service.create_sheet(customer=customer, actor=user, name="Mixte")
+    attach_png_asset(sheet=sheet, actor=user)
+    service.add_text_item(sheet=sheet, actor=user, content="Atelier")
+
+    service.request_render(sheet=sheet, actor=user)
+
+    sheet.refresh_from_db()
+    assert sheet.status == GangSheet.Status.RENDERING
+
+
 def test_render_accepts_text_only_sheet():
     user, customer, _project = create_customer_scope(email="text-render@example.com")
     service = GangSheetService()

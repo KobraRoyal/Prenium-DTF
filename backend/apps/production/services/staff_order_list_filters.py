@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from urllib.parse import urlencode
 
 from django.db.models import Case, Count, Exists, IntegerField, OuterRef, Q, QuerySet, Value, When
-from django.utils import timezone
+from django.urls import reverse
 
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
@@ -34,7 +34,14 @@ def order_by_operational_priority(queryset: QuerySet) -> QuerySet:
 class StaffOrderListFilterService:
     """Filtres opérationnels de la liste staff /staff/orders/."""
 
+    SORT_PRIORITY = "priority"
+    SORT_CREATED_AT = "created_at"
     default_queue = ""
+    default_sort = SORT_PRIORITY
+    default_dir_by_sort = {
+        SORT_PRIORITY: "asc",
+        SORT_CREATED_AT: "desc",
+    }
     queue_definitions = (
         ("", "Toutes"),
         ("unprinted", "OF non imprimés"),
@@ -42,12 +49,9 @@ class StaffOrderListFilterService:
         ("changes", "Corrections"),
         ("approved", "Fichiers validés"),
     )
-    default_period = ""
-    period_definitions = (
-        ("", "Toutes dates"),
-        ("today", "Aujourd'hui"),
-        ("7d", "7 jours"),
-        ("30d", "30 jours"),
+    sort_definitions = (
+        (SORT_PRIORITY, "Priorité"),
+        (SORT_CREATED_AT, "Créée le"),
     )
 
     def normalize_queue(self, queue: str | None) -> str:
@@ -55,26 +59,84 @@ class StaffOrderListFilterService:
         cleaned = str(queue or "").strip()
         return cleaned if cleaned in allowed else self.default_queue
 
-    def normalize_period(self, period: str | None) -> str:
-        allowed = {key for key, _label in self.period_definitions}
-        cleaned = str(period or "").strip()
-        return cleaned if cleaned in allowed else self.default_period
+    def normalize_sort(self, sort: str | None) -> str:
+        allowed = {key for key, _label in self.sort_definitions}
+        cleaned = str(sort or "").strip()
+        return cleaned if cleaned in allowed else self.default_sort
 
-    def label_for_period(self, period: str) -> str:
-        for key, label in self.period_definitions:
-            if key == period:
-                return label
-        return self.period_definitions[0][1]
+    def normalize_dir(self, sort: str, direction: str | None) -> str:
+        cleaned = str(direction or "").strip().lower()
+        if cleaned in {"asc", "desc"}:
+            return cleaned
+        return self.default_dir_by_sort.get(sort, "asc")
 
-    def build_period_tabs(self, *, active_period: str) -> list[dict[str, object]]:
-        return [
-            {
-                "key": key,
-                "label": label,
-                "is_active": key == active_period,
-            }
-            for key, label in self.period_definitions
-        ]
+    def next_sort_params(self, *, column: str, active_sort: str, active_dir: str) -> tuple[str, str]:
+        if column == active_sort:
+            return column, "desc" if active_dir == "asc" else "asc"
+        return column, self.default_dir_by_sort.get(column, "asc")
+
+    def preserved_query(
+        self,
+        *,
+        queue: str,
+        search: str,
+        sort: str,
+        direction: str,
+    ) -> dict[str, str]:
+        params: dict[str, str] = {}
+        if queue:
+            params["queue"] = queue
+        if search:
+            params["q"] = search
+        params["sort"] = sort
+        params["dir"] = direction
+        return params
+
+    def build_sort_header(
+        self,
+        *,
+        column: str,
+        label: str,
+        active_sort: str,
+        active_dir: str,
+        queue: str,
+        search: str,
+    ) -> dict[str, object]:
+        next_sort, next_dir = self.next_sort_params(
+            column=column,
+            active_sort=active_sort,
+            active_dir=active_dir,
+        )
+        params = self.preserved_query(
+            queue=queue,
+            search=search,
+            sort=next_sort,
+            direction=next_dir,
+        )
+        is_active = column == active_sort
+        return {
+            "column": column,
+            "label": label,
+            "href": f"{reverse('portal:staff-order-list')}?{urlencode(params)}",
+            "is_active": is_active,
+            "direction": active_dir if is_active else "",
+            "aria_sort": (
+                "ascending"
+                if is_active and active_dir == "asc"
+                else "descending"
+                if is_active and active_dir == "desc"
+                else "none"
+            ),
+        }
+
+    def sort_summary(self, *, sort: str, direction: str) -> str:
+        if sort == self.SORT_CREATED_AT:
+            return "Date de commande la plus récente en premier" if direction == "desc" else "Date de commande la plus ancienne en premier"
+        return (
+            "Priorité express → rapide → standard"
+            if direction == "asc"
+            else "Priorité standard → rapide → express"
+        )
 
     def label_for(self, queue: str) -> str:
         for key, label in self.queue_definitions:
@@ -134,23 +196,17 @@ class StaffOrderListFilterService:
             | Q(customer_note__icontains=cleaned)
         ).distinct()
 
-    def apply_period_filter(self, queryset: QuerySet, *, period: str) -> QuerySet:
-        normalized = self.normalize_period(period)
-        if not normalized:
-            return queryset
-        now = timezone.now()
-        if normalized == "today":
-            start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif normalized == "7d":
-            start = now - timedelta(days=7)
-        elif normalized == "30d":
-            start = now - timedelta(days=30)
-        else:
-            return queryset
-        return queryset.filter(created_at__gte=start)
-
-    def apply_operational_order(self, queryset: QuerySet) -> QuerySet:
-        return order_by_operational_priority(queryset)
+    def apply_sort(self, queryset: QuerySet, *, sort: str, direction: str) -> QuerySet:
+        normalized_sort = self.normalize_sort(sort)
+        normalized_dir = self.normalize_dir(normalized_sort, direction)
+        queryset = annotate_processing_time_priority(queryset)
+        if normalized_sort == self.SORT_CREATED_AT:
+            primary = "created_at" if normalized_dir == "asc" else "-created_at"
+            return queryset.order_by(primary, "processing_time_priority")
+        primary = (
+            "processing_time_priority" if normalized_dir == "asc" else "-processing_time_priority"
+        )
+        return queryset.order_by(primary, "-created_at")
 
     def _unissued_queryset_from(self, queryset: QuerySet) -> QuerySet:
         return self._active_queryset_from(queryset).filter(

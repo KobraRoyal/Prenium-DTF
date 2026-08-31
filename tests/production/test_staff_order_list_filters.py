@@ -285,39 +285,115 @@ def test_operational_priority_orders_express_fast_standard_then_date_desc():
 
 
 @pytest.mark.django_db
-def test_period_filter_limits_orders_by_created_at():
-    actor = get_user_model().objects.create_user(email="period@example.com", password="pass")
-    customer = Customer.objects.create(name="Period Client")
-    recent = create_order(customer=customer, actor=actor)
+def test_sort_by_created_at_desc_then_asc():
+    actor = get_user_model().objects.create_user(email="sort-date@example.com", password="pass")
+    customer = Customer.objects.create(name="Sort Date Client")
     older = create_order(customer=customer, actor=actor)
-    Order.objects.filter(pk=older.pk).update(created_at=timezone.now() - timedelta(days=10))
+    newer = create_order(customer=customer, actor=actor)
+    Order.objects.filter(pk=older.pk).update(created_at=timezone.now() - timedelta(days=2))
+    Order.objects.filter(pk=newer.pk).update(created_at=timezone.now())
 
     from apps.orders.services.orders import OrderService
 
     base = OrderService().list_staff_orders()
     service = StaffOrderListFilterService()
 
-    assert recent.pk in service.apply_period_filter(base, period="7d").values_list("pk", flat=True)
-    assert older.pk not in service.apply_period_filter(base, period="7d").values_list("pk", flat=True)
-    assert older.pk in service.apply_period_filter(base, period="30d").values_list("pk", flat=True)
+    desc_ids = list(
+        service.apply_sort(base, sort="created_at", direction="desc").values_list("pk", flat=True)
+    )
+    assert desc_ids.index(newer.pk) < desc_ids.index(older.pk)
+
+    asc_ids = list(
+        service.apply_sort(base, sort="created_at", direction="asc").values_list("pk", flat=True)
+    )
+    assert asc_ids.index(older.pk) < asc_ids.index(newer.pk)
 
 
 @pytest.mark.django_db
-def test_staff_order_list_renders_period_filter_and_priority_column():
-    actor = get_user_model().objects.create_user(email="period-ui@example.com", password="pass")
-    customer = Customer.objects.create(name="Period UI Client")
+def test_sort_by_priority_asc_and_desc():
+    actor = get_user_model().objects.create_user(email="sort-priority@example.com", password="pass")
+    customer = Customer.objects.create(name="Sort Priority Client")
+    standard = create_order(customer=customer, actor=actor, processing_time_code="standard")
+    express = create_order(customer=customer, actor=actor, processing_time_code="express")
+
+    from apps.orders.services.orders import OrderService
+
+    base = OrderService().list_staff_orders()
+    service = StaffOrderListFilterService()
+
+    asc_ids = list(
+        service.apply_sort(base, sort="priority", direction="asc").values_list("pk", flat=True)
+    )
+    assert asc_ids.index(express.pk) < asc_ids.index(standard.pk)
+
+    desc_ids = list(
+        service.apply_sort(base, sort="priority", direction="desc").values_list("pk", flat=True)
+    )
+    assert desc_ids.index(standard.pk) < desc_ids.index(express.pk)
+
+
+@pytest.mark.django_db
+def test_staff_order_list_renders_sortable_column_headers():
+    actor = get_user_model().objects.create_user(email="sort-ui@example.com", password="pass")
+    customer = Customer.objects.create(name="Sort UI Client")
     create_order(customer=customer, actor=actor, processing_time_code="express")
 
-    client = create_staff_client(email="staff-period-ui@example.com")
-    response = client.get(reverse("portal:staff-order-list"), {"period": "7d", "queue": "unprinted"})
+    client = create_staff_client(email="staff-sort-ui@example.com")
+    response = client.get(reverse("portal:staff-order-list"), {"queue": "unprinted", "sort": "priority", "dir": "asc"})
 
     assert response.status_code == 200
     html = response.content.decode()
-    assert 'aria-label="Filtrer par date de commande"' in html
-    assert "staff-orders-period-toolbar" in html
-    assert "7 jours" in html
+    assert "staff-orders-period-toolbar" not in html
+    assert "ui-table-sort-trigger" in html
+    assert 'aria-sort="ascending"' in html
     assert "Priorité" in html
+    assert "Créée le" in html
     assert "processing-time-badge--express" in html
+
+
+@pytest.mark.django_db
+def test_staff_order_list_queue_tabs_use_innerHTML_for_htmx_swap():
+    actor = get_user_model().objects.create_user(email="htmx-tabs@example.com", password="pass")
+    customer = Customer.objects.create(name="HTMX Tabs Client")
+    create_order(customer=customer, actor=actor)
+
+    client = create_staff_client(email="staff-htmx-tabs@example.com")
+    response = client.get(reverse("portal:staff-order-list"))
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert 'hx-target="#staff-orders-list-results"' in html
+    assert 'hx-swap="innerHTML"' in html
+
+    partial_response = client.get(
+        reverse("portal:staff-order-list"),
+        {"queue": "to_review"},
+        HTTP_HX_REQUEST="true",
+    )
+    assert partial_response.status_code == 200
+    partial_html = partial_response.content.decode()
+    assert 'id="staff-orders-list-results"' not in partial_html
+    assert 'class="staff-orders-results ui-list-results"' in partial_html
+    assert "À contrôler" in partial_html
+
+
+@pytest.mark.django_db
+def test_staff_order_list_sort_header_toggles_direction():
+    actor = get_user_model().objects.create_user(email="sort-toggle-actor@example.com", password="pass")
+    customer = Customer.objects.create(name="Sort Toggle Client")
+    create_order(customer=customer, actor=actor)
+
+    client = create_staff_client(email="staff-sort-toggle@example.com")
+    response = client.get(
+        reverse("portal:staff-order-list"),
+        {"sort": "created_at", "dir": "desc"},
+    )
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "sort=created_at" in html
+    assert "dir=asc" in html
+    assert 'aria-sort="descending"' in html
 
 
 @pytest.mark.django_db

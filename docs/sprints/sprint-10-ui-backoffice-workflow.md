@@ -82,3 +82,57 @@ Livrer un socle backend securise pour :
 - [x] logs / audit ajoutes si necessaire
 - [x] documentation mise a jour
 - [x] checklist du sprint mise a jour
+
+## Correctif PayPal — 2026-08-31
+
+### Cause et correction
+
+- [x] cause reproduite sur la fiche commande : le SDK etait charge avec
+  `data-popups-disabled="true"`, ce qui bloquait le parcours popup standard et
+  laissait des tentatives locales annulees / en attente ;
+- [x] une seule instance Smart Buttons laisse PayPal afficher les moyens
+  eligibles, sans forcer des boutons PayPal et carte concurrents ;
+- [x] cache des assets incremente pour livrer le correctif aux navigateurs deja
+  passes sur la page ;
+- [x] creation et capture executees cote serveur avec des cles d'idempotence
+  distinctes et stables ;
+- [x] initiations concurrentes reutilisant la meme tentative ; verrouillage
+  `Order -> Payment` et refus des tentatives obsoletes avant appel PayPal ;
+- [x] contrainte base garantissant un seul reglement financier par commande ;
+- [x] montant total et devise renvoyes par PayPal verifies avant facture et
+  deblocage de la production ;
+- [x] capture provider incoherente placee en `captured_review`, sans nouveau
+  paiement, facture ou deblocage avant controle manuel ;
+- [x] timeout apres debit provider : tentative rendue non remplacable et retry
+  limite a la meme cle d'idempotence ;
+- [x] identifiant de capture, montant et devise verifies pour PayPal, retour
+  Stripe et webhook Stripe ;
+- [x] etat capture et audit financier persistes avant le PDF et les effets
+  metier, y compris si la generation du justificatif echoue ;
+- [x] confusion d'identifiant Stripe / PayPal et commande voisine refusees ;
+- [x] isolation inter-client, acces owner-only et CSRF verifies sur le portail
+  et les deux API historiques d'initiation ;
+- [x] annulation GET sans identifiant provider exact rendue non mutante ;
+- [x] en-tete COOP conserve en `same-origin-allow-popups`.
+
+### Validation
+
+- [x] suite paiement, notifications et contrats UI cibles : 105 passes, 3 ignores
+  (tests de concurrence reserves a PostgreSQL dans ce run SQLite) ;
+- [x] tests PostgreSQL de double initiation et double capture : 2 passes ;
+- [x] migration `0009_payment_single_settlement` appliquee et contrainte unique
+  partielle verifiee dans PostgreSQL ; gardes historiques propres, doublons et
+  captures ambigues couverts par tests ;
+- [x] `makemigrations --check --dry-run billing` : aucun changement ;
+- [x] Ruff cible : conforme ;
+- [x] `python manage.py check` : aucune erreur ;
+- [x] revue securite independante finale : approuvee, aucun finding P0-P3 ;
+- [x] controle navigateur sur la commande signalee : dialogue ouvert, SDK charge,
+  etat `ready`, aucun `data-popups-disabled` ;
+- [ ] recette sandbox de bout en bout avec compte PayPal test et verification du
+  justificatif — non declenchee automatiquement pour ne pas creer de transaction.
+
+La suite avec migrations SQLite reste bloquee par la migration POD locale
+`0007_restore_shopify_webhook_secret.py`, qui interroge `information_schema`.
+Les validations de ce correctif ont donc utilise `--nomigrations` ; ce blocage
+est independant du paiement PayPal.

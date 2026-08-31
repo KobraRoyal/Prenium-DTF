@@ -42,6 +42,7 @@ class StripeGateway:
         order: Order,
         success_url: str,
         cancel_url: str,
+        idempotency_key: str = "",
     ) -> CheckoutCreateResult:
         amount_cents = int((Decimal(order.total_amount) * Decimal("100")).quantize(Decimal("1")))
         if amount_cents <= 0:
@@ -64,7 +65,12 @@ class StripeGateway:
         }
         # Stripe ignore les valeurs None ; on filtre.
         body = {k: v for k, v in form.items() if v is not None}
-        payload = self._request_form(method="POST", path="/v1/checkout/sessions", form=body)
+        payload = self._request_form(
+            method="POST",
+            path="/v1/checkout/sessions",
+            form=body,
+            idempotency_key=idempotency_key,
+        )
         return CheckoutCreateResult(
             provider_payment_id=str(payload.get("id", "")).strip(),
             status=str(payload.get("status", "")).strip() or "open",
@@ -73,7 +79,13 @@ class StripeGateway:
             provider_capture_id=str(payload.get("payment_intent") or "").strip(),
         )
 
-    def confirm_checkout(self, *, provider_payment_id: str) -> CheckoutConfirmResult:
+    def confirm_checkout(
+        self,
+        *,
+        provider_payment_id: str,
+        idempotency_key: str = "",
+    ) -> CheckoutConfirmResult:
+        _ = idempotency_key  # lecture Stripe : aucun header d'idempotence requis
         payload = self._request_form(
             method="GET",
             path=f"/v1/checkout/sessions/{provider_payment_id}",
@@ -156,6 +168,7 @@ class StripeGateway:
         method: str,
         path: str,
         form: dict[str, str] | None,
+        idempotency_key: str = "",
     ) -> dict[str, object]:
         data = None if form is None else parse.urlencode(form).encode()
         http_request = request.Request(
@@ -165,6 +178,7 @@ class StripeGateway:
                 "Authorization": f"Bearer {self.secret_key}",
                 "Accept": "application/json",
                 **({"Content-Type": "application/x-www-form-urlencoded"} if data else {}),
+                **({"Idempotency-Key": idempotency_key} if idempotency_key else {}),
             },
             method=method,
         )
@@ -173,7 +187,7 @@ class StripeGateway:
                 return json.loads(response.read().decode())
         except error.HTTPError as exc:
             raise StripeAPIError(self._build_api_error_message(exc)) from exc
-        except error.URLError as exc:
+        except (error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise StripeAPIError("Unable to reach Stripe.") from exc
 
     def _build_api_error_message(self, exc: error.HTTPError) -> str:

@@ -5,6 +5,7 @@
 @import "../components/billing-statement-panel.css";
 @import "../components/customer-account-workspace.css";
 @import "../components/volume-nudge-copy.css";
+@import "../components/processing-time-settings.css";
 @import "../components/atelier-operations.css";
 @import "../components/kpi-metrics.css";
 
@@ -1737,49 +1738,56 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier
   margin-top: 0.12rem;
 }
 
-/* v115 — Priorité délai de traitement + filtre période liste commandes Atelier. */
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.65rem 1rem;
-  margin: 0 0 0.75rem;
-  padding: 0.65rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm, 14px);
-  background: color-mix(in srgb, var(--bg-accent) 42%, var(--surface));
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-toolbar__label {
-  flex: 0 0 auto;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-soft);
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-tabs.ui-list-tabs {
-  flex: 1 1 12rem;
-  margin: 0;
+/* v115 — Tri colonnes Priorité / Créée le (liste commandes Atelier). */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-table-sort-th {
   padding: 0;
-  border: 0;
+  vertical-align: middle;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-table-sort-trigger {
+  display: inline-flex;
+  align-items: center;
   gap: 0.35rem;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-tabs .ui-list-tabs__tab {
-  min-height: 2rem;
-  padding: 0.35rem 0.8rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius-sm, 14px);
   background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--transition-base, 170ms ease), background var(--transition-base, 170ms ease);
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-period-tabs .ui-list-tabs__tab.is-active {
-  border-color: var(--line-strong);
-  background: var(--surface-raised);
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-table-sort-trigger:hover,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-table-sort-trigger:focus-visible {
   color: var(--ink);
-  box-shadow: var(--shadow-soft);
+  background: color-mix(in srgb, var(--brand-soft) 55%, transparent);
+  outline: none;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-table-sort-trigger.is-active {
+  color: var(--accent-strong);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-table-sort-trigger__label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-table-sort-trigger__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.72;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .ui-table-sort-trigger.is-active .ui-table-sort-trigger__icon {
+  opacity: 1;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(

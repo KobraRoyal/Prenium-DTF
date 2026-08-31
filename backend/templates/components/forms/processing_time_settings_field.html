@@ -1,0 +1,21 @@
+{# Champ formulaire réglages délai — checkbox ou input numérique/texte. #}
+{% load l10n %}
+<div class="ui-field-group{% if field.field.widget.input_type == 'checkbox' %} ui-checkbox-row{% endif %}{% if wrapper_class %} {{ wrapper_class }}{% endif %}">
+  {% if field.field.widget.input_type == 'checkbox' %}
+  {{ field }}
+  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+  {% else %}
+  <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+  <input
+    class="ui-input{% if field.errors %} ui-input--error{% endif %}"
+    type="{% if field.field.widget.input_type == 'number' %}number{% else %}text{% endif %}"
+    name="{{ field.name }}"
+    id="{{ field.id_for_label }}"
+    value="{{ field.value|default_if_none:''|unlocalize }}"
+    {% if field.field.widget.input_type == 'number' %}step="{% if 'percent' in field.name or 'fee' in field.name %}0.01{% else %}1{% endif %}" min="0"{% endif %}
+    {% if field.errors %}aria-invalid="true"{% endif %}
+  >
+  {% endif %}
+  {% if field.help_text %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
+  {% for error in field.errors %}<p class="ui-field-error" role="alert">{{ error }}</p>{% endfor %}
+</div>

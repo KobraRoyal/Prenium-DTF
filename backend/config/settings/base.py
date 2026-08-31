@@ -323,6 +323,9 @@ USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
 SECURE_REFERRER_POLICY = "same-origin"
+# PayPal JS SDK ouvre une fenêtre de login : COOP "same-origin" seul provoque un
+# popup about:blank vide par-dessus l'overlay iframe (fallback SDK).
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
 LOGGING = {
     "version": 1,

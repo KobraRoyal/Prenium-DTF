@@ -9,13 +9,21 @@
         {% if variant == "staff" %}
         <th>Client</th>
         <th>N° OF</th>
+        {% if sortable %}
+        {% include "components/ui/table_sort_header.html" with header=sort_header_priority %}
+        {% else %}
         <th>Priorité</th>
+        {% endif %}
         {% endif %}
         <th>N° commande</th>
         <th>{% if variant == "staff" %}Réf. client{% else %}Votre réf.{% endif %}</th>
         <th>Statut</th>
         <th>Total</th>
+        {% if variant == "staff" and sortable %}
+        {% include "components/ui/table_sort_header.html" with header=sort_header_created_at %}
+        {% else %}
         <th>Créée le</th>
+        {% endif %}
         <th><span class="sr-only">Actions</span></th>
       </tr>
     </thead>

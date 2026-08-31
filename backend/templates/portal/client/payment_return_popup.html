@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Paiement — Prenium DTF</title>
+</head>
+<body>
+  <p style="font-family: system-ui, sans-serif; padding: 1.5rem; margin: 0;">Finalisation du paiement…</p>
+  <script>
+    (function () {
+      var payload = {
+        type: "prenium-payment-return",
+        status: "{{ popup_status|escapejs }}",
+        message: "{{ popup_message|default:''|escapejs }}"
+      };
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(payload, window.location.origin);
+        window.close();
+        return;
+      }
+      window.location.replace("{{ fallback_url|escapejs }}");
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{# En-tête de colonne triable — flèche à droite du libellé. #}
+<th scope="col" class="ui-table-sort-th" aria-sort="{{ header.aria_sort }}">
+  <a
+    class="ui-table-sort-trigger{% if header.is_active %} is-active is-{{ header.direction }}{% endif %}"
+    href="{{ header.href }}"
+    hx-get="{{ header.href }}"
+    hx-target="#staff-orders-list-results"
+    hx-swap="innerHTML"
+    hx-push-url="true"
+    hx-indicator="#portal-htmx-indicator"
+  >
+    <span class="ui-table-sort-trigger__label">{{ header.label }}</span>
+    <span class="ui-table-sort-trigger__icon" aria-hidden="true">
+      {% if header.is_active and header.direction == "asc" %}
+      <svg viewBox="0 0 16 16" width="14" height="14" focusable="false"><path d="M8 3l4.5 6H3.5L8 3z" fill="currentColor"/></svg>
+      {% elif header.is_active and header.direction == "desc" %}
+      <svg viewBox="0 0 16 16" width="14" height="14" focusable="false"><path d="M8 13 3.5 7h9L8 13z" fill="currentColor"/></svg>
+      {% else %}
+      <svg viewBox="0 0 16 16" width="14" height="14" focusable="false"><path d="M8 3.5 10.5 7h-5L8 3.5zm0 9L5.5 9h5L8 12.5z" fill="currentColor" opacity="0.45"/></svg>
+      {% endif %}
+    </span>
+    {% if header.is_active %}
+    <span class="sr-only">, tri {% if header.direction == "asc" %}croissant{% else %}décroissant{% endif %}</span>
+    {% else %}
+    <span class="sr-only">, trier par {{ header.label|lower }}</span>
+    {% endif %}
+  </a>
+</th>

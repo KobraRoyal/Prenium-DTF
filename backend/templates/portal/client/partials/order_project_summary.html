@@ -28,11 +28,18 @@
           </span>
         </div>
         {% endif %}
-        {% if gang_sheet_quote.processing_time_surcharge_amount %}
+        {% if show_processing_time_quote_row|default:show_processing_time_choice %}
         <div class="b2b-project-quote__row" role="listitem">
           <span class="b2b-project-quote__label">{{ gang_sheet_quote.processing_time_name|default:"Délai de traitement" }}</span>
           <span class="b2b-project-quote__value">
+            {% if gang_sheet_quote.processing_time_surcharge_amount %}
             <span class="b2b-project-quote__amount">+{% localize on %}{{ gang_sheet_quote.processing_time_surcharge_amount }}{% endlocalize %}&nbsp;{{ gang_sheet_quote.currency }}</span>
+            {% if gang_sheet_quote.processing_time_markup_percent %}
+            <span class="b2b-project-quote__rate muted">+{{ gang_sheet_quote.processing_time_markup_percent|unlocalize }}&nbsp;% sur DTF</span>
+            {% endif %}
+            {% else %}
+            <span class="b2b-project-quote__amount">Inclus</span>
+            {% endif %}
           </span>
         </div>
         {% endif %}
@@ -78,7 +85,9 @@
             {% include "portal/client/partials/order_project_delete_button.html" with button_class="b2b-project-checkout-delete" label="Supprimer la commande" %}
           </div>
           {% if gang_sheet_quote and customer.default_billing_mode == "immediate" %}
-          <p class="b2b-project-checkout-hint muted text-sm">La production démarre après règlement.</p>
+          <p class="b2b-project-checkout-hint muted text-sm">Montant TTC incluant livraison{% if show_processing_time_choice %} et délai de traitement{% endif %} — production après règlement.</p>
+          {% elif gang_sheet_quote %}
+          <p class="b2b-project-checkout-hint muted text-sm">Montant HT indicatif incluant livraison{% if show_processing_time_choice %} et délai{% endif %} — facturation selon votre encours client.</p>
           {% endif %}
         </form>
       {% elif project.status == "converted" and project.converted_order %}

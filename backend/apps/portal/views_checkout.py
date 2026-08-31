@@ -30,6 +30,24 @@ from apps.portal.views_common import (
 )
 
 
+def checkout_choice_context(*, customer, order):
+    from apps.processing_time.services.options import ProcessingTimeOptionService
+    from apps.shipping.services.methods import ShippingMethodService
+
+    return {
+        **ShippingMethodService().checkout_ui_context(
+            customer=customer,
+            order=order,
+            widget="radios",
+        ),
+        **ProcessingTimeOptionService().checkout_ui_context(
+            customer=customer,
+            order=order,
+            widget="radios",
+        ),
+    }
+
+
 class ClientCheckoutView(ScopedCustomerMixin, View):
     template_name = "portal/client/checkout.html"
 
@@ -84,6 +102,9 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
             order_public_id=order_public_id,
         )
 
+    def _checkout_choice_context(self, *, order):
+        return checkout_choice_context(customer=self.customer, order=order)
+
     def _build_context(self, *, request, creation_error: str = ""):
         order = self._resolve_order(request)
         uploads = []
@@ -93,19 +114,6 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
                 order_public_id=order.public_id,
             )
             uploads = list(uploads_qs)
-        from apps.processing_time.services.options import ProcessingTimeOptionService
-        from apps.shipping.services.methods import ShippingMethodService
-
-        shipping_ctx = ShippingMethodService().checkout_ui_context(
-            customer=self.customer,
-            order=order,
-            widget="radios",
-        )
-        processing_ctx = ProcessingTimeOptionService().checkout_ui_context(
-            customer=self.customer,
-            order=order,
-            widget="radios",
-        )
         return {
             "customer": self.customer,
             "selected_order": order,
@@ -116,8 +124,7 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
             "nav_key": "client-checkout",
             "badge_tone_for_status": badge_tone_for_status,
             "status_label": status_label,
-            **shipping_ctx,
-            **processing_ctx,
+            **(self._checkout_choice_context(order=order) if order is not None else {}),
         }
 
 
@@ -221,6 +228,7 @@ class ClientCheckoutSummaryPartialView(ScopedCustomerMixin, View):
                 "uploads": list(uploads_qs),
                 "badge_tone_for_status": badge_tone_for_status,
                 "status_label": status_label,
+                **checkout_choice_context(customer=self.customer, order=order),
             },
         )
 

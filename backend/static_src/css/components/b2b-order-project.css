@@ -300,3 +300,84 @@ body.product-shell .b2b-shipping-choice__eta {
   font-size: 0.75rem;
   line-height: 1.3;
 }
+
+/* Choix délai de traitement — même pattern que livraison */
+body.product-shell .b2b-processing-time-choice {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.75rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+body.product-shell .b2b-processing-time-choice__legend {
+  float: none;
+  padding: 0;
+  margin: 0;
+  color: var(--product-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.product-shell .b2b-processing-time-choice__hint {
+  margin: 0;
+}
+
+body.product-shell .b2b-processing-time-choice__options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+@media (max-width: 39.99rem) {
+  body.product-shell .b2b-processing-time-choice__options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+body.product-shell .b2b-processing-time-choice__option {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--product-line);
+  border-radius: var(--radius-sm);
+  background: var(--product-panel);
+  cursor: pointer;
+}
+
+body.product-shell .b2b-processing-time-choice__option:hover {
+  background: color-mix(in srgb, var(--brand) 10%, var(--product-panel));
+}
+
+body.product-shell .b2b-processing-time-choice__option:has(input:checked) {
+  background: color-mix(in srgb, var(--brand) 18%, var(--product-panel));
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--product-line));
+}
+
+body.product-shell .b2b-processing-time-choice__option:focus-within {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--brand) 32%, transparent));
+}
+
+body.product-shell .b2b-processing-time-choice__name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+body.product-shell .b2b-processing-time-choice__price {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+body.product-shell .b2b-processing-time-choice__eta {
+  color: var(--product-muted);
+  font-size: 0.75rem;
+  line-height: 1.3;
+}

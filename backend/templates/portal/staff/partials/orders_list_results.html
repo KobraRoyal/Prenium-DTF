@@ -1,10 +1,5 @@
 {% load ui_tags %}
-<div class="staff-orders-period-toolbar" aria-label="Filtrer par date de commande">
-  <span class="staff-orders-period-toolbar__label">Période</span>
-  {% ui_list_tabs period_tabs aria_label="Filtrer par date de commande" url_name="portal:staff-order-list" query_param="period" preserve_query="q,queue" extra_class="staff-orders-period-tabs" htmx_target="#staff-orders-list-results" htmx_indicator="#portal-htmx-indicator" %}
-</div>
-
-{% ui_list_tabs queue_tabs aria_label="Filtrer les commandes Atelier" url_name="portal:staff-order-list" query_param="queue" preserve_query="q,period" htmx_target="#staff-orders-list-results" htmx_indicator="#portal-htmx-indicator" %}
+{% ui_list_tabs queue_tabs aria_label="Filtrer les commandes Atelier" url_name="portal:staff-order-list" query_param="queue" preserve_query="q,sort,dir" htmx_target="#staff-orders-list-results" htmx_swap="innerHTML" htmx_indicator="#portal-htmx-indicator" %}
 
 <section class="staff-orders-results ui-list-results" aria-labelledby="staff-orders-results-title">
   <header class="ui-list-results__head">
@@ -12,19 +7,17 @@
       <h2 class="font-display" id="staff-orders-results-title">{{ active_queue_label }}</h2>
       <p>
         {% if search_query %}
-          Résultats correspondant à « {{ search_query }} ».
+          Résultats correspondant à « {{ search_query }} » — {{ active_sort_summary|lower }}.
         {% elif active_queue == "unprinted" %}
-          Commandes soumises dont le PDF OF n'a pas encore été émis — tri par priorité de délai, puis date décroissante.
+          Commandes soumises dont le PDF OF n'a pas encore été émis — {{ active_sort_summary|lower }}.
         {% elif active_queue == "to_review" %}
-          OF émis — visuels à contrôler dans le pilotage — tri par priorité de délai, puis date décroissante.
+          OF émis — visuels à contrôler dans le pilotage — {{ active_sort_summary|lower }}.
         {% elif active_queue == "changes" %}
-          OF émis — corrections client en attente — tri par priorité de délai, puis date décroissante.
+          OF émis — corrections client en attente — {{ active_sort_summary|lower }}.
         {% elif active_queue == "approved" %}
-          OF émis — tous les fichiers sont validés pour la production — tri par priorité de délai, puis date décroissante.
-        {% elif active_period %}
-          Triées par priorité de délai (express → rapide → standard), puis par date décroissante — {{ active_period_label|lower }}.
+          OF émis — tous les fichiers sont validés pour la production — {{ active_sort_summary|lower }}.
         {% else %}
-          Triées par priorité de délai (express → rapide → standard), puis par date décroissante.
+          {{ active_sort_summary }} — cliquez sur les en-têtes Priorité ou Créée le pour trier.
         {% endif %}
       </p>
     </div>
@@ -34,11 +27,12 @@
   </header>
 
   {% if orders %}
-  {% ui_orders_table orders=orders variant="staff" %}
+  {% ui_orders_table orders=orders variant="staff" sortable=True %}
   {% include "components/portal/pagination.html" with pagination_label="Pagination commandes Atelier" pagination_class="staff-pagination" htmx_target="#staff-orders-list-results" %}
   {% elif search_query %}
   {% include "components/ui/empty_state.html" with title="Aucun résultat" message="Essayez un autre N° OF, numéro de commande, client ou référence." %}
   {% else %}
+  {% ui_orders_table orders=orders variant="staff" sortable=True %}
   {% url 'portal:staff-dashboard' as staff_dashboard_url %}
   {% include "components/ui/empty_state.html" with title="Aucune commande" message="Aucune commande ne correspond à ce filtre." cta_url=staff_dashboard_url cta_label="Retour au tableau de bord" %}
   {% endif %}

@@ -1,4 +1,4 @@
-{# Choix délai de traitement atelier avec majoration tarifaire. #}
+{# Choix délai de traitement atelier — cartes alignées sur la livraison. #}
 {% load l10n %}
 {% if show_processing_time_choice and processing_time_options %}
   {% if processing_time_choice_widget == "select" %}
@@ -15,6 +15,7 @@
       hx-swap="outerHTML"
       hx-include="this, [name=shipping_method_code]:checked"
       hx-trigger="change"
+      hx-indicator="#portal-htmx-indicator"
       {% endif %}
     >
       {% for option in processing_time_options %}
@@ -22,7 +23,7 @@
         value="{{ option.code }}"
         {% if selected_processing_time_code == option.code %}selected{% endif %}
       >
-        {{ option.client_label }}{% if option.markup_percent %} (+{{ option.markup_percent|unlocalize }}&nbsp;%){% endif %}{% if option.flat_fee_eur %} +{% localize on %}{{ option.flat_fee_eur }}{% endlocalize %}&nbsp;€ HT{% endif %}
+        {{ option.name }} — {{ option.client_label }}{% if option.markup_percent %} (+{{ option.markup_percent|unlocalize }}&nbsp;% sur DTF){% endif %}
       </option>
       {% endfor %}
     </select>
@@ -30,6 +31,10 @@
   {% else %}
   <fieldset class="b2b-processing-time-choice">
     <legend class="b2b-processing-time-choice__legend">Délai de traitement</legend>
+    {% if processing_time_auto_from_date and project.requested_date %}
+    <p class="b2b-processing-time-choice__auto-hint muted text-sm">Délai suggéré selon votre date du {{ project.requested_date|date:"d/m/Y" }} — modifiable.</p>
+    {% endif %}
+    <p class="b2b-processing-time-choice__hint muted text-sm">Majoration en&nbsp;% sur l'impression DTF — le montant exact dépend du métrage{% if customer.default_billing_mode != "immediate" %} et sera confirmé après contrôle atelier{% endif %}.</p>
     <div class="b2b-processing-time-choice__options">
       {% for option in processing_time_options %}
       <label class="b2b-processing-time-choice__option">
@@ -45,15 +50,19 @@
           hx-target="#order-project-summary"
           hx-swap="outerHTML"
           hx-include="[name=shipping_method_code]:checked, [name=processing_time_code]:checked"
+          hx-trigger="change"
           hx-indicator="#portal-htmx-indicator"
           {% endif %}
         >
-        <span class="b2b-processing-time-choice__name">{{ option.client_label }}</span>
+        <span class="b2b-processing-time-choice__name">{{ option.name }}</span>
         <span class="b2b-processing-time-choice__price">
-          {% if option.markup_percent %}(+{{ option.markup_percent|unlocalize }}&nbsp;% sur le prix de la planche){% endif %}
-          {% if option.flat_fee_eur %}{% if option.markup_percent %} {% endif %}+{% localize on %}{{ option.flat_fee_eur }}{% endlocalize %}&nbsp;€ HT{% endif %}
-          {% if not option.markup_percent and not option.flat_fee_eur %}Inclus{% endif %}
+          {% if option.markup_percent %}
+            +{{ option.markup_percent|unlocalize }}&nbsp;% sur DTF
+          {% else %}
+            Inclus
+          {% endif %}
         </span>
+        <span class="b2b-processing-time-choice__eta">{{ option.eta_label }}{% if option.disclaimer %} — {{ option.disclaimer }}{% endif %}</span>
       </label>
       {% endfor %}
     </div>

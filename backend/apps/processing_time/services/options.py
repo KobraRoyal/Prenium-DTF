@@ -10,6 +10,10 @@ from apps.processing_time.services.customer_overrides import (
     CustomerProcessingTimeOverrideService,
     ResolvedProcessingTimeOption,
 )
+from apps.processing_time.services.date_resolution import (
+    reference_order_date,
+    resolve_slowest_qualifying_code,
+)
 
 TWOPLACES = Decimal("0.01")
 
@@ -251,6 +255,51 @@ class ProcessingTimeOptionService:
             flat_fee=getattr(order, "processing_time_flat_fee", ZERO_AMOUNT) or ZERO_AMOUNT,
         )
 
+    def resolve_code_for_requested_date(
+        self,
+        *,
+        customer,
+        requested_date,
+        reference_date=None,
+    ) -> str:
+        """Choisit le délai le moins cher compatible avec la date souhaitée."""
+        self.ensure_default_options()
+        options = self.list_active_options_for_customer(customer)
+        if not options:
+            return self.resolve_default_code(customer=customer)
+        if requested_date is None:
+            return self.resolve_default_code(customer=customer)
+
+        order_date = reference_order_date(reference_date)
+        resolved = resolve_slowest_qualifying_code(
+            options=options,
+            order_date=order_date,
+            requested_date=requested_date,
+        )
+        if resolved is not None:
+            return resolved
+        fastest = min(options, key=lambda option: int(option.business_days))
+        return str(fastest.code)
+
+    @staticmethod
+    def _option_has_client_surcharge(option) -> bool:
+        markup = getattr(option, "markup_percent", None) or ZERO_AMOUNT
+        fee = getattr(option, "flat_fee_eur", None) or ZERO_AMOUNT
+        return markup > ZERO_AMOUNT or fee > ZERO_AMOUNT
+
+    def clamp_code_for_customer(self, *, customer, code: str | None) -> str:
+        """Retourne un code actif pour le client (ignore les options masquées)."""
+        self.ensure_default_options()
+        options = self.list_active_options_for_customer(customer)
+        if not options:
+            return self.resolve_default_code(customer=customer)
+        normalized = str(code or "").strip().lower()
+        enabled_codes = {option.code for option in options}
+        if normalized in enabled_codes:
+            return normalized
+        default = next((option for option in options if option.is_default), options[0])
+        return default.code
+
     def checkout_ui_context(
         self,
         *,
@@ -268,6 +317,7 @@ class ProcessingTimeOptionService:
                 "processing_time_options": [],
                 "selected_processing_time_code": "",
                 "show_processing_time_choice": False,
+                "show_processing_time_quote_row": False,
                 "processing_time_choice_widget": "hidden",
             }
         if order is not None and getattr(order, "processing_time_code", ""):
@@ -276,9 +326,16 @@ class ProcessingTimeOptionService:
             selected = self.resolve_default_code(customer=customer)
         else:
             selected = self.resolve_default_code()
+        enabled_codes = {option.code for option in options}
+        if selected not in enabled_codes:
+            selected = options[0].code
+        show_quote_row = len(options) > 1 or any(
+            self._option_has_client_surcharge(option) for option in options
+        )
         return {
             "processing_time_options": options,
             "selected_processing_time_code": selected,
-            "show_processing_time_choice": True,
-            "processing_time_choice_widget": widget,
+            "show_processing_time_choice": len(options) > 1,
+            "show_processing_time_quote_row": show_quote_row,
+            "processing_time_choice_widget": widget if len(options) > 1 else "hidden",
         }

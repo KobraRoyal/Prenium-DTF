@@ -1,4 +1,5 @@
 import pytest
+from decimal import Decimal
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer, CustomerBillingProfile, CustomerMembership
 from apps.customers.services.administration import CustomerAdministrationService
@@ -178,6 +179,71 @@ def test_staff_can_update_account_and_memberships_are_visible():
     assert customer.default_billing_mode == Customer.DefaultBillingMode.IMMEDIATE
     assert customer.preferred_settlement_method == Customer.PreferredSettlementMethod.PAYPAL
     assert AuditLogEntry.objects.filter(action="customer.account_updated").exists()
+
+
+@pytest.mark.django_db
+def test_staff_processing_time_update_rejects_all_disabled_options():
+    from apps.processing_time.services.options import ProcessingTimeOptionService
+
+    staff = _staff_user(
+        email="delais@example.com",
+        perms=[
+            "access_staff_portal",
+            "view_customer",
+            "manage_customer_pricing",
+        ],
+    )
+    customer = Customer.objects.create(name="Client Delais")
+    ProcessingTimeOptionService().ensure_default_options()
+    client = APIClient()
+    assert client.login(email=staff.email, password="pass") is True
+
+    response = client.post(
+        reverse(
+            "portal:staff-customer-processing-time-update",
+            kwargs={"customer_public_id": customer.public_id},
+        ),
+        {},
+    )
+    assert response.status_code == 200
+    assert b"Au moins une option de d" in response.content
+    assert response["X-Prenium-Toast"]
+
+
+@pytest.mark.django_db
+def test_staff_can_update_processing_time_overrides():
+    from apps.processing_time.models import CustomerProcessingTimeOptionOverride, ProcessingTimeOption
+    from apps.processing_time.services.options import ProcessingTimeOptionService
+
+    staff = _staff_user(
+        email="delais-ok@example.com",
+        perms=[
+            "access_staff_portal",
+            "view_customer",
+            "manage_customer_pricing",
+        ],
+    )
+    customer = Customer.objects.create(name="Client Delais OK")
+    ProcessingTimeOptionService().ensure_default_options()
+    fast = ProcessingTimeOption.objects.get(code="fast")
+    client = APIClient()
+    assert client.login(email=staff.email, password="pass") is True
+
+    response = client.post(
+        reverse(
+            "portal:staff-customer-processing-time-update",
+            kwargs={"customer_public_id": customer.public_id},
+        ),
+        {
+            "standard__is_enabled": "on",
+            "fast__is_enabled": "on",
+            "fast__markup_percent": "12.50",
+            "express__is_enabled": "on",
+        },
+    )
+    assert response.status_code == 302
+    override = CustomerProcessingTimeOptionOverride.objects.get(customer=customer, option=fast)
+    assert override.markup_percent == Decimal("12.50")
 
 
 @pytest.mark.django_db

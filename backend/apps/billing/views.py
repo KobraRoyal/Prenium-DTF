@@ -18,7 +18,7 @@ from apps.auditlog.services import record_event
 from apps.billing.models import Payment
 from apps.billing.services.gateways import PaymentGatewayError
 from apps.billing.services.stripe_gateway import StripeGateway
-from apps.customers.permissions import HasScopedCustomerAccess
+from apps.customers.permissions import HasCustomerOwnerAccess, HasScopedCustomerAccess
 
 from .services.payments import PaymentService
 
@@ -111,7 +111,7 @@ def _build_checkout_urls(*, request, customer_public_id, order_public_id) -> tup
 class ClientPayPalPaymentInitiateView(APIView):
     """Compat historique : initiation forcée PayPal."""
 
-    permission_classes = [IsAuthenticated, HasScopedCustomerAccess]
+    permission_classes = [IsAuthenticated, HasCustomerOwnerAccess]
 
     def post(self, request, customer_public_id, order_public_id):
         success_url, cancel_url = _build_checkout_urls(
@@ -137,7 +137,7 @@ class ClientPayPalPaymentInitiateView(APIView):
 
 
 class ClientOnlinePaymentInitiateView(APIView):
-    permission_classes = [IsAuthenticated, HasScopedCustomerAccess]
+    permission_classes = [IsAuthenticated, HasCustomerOwnerAccess]
 
     def post(self, request, customer_public_id, order_public_id):
         provider = str(request.data.get("provider", "")).strip().lower() or None
@@ -303,6 +303,7 @@ class BackendPayPalCaptureView(APIView):
                 order_public_id=order_public_id,
                 paypal_order_id=paypal_order_id,
                 payment_public_id=payment_public_id,
+                expected_provider=Payment.Provider.PAYPAL,
                 actor=None,
                 source="backend_api",
             )

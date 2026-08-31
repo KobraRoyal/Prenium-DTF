@@ -291,41 +291,8 @@
       </span>
       <span class="staff-customer-workspace__summary-meta">{% if processing_time_has_customizations %}Personnalisé{% else %}Grille atelier{% endif %}</span>
     </summary>
-    <div class="staff-customer-workspace__body">
-      <div class="volume-discount-panel__tools mb-4">
-        <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-processing-time-settings' %}">Voir la grille par défaut</a>
-      </div>
-      <form class="ui-form-stack" method="post" action="{% url 'portal:staff-customer-processing-time-update' customer_public_id=customer.public_id %}" data-submit-loading>
-        {% csrf_token %}
-        {% if processing_time_form.non_field_errors %}
-        <div class="alert alert--danger" role="alert">
-          {% for error in processing_time_form.non_field_errors %}<p class="m-0">{{ error }}</p>{% endfor %}
-        </div>
-        {% endif %}
-        {% for block in processing_time_option_forms %}
-        <section class="portal-page-surface processing-time-settings-surface mb-4" data-testid="customer-processing-time-{{ block.row.option.code }}">
-          <h3 class="font-display text-base">{{ block.row.option.name }} <span class="muted text-sm">({{ block.row.option.code }})</span></h3>
-          <p class="ui-field-help m-0">{{ block.row.option.client_label }}</p>
-          <p class="ui-field-help muted text-sm m-0 mt-1">Référence atelier : +{{ block.row.option.markup_percent }}&nbsp;% DTF{% if block.row.option.flat_fee_eur %} · +{{ block.row.option.flat_fee_eur }}&nbsp;€ HT{% endif %}</p>
-          <div class="grid gap-3 md:grid-cols-3 mt-4">
-            {% for field in block.fields %}
-            <div class="ui-field-group{% if field.field.widget.input_type == 'checkbox' %} ui-checkbox-row md:col-span-3{% endif %}">
-              {% if field.field.widget.input_type == 'checkbox' %}
-              {{ field }}
-              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-              {% else %}
-              <label class="ui-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-              {{ field }}
-              {% endif %}
-              {% if field.help_text %}<p class="ui-help">{{ field.help_text }}</p>{% endif %}
-              {% if field.errors %}<p class="error-text ui-error-text" role="alert">{{ field.errors|striptags }}</p>{% endif %}
-            </div>
-            {% endfor %}
-          </div>
-        </section>
-        {% endfor %}
-        {% include "components/forms/form_actions.html" with primary_label="Enregistrer les délais client" %}
-      </form>
+    <div class="staff-customer-workspace__body customer-processing-time-panel">
+      {% include "portal/staff/partials/processing_time/customer_workspace_edit.html" %}
     </div>
   </details>
   {% elif processing_time_rows %}
@@ -337,25 +304,7 @@
       </span>
       <span class="staff-customer-workspace__summary-meta">{% if processing_time_has_customizations %}Personnalisé{% else %}Grille atelier{% endif %}</span>
     </summary>
-    <div class="staff-customer-workspace__body">
-      <dl class="staff-customer-focus__facts staff-customer-focus__facts--embedded">
-        {% for row in processing_time_rows %}
-        <div>
-          <dt>{{ row.option.name }}</dt>
-          <dd>
-            {% if row.override and not row.is_enabled %}
-            <span class="muted">Masqué pour ce client</span>
-            {% elif row.markup_percent is not None or row.flat_fee_eur is not None %}
-            +{% if row.markup_percent is not None %}{{ row.markup_percent }} %{% else %}{{ row.option.markup_percent }} %{% endif %}
-            {% if row.flat_fee_eur is not None %} · +{{ row.flat_fee_eur }} €{% elif row.option.flat_fee_eur %} · +{{ row.option.flat_fee_eur }} €{% endif %}
-            {% else %}
-            <span class="muted">Grille atelier</span>
-            {% endif %}
-          </dd>
-        </div>
-        {% endfor %}
-      </dl>
-    </div>
+    {% include "portal/staff/partials/processing_time/customer_workspace_readonly.html" %}
   </details>
   {% endif %}
 

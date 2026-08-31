@@ -79,7 +79,11 @@ from .views_gang_sheets import (
     StaffGangSheetFinalDownloadView,
     StaffGangSheetSettingsView,
 )
-from .views_payments import ClientOrderPaymentInitiateView, ClientOrderPaymentReturnView
+from .views_payments import (
+    ClientOrderPaymentCaptureView,
+    ClientOrderPaymentInitiateView,
+    ClientOrderPaymentReturnView,
+)
 from .views_profile import (
     ClientCompanyProfileView,
     PortalProfileIdentityView,
@@ -447,6 +451,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/payments/return/",
         ClientOrderPaymentReturnView.as_view(),
         name="client-order-payment-return",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/payments/capture/",
+        ClientOrderPaymentCaptureView.as_view(),
+        name="client-order-payment-capture",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/preview/",
