@@ -42,6 +42,7 @@ class B2BOrderProjectCheckoutService:
         source: str = "client_portal.b2b_checkout",
         billing_mode: str | None = None,
         shipping_method_code: str | None = None,
+        processing_time_code: str | None = None,
     ):
         locked = self.project_service._lock(project)
         self.project_service._refresh_completeness(locked)
@@ -120,6 +121,7 @@ class B2BOrderProjectCheckoutService:
             source=source,
             billing_mode=billing_mode,
             shipping_method_code=shipping_method_code,
+            processing_time_code=processing_time_code,
         )
 
         for item in items:
@@ -151,6 +153,8 @@ class B2BOrderProjectCheckoutService:
             order_public_id=order.public_id,
             source=source,
             billing_mode=billing_mode,
+            shipping_method_code=shipping_method_code,
+            processing_time_code=processing_time_code,
         )
 
         now = timezone.now()

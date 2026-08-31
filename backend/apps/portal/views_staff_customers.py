@@ -31,12 +31,15 @@ from apps.customers.services.volume_nudge_copy import (
 )
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import StaffDomainPermissionMixin
+from apps.processing_time.forms_staff import StaffCustomerProcessingTimeOverridesForm
+from apps.processing_time.services.customer_overrides import CustomerProcessingTimeOverrideService
 
 customer_admin_service = CustomerAdministrationService()
 volume_discount_service = CustomerVolumeDiscountTierService()
 default_volume_discount_service = DefaultCustomerVolumeDiscountTierService()
 volume_nudge_copy_service = VolumeDiscountDashboardCopyService()
 billing_statement_service = BillingStatementService()
+processing_time_override_service = CustomerProcessingTimeOverrideService()
 
 
 def _copy_form_audience(form) -> str:
@@ -266,6 +269,7 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
         *,
         account_form=None,
         pricing_form=None,
+        processing_time_form=None,
         tier_add_form=None,
         tier_update_form=None,
         tier_update_public_id=None,
@@ -322,6 +326,26 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
         resolved_pricing_form = pricing_form or (
             StaffCustomerPricingForm.from_customer(customer) if can_edit_pricing else None
         )
+        resolved_processing_time_form = processing_time_form or (
+            StaffCustomerProcessingTimeOverridesForm.from_customer(customer)
+            if can_edit_pricing
+            else None
+        )
+        processing_time_rows = processing_time_override_service.rows_for_staff_form(customer)
+        processing_time_option_forms = []
+        if resolved_processing_time_form is not None:
+            for row in processing_time_rows:
+                code = row["option"].code.replace("-", "_")
+                processing_time_option_forms.append(
+                    {
+                        "row": row,
+                        "fields": [
+                            resolved_processing_time_form[f"{code}__is_enabled"],
+                            resolved_processing_time_form[f"{code}__markup_percent"],
+                            resolved_processing_time_form[f"{code}__flat_fee_eur"],
+                        ],
+                    }
+                )
         resolved_tier_add_form = tier_add_form or StaffCustomerVolumeDiscountTierForm(prefix="new")
         resolved_billing_statement_form = (
             billing_statement_form or BillingStatementMonthForm(prefix="statement")
@@ -353,6 +377,12 @@ class StaffCustomerDetailView(StaffDomainPermissionMixin, View):
                 resolved_account_form and "notes" in resolved_account_form.errors
             ),
             "pricing_form": resolved_pricing_form,
+            "processing_time_form": resolved_processing_time_form,
+            "processing_time_rows": processing_time_rows,
+            "processing_time_option_forms": processing_time_option_forms,
+            "processing_time_has_customizations": (
+                processing_time_override_service.customer_has_customizations(customer)
+            ),
             "can_edit_account": can_edit_account,
             "can_edit_pricing": can_edit_pricing,
             "volume_discount_tiers": tiers,
@@ -452,6 +482,48 @@ class StaffCustomerPricingUpdateView(StaffDomainPermissionMixin, View):
         return with_toast(
             response,
             message="Conditions tarifaires enregistrées.",
+            variant="success",
+        )
+
+
+class StaffCustomerProcessingTimeUpdateView(StaffDomainPermissionMixin, View):
+    required_permission = "customers.manage_customer_pricing"
+
+    def post(self, request, customer_public_id):
+        customer = customer_admin_service.get_customer(customer_public_id=customer_public_id)
+        if customer is None:
+            raise Http404
+        form = StaffCustomerProcessingTimeOverridesForm(
+            request.POST,
+            rows=processing_time_override_service.rows_for_staff_form(customer),
+        )
+        detail_url = reverse(
+            "portal:staff-customer-detail",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+        if not form.is_valid():
+            messages.error(request, "Corrigez les erreurs des délais de traitement client.")
+            response = render(
+                request,
+                "portal/staff/customers/detail.html",
+                StaffCustomerDetailView()._context(request, customer, processing_time_form=form),
+            )
+            return with_toast(
+                response,
+                message="Délais de traitement client invalides.",
+                variant="error",
+            )
+        processing_time_override_service.update_for_customer(
+            customer=customer,
+            payloads=form.cleaned_option_payloads(),
+            actor=request.user,
+            source="staff_portal",
+        )
+        messages.success(request, "Délais de traitement client enregistrés.")
+        response = redirect(f"{detail_url}#customer-processing-time")
+        return with_toast(
+            response,
+            message="Délais de traitement client enregistrés.",
             variant="success",
         )
 

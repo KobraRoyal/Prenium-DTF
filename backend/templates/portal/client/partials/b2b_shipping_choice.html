@@ -45,11 +45,11 @@
           value="{{ method.code }}"
           {% if selected_shipping_method_code == method.code %}checked{% endif %}
           {% if gang_sheet_quote and project %}
-          hx-get="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=project.public_id %}?shipping_method={{ method.code }}"
+          hx-get="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=project.public_id %}"
           hx-select="#order-project-summary"
           hx-target="#order-project-summary"
           hx-swap="outerHTML"
-          hx-include="none"
+          hx-include="[name=shipping_method_code]:checked, [name=processing_time_code]:checked"
           hx-indicator="#portal-htmx-indicator"
           {% endif %}
         >

@@ -17,7 +17,15 @@ Grille de référence (ajustable dans le **catalogue** `CatalogService`, pas par
    - Retrait atelier (`is_pickup`) → **0 €**.  
    - Seed V1 : standard **8 € HT**, express **18 € HT**.
 
-4. **TVA** : **20 %** (`ORDER_VAT_RATE_IMMEDIATE`) uniquement si `billing_mode=immediate` (comptant CB), sur **sous-total HT + port**.  
+4. **Délai de traitement atelier** : option choisie par le client (`ProcessingTimeOption` : standard / rapide / express).  
+   - Snapshot figé sur `Order` (`processing_time_code`, `processing_time_name`, `processing_time_markup_percent`, `processing_time_markup_amount`, `processing_time_flat_fee`, `processing_time_surcharge_amount`).  
+   - **Majoration % uniquement sur le montant DTF** (impression au mètre linéaire / planche), **après remise volume** — **pas** sur la préparation fichier ni sur les frais de transport.  
+   - Forfait HT optionnel (express) ajouté en complément, distinct du port.  
+   - Seed V1 : standard **0 %** (3 jours ouvrés), rapide **+20 %** (2 jours), express **+40 % + 7 € HT** (demain).  
+   - Configuration atelier : **Réglages → Délais de traitement**.
+   - **Dérogation client** : `CustomerProcessingTimeOptionOverride` sur fiche compte Atelier — % / forfait vides = hériter de la grille globale ; option masquable par client.
+
+5. **TVA** : **20 %** (`ORDER_VAT_RATE_IMMEDIATE`) uniquement si `billing_mode=immediate` (comptant CB), sur **sous-total HT + port**.  
    - Encours (`deferred`) : **`total_amount` = HT produit + frais de port** (pas de TVA dans le Hub). La TVA et la facture mensuelle / bimensuelle sont gérées **hors outil** (logiciel de facturation externe).
 
 5. **Remise volume mensuelle client**
@@ -53,10 +61,19 @@ Grille de référence (ajustable dans le **catalogue** `CatalogService`, pas par
 ### Formule (`OrderPricingService`)
 
 ```
-subtotal_amount  = DTF + préparation          # HT produit
-shipping_amount  = option livraison           # HT port (0 si retrait / legacy sans code)
+subtotal_amount  = DTF + préparation + majoration_délai   # HT produit
+shipping_amount  = option livraison                       # HT port (0 si retrait / legacy sans code)
 tax_amount       = (subtotal + shipping) × 20 % si immediate, sinon 0
-total_amount     = subtotal + shipping + tax  # Stripe TTC (comptant) ou HT+port (encours)
+total_amount     = subtotal + shipping + tax              # Stripe TTC (comptant) ou HT+port (encours)
+```
+
+Majoration délai (base = **DTF net uniquement**, hors préparation et hors port) :
+
+```text
+markup_amount    = DTF_net × (processing_time_markup_percent / 100)
+surcharge        = markup_amount + processing_time_flat_fee   # forfait express, pas le transport
+subtotal_amount  = DTF_net + préparation + surcharge
+shipping_amount  = inchangé (calculé à part)
 ```
 
 Pour l’encours avec palier :

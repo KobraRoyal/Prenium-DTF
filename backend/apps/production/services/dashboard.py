@@ -155,6 +155,10 @@ class AtelierDashboardService:
             "order_uuid_short": order_uuid_short(order),
             "order_business_number": order_business_number(order),
             "order_client_label": order_client_reference(order),
+            "processing_time_code": str(getattr(order, "processing_time_code", "") or "").strip(),
+            "processing_time_name": str(getattr(order, "processing_time_name", "") or "").strip()
+            or "Standard",
+            "processing_time_priority": self._processing_time_priority(order),
             # Compat listes / breadcrumbs : prioriser le n° métier, sinon UUID court.
             "order_reference": order_business_number(order) or order_uuid_short(order).upper(),
             "of_number": production_job.manufacturing_order_number
@@ -290,3 +294,13 @@ class AtelierDashboardService:
             return upload.atelier_review.status
         except ObjectDoesNotExist:
             return OrderUploadReview.Status.PENDING
+
+    def _processing_time_priority(self, order: Order) -> int:
+        code = str(getattr(order, "processing_time_code", "") or "").strip().lower()
+        if code == "express":
+            return 0
+        if code == "fast":
+            return 1
+        if code == "standard":
+            return 2
+        return 3

@@ -238,7 +238,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         surface_counts = {
             "portal/staff/order_detail.html": 1,
             "portal/staff/order_project_detail.html": 2,
-            "portal/staff/customers/detail.html": 2,
+            "portal/staff/customers/detail.html": 3,
             "portal/staff/access_requests/detail.html": 2,
         }
         for path, expected_surfaces in surface_counts.items():

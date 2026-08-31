@@ -28,6 +28,14 @@
           </span>
         </div>
         {% endif %}
+        {% if gang_sheet_quote.processing_time_surcharge_amount %}
+        <div class="b2b-project-quote__row" role="listitem">
+          <span class="b2b-project-quote__label">{{ gang_sheet_quote.processing_time_name|default:"Délai de traitement" }}</span>
+          <span class="b2b-project-quote__value">
+            <span class="b2b-project-quote__amount">+{% localize on %}{{ gang_sheet_quote.processing_time_surcharge_amount }}{% endlocalize %}&nbsp;{{ gang_sheet_quote.currency }}</span>
+          </span>
+        </div>
+        {% endif %}
         <div class="b2b-project-quote__row" role="listitem">
           <span class="b2b-project-quote__label">Préparation fichier</span>
           <span class="b2b-project-quote__value">
@@ -58,6 +66,7 @@
           {% csrf_token %}
           <input type="hidden" name="billing_mode" value="{{ customer.default_billing_mode|default:'deferred' }}">
           {% include "portal/client/partials/b2b_shipping_choice.html" %}
+          {% include "portal/client/partials/b2b_processing_time_choice.html" %}
           <div class="ui-form-actions client-order-project-form-actions">
             {% if gang_sheet_quote and customer.default_billing_mode == "immediate" %}
             <button class="ui-btn ui-btn-primary ui-btn-wide b2b-project-checkout-cta" type="submit">

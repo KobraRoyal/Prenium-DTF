@@ -19,6 +19,7 @@
     <div class="atelier-worklist-command__head">
       <h2 class="font-display" id="atelier-worklist-command-title">OF non imprimés</h2>
       <span class="badge is-neutral">{{ unprinted_of_total }} en attente</span>
+      <p class="muted text-sm m-0 mt-1">Triées par priorité de délai (express → rapide → standard), puis date décroissante.</p>
     </div>
     <div class="ui-list-command__tools atelier-worklist-command__tools" aria-label="Impression groupée">
       <button
@@ -47,7 +48,7 @@
         x-cloak
         {% if not unprinted_of_total %}disabled{% endif %}
         {% if unprinted_of_total > batch_print_limit %}
-        title="{{ unprinted_of_total }} OF en attente — ce lot imprime les {{ batch_print_limit }} plus récentes. Relancez ensuite pour le reste."
+        title="{{ unprinted_of_total }} OF en attente — ce lot imprime les {{ batch_print_limit }} plus urgentes. Relancez ensuite pour le reste."
         {% else %}
         title="Émet le PDF groupé de tous les OF non imprimés."
         {% endif %}

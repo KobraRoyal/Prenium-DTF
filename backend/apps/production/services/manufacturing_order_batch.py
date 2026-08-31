@@ -15,6 +15,7 @@ from apps.production.services.manufacturing_order_pdf import (
     render_manufacturing_order_pdf_bytes,
 )
 from apps.production.services.workflow import ProductionWorkflowService
+from apps.production.services.staff_order_list_filters import order_by_operational_priority
 from apps.uploads.models import OrderUploadReview
 
 
@@ -94,7 +95,9 @@ class ManufacturingOrderBatchService:
 
         normalized_ids = self._normalize_public_ids(order_public_ids)
         orders = list(
-            self._unissued_queryset().filter(public_id__in=normalized_ids).order_by("-created_at")
+            order_by_operational_priority(
+                self._unissued_queryset().filter(public_id__in=normalized_ids)
+            )
         )
         if len(orders) != len(normalized_ids):
             raise ValidationError("Une commande sélectionnée est introuvable ou déjà imprimée.")
@@ -128,7 +131,7 @@ class ManufacturingOrderBatchService:
         return normalized
 
     def _unissued_queryset(self):
-        return (
+        queryset = (
             Order.objects.filter(status=Order.Status.SUBMITTED)
             .filter(
                 production_job__of_document_issued_at__isnull=True,
@@ -144,8 +147,8 @@ class ManufacturingOrderBatchService:
                 "production_job__transitions",
             )
             .annotate(batch_upload_count=Count("uploads", distinct=True))
-            .order_by("-created_at")
         )
+        return order_by_operational_priority(queryset)
 
     def _is_batch_eligible(self, *, order: Order) -> bool:
         try:
