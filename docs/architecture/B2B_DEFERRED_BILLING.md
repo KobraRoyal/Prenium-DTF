@@ -52,6 +52,9 @@ permission tarifaire. Lors de l’approbation d’un prospect, chaque palier act
 grille `CustomerVolumeDiscountTier` propre au nouveau client en encours. Il n’existe aucun taux
 financier codé en dur : une grille globale vide ne crée aucune remise. Les modifications futures
 de la grille globale ne modifient pas les conditions déjà copiées chez les clients existants.
+Si aucune grille client n’existe (notamment pour les anciens comptes ou un compte créé alors que la
+grille globale était vide), le moteur utilise la grille globale active comme fallback, pour
+l’encours comme pour le comptant. Une grille client renseignée reste toujours prioritaire.
 
 ### `Order` (`orders`)
 
@@ -67,6 +70,10 @@ de la grille globale ne modifient pas les conditions déjà copiées chez les cl
 | `volume_discount_threshold_linear_m`, `volume_discount_percent` | Palier atteint et taux appliqué |
 | `volume_discount_amount` | Montant HT retiré des lignes DTF de la commande |
 | `volume_discount_base_unit_price_eur` | Prix DTF brut au m² conservé pour les recalculs rétroactifs |
+
+Les quantités DTF des `OrderLine` sont conservées à **4 décimales** : la répartition d’un métrage
+global entre plusieurs fichiers peut produire des valeurs comme `0,3163 m²`. Cette précision est
+nécessaire pour que le total facturé et le volume mensuel utilisent la même surface réelle.
 
 Les commandes **existantes** migrées restent en `immediate` + `pricing_status = priced`.
 

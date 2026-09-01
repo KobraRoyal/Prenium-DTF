@@ -47,6 +47,16 @@ DEFAULT_METHOD_SEED = (
 )
 
 
+def order_uses_pickup(order) -> bool:
+    """Return whether an order snapshot points to a workshop pickup method."""
+    code = str(getattr(order, "shipping_method_code", "") or "").strip().lower()
+    if not code:
+        return False
+    if code == "pickup":
+        return True
+    return ShippingMethod.objects.filter(code=code, is_pickup=True).exists()
+
+
 class ShippingMethodService:
     """Catalogue et résolution des options de livraison client."""
 

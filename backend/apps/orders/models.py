@@ -280,7 +280,7 @@ class OrderLine(BaseModel):
     unit = models.CharField(max_length=32)
     quantity = models.DecimalField(
         max_digits=10,
-        decimal_places=2,
+        decimal_places=4,
         validators=[MinValueValidator(MIN_QUANTITY)],
     )
     unit_price = models.DecimalField(

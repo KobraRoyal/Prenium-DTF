@@ -451,6 +451,60 @@ def test_compute_uses_staff_meterage_override_when_set():
 
 
 @pytest.mark.django_db
+@override_settings(DTF_LAIZE_CM=55)
+def test_two_file_order_override_preserves_four_decimal_meterage_and_total():
+    """Le métrage réparti par fichier ne doit pas être arrondi à 2 décimales en DB."""
+    user = get_user_model().objects.create_user(email="precision@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Precision",
+        negotiated_file_preparation_fee_eur=Decimal("6.00"),
+        default_billing_mode=Customer.DefaultBillingMode.DEFERRED,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(
+        customer=customer,
+        price_per_sqm_eur=Decimal("25.00"),
+    )
+    _seed_catalog_dtf_and_file_prep(dtf_price="99.00", prep_price="99.00")
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
+        pricing_status=Order.PricingStatus.PENDING,
+        currency="EUR",
+        subtotal_amount=Decimal("0"),
+        total_amount=Decimal("0"),
+        meterage_override_linear_m=Decimal("1.1500"),
+    )
+    for filename in ("first.png", "second.png"):
+        OrderUpload.objects.create(
+            order=order,
+            uploaded_by=user,
+            file=f"orders/{order.public_id}/{filename}",
+            original_filename=filename,
+            mime_type="image/png",
+            size_bytes=8,
+        )
+
+    OrderPricingService().compute_and_persist_order_pricing(
+        order=order,
+        actor=user,
+        source="test.precision",
+    )
+
+    order.refresh_from_db()
+    dtf_lines = list(
+        order.items.filter(service_type=CatalogService.ServiceType.DTF_TRANSFER).order_by(
+            "position"
+        )
+    )
+    assert [line.quantity for line in dtf_lines] == [Decimal("0.3163"), Decimal("0.3163")]
+    assert order.monthly_volume_linear_m == Decimal("1.1502")
+    assert order.total_amount == Decimal("27.82")
+
+
+@pytest.mark.django_db
 def test_compute_rejects_api_catalog_immediate_order():
     user = get_user_model().objects.create_user(email="inj@example.com", password="pass")
     customer = Customer.objects.create(name="Immediate API")

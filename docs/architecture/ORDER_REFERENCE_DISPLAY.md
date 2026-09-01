@@ -53,6 +53,12 @@ Module : `backend/apps/orders/references.py`
 
 Tags template portail : `order_business_ref`, `order_uuid_ref` (`portal_tags.py`).
 
+Tags e-mails transactionnels : `{{ order.business_number }}` pour le N° de commande métier
+(`CMD-…`) et `{{ order.client_reference }}` pour la référence client affichée dans le portail.
+`{{ order.files }}` produit une liste à puces des `OrderUpload` de la commande et, pour une
+commande Gang Sheet, des fichiers sources rattachés à ses planches.
+Les balises historiques `{{ order.reference }}` et `{{ order.public_id }}` restent disponibles.
+
 ## Règles d’affichage par surface
 
 ### Principe

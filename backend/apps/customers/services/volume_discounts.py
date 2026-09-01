@@ -57,7 +57,7 @@ def customer_has_personalized_ladder(customer: Customer) -> bool:
 
 
 def resolve_active_ladder(customer: Customer) -> list[ResolvedVolumeTier]:
-    """Paliers actifs : grille client si elle existe, sinon défauts live (comptant only)."""
+    """Paliers actifs : grille client prioritaire, sinon grille globale par défaut."""
     if customer_has_personalized_ladder(customer):
         rows = (
             CustomerVolumeDiscountTier.objects.for_customer(customer)
@@ -72,8 +72,6 @@ def resolve_active_ladder(customer: Customer) -> list[ResolvedVolumeTier]:
             )
             for row in rows
         ]
-    if customer.default_billing_mode != Customer.DefaultBillingMode.IMMEDIATE:
-        return []
     rows = DefaultCustomerVolumeDiscountTier.objects.active().order_by(
         "minimum_monthly_linear_m",
         "created_at",
@@ -449,9 +447,7 @@ class CustomerVolumeDiscountTierService:
             "next_tier": next_tier,
             "remaining_to_next_tier_linear_m": remaining_to_next_tier,
             "policy": policy,
-            "uses_default_ladder": (
-                is_immediate and not customer_has_personalized_ladder(customer)
-            ),
+            "uses_default_ladder": not customer_has_personalized_ladder(customer),
             "application_scope": application_scope_for_customer(customer),
         }
 

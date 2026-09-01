@@ -10,6 +10,7 @@ from django.db import transaction
 from apps.auditlog.services import record_event
 from apps.notifications.models import EmailTemplate
 from apps.orders.models import Order
+from apps.orders.references import order_business_number, order_client_reference
 
 TOKEN_PATTERN = re.compile(r"{{\s*([a-z][a-z0-9_.]*)\s*}}")
 UNSAFE_TEMPLATE_MARKERS = ("{%", "%}", "{#", "#}")
@@ -61,6 +62,8 @@ EMAIL_TAGS = (
     EmailTag("site.name", "Nom de la marque", "Prenium DTF"),
     EmailTag("customer.name", "Nom du client", "Atelier Démo"),
     EmailTag("customer.billing_email", "E-mail de facturation", "compta@atelier-demo.fr"),
+    EmailTag("order.business_number", "N° commande", "CMD-2026-000104"),
+    EmailTag("order.client_reference", "Réf. client", "Collection été"),
     EmailTag("order.reference", "Référence courte", "a1b2c3d4e5f6"),
     EmailTag(
         "order.public_id",
@@ -84,6 +87,11 @@ EMAIL_TAGS = (
     ),
     EmailTag("shipment.status", "Statut transporteur", "Colis en route"),
     EmailTag("upload.filename", "Nom du fichier", "visuel-logo-final.png"),
+    EmailTag(
+        "order.files",
+        "Liste des fichiers",
+        "- logo.png\n- visuel-2.pdf",
+    ),
     EmailTag("review.reason", "Motif de correction", "Résolution insuffisante"),
     EmailTag(
         "review.comment",
@@ -398,6 +406,36 @@ EMAIL_TEMPLATE_DEFINITIONS = (
         ),
     ),
     _definition(
+        EmailTemplate.Event.ORDER_READY_FOR_PICKUP,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Commande prête au retrait atelier",
+        audience_label="Client",
+        description="Message envoyé lorsque la production est terminée pour un retrait atelier.",
+        subject="Votre commande est prête au retrait — {{ order.business_number }}",
+        body=(
+            "Bonjour,\n\n"
+            "Votre commande est prête au retrait atelier.\n\n"
+            "N° commande : {{ order.business_number }}\n"
+            "Réf. client : {{ order.client_reference }}\n\n"
+            "Vous pouvez venir la retirer à l’atelier selon les modalités convenues.\n\n"
+            "Cordialement,\nL’équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.ORDER_READY_FOR_PICKUP,
+        EmailTemplate.Audience.INTERNAL,
+        event_label="Commande prête au retrait atelier",
+        audience_label="Équipe interne",
+        description="Alerte interne lorsqu’une commande en retrait atelier est terminée.",
+        subject="[Atelier] Commande prête au retrait — {{ order.business_number }}",
+        body=(
+            "Une commande en retrait atelier est prête.\n\n"
+            "Client : {{ customer.name }}\n"
+            "N° commande : {{ order.business_number }}\n"
+            "Réf. client : {{ order.client_reference }}"
+        ),
+    ),
+    _definition(
         EmailTemplate.Event.ORDER_SHIPPED,
         EmailTemplate.Audience.CLIENT,
         event_label="Commande expédiée",
@@ -625,11 +663,62 @@ def _credit_status_message(order: Order) -> str:
     return ""
 
 
+def _clean_email_filename(value: object) -> str:
+    """Keep a stored filename on one readable line in a text email."""
+    return " ".join(str(value or "").replace("\r", " ").replace("\n", " ").split())
+
+
+def _order_files_list(order: Order) -> str:
+    """Return the filenames attached to an order, one bullet per line.
+
+    Gang Sheet source assets are linked through their sheet rather than through
+    ``OrderUpload``. They are included after the order uploads so that the
+    aggregate tag remains useful for both standard and Gang Sheet orders.
+    """
+    filenames: list[str] = []
+    upload_asset_ids: set[int] = set()
+
+    uploads = (
+        order.uploads.all().select_related("asset_version").order_by("sort_order", "created_at")
+    )
+    for upload in uploads:
+        filename = _clean_email_filename(upload.original_filename)
+        if not filename:
+            continue
+        filenames.append(filename)
+        if upload.asset_version_id and upload.asset_version is not None:
+            upload_asset_ids.add(upload.asset_version.asset_id)
+
+    # Import lazily to keep the notification context independent at module load
+    # time from the optional Gang Sheet domain.
+    from apps.gang_sheets.models import GangSheetSourceAsset
+
+    source_assets = (
+        GangSheetSourceAsset.objects.filter(sheet__order_id=order.pk)
+        .select_related("asset__current_version", "sheet")
+        .order_by("sheet__created_at", "sort_order", "created_at")
+    )
+    for source_asset in source_assets:
+        if source_asset.asset_id in upload_asset_ids:
+            continue
+        version = source_asset.asset.current_version
+        filename = _clean_email_filename(
+            version.original_filename if version is not None else source_asset.asset.name
+        )
+        if filename:
+            filenames.append(filename)
+
+    return "\n".join(f"- {filename}" for filename in filenames)
+
+
 def context_for_order(order: Order) -> dict[str, str]:
     return {
         "site.name": "Prenium DTF",
         "customer.name": order.customer.name,
         "customer.billing_email": order.customer.billing_email or "",
+        "order.business_number": order_business_number(order),
+        "order.client_reference": order_client_reference(order),
+        "order.files": _order_files_list(order),
         "order.reference": order.short_ref,
         "order.public_id": str(order.public_id),
         "order.total_amount": _format_amount(order.total_amount),

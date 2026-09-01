@@ -12,6 +12,7 @@ class EmailTemplate(BaseModel):
         PAYMENT_CAPTURED = "payment_captured", "Paiement confirmé"
         ORDER_PROCESSING = "order_processing", "Commande en traitement"
         ORDER_READY_TO_SHIP = "order_ready_to_ship", "Commande traitée"
+        ORDER_READY_FOR_PICKUP = "order_ready_for_pickup", "Commande prête au retrait"
         ORDER_SHIPPED = "order_shipped", "Commande expédiée"
         ORDER_PRICED = "order_priced", "Commande tarifée"
         ORDER_AWAITING_PAYMENT = (

@@ -15,12 +15,13 @@ from apps.catalog.services.default_catalog import DefaultCatalogService
 from apps.customers.models import (
     Customer,
     CustomerBillingProfile,
-    CustomerVolumeDiscountTier,
 )
 from apps.customers.services.volume_discounts import (
     is_cash_volume_customer,
     linear_meters_from_sqm,
+    pick_tier_for_volume,
     quote_volume_and_tier,
+    resolve_active_ladder,
 )
 from apps.orders.models import ZERO_AMOUNT, Order, OrderLine
 from apps.shipping.services.methods import ShippingMethodService
@@ -715,14 +716,9 @@ class OrderPricingService:
         if laize_m <= 0:
             raise ValidationError("DTF_LAIZE_CM doit être strictement positif.")
         monthly_volume = (total_sqm / laize_m).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
-        tier = (
-            CustomerVolumeDiscountTier.objects.active()
-            .filter(
-                customer=customer,
-                minimum_monthly_linear_m__lte=monthly_volume,
-            )
-            .order_by("-minimum_monthly_linear_m", "-created_at")
-            .first()
+        tier = pick_tier_for_volume(
+            ladder=resolve_active_ladder(customer),
+            monthly_volume=monthly_volume,
         )
         discount_percent = tier.discount_percent if tier is not None else ZERO_AMOUNT
         discount_percent = discount_percent.quantize(TWOPLACES, rounding=ROUND_HALF_UP)

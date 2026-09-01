@@ -13,6 +13,8 @@ Permettre à l’équipe autorisée de personnaliser depuis le portail Atelier l
 - `EmailTemplateService` : catalogue des modèles par défaut, validation des tags, rendu texte, sauvegarde transactionnelle et audit.
 - Deux audiences : `client` et `internal`.
 - Sept événements : commande créée, paiement confirmé, commande en traitement, commande traitée/prête à expédier, commande expédiée, tarification B2B et correction fichier demandée.
+- Le jalon de production distingue désormais le retrait atelier : un modèle dédié est envoyé
+  lorsque la commande snapshotée porte une méthode de livraison `is_pickup`.
 - Destinataires internes configurés par `INTERNAL_NOTIFICATION_EMAILS` (liste séparée par des virgules).
 - Envoi asynchrone Celery existant conservé ; les tâches résolvent le modèle actif au moment de l’envoi.
 
@@ -43,6 +45,10 @@ Tags autorisés :
 - `{{ order.status }}`
 - `{{ order.billing_mode }}`
 - `{{ order.credit_status_message }}`
+- `{{ order.business_number }}`
+- `{{ order.client_reference }}`
+- `{{ order.files }}` — liste à puces des fichiers de la commande, avec les sources
+  Gang Sheet rattachées à la commande lorsqu’elles existent
 - `{{ shipment.tracking_number }}`
 - `{{ shipment.tracking_url }}`
 - `{{ shipment.status }}`
@@ -54,6 +60,8 @@ Tags autorisés :
 - `{{ action.url }}`
 
 Les instructions Django, commentaires de template, tags inconnus, tags mal formés et retours à la ligne dans l’objet sont refusés.
+`{{ upload.filename }}` reste lié au fichier concerné par une demande de correction ; pour
+une liste multi-fichiers, utiliser `{{ order.files }}`.
 
 ## Permissions
 

@@ -439,7 +439,7 @@ def test_immediate_uses_default_ladder_until_customer_personalizes():
 
 @pytest.mark.django_db
 @override_settings(DTF_LAIZE_CM=100)
-def test_deferred_empty_ladder_does_not_fallback_to_defaults():
+def test_deferred_uses_default_ladder_when_customer_has_no_personalized_tiers():
     user = get_user_model().objects.create_user(
         email="deferred-default@example.com",
         password="pass",
@@ -453,8 +453,40 @@ def test_deferred_empty_ladder_does_not_fallback_to_defaults():
     order = _create_order(customer=customer, user=user, linear_m="6.0000")
     _price(order, user)
     order.refresh_from_db()
-    assert order.volume_discount_percent == Decimal("0.00")
-    assert order.total_amount == Decimal("70.00")
+    assert order.volume_discount_percent == Decimal("10.00")
+    assert order.volume_discount_amount == Decimal("6.00")
+    assert order.total_amount == Decimal("64.00")
+    summary = CustomerVolumeDiscountTierService().get_current_month_summary(customer=customer)
+    assert summary["uses_default_ladder"] is True
+    assert summary["current_tier"].discount_percent == Decimal("10.00")
+
+
+@pytest.mark.django_db
+@override_settings(DTF_LAIZE_CM=100)
+def test_deferred_personalized_ladder_overrides_default_ladder():
+    user = get_user_model().objects.create_user(
+        email="deferred-personalized@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Deferred Personalized",
+        default_billing_mode="deferred",
+    )
+    _seed_catalog()
+    DefaultCustomerVolumeDiscountTier.objects.create(
+        minimum_monthly_linear_m=Decimal("5.0000"),
+        discount_percent=Decimal("40.00"),
+    )
+    CustomerVolumeDiscountTier.objects.create(
+        customer=customer,
+        minimum_monthly_linear_m=Decimal("5.0000"),
+        discount_percent=Decimal("10.00"),
+    )
+    order = _create_order(customer=customer, user=user, linear_m="6.0000")
+    _price(order, user)
+    order.refresh_from_db()
+    assert order.volume_discount_percent == Decimal("10.00")
+    assert order.total_amount == Decimal("64.00")
 
 
 @pytest.mark.django_db
