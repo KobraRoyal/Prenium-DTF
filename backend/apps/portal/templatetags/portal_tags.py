@@ -17,7 +17,7 @@ from apps.orders.references import (
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260831-prospect-step3-coherence-v4"
+PORTAL_CSS_ASSET_V = "20260901-client-pricing-profile-v1"
 
 STATUS_LABELS = {
     "draft": "Brouillon",

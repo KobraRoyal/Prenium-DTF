@@ -45,6 +45,12 @@ Grille de référence (ajustable dans le **catalogue** `CatalogService`, pas par
 - **Préparation fichier** : `Customer.negotiated_file_preparation_fee_eur` si renseigné, sinon service préféré `CATALOG_PREFERRED_FILE_PREP_CODES` (défaut `seed-file-prep`), puis éventuel `seed-*`, puis premier actif.
 - **DTF au m²** : `CustomerBillingProfile.price_per_sqm_eur` si renseigné, sinon `CATALOG_PREFERRED_DTF_CODES` (vide par défaut) puis premier actif par `display_order` / `name`.
 
+### Visibilité client des conditions
+
+- Dans **Mon compte**, seul le membre client avec le rôle **Propriétaire** voit la section en lecture seule **« Tarifs et remises »**.
+- La section expose les deux montants effectivement résolus par `OrderPricingService` (DTF au m² et préparation par fichier) et indique explicitement, pour chaque ligne, si la valeur est personnalisée ou provient du catalogue par défaut.
+- Les paliers actifs affichés sont ceux réellement résolus par `resolve_active_ladder` : grille client prioritaire, sinon grille globale. Les collaborateurs et administrateurs client ne reçoivent pas ces montants dans le contexte de la page profil.
+
 ### Livraison — UX
 
 - Fiche client en **retrait atelier** (`default_shipping_mode=pickup` ou méthode `is_pickup`) : **pas de choix** à la commande, forcé `pickup` / 0 €.

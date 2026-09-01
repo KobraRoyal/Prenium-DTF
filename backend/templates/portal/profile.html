@@ -85,6 +85,20 @@
         </div>
       </details>
       {% endif %}
+
+      {% if customer_pricing_overview %}
+      <details id="account-pricing" class="staff-customer-workspace__section" data-customer-section>
+        <summary class="staff-customer-workspace__summary">
+          <span>
+            <h2>Tarifs et remises</h2>
+            <small>Vos conditions commerciales</small>
+          </span>
+        </summary>
+        <div class="staff-customer-workspace__body">
+          {% include "portal/client/partials/customer_pricing_overview.html" %}
+        </div>
+      </details>
+      {% endif %}
     </div>
   </section>
   {% endif %}

@@ -1878,6 +1878,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         detail = template_source("portal/client/order_project_detail.html")
         fields = template_source("portal/client/partials/order_project_fields.html")
         items = template_source("portal/client/partials/order_project_items.html")
+        quantity_field = template_source(
+            "portal/client/partials/order_project_item_quantity_field.html"
+        )
+        order_project_css = static_source("css/components/b2b-order-project.css")
         editor = template_source("portal/client/partials/order_project_visual_editor.html")
         replace_form = template_source(
             "portal/client/partials/order_project_replace_asset_form.html"
@@ -1950,6 +1954,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Référence client final", fields)
         self.assertIn('id="order-project-items"', items)
         self.assertIn('id="order-project-item-dialogs"', items)
+        self.assertIn("b2b-inline-quantity-form", items)
+        self.assertIn("order_project_item_quantity_field.html", items)
+        self.assertIn('name="quantity"', quantity_field)
+        self.assertIn("action='update'", items)
+        self.assertIn('hx-target="#order-project-items"', items)
+        self.assertIn("b2b-inline-quantity-form", order_project_css)
         self.assertIn(
             'hx-select-oob="#order-project-facts,#order-project-summary,#order-project-item-dialogs"',
             items,

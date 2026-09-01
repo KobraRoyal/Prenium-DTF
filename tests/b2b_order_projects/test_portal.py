@@ -78,6 +78,74 @@ def test_client_create_with_first_visual_opens_validation_modal():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_client_can_update_item_quantity_inline_without_opening_visual_modal():
+    from apps.b2b_order_projects.services import B2BOrderProjectService
+
+    user, customer, client = portal_scope()
+    project = B2BOrderProjectService().create_project(
+        customer=customer,
+        actor=user,
+        data={"name": "Quantité inline"},
+        source="test",
+    )
+    item = B2BOrderProjectService().add_item(
+        project=project,
+        actor=user,
+        data={"name": "Logo", "width_mm": 100, "height_mm": 50, "quantity": 2},
+        source="test",
+    )
+    detail_url = reverse(
+        "portal:client-order-project-detail",
+        kwargs={"customer_public_id": customer.public_id, "project_public_id": project.public_id},
+    )
+
+    detail = client.get(detail_url)
+    assert detail.status_code == 200
+    detail_html = detail.content.decode()
+    assert "b2b-inline-quantity-form" in detail_html
+    assert 'name="quantity"' in detail_html
+    assert f'value="{item.quantity}"' in detail_html
+    assert "Valider le visuel" not in detail_html
+
+    update_url = reverse(
+        "portal:client-order-project-item-action",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+            "item_public_id": item.public_id,
+            "action": "update",
+        },
+    )
+    updated = client.post(
+        update_url,
+        {"quantity": "7"},
+        HTTP_HX_REQUEST="true",
+    )
+    assert updated.status_code == 200
+    assert json.loads(updated.headers["X-Prenium-Toast"]) == {
+        "message": "Ligne mise à jour.",
+        "variant": "success",
+    }
+    item.refresh_from_db()
+    assert item.quantity == 7
+    assert 'value="7"' in updated.content.decode()
+
+    invalid = client.post(
+        update_url,
+        {"quantity": "0"},
+        HTTP_HX_REQUEST="true",
+    )
+    assert invalid.status_code == 400
+    assert json.loads(invalid.headers["X-Prenium-Toast"]) == {
+        "message": "La quantité doit être un entier positif.",
+        "variant": "error",
+    }
+    item.refresh_from_db()
+    assert item.quantity == 7
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
 def test_client_can_delete_visual_from_validation_modal_flow():
     _user, customer, client = portal_scope()
     create_url = reverse(

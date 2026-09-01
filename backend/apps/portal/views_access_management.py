@@ -334,6 +334,7 @@ class ClientTeamView(ClientTeamManagerRequiredMixin, View):
             {
                 "customer": self.customer,
                 "customer_membership": self.customer_membership,
+                "can_view_pricing": self.customer_membership.is_owner,
                 "memberships": memberships,
                 **invite_panel_context,
                 "role_choices": CustomerMemberRoleForm.base_fields["role"].choices,

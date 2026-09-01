@@ -51,6 +51,9 @@ tests ; le parcours UI standard exige la sélection d’un fichier.
 - Chaque ligne doit aussi confirmer explicitement la version analysée courante. La confirmation
   stocke la version, l'utilisateur et l'horodatage ; une modification de largeur/hauteur ou un
   remplacement de fichier l'invalide automatiquement.
+- Tant que le projet est éditable, la quantité d'une ligne peut être ajustée directement depuis
+  la liste des visuels ; cette action réutilise `B2BOrderProjectService.update_item` et ses
+  validations. Le PDF HD d'une Gang Sheet déjà verrouillée pour la production reste en lecture seule.
 - La qualité de résolution est calculée à la taille demandée : objectif configurable à 300 DPI,
   avertissement entre 200 et 299 DPI et problème critique sous 200 DPI.
 - Un remplacement crée une version immuable et remet le projet à l'état incomplet pendant

@@ -158,6 +158,7 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                 not item.is_production_gang_sheet_asset
                 and asset_service.can_replace_project_item_file(item=item)
             )
+        project.can_edit_items = project_service.transitions.is_editable(project.status)
         project.can_delete = project_service.can_client_delete(project)
         return project
 

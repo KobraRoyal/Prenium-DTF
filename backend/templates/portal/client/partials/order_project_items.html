@@ -75,7 +75,26 @@
       </div>
       <div class="b2b-visual-list-item__content">
         <div><h3>{{ item.name }}</h3></div>
-        <div class="b2b-visual-facts" aria-label="Caractéristiques de {{ item.name }}"><span>{{ item.quantity }} ex.</span><span>{{ item.width_mm }} × {{ item.height_mm }} mm</span>{% if item.support_color_label %}<span class="b2b-support-color-badge{% if item.support_color_is_multicolor %} is-rainbow{% endif %}"{% if not item.support_color_is_multicolor %} style="--swatch: {{ item.support_color_hex }}"{% endif %}>{{ item.support_color_label }}</span>{% endif %}</div>
+        <div class="b2b-visual-facts" aria-label="Caractéristiques de {{ item.name }}">
+          {% if not project.can_edit_items or item.is_production_gang_sheet_asset %}<span>{{ item.quantity }} ex.</span>{% endif %}
+          <span>{{ item.width_mm }} × {{ item.height_mm }} mm</span>{% if item.support_color_label %}<span class="b2b-support-color-badge{% if item.support_color_is_multicolor %} is-rainbow{% endif %}"{% if not item.support_color_is_multicolor %} style="--swatch: {{ item.support_color_hex }}"{% endif %}>{{ item.support_color_label }}</span>{% endif %}
+        </div>
+        {% if project.can_edit_items and not item.is_production_gang_sheet_asset %}
+        <form
+          class="b2b-inline-quantity-form"
+          method="post"
+          hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='update' %}"
+          hx-target="#order-project-items"
+          hx-swap="outerHTML"
+          hx-indicator="#portal-htmx-indicator"
+          hx-disabled-elt="this"
+          data-submit-loading
+        >
+          {% csrf_token %}
+          {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Quantité" field_id=item.public_id %}
+          <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Enregistrer</button>
+        </form>
+        {% endif %}
         {% with review=item.technical_review %}
         {% include "portal/client/partials/order_project_quality_review.html" with compact=1 %}
         {% endwith %}
