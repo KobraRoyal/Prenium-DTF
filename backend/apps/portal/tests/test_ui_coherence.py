@@ -634,12 +634,13 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("▸", source)
         self.assertNotIn("<svg", source)
 
-    def test_staff_orders_table_shows_settlement_badge(self) -> None:
+    def test_orders_table_shows_one_operational_status_badge(self) -> None:
         orders = template_source("components/tables/orders_table.html")
         billing = template_source("portal/staff/panels/billing.html")
 
-        self.assertIn("settlement_badge", orders)
-        self.assertIn('variant == "staff"', orders)
+        self.assertIn("order.operational_status.label", orders)
+        self.assertIn("order.operational_status.tone", orders)
+        self.assertNotIn("settlement_badge", orders)
         self.assertIn(">N° OF<", orders)
         self.assertIn("N° commande", orders)
         self.assertIn("Réf. client", orders)
@@ -1481,6 +1482,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("ui-list-command", source)
         self.assertNotIn("atelier-worklist-results", source)
         self.assertIn("files_to_process_label", worklist_table)
+        self.assertNotIn("row.upload_count|pluralize", worklist_table)
+        self.assertNotIn("ui-inline-flag", worklist_table)
         self.assertIn(">N° OF<", worklist_table)
         self.assertIn("components/actions/copy_icon_button.html", worklist_table)
         self.assertNotIn(">UUID<", worklist_table)

@@ -174,8 +174,23 @@ def test_atelier_dashboard_files_to_process_summary():
     row = next(item for item in changes_dashboard["rows"] if item["order"] == changes_order)
 
     assert row["files_to_process_count"] == 1
-    assert row["files_to_process_label"] == "1 à traiter"
+    assert row["files_to_process_label"] == "1 fichier à traiter"
     assert changes_dashboard["metrics"]["changes_requested"] == 0
+
+
+@pytest.mark.django_db
+def test_atelier_dashboard_files_summary_keeps_total_when_it_differs():
+    actor = get_user_model().objects.create_user(email="mixed-files@example.com", password="pass")
+    customer = Customer.objects.create(name="Fichiers mixtes")
+    order = create_order(customer=customer, actor=actor)
+    add_upload(order=order, actor=actor, filename="validated.pdf", approved=True)
+    add_upload(order=order, actor=actor, filename="pending.pdf", approved=False)
+
+    dashboard = AtelierDashboardService().build_dashboard()
+    row = next(item for item in dashboard["rows"] if item["order"] == order)
+
+    assert row["files_to_process_count"] == 1
+    assert row["files_to_process_label"] == "1 à traiter sur 2 fichiers"
 
 
 @pytest.mark.django_db

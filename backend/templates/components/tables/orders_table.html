@@ -64,12 +64,7 @@
         </td>
         <td>
           <div class="ui-table-status-stack">
-            <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-            {% if variant == "staff" %}
-            <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
-            {% endif %}
-            {% if order.awaits_client_payment %}<span class="ui-inline-flag">Paiement non finalisé</span>{% endif %}
-            {% if order.pricing_status != 'priced' %}<span class="ui-inline-flag">Tarif à confirmer</span>{% endif %}
+            <span class="badge {{ order.operational_status.tone }}">{{ order.operational_status.label }}</span>
           </div>
         </td>
         <td>
@@ -135,16 +130,7 @@
       </div>
     </div>
     <div class="mt-3 flex flex-wrap items-center gap-2">
-      <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-      {% if variant == "staff" %}
-      <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
-      {% endif %}
-      {% if order.awaits_client_payment %}
-      <span class="ui-inline-flag">Paiement non finalisé</span>
-      {% endif %}
-      {% if order.pricing_status != "priced" %}
-      <span class="ui-inline-flag">Tarif à confirmer</span>
-      {% endif %}
+      <span class="badge {{ order.operational_status.tone }}">{{ order.operational_status.label }}</span>
       {% if order.pricing_status != "priced" %}
       <span class="text-sm">Total : <span class="muted">En attente</span></span>
       {% else %}

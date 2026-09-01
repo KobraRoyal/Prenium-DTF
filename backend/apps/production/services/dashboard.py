@@ -18,6 +18,10 @@ from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUploadDriveSync, OrderUploadReview
 
 
+def _file_count_label(count: int) -> str:
+    return f"{count} fichier" if count == 1 else f"{count} fichiers"
+
+
 class AtelierDashboardService:
     """Tour de contrôle : commandes soumises dont l'OF PDF n'a pas encore été émis."""
 
@@ -202,8 +206,13 @@ class AtelierDashboardService:
         if review_status == "missing_files":
             return 0, "Aucun fichier"
         if to_process == 0:
-            return 0, f"{upload_count} validé(s)"
-        return to_process, f"{to_process} à traiter"
+            suffix = "" if upload_count == 1 else "s"
+            return 0, f"{_file_count_label(upload_count)} validé{suffix}"
+        if to_process == upload_count:
+            return to_process, f"{_file_count_label(to_process)} à traiter"
+        return to_process, (
+            f"{to_process} à traiter sur {_file_count_label(upload_count)}"
+        )
 
     def _review_state(self, *, upload_count: int, counter: Counter) -> tuple[str, str, str]:
         if upload_count == 0:

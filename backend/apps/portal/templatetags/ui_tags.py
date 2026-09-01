@@ -3,6 +3,8 @@ from urllib.parse import urlencode
 from django import template
 from django.urls import reverse
 
+from apps.portal.order_status_presentation import prepare_orders_for_list
+
 register = template.Library()
 
 
@@ -89,7 +91,7 @@ def ui_kpi_grid(items):
 @register.inclusion_tag("components/tables/orders_table.html")
 def ui_orders_table(orders, variant, customer=None):
     return {
-        "orders": orders,
+        "orders": prepare_orders_for_list(orders),
         "variant": variant,
         "customer": customer,
     }
