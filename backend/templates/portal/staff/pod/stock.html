@@ -1,0 +1,149 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Stocks POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Stocks" title="Mouvements WMS" subtitle="Réception, picking (scan bin) et putaway — owner atelier ou client isolé." %}
+  <section class="portal-page-surface ui-list-section">
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    {% if can_manage_warehouse %}
+    <div class="grid gap-8 lg:grid-cols-3">
+      <form class="ui-form-stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="receive">
+        <h2 class="font-display text-lg">Réception</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="recv" %}
+        <p>
+          <label class="ui-label" for="recv-variant">Variante blank</label>
+          <select class="ui-input" id="recv-variant" name="blank_variant_public_id">
+            {% for blank in blanks %}
+              {% for variant in blank.variants.all %}
+              <option value="{{ variant.public_id }}">{{ variant.sku }}</option>
+              {% endfor %}
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="recv-loc">Emplacement</label>
+          <select class="ui-input" id="recv-loc" name="location_public_id">
+            {% for location in locations %}
+            <option value="{{ location.public_id }}">{{ location.code }} ({{ location.zone.name }})</option>
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="recv-qty">Qté</label>
+          <input class="ui-input" id="recv-qty" name="quantity" type="number" min="1" value="1">
+        </p>
+        <button class="ui-btn ui-btn-primary" type="submit">Réceptionner</button>
+      </form>
+      <form class="ui-form-stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="pick">
+        <h2 class="font-display text-lg">Picking</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="pick" %}
+        <p>
+          <label class="ui-label" for="pick-variant">Variante blank</label>
+          <select class="ui-input" id="pick-variant" name="blank_variant_public_id">
+            {% for blank in blanks %}
+              {% for variant in blank.variants.all %}
+              <option value="{{ variant.public_id }}">{{ variant.sku }}</option>
+              {% endfor %}
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="pick-bin">Scan bin (POD-17)</label>
+          <input class="ui-input" id="pick-bin" name="scanned_bin_code" required placeholder="A-01-01-A">
+        </p>
+        <p>
+          <label class="ui-label" for="pick-qty">Qté</label>
+          <input class="ui-input" id="pick-qty" name="quantity" type="number" min="1" value="1">
+        </p>
+        <button class="ui-btn ui-btn-secondary" type="submit">Picker</button>
+      </form>
+      <form class="ui-form-stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="putaway">
+        <h2 class="font-display text-lg">Putaway retours</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="put" %}
+        <p>
+          <label class="ui-label" for="put-variant">Variante blank</label>
+          <select class="ui-input" id="put-variant" name="blank_variant_public_id">
+            {% for blank in blanks %}
+              {% for variant in blank.variants.all %}
+              <option value="{{ variant.public_id }}">{{ variant.sku }}</option>
+              {% endfor %}
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="put-loc">Zone RETURNS</label>
+          <select class="ui-input" id="put-loc" name="location_public_id">
+            {% for location in locations %}
+              {% if location.zone.kind == "returns" %}
+              <option value="{{ location.public_id }}">{{ location.code }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="put-qty">Qté</label>
+          <input class="ui-input" id="put-qty" name="quantity" type="number" min="1" value="1">
+        </p>
+        <button class="ui-btn ui-btn-ghost" type="submit">Ranger</button>
+      </form>
+    </div>
+    <div class="grid gap-8 lg:grid-cols-2 mt-8">
+      <form class="ui-form-stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="receive_finished">
+        <h2 class="font-display text-lg">Réception produit fini (ON_STOCK)</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="finr" %}
+        <p>
+          <label class="ui-label" for="finr-sku">SKU fini</label>
+          <input class="ui-input" id="finr-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN" value="TEE-WHT-M-FIN">
+        </p>
+        <p>
+          <label class="ui-label" for="finr-loc">Emplacement FINISHED</label>
+          <select class="ui-input" id="finr-loc" name="location_public_id">
+            {% for location in locations %}
+              {% if location.zone.kind == "finished" %}
+              <option value="{{ location.public_id }}">{{ location.code }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="finr-qty">Qté</label>
+          <input class="ui-input" id="finr-qty" name="quantity" type="number" min="1" value="1">
+        </p>
+        <button class="ui-btn ui-btn-primary" type="submit">Réceptionner le fini</button>
+      </form>
+      <form class="ui-form-stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="pick_finished">
+        <h2 class="font-display text-lg">Picking produit fini</h2>
+        {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="finp" %}
+        <p>
+          <label class="ui-label" for="finp-sku">SKU fini</label>
+          <input class="ui-input" id="finp-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN" value="TEE-WHT-M-FIN">
+        </p>
+        <p>
+          <label class="ui-label" for="finp-bin">Scan bin (POD-17)</label>
+          <input class="ui-input" id="finp-bin" name="scanned_bin_code" required placeholder="F-01-01-A">
+        </p>
+        <p>
+          <label class="ui-label" for="finp-qty">Qté</label>
+          <input class="ui-input" id="finp-qty" name="quantity" type="number" min="1" value="1">
+        </p>
+        <button class="ui-btn ui-btn-secondary" type="submit">Picker le fini</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="muted">Consultation seule — la gestion stock demande la permission entrepôt.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

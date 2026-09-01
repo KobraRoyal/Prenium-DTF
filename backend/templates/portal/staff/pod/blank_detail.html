@@ -1,0 +1,128 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}{{ blank.name }} — Support POD{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=blank.sku title=blank.name subtitle=blank.sku %}
+  <section class="portal-page-surface ui-list-section">
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+
+    <h2 class="font-display text-lg">Variantes</h2>
+    <div class="ui-table-shell mb-8">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr><th>SKU</th><th>Taille</th><th>Couleur</th><th>Bin défaut</th></tr>
+        </thead>
+        <tbody>
+          {% for variant in blank.variants.all %}
+          <tr>
+            <td><code>{{ variant.sku }}</code></td>
+            <td>{{ variant.size_label }}</td>
+            <td>{{ variant.color_name }}{% if variant.color_hex %} <code>{{ variant.color_hex }}</code>{% endif %}</td>
+            <td>
+              {% with rule=variant.location_rules.first %}
+                {% if rule %}<a href="{% url 'portal:staff-pod-location-detail' location_public_id=rule.location.public_id %}"><code>{{ rule.location.code }}</code></a>
+                {% else %}—{% endif %}
+              {% endwith %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">Aucune variante.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if can_manage_catalog %}
+    <form class="ui-form-stack mb-8 max-w-3xl" method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="variant">
+      <div class="grid gap-3 sm:grid-cols-4">
+        <p>
+          <label class="ui-label" for="variant-sku">SKU variante</label>
+          <input class="ui-input" id="variant-sku" name="sku" required>
+        </p>
+        <p>
+          <label class="ui-label" for="variant-size">Taille</label>
+          <input class="ui-input" id="variant-size" name="size_label" placeholder="M">
+        </p>
+        <p>
+          <label class="ui-label" for="variant-color">Couleur</label>
+          <input class="ui-input" id="variant-color" name="color_name" placeholder="Noir">
+        </p>
+        <p>
+          <label class="ui-label" for="variant-hex">Hex</label>
+          <input class="ui-input" id="variant-hex" name="color_hex" placeholder="#111111">
+        </p>
+      </div>
+      <button class="ui-btn ui-btn-primary" type="submit">Ajouter une variante</button>
+    </form>
+    {% endif %}
+
+    <h2 class="font-display text-lg">Poses autorisées</h2>
+    <ul class="mb-6">
+      {% for capability in blank.placement_capabilities.all %}
+      <li>{{ capability.get_placement_display }} · {{ capability.technique.name }} · {% if capability.is_required %}requise{% else %}optionnelle{% endif %}</li>
+      {% empty %}
+      <li class="muted">Aucune pose configurée.</li>
+      {% endfor %}
+    </ul>
+    {% if can_manage_catalog %}
+    <form class="ui-form-stack mb-8 max-w-3xl" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="capability">
+      <div class="grid gap-3 sm:grid-cols-3">
+        <p>
+          <label class="ui-label" for="cap-placement">Zone</label>
+          <select class="ui-input" id="cap-placement" name="placement">
+            {% for value, label in placements %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="cap-technique">Technique</label>
+          <select class="ui-input" id="cap-technique" name="technique_public_id">
+            {% for technique in techniques %}
+            <option value="{{ technique.public_id }}">{{ technique.name }}</option>
+            {% endfor %}
+          </select>
+        </p>
+        <p class="flex items-end gap-2">
+          <label class="ui-label"><input type="checkbox" name="is_required"> Requise</label>
+        </p>
+      </div>
+      <button class="ui-btn ui-btn-primary" type="submit">Enregistrer la pose</button>
+    </form>
+    {% endif %}
+
+    {% if can_manage_warehouse and blank.variants.exists %}
+    <h2 class="font-display text-lg">Emplacement de picking par défaut</h2>
+    <form class="ui-form-stack max-w-3xl" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="default_location">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <p>
+          <label class="ui-label" for="rule-variant">Variante</label>
+          <select class="ui-input" id="rule-variant" name="variant_public_id">
+            {% for variant in blank.variants.all %}
+            <option value="{{ variant.public_id }}">{{ variant.sku }}</option>
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="rule-location">Emplacement</label>
+          <select class="ui-input" id="rule-location" name="location_public_id">
+            {% for location in locations %}
+            <option value="{{ location.public_id }}">{{ location.code }} — {{ location.zone.name }}</option>
+            {% endfor %}
+          </select>
+        </p>
+      </div>
+      <button class="ui-btn ui-btn-primary" type="submit" {% if not locations %}disabled{% endif %}>Définir le bin</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

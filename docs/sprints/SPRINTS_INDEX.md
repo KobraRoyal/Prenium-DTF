@@ -59,6 +59,11 @@
 - [Sprint 51 — Cohérence tokens et identité Atelier](sprint-51-tokens-brand-coherence.md)
 - [Sprint 52 — Soulignement animé des actions simples](sprint-52-simple-action-hover-motion.md)
 
+## Vague POD — Shopify fulfillment + atelier pose + WMS
+- [ADR Shopify POD + WMS](../architecture/ADR_SHOPIFY_POD_WMS.md)
+- [Sprint POD Shopify + WMS (lots D0→G)](sprint-pod-shopify-wms.md)
+- [Prompt orchestration économe](../prompts/PROMPT_SHOPIFY_POD_ORCHESTRATION.md)
+
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)
 - [Sprint 2 — Sécurité applicative ciblée](sprint-2-securite-applicative-ciblee.md)

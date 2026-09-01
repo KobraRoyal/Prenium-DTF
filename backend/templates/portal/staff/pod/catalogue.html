@@ -1,0 +1,62 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Catalogue Shopify POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Catalogue Shopify" title="Catalogue Shopify" subtitle="Mapping variante → blank → slots techniques. Badges POD, ON_STOCK, VIRTUAL et NEEDS_CONFIG." %}
+  <section class="portal-page-surface ui-list-section">
+    <div class="ui-table-shell">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr>
+            <th>Boutique</th>
+            <th>Produit</th>
+            <th>Variante</th>
+            <th>SKU</th>
+            <th>Statut</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            {% for variant_row in row.variants %}
+            <tr>
+              {% if forloop.first %}
+              <td rowspan="{{ row.variants|length }}">{{ row.product.store.name }}</td>
+              <td rowspan="{{ row.variants|length }}">
+                <a href="{% url 'portal:staff-pod-catalog-product' product_public_id=row.product.public_id %}">{{ row.product.title }}</a>
+              </td>
+              {% endif %}
+              <td>{{ variant_row.variant.title }}</td>
+              <td><code>{% if variant_row.variant.sku %}{{ variant_row.variant.sku }}{% else %}—{% endif %}</code></td>
+              <td><span class="badge {{ variant_row.badge_tone }}">{{ variant_row.status }}</span></td>
+              <td>
+                <button
+                  type="button"
+                  class="ui-btn ui-btn-ghost ui-btn-sm"
+                  hx-get="{% url 'portal:staff-pod-variant-config' variant_public_id=variant_row.variant.public_id %}"
+                  hx-target="#pod-variant-drawer"
+                  hx-swap="innerHTML"
+                  hx-indicator="#portal-htmx-indicator"
+                >Configurer</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td>{{ row.product.store.name }}</td>
+              <td colspan="5">Aucune variante importée.</td>
+            </tr>
+            {% endfor %}
+          {% empty %}
+          <tr><td colspan="6">Aucun produit Shopify. {% if can_manage_catalog %}Rechargez la page pour créer le catalogue démo.{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <aside id="pod-variant-drawer" class="mt-8 rounded-xl border border-[color:var(--ui-border)] p-4" aria-live="polite">
+      <p class="muted">Sélectionnez une variante pour ouvrir le configurateur.</p>
+    </aside>
+  </section>
+</div>
+{% endblock %}

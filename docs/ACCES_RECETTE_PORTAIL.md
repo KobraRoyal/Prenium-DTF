@@ -36,7 +36,7 @@ docker compose exec web python manage.py seed_sprint09_recipe --reset
 | Email | Usage |
 |--------|--------|
 | `admin@prenium.local` | Superuser → connexion **`/admin/`** (administration Django) |
-| `staff.ops@prenium.local` | Staff → portail **`/staff/`** (permissions larges : commandes, fichiers, production, expédition, **facturation / tarif**, **demandes d’accès**) |
+| `staff.ops@prenium.local` | Staff → portail **`/staff/`** (permissions larges : commandes, fichiers, production, expédition, **facturation / tarif**, **demandes d’accès**, **atelier POD / WMS**) |
 | `staff.limited@prenium.local` | Staff → portail limité (peu de permissions métier) |
 | `client.a.owner@prenium.local` | Client propriétaire (tenant A) → **`/client/`** |
 | `client.a.member@prenium.local` | Client membre (tenant A) |

@@ -1,0 +1,94 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Lots RIP POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Lots RIP" title="Lots impression DTF" subtitle="File d’attente puis export plat 02_rip/ (watch folder NAS). Manifest hors RIP." %}
+  <section class="portal-page-surface ui-list-section">
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+
+    <h2 class="font-display text-lg">File RIP</h2>
+    {% if can_manage_catalog %}
+    <form class="ui-form-stack mb-6 max-w-3xl" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="enqueue">
+      <div class="grid gap-3 sm:grid-cols-3">
+        <p>
+          <label class="ui-label" for="rip-variant">Variante</label>
+          <select class="ui-input" id="rip-variant" name="variant_public_id">
+            {% for product in products %}
+              {% for variant in product.variants.all %}
+              <option value="{{ variant.public_id }}"{% if variant.sku == "TEE-BLK-M" %} selected{% endif %}>{{ product.store.slug }} — {{ variant.sku|default:variant.title }}</option>
+              {% endfor %}
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label class="ui-label" for="rip-so">N° commande Shopify</label>
+          <input class="ui-input" id="rip-so" name="shopify_order_number" required placeholder="SO-1042">
+        </p>
+        <p>
+          <label class="ui-label" for="rip-qty">Qté</label>
+          <input class="ui-input" id="rip-qty" name="quantity" type="number" min="1" value="1">
+        </p>
+      </div>
+      <button class="ui-btn ui-btn-secondary" type="submit">Ajouter à la file</button>
+    </form>
+    <form method="post" class="mb-8">
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="prepare">
+      <p class="mb-3 max-w-xs">
+        <label class="ui-label" for="rip-tech">Technique</label>
+        <select class="ui-input" id="rip-tech" name="technique_code">
+          {% for technique in techniques %}
+          <option value="{{ technique.code }}">{{ technique.name }} ({{ technique.rip_directory }})</option>
+          {% endfor %}
+        </select>
+      </p>
+      <button class="ui-btn ui-btn-primary" type="submit">Préparer le lot RIP</button>
+    </form>
+    {% endif %}
+
+    <div class="ui-table-shell mb-8">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr><th>Boutique</th><th>SO</th><th>SKU</th><th>État</th></tr>
+        </thead>
+        <tbody>
+          {% for item in queue %}
+          <tr>
+            <td>{{ item.store.slug }}</td>
+            <td><code>{{ item.shopify_order_number }}</code></td>
+            <td><code>{{ item.variant.sku }}</code></td>
+            <td>{{ item.get_status_display }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">File vide. Ajoutez des pièces configurées POD.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="font-display text-lg">Lots préparés</h2>
+    <div class="ui-table-shell">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr><th>Code</th><th>Fichiers</th><th>Chemin NAS</th></tr>
+        </thead>
+        <tbody>
+          {% for lot in lots %}
+          <tr>
+            <td><a href="{% url 'portal:staff-pod-rip-lot-detail' lot_public_id=lot.public_id %}"><code>{{ lot.code }}</code></a></td>
+            <td>{{ lot.file_count }}</td>
+            <td><code>{{ lot.nas_relative_path }}/{{ lot.technique.rip_directory }}/</code></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3">Aucun lot.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

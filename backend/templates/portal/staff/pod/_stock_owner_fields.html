@@ -1,0 +1,18 @@
+<p>
+  <label class="ui-label" for="{{ prefix }}-owner">Propriétaire</label>
+  <select class="ui-input" id="{{ prefix }}-owner" name="owner_kind">
+    <option value="atelier">Atelier</option>
+    <option value="customer">Client</option>
+  </select>
+</p>
+{% if customers %}
+<p>
+  <label class="ui-label" for="{{ prefix }}-customer">Client (si propriétaire client)</label>
+  <select class="ui-input" id="{{ prefix }}-customer" name="customer_public_id">
+    <option value="">—</option>
+    {% for customer in customers %}
+    <option value="{{ customer.public_id }}">{{ customer.name }}</option>
+    {% endfor %}
+  </select>
+</p>
+{% endif %}

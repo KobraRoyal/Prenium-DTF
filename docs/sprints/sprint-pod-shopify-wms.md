@@ -1,0 +1,106 @@
+# Sprint POD — Shopify + atelier + WMS
+
+**Branche** : `feature/shopify-pod-wms`  
+**ADR** : `docs/architecture/ADR_SHOPIFY_POD_WMS.md`  
+**Prompt maître** : `docs/prompts/PROMPT_SHOPIFY_POD_ORCHESTRATION.md`  
+**Statut** : lots D0–G opérationnels atelier ; OAuth / token chiffré + import + webhooks + Drive RIP (projection) livrés. App block thème hors scope test boutique.
+
+## Objectif
+Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS emplacements, **sans** mélanger avec le flux DTF métrage existant.
+
+## Règles transverses (tous lots)
+- SRP / DRY : services applicatifs ; pas de logique dans vues / serializers / templates.
+- Isolation : `Customer` / org scope serveur ; `public_id` ; jamais ID incrémental en URL.
+- Audit : mouvements stock, écritures mapping, accept/reject fulfillment.
+- UI : Tailwind + DaisyUI (`dui-`) + HTMX + Alpine ; shell atelier existant.
+- Tests : service + permissions + accès croisé ; checklist sprint mise à jour.
+- Graphify avant exploration large ; `graphify update .` après code.
+- Orchestration : max 3 sous-agents, profondeur 1 ; Terra lecture / Sol écriture ; 1 writer par set de fichiers.
+
+## Lots (ordre strict)
+
+| Lot | Livrable | Apps / domaines | Vues clés | Skills |
+|-----|----------|-----------------|-----------|--------|
+| **D0** | Techniques + blanks + entrepôt (zones/bins) | `pod`/`catalog`/`inventory` | `/staff/atelier/pod/techniques/`, blanks, plan entrepôt | domain-db, inventory-wms, ui-ux |
+| **D1** | `IdsVariantConfig` + drawers staff + Shopify (même contrat) | overlay variante, templates recettes | catalogue, drawer variante, app block | pim-oms, shopify, ui-ux, security |
+| **A** | `PodRipLot` DTF : `02_rip/` plat + manifest | rip sync Drive/NAS | lot impression onglet DTF | pod-workflow |
+| **B** | OF + étiquette par pièce / technique | PDF, labels | lot, postes | pod-workflow |
+| **C** | Poste scan pose DTF | scan service | `/staff/atelier/pod/pose/dtf/` | pod-workflow, ui-ux |
+| **E** | Fulfillment Shopify + webhooks | OAuth, HMAC, idempotence | boutiques, NEEDS_CONFIG | shopify, security |
+| **F** | Broderie / subli (technique 2+) | export formats | `02_embroidery/`, poste broderie | pod-workflow |
+| **G** | WMS ops : mouvements, picking, putaway retours | stock services | stocks, picking, putaway | inventory-wms, security |
+
+## Template plan par lot (sortie agent — max ~40 lignes)
+
+```markdown
+## Lot X — plan
+### Scope IN / OUT
+### Entités & services (nouveaux | réutilisés)
+### Fichiers autorisés (liste bornée)
+### Migrations
+### URLs / HTMX
+### Tests (fichiers + cas min)
+### Risques POD-xx
+### DoD checklist
+### Délégation (agents + fichiers exclusifs)
+```
+
+## DoD global d’un lot
+- [ ] Code + migrations
+- [ ] Tests verts ciblés
+- [ ] Permissions / isolation vérifiées
+- [ ] Audit si mutation sensible
+- [ ] Doc sprint + ADR si décision ouverte tranchée
+- [ ] `graphify update .`
+- [ ] Security review si multi-tenant / webhook / fichier / stock
+
+## Lot D0 — statut
+- [x] Apps `pod` + `inventory` (techniques, blanks, warehouse, bins, règles défaut)
+- [x] Services SRP + audit + `public_id`
+- [x] Vues `/staff/atelier/pod/` (hub, techniques, blanks, entrepôt)
+- [x] Tests permissions client/staff + bin par défaut
+- [x] Mouvements / picking / qty (lot G)
+
+## Lot D1 — statut
+- [x] Modèles Shopify mirror + `IdsVariantConfig` + `PodRecipe`/`PodRecipeSlot` + templates
+- [x] `VariantConfigPayload` (contrat staff / future app Shopify)
+- [x] Catalogue staff + drawer HTMX `/staff/atelier/pod/catalogue/`
+- [x] Badges `needs_config` / mix techniques / ON_STOCK / VIRTUAL
+- [x] Tests permissions + save POD + apply template
+- [ ] App block Shopify embarqué (lot E ou extension D1-bis)
+
+## Lot A — statut
+- [x] File RIP (`PodRipWorkItem`) + `PodRipLot` / `PodRipLotFile`
+- [x] Export NAS plat `02_rip/` + `00_manifest/manifest.json`
+- [x] Noms ASCII `shop_so_pose_sku.ext` + test collision
+- [x] UI `/staff/atelier/pod/lots/`
+- [x] Sync Google Drive (projection `POD_RIP/{lot}/`, NAS plat reste vérité)
+
+## Lot B — statut
+- [x] `PodUnit` (1 pièce / qty) + PDF A4 `03_of/` + étiquette `04_labels/`
+- [x] Même identifiant scan OF / étiquette + téléchargement médié
+
+## Lot C — statut
+- [x] Poste `/staff/atelier/pod/pose/dtf/` scan → slots recette → confirmer pose + audit
+
+## Lot E — statut
+- [x] Webhook HMAC Shopify `webhooks/shopify/pod/fulfillment/` → file RIP
+- [x] Idempotence file QUEUED (même boutique / SO / SKU)
+- [x] OAuth app + token admin chiffré + import catalogue + enregistrement webhook
+- [ ] App block Shopify embarqué (hors flux test boutique)
+
+## Lot F — statut
+- [x] `prepare_lot(technique_code)` + répertoire plat `02_embroidery/` (seed technique Broderie)
+
+## Lot G — statut
+- [x] Réception / picking (scan bin POD-17) / putaway RETURNS
+- [x] Refus qty dispo insuffisante (POD-18)
+- [x] UI `/staff/atelier/pod/stocks/` (owner atelier)
+- [x] Owner client dédié (chemin atelier livré)
+- [x] SKU fini ON_STOCK (réception / picking zone FINISHED)
+- [x] Contrat mapping marchand (sauf `staff_locked`)
+
+## Hors scope (ne pas toucher)
+- Pricing B2B métrage, gang sheets, Sendcloud (sauf lien expédition POD plus tard)
+- Refonte pilotage DTF métrage
+- Décisions ouvertes ADR sans validation produit

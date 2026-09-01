@@ -1,0 +1,53 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Atelier POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Catalogue" title="Atelier POD" subtitle="Supports vierges, techniques d’impression et emplacements entrepôt — séparé du DTF au mètre." %}
+  <section class="portal-page-surface ui-list-section">
+    <div class="grid gap-4 md:grid-cols-3">
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-techniques' %}">
+        <p class="muted">Techniques</p>
+        <p class="font-display text-2xl">{{ technique_count }}</p>
+        <p>DTF, broderie, sublimation… répertoire RIP plat par technique.</p>
+      </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-blanks' %}">
+        <p class="muted">Supports vierges</p>
+        <p class="font-display text-2xl">{{ blank_count }}</p>
+        <p>SKU, tailles, couleurs, poses requises et optionnelles.</p>
+      </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-warehouse' %}">
+        <p class="muted">Entrepôt</p>
+        <p class="font-display text-2xl">{{ location_count }}</p>
+        <p>Zones, bins (ex. A-03-02-B) et emplacement par défaut.</p>
+      </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5 md:col-span-3" href="{% url 'portal:staff-pod-shops' %}">
+        <p class="muted">Shopify</p>
+        <p class="font-display text-lg">Boutiques</p>
+        <p>OAuth app ou token admin chiffré, import catalogue, webhook commandes → file RIP.</p>
+      </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5 md:col-span-3" href="{% url 'portal:staff-pod-catalog' %}">
+        <p class="muted">Catalogue Shopify</p>
+        <p class="font-display text-lg">Mapping variantes</p>
+        <p>POD · ON_STOCK · VIRTUAL · NEEDS_CONFIG — drawer staff (même contrat que l’app Shopify).</p>
+      </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5 md:col-span-3" href="{% url 'portal:staff-pod-rip-lots' %}">
+        <p class="muted">Impression</p>
+        <p class="font-display text-lg">Lots RIP</p>
+        <p>File d’attente puis export plat 02_rip/ (ou 02_embroidery/) + OF / étiquettes.</p>
+      </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-pose-dtf' %}">
+        <p class="muted">Poste pose</p>
+        <p class="font-display text-lg">Scan DTF</p>
+        <p>OF / étiquette → mockup, slots, confirmation pose.</p>
+      </a>
+      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-stock' %}">
+        <p class="muted">WMS</p>
+        <p class="font-display text-lg">Réception & picking</p>
+        <p>Scan bin obligatoire, refus si qty dispo = 0.</p>
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

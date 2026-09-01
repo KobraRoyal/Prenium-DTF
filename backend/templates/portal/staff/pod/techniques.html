@@ -1,0 +1,56 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Techniques POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Techniques" title="Techniques d’impression" subtitle="Chaque technique a son répertoire plat d’export RIP (02_rip, 02_embroidery…)." %}
+  <section class="portal-page-surface ui-list-section">
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    {% if can_manage_catalog %}
+    <form class="ui-form-stack mb-8 max-w-xl" method="post" novalidate>
+      {% csrf_token %}
+      <div class="grid gap-3 sm:grid-cols-2">
+        <p>
+          <label class="ui-label" for="technique-code">Code</label>
+          <input class="ui-input" id="technique-code" name="code" required placeholder="dtf">
+        </p>
+        <p>
+          <label class="ui-label" for="technique-name">Nom</label>
+          <input class="ui-input" id="technique-name" name="name" required placeholder="DTF">
+        </p>
+        <p>
+          <label class="ui-label" for="technique-rip">Répertoire RIP</label>
+          <input class="ui-input" id="technique-rip" name="rip_directory" value="02_rip">
+        </p>
+        <p>
+          <label class="ui-label" for="technique-ext">Extension</label>
+          <input class="ui-input" id="technique-ext" name="export_extension" value=".png">
+        </p>
+      </div>
+      <button class="ui-btn ui-btn-primary" type="submit">Ajouter une technique</button>
+    </form>
+    {% endif %}
+    <div class="ui-table-shell">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr><th>Code</th><th>Nom</th><th>RIP</th><th>Export</th><th>État</th></tr>
+        </thead>
+        <tbody>
+          {% for technique in techniques %}
+          <tr>
+            <td><code>{{ technique.code }}</code></td>
+            <td>{{ technique.name }}</td>
+            <td><code>{{ technique.rip_directory }}</code></td>
+            <td>{{ technique.export_extension }}</td>
+            <td>{% if technique.is_active %}Active{% else %}Inactive{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">Aucune technique.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

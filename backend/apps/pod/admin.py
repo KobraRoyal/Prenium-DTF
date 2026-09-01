@@ -1,0 +1,106 @@
+from django.contrib import admin
+
+from apps.pod.models import (
+    Blank,
+    BlankPlacementCapability,
+    BlankVariant,
+    IdsVariantConfig,
+    PodRecipeTemplate,
+    PodRipLot,
+    PodUnit,
+    PrintTechnique,
+    ShopifyProduct,
+    ShopifyStore,
+    ShopifyVariant,
+    ShopifyWebhookReceipt,
+)
+
+
+@admin.register(PrintTechnique)
+class PrintTechniqueAdmin(admin.ModelAdmin):
+    list_display = ("code", "name", "rip_directory", "is_active", "public_id")
+    search_fields = ("code", "name")
+    readonly_fields = ("public_id",)
+
+
+class BlankVariantInline(admin.TabularInline):
+    model = BlankVariant
+    extra = 0
+    readonly_fields = ("public_id",)
+
+
+class BlankPlacementInline(admin.TabularInline):
+    model = BlankPlacementCapability
+    extra = 0
+    readonly_fields = ("public_id",)
+
+
+@admin.register(Blank)
+class BlankAdmin(admin.ModelAdmin):
+    list_display = ("sku", "name", "brand", "is_active", "public_id")
+    search_fields = ("sku", "name")
+    readonly_fields = ("public_id",)
+    inlines = (BlankVariantInline, BlankPlacementInline)
+
+
+@admin.register(ShopifyStore)
+class ShopifyStoreAdmin(admin.ModelAdmin):
+    list_display = ("name", "shop_domain", "slug", "is_active", "token_suffix", "connected_at")
+    readonly_fields = ("public_id", "token_suffix", "oauth_scopes", "connected_at")
+    fields = (
+        "name",
+        "slug",
+        "shop_domain",
+        "is_active",
+        "webhook_secret",
+        "token_suffix",
+        "oauth_scopes",
+        "connected_at",
+        "public_id",
+    )
+
+
+@admin.register(ShopifyWebhookReceipt)
+class ShopifyWebhookReceiptAdmin(admin.ModelAdmin):
+    list_display = ("webhook_id", "shop_domain", "topic", "created_at")
+    readonly_fields = ("public_id", "webhook_id", "shop_domain", "topic")
+    search_fields = ("webhook_id", "shop_domain")
+
+
+@admin.register(ShopifyProduct)
+class ShopifyProductAdmin(admin.ModelAdmin):
+    list_display = ("title", "store", "external_id", "public_id")
+    search_fields = ("title", "external_id")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(ShopifyVariant)
+class ShopifyVariantAdmin(admin.ModelAdmin):
+    list_display = ("title", "sku", "product", "public_id")
+    search_fields = ("title", "sku")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(IdsVariantConfig)
+class IdsVariantConfigAdmin(admin.ModelAdmin):
+    list_display = ("variant", "mode", "blank_variant", "finished_sku", "staff_locked")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(PodRecipeTemplate)
+class PodRecipeTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name", "blank", "store")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(PodRipLot)
+class PodRipLotAdmin(admin.ModelAdmin):
+    list_display = ("code", "technique", "status", "file_count", "public_id")
+    readonly_fields = ("public_id",)
+
+
+@admin.register(PodUnit)
+class PodUnitAdmin(admin.ModelAdmin):
+    list_display = ("scan_identifier", "status", "lot", "variant")
+    search_fields = ("scan_identifier",)
+    readonly_fields = ("public_id",)

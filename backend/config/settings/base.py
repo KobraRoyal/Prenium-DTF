@@ -59,6 +59,8 @@ INSTALLED_APPS = [
     "apps.gang_sheets",
     "apps.orders",
     "apps.production",
+    "apps.pod",
+    "apps.inventory",
     "apps.portal",
     "apps.prospects",
     "apps.shipping",
@@ -176,6 +178,14 @@ GOOGLE_DRIVE_API_BASE_URL = os.environ.get(
 GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON = env("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON", "")
 GOOGLE_DRIVE_SYNC_ENABLED = env_bool("GOOGLE_DRIVE_SYNC_ENABLED", False)
 GOOGLE_DRIVE_TIMEOUT_SECONDS = env_int("GOOGLE_DRIVE_TIMEOUT_SECONDS", 30)
+SHOPIFY_POD_API_KEY = os.environ.get("SHOPIFY_POD_API_KEY", "")
+SHOPIFY_POD_API_SECRET = os.environ.get("SHOPIFY_POD_API_SECRET", "")
+SHOPIFY_POD_SCOPES = os.environ.get(
+    "SHOPIFY_POD_SCOPES",
+    "read_products,read_orders,read_assigned_fulfillment_orders,write_assigned_fulfillment_orders",
+)
+SHOPIFY_API_VERSION = os.environ.get("SHOPIFY_API_VERSION", "2024-10")
+SHOPIFY_TOKEN_FERNET_KEY = os.environ.get("SHOPIFY_TOKEN_FERNET_KEY", "")
 SENDCLOUD_PUBLIC_KEY = os.environ.get("SENDCLOUD_PUBLIC_KEY", "")
 SENDCLOUD_SECRET_KEY = os.environ.get("SENDCLOUD_SECRET_KEY", "")
 SENDCLOUD_WEBHOOK_SECRET = os.environ.get("SENDCLOUD_WEBHOOK_SECRET", "")

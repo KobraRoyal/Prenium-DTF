@@ -1,0 +1,75 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}{{ lot.code }} — Lot RIP{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=lot.code title=lot.code subtitle="Répertoire RIP plat — le RIP n’importe que ce dossier." %}
+  <section class="portal-page-surface ui-list-section">
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    <p class="mb-4">Chemin NAS relatif : <code>pod_rip/{{ lot.nas_relative_path }}/{{ lot.technique.rip_directory }}/</code></p>
+    <p class="muted mb-4">Manifest : <code>pod_rip/{{ lot.nas_relative_path }}/00_manifest/manifest.json</code></p>
+    <p class="muted mb-4">
+      Drive :
+      {% if lot.drive_synced_at %}
+        {{ lot.drive_file_count }} fichier(s) · {{ lot.drive_synced_at }}
+      {% elif lot.drive_error %}
+        erreur — {{ lot.drive_error }}
+      {% else %}
+        non synchronisé
+      {% endif %}
+    </p>
+    {% if can_manage_catalog %}
+    <form method="post" class="mb-6">
+      {% csrf_token %}
+      <button class="ui-btn ui-btn-ghost" type="submit" name="intent" value="sync_drive">Synchroniser Drive (projection)</button>
+    </form>
+    {% endif %}
+    <div class="ui-table-shell">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr><th>Fichier</th><th>Pose</th><th>SO</th><th>Origine HD</th><th>Checksum</th></tr>
+        </thead>
+        <tbody>
+          {% for file in files %}
+          <tr>
+            <td><code>{{ file.filename }}</code></td>
+            <td>{{ file.placement }}</td>
+            <td>{% if file.work_item %}<code>{{ file.work_item.shopify_order_number }}</code>{% endif %}</td>
+            <td><code>{{ file.source_print_reference }}</code></td>
+            <td><code>{{ file.checksum_sha256|truncatechars:12 }}</code></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">Aucun fichier.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <h2 class="font-display text-lg mt-8">Pièces (OF / étiquettes)</h2>
+    <div class="ui-table-shell mb-6">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr><th>Scan</th><th>SKU</th><th>État</th><th>PDF</th></tr>
+        </thead>
+        <tbody>
+          {% for unit in units %}
+          <tr>
+            <td><code>{{ unit.scan_identifier }}</code></td>
+            <td><code>{{ unit.variant.sku }}</code></td>
+            <td>{{ unit.get_status_display }}</td>
+            <td>
+              <a href="{% url 'portal:staff-pod-unit-document' unit_public_id=unit.public_id document_kind='of' %}">OF</a>
+              ·
+              <a href="{% url 'portal:staff-pod-unit-document' unit_public_id=unit.public_id document_kind='etiquette' %}">Étiquette</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">Aucune pièce.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-6"><a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-pod-rip-lots' %}">Retour aux lots</a></p>
+  </section>
+</div>
+{% endblock %}

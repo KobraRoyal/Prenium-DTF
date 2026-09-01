@@ -1,0 +1,75 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Boutiques Shopify POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Boutiques" title="Boutiques Shopify" subtitle="OAuth app Partners, ou token admin d’une app custom pour un test local. Le token est chiffré ; seuls les 4 derniers caractères sont affichés." %}
+  <section class="portal-page-surface ui-list-section">
+    {% if flash %}<p class="alert alert--success" role="status">{{ flash }}</p>{% endif %}
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    {% if can_manage_catalog %}
+    <form class="ui-form-stack mb-8 max-w-xl" method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="{% if oauth_ready %}oauth{% else %}save_token{% endif %}">
+      <p>
+        <label class="ui-label" for="shop-domain">Domaine boutique</label>
+        <input class="ui-input" id="shop-domain" name="shop_domain" required placeholder="ma-boutique.myshopify.com">
+      </p>
+      {% if oauth_ready %}
+      <button class="ui-btn ui-btn-primary" type="submit">Installer via OAuth</button>
+      <p class="muted mt-2">Callback : <code>/integrations/shopify/pod/oauth/callback/</code> — URL publique (tunnel) dans l’app Partners.</p>
+      {% else %}
+      <p class="muted">OAuth inactif : renseignez <code>SHOPIFY_POD_API_KEY</code> et <code>SHOPIFY_POD_API_SECRET</code> dans <code>.env</code>, ou collez un token Admin API ci-dessous.</p>
+      {% endif %}
+    </form>
+    <form class="ui-form-stack mb-8 max-w-xl" method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="save_token">
+      <p>
+        <label class="ui-label" for="shop-domain-token">Domaine (token admin)</label>
+        <input class="ui-input" id="shop-domain-token" name="shop_domain" required placeholder="ma-boutique.myshopify.com">
+      </p>
+      <p>
+        <label class="ui-label" for="shop-name">Nom interne</label>
+        <input class="ui-input" id="shop-name" name="name" placeholder="Boutique test">
+      </p>
+      <p>
+        <label class="ui-label" for="shop-token">Admin API access token</label>
+        <input class="ui-input" id="shop-token" name="access_token" type="password" required autocomplete="off">
+      </p>
+      <button class="ui-btn ui-btn-ghost" type="submit">Enregistrer le token (chiffré)</button>
+    </form>
+    {% endif %}
+    <div class="ui-table-shell">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr><th>Boutique</th><th>Domaine</th><th>Token</th><th>Connectée</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for store in stores %}
+          <tr>
+            <td>{{ store.name }}</td>
+            <td><code>{{ store.shop_domain }}</code></td>
+            <td>{% if store.token_suffix %}…{{ store.token_suffix }}{% else %}—{% endif %}</td>
+            <td>{{ store.connected_at|default:"—" }}</td>
+            <td>
+              {% if can_manage_catalog and store.access_token_encrypted %}
+              <form method="post" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="store_public_id" value="{{ store.public_id }}">
+                <button class="ui-btn ui-btn-ghost" name="intent" value="import" type="submit">Importer</button>
+                <button class="ui-btn ui-btn-ghost" name="intent" value="webhooks" type="submit">Webhooks</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">Aucune boutique. Connectez une boutique de test pour importer les SKU.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
