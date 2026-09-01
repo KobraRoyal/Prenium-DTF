@@ -1019,7 +1019,8 @@ def test_orders_table_and_dashboard_show_unpaid_payment_flag():
     )
     assert list_response.status_code == 200
     list_body = list_response.content.decode()
-    assert "Paiement non finalisé" in list_body
+    assert "Paiement à effectuer" in list_body
+    assert "Paiement non finalisé" not in list_body
     assert "Payer" in list_body
     assert "panel=billing&amp;pay=1" in list_body or "panel=billing&pay=1" in list_body
 

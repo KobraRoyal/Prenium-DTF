@@ -210,9 +210,7 @@ class AtelierDashboardService:
             return 0, f"{_file_count_label(upload_count)} validé{suffix}"
         if to_process == upload_count:
             return to_process, f"{_file_count_label(to_process)} à traiter"
-        return to_process, (
-            f"{to_process} à traiter sur {_file_count_label(upload_count)}"
-        )
+        return to_process, (f"{to_process} à traiter sur {_file_count_label(upload_count)}")
 
     def _review_state(self, *, upload_count: int, counter: Counter) -> tuple[str, str, str]:
         if upload_count == 0:

@@ -20,9 +20,7 @@ _PRODUCTION_STATUSES = {
     "queued": OperationalOrderStatus("queued", "En file Atelier", "is-warning"),
     "in_progress": OperationalOrderStatus("in_progress", "En production", "is-warning"),
     "blocked": OperationalOrderStatus("blocked", "Bloquée", "is-danger"),
-    "ready_to_ship": OperationalOrderStatus(
-        "ready_to_ship", "Prête à expédier", "is-success"
-    ),
+    "ready_to_ship": OperationalOrderStatus("ready_to_ship", "Prête à expédier", "is-success"),
     "completed": OperationalOrderStatus("completed", "Terminée", "is-success"),
 }
 
@@ -56,9 +54,7 @@ def operational_order_status(order) -> OperationalOrderStatus:
         return OperationalOrderStatus("pricing_pending", "Tarif à confirmer", "is-warning")
 
     if bool(getattr(order, "awaits_client_payment", False)):
-        return OperationalOrderStatus(
-            "awaiting_payment", "Paiement à effectuer", "is-warning"
-        )
+        return OperationalOrderStatus("awaiting_payment", "Paiement à effectuer", "is-warning")
 
     shipment = _related_or_none(order, "shipment")
     if shipment is not None and getattr(shipment, "shipped_at", None) is not None:
@@ -69,9 +65,7 @@ def operational_order_status(order) -> OperationalOrderStatus:
     if production_status == "ready_to_ship" and (
         str(getattr(order, "shipping_method_code", "") or "").strip().lower() == "pickup"
     ):
-        return OperationalOrderStatus(
-            "ready_for_pickup", "Prête au retrait", "is-success"
-        )
+        return OperationalOrderStatus("ready_for_pickup", "Prête au retrait", "is-success")
     if production_status in _PRODUCTION_STATUSES:
         return _PRODUCTION_STATUSES[production_status]
 
