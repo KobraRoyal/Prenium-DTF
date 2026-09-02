@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from io import BytesIO
+from pathlib import Path
 from xml.sax.saxutils import escape
 
-from reportlab.graphics.barcode import code128
+from reportlab.graphics.barcode import code128, qr
+from reportlab.graphics.shapes import Circle, Drawing, String, Wedge
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -30,6 +32,12 @@ INK = colors.HexColor("#111827")
 MUTED = colors.HexColor("#6B7280")
 LINE = colors.HexColor("#E5E7EB")
 SURFACE = colors.HexColor("#F9FAFB")
+MULTICOLOR_SWATCH = (
+    colors.HexColor("#EF4444"),
+    colors.HexColor("#F59E0B"),
+    colors.HexColor("#10B981"),
+    colors.HexColor("#3B82F6"),
+)
 
 CONTENT_WIDTH = 16.6 * cm
 PAD_H = 6
@@ -328,6 +336,88 @@ def _build_preview_cell(*, preview: bytes | None, styles: dict[str, ParagraphSty
     return image
 
 
+def _filename_without_extension(value) -> str:
+    filename = str(value or "").strip()
+    return Path(filename).stem if filename else ""
+
+
+def _build_file_qr_code(*, filename: str):
+    qr_code = qr.QrCode(
+        value=_filename_without_extension(filename) or "upload",
+        qrLevel="M",
+        qrBorder=4,
+        width=2.35 * cm,
+        height=2.35 * cm,
+    )
+    qr_code.hAlign = "CENTER"
+    return qr_code
+
+
+def _build_support_color_cell(*, upload: dict) -> Drawing:
+    support_color = str(upload.get("support_color") or "").strip()
+    support_color_label = str(upload.get("support_color_label") or "Non renseignée").strip()
+    is_multicolor = bool(upload.get("support_color_is_multicolor")) or (
+        support_color.casefold() == "#multicolor"
+    )
+
+    drawing = Drawing(width=3 * cm, height=0.65 * cm)
+    center_x = 0.22 * cm
+    center_y = 0.325 * cm
+    radius = 0.19 * cm
+
+    if is_multicolor:
+        for index, swatch_color in enumerate(MULTICOLOR_SWATCH):
+            drawing.add(
+                Wedge(
+                    center_x,
+                    center_y,
+                    radius,
+                    startangledegrees=index * 90,
+                    endangledegrees=(index + 1) * 90,
+                    fillColor=swatch_color,
+                    strokeColor=swatch_color,
+                    strokeWidth=0,
+                )
+            )
+        drawing.add(
+            Circle(
+                center_x,
+                center_y,
+                radius,
+                fillColor=None,
+                strokeColor=MUTED,
+                strokeWidth=0.5,
+            )
+        )
+    else:
+        try:
+            fill_color = colors.HexColor(support_color) if support_color else SURFACE
+        except (TypeError, ValueError):
+            fill_color = SURFACE
+        drawing.add(
+            Circle(
+                center_x,
+                center_y,
+                radius,
+                fillColor=fill_color,
+                strokeColor=MUTED,
+                strokeWidth=0.5,
+            )
+        )
+
+    drawing.add(
+        String(
+            0.55 * cm,
+            0.2 * cm,
+            support_color_label or "Non renseignée",
+            fontName="Helvetica",
+            fontSize=7.5,
+            fillColor=INK,
+        )
+    )
+    return drawing
+
+
 def _build_uploads_table(
     *,
     uploads: list[dict],
@@ -352,14 +442,11 @@ def _build_uploads_table(
     ]
 
     for row_number, upload in enumerate(uploads, start=1):
+        qr_filename = str(upload.get("drive_filename") or upload.get("original_filename") or "")
         file_block = [
             _paragraph(upload.get("original_filename"), styles["body"]),
-            Spacer(1, 0.05 * cm),
-            Paragraph("TAILLE DEMANDÉE", styles["meta_label"]),
-            _paragraph(upload.get("dimensions_label") or "—", styles["body_muted"]),
-            Spacer(1, 0.04 * cm),
-            Paragraph("COULEUR DU SUPPORT", styles["meta_label"]),
-            _paragraph(upload.get("support_color_label") or "—", styles["body_muted"]),
+            Spacer(1, 0.12 * cm),
+            _build_file_qr_code(filename=qr_filename),
         ]
         rows.append(
             [
@@ -370,7 +457,7 @@ def _build_uploads_table(
                 file_block,
                 _paragraph(upload.get("quantity") or 1, styles["table_center"]),
                 _paragraph(upload.get("dimensions_label") or "—", styles["body"]),
-                _paragraph(upload.get("support_color_label") or "—", styles["body"]),
+                _build_support_color_cell(upload=upload),
             ]
         )
         table_styles.extend(

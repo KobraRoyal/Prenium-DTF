@@ -98,7 +98,7 @@
 - [ ] Aucun blocage restant sur le slice uploads avant le prochain domaine sensible
 - [ ] Le contrôle fichier basique reste volontairement minimal avant le futur contrôle DTF avancé
 - [ ] Aucun blocage immédiat sur le socle workflow production livré
-- [ ] Aucun blocage immédiat sur le socle scan atelier ; génération visuelle réelle barcode/QR et UI riche restent hors périmètre
+- [x] Complément OF livré : QR code vectoriel par fichier, encodant le nom sans extension, pour recherche au scan atelier
 - [ ] Durcissement sécurité Sprint 11 reste à compléter séparément (rate limiting, audit renforcé)
 
 ## Décisions récentes

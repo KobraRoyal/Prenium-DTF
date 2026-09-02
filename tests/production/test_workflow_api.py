@@ -7,6 +7,12 @@ from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.production.models import ProductionJob, ProductionJobScanLog, ProductionJobTransition
+from apps.production.services.manufacturing_order_pdf import (
+    _build_file_qr_code,
+    _build_styles,
+    _build_support_color_cell,
+    _build_uploads_table,
+)
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import (
     OrderUpload,
@@ -19,6 +25,8 @@ from django.contrib.auth.models import Permission
 from django.core.files.base import ContentFile
 from django.urls import reverse
 from PIL import Image
+from reportlab.graphics.barcode.qr import QrCode
+from reportlab.graphics.shapes import Circle, Drawing, String, Wedge
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -175,6 +183,7 @@ def test_staff_with_permission_can_view_workflow_snapshot():
     )
     assert payload["manufacturing_order"]["uploads"][0]["dimensions_label"] == "120 × 80 mm"
     assert payload["manufacturing_order"]["uploads"][0]["support_color_label"] == "#112233"
+    assert payload["manufacturing_order"]["uploads"][0]["drive_filename"] == "masked.pdf"
     assert payload["manufacturing_order"]["file_review_summary"] == {
         "total": 1,
         "approved": 1,
@@ -233,9 +242,9 @@ def test_staff_can_download_manufacturing_order_pdf():
     assert "Urgent sample" in text
     assert "Date souhaitée : 2026-08-15" not in text
     assert text.count("design.pdf") == 1
-    assert "TAILLE DEMANDÉE" in text
+    assert "TAILLE DEMANDÉE" not in text
     assert "120 × 80 mm" in text
-    assert "COULEUR DU SUPPORT" in text
+    assert "COULEUR DU SUPPORT" not in text
     assert "#112233" in text
     assert "Total TTC" not in text
     job.refresh_from_db()
@@ -246,6 +255,70 @@ def test_staff_can_download_manufacturing_order_pdf():
     ).exists()
     assert "Sync Drive" not in text
     assert "Aperçu\nindisponible" in text
+
+
+def test_manufacturing_order_file_qr_code_uses_filename_without_extension():
+    qr_code = _build_file_qr_code(filename="design.final.pdf")
+
+    assert isinstance(qr_code, QrCode)
+    assert qr_code.value == "design.final"
+    assert qr_code.width > 0
+    assert qr_code.height > 0
+
+
+def test_manufacturing_order_support_color_cell_renders_hex_and_multicolor_swatches():
+    hex_upload = {
+        "support_color": "#112233",
+        "support_color_label": "#112233",
+        "support_color_is_multicolor": False,
+    }
+    hex_cell = _build_support_color_cell(upload=hex_upload)
+    table = _build_uploads_table(
+        uploads=[hex_upload],
+        previews={},
+        styles=_build_styles(),
+    )
+
+    assert isinstance(hex_cell, Drawing)
+    assert isinstance(table._cellvalues[1][4], Drawing)
+    hex_circle = next(shape for shape in hex_cell.contents if isinstance(shape, Circle))
+    assert hex_circle.fillColor.hexval() == "0x112233"
+    assert any(isinstance(shape, String) and shape.text == "#112233" for shape in hex_cell.contents)
+
+    multicolor_cell = _build_support_color_cell(
+        upload={
+            "support_color": "#multicolor",
+            "support_color_label": "Multicolore",
+            "support_color_is_multicolor": True,
+        }
+    )
+
+    assert sum(isinstance(shape, Wedge) for shape in multicolor_cell.contents) == 4
+    assert any(
+        isinstance(shape, String) and shape.text == "Multicolore"
+        for shape in multicolor_cell.contents
+    )
+
+
+def test_manufacturing_order_file_qr_code_prefers_drive_filename():
+    table = _build_uploads_table(
+        uploads=[
+            {
+                "original_filename": "design.pdf",
+                "drive_filename": "ORD-20260902-design-final.pdf",
+                "quantity": 1,
+                "dimensions_label": "120 × 80 mm",
+                "support_color_label": "#112233",
+            }
+        ],
+        previews={},
+        styles=_build_styles(),
+    )
+
+    qr_codes = [item for item in table._cellvalues[1][1] if isinstance(item, QrCode)]
+
+    assert len(qr_codes) == 1
+    assert qr_codes[0].value == "ORD-20260902-design-final"
 
 
 @pytest.mark.django_db

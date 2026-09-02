@@ -190,10 +190,12 @@ class ProductionWorkflowService:
         review = self._safe_related_object(order_upload, relation_name="atelier_review")
         drive_sync = self._safe_related_object(order_upload, relation_name="drive_sync")
         production_specs = production_spec_service.serialize(order_upload=order_upload)
+        drive_filename = str(drive_sync.drive_filename or "").strip() if drive_sync else ""
 
         return {
             "public_id": str(order_upload.public_id),
             "original_filename": order_upload.original_filename,
+            "drive_filename": drive_filename,
             "quantity": order_upload.quantity,
             "mime_type": order_upload.mime_type,
             "size_bytes": order_upload.size_bytes,
