@@ -1,8 +1,12 @@
+from datetime import date
+
 import pytest
+from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.production.models import ProductionJob, ProductionJobTransition
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.test import Client, override_settings
 from django.urls import reverse
 
@@ -176,9 +180,217 @@ def test_owner_shipping_panel_owns_the_primary_tracking_action():
     )
     production_html = production.content.decode()
     assert production.status_code == 200
-    assert "Commande expédiée" in production_html
+    assert "Expédiée" in production_html
     assert "TRK-CLIENT-001" in production_html
     assert "Suivre mon colis" in production_html
+
+
+@pytest.mark.django_db
+def test_client_shipping_panel_shows_delivered_carrier_state():
+    from apps.shipping.models import Shipment
+    from django.utils import timezone
+
+    user = get_user_model().objects.create_user(
+        email="delivered-owner@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Delivered Client")
+    CustomerMembership.objects.create(
+        customer=customer, user=user, role=CustomerMembership.Role.OWNER
+    )
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="10.00",
+        total_amount="10.00",
+        shipping_method_code="standard",
+    )
+    Shipment.objects.create(
+        order=order,
+        status=Shipment.Status.CREATED,
+        shipping_option_code="sendcloud:letter",
+        tracking_number="TRK-CLIENT-DELIVERED",
+        sendcloud_status_code="DELIVERED",
+        sendcloud_status_message="Livré",
+        shipped_at=timezone.now(),
+        source="test",
+    )
+
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+    response = client.get(
+        reverse(
+            "portal:client-order-panel-shipping",
+            kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
+        )
+    )
+    html = response.content.decode()
+
+    assert response.status_code == 200
+    assert "Votre commande est livrée" in html
+    assert "Livrée" in html
+    assert "Votre commande est en route" not in html
+    assert "client-shipment-card--shipped" in html
+
+
+@pytest.mark.django_db
+def test_client_order_views_share_operational_status_and_handover_date():
+    user = get_user_model().objects.create_user(email="status-list@example.com", password="pass")
+    customer = Customer.objects.create(name="Status Client")
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=user,
+        role=CustomerMembership.Role.MEMBER,
+    )
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="10.00",
+        total_amount="10.00",
+        billing_mode=Order.BillingMode.DEFERRED,
+        pricing_status=Order.PricingStatus.PRICED,
+        shipping_method_code="pickup",
+        estimated_handover_date=date(2026, 9, 15),
+    )
+    ProductionJob.objects.create(
+        order=order,
+        manufacturing_order_number="OF-STATUS-001",
+        status=ProductionJob.Status.IN_PROGRESS,
+    )
+
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+
+    list_response = client.get(
+        reverse(
+            "portal:client-order-list",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+    )
+    list_html = list_response.content.decode()
+    assert list_response.status_code == 200
+    assert "En production" in list_html
+    assert "Retrait prévu" in list_html
+    assert "15/09/2026" in list_html
+
+    detail_response = client.get(
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+    )
+    detail_html = detail_response.content.decode()
+    assert detail_response.status_code == 200
+    assert '<span class="badge is-warning">En production</span>' in detail_html
+    assert "Retrait prévu" in detail_html
+    assert "15/09/2026" in detail_html
+    assert '<span class="badge is-neutral">Soumise</span>' not in detail_html
+
+
+@pytest.mark.django_db
+def test_staff_can_update_handover_date_with_audited_change():
+    staff_user = get_user_model().objects.create_user(
+        email="handover-date-staff@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    staff_user.user_permissions.add(
+        Permission.objects.get(codename="access_staff_portal"),
+        Permission.objects.get(codename="view_order"),
+        Permission.objects.get(codename="view_productionjob"),
+        Permission.objects.get(codename="change_order"),
+    )
+    customer = Customer.objects.create(name="Handover Date Client")
+    order = Order.objects.create(
+        customer=customer,
+        created_by=staff_user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="10.00",
+        total_amount="10.00",
+        shipping_method_code="standard",
+    )
+    ProductionJob.objects.create(
+        order=order,
+        manufacturing_order_number="OF-HANDOVER-001",
+        status=ProductionJob.Status.QUEUED,
+    )
+
+    client = Client()
+    assert client.login(email=staff_user.email, password="pass")
+    response = client.post(
+        reverse(
+            "portal:staff-order-panel-production",
+            kwargs={"order_public_id": order.public_id},
+        ),
+        {"action": "update_handover_date", "estimated_handover_date": "2026-09-18"},
+    )
+
+    assert response.status_code == 200
+    order.refresh_from_db()
+    assert order.estimated_handover_date == date(2026, 9, 18)
+    assert AuditLogEntry.objects.filter(
+        action="order.estimated_handover_date_updated",
+        target_public_id=order.public_id,
+        metadata__estimated_handover_date="2026-09-18",
+    ).exists()
+
+    client.post(
+        reverse(
+            "portal:staff-order-panel-production",
+            kwargs={"order_public_id": order.public_id},
+        ),
+        {"action": "update_handover_date", "estimated_handover_date": ""},
+    )
+    order.refresh_from_db()
+    assert order.estimated_handover_date is None
+
+
+@pytest.mark.django_db
+def test_staff_without_order_change_cannot_update_handover_date():
+    staff_user = get_user_model().objects.create_user(
+        email="handover-date-readonly@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    staff_user.user_permissions.add(
+        Permission.objects.get(codename="access_staff_portal"),
+        Permission.objects.get(codename="view_order"),
+        Permission.objects.get(codename="view_productionjob"),
+    )
+    customer = Customer.objects.create(name="Readonly Handover Client")
+    order = Order.objects.create(
+        customer=customer,
+        created_by=staff_user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="10.00",
+        total_amount="10.00",
+    )
+    ProductionJob.objects.create(
+        order=order,
+        manufacturing_order_number="OF-HANDOVER-002",
+        status=ProductionJob.Status.QUEUED,
+    )
+
+    client = Client()
+    assert client.login(email=staff_user.email, password="pass")
+    response = client.post(
+        reverse(
+            "portal:staff-order-panel-production",
+            kwargs={"order_public_id": order.public_id},
+        ),
+        {"action": "update_handover_date", "estimated_handover_date": "2026-09-18"},
+    )
+
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db

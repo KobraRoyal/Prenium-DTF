@@ -27,6 +27,8 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
         currency="EUR",
         subtotal_amount="42.00",
         total_amount="42.00",
+        billing_mode=Order.BillingMode.DEFERRED,
+        pricing_status=Order.PricingStatus.PRICED,
     )
 
     client = Client()
@@ -92,7 +94,7 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     assert "client-order-detail" in detail_html
     assert "client-order-summary" in detail_html
     assert "client-order-summary__facts" in detail_html
-    assert "Soumise" in detail_html
+    assert "Commande transmise" in detail_html
     assert 'role="tablist"' in detail_html
     assert "client-order-panel" in detail_html
     assert "Visuels" in detail_html

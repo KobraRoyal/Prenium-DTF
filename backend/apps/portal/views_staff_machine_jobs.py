@@ -6,9 +6,9 @@ from django.views import View
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.portal.htmx import with_toast
+from apps.portal.services.production_panel_context import build_production_panel_context
 from apps.portal.views_common import access_scope_service, production_workflow_service
 from apps.portal.views_staff import StaffOrderContextMixin
-from apps.portal.views_staff_production import production_panel_context
 from apps.production.services.machine_assignments import (
     ProductionMachineAssignmentService,
 )
@@ -70,7 +70,7 @@ class StaffOrderMachineAssignmentView(
         response = render(
             request,
             self.template_name,
-            production_panel_context(
+            build_production_panel_context(
                 request=request,
                 order=self.order,
                 job=job,
@@ -117,7 +117,7 @@ class StaffOrderPrintConfirmView(StaffOrderMachinePermissionMixin, StaffOrderCon
         response = render(
             request,
             self.template_name,
-            production_panel_context(
+            build_production_panel_context(
                 request=request,
                 order=self.order,
                 job=job,

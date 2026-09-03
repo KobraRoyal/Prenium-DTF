@@ -6,7 +6,9 @@ from datetime import date
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from apps.core.public_refs import short_public_ref
 from apps.orders.references import order_business_number, order_client_reference
+from apps.portal.order_status_presentation import client_order_status, handover_date_label
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +45,31 @@ def client_order_identity(order) -> ClientOrderIdentity:
         note="\n".join(line.strip() for line in note_lines if line.strip()),
         requested_date=None,
     )
+
+
+def build_client_order_context(
+    *,
+    customer,
+    customer_membership,
+    order,
+    extra: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    """Build the shared client order context used by the page and its panels."""
+    identity = client_order_identity(order)
+    context: dict[str, object] = {
+        "customer": customer,
+        "customer_membership": customer_membership,
+        "order": order,
+        "order_short_ref": short_public_ref(order.public_id),
+        "order_client_label": identity.label,
+        "order_display_ref": identity.reference,
+        "order_note_details": identity.note,
+        "order_requested_date": identity.requested_date,
+        "client_order_status": client_order_status(order),
+        "handover_date_label": handover_date_label(order),
+    }
+    context.update(extra or {})
+    return context
 
 
 @dataclass(frozen=True, slots=True)

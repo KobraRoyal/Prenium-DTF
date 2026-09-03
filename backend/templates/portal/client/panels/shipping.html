@@ -13,9 +13,9 @@
         </svg>
       </span>
       <div class="client-shipment-card__copy">
-        <h3 id="client-shipment-shipped-title">Votre commande est en route</h3>
+        <h3 id="client-shipment-shipped-title">{% if shipment_status.key == "delivered" %}Votre commande est livrée{% else %}Votre commande est en route{% endif %}</h3>
         <p>
-          Colis pris en charge
+          {% if shipment_status.key == "delivered" %}Livrée{% else %}Colis pris en charge{% endif %}
           {% if shipment.shipped_at %}
           le <time datetime="{{ shipment.shipped_at|date:'c' }}">{{ shipment.shipped_at|date:"d/m/Y · H:i" }}</time>
           {% endif %}

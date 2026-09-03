@@ -30,6 +30,16 @@
         <dd><time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y" }}</time></dd>
       </div>
       <div class="client-order-summary__fact">
+        <dt>{{ handover_date_label }}</dt>
+        <dd>
+          {% if order.estimated_handover_date %}
+          <time datetime="{{ order.estimated_handover_date|date:'Y-m-d' }}">{{ order.estimated_handover_date|date:"d/m/Y" }}</time>
+          {% else %}
+          <span class="muted">À confirmer</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div class="client-order-summary__fact">
         <dt>Référence</dt>
         <dd>
           {% if order_display_ref %}

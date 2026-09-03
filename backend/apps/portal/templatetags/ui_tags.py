@@ -91,7 +91,7 @@ def ui_kpi_grid(items):
 @register.inclusion_tag("components/tables/orders_table.html")
 def ui_orders_table(orders, variant, customer=None):
     return {
-        "orders": prepare_orders_for_list(orders),
+        "orders": prepare_orders_for_list(orders, audience=variant),
         "variant": variant,
         "customer": customer,
     }

@@ -12,6 +12,20 @@ const MONTHS_FR = [
   "Novembre",
   "Décembre",
 ];
+const MONTHS_SHORT_FR = [
+  "janv.",
+  "févr.",
+  "mars",
+  "avr.",
+  "mai",
+  "juin",
+  "juil.",
+  "août",
+  "sept.",
+  "oct.",
+  "nov.",
+  "déc.",
+];
 
 function parseISODate(value) {
   if (!value) {
@@ -35,6 +49,22 @@ function parseISODate(value) {
   return date;
 }
 
+function parseISOMonth(value) {
+  if (!value) {
+    return null;
+  }
+  const match = /^(\d{4})-(\d{2})$/.exec(String(value));
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) {
+    return null;
+  }
+  return new Date(year, month - 1, 1);
+}
+
 function toISO(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -42,10 +72,20 @@ function toISO(date) {
   return `${year}-${month}-${day}`;
 }
 
+function toISOMonth(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
 function formatDisplay(date) {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${day}/${month}/${date.getFullYear()}`;
+}
+
+function formatMonthDisplay(date) {
+  return `${MONTHS_FR[date.getMonth()]} ${date.getFullYear()}`.toLocaleLowerCase("fr-FR");
 }
 
 function startOfDay(date) {
@@ -55,6 +95,13 @@ function startOfDay(date) {
 function accessibleDateLabel(date) {
   return new Intl.DateTimeFormat("fr-FR", {
     day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function accessibleMonthLabel(date) {
+  return new Intl.DateTimeFormat("fr-FR", {
     month: "long",
     year: "numeric",
   }).format(date);
@@ -74,7 +121,264 @@ function addMonthsClamped(date, offset) {
   );
 }
 
+function initProductMonthPicker(root) {
+  const hidden = root.querySelector('input[type="hidden"]');
+  const trigger = root.querySelector("[data-date-trigger]");
+  const display = root.querySelector("[data-date-display]");
+  const popover = root.querySelector("[data-date-popover]");
+  const grid = root.querySelector("[data-date-grid]");
+  const monthLabel = root.querySelector("[data-date-month]");
+  const prevButton = root.querySelector("[data-date-prev]");
+  const nextButton = root.querySelector("[data-date-next]");
+  const clearButton = root.querySelector("[data-date-clear]");
+
+  if (!hidden || !trigger || !display || !popover || !grid || !monthLabel) {
+    return;
+  }
+
+  const placeholder = root.dataset.placeholder || "Choisir un mois";
+  const now = new Date();
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const latestClosedMonth = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth() - 1,
+    1,
+  );
+  let viewYear =
+    parseISOMonth(hidden.value)?.getFullYear() || latestClosedMonth.getFullYear();
+
+  function selectedMonth() {
+    return parseISOMonth(hidden.value);
+  }
+
+  function updateDisplay() {
+    const current = selectedMonth();
+    if (current) {
+      display.textContent = formatMonthDisplay(current);
+      display.classList.remove("is-placeholder");
+      trigger.dataset.hasValue = "true";
+      return;
+    }
+    display.textContent = placeholder;
+    display.classList.add("is-placeholder");
+    delete trigger.dataset.hasValue;
+  }
+
+  function enabledMonthButtons() {
+    return Array.from(
+      grid.querySelectorAll('button[role="gridcell"]:not(:disabled)'),
+    );
+  }
+
+  function focusMonth(preferredMonth = null) {
+    const preferredISO = preferredMonth ? toISOMonth(preferredMonth) : "";
+    const selected = selectedMonth();
+    const selectedISO = selected ? toISOMonth(selected) : "";
+    const buttons = enabledMonthButtons();
+    const target =
+      buttons.find((button) => button.dataset.date === preferredISO) ||
+      buttons.find((button) => button.dataset.date === selectedISO) ||
+      buttons[0];
+
+    grid.querySelectorAll('[role="gridcell"]').forEach((button) => {
+      button.tabIndex = button === target ? 0 : -1;
+    });
+
+    if (target) {
+      target.focus();
+      return;
+    }
+    grid.tabIndex = -1;
+    grid.focus();
+  }
+
+  function renderGrid(focusTarget = null) {
+    monthLabel.textContent = String(viewYear);
+    if (nextButton) {
+      nextButton.disabled = viewYear >= latestClosedMonth.getFullYear();
+    }
+    grid.replaceChildren();
+
+    let row = null;
+    for (let index = 0; index < 12; index += 1) {
+      if (index % 4 === 0) {
+        row = document.createElement("div");
+        row.setAttribute("role", "row");
+        row.style.display = "contents";
+        grid.appendChild(row);
+      }
+
+      const month = new Date(viewYear, index, 1);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "product-date-picker__day";
+      button.textContent = MONTHS_SHORT_FR[index];
+      button.dataset.date = toISOMonth(month);
+      button.setAttribute("role", "gridcell");
+      button.setAttribute("aria-label", accessibleMonthLabel(month));
+      button.setAttribute("aria-selected", "false");
+      button.tabIndex = -1;
+
+      const selected = selectedMonth();
+      if (selected && month.getTime() === selected.getTime()) {
+        button.classList.add("is-selected");
+        button.setAttribute("aria-selected", "true");
+      }
+      if (month.getTime() === latestClosedMonth.getTime()) {
+        button.classList.add("is-latest");
+      }
+      if (month >= currentMonth) {
+        button.classList.add("is-disabled");
+        button.disabled = true;
+      } else {
+        button.addEventListener("click", () => {
+          hidden.value = toISOMonth(month);
+          updateDisplay();
+          renderGrid();
+          hidden.dispatchEvent(new Event("change", { bubbles: true }));
+          close({ restoreFocus: true });
+        });
+      }
+      row?.appendChild(button);
+    }
+
+    if (focusTarget) {
+      focusMonth(focusTarget);
+    }
+  }
+
+  function moveMonthFocus(month) {
+    const target = month >= currentMonth ? latestClosedMonth : month;
+    viewYear = target.getFullYear();
+    renderGrid(target);
+  }
+
+  function open() {
+    const current = selectedMonth();
+    const focusTarget = current && current < currentMonth ? current : latestClosedMonth;
+    viewYear = focusTarget.getFullYear();
+    renderGrid();
+    popover.hidden = false;
+    root.classList.add("is-open");
+    trigger.setAttribute("aria-expanded", "true");
+    focusMonth(focusTarget);
+  }
+
+  function close({ restoreFocus = false } = {}) {
+    popover.hidden = true;
+    root.classList.remove("is-open");
+    trigger.setAttribute("aria-expanded", "false");
+    if (restoreFocus) {
+      trigger.focus();
+    }
+  }
+
+  trigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (root.classList.contains("is-open")) {
+      close();
+      return;
+    }
+    open();
+  });
+
+  prevButton?.addEventListener("click", (event) => {
+    event.preventDefault();
+    viewYear -= 1;
+    renderGrid();
+    focusMonth();
+  });
+
+  nextButton?.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (viewYear >= latestClosedMonth.getFullYear()) {
+      return;
+    }
+    viewYear += 1;
+    renderGrid();
+    focusMonth();
+  });
+
+  clearButton?.addEventListener("click", (event) => {
+    event.preventDefault();
+    hidden.value = "";
+    updateDisplay();
+    renderGrid();
+    hidden.dispatchEvent(new Event("change", { bubbles: true }));
+    close({ restoreFocus: true });
+  });
+
+  grid.addEventListener("keydown", (event) => {
+    if (
+      !(event.target instanceof HTMLElement) ||
+      event.target.getAttribute("role") !== "gridcell"
+    ) {
+      return;
+    }
+    const current = parseISOMonth(event.target.dataset.date);
+    if (!current) {
+      return;
+    }
+
+    let target = null;
+    switch (event.key) {
+      case "ArrowLeft":
+        target = new Date(current.getFullYear(), current.getMonth() - 1, 1);
+        break;
+      case "ArrowRight":
+        target = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+        break;
+      case "ArrowUp":
+        target = new Date(current.getFullYear(), current.getMonth() - 4, 1);
+        break;
+      case "ArrowDown":
+        target = new Date(current.getFullYear(), current.getMonth() + 4, 1);
+        break;
+      case "Home":
+        target = new Date(current.getFullYear(), 0, 1);
+        break;
+      case "End":
+        target = new Date(current.getFullYear(), 11, 1);
+        break;
+      case "PageUp":
+        target = new Date(current.getFullYear() - 1, current.getMonth(), 1);
+        break;
+      case "PageDown":
+        target = new Date(current.getFullYear() + 1, current.getMonth(), 1);
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    moveMonthFocus(target);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element) || !root.classList.contains("is-open")) {
+      return;
+    }
+    if (!root.contains(event.target)) {
+      close();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && root.classList.contains("is-open")) {
+      event.preventDefault();
+      close({ restoreFocus: true });
+    }
+  });
+
+  updateDisplay();
+}
+
 function initProductDatePicker(root) {
+  if (root.dataset.pickerMode === "month") {
+    initProductMonthPicker(root);
+    return;
+  }
+
   const hidden = root.querySelector('input[type="hidden"]');
   const trigger = root.querySelector("[data-date-trigger]");
   const display = root.querySelector("[data-date-display]");

@@ -2039,6 +2039,43 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-c
   margin-top: 0.25rem;
 }
 
+/* v65 — Sélecteur de mois facturation : même calendrier que les autres dates du portail. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog {
+  overflow: visible;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker--month .product-date-picker__grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker--month .product-date-picker__day {
+  min-height: 2.5rem;
+  padding: 0.35rem 0.2rem;
+  font-size: 0.78rem;
+  text-transform: lowercase;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker--month .product-date-picker__day.is-latest {
+  border-color: var(--brand-strong);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker__nav:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (max-width: 639px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog {
+    overflow: auto;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker__popover {
+    top: auto;
+    bottom: calc(100% + 0.45rem);
+  }
+}
+
 /* v64 — Profil staff : même contrat focus + workspace que la fiche client. */
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-profile-page {
   display: grid !important;

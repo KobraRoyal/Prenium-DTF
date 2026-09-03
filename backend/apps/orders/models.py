@@ -76,6 +76,13 @@ class Order(BaseModel):
         blank=True,
         help_text="Snapshot libellé option livraison au moment du choix.",
     )
+    estimated_handover_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Date prévisionnelle de remise : retrait atelier ou livraison, selon le mode choisi."
+        ),
+    )
     shipping_amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,

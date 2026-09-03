@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -85,6 +86,56 @@ class OrderService:
             .filter(public_id=order_public_id)
             .first()
         )
+
+    def update_estimated_handover_date(
+        self,
+        *,
+        order_public_id,
+        value: date | str | None,
+        actor,
+        source: str,
+    ) -> Order | None:
+        """Update the staff-managed client handover date with an audit trail."""
+        if isinstance(value, date):
+            normalized_date = value
+        elif value is None or not str(value).strip():
+            normalized_date = None
+        else:
+            try:
+                normalized_date = date.fromisoformat(str(value).strip())
+            except ValueError as exc:
+                raise ValidationError("La date prévisionnelle est invalide.") from exc
+
+        with transaction.atomic():
+            order = (
+                Order.objects.select_for_update()
+                .select_related("customer")
+                .filter(public_id=order_public_id)
+                .first()
+            )
+            if order is None:
+                return None
+            previous_date = order.estimated_handover_date
+            if previous_date == normalized_date:
+                return order
+            order.estimated_handover_date = normalized_date
+            order.save(update_fields=("estimated_handover_date", "updated_at"))
+            record_event(
+                action="order.estimated_handover_date_updated",
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=order,
+                metadata={
+                    "customer_public_id": str(order.customer.public_id),
+                    "order_public_id": str(order.public_id),
+                    "previous_date": previous_date.isoformat() if previous_date else None,
+                    "estimated_handover_date": (
+                        normalized_date.isoformat() if normalized_date else None
+                    ),
+                    "shipping_method_code": order.shipping_method_code,
+                    "source": source,
+                },
+            )
+        return order
 
     def staff_delete_block_reason(self, order: Order) -> str | None:
         """Motif métier empêchant la suppression Atelier, ou None si autorisée."""

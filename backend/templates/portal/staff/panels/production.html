@@ -11,6 +11,29 @@
     </div>
   </header>
 
+  <section class="operator-subpanel" aria-labelledby="staff-order-handover-date-title">
+    <div class="operator-section-head">
+      <div>
+        <h4 id="staff-order-handover-date-title" class="font-display text-lg">Date annoncée au client</h4>
+        <p class="muted text-sm">Cette date est affichée dans le suivi client comme {{ handover_date_label|lower }}.</p>
+      </div>
+      {% if estimated_handover_date %}<span class="badge is-success">{{ estimated_handover_date_display }}</span>{% else %}<span class="badge is-warning">À confirmer</span>{% endif %}
+    </div>
+    {% if handover_date_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ handover_date_error }}</p></div>{% endif %}
+    {% if can_update_handover_date %}
+    <form class="ui-form-stack" hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_handover_date">
+      <div class="ui-field-group">
+        <label class="ui-label" for="estimated-handover-date">{{ handover_date_label }}</label>
+        {% include "components/forms/product_date_field.html" with id="estimated-handover-date" name="estimated_handover_date" value=estimated_handover_date placeholder="Choisir une date" label=handover_date_label describedby="estimated-handover-date-help" input_class="ui-input w-full" %}
+        <p class="muted text-sm" id="estimated-handover-date-help">Laissez vide si la date n’est pas encore confirmée.</p>
+      </div>
+      {% include "components/forms/form_actions.html" with primary_label="Enregistrer la date" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
+    </form>
+    {% endif %}
+  </section>
+
   {% if require_machine_selection and show_machine_workspace %}
   <section class="operator-machine" aria-labelledby="operator-machine-title">
     <header class="operator-section-head">

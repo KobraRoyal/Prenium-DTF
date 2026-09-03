@@ -1648,6 +1648,35 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("workflow-disclosure billing-breakdown", billing)
         self.assertNotIn("Pièces de la commande", billing)
 
+    def test_staff_handover_date_uses_shared_calendar_picker(self) -> None:
+        production = template_source("portal/staff/panels/production.html")
+        picker = template_source("components/forms/product_date_field.html")
+        product_css = static_source("css/components/product-shell.css")
+
+        self.assertIn('include "components/forms/product_date_field.html"', production)
+        self.assertIn('name="estimated_handover_date"', production)
+        self.assertNotIn('type="date"', production)
+        self.assertIn("data-product-date-picker", picker)
+        self.assertIn("product-date-picker__trigger-icon", picker)
+        self.assertNotIn("product-date-picker__trigger-chevron", picker)
+        self.assertIn("product-date-picker__nav-icon", picker)
+        self.assertIn("product-date-picker__trigger-icon", product_css)
+        self.assertIn("margin-left: auto", product_css)
+        self.assertIn("--shadow-raised", product_css)
+
+    def test_staff_billing_statement_uses_shared_month_picker(self) -> None:
+        statements = template_source("portal/staff/customers/_billing_statements.html")
+        staff_css = static_source("css/entries/portal-staff.css")
+
+        self.assertIn("components/forms/product_date_field.html", statements)
+        self.assertIn('picker_mode="month"', statements)
+        self.assertIn("name=billing_statement_form.month.html_name", statements)
+        self.assertIn("billing_statement_form.is_bound", statements)
+        self.assertNotIn('type="month"', statements)
+        self.assertIn("product-date-picker--month", staff_css)
+        self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr))", staff_css)
+        self.assertIn(".billing-statement-dialog", staff_css)
+
     def test_staff_order_detail_flattens_nested_workflow_borders(self) -> None:
         product_css = static_source("css/components/product-shell.css")
         detail = template_source("portal/staff/order_detail.html")

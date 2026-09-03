@@ -15,6 +15,9 @@
         <th>Statut</th>
         <th>Total</th>
         <th>Créée le</th>
+        {% if variant == "client" %}
+        <th>Remise prévue</th>
+        {% endif %}
         <th><span class="sr-only">Actions</span></th>
       </tr>
     </thead>
@@ -86,6 +89,18 @@
             <time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y H:i" }}</time>
           </div>
         </td>
+        {% if variant == "client" %}
+        <td>
+          <div class="ui-order-secondary">
+            <span class="ui-order-secondary__label">{{ order.handover_date_label }}</span>
+            {% if order.estimated_handover_date %}
+            <time datetime="{{ order.estimated_handover_date|date:'Y-m-d' }}">{{ order.estimated_handover_date|date:"d/m/Y" }}</time>
+            {% else %}
+            <span class="muted">À confirmer</span>
+            {% endif %}
+          </div>
+        </td>
+        {% endif %}
         <td>
           <div class="ui-table-actions">
             {% if variant == "staff" %}
@@ -138,6 +153,9 @@
       {% endif %}
     </div>
     <p class="muted mt-2 text-xs">Créée le {{ order.created_at|date:"d/m/Y H:i" }}</p>
+    {% if variant == "client" %}
+    <p class="muted mt-1 text-xs">{{ order.handover_date_label }} : {% if order.estimated_handover_date %}<time datetime="{{ order.estimated_handover_date|date:'Y-m-d' }}">{{ order.estimated_handover_date|date:"d/m/Y" }}</time>{% else %}À confirmer{% endif %}</p>
+    {% endif %}
     <div class="mt-4 flex flex-wrap gap-2">
       {% if variant == "staff" %}
       <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>

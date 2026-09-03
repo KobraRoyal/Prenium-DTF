@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from apps.portal.views_staff_production import production_panel_context
+from apps.portal.services.production_panel_context import build_production_panel_context
 from apps.production.models import ProductionJob
 
 
@@ -159,7 +159,7 @@ def build_operator_context(
     job = row["job"]
     from apps.portal.views_staff_reviews import _inspection_context
 
-    production = production_panel_context(
+    production = build_production_panel_context(
         request=request,
         order=order,
         job=job,

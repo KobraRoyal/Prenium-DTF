@@ -105,6 +105,7 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
             {
                 "apps.portal.client_order_presentation",
                 "apps.portal.dashboard_focus",
+                "apps.portal.order_status_presentation",
                 "apps.portal.views_common",
                 "apps.portal.views_payments",
             },
@@ -123,7 +124,12 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
         ),
         (
             "views_staff_production",
-            {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff"},
+            {
+                "apps.portal.htmx",
+                "apps.portal.services.production_panel_context",
+                "apps.portal.views_common",
+                "apps.portal.views_staff",
+            },
         ),
         (
             "views_staff_shipping",

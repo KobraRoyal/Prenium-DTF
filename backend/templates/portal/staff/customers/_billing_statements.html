@@ -139,7 +139,11 @@
     {% endif %}
     <div class="ui-field-group">
       <label class="ui-label" for="{{ billing_statement_form.month.id_for_label }}">Mois à clôturer</label>
-      {{ billing_statement_form.month }}
+      {% if billing_statement_form.is_bound %}
+      {% include "components/forms/product_date_field.html" with id=billing_statement_form.month.id_for_label name=billing_statement_form.month.html_name value=billing_statement_form.month.value label="Mois à clôturer" placeholder="Choisir un mois" picker_mode="month" input_class="ui-input w-full" %}
+      {% else %}
+      {% include "components/forms/product_date_field.html" with id=billing_statement_form.month.id_for_label name=billing_statement_form.month.html_name value=billing_statement_form.month.initial label="Mois à clôturer" placeholder="Choisir un mois" picker_mode="month" input_class="ui-input w-full" %}
+      {% endif %}
       {% if billing_statement_form.month.errors %}
       <p class="error-text ui-error-text" role="alert">{{ billing_statement_form.month.errors|striptags }}</p>
       {% endif %}

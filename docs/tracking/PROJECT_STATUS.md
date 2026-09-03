@@ -478,3 +478,11 @@
 - [x] Recette authentifiée à 1440/768/375 px, sans overflow horizontal
 - [x] Revue Impeccable indépendante : aucun P0/P1 ; badges, cartes mobiles et dette de tokens signalés puis corrigés
 - [x] Validation finale : 791 tests réussis, 1 ignoré ; Django, Ruff, format, migrations et santé conformes
+
+## Sprint 53 — Statuts client et remise prévisionnelle (2026-09-03)
+
+- [x] Statut client centralisé entre liste, fiche et timeline pour retrait atelier et expédition
+- [x] Distinction « Prête au retrait », « Prête à expédier », « Expédiée » et « Livrée »
+- [x] Date prévisionnelle de retrait/livraison affichée côté client, avec valeur « À confirmer »
+- [x] Modification Atelier protégée par permission `orders.change_order` et auditée
+- [x] 192 tests complets réussis ; Django, migrations, Ruff et format conformes

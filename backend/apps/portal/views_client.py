@@ -16,10 +16,10 @@ from apps.b2b_order_projects.services import (
     B2BOrderReorderService,
     ProjectDomainError,
 )
-from apps.core.public_refs import short_public_ref
 from apps.orders.services.client_timeline import build_client_order_status_history
 from apps.portal import dashboard_focus
-from apps.portal.client_order_presentation import client_order_identity
+from apps.portal.client_order_presentation import build_client_order_context
+from apps.portal.order_status_presentation import client_shipment_status
 from apps.portal.views_common import (
     ClientOwnerRequiredMixin,
     ScopedCustomerMixin,
@@ -142,21 +142,16 @@ class ClientOrderContextMixin(ScopedCustomerMixin):
         return order
 
     def client_order_context(self, *, order, **extra):
-        identity = client_order_identity(order)
-        context = {
-            "customer": self.customer,
-            "customer_membership": self.customer_membership,
-            "order": order,
-            "order_short_ref": short_public_ref(order.public_id),
-            "order_client_label": identity.label,
-            "order_display_ref": identity.reference,
-            "order_note_details": identity.note,
-            "order_requested_date": identity.requested_date,
-            "badge_tone_for_status": badge_tone_for_status,
-            "status_label": status_label,
-        }
-        context.update(extra)
-        return context
+        return build_client_order_context(
+            customer=self.customer,
+            customer_membership=self.customer_membership,
+            order=order,
+            extra={
+                "badge_tone_for_status": badge_tone_for_status,
+                "status_label": status_label,
+                **extra,
+            },
+        )
 
 
 class ClientOrderDetailView(ClientOrderContextMixin, View):
@@ -168,6 +163,7 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
 
         order = self.get_order_or_404(order_public_id)
         awaits_client_payment = order_awaits_client_payment(order)
+        order.awaits_client_payment = awaits_client_payment
         shipment = None
         try:
             shipment = order.shipment
@@ -267,10 +263,20 @@ class ClientOrderPanelShippingView(ClientOrderContextMixin, View):
             shipment = order.shipment
         except ObjectDoesNotExist:
             shipment = None
+        shipment_status = (
+            client_shipment_status(shipment)
+            if shipment is not None and shipment.shipped_at
+            else None
+        )
         return render(
             request,
             self.template_name,
-            self.client_order_context(order=order, shipment=shipment, active_panel="shipping"),
+            self.client_order_context(
+                order=order,
+                shipment=shipment,
+                shipment_status=shipment_status,
+                active_panel="shipping",
+            ),
         )
 
 

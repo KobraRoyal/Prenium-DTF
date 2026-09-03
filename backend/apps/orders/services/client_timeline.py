@@ -2,16 +2,22 @@ from __future__ import annotations
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from apps.portal.views_common import status_label
+from apps.portal.order_status_presentation import (
+    client_production_status,
+    client_shipment_status,
+    is_pickup_order,
+)
 
 
 def build_client_order_status_history(order) -> list[dict[str, object]]:
+    is_pickup = is_pickup_order(order)
     events: list[dict[str, object]] = [
         {
             "label": "Commande transmise",
             "detail": "",
             "occurred_at": order.created_at,
             "status_key": "submitted",
+            "tone": "is-neutral",
             "tracking_number": "",
             "tracking_url": "",
         }
@@ -26,23 +32,33 @@ def build_client_order_status_history(order) -> list[dict[str, object]]:
         transitions = list(production_job.transitions.order_by("created_at", "id"))
         if transitions:
             for transition in transitions:
+                status = client_production_status(
+                    transition.to_status,
+                    is_pickup=is_pickup,
+                )
                 events.append(
                     {
-                        "label": status_label(transition.to_status),
+                        "label": status.label,
                         "detail": str(transition.reason or "").strip(),
                         "occurred_at": transition.created_at,
-                        "status_key": transition.to_status,
+                        "status_key": status.key,
+                        "tone": status.tone,
                         "tracking_number": "",
                         "tracking_url": "",
                     }
                 )
         else:
+            status = client_production_status(
+                production_job.status,
+                is_pickup=is_pickup,
+            )
             events.append(
                 {
-                    "label": status_label(production_job.status),
+                    "label": status.label,
                     "detail": "",
                     "occurred_at": production_job.created_at,
-                    "status_key": production_job.status,
+                    "status_key": status.key,
+                    "tone": status.tone,
                     "tracking_number": "",
                     "tracking_url": "",
                 }
@@ -62,15 +78,17 @@ def build_client_order_status_history(order) -> list[dict[str, object]]:
                 label_detail = f"N° de suivi : {shipment.tracking_number}"
             events.append(
                 {
-                    "label": "Préparation d’expédition",
+                    "label": "Expédition en préparation",
                     "detail": label_detail,
                     "occurred_at": shipment.created_at,
-                    "status_key": "ready_to_ship",
+                    "status_key": "shipping_preparation",
+                    "tone": "is-warning",
                     "tracking_number": shipment.tracking_number if not shipment.shipped_at else "",
                     "tracking_url": shipment.tracking_url if not shipment.shipped_at else "",
                 }
             )
         if shipment.shipped_at:
+            status = client_shipment_status(shipment)
             carrier_message = str(shipment.sendcloud_status_message or "").strip()
             tracking = str(shipment.tracking_number or "").strip()
             detail_parts = []
@@ -80,10 +98,11 @@ def build_client_order_status_history(order) -> list[dict[str, object]]:
                 detail_parts.append(carrier_message)
             events.append(
                 {
-                    "label": "Commande expédiée",
+                    "label": status.label,
                     "detail": " · ".join(detail_parts),
                     "occurred_at": shipment.shipped_at,
-                    "status_key": "completed",
+                    "status_key": status.key,
+                    "tone": status.tone,
                     "tracking_number": tracking,
                     "tracking_url": str(shipment.tracking_url or "").strip(),
                 }

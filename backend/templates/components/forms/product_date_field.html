@@ -1,6 +1,7 @@
 <div
-  class="product-date-picker{% if wrapper_class %} {{ wrapper_class }}{% endif %}"
+  class="product-date-picker{% if picker_mode == 'month' %} product-date-picker--month{% endif %}{% if wrapper_class %} {{ wrapper_class }}{% endif %}"
   data-product-date-picker
+  data-picker-mode="{{ picker_mode|default:'date' }}"
   data-placeholder="{{ placeholder|default:'Choisir une date' }}"
 >
   <input type="hidden" name="{{ name }}" id="{{ id }}" value="{{ value|default:'' }}">
@@ -11,8 +12,14 @@
     aria-haspopup="dialog"
     aria-expanded="false"
     aria-controls="{{ id }}-popover"
+    aria-label="{{ label|default:'Choisir une date' }}"
+    {% if describedby %}aria-describedby="{{ describedby }}"{% endif %}
   >
     <span data-date-display class="is-placeholder">{{ placeholder|default:"Choisir une date" }}</span>
+    <svg class="product-date-picker__trigger-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5"></rect>
+      <path d="M8 3.5v4M16 3.5v4M3.5 10h17"></path>
+    </svg>
   </button>
   <div
     class="product-date-picker__popover"
@@ -20,21 +27,37 @@
     data-date-popover
     hidden
     role="dialog"
-    aria-label="{{ label|default:'Calendrier' }}"
+    aria-label="{% if picker_mode == 'month' %}Sélecteur de mois{% else %}{{ label|default:'Calendrier' }}{% endif %}"
   >
     <div class="product-date-picker__head">
-      <button type="button" class="product-date-picker__nav" data-date-prev aria-label="Mois précédent">‹</button>
+      <button
+        type="button"
+        class="product-date-picker__nav"
+        data-date-prev
+        aria-label="{% if picker_mode == 'month' %}Année précédente{% else %}Mois précédent{% endif %}"
+      >
+        <svg class="product-date-picker__nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+      </button>
       <p
         class="product-date-picker__month"
         id="{{ id }}-month"
         data-date-month
         aria-live="polite"
       ></p>
-      <button type="button" class="product-date-picker__nav" data-date-next aria-label="Mois suivant">›</button>
+      <button
+        type="button"
+        class="product-date-picker__nav"
+        data-date-next
+        aria-label="{% if picker_mode == 'month' %}Année suivante{% else %}Mois suivant{% endif %}"
+      >
+        <svg class="product-date-picker__nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+      </button>
     </div>
+    {% if picker_mode != 'month' %}
     <div class="product-date-picker__weekdays" aria-hidden="true">
       <span>Lu</span><span>Ma</span><span>Me</span><span>Je</span><span>Ve</span><span>Sa</span><span>Di</span>
     </div>
+    {% endif %}
     <div
       class="product-date-picker__grid"
       data-date-grid
