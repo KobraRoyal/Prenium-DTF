@@ -141,7 +141,9 @@ def test_console_lists_jobs_and_searches_by_of_without_detail_navigation():
     assert "Commande identifiée" in html
     assert "atelier-operations-focus" in html
     assert "Scanner un autre OF" in html
-    assert f'href="{route}">Scanner un autre OF' in html
+    assert f'href="{route}"' in html
+    assert 'x-show="scanned"' in html
+    assert '@submit="scanned = Boolean($refs.operationScan.value.trim())"' in html
     assert "ui-list-tabs" not in html
     assert "Parcours de production" in html
     assert "atelier-operations-list" not in html
@@ -367,7 +369,11 @@ def test_console_transition_updates_one_job_and_returns_status_feedback():
     assert response.status_code == 200
     job.refresh_from_db()
     assert job.status == ProductionJob.Status.IN_PROGRESS
-    assert "En production" in response.content.decode()
+    response_html = response.content.decode()
+    assert "En production" in response_html
+    assert "Commande identifiée" in response_html
+    assert job.manufacturing_order_number in response_html
+    assert "Déclarer prêt à expédier" in response_html
     toast = json.loads(response["X-Prenium-Toast"])
     assert toast["variant"] == "success"
     assert job.manufacturing_order_number in toast["message"]
