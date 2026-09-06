@@ -71,6 +71,17 @@
           <dt>Pays</dt>
           <dd>{{ profile.country }}</dd>
         </div>
+        <div class="detail-grid__span">
+          <dt>Adresse professionnelle</dt>
+          <dd>
+            {% if profile.billing_address_line1 %}
+              {{ profile.billing_address_line1 }}{% if profile.billing_address_line2 %}<br>{{ profile.billing_address_line2 }}{% endif %}<br>
+              {{ profile.billing_postal_code }} {{ profile.billing_city }}
+            {% else %}
+              <span class="muted">Non renseignée</span>
+            {% endif %}
+          </dd>
+        </div>
         <div>
           <dt>SIREN</dt>
           <dd>{{ profile.siren|default:"—" }}</dd>

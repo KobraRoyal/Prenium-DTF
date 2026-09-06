@@ -1,10 +1,18 @@
 {% load ui_tags %}
 <div id="atelier-dashboard-panel" class="atelier-dashboard-stack">
+{% if production_trend %}
+<section class="atelier-production-chart" aria-labelledby="atelier-production-chart-title">
+  <header><div><h2 class="font-display" id="atelier-production-chart-title">Flux Atelier</h2><p>Nouvelles commandes et commandes terminées · 7 derniers jours.</p></div><a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-list' %}">Voir les commandes</a></header>
+  <div class="atelier-production-chart__canvas"><canvas id="atelier-production-chart-canvas" aria-label="Évolution des nouvelles commandes et commandes terminées" role="img"></canvas></div>
+  {{ production_trend|json_script:"atelier-production-chart-data" }}
+</section>
+{% endif %}
 {% if dashboard_kpi_rows %}
 <section class="atelier-dashboard-metrics" aria-label="Indicateurs de la file Atelier">
   {% ui_kpi_grid dashboard_kpi_rows %}
 </section>
 {% endif %}
+
 
 <section class="portal-page-surface ui-list-section atelier-dashboard-surface" x-data="{
   selected: [],

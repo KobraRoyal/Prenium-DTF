@@ -24,6 +24,7 @@ def build_operator_steps(
     production: dict,
     shipment=None,
 ) -> list[dict[str, str]]:
+    is_pickup = getattr(order, "shipping_method_code", "") == "pickup"
     uploads = inspection.get("uploads") or []
     control_required = bool(uploads)
     of_document_issued = bool(inspection.get("of_document_issued"))
@@ -121,7 +122,7 @@ def build_operator_steps(
     steps.append(
         {
             "key": "shipping",
-            "label": "Expédition",
+            "label": "Retrait atelier" if is_pickup else "Expédition",
             "state": _step_state(
                 done=shipping_done,
                 active=shipping_active and not shipping_done,

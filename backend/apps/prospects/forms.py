@@ -14,7 +14,7 @@ class ProspectStep1Form(forms.Form):
     phone = forms.CharField(label="Téléphone", max_length=32)
     company = forms.CharField(label="Société", max_length=255)
     country = forms.ChoiceField(
-        label="Pays",
+        label="Pays de facturation",
         choices=[
             ("FR", "France"),
             ("BE", "Belgique"),
@@ -34,6 +34,23 @@ class ProspectStep1Form(forms.Form):
             ("ZZ", "Autre pays"),
         ],
     )
+    billing_address_line1 = forms.CharField(
+        label="Adresse postale",
+        max_length=255,
+    )
+    billing_address_line2 = forms.CharField(
+        label="Complément d’adresse",
+        max_length=255,
+        required=False,
+    )
+    billing_postal_code = forms.CharField(
+        label="Code postal",
+        max_length=32,
+    )
+    billing_city = forms.CharField(
+        label="Ville",
+        max_length=128,
+    )
     siren = forms.CharField(label="Numéro SIREN", max_length=14, required=False)
     vat_number = forms.CharField(
         label="N° de TVA / identifiant fiscal",
@@ -52,6 +69,18 @@ class ProspectStep1Form(forms.Form):
     def clean_vat_number(self) -> str:
         return re.sub(r"[\s.\-]", "", self.cleaned_data.get("vat_number", "")).upper()
 
+    def clean_billing_address_line1(self) -> str:
+        return " ".join(self.cleaned_data.get("billing_address_line1", "").split())
+
+    def clean_billing_address_line2(self) -> str:
+        return " ".join(self.cleaned_data.get("billing_address_line2", "").split())
+
+    def clean_billing_postal_code(self) -> str:
+        return " ".join(self.cleaned_data.get("billing_postal_code", "").split()).upper()
+
+    def clean_billing_city(self) -> str:
+        return " ".join(self.cleaned_data.get("billing_city", "").split())
+
     def clean(self):
         data = super().clean()
         country = data.get("country")
@@ -68,11 +97,6 @@ class ProspectStep1Form(forms.Form):
 
 
 class ProspectStep2Form(forms.Form):
-    service_interest = forms.ChoiceField(
-        label="Service qui vous intéresse",
-        choices=ProspectProfile.ServiceInterest.choices,
-        widget=forms.RadioSelect,
-    )
     main_goal = forms.CharField(
         label="Objectif principal",
         max_length=500,
@@ -99,14 +123,14 @@ class ProspectStep2Form(forms.Form):
         choices=ProspectProfile.Urgency.choices,
         widget=forms.RadioSelect,
     )
+    terms_accepted = forms.BooleanField(
+        label="J’accepte d’être contacté dans le cadre de cette demande d’accès."
+    )
 
 
 class ProspectStep3ReviewForm(forms.Form):
     terms_accepted = forms.BooleanField(
-        label=(
-            "Je confirme l'exactitude des informations et accepte d'être contacté "
-            "dans le cadre de cette demande d'accès."
-        )
+        label="J’accepte d’être contacté dans le cadre de cette demande d’accès."
     )
 
 

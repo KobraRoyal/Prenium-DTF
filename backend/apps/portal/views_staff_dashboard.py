@@ -29,6 +29,8 @@ class StaffDashboardView(StaffPortalMixin, View):
                 "rows": [],
                 "metrics": {},
                 "kpi_rows": [],
+                "activity_kpi_rows": [],
+                "production_trend": {},
                 "printable_count": 0,
                 "unprinted_of_total": 0,
                 "unprinted_of_batch_count": 0,
@@ -40,6 +42,8 @@ class StaffDashboardView(StaffPortalMixin, View):
             "worklist_rows": dashboard["rows"],
             "printable_count": dashboard["printable_count"],
             "dashboard_kpi_rows": dashboard.get("kpi_rows", []),
+            "activity_kpi_rows": dashboard.get("activity_kpi_rows", []),
+            "production_trend": dashboard.get("production_trend", {}),
             "unprinted_of_total": dashboard.get("unprinted_of_total", 0),
             "unprinted_of_batch_count": dashboard.get("unprinted_of_batch_count", 0),
             "batch_print_limit": dashboard.get(

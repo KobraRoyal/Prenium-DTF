@@ -61,9 +61,17 @@ class StaffAtelierOperationsContextMixin(StaffAtelierOperationsPermissionMixin):
     workspace_template_name = "portal/staff/operations/_workspace.html"
 
     def _filter_value(self, request, key: str, default: str = "") -> str:
-        if request.method == "POST":
-            return request.POST.get(key, default)
-        return request.GET.get(key, default)
+        return (request.POST if request.method == "POST" else request.GET).get(key, default)
+
+    def _focused_scan_query(self, request) -> str:
+        query = self._filter_value(request, "q", "")
+        order_public_id = request.resolver_match.kwargs.get("order_public_id")
+        if request.method != "POST" or not order_public_id:
+            return query
+        _order, job = production_workflow_service.get_staff_job_for_document(
+            order_public_id=order_public_id
+        )
+        return job.scan_identifier if job is not None else query
 
     def _workspace_context(
         self,
@@ -84,7 +92,7 @@ class StaffAtelierOperationsContextMixin(StaffAtelierOperationsPermissionMixin):
         )
         workspace = atelier_operations_service.build_workspace(
             queue=self._filter_value(request, "queue", "active"),
-            query=self._filter_value(request, "q", ""),
+            query=self._focused_scan_query(request),
             page_number=self._filter_value(request, "page", "1"),
             include_shipping=can_view_shipping,
         )
@@ -131,9 +139,7 @@ class StaffAtelierOperationsContextMixin(StaffAtelierOperationsPermissionMixin):
 
     def _render_workspace(self, request, **kwargs):
         return render(
-            request,
-            self.workspace_template_name,
-            self._workspace_context(request, **kwargs),
+            request, self.workspace_template_name, self._workspace_context(request, **kwargs)
         )
 
     def _staff_order(self, order_public_id):

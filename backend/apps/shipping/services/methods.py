@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ValidationError
 
 from apps.customers.models import Customer
+from apps.orders.services.business_days import add_business_days
 from apps.shipping.models import ZERO_AMOUNT, ShippingMethod
 
 TWOPLACES = Decimal("0.01")
@@ -14,6 +16,11 @@ DEFAULT_SHIPPING_MODE_TO_METHOD_CODE = {
     Customer.DefaultShippingMode.PICKUP: "pickup",
     Customer.DefaultShippingMode.CARRIER: "standard",
     Customer.DefaultShippingMode.DIRECT: "standard",
+}
+
+DELIVERY_ESTIMATE_DAYS_BY_METHOD_CODE = {
+    "standard": 3,
+    "express": 1,
 }
 
 DEFAULT_METHOD_SEED = (
@@ -192,3 +199,15 @@ class ShippingMethodService:
         if existing is not None:
             return Decimal(existing).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         return ZERO_AMOUNT
+
+    def estimated_delivery_date(self, *, order, declared_on: date) -> date | None:
+        """Return the client promise date for catalog delivery methods.
+
+        The catalog wording remains the operator-facing source of truth: standard
+        is 48–72 h and express 24 h after dispatch. The stored date uses the
+        outer bound of that promise and intentionally leaves custom methods unset.
+        """
+        days = DELIVERY_ESTIMATE_DAYS_BY_METHOD_CODE.get(
+            str(getattr(order, "shipping_method_code", "") or "").strip().lower()
+        )
+        return add_business_days(declared_on, days) if days else None

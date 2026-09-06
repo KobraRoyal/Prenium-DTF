@@ -5,11 +5,13 @@ from apps.auditlog.models import AuditLogEntry
 from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
+from apps.orders.services.business_days import add_business_days
 from apps.production.models import ProductionJob, ProductionJobScanLog, ProductionJobTransition
 from apps.production.services.scans import ProductionScanService
 from apps.production.services.workflow import ProductionWorkflowService
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 def create_customer_scope(email: str, customer_name: str):
@@ -68,6 +70,33 @@ def test_transition_job_updates_status_creates_history_and_audit():
     assert AuditLogEntry.objects.filter(
         action="production.status_changed",
         target_public_id=updated_job.public_id,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_pickup_production_start_sets_tomorrows_client_handover_date():
+    service = ProductionWorkflowService()
+    actor, customer, _membership = create_customer_scope("pickup-eta@example.com", "Acme")
+    staff_user = get_user_model().objects.create_user(
+        email="pickup-eta-staff@example.com", password="pass", is_staff=True
+    )
+    order = create_order(customer, actor)
+    order.shipping_method_code = "pickup"
+    order.save(update_fields=["shipping_method_code", "updated_at"])
+
+    service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.IN_PROGRESS,
+        actor=staff_user,
+        source="test",
+    )
+
+    order.refresh_from_db()
+    assert order.estimated_handover_date == add_business_days(timezone.localdate(), 1)
+    assert AuditLogEntry.objects.filter(
+        action="order.estimated_handover_date_updated",
+        target_public_id=order.public_id,
+        metadata__source="production_start_pickup_eta",
     ).exists()
 
 

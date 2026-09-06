@@ -18,6 +18,14 @@ class StaffOrderListFilterService:
         ("changes", "Corrections"),
         ("approved", "Fichiers validés"),
     )
+    status_definitions = (
+        ("", "Tous statuts"),
+        (ProductionJob.Status.QUEUED, "En traitement"),
+        (ProductionJob.Status.IN_PROGRESS, "En production"),
+        (ProductionJob.Status.READY_TO_SHIP, "Prêtes à expédier"),
+        (ProductionJob.Status.COMPLETED, "Terminées"),
+        (ProductionJob.Status.BLOCKED, "Bloquées"),
+    )
 
     def normalize_queue(self, queue: str | None) -> str:
         allowed = {key for key, _label in self.queue_definitions}
@@ -30,6 +38,11 @@ class StaffOrderListFilterService:
                 return label
         return self.queue_definitions[0][1]
 
+    def normalize_status(self, status: str | None) -> str:
+        allowed = {key for key, _label in self.status_definitions}
+        cleaned = str(status or "").strip()
+        return cleaned if cleaned in allowed else ""
+
     def build_tabs(self, *, active_queue: str, counts: dict[str, int]) -> list[dict[str, object]]:
         return [
             {
@@ -39,6 +52,19 @@ class StaffOrderListFilterService:
                 "is_active": key == active_queue,
             }
             for key, label in self.queue_definitions
+        ]
+
+    def build_status_tabs(
+        self, *, active_status: str, counts: dict[str, int]
+    ) -> list[dict[str, object]]:
+        return [
+            {
+                "key": key,
+                "label": label,
+                "count": counts.get(key, 0),
+                "is_active": key == active_status,
+            }
+            for key, label in self.status_definitions
         ]
 
     def count_by_queue(self, queryset: QuerySet) -> dict[str, int]:
@@ -51,6 +77,17 @@ class StaffOrderListFilterService:
             "to_review": self._filter_to_review(issued).count(),
             "changes": self._filter_changes(issued).count(),
             "approved": self._filter_approved(issued).count(),
+        }
+
+    def count_by_status(self, queryset: QuerySet) -> dict[str, int]:
+        base = queryset.exclude(status=Order.Status.CANCELLED)
+        return {
+            "": base.count(),
+            **{
+                status: base.filter(production_job__status=status).count()
+                for status, _label in self.status_definitions
+                if status
+            },
         }
 
     def apply_filter(self, queryset: QuerySet, *, queue: str) -> QuerySet:
@@ -67,6 +104,12 @@ class StaffOrderListFilterService:
         if normalized == "approved":
             return self._filter_approved(issued)
         return queryset
+
+    def apply_status_filter(self, queryset: QuerySet, *, status: str | None) -> QuerySet:
+        normalized = self.normalize_status(status)
+        if not normalized:
+            return queryset
+        return queryset.filter(production_job__status=normalized)
 
     def apply_search(self, queryset: QuerySet, *, query: str) -> QuerySet:
         cleaned = str(query or "").strip()

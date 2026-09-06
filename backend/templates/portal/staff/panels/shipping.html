@@ -2,27 +2,66 @@
 <div class="workflow-panel workflow-panel--operator shipping-station">
   <header class="workflow-panel__hero operator-panel-hero">
     <div>
-      <h3 class="workflow-panel__title">Expédition</h3>
-      <p class="workflow-panel__meta">{% if shipment %}Envoi déclaré dans Sendcloud · suivi synchronisé automatiquement{% elif shipping_ready %}Vérifiez le destinataire et le poids avant la déclaration Sendcloud{% else %}Disponible quand l’OF sera prêt à expédier{% endif %}</p>
+      <h3 class="workflow-panel__title">{% if is_pickup %}Retrait atelier{% else %}Expédition{% endif %}</h3>
+      <p class="workflow-panel__meta">{% if is_pickup %}{% if production_job.status == "completed" %}Le retrait est enregistré.{% elif shipping_ready %}La commande est disponible pour le client.{% else %}Disponible lorsque l’OF sera prêt au retrait.{% endif %}{% elif shipment %}{% if shipment.shipped_at %}Colis confié au transporteur.{% elif shipment.tracking_number %}Étiquette prête ; prise en charge en attente.{% else %}Déclaration créée ; générez l’étiquette dans Sendcloud.{% endif %}{% elif shipping_ready %}Contrôlez le destinataire et le poids avant de déclarer l’envoi.{% else %}Disponible lorsque l’OF sera prêt à expédier.{% endif %}</p>
     </div>
-    {% if shipment %}<span class="badge {{ shipment.status|badge_tone }}">{{ shipment.status|human_status }}</span>{% elif shipping_ready %}<span class="badge is-success">Prêt à déclarer</span>{% else %}<span class="badge is-warning">En attente production</span>{% endif %}
+    {% if is_pickup %}{% if production_job.status == "completed" %}<span class="badge is-success">Retrait confirmé</span>{% elif shipping_ready %}<span class="badge is-success">À remettre</span>{% else %}<span class="badge is-warning">En attente production</span>{% endif %}{% elif shipment %}<span class="badge {{ shipment.status|badge_tone }}">{{ shipment.status|human_status }}</span>{% elif shipping_ready %}<span class="badge is-success">Prêt à déclarer</span>{% else %}<span class="badge is-warning">En attente production</span>{% endif %}
   </header>
 
   {% if form_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p class="m-0">{{ form_error }}</p></div>{% endif %}
 
-  {% if shipment %}
+  {% if is_pickup %}
+  <section class="shipment-status-card" aria-labelledby="pickup-status-title">
+    <div class="shipment-status-card__head">
+      <div>
+        {% if production_job.status == "completed" %}
+        <h4 id="pickup-status-title">Retrait confirmé</h4>
+        <p class="ui-help">La commande a été remise au client.</p>
+        {% elif shipping_ready %}
+        <h4 id="pickup-status-title">Commande à remettre</h4>
+        <p class="ui-help">La confirmation enregistre la date, l’opérateur et termine l’OF.</p>
+        {% else %}
+        <h4 id="pickup-status-title">Retrait non disponible</h4>
+        <p class="ui-help">La commande doit d’abord atteindre l’état « Prêt à expédier ».</p>
+        {% endif %}
+      </div>
+    </div>
+    {% if production_job.completed_at or order.estimated_handover_date %}
+    <dl class="shipment-status-card__facts">
+      {% if production_job.completed_at %}<div><dt>Retrait effectué</dt><dd>{{ production_job.completed_at|date:"d/m/Y · H:i" }}</dd></div>{% endif %}
+      {% if order.estimated_handover_date and not production_job.completed_at %}<div><dt>Date annoncée au client</dt><dd>{{ order.estimated_handover_date|date:"d/m/Y" }}</dd></div>{% endif %}
+    </dl>
+    {% endif %}
+    {% if shipping_ready and can_confirm_pickup %}
+    <form class="ui-form-stack" hx-post="{% url 'portal:staff-order-panel-shipping' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="confirm_pickup">
+      {% include "components/forms/field_group.html" with id="pickup-note" name="pickup_note" label="Commentaire de remise" type="text" placeholder="Facultatif — ex. remis à Mme Martin" show_label=1 %}
+      {% include "components/forms/form_actions.html" with primary_label="Confirmer le retrait" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
+    </form>
+    {% elif perms.production.view_productionjob %}
+    <div class="shipment-status-card__actions"><a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Ouvrir Production</a></div>
+    {% endif %}
+  </section>
+  {% elif shipment %}
   <section class="shipment-status-card" aria-labelledby="shipment-status-title">
     <div class="shipment-status-card__head">
-      <div><h4 id="shipment-status-title">Suivi Sendcloud</h4></div>
+      <div><h4 id="shipment-status-title">Pilotage Sendcloud</h4></div>
     </div>
-    <dl class="shipment-status-card__facts">
-      <div><dt>Numéro de suivi</dt><dd>{{ shipment.tracking_number|default:"En attente (étiquette Sendcloud)" }}</dd></div>
-      <div><dt>Service / indication</dt><dd>{{ shipment.shipping_option_code|default:"Choix transporteur dans Sendcloud" }}</dd></div>
-      <div><dt>Dernière synchronisation</dt><dd>{% if shipment.last_api_sync_at %}{{ shipment.last_api_sync_at|date:"d/m/Y · H:i" }}{% else %}Pas encore synchronisé{% endif %}</dd></div>
-      <div><dt>Statut transporteur</dt><dd>{{ shipment.sendcloud_status_message|default:"Déclarée — étiquette à générer dans Sendcloud" }}</dd></div>
-    </dl>
     {% if shipment.status == "created" and not shipment.tracking_number %}
-    <p class="ui-help">Commande déclarée dans Sendcloud. Générez l’étiquette dans le panneau Sendcloud ; le suivi remontera automatiquement ici.</p>
+    <p class="ui-help">Prochaine étape : générez l’étiquette dans Sendcloud, puis actualisez le suivi ici.</p>
+    {% elif shipment.tracking_number and not shipment.shipped_at %}
+    <p class="ui-help">Étiquette disponible. Le suivi s’activera dès la prise en charge du colis.</p>
+    {% endif %}
+    {% if shipment.tracking_number or shipment.shipping_option_code or shipment.last_api_sync_at or shipment.sendcloud_status_message %}
+    <dl class="shipment-status-card__facts">
+      {% if shipment.tracking_number %}<div><dt>Numéro de suivi</dt><dd>{{ shipment.tracking_number }}</dd></div>{% endif %}
+      {% if shipment.shipping_option_code %}<div><dt>Service transport</dt><dd>{{ shipment.shipping_option_code }}</dd></div>{% endif %}
+      {% if delivery_eta_label %}<div><dt>Délai estimé</dt><dd>{{ delivery_eta_label }}</dd></div>{% endif %}
+      {% if order.estimated_handover_date %}<div><dt>Date annoncée au client</dt><dd>{{ order.estimated_handover_date|date:"d/m/Y" }}</dd></div>{% endif %}
+      {% if shipment.last_api_sync_at %}<div><dt>Synchronisé le</dt><dd>{{ shipment.last_api_sync_at|date:"d/m/Y · H:i" }}</dd></div>{% endif %}
+      {% if shipment.sendcloud_status_message %}<div><dt>Statut transporteur</dt><dd>{{ shipment.sendcloud_status_message }}</dd></div>{% endif %}
+    </dl>
     {% endif %}
     <div class="shipment-status-card__actions">
       {% if shipment.label_file %}
@@ -43,7 +82,7 @@
   {% else %}
   <section class="shipping-form-shell" aria-labelledby="staff-shipping-form-heading">
     <div class="operator-section-head">
-      <div><h4 id="staff-shipping-form-heading">Déclarer dans Sendcloud</h4><p>L’adresse, les produits et la commande seront transmis. L’étiquette restera gérée dans Sendcloud.</p></div>
+      <div><h4 id="staff-shipping-form-heading">Préparer l’envoi</h4><p>Vérifiez ces informations avant de transmettre la commande à Sendcloud.</p></div>
     </div>
 
     <form class="shipping-guided-form" hx-post="{% url 'portal:staff-order-panel-shipping' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
@@ -77,7 +116,7 @@
         </div>
       </fieldset>
 
-      <div class="shipping-submit-bar"><p>Adresse et poids vérifiés ?</p><button type="submit" class="ui-btn ui-btn-primary" hx-disabled-elt="this">Déclarer dans Sendcloud</button></div>
+      <div class="shipping-submit-bar"><p>Adresse et poids vérifiés ?</p><button type="submit" class="ui-btn ui-btn-primary" hx-disabled-elt="this">Déclarer l’envoi</button></div>
     </form>
   </section>
   {% endif %}

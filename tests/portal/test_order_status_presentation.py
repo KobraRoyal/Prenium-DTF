@@ -1,7 +1,9 @@
+from datetime import date, datetime
 from types import SimpleNamespace
 
 import pytest
 from apps.portal.order_status_presentation import (
+    client_order_handover,
     client_order_status,
     handover_date_label,
     operational_order_status,
@@ -25,7 +27,7 @@ def make_order(**overrides):
         (
             make_order(production_job=SimpleNamespace(status="queued")),
             "queued",
-            "En file Atelier",
+            "En traitement",
             "is-warning",
         ),
         (
@@ -134,6 +136,18 @@ def test_operational_order_status_prioritizes_customer_blockers():
             "Retirée",
         ),
         (
+            make_order(
+                production_job=SimpleNamespace(status="completed"),
+                shipping_method_code="pickup",
+                shipment=SimpleNamespace(
+                    shipped_at=object(),
+                    sendcloud_status_code="IN_TRANSIT",
+                ),
+            ),
+            "picked_up",
+            "Retirée",
+        ),
+        (
             make_order(production_job=SimpleNamespace(status="completed")),
             "production_completed",
             "Préparation terminée",
@@ -190,3 +204,36 @@ def test_client_order_status_keeps_customer_blockers_in_front_of_production():
 def test_handover_date_label_follows_the_selected_shipping_method():
     assert handover_date_label(make_order(shipping_method_code="pickup")) == "Retrait prévu"
     assert handover_date_label(make_order(shipping_method_code="standard")) == "Livraison prévue"
+
+
+def test_client_handover_replaces_an_estimate_with_completed_fulfilment():
+    pickup = make_order(
+        shipping_method_code="pickup",
+        estimated_handover_date=None,
+        production_job=SimpleNamespace(
+            status="completed", completed_at=datetime(2026, 9, 6, 10, 30)
+        ),
+    )
+    delivered = make_order(
+        estimated_handover_date=None,
+        shipment=SimpleNamespace(sendcloud_status_code="DELIVERED", shipped_at=None),
+    )
+
+    pickup_handover = client_order_handover(pickup)
+    delivered_handover = client_order_handover(delivered)
+
+    assert (pickup_handover.label, pickup_handover.value) == ("Retrait", "Effectué")
+    assert pickup_handover.occurred_at == datetime(2026, 9, 6, 10, 30)
+    assert (delivered_handover.label, delivered_handover.value) == ("Livraison", "Livrée")
+
+
+def test_client_handover_uses_the_staff_announced_date_until_fulfilment():
+    announced_date = date(2026, 9, 8)
+
+    handover = client_order_handover(make_order(estimated_handover_date=announced_date))
+
+    assert (handover.label, handover.value, handover.occurred_at) == (
+        "Date annoncée",
+        "",
+        announced_date,
+    )

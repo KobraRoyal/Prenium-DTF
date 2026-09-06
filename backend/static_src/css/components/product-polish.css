@@ -780,9 +780,7 @@ body.product-shell.prospect-journey-page .prospect-shell__eyebrow {
 }
 
 body.product-shell.prospect-journey-page .prospect-shell__title,
-body.product-shell.prospect-journey-page .prospect-shell__lead,
-body.product-shell.prospect-journey-page .prospect-tunnel__step-meta,
-body.product-shell.prospect-journey-page .prospect-journey__progress-number {
+body.product-shell.prospect-journey-page .prospect-shell__lead {
   color: var(--product-ink);
 }
 
@@ -791,17 +789,6 @@ body.product-shell.prospect-journey-page .prospect-shell__title {
   line-height: 0.98;
   letter-spacing: -0.035em;
   text-transform: none;
-}
-
-body.product-shell.prospect-journey-page .prospect-tunnel__track {
-  overflow: hidden;
-  border: 1px solid var(--product-line);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--product-panel) 54%, transparent);
-}
-
-body.product-shell.prospect-journey-page .prospect-tunnel__track-fill {
-  background: var(--product-accent);
 }
 
 body.product-shell.prospect-journey-page .prospect-stepper__index {
@@ -828,7 +815,7 @@ body.product-shell.prospect-journey-page .prospect-journey__panel {
   background: var(--product-panel);
 }
 
-body.product-shell.prospect-journey-page :is(.prospect-step1__surface, .prospect-review, .prospect-consent-card, .prospect-success-card) {
+body.product-shell.prospect-journey-page :is(.prospect-consent-card, .prospect-success-card) {
   border: 1px solid color-mix(in srgb, var(--product-line) 26%, transparent);
   border-radius: var(--product-polish-radius);
   background: var(--product-panel);

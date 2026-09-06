@@ -43,7 +43,8 @@ def test_css_entrypoints_keep_shared_and_surface_rules_separate() -> None:
     assert '@import "./portal-staff.css"' in portal_entry
     assert "workflow.css" in portal_core_entry
     assert "product-shell.css" in portal_core_entry
-    assert "prospect-tunnel.css" in portal_core_entry
+    assert "access-management.css" in portal_core_entry
+    assert "prospect-tunnel.css" not in portal_core_entry
     assert "prospect-journey.css" in portal_entry
     assert "gang-sheet.css" in read(CSS_DIR / "entries" / "portal-client.css")
     assert "gang-sheet-studio.css" in studio_entry
@@ -70,6 +71,12 @@ def test_templates_load_common_css_before_exact_surface_bundle() -> None:
     assert "css/portal-core.css" not in home
     assert "css/marketing.css" in services
     assert "css/portal-core.css" not in services
+
+
+def test_portal_css_asset_version_is_bumped_for_surface_changes() -> None:
+    portal_tags = read(BACKEND_DIR / "apps" / "portal" / "templatetags" / "portal_tags.py")
+
+    assert 'PORTAL_CSS_ASSET_V = "20260906-atelier-chart-v22"' in portal_tags
 
 
 def test_generated_surface_bundles_exist_and_contain_expected_markers() -> None:

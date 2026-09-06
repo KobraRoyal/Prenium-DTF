@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -16,8 +17,17 @@ class OperationalOrderStatus:
     tone: str
 
 
+@dataclass(frozen=True, slots=True)
+class ClientOrderHandover:
+    """One truthful fulfilment fact for the client order list."""
+
+    label: str
+    value: str
+    occurred_at: date | datetime | None = None
+
+
 _PRODUCTION_STATUSES = {
-    "queued": OperationalOrderStatus("queued", "En file Atelier", "is-warning"),
+    "queued": OperationalOrderStatus("queued", "En traitement", "is-warning"),
     "in_progress": OperationalOrderStatus("in_progress", "En production", "is-warning"),
     "blocked": OperationalOrderStatus("blocked", "Bloquée", "is-danger"),
     "ready_to_ship": OperationalOrderStatus("ready_to_ship", "Prête à expédier", "is-success"),
@@ -51,6 +61,36 @@ def is_pickup_order(order) -> bool:
 def handover_date_label(order) -> str:
     """Return the client-facing label for the shared handover date field."""
     return "Retrait prévu" if is_pickup_order(order) else "Livraison prévue"
+
+
+def client_order_handover(order) -> ClientOrderHandover:
+    """Present an estimate until fulfilment, then replace it with the real event."""
+    if is_pickup_order(order):
+        production_job = _related_or_none(order, "production_job")
+        if str(getattr(production_job, "status", "") or "").lower() == "completed":
+            return ClientOrderHandover(
+                label="Retrait",
+                value="Effectué",
+                occurred_at=getattr(production_job, "completed_at", None),
+            )
+    else:
+        shipment = _related_or_none(order, "shipment")
+        carrier_status = str(getattr(shipment, "sendcloud_status_code", "") or "").upper()
+        if carrier_status == "DELIVERED":
+            return ClientOrderHandover(label="Livraison", value="Livrée")
+        if getattr(shipment, "shipped_at", None) is not None:
+            return ClientOrderHandover(
+                label="Expédition",
+                value="Expédiée",
+                occurred_at=shipment.shipped_at,
+            )
+
+    expected_at = getattr(order, "estimated_handover_date", None)
+    return ClientOrderHandover(
+        label="Date annoncée",
+        value="À confirmer" if expected_at is None else "",
+        occurred_at=expected_at,
+    )
 
 
 def client_production_status(
@@ -100,8 +140,9 @@ def client_order_status(order) -> OperationalOrderStatus:
     if bool(getattr(order, "awaits_client_payment", False)):
         return OperationalOrderStatus("awaiting_payment", "Paiement à effectuer", "is-warning")
 
+    is_pickup = is_pickup_order(order)
     shipment = _related_or_none(order, "shipment")
-    if shipment is not None and getattr(shipment, "shipped_at", None) is not None:
+    if not is_pickup and shipment is not None and getattr(shipment, "shipped_at", None) is not None:
         return client_shipment_status(shipment)
 
     production_job = _related_or_none(order, "production_job")
@@ -109,7 +150,7 @@ def client_order_status(order) -> OperationalOrderStatus:
     if production_status:
         return client_production_status(
             production_status,
-            is_pickup=is_pickup_order(order),
+            is_pickup=is_pickup,
         )
 
     if order_status == "submitted":
@@ -172,5 +213,7 @@ def prepare_orders_for_list(orders, *, audience: str = "staff"):
         order.operational_status = (
             client_order_status(order) if audience == "client" else operational_order_status(order)
         )
+        if audience == "client":
+            order.client_handover = client_order_handover(order)
         order.handover_date_label = handover_date_label(order)
     return order_list

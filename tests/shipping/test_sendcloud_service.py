@@ -5,6 +5,7 @@ from apps.auditlog.models import AuditLogEntry
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
+from apps.orders.services.business_days import add_business_days
 from apps.production.models import ProductionJob
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.shipping.models import Shipment
@@ -16,6 +17,7 @@ from apps.shipping.services.sendcloud import (
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import override_settings
+from django.utils import timezone
 
 
 def create_customer_scope(email: str, customer_name: str):
@@ -36,6 +38,33 @@ def create_order(customer, actor):
         total_amount="25.00",
         customer_note="Ship me safely",
     )
+
+
+@pytest.mark.django_db
+def test_shipment_declaration_sets_delivery_date_from_the_selected_method():
+    actor, customer, _membership = create_customer_scope("delivery-eta@example.com", "Acme")
+    order = create_order(customer, actor)
+    order.shipping_method_code = "standard"
+    order.save(update_fields=["shipping_method_code", "updated_at"])
+    mark_order_ready_to_ship(order)
+    staff_user = get_user_model().objects.create_user(
+        email="delivery-eta-staff@example.com", password="pass", is_staff=True
+    )
+
+    ShipmentService(gateway=FakeSendcloudGateway()).create_shipment(
+        order_public_id=order.public_id,
+        actor=staff_user,
+        source="test",
+        payload=build_shipment_payload(),
+    )
+
+    order.refresh_from_db()
+    assert order.estimated_handover_date == add_business_days(timezone.localdate(), 3)
+    assert AuditLogEntry.objects.filter(
+        action="order.estimated_handover_date_updated",
+        target_public_id=order.public_id,
+        metadata__source="shipping_declaration_delivery_eta",
+    ).exists()
 
 
 def link_business_number(order, *, project_number="CMD-2026-000001"):

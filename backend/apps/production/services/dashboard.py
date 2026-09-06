@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import timedelta
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.billing.services.production_payment_gate import (
     order_awaits_client_payment,
@@ -41,11 +43,92 @@ class AtelierDashboardService:
                 metrics=metrics,
                 unprinted_total=unprinted_total,
             ),
+            "activity_kpi_rows": self._build_activity_kpi_rows(),
+            "production_trend": self._build_production_trend(),
             "printable_count": sum(row["print_eligible"] for row in rows),
             "unprinted_of_total": unprinted_total,
             "unprinted_of_batch_count": min(unprinted_total, batch_service.max_batch_size),
             "batch_print_limit": batch_service.max_batch_size,
         }
+
+    def _build_production_trend(self) -> dict[str, object]:
+        """Historique réel à sept jours : entrées Atelier et commandes terminées."""
+        today = timezone.localdate()
+        dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        entries = {
+            day: Order.objects.filter(status=Order.Status.SUBMITTED, created_at__date=day).count()
+            for day in dates
+        }
+        completed = {
+            day: ProductionJob.objects.filter(
+                status=ProductionJob.Status.COMPLETED,
+                updated_at__date=day,
+            ).count()
+            for day in dates
+        }
+        maximum = max([*entries.values(), *completed.values(), 1])
+
+        def points(values: dict) -> list[dict[str, object]]:
+            return [
+                {
+                    "x": round(index * (100 / (len(dates) - 1)), 2),
+                    "y": round(100 - (values[day] / maximum) * 100, 2),
+                    "label": day.strftime("%d/%m"),
+                    "value": values[day],
+                }
+                for index, day in enumerate(dates)
+            ]
+
+        return {
+            "maximum": maximum,
+            "labels": [day.strftime("%d/%m") for day in dates],
+            "entry_values": [entries[day] for day in dates],
+            "completed_values": [completed[day] for day in dates],
+            "entries": points(entries),
+            "completed": points(completed),
+        }
+
+    def _build_activity_kpi_rows(self) -> list[dict[str, object]]:
+        """KPI de production destinés au responsable Atelier."""
+        orders_url = reverse("portal:staff-order-list")
+        today = timezone.localdate()
+        jobs = ProductionJob.objects.all()
+        completed_today = jobs.filter(
+            status=ProductionJob.Status.COMPLETED,
+            updated_at__date=today,
+        ).count()
+        rows = [
+            {
+                "label": "En traitement",
+                "value": jobs.filter(status=ProductionJob.Status.QUEUED).count(),
+                "hint": "OF à lancer en production.",
+                "card_href": f"{orders_url}?status={ProductionJob.Status.QUEUED}",
+            },
+            {
+                "label": "En production",
+                "value": jobs.filter(status=ProductionJob.Status.IN_PROGRESS).count(),
+                "hint": "OF actuellement sur le flux Atelier.",
+                "tone": "is-attention",
+                "card_href": f"{orders_url}?status={ProductionJob.Status.IN_PROGRESS}",
+            },
+            {
+                "label": "Prêtes à remettre",
+                "value": jobs.filter(status=ProductionJob.Status.READY_TO_SHIP).count(),
+                "hint": "Expédition ou retrait à confirmer.",
+                "tone": "is-ready",
+                "card_href": f"{orders_url}?status={ProductionJob.Status.READY_TO_SHIP}",
+            },
+            {
+                "label": "Terminées aujourd’hui",
+                "value": completed_today,
+                "hint": "Commandes finalisées depuis ce matin.",
+                "card_href": f"{orders_url}?status={ProductionJob.Status.COMPLETED}",
+            },
+        ]
+        maximum = max((int(row["value"]) for row in rows), default=0)
+        for row in rows:
+            row["share"] = round((int(row["value"]) / maximum) * 100) if maximum else 0
+        return rows
 
     def _build_metrics(self, queue_counts: dict[str, int]) -> dict[str, int]:
         return {

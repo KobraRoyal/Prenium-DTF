@@ -1,7 +1,10 @@
+from decimal import Decimal
+
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer, CustomerBillingProfile, CustomerMembership
 from apps.customers.services.administration import CustomerAdministrationService
+from apps.orders.models import Order
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.urls import reverse
@@ -49,6 +52,31 @@ def test_staff_can_list_and_open_customer_detail():
     assert b"staff-customer-focus" in detail_response.content
     assert b"Encours" in detail_response.content
     assert b'name="default_billing_mode"' not in detail_response.content
+
+
+@pytest.mark.django_db
+def test_staff_customer_list_shows_monthly_revenue_and_current_outstanding():
+    staff = _staff_user(email="revenue@example.com", perms=["access_staff_portal", "view_customer"])
+    customer = Customer.objects.create(name="CA mensuel")
+    CustomerBillingProfile.objects.create(customer=customer, credit_limit_eur="500.00")
+    Order.objects.create(
+        customer=customer,
+        status=Order.Status.SUBMITTED,
+        pricing_status=Order.PricingStatus.PRICED,
+        billing_mode=Order.BillingMode.DEFERRED,
+        total_amount="120.00",
+    )
+    client = APIClient()
+    assert client.login(email=staff.email, password="pass") is True
+
+    response = client.get(reverse("portal:staff-customer-list"))
+
+    assert response.status_code == 200
+    assert b"CA mensuel" in response.content
+    listed_customer = next(row for row in response.context["page_obj"] if row.pk == customer.pk)
+    assert listed_customer.monthly_revenue_eur == Decimal("120.00")
+    assert b"CA mensuel / plafond encours" in response.content
+    assert b"Tarif m" not in response.content
 
 
 @pytest.mark.django_db

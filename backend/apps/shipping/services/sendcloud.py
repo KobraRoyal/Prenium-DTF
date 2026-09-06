@@ -592,6 +592,29 @@ class ShipmentService:
                 "source": source,
             },
         )
+        if order.estimated_handover_date is None:
+            from apps.shipping.services.methods import ShippingMethodService
+
+            estimated_date = ShippingMethodService().estimated_delivery_date(
+                order=order,
+                declared_on=timezone.localdate(),
+            )
+            if estimated_date is not None:
+                order.estimated_handover_date = estimated_date
+                order.save(update_fields=["estimated_handover_date", "updated_at"])
+                record_event(
+                    action="order.estimated_handover_date_updated",
+                    actor=actor if getattr(actor, "is_authenticated", False) else None,
+                    target=order,
+                    metadata={
+                        "customer_public_id": str(order.customer.public_id),
+                        "order_public_id": str(order.public_id),
+                        "previous_date": None,
+                        "estimated_handover_date": estimated_date.isoformat(),
+                        "shipping_method_code": order.shipping_method_code,
+                        "source": "shipping_declaration_delivery_eta",
+                    },
+                )
         return order, shipment
 
     def record_view_event(self, *, shipment: Shipment, actor, source: str) -> None:

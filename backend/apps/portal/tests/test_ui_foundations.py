@@ -222,7 +222,8 @@ class UiFoundationSourceTests(SimpleTestCase):
         )
         self.assertIsNotNone(toggle)
 
-        self.assertIn("prospect-tunnel.css", portal_entry)
+        self.assertIn("access-management.css", portal_entry)
+        self.assertNotIn("prospect-tunnel.css", portal_entry)
         self.assertIn('content: ["./templates/**/*.html"]', surface_config)
         self.assertIn("corePlugins: []", surface_config)
         shell = source(CSS_DIR / "components" / "shell.css")

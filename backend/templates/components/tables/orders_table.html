@@ -11,7 +11,9 @@
         <th>N° OF</th>
         {% endif %}
         <th>N° commande</th>
-        <th>{% if variant == "staff" %}Réf. client{% else %}Votre réf.{% endif %}</th>
+        {% if variant != "staff" %}
+        <th>Votre réf.</th>
+        {% endif %}
         <th>Statut</th>
         <th>Total</th>
         <th>Créée le</th>
@@ -55,9 +57,10 @@
             {% endif %}
           </div>
         </td>
+        {% if variant != "staff" %}
         <td>
           <div class="ui-order-secondary">
-            <span class="ui-order-secondary__label">{% if variant == "staff" %}Réf. client{% else %}Votre réf.{% endif %}</span>
+            <span class="ui-order-secondary__label">Votre réf.</span>
             {% if order|order_client_ref %}
             <span class="ui-order-secondary__value">{{ order|order_client_ref }}</span>
             {% else %}
@@ -65,9 +68,10 @@
             {% endif %}
           </div>
         </td>
+        {% endif %}
         <td>
           <div class="ui-table-status-stack">
-            <span class="badge {{ order.operational_status.tone }}">{{ order.operational_status.label }}</span>
+            <span class="badge whitespace-nowrap {{ order.operational_status.tone }}">{{ order.operational_status.label }}</span>
           </div>
         </td>
         <td>
@@ -92,11 +96,11 @@
         {% if variant == "client" %}
         <td>
           <div class="ui-order-secondary">
-            <span class="ui-order-secondary__label">{{ order.handover_date_label }}</span>
-            {% if order.estimated_handover_date %}
-            <time datetime="{{ order.estimated_handover_date|date:'Y-m-d' }}">{{ order.estimated_handover_date|date:"d/m/Y" }}</time>
+            <span class="ui-order-secondary__label">{{ order.client_handover.label }}</span>
+            {% if order.client_handover.occurred_at %}
+            <span class="ui-order-secondary__value">{{ order.client_handover.value }}{% if order.client_handover.value %} · {% endif %}<time datetime="{{ order.client_handover.occurred_at|date:'c' }}">{{ order.client_handover.occurred_at|date:"d/m/Y" }}</time></span>
             {% else %}
-            <span class="muted">À confirmer</span>
+            <span class="ui-order-secondary__value{% if order.client_handover.value == 'À confirmer' %} muted{% endif %}">{{ order.client_handover.value }}</span>
             {% endif %}
           </div>
         </td>
@@ -136,8 +140,6 @@
         {% if variant == "staff" %}
         <p class="muted text-xs">Client</p>
         <p class="text-sm">{{ order.customer.name }}</p>
-        <p class="muted mt-1 text-xs">Réf. client</p>
-        <p class="text-sm break-words">{% if order|order_client_ref %}{{ order|order_client_ref }}{% else %}<span class="muted">—</span>{% endif %}</p>
         {% else %}
         <p class="muted text-xs">Votre réf.</p>
         <p class="text-sm break-words">{% if order|order_client_ref %}{{ order|order_client_ref }}{% else %}<span class="muted">—</span>{% endif %}</p>
@@ -145,7 +147,7 @@
       </div>
     </div>
     <div class="mt-3 flex flex-wrap items-center gap-2">
-      <span class="badge {{ order.operational_status.tone }}">{{ order.operational_status.label }}</span>
+      <span class="badge whitespace-nowrap {{ order.operational_status.tone }}">{{ order.operational_status.label }}</span>
       {% if order.pricing_status != "priced" %}
       <span class="text-sm">Total : <span class="muted">En attente</span></span>
       {% else %}
@@ -154,7 +156,7 @@
     </div>
     <p class="muted mt-2 text-xs">Créée le {{ order.created_at|date:"d/m/Y H:i" }}</p>
     {% if variant == "client" %}
-    <p class="muted mt-1 text-xs">{{ order.handover_date_label }} : {% if order.estimated_handover_date %}<time datetime="{{ order.estimated_handover_date|date:'Y-m-d' }}">{{ order.estimated_handover_date|date:"d/m/Y" }}</time>{% else %}À confirmer{% endif %}</p>
+    <p class="muted mt-1 text-xs">{{ order.client_handover.label }} : {% if order.client_handover.occurred_at %}{{ order.client_handover.value }}{% if order.client_handover.value %} · {% endif %}<time datetime="{{ order.client_handover.occurred_at|date:'c' }}">{{ order.client_handover.occurred_at|date:"d/m/Y" }}</time>{% else %}{{ order.client_handover.value }}{% endif %}</p>
     {% endif %}
     <div class="mt-4 flex flex-wrap gap-2">
       {% if variant == "staff" %}
