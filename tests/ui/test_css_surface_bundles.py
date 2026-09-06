@@ -76,7 +76,7 @@ def test_templates_load_common_css_before_exact_surface_bundle() -> None:
 def test_portal_css_asset_version_is_bumped_for_surface_changes() -> None:
     portal_tags = read(BACKEND_DIR / "apps" / "portal" / "templatetags" / "portal_tags.py")
 
-    assert 'PORTAL_CSS_ASSET_V = "20260904-prospect-minimal-v20"' in portal_tags
+    assert 'PORTAL_CSS_ASSET_V = "20260906-atelier-chart-v22"' in portal_tags
 
 
 def test_generated_surface_bundles_exist_and_contain_expected_markers() -> None:

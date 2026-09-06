@@ -2,8 +2,8 @@
 <div id="atelier-dashboard-panel" class="atelier-dashboard-stack">
 {% if production_trend %}
 <section class="atelier-production-chart" aria-labelledby="atelier-production-chart-title">
-  <header><div><h2 class="font-display" id="atelier-production-chart-title">Flux Atelier</h2><p>Entrées et commandes terminées · 7 derniers jours.</p></div><a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-list' %}">Voir les commandes</a></header>
-  <div class="atelier-production-chart__canvas"><canvas id="atelier-production-chart-canvas" aria-label="Évolution des entrées et commandes terminées" role="img"></canvas></div>
+  <header><div><h2 class="font-display" id="atelier-production-chart-title">Flux Atelier</h2><p>Nouvelles commandes et commandes terminées · 7 derniers jours.</p></div><a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-list' %}">Voir les commandes</a></header>
+  <div class="atelier-production-chart__canvas"><canvas id="atelier-production-chart-canvas" aria-label="Évolution des nouvelles commandes et commandes terminées" role="img"></canvas></div>
   {{ production_trend|json_script:"atelier-production-chart-data" }}
 </section>
 {% endif %}

@@ -9,13 +9,23 @@ if (canvas instanceof HTMLCanvasElement && source && window.Chart) {
   const muted = styles.getPropertyValue("--muted").trim() || "#6b675c";
   const line = styles.getPropertyValue("--line").trim() || "#e2dccb";
 
+  // With indexed tooltips, Chart.js otherwise anchors between series. Keeping
+  // the tooltip on the highest value makes it clearly belong to its data point.
+  window.Chart.Tooltip.positioners.topmost = (items) => {
+    const topmost = items.reduce(
+      (candidate, item) => (!candidate || item.element.y < candidate.element.y ? item : candidate),
+      null,
+    );
+    return topmost ? { x: topmost.element.x, y: topmost.element.y } : false;
+  };
+
   new window.Chart(canvas, {
     type: "line",
     data: {
       labels: trend.labels || [],
       datasets: [
         {
-          label: "Entrées Atelier",
+          label: "Nouvelles commandes",
           data: trend.entry_values || [],
           borderColor: brand,
           backgroundColor: `${brand}22`,
@@ -43,7 +53,12 @@ if (canvas instanceof HTMLCanvasElement && source && window.Chart) {
       interaction: { intersect: false, mode: "index" },
       plugins: {
         legend: { align: "end", labels: { boxWidth: 10, boxHeight: 10, color: muted, usePointStyle: true } },
-        tooltip: { backgroundColor: "#1a1815", padding: 10, displayColors: true },
+        tooltip: {
+          backgroundColor: "#1a1815",
+          displayColors: true,
+          padding: 10,
+          position: "topmost",
+        },
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: muted, font: { size: 11 } }, border: { display: false } },
