@@ -69,7 +69,7 @@ def build_client_order_status_history(order) -> list[dict[str, object]]:
     except ObjectDoesNotExist:
         shipment = None
 
-    if shipment is not None:
+    if shipment is not None and not is_pickup:
         if shipment.created_at and (
             shipment.tracking_number or shipment.status in {"created", "pending"}
         ):
@@ -89,17 +89,11 @@ def build_client_order_status_history(order) -> list[dict[str, object]]:
             )
         if shipment.shipped_at:
             status = client_shipment_status(shipment)
-            carrier_message = str(shipment.sendcloud_status_message or "").strip()
             tracking = str(shipment.tracking_number or "").strip()
-            detail_parts = []
-            if tracking:
-                detail_parts.append(f"N° de suivi : {tracking}")
-            if carrier_message:
-                detail_parts.append(carrier_message)
             events.append(
                 {
                     "label": status.label,
-                    "detail": " · ".join(detail_parts),
+                    "detail": f"N° de suivi : {tracking}" if tracking else "",
                     "occurred_at": shipment.shipped_at,
                     "status_key": status.key,
                     "tone": status.tone,

@@ -50,7 +50,7 @@ def status_label(value: str) -> str:
         "captured": "Capturee",
         "failed": "En echec",
         "cancelled": "Annulee",
-        "queued": "En file atelier",
+        "queued": "En traitement",
         "in_progress": "En production",
         "ready_to_ship": "Prete a expedier",
         "completed": "Terminee",

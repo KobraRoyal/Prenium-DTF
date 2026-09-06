@@ -25,5 +25,7 @@
 
 {% block extra_scripts %}
 {% portal_css_asset_v as asset_v %}
+<script defer src="{% static 'vendor/chart-4.5.1.umd.js' %}?v={{ asset_v }}"></script>
+<script type="module" src="{% static 'js/atelier-dashboard-chart.js' %}?v={{ asset_v }}"></script>
 <script type="module" src="{% static 'js/atelier-dashboard-batch.js' %}?v={{ asset_v }}"></script>
 {% endblock %}

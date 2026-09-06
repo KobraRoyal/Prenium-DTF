@@ -1,41 +1,55 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="shipping" %}
-<div class="client-order-panel client-order-panel--shipping{% if shipment and shipment.shipped_at %} client-order-panel--shipping-shipped{% endif %}" aria-label="Expédition">
-  {% if shipment and shipment.shipped_at %}
-  <section class="client-shipment-card client-shipment-card--shipped" aria-labelledby="client-shipment-shipped-title">
+<div class="client-order-panel client-order-panel--shipping{% if shipping_panel.is_carrier_handoff %} client-order-panel--shipping-shipped{% endif %}{% if shipping_panel.is_pickup %} client-order-panel--pickup{% endif %}" aria-label="{% if shipping_panel.is_pickup %}Retrait atelier{% else %}Livraison{% endif %}">
+  {% if shipping_panel.key == "delivery_pending" %}
+  {% include "components/ui/empty_state.html" with title=shipping_panel.title message=shipping_panel.message %}
+  {% else %}
+  <section class="client-shipment-card{% if shipping_panel.is_carrier_handoff %} client-shipment-card--shipped{% endif %}{% if shipping_panel.is_pickup %} client-shipment-card--pickup{% endif %}" aria-labelledby="client-shipping-panel-title">
     <div class="client-shipment-card__intro">
       <span class="client-shipment-card__mark" aria-hidden="true">
+        {% if shipping_panel.is_pickup %}
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m4 7.5 8-4.5 8 4.5v9L12 21l-8-4.5z" />
+          <path d="m4 7.5 8 4.5 8-4.5M12 12v9" />
+        </svg>
+        {% else %}
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 7h11v10H3z" />
           <path d="M14 10h4l3 3v4h-7V10z" />
           <circle cx="7.5" cy="18.5" r="1.5" />
           <circle cx="17.5" cy="18.5" r="1.5" />
         </svg>
+        {% endif %}
       </span>
       <div class="client-shipment-card__copy">
-        <h3 id="client-shipment-shipped-title">{% if shipment_status.key == "delivered" %}Votre commande est livrée{% else %}Votre commande est en route{% endif %}</h3>
-        <p>
-          {% if shipment_status.key == "delivered" %}Livrée{% else %}Colis pris en charge{% endif %}
-          {% if shipment.shipped_at %}
-          le <time datetime="{{ shipment.shipped_at|date:'c' }}">{{ shipment.shipped_at|date:"d/m/Y · H:i" }}</time>
-          {% endif %}
-          {% if shipment.sendcloud_status_message %}
-          · {{ shipment.sendcloud_status_message }}
-          {% endif %}
-        </p>
+        <h3 id="client-shipping-panel-title">{{ shipping_panel.title }}</h3>
+        <p>{{ shipping_panel.message }}</p>
       </div>
     </div>
 
-    <dl class="client-shipment-card__facts" aria-label="Suivi du colis">
-      {% if shipment.tracking_number %}
+    {% if shipping_panel.event_at or shipping_panel.tracking_number or shipping_panel.last_updated_at %}
+    <dl class="client-shipment-card__facts" aria-label="Informations de {% if shipping_panel.is_pickup %}retrait{% else %}livraison{% endif %}">
+      {% if shipping_panel.event_at %}
+      <div class="client-shipment-card__fact">
+        <dt>{{ shipping_panel.event_label }}</dt>
+        <dd>
+          {% if shipping_panel.event_has_time %}
+          <time datetime="{{ shipping_panel.event_at|date:'c' }}">{{ shipping_panel.event_at|date:"d/m/Y · H:i" }}</time>
+          {% else %}
+          <time datetime="{{ shipping_panel.event_at|date:'Y-m-d' }}">{{ shipping_panel.event_at|date:"d/m/Y" }}</time>
+          {% endif %}
+        </dd>
+      </div>
+      {% endif %}
+      {% if shipping_panel.tracking_number %}
       <div class="client-shipment-card__fact client-shipment-card__fact--tracking">
         <dt>N° de suivi</dt>
         <dd>
-          <code class="client-shipment-card__tracking">{{ shipment.tracking_number }}</code>
+          <code class="client-shipment-card__tracking">{{ shipping_panel.tracking_number }}</code>
           <button
             type="button"
             class="ui-btn ui-btn-secondary client-shipment-card__copy-btn"
-            data-copy-value="{{ shipment.tracking_number }}"
+            data-copy-value="{{ shipping_panel.tracking_number }}"
             data-copy-idle="Copier"
             data-copy-done="Copié"
             onclick="(function(btn){var v=btn.getAttribute('data-copy-value')||'';var idle=btn.getAttribute('data-copy-idle')||'Copier';var done=btn.getAttribute('data-copy-done')||'Copié';if(!v||!navigator.clipboard){return;}navigator.clipboard.writeText(v).then(function(){btn.textContent=done;window.setTimeout(function(){btn.textContent=idle;},1600);});})(this)"
@@ -45,55 +59,20 @@
         </dd>
       </div>
       {% endif %}
-      {% if shipment.last_api_sync_at %}
+      {% if shipping_panel.last_updated_at %}
       <div class="client-shipment-card__fact">
         <dt>Dernière mise à jour</dt>
-        <dd><time datetime="{{ shipment.last_api_sync_at|date:'c' }}">{{ shipment.last_api_sync_at|date:"d/m/Y · H:i" }}</time></dd>
+        <dd><time datetime="{{ shipping_panel.last_updated_at|date:'c' }}">{{ shipping_panel.last_updated_at|date:"d/m/Y · H:i" }}</time></dd>
       </div>
       {% endif %}
     </dl>
+    {% endif %}
 
-    {% if shipment.tracking_url %}
+    {% if shipping_panel.tracking_url %}
     <div class="client-shipment-card__actions">
-      <a class="ui-btn ui-btn-primary" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">
-        Suivre mon colis
-      </a>
+      <a class="ui-btn ui-btn-primary" href="{{ shipping_panel.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre mon colis</a>
     </div>
     {% endif %}
   </section>
-
-  {% elif shipment %}
-  <p class="client-order-panel__lead">
-    {% if shipment.tracking_number %}
-    L’étiquette est prête. Le suivi s’activera dès la prise en charge.
-    {% else %}
-    Envoi déclaré chez le transporteur. Le numéro de suivi apparaîtra dès la prise en charge.
-    {% endif %}
-  </p>
-
-  <section class="client-shipment-overview" aria-label="État d’expédition">
-    {% if shipment.tracking_number %}
-    <article>
-      <span>N° de suivi</span>
-      <strong class="client-shipment-overview__tracking">{{ shipment.tracking_number }}</strong>
-    </article>
-    {% endif %}
-    <article>
-      <span>Statut</span>
-      <strong>{% if shipment.sendcloud_status_message %}{{ shipment.sendcloud_status_message }}{% else %}En préparation{% endif %}</strong>
-      {% if shipment.last_api_sync_at %}
-      <small>Mise à jour {{ shipment.last_api_sync_at|date:"d/m/Y H:i" }}</small>
-      {% endif %}
-    </article>
-  </section>
-
-  {% if shipment.tracking_url %}
-  <div class="client-shipment-card__actions">
-    <a class="ui-btn ui-btn-primary" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre mon colis</a>
-  </div>
-  {% endif %}
-
-  {% else %}
-  {% include "components/ui/empty_state.html" with title="Expédition en préparation" message="Le suivi apparaîtra dès l'expédition de votre commande." %}
   {% endif %}
 </div>

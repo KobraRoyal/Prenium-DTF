@@ -18,8 +18,10 @@ from apps.b2b_order_projects.services import (
 )
 from apps.orders.services.client_timeline import build_client_order_status_history
 from apps.portal import dashboard_focus
-from apps.portal.client_order_presentation import build_client_order_context
-from apps.portal.order_status_presentation import client_shipment_status
+from apps.portal.client_order_presentation import (
+    build_client_order_context,
+    client_order_shipping_panel,
+)
 from apps.portal.views_common import (
     ClientOwnerRequiredMixin,
     ScopedCustomerMixin,
@@ -263,18 +265,12 @@ class ClientOrderPanelShippingView(ClientOrderContextMixin, View):
             shipment = order.shipment
         except ObjectDoesNotExist:
             shipment = None
-        shipment_status = (
-            client_shipment_status(shipment)
-            if shipment is not None and shipment.shipped_at
-            else None
-        )
         return render(
             request,
             self.template_name,
             self.client_order_context(
                 order=order,
-                shipment=shipment,
-                shipment_status=shipment_status,
+                shipping_panel=client_order_shipping_panel(order=order, shipment=shipment),
                 active_panel="shipping",
             ),
         )

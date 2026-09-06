@@ -1,5 +1,5 @@
 {% load ui_tags %}
-{% ui_list_tabs queue_tabs aria_label="Filtrer les commandes Atelier" url_name="portal:staff-order-list" query_param="queue" preserve_query="q" %}
+{% ui_list_tabs queue_tabs aria_label="Filtrer les commandes Atelier" url_name="portal:staff-order-list" query_param="queue" preserve_query="q,status" extra_class="staff-orders-queue-tabs" %}
 
 <section class="staff-orders-results ui-list-results" aria-labelledby="staff-orders-results-title">
   <header class="ui-list-results__head">

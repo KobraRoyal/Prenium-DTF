@@ -1,10 +1,14 @@
-from datetime import date
+from datetime import date, datetime
 from types import SimpleNamespace
 from uuid import UUID
 
 from django.test import SimpleTestCase
 
-from apps.portal.client_order_presentation import client_order_identity, client_order_status_banner
+from apps.portal.client_order_presentation import (
+    client_order_identity,
+    client_order_shipping_panel,
+    client_order_status_banner,
+)
 
 
 class ClientOrderIdentityTests(SimpleTestCase):
@@ -42,6 +46,52 @@ class ClientOrderIdentityTests(SimpleTestCase):
         self.assertEqual(identity.reference, "")
         self.assertEqual(identity.note, "Livraison avant ouverture")
         self.assertIsNone(identity.requested_date)
+
+
+class ClientOrderShippingPanelTests(SimpleTestCase):
+    def test_pickup_collection_uses_the_confirmed_collection_date(self) -> None:
+        collected_at = datetime(2026, 8, 29, 11, 6)
+        order = SimpleNamespace(
+            shipping_method_code="pickup",
+            estimated_handover_date=date(2026, 8, 28),
+            production_job=SimpleNamespace(status="completed", completed_at=collected_at),
+        )
+        shipment = SimpleNamespace(
+            shipped_at=collected_at,
+            tracking_number="TRK-DO-NOT-SHOW",
+            tracking_url="https://tracking.example.test/TRK-DO-NOT-SHOW",
+            sendcloud_status_code="DELIVERED",
+            sendcloud_status_message="Declared in Sendcloud — awaiting label",
+        )
+
+        panel = client_order_shipping_panel(order=order, shipment=shipment)
+
+        self.assertEqual(panel.key, "pickup_collected")
+        self.assertEqual(panel.title, "Commande retirée")
+        self.assertEqual(panel.event_label, "Retrait effectué")
+        self.assertEqual(panel.event_at, collected_at)
+        self.assertEqual(panel.tracking_number, "")
+        self.assertEqual(panel.tracking_url, "")
+
+    def test_delivery_preparation_never_surfaces_the_carrier_payload(self) -> None:
+        order = SimpleNamespace(
+            shipping_method_code="standard",
+            estimated_handover_date=date(2026, 9, 15),
+        )
+        shipment = SimpleNamespace(
+            shipped_at=None,
+            tracking_number="",
+            tracking_url="",
+            last_api_sync_at=None,
+            sendcloud_status_message="Declared in Sendcloud — awaiting label",
+        )
+
+        panel = client_order_shipping_panel(order=order, shipment=shipment)
+
+        self.assertEqual(panel.key, "delivery_preparing")
+        self.assertEqual(panel.title, "Envoi en préparation")
+        self.assertEqual(panel.event_label, "Livraison prévue")
+        self.assertNotIn("Sendcloud", panel.message)
 
 
 class ClientOrderStatusBannerTests(SimpleTestCase):

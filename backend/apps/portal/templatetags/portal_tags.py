@@ -38,7 +38,7 @@ STATUS_LABELS = {
     "warning": "À vérifier",
     "error": "Erreur",
     "synced": "Synchronisé",
-    "queued": "En file atelier",
+    "queued": "En traitement",
     "in_progress": "En production",
     "ready_to_ship": "Prête à expédier",
     "completed": "Terminée",

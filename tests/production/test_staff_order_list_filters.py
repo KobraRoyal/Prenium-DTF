@@ -4,6 +4,7 @@ import pytest
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer
 from apps.orders.models import Order
+from apps.production.models import ProductionJob
 from apps.production.services.dashboard import AtelierDashboardService
 from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
 from apps.production.services.workflow import ProductionWorkflowService
@@ -115,6 +116,37 @@ def test_staff_order_list_filter_service_matches_dashboard_segments():
 
 
 @pytest.mark.django_db
+def test_staff_order_list_filter_service_filters_by_production_status():
+    actor = get_user_model().objects.create_user(
+        email="status-filters@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Status filter client")
+    create_order(customer=customer, actor=actor)
+    in_progress_order = create_order(customer=customer, actor=actor)
+    ready_order = create_order(customer=customer, actor=actor)
+    in_progress_order.production_job.status = ProductionJob.Status.IN_PROGRESS
+    in_progress_order.production_job.save(update_fields=["status", "updated_at"])
+    ready_order.production_job.status = ProductionJob.Status.READY_TO_SHIP
+    ready_order.production_job.save(update_fields=["status", "updated_at"])
+
+    from apps.orders.services.orders import OrderService
+
+    base = OrderService().list_staff_orders()
+    service = StaffOrderListFilterService()
+
+    assert service.count_by_status(base)[ProductionJob.Status.QUEUED] == 1
+    assert service.count_by_status(base)[ProductionJob.Status.IN_PROGRESS] == 1
+    assert service.count_by_status(base)[ProductionJob.Status.READY_TO_SHIP] == 1
+    assert set(
+        service.apply_status_filter(base, status=ProductionJob.Status.READY_TO_SHIP).values_list(
+            "public_id", flat=True
+        )
+    ) == {ready_order.public_id}
+    assert service.normalize_status("unknown") == ""
+
+
+@pytest.mark.django_db
 def test_staff_order_list_search_matches_of_order_and_customer_references():
     actor = get_user_model().objects.create_user(
         email="search-filters@example.com", password="pass"
@@ -218,12 +250,14 @@ def test_staff_order_list_search_preserves_queue_and_displays_of_instead_of_uuid
     assert response.status_code == 200
     assert response.context["search_query"] == matching_of
     assert response.context["active_queue"] == "unprinted"
+    assert response.context["active_production_status"] == ""
     html = response.content.decode()
     assert 'id="staff-orders-search-input"' in html
     assert f'value="{matching_of}"' in html
     assert 'hx-trigger="input changed delay:300ms, search"' in html
     assert 'hx-target="#staff-orders-list-results"' in html
     assert 'hx-include="closest form"' in html
+    assert 'id="staff-orders-search-input-status"' in html
     assert f"q={matching_of}" in html
     assert matching_of in html
     assert other_of not in html
@@ -243,3 +277,29 @@ def test_staff_order_list_search_preserves_queue_and_displays_of_instead_of_uuid
     assert "portal-page--staff" not in partial_html
     assert matching_of in partial_html
     assert other_of not in partial_html
+
+
+@pytest.mark.django_db
+def test_staff_order_list_status_filter_preserves_the_queue_and_search():
+    actor = get_user_model().objects.create_user(email="list-status@example.com", password="pass")
+    customer = Customer.objects.create(name="List status client")
+    ready_order = create_order(customer=customer, actor=actor)
+    queued_order = create_order(customer=customer, actor=actor)
+    ready_order.production_job.status = ProductionJob.Status.READY_TO_SHIP
+    ready_order.production_job.save(update_fields=["status", "updated_at"])
+
+    client = create_staff_client(email="staff-list-status@example.com")
+    response = client.get(
+        reverse("portal:staff-order-list"),
+        {"queue": "", "status": ProductionJob.Status.READY_TO_SHIP, "q": "List status"},
+    )
+
+    assert response.status_code == 200
+    assert response.context["active_production_status"] == ProductionJob.Status.READY_TO_SHIP
+    html = response.content.decode()
+    assert 'id="staff-orders-search-input-status"' in html
+    assert "Prêtes à expédier" in html
+    assert ready_order.production_job.manufacturing_order_number in html
+    assert queued_order.production_job.manufacturing_order_number not in html
+    assert 'name="queue" type="hidden" value=""' in html
+    assert '<option value="ready_to_ship" selected>' in html

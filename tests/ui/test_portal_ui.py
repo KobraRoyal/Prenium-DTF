@@ -531,7 +531,7 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert drive_panel_response.status_code == 200
     assert shipping_panel_response.status_code == 200
     shipping_html = shipping_panel_response.content.decode()
-    assert "Disponible quand l’OF sera prêt à expédier" in shipping_html
+    assert "Disponible lorsque l’OF sera prêt à expédier" in shipping_html
     assert "Consultation seule" in shipping_html
     assert "Générer l’étiquette" not in shipping_html
     assert "Déclarer dans Sendcloud" not in shipping_html
@@ -586,12 +586,12 @@ def test_shipping_panel_is_prefilled_only_when_workflow_and_permission_allow_cre
     assert response.status_code == 200
     html = response.content.decode()
     assert "Prêt à déclarer" in html
-    assert "Vérifiez le destinataire et le poids" in html
+    assert "Contrôlez le destinataire et le poids" in html
     assert 'value="Atelier Client"' in html
     assert 'value="logistique@example.com"' in html
     assert 'value="Rue des Imprimeurs"' in html
     assert 'value="59000"' in html
-    assert "Déclarer dans Sendcloud" in html
+    assert "Déclarer l’envoi" in html
 
     invalid_response = client.post(
         panel_url,
@@ -615,6 +615,71 @@ def test_shipping_panel_is_prefilled_only_when_workflow_and_permission_allow_cre
     assert 'value="retained@example.com"' in invalid_html
     assert 'value="1.25"' in invalid_html
     assert "alert--danger" in invalid_html
+
+
+@pytest.mark.django_db
+def test_staff_can_confirm_pickup_and_complete_the_production_job():
+    staff_user = get_user_model().objects.create_user(
+        email="pickup-validator@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    customer = Customer.objects.create(name="Pickup validation")
+    order = Order.objects.create(
+        customer=customer,
+        created_by=staff_user,
+        shipping_method_code="pickup",
+    )
+    job = ProductionJob.objects.create(
+        order=order,
+        manufacturing_order_number="OF-PICKUP-VALIDATION",
+        status=ProductionJob.Status.READY_TO_SHIP,
+    )
+    for codename in (
+        "access_staff_portal",
+        "view_order",
+        "view_shipment",
+        "transition_productionjob",
+    ):
+        staff_user.user_permissions.add(Permission.objects.get(codename=codename))
+
+    client = Client()
+    assert client.login(email=staff_user.email, password="pass")
+    panel_url = reverse(
+        "portal:staff-order-panel-shipping", kwargs={"order_public_id": order.public_id}
+    )
+
+    initial = client.get(panel_url)
+    initial_html = initial.content.decode()
+    assert initial.status_code == 200
+    assert "Retrait atelier" in initial_html
+    assert "Confirmer le retrait" in initial_html
+    assert "Sendcloud" not in initial_html
+
+    stale_shipment_response = client.post(
+        panel_url,
+        {"shipping_option_code": "standard"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert stale_shipment_response.status_code == 200
+    assert "Le retrait atelier se confirme avec" in stale_shipment_response.content.decode()
+    job.refresh_from_db()
+    assert job.status == ProductionJob.Status.READY_TO_SHIP
+
+    response = client.post(
+        panel_url,
+        {"action": "confirm_pickup", "pickup_note": "Remis à l’accueil."},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    assert "Retrait confirmé" in response.content.decode()
+    job.refresh_from_db()
+    assert job.status == ProductionJob.Status.COMPLETED
+    assert job.completed_at is not None
+    assert job.last_transition_by == staff_user
+    assert job.last_transition_note == "Remis à l’accueil."
 
 
 @pytest.mark.django_db

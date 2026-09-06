@@ -11,6 +11,7 @@ from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
+from apps.orders.services.business_days import add_business_days
 from apps.production.models import ProductionJob, ProductionJobTransition
 from apps.uploads.services.production_specs import OrderUploadProductionSpecService
 
@@ -444,6 +445,28 @@ class ProductionWorkflowService:
                     locked_job.started_at = now
                 if normalized_status == ProductionJob.Status.COMPLETED:
                     locked_job.completed_at = now
+
+                if (
+                    normalized_status == ProductionJob.Status.IN_PROGRESS
+                    and locked_job.order.shipping_method_code == "pickup"
+                    and locked_job.order.estimated_handover_date is None
+                ):
+                    announced_date = add_business_days(timezone.localdate(now), 1)
+                    locked_job.order.estimated_handover_date = announced_date
+                    locked_job.order.save(update_fields=["estimated_handover_date", "updated_at"])
+                    record_event(
+                        action="order.estimated_handover_date_updated",
+                        actor=actor if getattr(actor, "is_authenticated", False) else None,
+                        target=locked_job.order,
+                        metadata={
+                            "customer_public_id": str(locked_job.order.customer.public_id),
+                            "order_public_id": str(locked_job.order.public_id),
+                            "previous_date": None,
+                            "estimated_handover_date": announced_date.isoformat(),
+                            "shipping_method_code": locked_job.order.shipping_method_code,
+                            "source": "production_start_pickup_eta",
+                        },
+                    )
 
                 locked_job.save(
                     update_fields=[

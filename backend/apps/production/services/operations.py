@@ -50,9 +50,13 @@ class AtelierOperationsService:
         normalized_query = str(query or "").strip()[:80]
         base_queryset = self._base_queryset(include_shipping=include_shipping)
         counts = self._queue_counts(base_queryset)
-        filtered = self._filter_queue(base_queryset, normalized_queue)
         if normalized_query:
-            filtered = self._filter_scan_query(filtered, normalized_query)
+            # A scan identifies a specific OF; it must not be hidden because
+            # its next action belongs to another worklist (e.g. workshop pickup
+            # waiting in the shipping queue).
+            filtered = self._filter_scan_query(base_queryset, normalized_query)
+        else:
+            filtered = self._filter_queue(base_queryset, normalized_queue)
 
         page_obj = Paginator(filtered, self.page_size).get_page(page_number)
         rows = [
@@ -129,6 +133,7 @@ class AtelierOperationsService:
         )
 
     def _serialize_job(self, *, job: ProductionJob, include_shipping: bool) -> dict[str, object]:
+        is_pickup = job.order.shipping_method_code == "pickup"
         shipment = None
         if include_shipping:
             try:
@@ -151,7 +156,7 @@ class AtelierOperationsService:
             "allowed_actions": [
                 {
                     "status": status,
-                    "label": self.action_labels[status],
+                    "label": self._action_label(status=status, is_pickup=is_pickup),
                     "is_primary": status
                     in {
                         ProductionJob.Status.IN_PROGRESS,
@@ -173,8 +178,14 @@ class AtelierOperationsService:
                 include_shipping
                 and job.status == ProductionJob.Status.READY_TO_SHIP
                 and shipment is None
+                and not is_pickup
             ),
         }
+
+    def _action_label(self, *, status: str, is_pickup: bool) -> str:
+        if is_pickup and status == ProductionJob.Status.COMPLETED:
+            return "Déclarer le retrait"
+        return self.action_labels[status]
 
     def _focus_panel(self, status: str) -> str:
         mapping = {
@@ -199,6 +210,8 @@ class AtelierOperationsService:
                 return "Confirmez l’impression après le métrage."
             return "Avancez le statut ou préparez l’expédition."
         if job.status == ProductionJob.Status.READY_TO_SHIP:
+            if job.order.shipping_method_code == "pickup":
+                return "Confirmez le retrait atelier pour clôturer la commande."
             return "Déclarez l’expédition Sendcloud ou terminez l’OF."
         if job.status == ProductionJob.Status.BLOCKED:
             return "Levez le blocage ou vérifiez les prérequis métier."

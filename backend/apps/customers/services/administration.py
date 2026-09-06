@@ -1,18 +1,42 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import DecimalField, Q, Sum, Value
+from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from apps.auditlog.services import record_event
 from apps.customers.models import Customer, CustomerBillingProfile, CustomerMembership
+from apps.orders.models import Order
 
 
 class CustomerAdministrationService:
     """Administration staff des comptes clients et conditions tarifaires."""
 
     def list_customers(self, *, search: str = "", active_only: bool | None = None):
-        queryset = Customer.objects.all().select_related("billing_profile")
+        month_start = timezone.localdate().replace(day=1)
+        amount_field = DecimalField(max_digits=12, decimal_places=2)
+        queryset = (
+            Customer.objects.all()
+            .select_related("billing_profile")
+            .annotate(
+                monthly_revenue_eur=Coalesce(
+                    Sum(
+                        "orders__total_amount",
+                        filter=Q(
+                            orders__created_at__date__gte=month_start,
+                            orders__status=Order.Status.SUBMITTED,
+                            orders__pricing_status=Order.PricingStatus.PRICED,
+                        ),
+                    ),
+                    Value(Decimal("0.00"), output_field=amount_field),
+                    output_field=amount_field,
+                ),
+            )
+        )
         query = (search or "").strip()
         if query:
             queryset = queryset.filter(
