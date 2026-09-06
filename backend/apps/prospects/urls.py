@@ -22,7 +22,7 @@ urlpatterns = [
     path("demande-acces/etape-3/", ProspectStep3View.as_view(), name="step3"),
     path(
         "demande-acces/etape-4/",
-        RedirectView.as_view(pattern_name="prospects:step3", permanent=False),
+        RedirectView.as_view(pattern_name="prospects:step2", permanent=False),
         name="step4",
     ),
     path("demande-acces/confirmation/", ProspectConfirmationView.as_view(), name="confirmation"),

@@ -1,5 +1,5 @@
 /* Socle portail partagé (header, workflow, shell, profil). */
-@import "../components/prospect-tunnel.css";
+@import "../components/access-management.css";
 @import "../components/workflow.css";
 @import "../components/product-shell.css";
 @import "../components/product-polish.css";
@@ -1679,6 +1679,20 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .product
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .product-header .ui-foundation-nav .product-nav__links .product-nav__link.is-active,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .product-header .ui-foundation-nav .product-nav__links .product-nav__link[aria-current="page"] {
   box-shadow: none !important;
+}
+
+/* Header partagé : les liens de navigation restent des liens, jamais des pastilles. */
+html[data-theme="prenium"] body.product-shell .product-header .ui-foundation-nav .product-nav__link.ui-btn-ghost:is(
+  :hover,
+  :focus-visible,
+  .is-active,
+  [aria-current="page"]
+) {
+  border-color: transparent !important;
+  color: var(--ink) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 /*

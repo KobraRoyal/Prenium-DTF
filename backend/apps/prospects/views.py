@@ -15,7 +15,7 @@ from .services.onboarding import ProspectDraft, ProspectOnboardingError, Prospec
 from .session import clear_draft, get_draft, has_steps, update_draft
 from .stepper import stepper_items_for_step
 
-TOTAL_STEPS = 3
+TOTAL_STEPS = 2
 
 
 def _client_ip(request: HttpRequest) -> str | None:
@@ -49,47 +49,45 @@ def _submission_rate_limited(request: HttpRequest, email: str) -> bool:
     return attempts > maximum
 
 
+def _submit_draft(request: HttpRequest, *, form, step: int, template_name: str) -> HttpResponse:
+    """Enregistre un brouillon validé et lance la demande d'accès."""
+    draft = _draft_to_dataclass(request)
+    if draft is None:
+        messages.error(request, "Session expirée. Recommencez votre demande.")
+        return redirect("prospects:step1")
+    if _submission_rate_limited(request, str(draft.step1.get("email", ""))):
+        messages.error(
+            request,
+            "Trop de tentatives ont été détectées. Réessayez dans une heure.",
+        )
+        return render(
+            request,
+            template_name,
+            _context(step, form=form),
+            status=429,
+        )
+    try:
+        profile = ProspectOnboardingService().submit_from_draft(
+            draft=draft,
+            ip_address=_client_ip(request),
+        )
+    except ProspectOnboardingError:
+        messages.error(
+            request,
+            "Nous ne pouvons pas enregistrer la demande pour le moment. Réessayez plus tard.",
+        )
+        return render(request, template_name, _context(step, form=form))
+    clear_draft(request)
+    request.session["prospect_confirmation_public_id"] = str(profile.public_id)
+    return redirect("prospects:confirmation")
+
+
 def _context(step: int, **extra) -> dict:
     return {
         "step": step,
         "total_steps": TOTAL_STEPS,
         "steps": stepper_items_for_step(step, TOTAL_STEPS),
         **extra,
-    }
-
-
-def _choice_label(form_class, field_name: str, value: str) -> str:
-    return dict(form_class.base_fields[field_name].choices).get(value, value)
-
-
-def _summary_for_draft(draft: dict) -> dict[str, str]:
-    step1 = draft.get("step1") or {}
-    step2 = draft.get("step2") or {}
-    return {
-        "company": str(step1.get("company") or ""),
-        "contact": f"{step1.get('first_name', '')} {step1.get('last_name', '')}".strip(),
-        "email": str(step1.get("email") or ""),
-        "country": _choice_label(ProspectStep1Form, "country", step1.get("country", "")),
-        "legal_id": (
-            f"SIREN {step1.get('siren', '')}"
-            if step1.get("country") == "FR"
-            else str(step1.get("vat_number") or "")
-        ),
-        "service": _choice_label(
-            ProspectStep2Form,
-            "service_interest",
-            step2.get("service_interest", ""),
-        ),
-        "volume": _choice_label(
-            ProspectStep2Form,
-            "monthly_volume",
-            step2.get("monthly_volume", ""),
-        ),
-        "timing": _choice_label(
-            ProspectStep2Form,
-            "project_timing",
-            step2.get("project_timing", ""),
-        ),
     }
 
 
@@ -122,8 +120,17 @@ class ProspectStep2View(View):
             return redirect("prospects:step1")
         form = ProspectStep2Form(request.POST)
         if form.is_valid():
-            update_draft(request, "step2", form.cleaned_data)
-            return redirect("prospects:step3")
+            update_draft(
+                request,
+                "step2",
+                {key: value for key, value in form.cleaned_data.items() if key != "terms_accepted"},
+            )
+            return _submit_draft(
+                request,
+                form=form,
+                step=2,
+                template_name=self.template_name,
+            )
         return render(request, self.template_name, _context(2, form=form))
 
 
@@ -133,17 +140,7 @@ class ProspectStep3View(View):
     def get(self, request: HttpRequest) -> HttpResponse:
         if not has_steps(request, "step1", "step2"):
             return redirect("prospects:step1")
-        draft = get_draft(request)
-        return render(
-            request,
-            self.template_name,
-            _context(
-                3,
-                form=ProspectStep3ReviewForm(),
-                draft=draft,
-                summary=_summary_for_draft(draft),
-            ),
-        )
+        return redirect("prospects:step2")
 
     def post(self, request: HttpRequest) -> HttpResponse:
         if not has_steps(request, "step1", "step2"):
@@ -154,58 +151,20 @@ class ProspectStep3View(View):
             messages.error(request, "Session expirée. Recommencez votre demande.")
             return redirect("prospects:step1")
         if not form.is_valid():
-            draft_data = get_draft(request)
             return render(
                 request,
                 self.template_name,
                 _context(
                     3,
                     form=form,
-                    draft=draft_data,
-                    summary=_summary_for_draft(draft_data),
                 ),
             )
-        if _submission_rate_limited(request, str(draft.step1.get("email", ""))):
-            messages.error(
-                request,
-                "Trop de tentatives ont été détectées. Réessayez dans une heure.",
-            )
-            draft_data = get_draft(request)
-            return render(
-                request,
-                self.template_name,
-                _context(
-                    3,
-                    form=form,
-                    draft=draft_data,
-                    summary=_summary_for_draft(draft_data),
-                ),
-                status=429,
-            )
-        try:
-            profile = ProspectOnboardingService().submit_from_draft(
-                draft=draft,
-                ip_address=_client_ip(request),
-            )
-        except ProspectOnboardingError:
-            messages.error(
-                request,
-                "Nous ne pouvons pas enregistrer la demande pour le moment. Réessayez plus tard.",
-            )
-            draft_data = get_draft(request)
-            return render(
-                request,
-                self.template_name,
-                _context(
-                    3,
-                    form=form,
-                    draft=draft_data,
-                    summary=_summary_for_draft(draft_data),
-                ),
-            )
-        clear_draft(request)
-        request.session["prospect_confirmation_public_id"] = str(profile.public_id)
-        return redirect("prospects:confirmation")
+        return _submit_draft(
+            request,
+            form=form,
+            step=3,
+            template_name=self.template_name,
+        )
 
 
 class ProspectConfirmationView(View):

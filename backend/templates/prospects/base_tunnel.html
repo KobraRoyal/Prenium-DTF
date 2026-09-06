@@ -10,37 +10,18 @@
 {% endblock %}
 
 {% block content %}
-{% include "components/nav/landing_header.html" %}
+{% include "components/nav/landing_header.html" with header_mode="prospect" %}
 <section class="prospect-shell prospect-journey" aria-labelledby="prospect-shell-heading">
   <div class="prospect-shell__inner prospect-journey__frame">
-    <aside class="prospect-shell__aside prospect-journey__rail">
-      <div class="prospect-shell__aside-card prospect-journey__rail-inner">
-        <div class="prospect-journey__rail-heading">
-          <p class="prospect-shell__eyebrow">Accès professionnel</p>
-          <h1 id="prospect-shell-heading" class="prospect-shell__title">Demande d’accès</h1>
-          <p class="prospect-shell__lead">Trois étapes. Réponse humaine sous 1 à 2 jours ouvrés.</p>
-        </div>
-        {% if step and total_steps %}
-        <div class="prospect-tunnel__progress-panel prospect-journey__progress">
-          <div class="prospect-journey__progress-copy">
-            <p class="prospect-tunnel__step-meta">Étape {{ step }} sur {{ total_steps }}</p>
-            <p class="prospect-journey__progress-number"><strong>{{ step }}</strong><span>/{{ total_steps }}</span></p>
-          </div>
-          <div
-            class="prospect-tunnel__track"
-            role="progressbar"
-            aria-valuemin="1"
-            aria-valuemax="{{ total_steps }}"
-            aria-valuenow="{{ step }}"
-            aria-label="Progression du formulaire"
-          >
-            <div class="prospect-tunnel__track-fill" style="--progress: {% widthratio step total_steps 100 %}"></div>
-          </div>
-        </div>
-        {% endif %}
-        {% include "prospects/partials/stepper.html" %}
+    <header class="prospect-journey__topbar">
+      <div class="prospect-journey__brand">
+        <h1 id="prospect-shell-heading" class="prospect-shell__title">Demande d’accès professionnel</h1>
+        <p class="prospect-shell__lead">Deux étapes pour ouvrir votre compte professionnel.</p>
       </div>
-    </aside>
+    </header>
+    <div class="prospect-journey__breadcrumb">
+      {% include "prospects/partials/stepper.html" %}
+    </div>
     <main class="prospect-shell__main prospect-journey__main" id="main-content">
       <div class="prospect-panel prospect-journey__panel">
         {% block prospect_section_head %}{% endblock %}

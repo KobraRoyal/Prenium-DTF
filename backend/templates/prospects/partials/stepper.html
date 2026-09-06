@@ -1,9 +1,19 @@
-<nav class="prospect-stepper" aria-label="Progression ouverture de compte">
+<nav class="prospect-stepper" aria-label="Fil d’Ariane de la demande d’accès">
   <ol class="prospect-stepper__list">
     {% for item in steps %}
     <li class="prospect-stepper__item {% if item.is_current %}is-current{% elif item.is_complete %}is-complete{% endif %}"{% if item.is_current %} aria-current="step"{% endif %}>
       <span class="prospect-stepper__index" aria-hidden="true"><span>{% if item.is_complete %}✓{% else %}{{ forloop.counter }}{% endif %}</span></span>
-      <span class="prospect-stepper__label">{{ item.label }}</span>
+      <span class="prospect-stepper__copy">
+        {% if item.is_complete %}
+          {% if forloop.counter == 1 %}<a class="prospect-stepper__label" href="{% url 'prospects:step1' %}">{{ item.label }}</a>
+          {% elif forloop.counter == 2 %}<a class="prospect-stepper__label" href="{% url 'prospects:step2' %}">{{ item.label }}</a>
+          {% else %}<span class="prospect-stepper__label">{{ item.label }}</span>{% endif %}
+        {% else %}
+          <span class="prospect-stepper__label">{{ item.label }}</span>
+        {% endif %}
+        {% if item.help %}<small class="prospect-stepper__help">{{ item.help }}</small>{% endif %}
+      </span>
+      {% if not forloop.last %}<span class="prospect-stepper__connector" aria-hidden="true"></span>{% endif %}
     </li>
     {% endfor %}
   </ol>

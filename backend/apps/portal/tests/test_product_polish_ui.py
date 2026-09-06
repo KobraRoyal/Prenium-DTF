@@ -438,7 +438,8 @@ class ProductPolishUITests(SimpleTestCase):
             "--journey-ink: var(--ink)",
             "--journey-paper: var(--bg)",
             "body.prospect-journey-page .prospect-journey__frame",
-            "body.prospect-journey-page .prospect-journey__rail",
+            "body.prospect-journey-page .prospect-journey__topbar",
+            "body.prospect-journey-page .prospect-journey__breadcrumb",
             "box-shadow: none !important",
         ]:
             with self.subTest(marker=marker):

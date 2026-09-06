@@ -90,10 +90,18 @@ class ProspectOnboardingService:
             phone=str(draft.step1.get("phone") or "").strip(),
             company=company,
             country=str(draft.step1.get("country") or "").upper(),
+            billing_address_line1=str(draft.step1.get("billing_address_line1") or "").strip(),
+            billing_address_line2=str(draft.step1.get("billing_address_line2") or "").strip(),
+            billing_postal_code=str(draft.step1.get("billing_postal_code") or "").strip(),
+            billing_city=str(draft.step1.get("billing_city") or "").strip(),
             siren=str(draft.step1.get("siren") or ""),
             vat_number=str(draft.step1.get("vat_number") or "").upper(),
             activity_type=str(draft.step1.get("activity_type") or ""),
-            service_interest=str(draft.step2.get("service_interest") or ""),
+            # Le service n'est plus demandé dans le tunnel ; les anciens brouillons
+            # conservent leur choix et les nouveaux profils restent à orienter.
+            service_interest=str(
+                draft.step2.get("service_interest") or ProspectProfile.ServiceInterest.UNSURE
+            ),
             main_goal=str(draft.step2.get("main_goal") or "").strip(),
             project_timing=str(draft.step2.get("project_timing") or ""),
             monthly_volume=str(draft.step2.get("monthly_volume") or ""),
@@ -182,11 +190,20 @@ class ProspectReviewService:
         if profile is None or profile.status != ProspectProfile.Status.PENDING_REVIEW:
             raise ProspectOnboardingError("Cette demande n'est plus en attente de validation.")
 
+        customer_country = profile.country if profile.country != "ZZ" else ""
         customer = Customer.objects.create(
             name=profile.company,
             billing_email=profile.email,
-            billing_country=profile.country if profile.country != "ZZ" else "",
-            shipping_country=profile.country if profile.country != "ZZ" else "",
+            billing_address_line1=profile.billing_address_line1,
+            billing_address_line2=profile.billing_address_line2,
+            billing_postal_code=profile.billing_postal_code,
+            billing_city=profile.billing_city,
+            billing_country=customer_country,
+            shipping_address_line1=profile.billing_address_line1,
+            shipping_address_line2=profile.billing_address_line2,
+            shipping_postal_code=profile.billing_postal_code,
+            shipping_city=profile.billing_city,
+            shipping_country=customer_country,
             siren=profile.siren,
             vat_number=profile.vat_number,
             is_active=False,

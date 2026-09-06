@@ -1,48 +1,34 @@
 {% extends "prospects/base_tunnel.html" %}
 
-{% block title %}Vérifiez votre demande — Prenium DTF{% endblock %}
+{% block title %}Confirmez votre demande — Prenium DTF{% endblock %}
 {% block body_class %}{{ block.super }} prospect-step3-page{% endblock %}
 
 {% block prospect_section_head %}
 <div class="landing-section-head prospect-tunnel__intro prospect-journey__intro">
-  <h2 class="prospect-tunnel__title">Vérification</h2>
-  <p class="landing-auth-lead prospect-tunnel__lead">Relisez l’essentiel, puis envoyez. Un e-mail de confirmation suivra.</p>
+  <h2 class="prospect-tunnel__title">Confirmez votre demande</h2>
+  <p class="landing-auth-lead prospect-tunnel__lead">Une dernière confirmation et votre demande est envoyée à notre équipe.</p>
 </div>
 {% endblock %}
 
 {% block prospect_inner %}
-<section class="prospect-summary prospect-summary--premium prospect-review" aria-labelledby="review-title">
-  <div class="prospect-summary__header prospect-review__header">
-    <div>
-      <h3 id="review-title" class="prospect-summary__title">Récapitulatif</h3>
-    </div>
-    <a href="{% url 'prospects:step1' %}">Modifier</a>
-  </div>
-
-  <dl class="prospect-summary__dl prospect-review__grid">
-    <div class="prospect-review__item prospect-review__item--wide"><dt>Entreprise</dt><dd>{{ summary.company }}</dd></div>
-    <div class="prospect-review__item"><dt>Contact</dt><dd>{{ summary.contact }}</dd></div>
-    <div class="prospect-review__item"><dt>E-mail</dt><dd>{{ summary.email }}</dd></div>
-    <div class="prospect-review__item"><dt>Pays</dt><dd>{{ summary.country }}</dd></div>
-    <div class="prospect-review__item"><dt>Identifiant légal</dt><dd>{{ summary.legal_id }}</dd></div>
-    <div class="prospect-review__item prospect-review__item--accent"><dt>Service</dt><dd>{{ summary.service }}</dd></div>
-    <div class="prospect-review__item"><dt>Volume</dt><dd>{{ summary.volume }}</dd></div>
-    <div class="prospect-review__item prospect-review__item--wide"><dt>Calendrier</dt><dd>{{ summary.timing }}</dd></div>
-  </dl>
-</section>
-
-<form method="post" class="ui-form-stack prospect-form prospect-review-form text-left" novalidate data-submit-loading>
+<form method="post" class="ui-form-stack prospect-form prospect-confirm-form text-left" novalidate data-inline-required data-submit-loading>
   {% csrf_token %}
   {% if messages %}{% for message in messages %}<div class="alert alert--danger" role="alert">{{ message }}</div>{% endfor %}{% endif %}
 
-  <section class="prospect-review-confirm" aria-labelledby="confirm-title">
-    <h3 id="confirm-title" class="prospect-form__section-title">Confirmer et envoyer</h3>
+  <section class="prospect-confirmation" aria-labelledby="confirm-title">
+    <div class="prospect-form__section-head">
+      <div>
+        <h3 id="confirm-title" class="prospect-form__section-title">Votre accord</h3>
+        <p class="prospect-form__section-note">Cochez la case pour transmettre votre demande.</p>
+      </div>
+      <span class="prospect-form__required-note">Requis</span>
+    </div>
     <label class="prospect-consent-card{% if form.terms_accepted.errors %} is-error{% endif %}">
-      <input type="checkbox" name="terms_accepted" required {% if form.terms_accepted.value %}checked{% endif %}>
+      <input id="id_terms_accepted" type="checkbox" name="terms_accepted" required aria-describedby="terms-accepted-error" {% if form.terms_accepted.value %}checked{% endif %}{% if form.terms_accepted.errors %} aria-invalid="true"{% endif %}>
       <span class="prospect-consent-card__control" aria-hidden="true">✓</span>
-      <span><strong>Je confirme ma demande d’accès professionnel</strong><small>{{ form.terms_accepted.label }}</small></span>
+      <span><strong>Je confirme l’exactitude des informations saisies.</strong><small>{{ form.terms_accepted.label }}</small></span>
     </label>
-    {% if form.terms_accepted.errors %}<p class="ui-field-error" role="alert">{{ form.terms_accepted.errors.0 }}</p>{% endif %}
+    <p id="terms-accepted-error" class="ui-field-error ui-error-text" role="alert"{% if not form.terms_accepted.errors %} hidden{% endif %}>{% if form.terms_accepted.errors %}{{ form.terms_accepted.errors.0 }}{% endif %}</p>
   </section>
 
   <div class="prospect-form__footer prospect-journey__footer">

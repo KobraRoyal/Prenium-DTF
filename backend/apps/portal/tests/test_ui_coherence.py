@@ -161,20 +161,61 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_audit_followups_remove_gated_reveal_side_tab_and_width_motion(self) -> None:
         conversion_css = static_source("css/components/landing-conversion.css")
-        tunnel_css = static_source("css/components/prospect-tunnel.css")
         journey_css = static_source("css/components/prospect-journey.css")
+        portal_core = static_source("css/entries/portal-core.css")
         tunnel_base = template_source("prospects/base_tunnel.html")
         design_md = (Path(settings.BASE_DIR).parent / "DESIGN.md").read_text(encoding="utf-8")
 
         self.assertIn("Contenu toujours lisible", conversion_css)
         self.assertNotIn("filter: blur(5px)", conversion_css)
-        self.assertNotIn("border-left: 4px solid var(--success)", tunnel_css)
-        self.assertIn("transform: scaleX(calc(var(--progress, 0) / 100))", tunnel_css)
-        self.assertIn("transition: transform 280ms", journey_css)
-        self.assertIn('style="--progress:', tunnel_base)
+        self.assertNotIn("prospect-tunnel.css", portal_core)
+        self.assertIn("@view-transition", journey_css)
+        self.assertIn("journey-panel-in", journey_css)
+        self.assertIn("view-transition-name: prospect-journey-main", journey_css)
+        self.assertIn("view-transition-name: prospect-journey-stepper", journey_css)
+        self.assertIn("journey-stepper-in", journey_css)
+        self.assertIn("position: sticky", journey_css)
+        self.assertIn("top: var(--journey-sticky-top)", journey_css)
+        self.assertIn("z-index: 20", journey_css)
+
+        self.assertIn("background: var(--journey-paper)", journey_css)
+        self.assertIn(".prospect-project-metrics {", journey_css)
+        self.assertIn("align-items: start;", journey_css)
+        self.assertIn(".prospect-project-metrics .prospect-project-fieldset {", journey_css)
+        self.assertIn("padding-top: 0;", journey_css)
+        self.assertIn("border-top: 0;", journey_css)
+        self.assertIn(".prospect-step1__activity-marker,", journey_css)
+        self.assertIn("grid-template-columns: 1.1rem minmax(0, 1fr);", journey_css)
+        self.assertIn("border-radius: var(--radius-sm);", journey_css)
+        self.assertNotIn(".prospect-project-option__check", journey_css)
+        self.assertIn("clip-path: inset(0 12% 0 0)", journey_css)
+        self.assertIn("transform: translate3d(-4rem, 0, 0)", journey_css)
+        self.assertIn("clip-path: inset(0 0 0 14%)", journey_css)
+        self.assertIn("transform: translate3d(6rem, 0, 0)", journey_css)
+        self.assertNotIn("prospect-journey__progress", tunnel_base)
+        self.assertNotIn('style="--progress:', tunnel_base)
         self.assertNotIn('style="width:', tunnel_base)
         self.assertIn("name: Prenium DTF", design_md)
         self.assertIn("## Do's and Don'ts", design_md)
+
+    def test_prospect_controls_share_premium_input_and_radio_contract(self) -> None:
+        journey_css = static_source("css/components/prospect-journey.css")
+        prospect_css = static_source("css/entries/prospect.css")
+        step1 = template_source("prospects/step1.html")
+        step2 = template_source("prospects/step2.html")
+
+        self.assertIn("grid-template-columns: 1.1rem minmax(0, 1fr);", journey_css)
+        self.assertIn("border-radius: 50%;", journey_css)
+        self.assertIn("min-height: 3rem;", journey_css)
+        self.assertIn("border-radius: var(--radius-sm);", prospect_css)
+        self.assertIn("min-height: 2.75rem;", prospect_css)
+        self.assertIn("box-shadow: 0 0 0 3px color-mix", prospect_css)
+        self.assertIn("prospect-step1__activity-marker", step1)
+        self.assertIn("prospect-project-option__marker", step2)
+        self.assertEqual(
+            step2.count('type="radio"'), step2.count("prospect-project-option__marker")
+        )
+        self.assertNotIn("prospect-project-option__check", step2)
 
     def test_landing_impeccable_accessibility_and_visual_contracts(self) -> None:
         landing_css = static_source("css/components/landing.css")
@@ -403,21 +444,15 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("alert alert--info", branding)
         self.assertNotIn("ui-alert", branding)
 
-    def test_checkout_and_prospect_mobile_layouts_are_compact(self) -> None:
+    def test_checkout_and_prospect_journey_layouts_are_compact(self) -> None:
         product_css = static_source("css/components/product-shell.css")
-        prospect_css = static_source("css/components/prospect-tunnel.css")
         journey_css = static_source("css/components/prospect-journey.css")
         invitation = template_source("portal/access/invitation_accept.html")
 
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", product_css)
         self.assertIn(".product-checkout-card > .dui-card-body", product_css)
         self.assertIn(".product-checkout-submit", product_css)
-        self.assertIn("body.prospect-tunnel-page .prospect-shell__trust", prospect_css)
-        self.assertIn(
-            "body.ui-marketing-body.prospect-tunnel-page .agency-menu-toggle",
-            prospect_css,
-        )
-        self.assertIn("display: none", prospect_css)
+        self.assertIn("body.prospect-journey-page .prospect-consent-card", journey_css)
         self.assertIn("@media (max-width: 767px)", journey_css)
         self.assertIn("grid-template-columns: 1fr", journey_css)
         self.assertIn("prefers-reduced-motion: reduce", journey_css)
@@ -830,7 +865,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Identité visuelle", staff_nav)
         self.assertIn("Votre compte", header)
         self.assertIn(">Atelier</span>", header)
-        self.assertNotIn(">Espace client<", header)
+        self.assertIn(">Espace client</span>", header)
         self.assertIn("product-menu-button__icon", header)
         self.assertIn("ui-btn ui-btn-ghost ui-btn-sm product-menu-button", header)
         self.assertIn("portal_profile_menu.html", header)
@@ -1903,7 +1938,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
                 self.assertNotIn(f'class="ui-sr-only" for="{field_id}"', source)
 
         self.assertIn("<legend>{{ form.activity_type.label }}</legend>", source)
-        self.assertIn('class="ui-field-error"', source)
+        self.assertIn('class="ui-field-error ui-error-text"', source)
         self.assertNotIn('class="error-text"', source)
 
     def test_b2b_order_project_flow_reuses_portal_htmx_contracts(self) -> None:
@@ -2366,3 +2401,15 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn(".product-header .ui-foundation-nav .ui-nav-rail", portal_entry)
         self.assertIn(".product-header .ui-foundation-nav .product-profile__trigger", portal_entry)
         self.assertIn("border: 0 !important", portal_entry.split("v15 — Header portail")[-1])
+        navigation_link_rule = portal_entry.split(
+            "Header partagé : les liens de navigation restent des liens, jamais des pastilles.",
+            1,
+        )[1].split("}", 1)[0]
+        for declaration in [
+            "border-color: transparent !important;",
+            "background: transparent !important;",
+            "box-shadow: none !important;",
+            "transform: none !important;",
+        ]:
+            with self.subTest(declaration=declaration):
+                self.assertIn(declaration, navigation_link_rule)
