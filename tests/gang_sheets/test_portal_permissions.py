@@ -1503,7 +1503,7 @@ def test_client_cannot_download_generated_production_asset_from_order_project(cl
     pending_detail_content = pending_detail_response.content.decode()
     assert pending_detail_response.status_code == 200
     assert "data-analysis-pending" in pending_detail_content
-    assert 'hx-trigger="load delay:1400ms"' in pending_detail_content
+    assert 'hx-trigger="load delay:1400ms, every 2s"' in pending_detail_content
     assert "Contrôle du fichier HD" not in pending_detail_content
     assert response.status_code == 404
 

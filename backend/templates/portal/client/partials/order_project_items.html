@@ -10,12 +10,23 @@
     <span class="b2b-analysis-live htmx-indicator" id="order-project-analysis-indicator" role="status"><i aria-hidden="true"></i>Analyse…</span>
     {% if not project.has_locked_gang_sheet_output %}
     {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
-    <button class="ui-btn ui-btn-primary ui-btn-sm" type="button" data-file-picker-dialog="add-visual-dialog" aria-controls="add-visual-dialog" aria-haspopup="dialog">Ajouter un visuel</button>
+    <button class="ui-btn ui-btn-primary ui-btn-sm" type="button" data-dialog-open="add-visual-dialog" aria-controls="add-visual-dialog" aria-haspopup="dialog">Ajouter des visuels</button>
     {% endif %}
     {% endif %}
   </div>
 
   {% if form_error %}<div class="alert alert--danger mb-4" role="alert">{{ form_error }}</div>{% endif %}
+  {% if upload_errors %}
+  <div class="alert alert--warning mb-4 b2b-batch-result" role="status">
+    <strong>{{ upload_batch_added }} visuel{{ upload_batch_added|pluralize }} ajouté{{ upload_batch_added|pluralize }}, {{ upload_errors|length }} refusé{{ upload_errors|length|pluralize }}.</strong>
+    <ul>{% for error in upload_errors %}<li><span>{{ error.filename }}</span> — {{ error.message }}</li>{% endfor %}</ul>
+  </div>
+  {% elif upload_batch_added or upload_batch_failed %}
+  <div class="alert {% if upload_batch_failed %}alert--warning{% else %}alert--success{% endif %} mb-4 b2b-batch-result" role="status">
+    {{ upload_batch_added }} visuel{{ upload_batch_added|pluralize }} ajouté{{ upload_batch_added|pluralize }}.
+    {% if upload_batch_failed %}{{ upload_batch_failed }} fichier{{ upload_batch_failed|pluralize }} refusé{{ upload_batch_failed|pluralize }} ; les autres restent disponibles.{% endif %}
+  </div>
+  {% endif %}
 
   {% if not project.has_locked_gang_sheet_output %}
   {% if project.status == "draft" or project.status == "incomplete" or project.status == "ready_to_submit" or project.status == "action_required" or project.status == "changes_requested" %}
@@ -23,7 +34,7 @@
     <div class="b2b-dialog-shell">
       <header class="b2b-dialog-head">
         <div class="b2b-dialog-head__copy">
-          <h2 id="add-visual-dialog-title">{% if active_validation_item %}Valider le visuel{% else %}Ajouter un visuel{% endif %}</h2>
+          <h2 id="add-visual-dialog-title">{% if active_validation_item %}Valider le visuel{% else %}Ajouter des visuels{% endif %}</h2>
         </div>
         <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">
           <svg class="b2b-dialog-close__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
@@ -47,7 +58,7 @@
     id="order-project-visuals-state"
     {% if analysis_pending %}
     hx-get="{% url 'portal:client-order-project-item-create' customer_public_id=customer.public_id project_public_id=project.public_id %}"
-    hx-trigger="load delay:1400ms"
+    hx-trigger="load delay:1400ms, every 2s"
     hx-target="this"
     hx-swap="outerHTML"
     hx-select="#order-project-visuals-state"
@@ -79,22 +90,32 @@
           {% if not project.can_edit_items or item.is_production_gang_sheet_asset %}<span>{{ item.quantity }} ex.</span>{% endif %}
           <span>{{ item.width_mm }} × {{ item.height_mm }} mm</span>{% if item.support_color_label %}<span class="b2b-support-color-badge{% if item.support_color_is_multicolor %} is-rainbow{% endif %}"{% if not item.support_color_is_multicolor %} style="--swatch: {{ item.support_color_hex }}"{% endif %}>{{ item.support_color_label }}</span>{% endif %}
         </div>
-        {% if project.can_edit_items and not item.is_production_gang_sheet_asset %}
-        <form
-          class="b2b-inline-quantity-form"
-          method="post"
-          hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='update' %}"
-          hx-target="#order-project-items"
-          hx-swap="outerHTML"
-          hx-indicator="#portal-htmx-indicator"
-          hx-disabled-elt="this"
-          data-submit-loading
-        >
-          {% csrf_token %}
-          {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Quantité" field_id=item.public_id %}
-          <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Enregistrer</button>
-        </form>
-        {% endif %}
+        <div class="b2b-visual-list-item__controls">
+          {% if project.can_edit_items and not item.is_production_gang_sheet_asset %}
+          <form
+            class="b2b-inline-quantity-form"
+            method="post"
+            hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='update' %}"
+            hx-target="#order-project-items"
+            hx-swap="outerHTML"
+            hx-indicator="#portal-htmx-indicator"
+            hx-disabled-elt="this"
+            data-submit-loading
+            data-order-project-inline-item="{{ item.public_id }}"
+            data-order-project-autosave
+          >
+            {% csrf_token %}
+            <input type="hidden" name="_autosave" value="1">
+            {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Quantité" field_id=item.public_id %}
+            {% include "portal/client/partials/order_project_support_color_field.html" with item=item swatch_prefix="inline-support-hex-" exact_color_required=item.technical_review.thin_zone.detected %}
+            <span class="ui-sr-only htmx-indicator" role="status">Enregistrement…</span>
+          </form>
+          {% endif %}
+          <div class="ui-table-actions b2b-visual-list-item__actions">
+            <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-dialog-open="visual-dialog-{{ item.public_id }}">Analyse</button>
+            {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True %}
+          </div>
+        </div>
         {% with review=item.technical_review %}
         {% include "portal/client/partials/order_project_quality_review.html" with compact=1 %}
         {% endwith %}
@@ -104,15 +125,11 @@
       {% elif not item.asset or not item.asset.current_version %}
       <span class="badge">Fichier requis</span>
       {% endif %}
-      <div class="ui-table-actions b2b-visual-list-item__actions">
-        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-dialog-open="visual-dialog-{{ item.public_id }}">Ouvrir</button>
-        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True %}
-      </div>
     </article>
     {% endfor %}
   </div>
   {% else %}
-  {% include "components/ui/empty_state.html" with title="Aucun fichier joint" message="Choisissez votre premier visuel : le configurateur s'ouvrira automatiquement." extra_class="b2b-visual-empty" cta_button_label="Choisir un fichier" cta_button_dialog="add-visual-dialog" %}
+  {% include "components/ui/empty_state.html" with title="Aucun fichier joint" message="Ajoutez jusqu’à cinq visuels pour lancer leur analyse technique." extra_class="b2b-visual-empty" cta_button_label="Choisir des fichiers" cta_button_dialog="add-visual-dialog" %}
   {% endif %}
   </div>
 

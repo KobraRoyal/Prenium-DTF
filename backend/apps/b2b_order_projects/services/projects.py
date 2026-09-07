@@ -193,8 +193,16 @@ class B2BOrderProjectService:
         locked = self._lock(project)
         self._ensure_editable(locked)
         item = self._get_item(locked, item_public_id, for_update=True)
-        self._ensure_item_mutable(item)
+        production_item = self._is_production_item(item)
+        if not production_item:
+            self._ensure_item_mutable(item)
         values = self._normalize_item_data(data, require_all=False)
+        if production_item:
+            values = {
+                field: value
+                for field, value in values.items()
+                if field in {"quantity", "support_color_hex"}
+            }
         changed = []
         for field, value in values.items():
             if getattr(item, field) != value:
@@ -327,6 +335,77 @@ class B2BOrderProjectService:
         )
         self._refresh_completeness(locked)
         return item
+
+    @transaction.atomic
+    def confirm_all_item_analyses(self, *, project, actor, source: str):
+        """Confirme atomiquement tous les visuels prêts d'un même projet."""
+        locked = self._lock(project)
+        self._ensure_editable(locked)
+        items = list(
+            B2BOrderProjectItem.objects.select_for_update(of=("self",))
+            .for_project(locked)
+            .select_related("asset__current_version")
+            .order_by("sort_order", "created_at")
+        )
+        if not items:
+            raise ProjectDomainError("PROJECT_ITEMS_REQUIRED", "Ajoutez au moins un visuel.")
+
+        not_ready = []
+        missing_support_color = []
+        for item in items:
+            version = getattr(getattr(item, "asset", None), "current_version", None)
+            if version is None or version.analysis_status not in {"ready", "warning"}:
+                not_ready.append(item.name)
+            elif not item.support_color_hex:
+                missing_support_color.append(item.name)
+        if not_ready:
+            raise ProjectDomainError(
+                "ANALYSES_NOT_READY",
+                "Attendez la fin de l’analyse de tous les visuels avant de les valider ensemble.",
+                {"items": not_ready},
+            )
+        if missing_support_color:
+            raise ProjectDomainError(
+                "SUPPORT_COLOR_REQUIRED",
+                "Choisissez la couleur du support pour chaque visuel avant la validation globale.",
+                {"items": missing_support_color},
+            )
+
+        confirmed_at = timezone.now()
+        for item in items:
+            version = item.asset.current_version
+            item.client_confirmed_asset_version = version
+            item.client_confirmed_at = confirmed_at
+            item.client_confirmed_by = actor
+            item.save(
+                update_fields=[
+                    "client_confirmed_asset_version",
+                    "client_confirmed_at",
+                    "client_confirmed_by",
+                    "updated_at",
+                ]
+            )
+            self._audit(
+                "item_analysis_confirmed",
+                project=locked,
+                actor=actor,
+                source=source,
+                metadata={
+                    "item_public_id": str(item.public_id),
+                    "asset_version_public_id": str(version.public_id),
+                    "support_color_hex": item.support_color_hex,
+                    "quantity": item.quantity,
+                },
+            )
+        self._audit(
+            "all_item_analyses_confirmed",
+            project=locked,
+            actor=actor,
+            source=source,
+            metadata={"item_count": len(items)},
+        )
+        self._refresh_completeness(locked)
+        return items
 
     @transaction.atomic
     def delete_item(self, *, project, item_public_id, actor, source: str) -> None:

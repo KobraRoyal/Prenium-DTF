@@ -452,6 +452,7 @@ def test_pdf_auto_size_uses_artboard_for_illustrator_mixed_documents():
     assert analyzed.analysis.metadata["semi_transparency"]["detected"] is False
     review = AssetService().technical_review_for_item(item=item)
     assert review["level"] == "good"
+    assert review["label"] == "Validé"
     assert review["resolution_display"] == "300 DPI"
     assert review["effective_dpi"] == pytest.approx(300.0, rel=0.02)
 
@@ -473,6 +474,14 @@ def test_png_effective_dpi_matches_source_metadata_at_intrinsic_size():
 
     assert AssetService().effective_dpi_for_item(item=item) == 300.0
     assert AssetService().technical_review_for_item(item=item)["level"] == "good"
+
+
+def test_dpi_badge_threshold_uses_the_displayed_whole_dpi_value():
+    service = AssetService()
+
+    assert service._dpi_reaches(299.49, 300) is False
+    assert service._dpi_reaches(299.5, 300) is True
+    assert service._dpi_reaches(300.0, 300) is True
 
 
 @pytest.mark.django_db

@@ -26,6 +26,7 @@ from .views_auth import (
 from .views_b2b_order_projects import (
     ClientOrderProjectAutosaveView,
     ClientOrderProjectCancelView,
+    ClientOrderProjectConfirmAllAnalysesView,
     ClientOrderProjectCreateView,
     ClientOrderProjectDetailView,
     ClientOrderProjectItemActionView,
@@ -265,6 +266,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/",
         ClientOrderProjectItemCreateView.as_view(),
         name="client-order-project-item-create",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/confirm-all-analyses/",
+        ClientOrderProjectConfirmAllAnalysesView.as_view(),
+        name="client-order-project-confirm-all-analyses",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/<str:action>/",

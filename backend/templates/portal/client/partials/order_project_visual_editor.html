@@ -23,27 +23,25 @@
     <div class="b2b-visual-validation">
       <p class="gang-inspector-note"><strong>Planche HD verrouillée.</strong> L’analyse porte sur le PDF final généré par le studio de planches DTF. Vérifiez les détails fins, les semi-transparences et la couleur du support avant de commander.</p>
     </div>
+    {% endif %}
     {% if review.can_confirm and project.status != "submitted" and project.status != "converted" and project.status != "cancelled" %}
     <form
       class="b2b-visual-validation"
       method="post"
-      hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='confirm-analysis' %}"
+      hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='update' %}"
       hx-target="#order-project-items"
       hx-swap="outerHTML"
       hx-indicator="#portal-htmx-indicator"
-      data-submit-loading
-      data-visual-confirm
+      data-order-project-autosave
+      {% if not item.is_production_gang_sheet_asset %}data-order-project-inline-item="{{ item.public_id }}"{% endif %}
     >
       {% csrf_token %}
-      {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Exemplaires de planche" %}
+      <input type="hidden" name="_autosave" value="1">
+      {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Quantité" field_prefix="id-analysis-quantity-" field_id=item.public_id %}
+      {% include "portal/client/partials/order_project_validation_dimensions_row.html" with item=item width_mm=item.width_mm height_mm=item.height_mm show_quantity=0 %}
       {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
-      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>Je confirme le contrôle HD (détails, dégradés, support).</span></label>
-      <div class="b2b-dialog-actions b2b-dialog-actions--editor">
-        <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer le support{% else %}Valider pour commander{% endif %}</button>
-      </div>
+      <span class="ui-sr-only htmx-indicator" role="status">Enregistrement…</span>
     </form>
-    {% endif %}
-    {% elif review.can_confirm and project.status != "submitted" and project.status != "converted" and project.status != "cancelled" %}
     <form
       class="b2b-visual-validation"
       method="post"
@@ -55,27 +53,22 @@
       data-visual-confirm
     >
       {% csrf_token %}
-      <input type="hidden" name="name" value="{{ item.name }}">
-      <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}">
-      <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}">
-      {% include "portal/client/partials/order_project_rotation_hidden.html" %}
-      {% include "portal/client/partials/order_project_validation_dimensions_row.html" with quantity=item.quantity width_mm=item.width_mm height_mm=item.height_mm %}
-      {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
       <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>Je confirme le contrôle qualité.</span></label>
       <div class="b2b-dialog-actions b2b-dialog-actions--editor">
-        <button class="ui-btn ui-btn-primary" type="submit">{% if review.confirmed %}Enregistrer{% else %}Valider{% endif %}</button>
-        <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-project-item-asset-download' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>
+        <button class="ui-btn ui-btn-primary" type="submit">Valider pour commander</button>
+        {% if not item.is_production_gang_sheet_asset %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-project-item-asset-download' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>{% endif %}
         {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True dialog_prefix="editor-" button_class="b2b-dialog-actions__danger" %}
       </div>
     </form>
     {% else %}
-    <form class="b2b-visual-edit" method="post" hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='update' %}" hx-target="#order-project-items" hx-swap="outerHTML">
+    <form class="b2b-visual-edit" method="post" hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='update' %}" hx-target="#order-project-items" hx-swap="outerHTML" data-order-project-autosave data-order-project-inline-item="{{ item.public_id }}">
       {% csrf_token %}
+      <input type="hidden" name="_autosave" value="1">
       <input type="hidden" name="name" value="{{ item.name }}">
       <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}">
       <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}">
-      {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity %}
-      <div class="b2b-dialog-actions"><button class="ui-btn ui-btn-primary" type="submit">Enregistrer</button></div>
+      {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity field_prefix="id-editor-quantity-" field_id=item.public_id %}
+      <span class="ui-sr-only htmx-indicator" role="status">Enregistrement…</span>
     </form>
     {% endif %}
 
@@ -95,7 +88,7 @@
       <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}" data-configurator-width>
       <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}" data-configurator-height>
       {% include "portal/client/partials/order_project_rotation_hidden.html" %}
-      <div class="b2b-configurator__dimensions">{% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity %}</div>
+      <div class="b2b-configurator__dimensions">{% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity field_prefix="id-attach-quantity-" field_id=item.public_id %}</div>
       <p class="b2b-configurator__file-meta"><span data-configurator-pixels>—</span></p>
       <button class="ui-btn ui-btn-primary" type="submit">Ajouter le fichier</button>
     </form>

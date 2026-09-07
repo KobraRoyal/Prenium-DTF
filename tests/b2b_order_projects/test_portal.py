@@ -1,11 +1,16 @@
 import json
+import re
+from collections import Counter
 
 import pytest
+from apps.auditlog.models import AuditLogEntry
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer, CustomerMembership
+from apps.uploads.models import Asset, AssetVersion
 from apps.uploads.services.asset_analysis import AssetAnalysisService
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, override_settings
 from django.urls import reverse
 
@@ -27,7 +32,7 @@ def portal_scope(*, owner=True):
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
-def test_client_create_with_first_visual_opens_validation_modal():
+def test_client_create_with_visual_batch_lists_analyses_without_opening_modal():
     _user, customer, client = portal_scope()
     create_url = reverse(
         "portal:client-order-project-create",
@@ -38,42 +43,352 @@ def test_client_create_with_first_visual_opens_validation_modal():
     assert create_page.status_code == 200
     html = create_page.content.decode()
     assert 'enctype="multipart/form-data"' in html
-    assert "data-order-start-pick-visual" in html
+    assert "data-batch-dropzone" in html
     assert 'name="file"' in html
+    assert "multiple" in html
+    assert 'data-max-files="5"' in html
 
     response = client.post(
         create_url,
         {
             "name": "Commande premier visuel",
             "order_mode": "individual_designs",
-            "file": png_upload("premier.png"),
+            "file": [png_upload("premier.png"), png_upload("second.png")],
         },
     )
     assert response.status_code == 302
     project = B2BOrderProject.objects.get(customer=customer)
-    item = project.items.get()
-    assert item.name == "premier"
-    assert item.crop_mode == item.CropMode.MANUAL
-    assert item.crop_metadata == {
-        "x": "0.000000",
-        "y": "0.000000",
-        "width": "1.000000",
-        "height": "1.000000",
-    }
-    assert f"validate={item.public_id}" in response.url
+    assert list(project.items.values_list("name", flat=True)) == ["premier", "second"]
+    assert "validate=" not in response.url
 
     detail = client.get(response.url)
     assert detail.status_code == 200
     detail_html = detail.content.decode()
-    assert "data-dialog-auto-open" in detail_html
-    assert "Valider le visuel" in detail_html
-    assert str(item.public_id) in detail_html
+    assert "data-dialog-auto-open" not in detail_html
+    assert "2 visuels ajoutés" in detail_html
+    assert "Analyse" in detail_html
+    assert "Quantité" in detail_html
+    assert "Couleur du support" in detail_html
+    assert "b2b-quality-review__chips" in detail_html
+    assert "Pas de dégradé" in detail_html
+    assert all(str(item.public_id) in detail_html for item in project.items.all())
     assert "Supprimer" in detail_html
-    assert (
-        "action='delete'" in detail_html
-        or "/delete/" in detail_html
-        or "action=delete" in detail_html
+    rendered_ids = re.findall(r'\sid="([^"]+)"', detail_html)
+    assert [value for value, count in Counter(rendered_ids).items() if count > 1] == []
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_client_can_autosave_visual_settings_then_confirm_all_analyses():
+    _user, customer, client = portal_scope()
+    create_url = reverse(
+        "portal:client-order-project-create",
+        kwargs={"customer_public_id": customer.public_id},
     )
+    created = client.post(
+        create_url,
+        {
+            "name": "Validation groupée",
+            "order_mode": "individual_designs",
+            "file": [png_upload("premier.png"), png_upload("second.png")],
+        },
+    )
+    project = B2BOrderProject.objects.get(customer=customer)
+    for item in project.items.select_related("asset__current_version"):
+        AssetAnalysisService().analyze(
+            version_public_id=item.asset.current_version.public_id,
+            source="test",
+        )
+
+    detail = client.get(created.url)
+    html = detail.content.decode()
+    assert "Je confirme le contrôle qualité de tous les visuels" in html
+    assert "Enregistrer" not in html
+    assert "data-order-project-autosave" in html
+
+    for index, item in enumerate(project.items.order_by("sort_order"), start=1):
+        updated = client.post(
+            reverse(
+                "portal:client-order-project-item-action",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "project_public_id": project.public_id,
+                    "item_public_id": item.public_id,
+                    "action": "update",
+                },
+            ),
+            {"quantity": str(index + 1), "support_color_hex": "#AABBCC", "_autosave": "1"},
+            HTTP_HX_REQUEST="true",
+        )
+        assert updated.status_code == 200
+        assert "X-Prenium-Toast" not in updated.headers
+
+    confirmed = client.post(
+        reverse(
+            "portal:client-order-project-confirm-all-analyses",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        ),
+        HTTP_HX_REQUEST="true",
+    )
+    assert confirmed.status_code == 200
+    assert json.loads(confirmed.headers["X-Prenium-Toast"])["message"] == (
+        "2 visuel(s) validé(s) pour la commande."
+    )
+    assert all(
+        item.client_confirmed_asset_version_id == item.asset.current_version_id
+        for item in project.items.select_related("asset__current_version")
+    )
+    project.refresh_from_db()
+    assert project.status == B2BOrderProject.Status.READY_TO_SUBMIT
+    assert AuditLogEntry.objects.filter(
+        action="b2b_order_project.all_item_analyses_confirmed",
+        target_public_id=project.public_id,
+    ).exists()
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_initial_visual_batch_over_limit_is_rejected_before_project_creation():
+    _user, customer, client = portal_scope()
+    create_url = reverse(
+        "portal:client-order-project-create",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+
+    response = client.post(
+        create_url,
+        {
+            "name": "Lot trop grand",
+            "order_mode": "individual_designs",
+            "file": [png_upload(f"visual-{index}.png") for index in range(6)],
+        },
+    )
+
+    assert response.status_code == 400
+    assert "au maximum 5 fichiers" in response.content.decode()
+    assert not B2BOrderProject.objects.filter(customer=customer).exists()
+    assert not Asset.objects.filter(customer=customer).exists()
+    assert not AuditLogEntry.objects.filter(
+        metadata__customer_public_id=str(customer.public_id)
+    ).exists()
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_initial_visual_batch_flash_keeps_success_and_detailed_error_once():
+    _user, customer, client = portal_scope()
+    response = client.post(
+        reverse(
+            "portal:client-order-project-create",
+            kwargs={"customer_public_id": customer.public_id},
+        ),
+        {
+            "name": "Lot initial partiel",
+            "order_mode": "individual_designs",
+            "file": [
+                png_upload("initial-ok.png"),
+                SimpleUploadedFile("initial-corrompu.png", b"broken", content_type="image/png"),
+            ],
+        },
+    )
+
+    assert response.status_code == 302
+    project = B2BOrderProject.objects.get(customer=customer)
+    assert list(project.items.values_list("name", flat=True)) == ["initial-ok"]
+    detail = client.get(response.url)
+    html = detail.content.decode()
+    assert "1 visuel ajouté, 1 refusé" in html
+    assert "initial-corrompu.png" in html
+    assert "Le contenu ne correspond pas au format annoncé" in html
+    assert "data-dialog-auto-open" not in html
+    assert "initial-corrompu.png" not in client.get(response.url).content.decode()
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, ORDER_UPLOAD_MAX_BYTES=10)
+def test_initial_visual_batch_total_size_is_rejected_before_project_creation():
+    _user, customer, client = portal_scope()
+    response = client.post(
+        reverse(
+            "portal:client-order-project-create",
+            kwargs={"customer_public_id": customer.public_id},
+        ),
+        {
+            "name": "Lot trop lourd",
+            "file": [
+                SimpleUploadedFile(f"heavy-{index}.png", b"x" * 11, content_type="image/png")
+                for index in range(5)
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert "La sélection dépasse la limite" in response.content.decode()
+    assert not B2BOrderProject.objects.filter(customer=customer).exists()
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_existing_project_batch_keeps_successes_and_escapes_failed_filename():
+    user, customer, client = portal_scope()
+    project = B2BOrderProject.objects.create(
+        customer=customer,
+        created_by=user,
+        project_number="CMD-2026-888881",
+        name="Lot partiel",
+    )
+    invalid_name = '<img src=x onerror="alert(1)">.png'
+    response = client.post(
+        reverse(
+            "portal:client-order-project-item-create",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        ),
+        {
+            "file": [
+                png_upload("valide-a.png"),
+                SimpleUploadedFile(invalid_name, b"not-a-png", content_type="image/png"),
+                png_upload("valide-b.png"),
+            ]
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    html = response.content.decode()
+    assert response.status_code == 200
+    assert json.loads(response.headers["X-Prenium-Toast"])["variant"] == "warning"
+    assert list(project.items.order_by("sort_order").values_list("name", flat=True)) == [
+        "valide-a",
+        "valide-b",
+    ]
+    assert Asset.objects.filter(customer=customer).count() == 2
+    assert AssetVersion.objects.filter(customer=customer).count() == 2
+    assert "2 visuels ajoutés, 1 refusé" in html
+    assert "Le contenu ne correspond pas au format annoncé" in html
+    assert "&lt;img src=x onerror=&quot;" in html
+    assert '<img src=x onerror="alert(1)">' not in html
+    assert (
+        AuditLogEntry.objects.filter(
+            action="b2b_order_project.item_added",
+            target_public_id=project.public_id,
+        ).count()
+        == 2
+    )
+    assert (
+        AuditLogEntry.objects.filter(
+            action="asset.attached",
+            metadata__project_public_id=str(project.public_id),
+        ).count()
+        == 2
+    )
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_visual_batch_post_is_customer_scoped():
+    user, owner_customer, client = portal_scope()
+    other_customer = Customer.objects.create(name="Autre", b2b_order_projects_enabled=True)
+    CustomerMembership.objects.create(customer=other_customer, user=user)
+    project = B2BOrderProject.objects.create(
+        customer=owner_customer,
+        created_by=user,
+        project_number="CMD-2026-888882",
+        name="Commande isolée",
+    )
+
+    response = client.post(
+        reverse(
+            "portal:client-order-project-item-create",
+            kwargs={
+                "customer_public_id": other_customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        ),
+        {"file": [png_upload("interdit-a.png"), png_upload("interdit-b.png")]},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 404
+    assert project.items.count() == 0
+    assert not Asset.objects.filter(customer=owner_customer).exists()
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_existing_project_batch_over_limit_has_no_side_effect():
+    user, customer, client = portal_scope()
+    project = B2BOrderProject.objects.create(
+        customer=customer,
+        created_by=user,
+        project_number="CMD-2026-888883",
+        name="Lot existant limité",
+    )
+    url = reverse(
+        "portal:client-order-project-item-create",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+        },
+    )
+    audit_count = AuditLogEntry.objects.count()
+
+    response = client.post(
+        url,
+        {"file": [png_upload(f"extra-{index}.png") for index in range(6)]},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 400
+    assert "au maximum 5 fichiers" in response.content.decode()
+    assert project.items.count() == 0
+    assert not Asset.objects.filter(customer=customer).exists()
+    assert AuditLogEntry.objects.count() == audit_count
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_visual_batch_requires_authenticated_active_customer_membership():
+    user, customer, client = portal_scope()
+    project = B2BOrderProject.objects.create(
+        customer=customer,
+        created_by=user,
+        project_number="CMD-2026-888884",
+        name="Accès lot protégé",
+    )
+    url = reverse(
+        "portal:client-order-project-item-create",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "project_public_id": project.public_id,
+        },
+    )
+    audit_count = AuditLogEntry.objects.count()
+
+    client.logout()
+    anonymous = client.post(url, {"file": [png_upload("anonymous.png")]})
+    assert anonymous.status_code == 302
+    assert "/login/" in anonymous.url
+
+    user.is_active = False
+    user.save(update_fields=["is_active"])
+    client.force_login(user)
+    inactive = client.post(url, {"file": [png_upload("inactive.png")]})
+    assert inactive.status_code == 302
+    assert "/login/" in inactive.url
+    user.is_active = True
+    user.save(update_fields=["is_active"])
+    CustomerMembership.objects.filter(customer=customer, user=user).update(is_active=False)
+    client.force_login(user)
+    denied = client.post(url, {"file": [png_upload("inactive-membership.png")]})
+    assert denied.status_code == 403
+    assert project.items.count() == 0
+    assert not Asset.objects.filter(customer=customer).exists()
+    assert AuditLogEntry.objects.count() == audit_count
 
 
 @pytest.mark.django_db
@@ -104,7 +419,11 @@ def test_client_can_update_item_quantity_inline_without_opening_visual_modal():
     detail_html = detail.content.decode()
     assert "b2b-inline-quantity-form" in detail_html
     assert 'name="quantity"' in detail_html
+    assert 'name="support_color_hex"' in detail_html
+    assert 'name="support_color_multicolor"' in detail_html
     assert f'value="{item.quantity}"' in detail_html
+    assert f'id="{item.public_id}"' in detail_html
+    assert f'id="id-attach-quantity-{item.public_id}"' in detail_html
     assert "Valider le visuel" not in detail_html
 
     update_url = reverse(
@@ -118,7 +437,7 @@ def test_client_can_update_item_quantity_inline_without_opening_visual_modal():
     )
     updated = client.post(
         update_url,
-        {"quantity": "7"},
+        {"quantity": "7", "support_color_hex": "#AABBCC"},
         HTTP_HX_REQUEST="true",
     )
     assert updated.status_code == 200
@@ -128,6 +447,7 @@ def test_client_can_update_item_quantity_inline_without_opening_visual_modal():
     }
     item.refresh_from_db()
     assert item.quantity == 7
+    assert item.support_color_hex == "#aabbcc"
     assert 'value="7"' in updated.content.decode()
 
     invalid = client.post(
@@ -284,7 +604,7 @@ def test_client_portal_project_flow_is_functional():
     )
     assert item_response.status_code == 200
     assert "HX-Refresh" not in item_response
-    assert 'hx-trigger="load delay:1400ms"' in item_response.content.decode()
+    assert 'hx-trigger="load delay:1400ms, every 2s"' in item_response.content.decode()
     assert 'hx-swap-oob="outerHTML"' in item_response.content.decode()
     assert "data-asset-replace-before-analysis" in item_response.content.decode()
 
