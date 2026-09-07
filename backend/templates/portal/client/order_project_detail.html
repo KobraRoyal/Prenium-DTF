@@ -1,11 +1,11 @@
 {% extends "portal/layout.html" %}
 {% load portal_tags %}
 
-{% block title %}{{ project_client_label|default:project.project_number }} — Prenium DTF{% endblock %}
+{% block title %}Projet de commande — Prenium DTF{% endblock %}
 
 {% block portal_content %}
 <div class="portal-page portal-page--client client-order-project-detail client-order-project-detail-page">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_project_detail.html" head_labelledby="client-order-project-title" title=project_client_label|default:project.project_number lead_template="components/portal/page_head_leads/client_order_project_detail.html" %}
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_project_detail.html" head_labelledby="client-order-project-title" title="Projet de commande" lead_template="components/portal/page_head_leads/client_order_project_detail.html" %}
 
   {% if validate_missing %}
   <div class="alert alert--warning mb-4 client-order-project-banner" role="status" data-validate-missing-toast>

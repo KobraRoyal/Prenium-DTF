@@ -417,6 +417,9 @@ def test_client_can_update_item_quantity_inline_without_opening_visual_modal():
     detail = client.get(detail_url)
     assert detail.status_code == 200
     detail_html = detail.content.decode()
+    assert "Projet de commande" in detail_html
+    assert f"N° UUID {project.public_id}" in detail_html
+    assert project.project_number not in detail_html
     assert "b2b-inline-quantity-form" in detail_html
     assert 'name="quantity"' in detail_html
     assert 'name="support_color_hex"' in detail_html
@@ -583,8 +586,11 @@ def test_client_portal_project_flow_is_functional():
     )
     detail = client.get(detail_url)
     assert detail.status_code == 200
-    assert "Projet portail" in detail.content.decode()
-    assert "Finaliser la commande" not in detail.content.decode()
+    detail_html = detail.content.decode()
+    assert "Projet de commande" in detail_html
+    assert f"N° UUID {project.public_id}" in detail_html
+    assert project.project_number not in detail_html
+    assert "Finaliser la commande" not in detail_html
 
     item_response = client.post(
         reverse(

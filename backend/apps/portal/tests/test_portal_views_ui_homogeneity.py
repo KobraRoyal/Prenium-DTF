@@ -553,7 +553,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertEqual(1, len(re.findall(r"<section[^>]*portal-page-surface", source)))
         self.assertIn("client-order-project-identity", facts)
         self.assertIn(">Date<", facts)
-        self.assertIn(">Référence<", facts)
+        self.assertIn(">N° UUID<", facts)
         self.assertIn(">Règlement<", facts)
         self.assertIn("client-order-project-stack", source)
         self.assertNotIn("stack-lg", source)

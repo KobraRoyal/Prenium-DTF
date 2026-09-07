@@ -6,8 +6,8 @@
       <dd><time datetime="{{ project.created_at|date:'c' }}">{{ project.created_at|date:"d/m/Y" }}</time></dd>
     </div>
     <div class="client-order-summary__fact">
-      <dt>Référence</dt>
-      <dd><span class="client-order-summary__ref">{{ project.project_number }}</span></dd>
+      <dt>N° UUID</dt>
+      <dd><span class="client-order-summary__ref">{{ project.public_id }}</span></dd>
     </div>
     {% if gang_sheet_quote %}
     <div class="client-order-summary__fact client-order-summary__fact--pricing">

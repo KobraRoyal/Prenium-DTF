@@ -1990,7 +1990,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("is-selected", shipping)
         self.assertIn('hx-indicator="#portal-htmx-indicator"', shipping)
 
-        self.assertIn("project_client_label", detail)
+        self.assertIn('title="Projet de commande"', detail)
         self.assertIn("components/portal/page_head.html", detail)
         self.assertIn("breadcrumbs/client_order_project_detail.html", detail)
         self.assertIn("client-order-project-detail", detail)

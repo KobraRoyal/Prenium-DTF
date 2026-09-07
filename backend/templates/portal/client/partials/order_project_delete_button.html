@@ -19,9 +19,10 @@
       <p id="delete-project-desc-{{ project.public_id }}" class="b2b-confirm-dialog__lead">
         {% if project.name %}
           <strong>{{ project.name }}</strong>
-          <span class="b2b-confirm-dialog__ref">{{ project.project_number }}</span>
+          <span class="b2b-confirm-dialog__ref">N° UUID {{ project.public_id }}</span>
         {% else %}
-          <strong>{{ project.project_number }}</strong>
+          <strong>Projet de commande</strong>
+          <span class="b2b-confirm-dialog__ref">N° UUID {{ project.public_id }}</span>
         {% endif %}
         sera supprimée de vos commandes à finaliser.
       </p>

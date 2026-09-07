@@ -87,8 +87,10 @@ Le dashboard staff applique la même règle et propose une icône accessible pou
 
 ### Projets B2B (avant conversion)
 
-Le `project_number` (`CMD-…`) s’affiche tel quel dans les listes et fiches projet. Le libellé
-« Gang Sheet » dans le studio planches DTF qualifie le **type de planche**, pas le numéro.
+Le `project_number` (`CMD-…`) reste le repère métier interne. Sur la fiche client d’un projet à
+finaliser, le portail affiche « Projet de commande » et son `public_id` sous le libellé « N° UUID »
+afin de ne pas présenter un numéro atelier ou de commande avant la transmission. Le libellé « Gang
+Sheet » dans le studio planches DTF qualifie le **type de planche**, pas le numéro.
 
 ## Sécurité
 
