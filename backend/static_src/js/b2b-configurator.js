@@ -2112,6 +2112,15 @@ function submitBatchUploadWhenReady(input) {
   if (!(input instanceof HTMLInputElement) || !input.files?.length) return;
   const form = input.closest("form[data-batch-auto-submit]");
   if (!(form instanceof HTMLFormElement) || form.classList.contains("is-uploading")) return;
+  if (form.dataset.orderStartForm !== undefined) {
+    const nameInput = form.querySelector('input[name="name"]');
+    if (nameInput instanceof HTMLInputElement && !nameInput.value.trim()) {
+      const firstFilename = input.files[0]?.name || "";
+      const inferredName = firstFilename.replace(/\.[^.]+$/, "").trim();
+      nameInput.value = inferredName || "Nouvelle commande";
+      nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
   if (!form.checkValidity()) return;
   form.classList.add("is-uploading");
   if (typeof form.requestSubmit === "function") {

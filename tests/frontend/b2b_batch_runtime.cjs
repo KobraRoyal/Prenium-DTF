@@ -88,6 +88,16 @@ autoInput.files = [{name: 'auto.png', size: 1}];
 autoInput.closest = (selector) => selector === 'form[data-batch-auto-submit]' ? autoForm : null;
 ctx.submitBatchUploadWhenReady(autoInput);
 assert.equal(autoForm.submitCount, 1);
+// On the new-project page, the first filename supplies the required name so
+// selecting files immediately starts the upload without a second interaction.
+const startForm = new Form(), startInput = new Input('file'), startName = new Input('name');
+startForm.dataset.orderStartForm = '';
+startForm.querySelector = (selector) => selector === 'input[name="name"]' ? startName : null;
+startInput.files = [{name: 'collection-ete.pdf', size: 1}];
+startInput.closest = (selector) => selector === 'form[data-batch-auto-submit]' ? startForm : null;
+ctx.submitBatchUploadWhenReady(startInput);
+assert.equal(startName.value, 'collection-ete');
+assert.equal(startForm.submitCount, 1);
 // A polling replacement restores all unsaved values, including hidden multicolor state.
 const quantity = new Input('quantity', '12'), hex = new Input('support_color_hex', '#112233'), multi = new Input('support_color_multicolor', 'on');
 const draftForm = new Form();
