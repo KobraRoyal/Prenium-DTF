@@ -1,5 +1,5 @@
 <div class="b2b-configurator__dimensions">
-  {% if show_quantity|default:1 %}
+  {% if show_quantity != 0 %}
   {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=quantity field_prefix="id-validation-quantity-" field_id=item.public_id %}
   {% endif %}
   <div class="b2b-configurator__dimensions-info" aria-label="Dimensions du fichier">

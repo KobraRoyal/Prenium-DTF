@@ -34,7 +34,7 @@
     <div class="b2b-dialog-shell">
       <header class="b2b-dialog-head">
         <div class="b2b-dialog-head__copy">
-          <h2 id="add-visual-dialog-title">{% if active_validation_item %}Valider le visuel{% else %}Ajouter des visuels{% endif %}</h2>
+          <h2 id="add-visual-dialog-title">{% if active_validation_item %}Contrôler le visuel{% else %}Ajouter des visuels{% endif %}</h2>
         </div>
         <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">
           <svg class="b2b-dialog-close__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
@@ -112,7 +112,7 @@
           </form>
           {% endif %}
           <div class="ui-table-actions b2b-visual-list-item__actions">
-            <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-dialog-open="visual-dialog-{{ item.public_id }}">Analyse</button>
+            <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-dialog-open="visual-dialog-{{ item.public_id }}" aria-label="Prévisualiser et contrôler {{ item.name }}">Contrôler le visuel</button>
             {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True %}
           </div>
         </div>

@@ -37,8 +37,7 @@
     >
       {% csrf_token %}
       <input type="hidden" name="_autosave" value="1">
-      {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Quantité" field_prefix="id-analysis-quantity-" field_id=item.public_id %}
-      {% include "portal/client/partials/order_project_validation_dimensions_row.html" with item=item width_mm=item.width_mm height_mm=item.height_mm show_quantity=0 %}
+      {% include "portal/client/partials/order_project_validation_dimensions_row.html" with item=item quantity=item.quantity width_mm=item.width_mm height_mm=item.height_mm %}
       {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
       <span class="ui-sr-only htmx-indicator" role="status">Enregistrement…</span>
     </form>
@@ -53,9 +52,9 @@
       data-visual-confirm
     >
       {% csrf_token %}
-      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>Je confirme le contrôle qualité.</span></label>
+      <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié l’aperçu et les alertes.</span></label>
       <div class="b2b-dialog-actions b2b-dialog-actions--editor">
-        <button class="ui-btn ui-btn-primary" type="submit">Valider pour commander</button>
+        <button class="ui-btn ui-btn-primary" type="submit">Confirmer ce visuel</button>
         {% if not item.is_production_gang_sheet_asset %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-project-item-asset-download' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>{% endif %}
         {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True dialog_prefix="editor-" button_class="b2b-dialog-actions__danger" %}
       </div>

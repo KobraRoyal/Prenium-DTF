@@ -427,7 +427,12 @@ def test_client_can_update_item_quantity_inline_without_opening_visual_modal():
     assert f'value="{item.quantity}"' in detail_html
     assert f'id="{item.public_id}"' in detail_html
     assert f'id="id-attach-quantity-{item.public_id}"' in detail_html
-    assert "Valider le visuel" not in detail_html
+    visual_dialog = detail_html.split(f'id="visual-dialog-{item.public_id}"', 1)[1].split(
+        "</dialog>", 1
+    )[0]
+    assert visual_dialog.count('name="quantity"') == 1
+    assert "Confirmer ce visuel" not in visual_dialog
+    assert "Contrôler le visuel" in detail_html
 
     update_url = reverse(
         "portal:client-order-project-item-action",

@@ -1496,7 +1496,7 @@ def test_client_cannot_download_generated_production_asset_from_order_project(cl
     assert "Obligatoire" in detail_content
     assert "optimiser la base blanche" in detail_content
     assert "Indiquez la couleur unie exacte du textile" not in detail_content
-    assert "Valider pour commander" in detail_content
+    assert "Confirmer ce visuel" in detail_content
     assert confirmation_response.status_code == 200
     assert item.support_color_hex == "#112233"
     assert item.client_confirmed_asset_version == version
