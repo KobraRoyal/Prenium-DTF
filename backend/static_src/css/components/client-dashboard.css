@@ -84,6 +84,108 @@ body.product-shell .client-dashboard-palier__meter {
   white-space: nowrap;
 }
 
+body.product-shell .client-dashboard-overview,
+body.product-shell .client-dashboard-analytics {
+  display: grid;
+  gap: 0.85rem;
+}
+
+body.product-shell .client-dashboard-section__head > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+body.product-shell .client-dashboard-section__head p,
+body.product-shell .client-dashboard-chart__head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+body.product-shell .client-dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+body.product-shell .client-dashboard-kpi {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+}
+
+body.product-shell .client-dashboard-kpi + .client-dashboard-kpi {
+  border-left: 1px solid var(--line);
+}
+
+body.product-shell .client-dashboard-kpi dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.product-shell .client-dashboard-kpi dd {
+  margin: 0;
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+body.product-shell .client-dashboard-kpi.is-attention dd {
+  color: var(--warning);
+}
+
+body.product-shell .client-dashboard-analytics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.product-shell .client-dashboard-chart {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+body.product-shell .client-dashboard-chart__head {
+  display: grid;
+  gap: 0.2rem;
+}
+
+body.product-shell .client-dashboard-chart__head h2 {
+  margin: 0;
+}
+
+body.product-shell .client-dashboard-chart__canvas {
+  position: relative;
+  min-height: 16rem;
+}
+
+@media (max-width: 59.99rem) {
+  body.product-shell .client-dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.product-shell .client-dashboard-kpi:nth-child(2n + 1) {
+    border-left: 0;
+  }
+
+  body.product-shell .client-dashboard-kpi:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  body.product-shell .client-dashboard-analytics {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 39.99rem) {
   body.product-shell .client-dashboard-head,
   body.product-shell .client-dashboard-palier {
@@ -98,5 +200,18 @@ body.product-shell .client-dashboard-palier__meter {
 
   body.product-shell .client-dashboard-palier__meter {
     text-align: center;
+  }
+
+  body.product-shell .client-dashboard-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  body.product-shell .client-dashboard-kpi + .client-dashboard-kpi {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  body.product-shell .client-dashboard-chart__canvas {
+    min-height: 14rem;
   }
 }
