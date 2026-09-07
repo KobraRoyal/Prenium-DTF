@@ -47,9 +47,10 @@ def test_financial_dashboard_is_limited_to_customer_managers(role: str) -> None:
     ).get(reverse("portal:client-dashboard")).content.decode()
 
     assert "Budget des six derniers mois" in html
-    assert "Commandé ce mois" in html
-    assert "Paiements reçus" in html
+    assert "Cliquez sur une barre" in html
+    assert '"awaiting"' in html
     assert 'id="client-budget-chart-data"' in html
+    assert 'id="client-dashboard-drilldown"' in html
     assert 'js/client-dashboard-chart.js' in html
 
 
@@ -70,6 +71,22 @@ def test_financial_dashboard_is_hidden_from_collaborator_and_readonly() -> None:
             email=f"{role}-no-finance@example.com",
         ).get(reverse("portal:client-dashboard")).content.decode()
         assert "Budget des six derniers mois" not in html
-        assert "Commandé ce mois" not in html
+        assert '"awaiting"' not in html
         assert 'id="client-budget-chart-data"' not in html
         assert "Où en sont vos commandes" in html
+
+
+@pytest.mark.django_db
+def test_dashboard_exposes_clickable_operational_drilldowns() -> None:
+    customer = Customer.objects.create(name="Pilotage opérationnel", b2b_order_projects_enabled=True)
+
+    html = _client_for(
+        customer=customer,
+        role=CustomerMembership.Role.OWNER,
+        email="owner-drilldown@example.com",
+    ).get(reverse("portal:client-dashboard")).content.decode()
+
+    assert "Cliquez sur une section" in html
+    assert 'id="client-activity-chart-data"' in html
+    assert "Dossiers" in html
+    assert 'id="client-dashboard-drilldown"' in html

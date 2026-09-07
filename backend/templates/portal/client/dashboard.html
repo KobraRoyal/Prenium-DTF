@@ -14,62 +14,21 @@
 <section class="portal-page-surface client-dashboard-surface">
 {% if volume_discount_summary %}
   <section class="client-dashboard-palier" aria-labelledby="client-volume-discount-title" data-testid="client-volume-discount-summary">
-    <div>
+    <div class="client-dashboard-palier__copy">
       <h2 id="client-volume-discount-title">{{ volume_discount_summary.nudge_headline }}</h2>
       {% if volume_discount_summary.nudge_message %}
       <p>{{ volume_discount_summary.nudge_message }}</p>
       {% endif %}
     </div>
-    <span class="client-dashboard-palier__meter" aria-label="Volume DTF du mois">{{ volume_discount_summary.volume_label }} m ce mois</span>
-  </section>
-{% endif %}
-{% if client_focus and client_focus.kind != "start" %}
-  <section class="client-dashboard-focus {{ client_focus.tone }}" aria-labelledby="client-dashboard-focus-title" data-testid="client-dashboard-focus">
-    <div>
-      <h2 id="client-dashboard-focus-title">{{ client_focus.title }}</h2>
-      {% if client_focus.detail %}
-      <p class="client-dashboard-focus__detail">{{ client_focus.detail }}</p>
-      {% endif %}
+    {% if volume_discount_chart %}
+    <div class="client-dashboard-palier__chart" aria-label="Progression du palier mensuel">
+      <div class="client-dashboard-palier__canvas"><canvas id="client-volume-chart" aria-describedby="client-volume-chart-summary"></canvas></div>
+      <p id="client-volume-chart-summary" class="ui-sr-only">{{ volume_discount_summary.volume_label }} mètres cumulés ce mois, sur un objectif de {{ volume_discount_chart.target }} mètres.</p>
+      <strong>{{ volume_discount_summary.volume_label }} m</strong>
+      <span>ce mois</span>
     </div>
-    <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">{{ client_focus.action_label }}</a>
-  </section>
-{% endif %}
-{% if operational_dashboard %}
-  <section class="client-dashboard-overview" aria-labelledby="client-dashboard-overview-title">
-    <div class="client-dashboard-section__head">
-      <div>
-        <h2 class="font-display text-lg" id="client-dashboard-overview-title">Vue d’ensemble</h2>
-        <p>Les priorités de {{ selected_membership.role_label|lower }} pour {{ customer.name }}.</p>
-      </div>
-    </div>
-    <dl class="client-dashboard-kpis">
-      {% if financial_dashboard %}
-      <div class="client-dashboard-kpi">
-        <dt>Commandé ce mois</dt>
-        <dd>{{ financial_dashboard.current_month_total|floatformat:2 }}&nbsp;€</dd>
-      </div>
-      <div class="client-dashboard-kpi">
-        <dt>Paiements reçus</dt>
-        <dd>{{ financial_dashboard.current_month_paid|floatformat:2 }}&nbsp;€</dd>
-      </div>
-      <div class="client-dashboard-kpi{% if financial_dashboard.awaiting_payment_total %} is-attention{% endif %}">
-        <dt>À régler</dt>
-        <dd>{{ financial_dashboard.awaiting_payment_total|floatformat:2 }}&nbsp;€</dd>
-      </div>
-      {% endif %}
-      <div class="client-dashboard-kpi{% if projects_in_progress_count %} is-attention{% endif %}">
-        <dt>À reprendre</dt>
-        <dd>{{ projects_in_progress_count }}</dd>
-      </div>
-      <div class="client-dashboard-kpi">
-        <dt>En atelier</dt>
-        <dd>{{ operational_dashboard.in_atelier_count }}</dd>
-      </div>
-      <div class="client-dashboard-kpi">
-        <dt>Livraisons à suivre</dt>
-        <dd>{{ operational_dashboard.trackable_shipments_count }}</dd>
-      </div>
-    </dl>
+    {{ volume_discount_chart|json_script:"client-volume-chart-data" }}
+    {% endif %}
   </section>
 {% endif %}
 {% if operational_dashboard %}
@@ -78,7 +37,7 @@
     <article class="client-dashboard-chart" aria-labelledby="client-budget-chart-title">
       <div class="client-dashboard-chart__head">
         <h2 class="font-display text-lg" id="client-budget-chart-title">Budget des six derniers mois</h2>
-        <p>Commandes tarifées et paiements confirmés.</p>
+        <p>Cliquez sur une barre pour afficher les commandes concernées.</p>
       </div>
       <div class="client-dashboard-chart__canvas"><canvas id="client-budget-chart" aria-describedby="client-budget-chart-summary"></canvas></div>
       <p id="client-budget-chart-summary" class="ui-sr-only">Graphique des montants commandés et des paiements reçus sur les six derniers mois.</p>
@@ -88,35 +47,23 @@
     <article class="client-dashboard-chart client-dashboard-chart--activity" aria-labelledby="client-activity-chart-title">
       <div class="client-dashboard-chart__head">
         <h2 class="font-display text-lg" id="client-activity-chart-title">Où en sont vos commandes</h2>
-        <p>Préparation, atelier et suivi transport.</p>
+        <p>Cliquez sur une section pour afficher les dossiers ou commandes concernés.</p>
       </div>
       <div class="client-dashboard-chart__canvas"><canvas id="client-activity-chart" aria-describedby="client-activity-chart-summary"></canvas></div>
       <p id="client-activity-chart-summary" class="ui-sr-only">Graphique de répartition des commandes à préparer, en atelier et à suivre.</p>
       {{ operational_dashboard.status_chart|json_script:"client-activity-chart-data" }}
     </article>
   </section>
-{% endif %}
-{% if project_feature_enabled and recent_projects %}
-  <div class="client-dashboard-section" aria-labelledby="client-dashboard-preparations">
-    <div class="client-dashboard-section__head">
-      <h2 class="font-display text-lg" id="client-dashboard-preparations">Commandes à finaliser</h2>
-      {% if projects_in_progress_count > recent_projects|length %}
-      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-project-list' customer_public_id=customer.public_id %}">Tout voir</a>
-      {% endif %}
+  <section class="client-dashboard-drilldown" id="client-dashboard-drilldown" hidden aria-live="polite" aria-labelledby="client-dashboard-drilldown-title">
+    <div class="client-dashboard-drilldown__head">
+      <div>
+        <h2 class="font-display text-lg" id="client-dashboard-drilldown-title"></h2>
+        <p id="client-dashboard-drilldown-description"></p>
+      </div>
+      <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" data-dashboard-drilldown-close>Fermer</button>
     </div>
-    {% ui_order_projects_table projects=recent_projects customer=customer show_delete=True %}
-  </div>
-{% endif %}
-{% if recent_orders %}
-  <div class="client-dashboard-section" aria-labelledby="client-dashboard-orders">
-    <div class="client-dashboard-section__head">
-      <h2 class="font-display text-lg" id="client-dashboard-orders">Commandes transmises</h2>
-      {% if orders_count > recent_orders|length %}
-      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Tout voir</a>
-      {% endif %}
-    </div>
-    {% ui_orders_table orders=recent_orders variant="client" customer=customer %}
-  </div>
+    <div id="client-dashboard-drilldown-list"></div>
+  </section>
 {% endif %}
 </section>
 {% endif %}

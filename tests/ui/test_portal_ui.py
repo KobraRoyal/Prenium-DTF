@@ -86,7 +86,7 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     dashboard_html = dashboard_response.content.decode()
     assert "product-shell--portal" in dashboard_html
     assert "client-dashboard" in dashboard_html
-    assert 'data-testid="client-dashboard-focus"' in dashboard_html
+    assert 'id="client-dashboard-drilldown"' in dashboard_html
     assert "Accès isolé" not in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
@@ -191,7 +191,7 @@ def test_client_dashboard_cash_volume_copy_and_empty_lists():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
-def test_client_dashboard_does_not_repeat_focused_project_in_list():
+def test_client_dashboard_surfaces_project_through_the_operational_chart():
     user = get_user_model().objects.create_user(
         email="dashboard-focus-once@example.com",
         password="pass",
@@ -214,9 +214,8 @@ def test_client_dashboard_does_not_repeat_focused_project_in_list():
 
     html = client.get(reverse("portal:client-dashboard")).content.decode()
 
-    assert html.count("CMD-2026-000084") == 1
-    assert 'data-testid="client-dashboard-focus"' in html
-    assert "Reprendre" in html
+    assert 'id="client-activity-chart-data"' in html
+    assert 'id="client-dashboard-drilldown"' in html
     assert "Commandes à finaliser" not in html
     assert "visuel(s)" not in html
 
@@ -1051,7 +1050,11 @@ def test_orders_table_and_dashboard_show_unpaid_payment_flag():
         name="Client Unpaid",
         default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
     )
-    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=user,
+        role=CustomerMembership.Role.OWNER,
+    )
     order = Order.objects.create(
         customer=customer,
         created_by=user,
@@ -1094,7 +1097,6 @@ def test_orders_table_and_dashboard_show_unpaid_payment_flag():
     dash_response = client.get(reverse("portal:client-dashboard"))
     assert dash_response.status_code == 200
     dash_body = dash_response.content.decode()
-    assert "Paiement à finaliser" in dash_body
-    assert "Payer" in dash_body
-    assert dash_body.lower().count("paiement") >= 1
+    assert '"awaiting"' in dash_body
+    assert 'id="client-dashboard-drilldown"' in dash_body
     assert "Commandes transmises" not in dash_body

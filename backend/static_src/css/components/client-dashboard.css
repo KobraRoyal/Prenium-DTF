@@ -45,13 +45,13 @@ body.product-shell .client-dashboard-palier {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.9rem 1rem;
+  gap: 1.5rem;
+  padding: 1rem 1.15rem;
   border: 1px solid var(--product-line);
   background: color-mix(in srgb, var(--product-accent) 12%, var(--product-panel));
 }
 
-body.product-shell .client-dashboard-palier > div {
+body.product-shell .client-dashboard-palier__copy {
   display: grid;
   min-width: 0;
   gap: 0.25rem;
@@ -74,14 +74,31 @@ body.product-shell .client-dashboard-palier p {
   line-height: 1.45;
 }
 
-body.product-shell .client-dashboard-palier__meter {
+body.product-shell .client-dashboard-palier__chart {
+  display: grid;
   flex: 0 0 auto;
-  padding: 0.42rem 0.58rem;
-  border: 1px solid var(--product-line);
-  background: var(--product-panel);
+  grid-template-columns: 5.5rem auto;
+  grid-template-rows: auto auto;
+  column-gap: 0.5rem;
+  align-items: end;
+}
+
+body.product-shell .client-dashboard-palier__canvas {
+  grid-row: 1 / span 2;
+  width: 5.5rem;
+  height: 2.8rem;
+}
+
+body.product-shell .client-dashboard-palier__chart strong {
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+body.product-shell .client-dashboard-palier__chart span {
+  color: var(--product-muted);
   font-size: 0.75rem;
-  font-weight: 850;
-  white-space: nowrap;
+  font-weight: 700;
 }
 
 body.product-shell .client-dashboard-overview,
@@ -168,6 +185,76 @@ body.product-shell .client-dashboard-chart__canvas {
   min-height: 16rem;
 }
 
+body.product-shell .client-dashboard-chart__canvas canvas {
+  cursor: pointer;
+}
+
+body.product-shell .client-dashboard-drilldown {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+body.product-shell .client-dashboard-drilldown[hidden] {
+  display: none;
+}
+
+body.product-shell .client-dashboard-drilldown__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+body.product-shell .client-dashboard-drilldown__head h2,
+body.product-shell .client-dashboard-drilldown__head p {
+  margin: 0;
+}
+
+body.product-shell .client-dashboard-drilldown__head p,
+body.product-shell .client-dashboard-drilldown__empty {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+body.product-shell .client-dashboard-drilldown__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.product-shell .client-dashboard-drilldown__list li {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+}
+
+body.product-shell .client-dashboard-drilldown__list a {
+  color: inherit;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+body.product-shell .client-dashboard-drilldown__list a:hover {
+  color: var(--brand-ink, var(--product-accent-ink));
+  text-decoration: underline;
+}
+
+body.product-shell .client-dashboard-drilldown__list span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+body.product-shell .client-dashboard-drilldown__all {
+  justify-self: start;
+}
+
 @media (max-width: 59.99rem) {
   body.product-shell .client-dashboard-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -184,6 +271,10 @@ body.product-shell .client-dashboard-chart__canvas {
   body.product-shell .client-dashboard-analytics {
     grid-template-columns: 1fr;
   }
+
+  body.product-shell .client-dashboard-drilldown__list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 39.99rem) {
@@ -194,12 +285,12 @@ body.product-shell .client-dashboard-chart__canvas {
   }
 
   body.product-shell .client-dashboard-head .ui-btn,
-  body.product-shell .client-dashboard-palier__meter {
+  body.product-shell .client-dashboard-palier__chart {
     width: 100%;
   }
 
-  body.product-shell .client-dashboard-palier__meter {
-    text-align: center;
+  body.product-shell .client-dashboard-palier__chart {
+    grid-template-columns: 5.5rem auto;
   }
 
   body.product-shell .client-dashboard-kpis {
@@ -213,5 +304,10 @@ body.product-shell .client-dashboard-chart__canvas {
 
   body.product-shell .client-dashboard-chart__canvas {
     min-height: 14rem;
+  }
+
+  body.product-shell .client-dashboard-drilldown__head {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
