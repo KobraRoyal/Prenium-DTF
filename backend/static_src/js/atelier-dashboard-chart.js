@@ -2,6 +2,43 @@ const canvas = document.getElementById("atelier-production-chart-canvas");
 const source = document.getElementById("atelier-production-chart-data");
 const revenueCanvas = document.getElementById("atelier-revenue-chart-canvas");
 const revenueSource = document.getElementById("atelier-revenue-chart-data");
+const productionGauges = document.querySelectorAll(".atelier-production-gauge__canvas");
+const productionGaugesSource = document.getElementById("atelier-production-gauges-data");
+
+if (productionGauges.length && productionGaugesSource && window.Chart) {
+  const gauges = JSON.parse(productionGaugesSource.textContent || "[]");
+  const styles = getComputedStyle(document.documentElement);
+  const accent = styles.getPropertyValue("--accent").trim() || "#a83bc4";
+  const line = styles.getPropertyValue("--line").trim() || "#e2dccb";
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  productionGauges.forEach((canvas, index) => {
+    const gauge = gauges[index];
+    if (!(canvas instanceof HTMLCanvasElement) || !gauge) return;
+
+    new window.Chart(canvas, {
+      type: "doughnut",
+      data: {
+        datasets: [{
+          data: [gauge.progress || 0, 100 - (gauge.progress || 0)],
+          backgroundColor: [accent, line],
+          borderWidth: 0,
+          borderRadius: 12,
+          spacing: 1,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        rotation: -90,
+        circumference: 180,
+        cutout: "78%",
+        animation: { duration: reducedMotion ? 0 : 450, easing: "easeOutQuart" },
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      },
+    });
+  });
+}
 
 if (canvas instanceof HTMLCanvasElement && source && window.Chart) {
   const trend = JSON.parse(source.textContent || "{}");

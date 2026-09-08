@@ -12,10 +12,7 @@
       <dt>{{ gauge.label }}</dt>
       <dd>
         <span class="atelier-production-gauge__arc">
-          <svg viewBox="0 0 128 72" aria-hidden="true" focusable="false">
-            <path class="atelier-production-gauge__track" pathLength="100" d="M 12 66 A 52 52 0 0 1 116 66"></path>
-            <path class="atelier-production-gauge__value" style="--atelier-gauge-progress: {{ gauge.progress }}" pathLength="100" d="M 12 66 A 52 52 0 0 1 116 66"></path>
-          </svg>
+          <canvas class="atelier-production-gauge__canvas" aria-label="{{ gauge.label }} : {{ gauge.value|floatformat:2 }} mètres, {{ gauge.detail }}" role="img"></canvas>
           <strong>{{ gauge.value|floatformat:2 }}<small>m</small></strong>
         </span>
       </dd>
@@ -23,6 +20,7 @@
     </div>
     {% endfor %}
   </dl>
+  {{ printed_meterage_trend.metric_gauges|json_script:"atelier-production-gauges-data" }}
 </section>
 {% endif %}
 <div class="atelier-dashboard-charts{% if financial_trend %} atelier-dashboard-charts--with-financials{% endif %}">
