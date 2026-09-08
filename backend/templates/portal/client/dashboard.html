@@ -1,5 +1,5 @@
 {% extends "portal/layout.html" %}
-{% load ui_tags portal_tags %}
+{% load ui_tags portal_tags static %}
 
 {% block title %}Tableau de bord — Prenium DTF{% endblock %}
 
@@ -14,49 +14,71 @@
 <section class="portal-page-surface client-dashboard-surface">
 {% if volume_discount_summary %}
   <section class="client-dashboard-palier" aria-labelledby="client-volume-discount-title" data-testid="client-volume-discount-summary">
-    <div>
+    <div class="client-dashboard-palier__copy">
       <h2 id="client-volume-discount-title">{{ volume_discount_summary.nudge_headline }}</h2>
       {% if volume_discount_summary.nudge_message %}
       <p>{{ volume_discount_summary.nudge_message }}</p>
       {% endif %}
     </div>
-    <span class="client-dashboard-palier__meter" aria-label="Volume DTF du mois">{{ volume_discount_summary.volume_label }} m ce mois</span>
+    {% if volume_discount_chart %}
+    <div class="client-dashboard-palier__chart" aria-label="Progression du palier mensuel">
+      <div class="client-dashboard-palier__canvas"><canvas id="client-volume-chart" aria-describedby="client-volume-chart-summary"></canvas></div>
+      <p id="client-volume-chart-summary" class="ui-sr-only">{{ volume_discount_summary.volume_label }} mètres cumulés ce mois, sur un objectif de {{ volume_discount_chart.target }} mètres.</p>
+      <strong>{{ volume_discount_summary.volume_label }} m</strong>
+      <span>ce mois</span>
+    </div>
+    {{ volume_discount_chart|json_script:"client-volume-chart-data" }}
+    {% endif %}
   </section>
 {% endif %}
-{% if client_focus and client_focus.kind != "start" %}
-  <section class="client-dashboard-focus {{ client_focus.tone }}" aria-labelledby="client-dashboard-focus-title" data-testid="client-dashboard-focus">
-    <div>
-      <h2 id="client-dashboard-focus-title">{{ client_focus.title }}</h2>
-      {% if client_focus.detail %}
-      <p class="client-dashboard-focus__detail">{{ client_focus.detail }}</p>
-      {% endif %}
-    </div>
-    <a class="ui-btn ui-btn-primary" href="{{ client_focus.action_url }}">{{ client_focus.action_label }}</a>
+{% if operational_dashboard %}
+  <section class="client-dashboard-analytics" aria-label="Analyse de l’activité">
+    {% if financial_dashboard %}
+    <article class="client-dashboard-chart" aria-labelledby="client-budget-chart-title">
+      <div class="client-dashboard-chart__head">
+        <h2 class="font-display text-lg" id="client-budget-chart-title">Budget des six derniers mois</h2>
+        <p>Cliquez sur une barre pour afficher les commandes concernées.</p>
+      </div>
+      <div class="client-dashboard-chart__canvas"><canvas id="client-budget-chart" aria-describedby="client-budget-chart-summary"></canvas></div>
+      <p id="client-budget-chart-summary" class="ui-sr-only">Graphique des montants commandés et des paiements reçus sur les six derniers mois.</p>
+      {{ financial_dashboard.trend|json_script:"client-budget-chart-data" }}
+      <div hidden>
+        {% for url in financial_dashboard.trend.result_urls.ordered %}
+        <a id="client-budget-result-ordered-{{ forloop.counter0 }}" href="{{ url }}" hx-get="{{ url }}" hx-target="#client-dashboard-orders" hx-swap="outerHTML">Commandes du mois</a>
+        {% endfor %}
+        {% for url in financial_dashboard.trend.result_urls.paid %}
+        <a id="client-budget-result-paid-{{ forloop.counter0 }}" href="{{ url }}" hx-get="{{ url }}" hx-target="#client-dashboard-orders" hx-swap="outerHTML">Paiements du mois</a>
+        {% endfor %}
+        {% for url in financial_dashboard.trend.result_urls.awaiting %}
+        <a id="client-budget-result-awaiting-{{ forloop.counter0 }}" href="{{ url }}" hx-get="{{ url }}" hx-target="#client-dashboard-orders" hx-swap="outerHTML">Règlements du mois</a>
+        {% endfor %}
+      </div>
+    </article>
+    {% endif %}
+    <article class="client-dashboard-chart client-dashboard-chart--activity" aria-labelledby="client-activity-chart-title">
+      <div class="client-dashboard-chart__head">
+        <h2 class="font-display text-lg" id="client-activity-chart-title">Où en sont vos commandes</h2>
+        <p>Cliquez sur une section pour afficher les dossiers ou commandes concernés.</p>
+      </div>
+      <div class="client-dashboard-chart__canvas"><canvas id="client-activity-chart" aria-describedby="client-activity-chart-summary"></canvas></div>
+      <p id="client-activity-chart-summary" class="ui-sr-only">Graphique de répartition des commandes à préparer, en atelier et à suivre.</p>
+      {{ operational_dashboard.status_chart|json_script:"client-activity-chart-data" }}
+      <div hidden>
+        {% for url in operational_dashboard.status_chart.result_urls %}
+        <a id="client-activity-result-{{ forloop.counter0 }}" href="{{ url }}" hx-get="{{ url }}" hx-target="#client-dashboard-orders" hx-swap="outerHTML">Afficher le détail</a>
+        {% endfor %}
+      </div>
+    </article>
   </section>
 {% endif %}
-{% if project_feature_enabled and recent_projects %}
-  <div class="client-dashboard-section" aria-labelledby="client-dashboard-preparations">
-    <div class="client-dashboard-section__head">
-      <h2 class="font-display text-lg" id="client-dashboard-preparations">Commandes à finaliser</h2>
-      {% if projects_in_progress_count > recent_projects|length %}
-      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-project-list' customer_public_id=customer.public_id %}">Tout voir</a>
-      {% endif %}
-    </div>
-    {% ui_order_projects_table projects=recent_projects customer=customer show_delete=True %}
-  </div>
-{% endif %}
-{% if recent_orders %}
-  <div class="client-dashboard-section" aria-labelledby="client-dashboard-orders">
-    <div class="client-dashboard-section__head">
-      <h2 class="font-display text-lg" id="client-dashboard-orders">Commandes transmises</h2>
-      {% if orders_count > recent_orders|length %}
-      <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Tout voir</a>
-      {% endif %}
-    </div>
-    {% ui_orders_table orders=recent_orders variant="client" customer=customer %}
-  </div>
-{% endif %}
+  {% include "portal/client/partials/dashboard_orders.html" with customer=customer orders=recent_orders orders_count=orders_count %}
 </section>
 {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% portal_css_asset_v as asset_v %}
+<script defer src="{% static 'vendor/chart-4.5.1.umd.js' %}?v={{ asset_v }}"></script>
+<script type="module" src="{% static 'js/client-dashboard-chart.js' %}?v={{ asset_v }}"></script>
 {% endblock %}

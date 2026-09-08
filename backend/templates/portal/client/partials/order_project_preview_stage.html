@@ -76,7 +76,9 @@
     <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-configurator-bg="checker" aria-label="Damier" aria-pressed="true" title="Damier"></button>
     <button type="button" class="b2b-swatch-btn b2b-swatch-btn--white b2b-bg-button is-white" data-configurator-bg="#ffffff" aria-label="Blanc" aria-pressed="false" title="Blanc"></button>
     <button type="button" class="b2b-swatch-btn b2b-swatch-btn--black b2b-bg-button is-black" data-configurator-bg="#111111" aria-label="Noir" aria-pressed="false" title="Noir"></button>
-    {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="preview-hex-"|add:item.public_id preview_mode=True initial_color="#ffffff" %}
+    {% with preview_item_id=item.public_id|stringformat:"s" %}
+    {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="preview-hex-"|add:preview_item_id preview_mode=True initial_color="#ffffff" %}
+    {% endwith %}
   </div>
 </div>
 {% endwith %}

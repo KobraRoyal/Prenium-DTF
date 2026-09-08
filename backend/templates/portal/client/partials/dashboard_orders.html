@@ -1,0 +1,21 @@
+{% load ui_tags %}
+<section class="client-dashboard-orders client-dashboard-section" id="client-dashboard-orders" aria-labelledby="client-dashboard-orders-title" tabindex="-1">
+  <div class="client-dashboard-section__head client-dashboard-orders__head">
+    <div>
+      <h2 class="font-display text-lg" id="client-dashboard-orders-title">{{ dashboard_results_title|default:"Commandes" }}</h2>
+      <p>{{ dashboard_results_description|default:"Les dernières commandes transmises à l’atelier." }}</p>
+    </div>
+    {% if dashboard_results_all_url %}
+    <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{{ dashboard_results_all_url }}">{{ dashboard_results_all_label|default:"Toutes les commandes" }}</a>
+    {% elif orders_count > orders|length %}
+    <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:client-order-list' customer_public_id=customer.public_id %}">Toutes les commandes</a>
+    {% endif %}
+  </div>
+  {% if dashboard_results_projects %}
+    {% ui_order_projects_table projects=dashboard_results_projects customer=customer show_delete=True %}
+  {% elif orders %}
+    {% ui_orders_table orders=orders variant="client" customer=customer %}
+  {% else %}
+    <p class="client-dashboard-orders__empty">{{ dashboard_results_empty|default:"Aucune commande à afficher pour cette sélection." }}</p>
+  {% endif %}
+</section>

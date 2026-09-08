@@ -186,6 +186,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_common", 220),
         ("views_checkout", 270),
         ("views_client", 420),
+        ("views_client_dashboard", 160),
     ],
 )
 def test_portal_modules_stay_within_expected_size_limits(module_name, max_lines):

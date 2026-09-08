@@ -68,7 +68,7 @@ class DashboardActionFocusTests(SimpleTestCase):
         self.assertIn("staff_order_focus.action_label", order_detail)
         self.assertIn("Imprimer le lot", template)
 
-    def test_client_dashboard_prioritizes_resume_payment_or_tracking(self) -> None:
+    def test_client_dashboard_exposes_chart_drilldowns_for_resume_payment_or_tracking(self) -> None:
         template = (Path(settings.BASE_DIR) / "templates/portal/client/dashboard.html").read_text(
             encoding="utf-8"
         )
@@ -76,8 +76,9 @@ class DashboardActionFocusTests(SimpleTestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("client-dashboard-focus", template)
-        self.assertIn("client_focus.action_url", template)
+        self.assertIn("partials/dashboard_orders.html", template)
+        self.assertIn("client-activity-chart-data", template)
+        self.assertIn("client-dashboard-results", focus_builder)
         self.assertIn('"Commande à reprendre"', focus_builder)
         self.assertIn('"Action nécessaire"', focus_builder)
         self.assertIn('"Expédition à suivre"', focus_builder)

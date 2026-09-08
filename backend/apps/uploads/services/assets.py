@@ -501,6 +501,11 @@ class AssetService:
         format_name = str(metadata.get("format", "")).upper()
         return format_name in {"EPS", "AI"} and not analysis.dpi_x and not analysis.dpi_y
 
+    @staticmethod
+    def _dpi_reaches(value: float | None, threshold: int) -> bool:
+        """Keep the displayed whole-DPI badge and its quality state consistent."""
+        return value is not None and round(float(value)) >= threshold
+
     def technical_review_for_item(self, *, item) -> dict[str, object]:
         version = getattr(getattr(item, "asset", None), "current_version", None)
         analysis = getattr(version, "analysis", None) if version else None
@@ -529,7 +534,7 @@ class AssetService:
             resolution_display = "—"
         elif is_vector:
             level = "good"
-            label = "Résolution OK"
+            label = "Validé"
             message = "Document vectoriel · netteté indépendante d’un DPI raster."
             resolution_display = "OK"
         elif effective_dpi is None:
@@ -543,11 +548,11 @@ class AssetService:
             raster_dpi = float(metadata.get("placement_effective_dpi") or analysis.dpi_x or 0)
             resolution_display = f"{raster_dpi:.0f} DPI" if raster_dpi else "OK"
             if metadata.get("has_vector_artwork") and metadata.get("has_raster_artwork"):
-                if raster_dpi >= recommended_dpi:
+                if self._dpi_reaches(raster_dpi, recommended_dpi):
                     level = "good"
-                    label = "Résolution OK"
+                    label = "Validé"
                     message = f"Document mixte · vectoriel net · photo raster {raster_dpi:.0f} DPI."
-                elif raster_dpi >= minimum_dpi:
+                elif self._dpi_reaches(raster_dpi, minimum_dpi):
                     level = "warning"
                     label = "Résolution acceptable"
                     message = (
@@ -561,14 +566,14 @@ class AssetService:
                         f"Document mixte · photo raster {raster_dpi:.0f} DPI · "
                         f"pixellisation probable sous {minimum_dpi} DPI."
                     )
-            elif raster_dpi >= recommended_dpi:
+            elif self._dpi_reaches(raster_dpi, recommended_dpi):
                 level = "good"
-                label = "Résolution optimale"
+                label = "Validé"
                 message = (
                     f"{raster_dpi:.0f} DPI effectifs à l’échelle de pose · "
                     f"objectif {recommended_dpi} DPI atteint."
                 )
-            elif raster_dpi >= minimum_dpi:
+            elif self._dpi_reaches(raster_dpi, minimum_dpi):
                 level = "warning"
                 label = "Résolution acceptable"
                 message = (
@@ -585,9 +590,9 @@ class AssetService:
         elif metadata.get("uses_artboard_dimensions") and analysis and analysis.dpi_x:
             source_dpi = float(analysis.dpi_x)
             resolution_display = f"{source_dpi:.0f} DPI"
-            if effective_dpi >= minimum_dpi:
-                level = "good" if effective_dpi >= recommended_dpi else "warning"
-                label = "Résolution optimale" if level == "good" else "Résolution acceptable"
+            if self._dpi_reaches(effective_dpi, minimum_dpi):
+                level = "good" if self._dpi_reaches(effective_dpi, recommended_dpi) else "warning"
+                label = "Validé" if level == "good" else "Résolution acceptable"
                 message = (
                     f"{source_dpi:.0f} DPI source · {effective_dpi:.0f} DPI effectifs "
                     f"à l’échelle du document."
@@ -599,12 +604,12 @@ class AssetService:
                     f"{source_dpi:.0f} DPI source · {effective_dpi:.0f} DPI effectifs "
                     f"à l’échelle du document · pixellisation probable sur la photo raster."
                 )
-        elif effective_dpi >= recommended_dpi:
+        elif self._dpi_reaches(effective_dpi, recommended_dpi):
             level = "good"
-            label = "Résolution optimale"
+            label = "Validé"
             message = f"{effective_dpi:.0f} DPI effectifs · objectif {recommended_dpi} DPI atteint."
             resolution_display = f"{effective_dpi:.0f} DPI"
-        elif effective_dpi >= minimum_dpi:
+        elif self._dpi_reaches(effective_dpi, minimum_dpi):
             level = "warning"
             label = "Résolution acceptable"
             message = (

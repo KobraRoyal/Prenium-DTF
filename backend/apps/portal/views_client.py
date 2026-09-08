@@ -80,6 +80,7 @@ class ClientDashboardView(LoginRequiredMixin, View):
             customer=customer,
             order_service=order_service,
             project_service=project_service,
+            selected_membership=selected_membership,
         )
         return render(
             request,

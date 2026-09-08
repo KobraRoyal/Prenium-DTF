@@ -28,7 +28,7 @@
       </p>
     </div>
     <div class="b2b-confirm-dialog__actions">
-      <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+      <button type="button" class="b2b-confirm-dialog__button b2b-confirm-dialog__button--cancel" data-dialog-close>Annuler</button>
       <form
         hx-post="{% url 'portal:client-order-project-item-action' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id action='delete' %}"
         hx-target="#order-project-items"
@@ -36,7 +36,7 @@
         hx-indicator="#portal-htmx-indicator"
       >
         {% csrf_token %}
-        <button class="ui-btn ui-btn-danger" type="submit">Supprimer définitivement</button>
+        <button class="b2b-confirm-dialog__button b2b-confirm-dialog__button--danger" type="submit">Supprimer définitivement</button>
       </form>
     </div>
   </div>

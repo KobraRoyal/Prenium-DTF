@@ -57,7 +57,7 @@
       {% else %}
       <div class="client-order-summary__fact client-order-summary__fact--pricing">
         <dt>Tarification</dt>
-        <dd>{% if order.billing_mode == "deferred" or order.uses_atelier_pricing %}Après contrôle technique{% else %}{{ order.pricing_status|human_status }}{% endif %}</dd>
+        <dd>{% if order.billing_mode == "deferred" or order.uses_atelier_pricing %}Après contrôle atelier{% else %}{{ order.pricing_status|human_status }}{% endif %}</dd>
       </div>
       {% endif %}
       <div class="client-order-summary__fact">

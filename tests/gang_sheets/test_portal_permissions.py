@@ -1496,14 +1496,14 @@ def test_client_cannot_download_generated_production_asset_from_order_project(cl
     assert "Obligatoire" in detail_content
     assert "optimiser la base blanche" in detail_content
     assert "Indiquez la couleur unie exacte du textile" not in detail_content
-    assert "Valider pour commander" in detail_content
+    assert "Confirmer ce visuel" in detail_content
     assert confirmation_response.status_code == 200
     assert item.support_color_hex == "#112233"
     assert item.client_confirmed_asset_version == version
     pending_detail_content = pending_detail_response.content.decode()
     assert pending_detail_response.status_code == 200
     assert "data-analysis-pending" in pending_detail_content
-    assert 'hx-trigger="load delay:1400ms"' in pending_detail_content
+    assert 'hx-trigger="load delay:1400ms, every 2s"' in pending_detail_content
     assert "Contrôle du fichier HD" not in pending_detail_content
     assert response.status_code == 404
 

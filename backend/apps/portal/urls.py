@@ -26,6 +26,7 @@ from .views_auth import (
 from .views_b2b_order_projects import (
     ClientOrderProjectAutosaveView,
     ClientOrderProjectCancelView,
+    ClientOrderProjectConfirmAllAnalysesView,
     ClientOrderProjectCreateView,
     ClientOrderProjectDetailView,
     ClientOrderProjectItemActionView,
@@ -60,6 +61,7 @@ from .views_client import (
     ClientOrderUploadDownloadView,
     ClientOrderUploadPreviewView,
 )
+from .views_client_dashboard import ClientDashboardResultsView
 from .views_gang_sheets import (
     ClientGangSheetAddItemView,
     ClientGangSheetAssetGalleryView,
@@ -267,6 +269,11 @@ urlpatterns = [
         name="client-order-project-item-create",
     ),
     path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/confirm-all-analyses/",
+        ClientOrderProjectConfirmAllAnalysesView.as_view(),
+        name="client-order-project-confirm-all-analyses",
+    ),
+    path(
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/<str:action>/",
         ClientOrderProjectItemActionView.as_view(),
         name="client-order-project-item-action",
@@ -385,6 +392,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/orders/",
         ClientOrderListView.as_view(),
         name="client-order-list",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/dashboard-results/",
+        ClientDashboardResultsView.as_view(),
+        name="client-dashboard-results",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/",

@@ -49,10 +49,10 @@
         {% include "portal/client/partials/order_project_support_color_field.html" with item=item exact_color_required=review.thin_zone.detected %}
         <label class="b2b-quality-confirm">
           <input type="checkbox" name="confirm_analysis" required>
-          <span>Je confirme le contrôle qualité.</span>
+          <span>J’ai vérifié l’aperçu et les alertes.</span>
         </label>
         <div class="b2b-dialog-actions b2b-dialog-actions--validate">
-          <button class="ui-btn ui-btn-primary" type="submit">Valider</button>
+          <button class="ui-btn ui-btn-primary" type="submit">Confirmer ce visuel</button>
           <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Plus tard</button>
           {% include "portal/client/partials/order_project_item_delete_button.html" with dialog_prefix="validate-" button_class="b2b-dialog-actions__danger" %}
         </div>

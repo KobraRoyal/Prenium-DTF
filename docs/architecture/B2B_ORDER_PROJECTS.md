@@ -30,12 +30,33 @@ Le flag global reste le coupe-circuit pour désactiver la feature pour tous les 
 
 Le checkout classique fichier → commande n’est plus le parcours retenu.
 
-## UX création client (premier visuel)
+## UX client : dépôt de visuels par lots
 
-Sur `/client/.../order-projects/new/`, le CTA « Ajouter mes visuels » ouvre le sélecteur de
-fichier dans le même geste utilisateur, puis crée le projet avec le premier fichier en
-`multipart/form-data`. La redirection détail inclut `?validate=<item_public_id>` pour ouvrir
-immédiatement la modale de validation technique, sans étape intermédiaire sur une fiche vide.
+Sur `/client/.../order-projects/new/`, le client renseigne sa commande puis dépose ses visuels
+par glisser-déposer ou par sélection de fichiers. Chaque dépôt est limité à **5 fichiers** ;
+des lots supplémentaires peuvent être ajoutés depuis la fiche du projet. Cette limite porte
+sur un dépôt et non sur le nombre total de visuels de la commande.
+
+Le navigateur et le serveur vérifient le nombre et le poids total avant création. Le plafond
+par fichier reste `ORDER_UPLOAD_MAX_BYTES` (20 Mio par défaut) ; le lot est limité au minimum
+de cinq fois ce plafond et 60 Mio, avec une marge sous la limite Nginx de 64 Mio.
+Chaque fichier est traité par le service transactionnel existant : les succès restent acquis
+si un autre fichier est refusé. Le résultat indique son nom et le motif du refus ; après la
+création initiale, il est conservé en session pour la seule fiche du projet concerné.
+
+Chaque fichier conserve sa propre ligne, son Asset versionné et son analyse asynchrone. Dès que
+le client dépose ou choisit un lot valide (maximum cinq fichiers), l'envoi et l'analyse démarrent
+sans bouton de confirmation intermédiaire.
+La liste regroupe aperçu, dimensions, quantité, couleur du support et alertes techniques.
+La quantité et la couleur du support sont enregistrées automatiquement après modification, sans
+bouton de sauvegarde. L'action « Analyse » donne accès à la modale du visuel concerné ; le client
+peut aussi confirmer tous les visuels prêts en une seule action explicite, placée au bas de la
+fiche avec le reste des actions de transmission. Cette validation globale est atomique : elle échoue
+sans modifier aucun visuel tant qu'une analyse ou une couleur de support manque.
+
+La liste affiche aussi, pour chaque visuel, les pastilles de contrôle utiles avant ouverture de la
+modale : DPI effectif, détails sous 0,5 mm et dégradés. Une résolution de 300 DPI ou plus est
+signalée comme « Validé » ; les détails fins et dégradés détectés restent visibles en alerte.
 
 La création sans fichier reste acceptée côté serveur (POST sans `file`) pour compatibilité et
 tests ; le parcours UI standard exige la sélection d’un fichier.
@@ -51,11 +72,13 @@ tests ; le parcours UI standard exige la sélection d’un fichier.
 - Chaque ligne doit aussi confirmer explicitement la version analysée courante. La confirmation
   stocke la version, l'utilisateur et l'horodatage ; une modification de largeur/hauteur ou un
   remplacement de fichier l'invalide automatiquement.
-- Tant que le projet est éditable, la quantité d'une ligne peut être ajustée directement depuis
-  la liste des visuels ; cette action réutilise `B2BOrderProjectService.update_item` et ses
-  validations. Le PDF HD d'une Gang Sheet déjà verrouillée pour la production reste en lecture seule.
+- Tant que le projet est éditable, la quantité et la couleur du support peuvent être ajustées depuis
+  la liste des visuels ; l'enregistrement automatique réutilise `B2BOrderProjectService.update_item`
+  et ses validations. Le PDF HD d'une Gang Sheet déjà verrouillée pour la production conserve ses
+  seules données de commande modifiables (quantité et support).
 - La qualité de résolution est calculée à la taille demandée : objectif configurable à 300 DPI,
-  avertissement entre 200 et 299 DPI et problème critique sous 200 DPI.
+  avertissement entre 200 DPI et l'objectif, et problème critique sous 200 DPI. L'état de la
+  pastille suit le DPI entier affiché afin qu'un badge « 300 DPI » soit toujours vert.
 - Un remplacement crée une version immuable et remet le projet à l'état incomplet pendant
   l'analyse.
 - Tous les téléchargements sont médiés et revalident le scope `Customer`.

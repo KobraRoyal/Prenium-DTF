@@ -389,18 +389,14 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         )
         self.assertEqual(source.count("client-dashboard-surface"), 2)
         self.assertIn("{% if not memberships %}", source)
-        self.assertIn("client-dashboard-section", source)
+        self.assertIn("client-dashboard-analytics", source)
         self.assertLess(
             source.index("client-dashboard-surface"),
             source.index("client-dashboard-palier"),
         )
         self.assertLess(
             source.index("client-dashboard-palier"),
-            source.index("client-dashboard-focus"),
-        )
-        self.assertLess(
-            source.index("client-dashboard-focus"),
-            source.index("client-dashboard-section"),
+            source.index("client-dashboard-analytics"),
         )
         self.assertIn("v123 — Dashboard client", css)
         self.assertIn(
@@ -553,7 +549,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertEqual(1, len(re.findall(r"<section[^>]*portal-page-surface", source)))
         self.assertIn("client-order-project-identity", facts)
         self.assertIn(">Date<", facts)
-        self.assertIn(">Référence<", facts)
+        self.assertIn(">N° UUID<", facts)
         self.assertIn(">Règlement<", facts)
         self.assertIn("client-order-project-stack", source)
         self.assertNotIn("stack-lg", source)
