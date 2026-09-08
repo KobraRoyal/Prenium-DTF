@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from calendar import month_abbr
 from datetime import date
-from urllib.parse import urlencode
 from decimal import ROUND_HALF_UP, Decimal
+from urllib.parse import urlencode
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
@@ -11,8 +11,8 @@ from django.utils import timezone
 
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import CustomerMembership
-from apps.orders.models import Order
 from apps.customers.services.volume_nudge_copy import render_nudge_message
+from apps.orders.models import Order
 from apps.orders.references import order_business_number, order_client_reference
 from apps.portal.views_common import status_label
 
@@ -43,8 +43,7 @@ def can_view_client_financial_dashboard(membership) -> bool:
     """Expose le pilotage financier aux rôles de gestion du compte uniquement."""
     return bool(
         membership is not None
-        and membership.role
-        in {CustomerMembership.Role.OWNER, CustomerMembership.Role.ADMIN}
+        and membership.role in {CustomerMembership.Role.OWNER, CustomerMembership.Role.ADMIN}
     )
 
 
@@ -152,9 +151,9 @@ def build_client_operational_dashboard(
             ProductionJob.Status.READY_TO_SHIP,
         },
     ).count()
-    trackable_shipments_count = Shipment.objects.for_customer(customer).filter(
-        tracking_number__gt=""
-    ).count()
+    trackable_shipments_count = (
+        Shipment.objects.for_customer(customer).filter(tracking_number__gt="").count()
+    )
     return {
         "in_atelier_count": in_atelier_count,
         "trackable_shipments_count": trackable_shipments_count,
@@ -425,7 +424,9 @@ def split_dashboard_lists(*, focus, recent_projects, recent_orders):
     return recent_projects, recent_orders
 
 
-def assemble_client_dashboard(*, customer, order_service, project_service, selected_membership=None):
+def assemble_client_dashboard(
+    *, customer, order_service, project_service, selected_membership=None
+):
     empty = {
         "recent_orders": [],
         "recent_projects": [],

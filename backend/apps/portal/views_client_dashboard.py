@@ -47,8 +47,9 @@ class ClientDashboardResultsView(ScopedCustomerMixin, View):
         if kind == "projects":
             projects = project_service.attach_can_delete(
                 list(
-                    project_service.list_customer_projects_in_progress(self.customer)
-                    .filter(status__in=dashboard_focus.ACTIONABLE_PROJECT_STATUSES)[:5]
+                    project_service.list_customer_projects_in_progress(self.customer).filter(
+                        status__in=dashboard_focus.ACTIONABLE_PROJECT_STATUSES
+                    )[:5]
                 )
             )
             return render(
@@ -57,7 +58,9 @@ class ClientDashboardResultsView(ScopedCustomerMixin, View):
                 context
                 | {
                     "dashboard_results_title": "Dossiers à reprendre",
-                    "dashboard_results_description": "Complétez ou confirmez les visuels pour poursuivre.",
+                    "dashboard_results_description": (
+                        "Complétez ou confirmez les visuels pour poursuivre."
+                    ),
                     "dashboard_results_projects": projects,
                     "dashboard_results_all_url": reverse(
                         "portal:client-order-project-list",
@@ -68,7 +71,8 @@ class ClientDashboardResultsView(ScopedCustomerMixin, View):
                 },
             )
 
-        if kind in {"ordered", "paid", "awaiting"} and not dashboard_focus.can_view_client_financial_dashboard(
+        financial_kind = kind in {"ordered", "paid", "awaiting"}
+        if financial_kind and not dashboard_focus.can_view_client_financial_dashboard(
             self.customer_membership
         ):
             raise Http404
@@ -89,11 +93,15 @@ class ClientDashboardResultsView(ScopedCustomerMixin, View):
         elif kind in {"ordered", "paid", "awaiting"} and month_start is not None:
             next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
             if kind == "paid":
-                paid_order_ids = Payment.objects.for_customer(self.customer).filter(
-                    status=Payment.Status.CAPTURED,
-                    captured_at__date__gte=month_start,
-                    captured_at__date__lt=next_month,
-                ).values_list("order_id", flat=True)
+                paid_order_ids = (
+                    Payment.objects.for_customer(self.customer)
+                    .filter(
+                        status=Payment.Status.CAPTURED,
+                        captured_at__date__gte=month_start,
+                        captured_at__date__lt=next_month,
+                    )
+                    .values_list("order_id", flat=True)
+                )
                 orders = orders.filter(pk__in=paid_order_ids)
                 title = f"Paiements de {month_start.strftime('%m/%Y')}"
                 description = "Paiements confirmés sur la période sélectionnée."
