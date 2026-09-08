@@ -8,13 +8,24 @@ const readChartData = (id) => {
   }
 };
 
+const dashboardResultsPath = (url) => {
+  if (typeof url !== "string") return null;
+  const destination = new URL(url, window.location.origin);
+  const dashboardResultPath = /^\/client\/customers\/[0-9a-f-]+\/dashboard-results\/$/i;
+  if (destination.origin !== window.location.origin || !dashboardResultPath.test(destination.pathname)) {
+    return null;
+  }
+  return `${destination.pathname}${destination.search}`;
+};
+
 const loadDashboardResults = (url) => {
-  if (!url) return;
+  const path = dashboardResultsPath(url);
+  if (!path) return;
   if (window.htmx) {
-    window.htmx.ajax("GET", url, { target: "#client-dashboard-orders", swap: "outerHTML" });
+    window.htmx.ajax("GET", path, { target: "#client-dashboard-orders", swap: "outerHTML" });
     return;
   }
-  window.location.assign(url);
+  window.location.assign(path);
 };
 
 document.body.addEventListener("htmx:afterSwap", (event) => {

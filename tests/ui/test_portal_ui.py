@@ -1014,6 +1014,17 @@ def test_portal_feedback_js_uses_text_nodes_for_local_messages():
     assert "box.innerHTML" not in source
 
 
+def test_dashboard_chart_only_loads_internal_dashboard_result_paths():
+    repo_root = Path(__file__).resolve().parents[2]
+    dashboard_js = repo_root / "backend" / "static_src" / "js" / "client-dashboard-chart.js"
+    source = dashboard_js.read_text()
+
+    assert "new URL(url, window.location.origin)" in source
+    assert "destination.origin !== window.location.origin" in source
+    assert "dashboard-results" in source
+    assert "window.location.assign(path)" in source
+
+
 @pytest.mark.django_db
 def test_orders_table_shows_pending_label_when_not_priced():
     user = get_user_model().objects.create_user(email="pending-price@example.com", password="pass")
