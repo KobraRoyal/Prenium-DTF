@@ -417,8 +417,26 @@ def test_atelier_printed_meterage_trend_uses_print_record_snapshots_and_reprints
     assert trend["today_total"] == Decimal("0.7500")
     assert trend["average_per_print"] == Decimal("1.0000")
     assert trend["print_count"] == 2
-    assert trend["meterage_values"][-1] == 0.75
-    assert trend["meterage_values"][-3] == 1.25
+    assert trend["metric_gauges"] == [
+        {
+            "label": "7 jours",
+            "value": Decimal("2.0000"),
+            "detail": "2/7 jours actifs",
+            "progress": 29,
+        },
+        {
+            "label": "Aujourd’hui",
+            "value": Decimal("0.7500"),
+            "detail": "vs pic quotidien",
+            "progress": 60,
+        },
+        {
+            "label": "Par impression",
+            "value": Decimal("1.0000"),
+            "detail": "vs plus grand tirage",
+            "progress": 80,
+        },
+    ]
 
 
 @pytest.mark.django_db

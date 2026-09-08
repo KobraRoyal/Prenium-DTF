@@ -494,5 +494,5 @@
 
 - [x] Mètres linéaires figés à chaque confirmation d’impression
 - [x] Réimpressions comptabilisées dans la consommation réelle
-- [x] Courbe Chart.js et indicateurs 7 jours, jour courant et moyenne par impression
+- [x] Rail de jauges demi-lune : 7 jours, jour courant et moyenne par impression
 - [x] Accès opérationnel pour les rôles Atelier sans exposer le CA

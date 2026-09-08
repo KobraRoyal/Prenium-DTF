@@ -37,10 +37,10 @@ body.product-shell .atelier-worklist {
 
         self.assertNotIn("Tour de contrôle Atelier", dashboard)
         self.assertIn('label: "Nouvelles commandes"', chart_script)
-        self.assertIn('label: "Métrage imprimé"', chart_script)
         self.assertNotIn('label: "Entrées Atelier"', chart_script)
-        self.assertIn('id="atelier-meterage-chart-canvas"', dashboard_panel)
-        self.assertIn("Mètres linéaires confirmés à l’impression", dashboard_panel)
+        self.assertIn('class="atelier-production-rail"', dashboard_panel)
+        self.assertIn("atelier-production-gauge__value", dashboard_panel)
+        self.assertNotIn("atelier-meterage-chart-canvas", chart_script)
         self.assertIn("Tooltip.positioners.topmost", chart_script)
         self.assertIn('position: "topmost"', chart_script)
         self.assertIn("height:clamp(12rem,18vw,15rem)", staff_css)

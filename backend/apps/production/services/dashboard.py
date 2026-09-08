@@ -124,6 +124,7 @@ class AtelierDashboardService:
         dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
         meterage_by_day = {day: Decimal("0.0000") for day in dates}
         prints_by_day = {day: 0 for day in dates}
+        printed_meterages: list[Decimal] = []
         print_records = ProductionPrintRecord.objects.filter(
             printed_at__date__gte=dates[0],
             printed_linear_m__isnull=False,
@@ -133,16 +134,46 @@ class AtelierDashboardService:
                 continue
             meterage_by_day[printed_on] += printed_linear_m
             prints_by_day[printed_on] += 1
+            printed_meterages.append(printed_linear_m)
 
         total = sum(meterage_by_day.values(), Decimal("0.0000"))
         print_count = sum(prints_by_day.values())
+        today_total = meterage_by_day[today]
+        average_per_print = total / print_count if print_count else Decimal("0.0000")
+        peak_day_total = max(meterage_by_day.values(), default=Decimal("0.0000"))
+        largest_print = max(printed_meterages, default=Decimal("0.0000"))
+        active_day_count = sum(1 for meterage in meterage_by_day.values() if meterage > 0)
+
+        def percentage(value: Decimal, reference: Decimal) -> int:
+            if reference <= 0:
+                return 0
+            return min(100, round((value / reference) * 100))
+
         return {
-            "labels": [day.strftime("%d/%m") for day in dates],
-            "meterage_values": [float(meterage_by_day[day]) for day in dates],
             "seven_day_total": total,
-            "today_total": meterage_by_day[today],
-            "average_per_print": total / print_count if print_count else Decimal("0.0000"),
+            "today_total": today_total,
+            "average_per_print": average_per_print,
             "print_count": print_count,
+            "metric_gauges": [
+                {
+                    "label": "7 jours",
+                    "value": total,
+                    "detail": f"{active_day_count}/7 jours actifs",
+                    "progress": round((active_day_count / len(dates)) * 100),
+                },
+                {
+                    "label": "Aujourd’hui",
+                    "value": today_total,
+                    "detail": "vs pic quotidien",
+                    "progress": percentage(today_total, peak_day_total),
+                },
+                {
+                    "label": "Par impression",
+                    "value": average_per_print,
+                    "detail": "vs plus grand tirage",
+                    "progress": percentage(average_per_print, largest_print),
+                },
+            ],
         }
 
     def _build_activity_kpi_rows(self) -> list[dict[str, object]]:
