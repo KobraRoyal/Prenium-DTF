@@ -758,14 +758,27 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   gap: 0.5rem 0.75rem;
 }
 
+@media (min-width: 480px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] {
+    flex-wrap: nowrap;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .ui-breadcrumb {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+}
+
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .atelier-push-action {
   display: flex;
   flex: 0 0 auto;
+  margin-left: auto;
   justify-content: flex-end;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .atelier-push-action .ui-btn {
   min-height: 2.25rem;
+  white-space: nowrap;
 }
 
 @media (max-width: 479px) {

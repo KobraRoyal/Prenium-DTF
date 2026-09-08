@@ -293,3 +293,13 @@ def test_atelier_notification_runtime_keeps_permission_user_initiated_and_fallba
         in runtime
     )
     assert "markEventSeen(publicId)" in runtime
+
+
+def test_desktop_push_control_keeps_the_breadcrumb_rail_on_one_line():
+    root = Path(__file__).resolve().parents[2]
+    stylesheet = (root / "backend/static_src/css/entries/portal-core.css").read_text()
+
+    assert '@media (min-width: 480px)' in stylesheet
+    assert 'flex-wrap: nowrap;' in stylesheet
+    assert 'margin-left: auto;' in stylesheet
+    assert 'white-space: nowrap;' in stylesheet
