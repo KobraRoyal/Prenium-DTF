@@ -1014,15 +1014,14 @@ def test_portal_feedback_js_uses_text_nodes_for_local_messages():
     assert "box.innerHTML" not in source
 
 
-def test_dashboard_chart_only_loads_internal_dashboard_result_paths():
+def test_dashboard_chart_uses_server_rendered_drilldown_targets():
     repo_root = Path(__file__).resolve().parents[2]
     dashboard_js = repo_root / "backend" / "static_src" / "js" / "client-dashboard-chart.js"
     source = dashboard_js.read_text()
 
-    assert "new URL(url, window.location.origin)" in source
-    assert "destination.origin !== window.location.origin" in source
-    assert "dashboard-results" in source
-    assert "window.location.assign(path)" in source
+    assert "document.getElementById(targetId)?.click()" in source
+    assert "window.htmx.ajax" not in source
+    assert "window.location.assign" not in source
 
 
 @pytest.mark.django_db

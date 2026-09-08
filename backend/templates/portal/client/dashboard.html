@@ -42,6 +42,17 @@
       <div class="client-dashboard-chart__canvas"><canvas id="client-budget-chart" aria-describedby="client-budget-chart-summary"></canvas></div>
       <p id="client-budget-chart-summary" class="ui-sr-only">Graphique des montants commandés et des paiements reçus sur les six derniers mois.</p>
       {{ financial_dashboard.trend|json_script:"client-budget-chart-data" }}
+      <div hidden>
+        {% for url in financial_dashboard.trend.result_urls.ordered %}
+        <a id="client-budget-result-ordered-{{ forloop.counter0 }}" href="{{ url }}" hx-get="{{ url }}" hx-target="#client-dashboard-orders" hx-swap="outerHTML">Commandes du mois</a>
+        {% endfor %}
+        {% for url in financial_dashboard.trend.result_urls.paid %}
+        <a id="client-budget-result-paid-{{ forloop.counter0 }}" href="{{ url }}" hx-get="{{ url }}" hx-target="#client-dashboard-orders" hx-swap="outerHTML">Paiements du mois</a>
+        {% endfor %}
+        {% for url in financial_dashboard.trend.result_urls.awaiting %}
+        <a id="client-budget-result-awaiting-{{ forloop.counter0 }}" href="{{ url }}" hx-get="{{ url }}" hx-target="#client-dashboard-orders" hx-swap="outerHTML">Règlements du mois</a>
+        {% endfor %}
+      </div>
     </article>
     {% endif %}
     <article class="client-dashboard-chart client-dashboard-chart--activity" aria-labelledby="client-activity-chart-title">
@@ -52,6 +63,11 @@
       <div class="client-dashboard-chart__canvas"><canvas id="client-activity-chart" aria-describedby="client-activity-chart-summary"></canvas></div>
       <p id="client-activity-chart-summary" class="ui-sr-only">Graphique de répartition des commandes à préparer, en atelier et à suivre.</p>
       {{ operational_dashboard.status_chart|json_script:"client-activity-chart-data" }}
+      <div hidden>
+        {% for url in operational_dashboard.status_chart.result_urls %}
+        <a id="client-activity-result-{{ forloop.counter0 }}" href="{{ url }}" hx-get="{{ url }}" hx-target="#client-dashboard-orders" hx-swap="outerHTML">Afficher le détail</a>
+        {% endfor %}
+      </div>
     </article>
   </section>
 {% endif %}

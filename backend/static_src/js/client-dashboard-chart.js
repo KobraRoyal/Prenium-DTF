@@ -8,24 +8,8 @@ const readChartData = (id) => {
   }
 };
 
-const dashboardResultsPath = (url) => {
-  if (typeof url !== "string") return null;
-  const destination = new URL(url, window.location.origin);
-  const dashboardResultPath = /^\/client\/customers\/[0-9a-f-]+\/dashboard-results\/$/i;
-  if (destination.origin !== window.location.origin || !dashboardResultPath.test(destination.pathname)) {
-    return null;
-  }
-  return `${destination.pathname}${destination.search}`;
-};
-
-const loadDashboardResults = (url) => {
-  const path = dashboardResultsPath(url);
-  if (!path) return;
-  if (window.htmx) {
-    window.htmx.ajax("GET", path, { target: "#client-dashboard-orders", swap: "outerHTML" });
-    return;
-  }
-  window.location.assign(path);
+const loadDashboardResults = (targetId) => {
+  document.getElementById(targetId)?.click();
 };
 
 document.body.addEventListener("htmx:afterSwap", (event) => {
@@ -64,7 +48,7 @@ if (budgetCanvas instanceof HTMLCanvasElement && budget && window.Chart) {
         const selected = elements[0];
         if (!selected) return;
         const series = ["ordered", "paid", "awaiting"][selected.datasetIndex];
-        loadDashboardResults(budget.result_urls?.[series]?.[selected.index]);
+        loadDashboardResults(`client-budget-result-${series}-${selected.index}`);
       },
       plugins: {
         legend: { align: "end", labels: { boxWidth: 10, boxHeight: 10, color: muted, usePointStyle: true } },
@@ -90,7 +74,7 @@ if (activityCanvas instanceof HTMLCanvasElement && activity && window.Chart) {
       cutout: "68%",
       onClick: (_event, elements) => {
         const selected = elements[0];
-        if (selected) loadDashboardResults(activity.result_urls?.[selected.index]);
+        if (selected) loadDashboardResults(`client-activity-result-${selected.index}`);
       },
       plugins: {
         legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, color: muted, usePointStyle: true } },
