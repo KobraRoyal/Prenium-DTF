@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from calendar import month_abbr
 from datetime import date
+from urllib.parse import urlencode
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -47,26 +48,15 @@ def can_view_client_financial_dashboard(membership) -> bool:
     )
 
 
-def _project_dashboard_item(*, customer, project) -> dict[str, str]:
-    return {
-        "title": project.name or project.project_number,
-        "detail": project.get_status_display(),
-        "url": reverse(
-            "portal:client-order-project-detail",
-            kwargs={
-                "customer_public_id": customer.public_id,
-                "project_public_id": project.public_id,
-            },
-        ),
-    }
-
-
-def _order_dashboard_item(*, customer, order, detail: str) -> dict[str, str]:
-    return {
-        "title": _order_title(order),
-        "detail": detail,
-        "url": _order_url(customer=customer, order=order),
-    }
+def _dashboard_results_url(*, customer, kind: str, month: date | None = None) -> str:
+    url = reverse(
+        "portal:client-dashboard-results",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+    query = {"kind": kind}
+    if month is not None:
+        query["month"] = month.strftime("%Y-%m")
+    return f"{url}?{urlencode(query)}"
 
 
 def build_client_financial_dashboard(*, customer) -> dict[str, object]:
@@ -99,21 +89,11 @@ def build_client_financial_dashboard(*, customer) -> dict[str, object]:
     ordered_by_month = {month: Decimal("0.00") for month in month_starts}
     paid_by_month = {month: Decimal("0.00") for month in month_starts}
     awaiting_by_month = {month: Decimal("0.00") for month in month_starts}
-    ordered_items_by_month = {month: [] for month in month_starts}
-    paid_items_by_month = {month: [] for month in month_starts}
-    awaiting_items_by_month = {month: [] for month in month_starts}
     awaiting_amount = Decimal("0.00")
     for order in orders:
         order_month = order.created_at.date().replace(day=1)
         if order_month in ordered_by_month:
             ordered_by_month[order_month] += order.total_amount or Decimal("0.00")
-            ordered_items_by_month[order_month].append(
-                _order_dashboard_item(
-                    customer=customer,
-                    order=order,
-                    detail=f"Commandée le {order.created_at.date().strftime('%d/%m/%Y')}",
-                )
-            )
         if (
             order.billing_mode == Order.BillingMode.IMMEDIATE
             and order.pk not in captured_order_ids
@@ -123,26 +103,12 @@ def build_client_financial_dashboard(*, customer) -> dict[str, object]:
             awaiting_amount += order.total_amount
             if order_month in awaiting_by_month:
                 awaiting_by_month[order_month] += order.total_amount
-                awaiting_items_by_month[order_month].append(
-                    _order_dashboard_item(
-                        customer=customer,
-                        order=order,
-                        detail="Règlement à finaliser",
-                    )
-                )
     for payment in captured_payments:
         if payment.captured_at is None:
             continue
         payment_month = payment.captured_at.date().replace(day=1)
         if payment_month in paid_by_month:
             paid_by_month[payment_month] += payment.amount
-            paid_items_by_month[payment_month].append(
-                _order_dashboard_item(
-                    customer=customer,
-                    order=payment.order,
-                    detail=f"Paiement confirmé le {payment.captured_at.date().strftime('%d/%m/%Y')}",
-                )
-            )
     labels = [_month_label(month) for month in month_starts]
     return {
         "current_month_total": ordered_by_month[current_month],
@@ -153,30 +119,18 @@ def build_client_financial_dashboard(*, customer) -> dict[str, object]:
             "ordered": [float(ordered_by_month[month]) for month in month_starts],
             "paid": [float(paid_by_month[month]) for month in month_starts],
             "awaiting": [float(awaiting_by_month[month]) for month in month_starts],
-            "drilldowns": {
+            "result_urls": {
                 "ordered": [
-                    {
-                        "title": f"Commandes de {label}",
-                        "description": "Commandes tarifées sur la période sélectionnée.",
-                        "items": ordered_items_by_month[month],
-                    }
-                    for label, month in zip(labels, month_starts, strict=True)
+                    _dashboard_results_url(customer=customer, kind="ordered", month=month)
+                    for month in month_starts
                 ],
                 "paid": [
-                    {
-                        "title": f"Paiements de {label}",
-                        "description": "Paiements confirmés sur la période sélectionnée.",
-                        "items": paid_items_by_month[month],
-                    }
-                    for label, month in zip(labels, month_starts, strict=True)
+                    _dashboard_results_url(customer=customer, kind="paid", month=month)
+                    for month in month_starts
                 ],
                 "awaiting": [
-                    {
-                        "title": f"Règlements à finaliser de {label}",
-                        "description": "Commandes qui attendent le règlement client.",
-                        "items": awaiting_items_by_month[month],
-                    }
-                    for label, month in zip(labels, month_starts, strict=True)
+                    _dashboard_results_url(customer=customer, kind="awaiting", month=month)
+                    for month in month_starts
                 ],
             },
         },
@@ -184,7 +138,7 @@ def build_client_financial_dashboard(*, customer) -> dict[str, object]:
 
 
 def build_client_operational_dashboard(
-    *, customer, projects_in_progress_count: int, recent_projects, recent_orders
+    *, customer, projects_in_progress_count: int
 ) -> dict[str, object]:
     """Statuts lisibles par le client : préparation, atelier, expédition."""
     from apps.production.models import ProductionJob
@@ -201,42 +155,6 @@ def build_client_operational_dashboard(
     trackable_shipments_count = Shipment.objects.for_customer(customer).filter(
         tracking_number__gt=""
     ).count()
-    pending_projects = [
-        _project_dashboard_item(customer=customer, project=project)
-        for project in recent_projects
-        if project.status in ACTIONABLE_PROJECT_STATUSES
-    ]
-    atelier_orders = []
-    tracking_orders = []
-    for order in recent_orders:
-        try:
-            production_job = order.production_job
-        except ObjectDoesNotExist:
-            production_job = None
-        if production_job and production_job.status in {
-            ProductionJob.Status.QUEUED,
-            ProductionJob.Status.IN_PROGRESS,
-            ProductionJob.Status.READY_TO_SHIP,
-        }:
-            atelier_orders.append(
-                _order_dashboard_item(
-                    customer=customer,
-                    order=order,
-                    detail=production_job.get_status_display(),
-                )
-            )
-        try:
-            shipment = order.shipment
-        except ObjectDoesNotExist:
-            shipment = None
-        if shipment and shipment.tracking_number:
-            tracking_orders.append(
-                _order_dashboard_item(
-                    customer=customer,
-                    order=order,
-                    detail=f"Suivi n° {shipment.tracking_number}",
-                )
-            )
     return {
         "in_atelier_count": in_atelier_count,
         "trackable_shipments_count": trackable_shipments_count,
@@ -247,37 +165,10 @@ def build_client_operational_dashboard(
                 in_atelier_count,
                 trackable_shipments_count,
             ],
-            "drilldowns": [
-                {
-                    "title": "Dossiers à reprendre",
-                    "description": "Complétez ou confirmez les visuels pour poursuivre.",
-                    "items": pending_projects,
-                    "all_url": reverse(
-                        "portal:client-order-project-list",
-                        kwargs={"customer_public_id": customer.public_id},
-                    ),
-                    "all_label": "Voir tous les dossiers",
-                },
-                {
-                    "title": "Commandes en atelier",
-                    "description": "Vos commandes sont en préparation ou prêtes à expédier.",
-                    "items": atelier_orders,
-                    "all_url": reverse(
-                        "portal:client-order-list",
-                        kwargs={"customer_public_id": customer.public_id},
-                    ),
-                    "all_label": "Voir toutes les commandes",
-                },
-                {
-                    "title": "Livraisons à suivre",
-                    "description": "Suivez les commandes dont le transport est disponible.",
-                    "items": tracking_orders,
-                    "all_url": reverse(
-                        "portal:client-order-list",
-                        kwargs={"customer_public_id": customer.public_id},
-                    ),
-                    "all_label": "Voir toutes les commandes",
-                },
+            "result_urls": [
+                _dashboard_results_url(customer=customer, kind="projects"),
+                _dashboard_results_url(customer=customer, kind="atelier"),
+                _dashboard_results_url(customer=customer, kind="tracking"),
             ],
         },
     }
@@ -585,8 +476,6 @@ def assemble_client_dashboard(*, customer, order_service, project_service, selec
     operational_dashboard = build_client_operational_dashboard(
         customer=customer,
         projects_in_progress_count=projects_in_progress_count,
-        recent_projects=recent_projects,
-        recent_orders=recent_orders,
     )
     can_view_financial_dashboard = can_view_client_financial_dashboard(selected_membership)
     volume_discount_summary = build_client_volume_discount_summary(customer=customer)

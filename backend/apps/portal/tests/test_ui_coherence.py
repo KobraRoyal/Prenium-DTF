@@ -1790,6 +1790,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
                 source = template_source(path) + template_source(
                     "components/portal/page_head_actions/staff_order_detail.html"
                 )
+            elif path == "portal/client/dashboard.html":
+                source = template_source(path) + template_source(
+                    "portal/client/partials/dashboard_orders.html"
+                )
             else:
                 source = template_source(path)
             with self.subTest(path=path):
@@ -2052,7 +2056,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("dialog[open][id^='visual-dialog-']", configurator_script)
         self.assertNotIn("Largeur (mm)", editor)
         self.assertIn('type="hidden" name="width_mm"', editor)
-        self.assertIn("ui-btn ui-btn-danger", item_delete)
+        self.assertIn("b2b-confirm-dialog__button--danger", item_delete)
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", product_shell)
+        self.assertIn("body.product-shell .b2b-confirm-dialog__content", product_shell)
+        self.assertIn("overflow-wrap: anywhere;", product_shell)
         validation_dimensions = template_source(
             "portal/client/partials/order_project_validation_dimensions_row.html"
         )
@@ -2116,6 +2123,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("action='delete'", item_delete)
         self.assertIn("Supprimer", item_delete)
         self.assertIn("b2b-confirm-dialog", item_delete)
+        self.assertIn("b2b-confirm-dialog__button--cancel", item_delete)
+        self.assertIn("b2b-confirm-dialog__button--danger", item_delete)
         self.assertIn("data-dialog-open", item_delete)
         self.assertIn("Supprimer ce visuel ?", item_delete)
         self.assertIn("Supprimer définitivement", item_delete)
@@ -2295,7 +2304,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         dashboard = template_source("portal/client/dashboard.html")
         self.assertNotIn("client-dashboard-toolbar", dashboard)
         self.assertNotIn(">Nouvelle commande</a>", dashboard)
-        self.assertIn("client-dashboard-drilldown", dashboard)
+        self.assertIn("partials/dashboard_orders.html", dashboard)
         self.assertIn("client-volume-chart", dashboard)
         self.assertNotIn("Commandes à continuer", dashboard)
         self.assertNotIn("Préparer une commande", dashboard)

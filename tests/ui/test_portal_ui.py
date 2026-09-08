@@ -86,7 +86,7 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     dashboard_html = dashboard_response.content.decode()
     assert "product-shell--portal" in dashboard_html
     assert "client-dashboard" in dashboard_html
-    assert 'id="client-dashboard-drilldown"' in dashboard_html
+    assert 'id="client-dashboard-orders"' in dashboard_html
     assert "Accès isolé" not in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
@@ -215,7 +215,7 @@ def test_client_dashboard_surfaces_project_through_the_operational_chart():
     html = client.get(reverse("portal:client-dashboard")).content.decode()
 
     assert 'id="client-activity-chart-data"' in html
-    assert 'id="client-dashboard-drilldown"' in html
+    assert 'id="client-dashboard-orders"' in html
     assert "Commandes à finaliser" not in html
     assert "visuel(s)" not in html
 
@@ -1098,5 +1098,5 @@ def test_orders_table_and_dashboard_show_unpaid_payment_flag():
     assert dash_response.status_code == 200
     dash_body = dash_response.content.decode()
     assert '"awaiting"' in dash_body
-    assert 'id="client-dashboard-drilldown"' in dash_body
+    assert 'id="client-dashboard-orders"' in dash_body
     assert "Commandes transmises" not in dash_body

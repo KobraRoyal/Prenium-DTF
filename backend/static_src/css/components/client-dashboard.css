@@ -189,70 +189,21 @@ body.product-shell .client-dashboard-chart__canvas canvas {
   cursor: pointer;
 }
 
-body.product-shell .client-dashboard-drilldown {
+body.product-shell .client-dashboard-orders {
   display: grid;
   gap: 0.85rem;
-  padding: 1rem 0 0;
+  padding-top: 1.25rem;
   border-top: 1px solid var(--line);
 }
 
-body.product-shell .client-dashboard-drilldown[hidden] {
-  display: none;
+body.product-shell .client-dashboard-orders__head {
+  align-items: end;
 }
 
-body.product-shell .client-dashboard-drilldown__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-body.product-shell .client-dashboard-drilldown__head h2,
-body.product-shell .client-dashboard-drilldown__head p {
+body.product-shell .client-dashboard-orders__empty {
   margin: 0;
-}
-
-body.product-shell .client-dashboard-drilldown__head p,
-body.product-shell .client-dashboard-drilldown__empty {
-  margin: 0.25rem 0 0;
+  padding: 1rem 0;
   color: var(--muted);
-}
-
-body.product-shell .client-dashboard-drilldown__list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-body.product-shell .client-dashboard-drilldown__list li {
-  display: grid;
-  gap: 0.15rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--line);
-  background: var(--surface-raised);
-}
-
-body.product-shell .client-dashboard-drilldown__list a {
-  color: inherit;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-body.product-shell .client-dashboard-drilldown__list a:hover {
-  color: var(--brand-ink, var(--product-accent-ink));
-  text-decoration: underline;
-}
-
-body.product-shell .client-dashboard-drilldown__list span {
-  color: var(--muted);
-  font-size: 0.84rem;
-}
-
-body.product-shell .client-dashboard-drilldown__all {
-  justify-self: start;
 }
 
 @media (max-width: 59.99rem) {
@@ -272,9 +223,6 @@ body.product-shell .client-dashboard-drilldown__all {
     grid-template-columns: 1fr;
   }
 
-  body.product-shell .client-dashboard-drilldown__list {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 39.99rem) {
@@ -306,8 +254,7 @@ body.product-shell .client-dashboard-drilldown__all {
     min-height: 14rem;
   }
 
-  body.product-shell .client-dashboard-drilldown__head {
+  body.product-shell .client-dashboard-orders__head {
     align-items: stretch;
-    flex-direction: column;
   }
 }

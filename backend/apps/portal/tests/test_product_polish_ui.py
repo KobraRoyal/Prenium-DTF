@@ -598,4 +598,7 @@ class ProductPolishUITests(SimpleTestCase):
             with self.subTest(template_path=template_path):
                 template = source(TEMPLATES_DIR / template_path)
                 self.assertIn("ui-destructive-action", template)
-                self.assertIn("ui-btn ui-btn-danger", template)
+                if "order_project" in template_path:
+                    self.assertIn("b2b-confirm-dialog__button--danger", template)
+                else:
+                    self.assertIn("ui-btn ui-btn-danger", template)

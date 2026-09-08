@@ -76,8 +76,9 @@ class DashboardActionFocusTests(SimpleTestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("client-dashboard-drilldown", template)
+        self.assertIn("partials/dashboard_orders.html", template)
         self.assertIn("client-activity-chart-data", template)
+        self.assertIn("client-dashboard-results", focus_builder)
         self.assertIn('"Commande à reprendre"', focus_builder)
         self.assertIn('"Action nécessaire"', focus_builder)
         self.assertIn('"Expédition à suivre"', focus_builder)

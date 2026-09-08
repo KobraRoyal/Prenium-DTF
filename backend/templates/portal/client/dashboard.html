@@ -54,17 +54,8 @@
       {{ operational_dashboard.status_chart|json_script:"client-activity-chart-data" }}
     </article>
   </section>
-  <section class="client-dashboard-drilldown" id="client-dashboard-drilldown" hidden aria-live="polite" aria-labelledby="client-dashboard-drilldown-title">
-    <div class="client-dashboard-drilldown__head">
-      <div>
-        <h2 class="font-display text-lg" id="client-dashboard-drilldown-title"></h2>
-        <p id="client-dashboard-drilldown-description"></p>
-      </div>
-      <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" data-dashboard-drilldown-close>Fermer</button>
-    </div>
-    <div id="client-dashboard-drilldown-list"></div>
-  </section>
 {% endif %}
+  {% include "portal/client/partials/dashboard_orders.html" with customer=customer orders=recent_orders orders_count=orders_count %}
 </section>
 {% endif %}
 </div>

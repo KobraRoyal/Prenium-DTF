@@ -61,6 +61,7 @@ from .views_client import (
     ClientOrderUploadDownloadView,
     ClientOrderUploadPreviewView,
 )
+from .views_client_dashboard import ClientDashboardResultsView
 from .views_gang_sheets import (
     ClientGangSheetAddItemView,
     ClientGangSheetAssetGalleryView,
@@ -391,6 +392,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/orders/",
         ClientOrderListView.as_view(),
         name="client-order-list",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/dashboard-results/",
+        ClientDashboardResultsView.as_view(),
+        name="client-dashboard-results",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/",

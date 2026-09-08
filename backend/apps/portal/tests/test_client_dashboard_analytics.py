@@ -50,7 +50,8 @@ def test_financial_dashboard_is_limited_to_customer_managers(role: str) -> None:
     assert "Cliquez sur une barre" in html
     assert '"awaiting"' in html
     assert 'id="client-budget-chart-data"' in html
-    assert 'id="client-dashboard-drilldown"' in html
+    assert 'id="client-dashboard-orders-title"' in html
+    assert "Commandes" in html
     assert 'js/client-dashboard-chart.js' in html
 
 
@@ -88,5 +89,25 @@ def test_dashboard_exposes_clickable_operational_drilldowns() -> None:
 
     assert "Cliquez sur une section" in html
     assert 'id="client-activity-chart-data"' in html
-    assert "Dossiers" in html
-    assert 'id="client-dashboard-drilldown"' in html
+    assert 'id="client-dashboard-orders"' in html
+
+
+@pytest.mark.django_db
+def test_chart_filter_replaces_the_shared_orders_section() -> None:
+    customer = Customer.objects.create(name="Pilotage filtré", b2b_order_projects_enabled=True)
+    client = _client_for(
+        customer=customer,
+        role=CustomerMembership.Role.OWNER,
+        email="owner-filter@example.com",
+    )
+
+    response = client.get(
+        reverse("portal:client-dashboard-results", kwargs={"customer_public_id": customer.public_id}),
+        {"kind": "projects"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert 'id="client-dashboard-orders"' in html
+    assert "Dossiers à reprendre" in html

@@ -8,50 +8,19 @@ const readChartData = (id) => {
   }
 };
 
-const drilldown = document.getElementById("client-dashboard-drilldown");
-const drilldownTitle = document.getElementById("client-dashboard-drilldown-title");
-const drilldownDescription = document.getElementById("client-dashboard-drilldown-description");
-const drilldownList = document.getElementById("client-dashboard-drilldown-list");
-
-const showDrilldown = (data) => {
-  if (!data || !drilldown || !drilldownTitle || !drilldownDescription || !drilldownList) return;
-  drilldownTitle.textContent = data.title || "Éléments concernés";
-  drilldownDescription.textContent = data.description || "";
-  drilldownList.replaceChildren();
-  const items = Array.isArray(data.items) ? data.items : [];
-  if (items.length) {
-    const list = document.createElement("ul");
-    list.className = "client-dashboard-drilldown__list";
-    items.forEach((item) => {
-      const row = document.createElement("li");
-      const link = document.createElement("a");
-      link.href = item.url || "#";
-      link.textContent = item.title || "Ouvrir";
-      const detail = document.createElement("span");
-      detail.textContent = item.detail || "";
-      row.append(link, detail);
-      list.append(row);
-    });
-    drilldownList.append(list);
-  } else {
-    const empty = document.createElement("p");
-    empty.className = "client-dashboard-drilldown__empty";
-    empty.textContent = "Aucun élément à afficher pour cette sélection.";
-    drilldownList.append(empty);
+const loadDashboardResults = (url) => {
+  if (!url) return;
+  if (window.htmx) {
+    window.htmx.ajax("GET", url, { target: "#client-dashboard-orders", swap: "outerHTML" });
+    return;
   }
-  if (data.all_url) {
-    const link = document.createElement("a");
-    link.className = "ui-btn ui-btn-secondary ui-btn-sm client-dashboard-drilldown__all";
-    link.href = data.all_url;
-    link.textContent = data.all_label || "Tout voir";
-    drilldownList.append(link);
-  }
-  drilldown.hidden = false;
-  drilldown.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  window.location.assign(url);
 };
 
-document.querySelector("[data-dashboard-drilldown-close]")?.addEventListener("click", () => {
-  if (drilldown) drilldown.hidden = true;
+document.body.addEventListener("htmx:afterSwap", (event) => {
+  if (event.detail.target?.id !== "client-dashboard-orders") return;
+  event.detail.target.focus({ preventScroll: true });
+  event.detail.target.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 const styles = getComputedStyle(document.documentElement);
@@ -84,7 +53,7 @@ if (budgetCanvas instanceof HTMLCanvasElement && budget && window.Chart) {
         const selected = elements[0];
         if (!selected) return;
         const series = ["ordered", "paid", "awaiting"][selected.datasetIndex];
-        showDrilldown(budget.drilldowns?.[series]?.[selected.index]);
+        loadDashboardResults(budget.result_urls?.[series]?.[selected.index]);
       },
       plugins: {
         legend: { align: "end", labels: { boxWidth: 10, boxHeight: 10, color: muted, usePointStyle: true } },
@@ -110,7 +79,7 @@ if (activityCanvas instanceof HTMLCanvasElement && activity && window.Chart) {
       cutout: "68%",
       onClick: (_event, elements) => {
         const selected = elements[0];
-        if (selected) showDrilldown(activity.drilldowns?.[selected.index]);
+        if (selected) loadDashboardResults(activity.result_urls?.[selected.index]);
       },
       plugins: {
         legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, color: muted, usePointStyle: true } },
