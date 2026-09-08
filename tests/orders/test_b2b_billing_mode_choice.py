@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
@@ -41,15 +43,25 @@ def test_b2b_order_can_be_created_and_submitted_as_card_payment():
 
     _attach_dummy_upload(order)
 
-    submitted = service.submit_b2b_deferred_order(
-        customer=customer,
-        actor=user,
-        order_public_id=order.public_id,
-        source="client_portal.b2b_checkout",
-        billing_mode="immediate",
-    )
+    with patch(
+        "apps.notifications.services.workshop_push."
+        "WorkshopNotificationService.publish_order_submitted"
+    ) as publish_order_submitted:
+        submitted = service.submit_b2b_deferred_order(
+            customer=customer,
+            actor=user,
+            order_public_id=order.public_id,
+            source="client_portal.b2b_checkout",
+            billing_mode="immediate",
+        )
     assert submitted.status == Order.Status.SUBMITTED
     assert submitted.billing_mode == Order.BillingMode.IMMEDIATE
+    publish_order_submitted.assert_called_once()
+    assert publish_order_submitted.call_args.kwargs == {
+        "order": submitted,
+        "actor": user,
+        "source": "client_portal.b2b_checkout",
+    }
 
 
 @pytest.mark.django_db

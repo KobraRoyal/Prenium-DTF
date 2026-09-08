@@ -196,6 +196,28 @@ SENDCLOUD_SENDER_COUNTRY_CODE = os.environ.get("SENDCLOUD_SENDER_COUNTRY_CODE", 
 SENDCLOUD_SENDER_EMAIL = os.environ.get("SENDCLOUD_SENDER_EMAIL", "")
 SENDCLOUD_SENDER_PHONE_NUMBER = os.environ.get("SENDCLOUD_SENDER_PHONE_NUMBER", "")
 
+WEB_PUSH_ENABLED = env_bool("WEB_PUSH_ENABLED", False)
+WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "")
+WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "")
+WEB_PUSH_VAPID_CONTACT = os.environ.get("WEB_PUSH_VAPID_CONTACT", "")
+WEB_PUSH_ENCRYPTION_KEYS = tuple(env_list("WEB_PUSH_ENCRYPTION_KEYS"))
+WEB_PUSH_ALLOWED_DOMAINS = tuple(
+    env_list(
+        "WEB_PUSH_ALLOWED_DOMAINS",
+        "*.push.apple.com,fcm.googleapis.com,updates.push.services.mozilla.com",
+    )
+)
+WEB_PUSH_TIMEOUT_SECONDS = env_int("WEB_PUSH_TIMEOUT_SECONDS", 10)
+WEB_PUSH_CLAIM_TIMEOUT_SECONDS = env_int("WEB_PUSH_CLAIM_TIMEOUT_SECONDS", 300)
+WEB_PUSH_MAX_ATTEMPTS = env_int("WEB_PUSH_MAX_ATTEMPTS", 7)
+WEB_PUSH_MAX_ACTIVE_SUBSCRIPTIONS_PER_MEMBER = env_int(
+    "WEB_PUSH_MAX_ACTIVE_SUBSCRIPTIONS_PER_MEMBER",
+    5,
+)
+WEB_PUSH_RECOVERY_BATCH_SIZE = env_int("WEB_PUSH_RECOVERY_BATCH_SIZE", 100)
+WEB_PUSH_RETENTION_DAYS = env_int("WEB_PUSH_RETENTION_DAYS", 30)
+WEB_PUSH_POLL_MAX_EVENTS = env_int("WEB_PUSH_POLL_MAX_EVENTS", 50)
+
 PAYPAL_CLIENT_ID = os.environ.get("PAYPAL_CLIENT_ID", "")
 PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
 PAYPAL_API_BASE_URL = os.environ.get("PAYPAL_API_BASE_URL", "https://api-m.sandbox.paypal.com")
@@ -281,6 +303,14 @@ CELERY_BEAT_SCHEDULE = {
     "shipping-sync-stale-tracking": {
         "task": "shipping.sync_stale_shipments_tracking",
         "schedule": max(60, env_int("SENDCLOUD_TRACKING_POLL_SECONDS", 1800)),
+    },
+    "notifications-recover-workshop-push": {
+        "task": "notifications.recover_workshop_push_deliveries",
+        "schedule": max(60, env_int("WEB_PUSH_RECOVERY_INTERVAL_SECONDS", 300)),
+    },
+    "notifications-purge-workshop-push-history": {
+        "task": "notifications.purge_workshop_push_history",
+        "schedule": 86400,
     },
 }
 

@@ -1,8 +1,11 @@
 {# Paramètres : breadcrumb_template | kicker ; title ; subtitle | lead_template ; title_code ; head_class ; head_labelledby ; actions_template. #}
 {# Operate shell : rail (crème) → intro (crème) → contenu dans .portal-page-surface en dessous. #}
 {% if breadcrumb_template %}
-<div class="portal-page-rail">
+<div class="portal-page-rail"{% if breadcrumb_actions_template %} data-breadcrumb-action="true"{% endif %}>
   {% include breadcrumb_template %}
+  {% if breadcrumb_actions_template %}
+    {% include breadcrumb_actions_template %}
+  {% endif %}
 </div>
 {% endif %}
 <header class="portal-page-intro page-head{% if head_class %} {{ head_class }}{% endif %}"{% if head_labelledby %} aria-labelledby="{{ head_labelledby }}"{% endif %}>

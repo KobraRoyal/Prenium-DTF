@@ -1,0 +1,22 @@
+<div
+  class="atelier-push-action"
+  data-atelier-notifications
+  data-state-url="{% url 'portal:staff-push-notification-state' %}"
+  data-subscribe-url="{% url 'portal:staff-push-notification-subscribe' %}"
+  data-unsubscribe-url-template="{% url 'portal:staff-push-notification-unsubscribe' subscription_public_id='00000000-0000-0000-0000-000000000000' %}"
+  data-poll-url="{% url 'portal:staff-push-notification-events' %}"
+  data-dashboard-refresh-url="{% url 'portal:staff-dashboard' %}"
+>
+  <span class="ui-sr-only" data-push-status aria-live="polite">Vérification…</span>
+  <button
+    class="ui-btn ui-btn-secondary ui-btn-sm"
+    type="button"
+    data-push-toggle
+    disabled
+    aria-describedby="atelier-notifications-help"
+  >Activer les alertes</button>
+  <span class="ui-sr-only" id="atelier-notifications-help" data-push-help>
+    Votre navigateur demandera votre accord uniquement après un clic sur le bouton.
+  </span>
+  <form hidden aria-hidden="true">{% csrf_token %}</form>
+</div>

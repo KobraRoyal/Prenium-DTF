@@ -42,6 +42,7 @@
 - [x] Sprint 42 — Parc de machines DTF, affectation des OF et preuves d'impression immuables
 - [x] Sprint 43 — Distillation UI/UX de toutes les vues Atelier
 - [x] Sprint 44 — Pilotage Atelier rapide, transitions et Sendcloud sans ouvrir chaque fiche
+- [x] Sprint 54 — Notifications Web Push Atelier sécurisées, avec notification macOS et polling HTMX de secours
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement

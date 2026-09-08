@@ -750,6 +750,34 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   box-shadow: none !important;
 }
 
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .atelier-push-action {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .atelier-push-action .ui-btn {
+  min-height: 2.25rem;
+}
+
+@media (max-width: 479px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] {
+    align-items: flex-start;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .atelier-push-action {
+    margin-left: auto;
+  }
+}
+
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail .ui-breadcrumb,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-breadcrumb .ui-breadcrumb {
   margin: 0 !important;

@@ -169,3 +169,151 @@ class VolumeDiscountTierNotification(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.customer} — {self.month:%m/%Y} — {self.threshold_linear_m} m"
+
+
+class StaffPushSubscription(BaseModel):
+    """Encrypted Web Push subscription owned by one active workshop member."""
+
+    staff_membership = models.ForeignKey(
+        "accounts.StaffMembership",
+        on_delete=models.CASCADE,
+        related_name="push_subscriptions",
+    )
+    endpoint_ciphertext = models.TextField()
+    endpoint_digest = models.CharField(max_length=64, unique=True)
+    p256dh_ciphertext = models.TextField()
+    auth_ciphertext = models.TextField()
+    is_active = models.BooleanField(default=True)
+    last_seen_at = models.DateTimeField()
+    disabled_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    consecutive_failures = models.PositiveSmallIntegerField(default=0)
+    last_failure_code = models.CharField(max_length=32, blank=True)
+
+    class Meta:
+        ordering = ("-last_seen_at",)
+        indexes = [
+            models.Index(
+                fields=("staff_membership", "is_active"),
+                name="notif_push_member_active_idx",
+            ),
+            models.Index(fields=("is_active", "last_seen_at"), name="notif_push_active_seen_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(is_active=True, disabled_at__isnull=True) | models.Q(is_active=False)
+                ),
+                name="notif_push_active_not_disabled",
+            ),
+        ]
+        verbose_name = "Abonnement Web Push Atelier"
+        verbose_name_plural = "Abonnements Web Push Atelier"
+
+    def __str__(self) -> str:
+        return f"Abonnement {self.public_id}"
+
+
+class WorkshopNotificationEvent(BaseModel):
+    """Tenant-scoped, idempotent workshop event safe for browser polling."""
+
+    class EventType(models.TextChoices):
+        ORDER_SUBMITTED = "workshop.order_submitted", "Nouvelle commande Atelier"
+
+    event_type = models.CharField(max_length=64, choices=EventType.choices)
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.CASCADE,
+        related_name="workshop_notification_events",
+    )
+    order = models.ForeignKey(
+        "orders.Order",
+        on_delete=models.CASCADE,
+        related_name="workshop_notification_events",
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="published_workshop_notification_events",
+    )
+    source = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("event_type", "order"),
+                name="uniq_workshop_event_type_order",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("customer", "created_at"),
+                name="notif_workshop_customer_idx",
+            ),
+            models.Index(fields=("event_type", "created_at"), name="notif_workshop_type_idx"),
+        ]
+        verbose_name = "Événement Atelier"
+        verbose_name_plural = "Événements Atelier"
+
+    def __str__(self) -> str:
+        return f"{self.event_type} ({self.public_id})"
+
+
+class PushDelivery(BaseModel):
+    """Idempotent delivery of one workshop event to one browser subscription."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "En attente"
+        SENDING = "sending", "En cours"
+        RETRY = "retry", "À réessayer"
+        SENT = "sent", "Envoyée"
+        SKIPPED = "skipped", "Ignorée"
+        GONE = "gone", "Abonnement expiré"
+        FAILED = "failed", "Échec définitif"
+
+    event = models.ForeignKey(
+        WorkshopNotificationEvent,
+        on_delete=models.CASCADE,
+        related_name="deliveries",
+    )
+    subscription = models.ForeignKey(
+        StaffPushSubscription,
+        on_delete=models.CASCADE,
+        related_name="deliveries",
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    attempt_count = models.PositiveSmallIntegerField(default=0)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    failure_code = models.CharField(max_length=32, blank=True)
+
+    class Meta:
+        ordering = ("created_at", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("event", "subscription"),
+                name="uniq_workshop_event_subscription",
+            ),
+            models.CheckConstraint(
+                condition=(~models.Q(status="sent") | models.Q(delivered_at__isnull=False)),
+                name="notif_delivery_sent_at",
+            ),
+            models.CheckConstraint(
+                condition=(~models.Q(status="sending") | models.Q(claimed_at__isnull=False)),
+                name="notif_delivery_claimed_at",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("status", "next_attempt_at"), name="notif_delivery_retry_idx"),
+            models.Index(fields=("event", "status"), name="notif_delivery_event_idx"),
+            models.Index(fields=("subscription", "status"), name="notif_delivery_sub_idx"),
+        ]
+        verbose_name = "Livraison Web Push"
+        verbose_name_plural = "Livraisons Web Push"
+
+    def __str__(self) -> str:
+        return f"Livraison {self.public_id} ({self.status})"

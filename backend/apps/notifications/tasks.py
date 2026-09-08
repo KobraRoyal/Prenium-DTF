@@ -22,6 +22,8 @@ from apps.notifications.services.transactional import (
     send_staff_account_activated_email,
     send_staff_invitation_email,
 )
+from apps.notifications.services.web_push_client import WebPushTransientError
+from apps.notifications.services.workshop_push import WorkshopNotificationService
 from apps.orders.models import Order
 from apps.prospects.models import ProspectProfile
 from apps.uploads.models import OrderUploadReview
@@ -289,3 +291,45 @@ def send_file_correction_requested_email_task(review_public_id: str) -> None:
 )
 def send_volume_discount_tier_reached_email_task(notification_public_id: str) -> None:
     deliver_volume_discount_tier_notification(notification_public_id=notification_public_id)
+
+
+@shared_task(
+    name="notifications.fanout_workshop_notification",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def fanout_workshop_notification_task(event_public_id: str) -> None:
+    WorkshopNotificationService().fanout(event_public_id=event_public_id)
+
+
+@shared_task(bind=True, name="notifications.deliver_workshop_push", max_retries=7)
+def deliver_workshop_push_task(self, delivery_public_id: str) -> None:
+    try:
+        WorkshopNotificationService().deliver(delivery_public_id=delivery_public_id)
+    except WebPushTransientError as exc:
+        countdown = min(3600, 30 * (2**self.request.retries))
+        raise self.retry(exc=RuntimeError(exc.code), countdown=countdown) from None
+
+
+@shared_task(
+    name="notifications.recover_workshop_push_deliveries",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def recover_workshop_push_deliveries_task() -> None:
+    WorkshopNotificationService().recover_stale_deliveries()
+
+
+@shared_task(
+    name="notifications.purge_workshop_push_history",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=3,
+)
+def purge_workshop_push_history_task() -> None:
+    WorkshopNotificationService().purge_history()
