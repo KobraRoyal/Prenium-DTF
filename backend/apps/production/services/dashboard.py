@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import timedelta
+from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
@@ -86,6 +87,34 @@ class AtelierDashboardService:
             "completed_values": [completed[day] for day in dates],
             "entries": points(entries),
             "completed": points(completed),
+        }
+
+    def build_financial_trend(self) -> dict[str, object]:
+        """CA TTC des commandes validées, pour le pilotage administratif Atelier."""
+        today = timezone.localdate()
+        dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        revenue_by_day = {day: Decimal("0.00") for day in dates}
+        orders_by_day = {day: 0 for day in dates}
+        priced_orders = Order.objects.filter(
+            status=Order.Status.SUBMITTED,
+            pricing_status=Order.PricingStatus.PRICED,
+            created_at__date__gte=dates[0],
+        ).values_list("created_at__date", "total_amount")
+        for created_on, total_amount in priced_orders:
+            if created_on not in revenue_by_day:
+                continue
+            revenue_by_day[created_on] += total_amount or Decimal("0.00")
+            orders_by_day[created_on] += 1
+
+        total = sum(revenue_by_day.values(), Decimal("0.00"))
+        order_count = sum(orders_by_day.values())
+        return {
+            "labels": [day.strftime("%d/%m") for day in dates],
+            "revenue_values": [float(revenue_by_day[day]) for day in dates],
+            "seven_day_total": total,
+            "today_total": revenue_by_day[today],
+            "average_order_total": total / order_count if order_count else Decimal("0.00"),
+            "order_count": order_count,
         }
 
     def _build_activity_kpi_rows(self) -> list[dict[str, object]]:

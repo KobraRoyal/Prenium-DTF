@@ -43,6 +43,8 @@
 - [x] Sprint 43 — Distillation UI/UX de toutes les vues Atelier
 - [x] Sprint 44 — Pilotage Atelier rapide, transitions et Sendcloud sans ouvrir chaque fiche
 - [x] Sprint 54 — Notifications Web Push Atelier sécurisées, avec notification macOS et polling HTMX de secours
+- [x] Sprint 55 — KPI et courbe Chart.js de CA TTC sur le dashboard Atelier,
+  visibles uniquement par les rôles Administrateur et Propriétaire
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement

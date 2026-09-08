@@ -1,5 +1,7 @@
 const canvas = document.getElementById("atelier-production-chart-canvas");
 const source = document.getElementById("atelier-production-chart-data");
+const revenueCanvas = document.getElementById("atelier-revenue-chart-canvas");
+const revenueSource = document.getElementById("atelier-revenue-chart-data");
 
 if (canvas instanceof HTMLCanvasElement && source && window.Chart) {
   const trend = JSON.parse(source.textContent || "{}");
@@ -63,6 +65,56 @@ if (canvas instanceof HTMLCanvasElement && source && window.Chart) {
       scales: {
         x: { grid: { display: false }, ticks: { color: muted, font: { size: 11 } }, border: { display: false } },
         y: { beginAtZero: true, ticks: { precision: 0, color: muted, font: { size: 11 } }, grid: { color: line }, border: { display: false } },
+      },
+    },
+  });
+}
+
+if (revenueCanvas instanceof HTMLCanvasElement && revenueSource && window.Chart) {
+  const trend = JSON.parse(revenueSource.textContent || "{}");
+  const styles = getComputedStyle(document.documentElement);
+  const brand = styles.getPropertyValue("--brand").trim() || "#ff8775";
+  const muted = styles.getPropertyValue("--muted").trim() || "#6b675c";
+  const line = styles.getPropertyValue("--line").trim() || "#e2dccb";
+  const euro = new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  });
+
+  new window.Chart(revenueCanvas, {
+    type: "bar",
+    data: {
+      labels: trend.labels || [],
+      datasets: [{
+        label: "CA TTC",
+        data: trend.revenue_values || [],
+        backgroundColor: `${brand}99`,
+        borderColor: brand,
+        borderWidth: 1,
+        borderRadius: 6,
+        maxBarThickness: 38,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#1a1815",
+          padding: 10,
+          callbacks: { label: (context) => `CA TTC : ${euro.format(context.parsed.y || 0)}` },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: muted, font: { size: 11 } }, border: { display: false } },
+        y: {
+          beginAtZero: true,
+          ticks: { color: muted, font: { size: 11 }, callback: (value) => euro.format(value) },
+          grid: { color: line },
+          border: { display: false },
+        },
       },
     },
   });

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import timedelta
+from decimal import Decimal
 
 import pytest
+from apps.accounts.models import StaffMembership
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer
 from apps.orders.models import Order
@@ -316,6 +319,84 @@ def test_atelier_dashboard_lists_full_unissued_queue():
     assert dashboard["unprinted_of_total"] == expected_count
     assert len(dashboard["rows"]) == expected_count
     assert dashboard["unprinted_of_batch_count"] == ManufacturingOrderBatchService.max_batch_size
+
+
+@pytest.mark.django_db
+def test_atelier_financial_trend_uses_priced_submitted_orders_over_seven_days():
+    actor = get_user_model().objects.create_user(email="revenue-owner@example.com", password="pass")
+    customer = Customer.objects.create(name="CA Atelier")
+    today_order = Order.objects.create(
+        customer=customer,
+        created_by=actor,
+        status=Order.Status.SUBMITTED,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="120.00",
+    )
+    earlier_order = Order.objects.create(
+        customer=customer,
+        created_by=actor,
+        status=Order.Status.SUBMITTED,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="80.00",
+    )
+    excluded_order = Order.objects.create(
+        customer=customer,
+        created_by=actor,
+        status=Order.Status.DRAFT,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="999.00",
+    )
+    earlier_day = timezone.now() - timedelta(days=2)
+    Order.objects.filter(pk=earlier_order.pk).update(created_at=earlier_day)
+    Order.objects.filter(pk=excluded_order.pk).update(created_at=earlier_day)
+
+    trend = AtelierDashboardService().build_financial_trend()
+
+    assert trend["seven_day_total"] == Decimal("200.00")
+    assert trend["today_total"] == Decimal("120.00")
+    assert trend["average_order_total"] == Decimal("100.00")
+    assert trend["order_count"] == 2
+    assert trend["revenue_values"][-1] == 120.0
+    assert trend["revenue_values"][-3] == 80.0
+    assert today_order.pk != excluded_order.pk
+
+
+@pytest.mark.django_db
+def test_atelier_financial_dashboard_is_only_rendered_for_owner_or_admin_roles():
+    actor = get_user_model().objects.create_user(email="revenue-order@example.com", password="pass")
+    customer = Customer.objects.create(name="Revenus Atelier")
+    Order.objects.create(
+        customer=customer,
+        created_by=actor,
+        status=Order.Status.SUBMITTED,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="150.00",
+    )
+    admin, admin_client = create_staff_client(
+        email="admin-revenue@example.com",
+        permissions=["view_order", "view_productionjob"],
+    )
+    collaborator, collaborator_client = create_staff_client(
+        email="collaborator-revenue@example.com",
+        permissions=["view_order", "view_productionjob"],
+    )
+    StaffMembership.objects.create(user=admin, role=StaffMembership.Role.ADMIN)
+    StaffMembership.objects.create(user=collaborator, role=StaffMembership.Role.MEMBER)
+
+    admin_response = admin_client.get(reverse("portal:staff-dashboard"))
+    collaborator_response = collaborator_client.get(reverse("portal:staff-dashboard"))
+    collaborator_partial = collaborator_client.get(
+        reverse("portal:staff-dashboard"), HTTP_HX_REQUEST="true"
+    )
+
+    assert admin_response.context["can_view_financial_trend"] is True
+    assert admin_response.context["financial_trend"]["seven_day_total"] == Decimal("150.00")
+    assert "Chiffre d’affaires" in admin_response.content.decode()
+    assert 'id="atelier-revenue-chart-data"' in admin_response.content.decode()
+    assert collaborator_response.context["can_view_financial_trend"] is False
+    assert collaborator_response.context["financial_trend"] is None
+    assert "Chiffre d’affaires" not in collaborator_response.content.decode()
+    assert "atelier-revenue-chart-data" not in collaborator_partial.content.decode()
 
 
 @pytest.mark.django_db

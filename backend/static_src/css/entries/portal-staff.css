@@ -2498,7 +2498,8 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-o
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse { margin: 0 0 1rem; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart { margin:0 0 1rem; padding:1rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-charts { display:grid; gap:1rem; margin:0 0 1rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart { min-width:0; margin:0; padding:1rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart h2,.atelier-production-chart p { margin:0; }
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart p { color:var(--muted); font-size:.85rem; }
@@ -2511,6 +2512,12 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__line.is-completed,.atelier-production-chart__dot.is-completed { stroke:var(--success); fill:var(--success); }
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__dates { display:grid; grid-template-columns:repeat(7,1fr); color:var(--muted); font-size:.72rem; text-align:center; }
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__canvas { position:relative; height:clamp(12rem,18vw,15rem); margin-top:.85rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-revenue-chart__kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; margin:.9rem 0 0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-revenue-chart__kpis div { min-width:0; padding:.55rem .6rem; border:1px solid color-mix(in srgb,var(--line) 85%,transparent); border-radius:12px; background:var(--raised); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-revenue-chart__kpis dt { color:var(--muted); font-size:.68rem; font-weight:700; line-height:1.25; text-transform:uppercase; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-revenue-chart__kpis dd { margin:.2rem 0 0; overflow:hidden; color:var(--ink); font-family:var(--ui-font-display); font-size:clamp(.88rem,1.2vw,1.1rem); font-weight:750; letter-spacing:-.025em; text-overflow:ellipsis; white-space:nowrap; }
+@media (min-width: 1100px) { html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-charts--with-financials { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width: 479px) { html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-revenue-chart__kpis { grid-template-columns:1fr; } }
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__head { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; }
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__head h2,.atelier-production-pulse__head p { margin:0; }
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__head p { color:var(--muted); font-size:.85rem; }
