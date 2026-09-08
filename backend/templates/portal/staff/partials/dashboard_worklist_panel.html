@@ -1,6 +1,6 @@
 {% load ui_tags %}
 <div id="atelier-dashboard-panel" class="atelier-dashboard-stack">
-<div class="atelier-dashboard-charts{% if financial_trend %} atelier-dashboard-charts--with-financials{% endif %}">
+<div class="atelier-dashboard-charts{% if financial_trend %} atelier-dashboard-charts--with-financials{% endif %}{% if printed_meterage_trend %} atelier-dashboard-charts--with-meterage{% endif %}">
 {% if production_trend %}
 <section class="atelier-production-chart" aria-labelledby="atelier-production-chart-title">
   <header><div><h2 class="font-display" id="atelier-production-chart-title">Flux Atelier</h2><p>Nouvelles commandes et commandes terminées · 7 derniers jours.</p></div><a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-list' %}">Voir les commandes</a></header>
@@ -16,13 +16,30 @@
       <p>CA TTC des commandes validées · 7 derniers jours.</p>
     </div>
   </header>
-  <dl class="atelier-revenue-chart__kpis" aria-label="Indicateurs de chiffre d’affaires">
+  <dl class="atelier-chart-kpis" aria-label="Indicateurs de chiffre d’affaires">
     <div><dt>7 jours</dt><dd>{{ financial_trend.seven_day_total|floatformat:2 }} €</dd></div>
     <div><dt>Aujourd’hui</dt><dd>{{ financial_trend.today_total|floatformat:2 }} €</dd></div>
     <div><dt>Panier moyen</dt><dd>{{ financial_trend.average_order_total|floatformat:2 }} €</dd></div>
   </dl>
   <div class="atelier-production-chart__canvas"><canvas id="atelier-revenue-chart-canvas" aria-label="Évolution du chiffre d’affaires TTC sur les sept derniers jours" role="img"></canvas></div>
   {{ financial_trend|json_script:"atelier-revenue-chart-data" }}
+</section>
+{% endif %}
+{% if printed_meterage_trend %}
+<section class="atelier-production-chart atelier-meterage-chart" aria-labelledby="atelier-meterage-chart-title">
+  <header>
+    <div>
+      <h2 class="font-display" id="atelier-meterage-chart-title">Métrage imprimé</h2>
+      <p>Mètres linéaires confirmés à l’impression · réimpressions incluses.</p>
+    </div>
+  </header>
+  <dl class="atelier-chart-kpis" aria-label="Indicateurs de métrage imprimé">
+    <div><dt>7 jours</dt><dd>{{ printed_meterage_trend.seven_day_total|floatformat:2 }} m</dd></div>
+    <div><dt>Aujourd’hui</dt><dd>{{ printed_meterage_trend.today_total|floatformat:2 }} m</dd></div>
+    <div><dt>Par impression</dt><dd>{{ printed_meterage_trend.average_per_print|floatformat:2 }} m</dd></div>
+  </dl>
+  <div class="atelier-production-chart__canvas"><canvas id="atelier-meterage-chart-canvas" aria-label="Évolution du métrage imprimé sur les sept derniers jours" role="img"></canvas></div>
+  {{ printed_meterage_trend|json_script:"atelier-meterage-chart-data" }}
 </section>
 {% endif %}
 </div>

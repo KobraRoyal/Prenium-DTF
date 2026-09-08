@@ -27,13 +27,20 @@ body.product-shell .atelier-worklist {
         )
         chart_script_path = Path(settings.BASE_DIR) / "static_src/js/atelier-dashboard-chart.js"
         chart_script = chart_script_path.read_text(encoding="utf-8")
+        dashboard_panel = (
+            Path(settings.BASE_DIR)
+            / "templates/portal/staff/partials/dashboard_worklist_panel.html"
+        ).read_text(encoding="utf-8")
         staff_css = (Path(settings.BASE_DIR) / "static_src/css/entries/portal-staff.css").read_text(
             encoding="utf-8"
         )
 
         self.assertNotIn("Tour de contrôle Atelier", dashboard)
         self.assertIn('label: "Nouvelles commandes"', chart_script)
+        self.assertIn('label: "Métrage imprimé"', chart_script)
         self.assertNotIn('label: "Entrées Atelier"', chart_script)
+        self.assertIn('id="atelier-meterage-chart-canvas"', dashboard_panel)
+        self.assertIn("Mètres linéaires confirmés à l’impression", dashboard_panel)
         self.assertIn("Tooltip.positioners.topmost", chart_script)
         self.assertIn('position: "topmost"', chart_script)
         self.assertIn("height:clamp(12rem,18vw,15rem)", staff_css)

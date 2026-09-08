@@ -10,7 +10,12 @@ from apps.accounts.models import StaffMembership
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer
 from apps.orders.models import Order
-from apps.production.models import ProductionJob
+from apps.production.models import (
+    ProductionJob,
+    ProductionJobMachineAssignment,
+    ProductionMachine,
+    ProductionPrintRecord,
+)
 from apps.production.services.dashboard import AtelierDashboardService
 from apps.production.services.manufacturing_order_batch import (
     ManufacturingOrderBatchService,
@@ -359,6 +364,61 @@ def test_atelier_financial_trend_uses_priced_submitted_orders_over_seven_days():
     assert trend["revenue_values"][-1] == 120.0
     assert trend["revenue_values"][-3] == 80.0
     assert today_order.pk != excluded_order.pk
+
+
+@pytest.mark.django_db
+def test_atelier_printed_meterage_trend_uses_print_record_snapshots_and_reprints():
+    actor = get_user_model().objects.create_user(
+        email="meterage-owner@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Métrage Atelier")
+    order = create_order(customer=customer, actor=actor)
+    machine = ProductionMachine.objects.create(code="MTR-01", name="Mètre")
+    assignment = ProductionJobMachineAssignment.objects.create(
+        production_job=order.production_job,
+        machine=machine,
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+    )
+    earlier_record = ProductionPrintRecord.objects.create(
+        production_job=order.production_job,
+        machine=machine,
+        assignment=assignment,
+        printed_linear_m="1.2500",
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+        manufacturing_order_number_snapshot=order.production_job.manufacturing_order_number,
+        order_public_id_snapshot=order.public_id,
+        customer_public_id_snapshot=customer.public_id,
+    )
+    ProductionPrintRecord.objects.create(
+        production_job=order.production_job,
+        machine=machine,
+        assignment=assignment,
+        printed_linear_m="0.7500",
+        note="Réimpression de contrôle",
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+        manufacturing_order_number_snapshot=order.production_job.manufacturing_order_number,
+        order_public_id_snapshot=order.public_id,
+        customer_public_id_snapshot=customer.public_id,
+    )
+    ProductionPrintRecord.objects.filter(pk=earlier_record.pk).update(
+        printed_at=timezone.now() - timedelta(days=2)
+    )
+
+    trend = AtelierDashboardService()._build_printed_meterage_trend()
+
+    assert trend["seven_day_total"] == Decimal("2.0000")
+    assert trend["today_total"] == Decimal("0.7500")
+    assert trend["average_per_print"] == Decimal("1.0000")
+    assert trend["print_count"] == 2
+    assert trend["meterage_values"][-1] == 0.75
+    assert trend["meterage_values"][-3] == 1.25
 
 
 @pytest.mark.django_db

@@ -2,6 +2,8 @@ const canvas = document.getElementById("atelier-production-chart-canvas");
 const source = document.getElementById("atelier-production-chart-data");
 const revenueCanvas = document.getElementById("atelier-revenue-chart-canvas");
 const revenueSource = document.getElementById("atelier-revenue-chart-data");
+const meterageCanvas = document.getElementById("atelier-meterage-chart-canvas");
+const meterageSource = document.getElementById("atelier-meterage-chart-data");
 
 if (canvas instanceof HTMLCanvasElement && source && window.Chart) {
   const trend = JSON.parse(source.textContent || "{}");
@@ -65,6 +67,55 @@ if (canvas instanceof HTMLCanvasElement && source && window.Chart) {
       scales: {
         x: { grid: { display: false }, ticks: { color: muted, font: { size: 11 } }, border: { display: false } },
         y: { beginAtZero: true, ticks: { precision: 0, color: muted, font: { size: 11 } }, grid: { color: line }, border: { display: false } },
+      },
+    },
+  });
+}
+
+if (meterageCanvas instanceof HTMLCanvasElement && meterageSource && window.Chart) {
+  const trend = JSON.parse(meterageSource.textContent || "{}");
+  const styles = getComputedStyle(document.documentElement);
+  const accent = styles.getPropertyValue("--accent").trim() || "#a83bc4";
+  const muted = styles.getPropertyValue("--muted").trim() || "#6b675c";
+  const line = styles.getPropertyValue("--line").trim() || "#e2dccb";
+  const meters = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
+
+  new window.Chart(meterageCanvas, {
+    type: "line",
+    data: {
+      labels: trend.labels || [],
+      datasets: [{
+        label: "Métrage imprimé",
+        data: trend.meterage_values || [],
+        borderColor: accent,
+        backgroundColor: `${accent}20`,
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointBackgroundColor: accent,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: "index" },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#1a1815",
+          padding: 10,
+          callbacks: { label: (context) => `Métrage : ${meters.format(context.parsed.y || 0)} m` },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: muted, font: { size: 11 } }, border: { display: false } },
+        y: {
+          beginAtZero: true,
+          ticks: { color: muted, font: { size: 11 }, callback: (value) => `${meters.format(value)} m` },
+          grid: { color: line },
+          border: { display: false },
+        },
       },
     },
   });

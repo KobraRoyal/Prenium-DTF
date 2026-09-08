@@ -35,6 +35,7 @@ class StaffDashboardView(StaffPortalMixin, View):
                 "kpi_rows": [],
                 "activity_kpi_rows": [],
                 "production_trend": {},
+                "printed_meterage_trend": {},
                 "printable_count": 0,
                 "unprinted_of_total": 0,
                 "unprinted_of_batch_count": 0,
@@ -48,6 +49,7 @@ class StaffDashboardView(StaffPortalMixin, View):
             "dashboard_kpi_rows": dashboard.get("kpi_rows", []),
             "activity_kpi_rows": dashboard.get("activity_kpi_rows", []),
             "production_trend": dashboard.get("production_trend", {}),
+            "printed_meterage_trend": dashboard.get("printed_meterage_trend", {}),
             "financial_trend": (
                 atelier_dashboard_service.build_financial_trend()
                 if can_view_financial_trend

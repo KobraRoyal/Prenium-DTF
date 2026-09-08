@@ -14,7 +14,7 @@ from apps.billing.services.production_payment_gate import (
 )
 from apps.orders.models import Order
 from apps.orders.references import order_business_number, order_client_reference, order_uuid_short
-from apps.production.models import ProductionJob
+from apps.production.models import ProductionJob, ProductionPrintRecord
 from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
 from apps.production.services.workflow import ProductionWorkflowService
@@ -46,6 +46,7 @@ class AtelierDashboardService:
             ),
             "activity_kpi_rows": self._build_activity_kpi_rows(),
             "production_trend": self._build_production_trend(),
+            "printed_meterage_trend": self._build_printed_meterage_trend(),
             "printable_count": sum(row["print_eligible"] for row in rows),
             "unprinted_of_total": unprinted_total,
             "unprinted_of_batch_count": min(unprinted_total, batch_service.max_batch_size),
@@ -115,6 +116,33 @@ class AtelierDashboardService:
             "today_total": revenue_by_day[today],
             "average_order_total": total / order_count if order_count else Decimal("0.00"),
             "order_count": order_count,
+        }
+
+    def _build_printed_meterage_trend(self) -> dict[str, object]:
+        """Métrage linéaire issu des preuves d'impression, réimpressions incluses."""
+        today = timezone.localdate()
+        dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        meterage_by_day = {day: Decimal("0.0000") for day in dates}
+        prints_by_day = {day: 0 for day in dates}
+        print_records = ProductionPrintRecord.objects.filter(
+            printed_at__date__gte=dates[0],
+            printed_linear_m__isnull=False,
+        ).values_list("printed_at__date", "printed_linear_m")
+        for printed_on, printed_linear_m in print_records:
+            if printed_on not in meterage_by_day:
+                continue
+            meterage_by_day[printed_on] += printed_linear_m
+            prints_by_day[printed_on] += 1
+
+        total = sum(meterage_by_day.values(), Decimal("0.0000"))
+        print_count = sum(prints_by_day.values())
+        return {
+            "labels": [day.strftime("%d/%m") for day in dates],
+            "meterage_values": [float(meterage_by_day[day]) for day in dates],
+            "seven_day_total": total,
+            "today_total": meterage_by_day[today],
+            "average_per_print": total / print_count if print_count else Decimal("0.0000"),
+            "print_count": print_count,
         }
 
     def _build_activity_kpi_rows(self) -> list[dict[str, object]]:

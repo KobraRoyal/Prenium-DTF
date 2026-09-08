@@ -489,3 +489,10 @@
 - [x] Date prévisionnelle de retrait/livraison affichée côté client, avec valeur « À confirmer »
 - [x] Modification Atelier protégée par permission `orders.change_order` et auditée
 - [x] 192 tests complets réussis ; Django, migrations, Ruff et format conformes
+
+## Sprint 56 — Pilotage du métrage imprimé Atelier (2026-09-08)
+
+- [x] Mètres linéaires figés à chaque confirmation d’impression
+- [x] Réimpressions comptabilisées dans la consommation réelle
+- [x] Courbe Chart.js et indicateurs 7 jours, jour courant et moyenne par impression
+- [x] Accès opérationnel pour les rôles Atelier sans exposer le CA
