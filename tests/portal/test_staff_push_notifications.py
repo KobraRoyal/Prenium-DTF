@@ -287,6 +287,8 @@ def test_atelier_notification_runtime_keeps_permission_user_initiated_and_fallba
     assert 'if (document.hidden || root.dataset.pushState === "enabled") return' in runtime
     assert 'target: "#atelier-dashboard-live-region"' in runtime
     assert 'select: "#atelier-dashboard-live-region"' in runtime
+    assert 'target: "#atelier-production-health"' in runtime
+    assert 'select: "#atelier-production-health"' in runtime
     assert "atelier-production-chart-canvas" not in runtime
     assert (
         'window.preniumToast?.("Une nouvelle commande est disponible dans l’Atelier.", "info")'

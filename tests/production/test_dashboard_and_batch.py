@@ -440,6 +440,167 @@ def test_atelier_printed_meterage_trend_uses_print_record_snapshots_and_reprints
 
 
 @pytest.mark.django_db
+def test_atelier_production_health_reports_actionable_alerts_quality_and_flow():
+    actor = get_user_model().objects.create_user(
+        email="production-health@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Pilotage production")
+    now = timezone.now()
+
+    blocked_order = create_order(customer=customer, actor=actor)
+    ProductionJob.objects.filter(pk=blocked_order.production_job.pk).update(
+        status=ProductionJob.Status.BLOCKED,
+    )
+
+    overdue_order = create_order(customer=customer, actor=actor)
+    Order.objects.filter(pk=overdue_order.pk).update(
+        estimated_handover_date=timezone.localdate() - timedelta(days=1),
+    )
+    ProductionJob.objects.filter(pk=overdue_order.production_job.pk).update(
+        status=ProductionJob.Status.IN_PROGRESS,
+        last_transition_at=now,
+    )
+
+    aging_order = create_order(customer=customer, actor=actor)
+    ProductionJob.objects.filter(pk=aging_order.production_job.pk).update(
+        status=ProductionJob.Status.QUEUED,
+        last_transition_at=None,
+        created_at=now - timedelta(hours=25),
+    )
+
+    fresh_order = create_order(customer=customer, actor=actor)
+    ProductionJob.objects.filter(pk=fresh_order.production_job.pk).update(
+        status=ProductionJob.Status.QUEUED,
+        last_transition_at=now - timedelta(hours=23),
+    )
+
+    two_hour_order = create_order(customer=customer, actor=actor)
+    four_hour_order = create_order(customer=customer, actor=actor)
+    missing_timestamp_order = create_order(customer=customer, actor=actor)
+    ProductionJob.objects.filter(pk=two_hour_order.production_job.pk).update(
+        status=ProductionJob.Status.COMPLETED,
+        started_at=now - timedelta(hours=2),
+        completed_at=now,
+    )
+    ProductionJob.objects.filter(pk=four_hour_order.production_job.pk).update(
+        status=ProductionJob.Status.COMPLETED,
+        started_at=now - timedelta(hours=5),
+        completed_at=now - timedelta(hours=1),
+    )
+    ProductionJob.objects.filter(pk=missing_timestamp_order.production_job.pk).update(
+        status=ProductionJob.Status.COMPLETED,
+        started_at=None,
+        completed_at=now,
+    )
+
+    print_order = create_order(customer=customer, actor=actor)
+    machine = ProductionMachine.objects.create(code="KPI-01", name="KPI")
+    assignment = ProductionJobMachineAssignment.objects.create(
+        production_job=print_order.production_job,
+        machine=machine,
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+    )
+
+    def create_print_record(*, note: str = ""):
+        return ProductionPrintRecord.objects.create(
+            production_job=print_order.production_job,
+            machine=machine,
+            assignment=assignment,
+            note=note,
+            machine_public_id_snapshot=machine.public_id,
+            machine_code_snapshot=machine.code,
+            machine_name_snapshot=machine.name,
+            manufacturing_order_number_snapshot=(
+                print_order.production_job.manufacturing_order_number
+            ),
+            order_public_id_snapshot=print_order.public_id,
+            customer_public_id_snapshot=customer.public_id,
+        )
+
+    historical_print = create_print_record()
+    first_recent_reprint = create_print_record(note="Réimpression couleur")
+    second_recent_reprint = create_print_record(note="Réimpression contrôle")
+    ProductionPrintRecord.objects.filter(pk=historical_print.pk).update(
+        created_at=now - timedelta(days=8),
+        printed_at=now - timedelta(days=8),
+    )
+    ProductionPrintRecord.objects.filter(pk=first_recent_reprint.pk).update(
+        created_at=now - timedelta(hours=2),
+        printed_at=now - timedelta(hours=2),
+    )
+    ProductionPrintRecord.objects.filter(pk=second_recent_reprint.pk).update(
+        created_at=now - timedelta(hours=1),
+        printed_at=now - timedelta(hours=1),
+    )
+
+    health = AtelierDashboardService()._build_production_health()
+
+    assert health["alerts"] == [
+        {
+            "key": "blocked",
+            "label": "OF bloquées",
+            "value": 1,
+            "detail": "À débloquer maintenant",
+            "tone": "is-danger",
+            "href": f"{reverse('portal:staff-order-list')}?status=blocked",
+        },
+        {
+            "key": "overdue",
+            "label": "Retards de remise",
+            "value": 1,
+            "detail": "Date de remise dépassée",
+            "tone": "is-danger",
+        },
+        {
+            "key": "aging",
+            "label": "Encours > 24 h",
+            "value": 1,
+            "detail": "Sans progression depuis 24 h",
+            "tone": "is-warning",
+        },
+    ]
+    assert health["quality"] == [
+        {
+            "key": "reprint_rate",
+            "label": "Taux de réimpression",
+            "value": Decimal("100.0"),
+            "unit": "%",
+            "detail": "2 sur 2 impressions · 7 j",
+            "tone": "is-warning",
+        }
+    ]
+    assert health["flow"] == [
+        {
+            "key": "average_production_time",
+            "label": "Délai moyen de production",
+            "value": Decimal("3.0"),
+            "unit": "h",
+            "detail": "2 OF terminés · 7 j",
+            "tone": "is-neutral",
+        }
+    ]
+
+
+@pytest.mark.django_db
+def test_atelier_production_health_is_safe_without_activity():
+    health = AtelierDashboardService()._build_production_health()
+
+    assert [alert["value"] for alert in health["alerts"]] == [0, 0, 0]
+    assert [alert["tone"] for alert in health["alerts"]] == [
+        "is-success",
+        "is-success",
+        "is-success",
+    ]
+    assert health["quality"][0]["value"] == Decimal("0.0")
+    assert health["quality"][0]["detail"] == "0 sur 0 impressions · 7 j"
+    assert health["flow"][0]["value"] == Decimal("0.0")
+    assert health["flow"][0]["detail"] == "0 OF terminés · 7 j"
+
+
+@pytest.mark.django_db
 def test_atelier_financial_dashboard_is_only_rendered_for_owner_or_admin_roles():
     actor = get_user_model().objects.create_user(email="revenue-order@example.com", password="pass")
     customer = Customer.objects.create(name="Revenus Atelier")

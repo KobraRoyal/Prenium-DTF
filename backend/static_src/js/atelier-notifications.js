@@ -59,6 +59,15 @@ function refreshDashboard(root) {
     select: "#atelier-dashboard-live-region",
     swap: "outerHTML",
   });
+  // La notification est l'événement temps réel de l'Atelier : synchroniser
+  // aussi les priorités et compteurs sans redessiner les graphiques Chart.js.
+  if (document.getElementById("atelier-production-health")) {
+    window.htmx.ajax("GET", root.dataset.dashboardRefreshUrl, {
+      target: "#atelier-production-health",
+      select: "#atelier-production-health",
+      swap: "outerHTML",
+    });
+  }
 }
 
 function announceEvent(root, publicId) {

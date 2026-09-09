@@ -58,6 +58,9 @@
 - [Sprint 50 — Page HTTP 404 Operate](sprint-50-page-404.md)
 - [Sprint 51 — Cohérence tokens et identité Atelier](sprint-51-tokens-brand-coherence.md)
 - [Sprint 52 — Soulignement animé des actions simples](sprint-52-simple-action-hover-motion.md)
+- [Sprint 55 — Pilotage financier du dashboard Atelier](sprint-55-dashboard-financier-atelier.md)
+- [Sprint 56 — Pilotage du métrage imprimé Atelier](sprint-56-metrage-imprime-atelier.md)
+- [Sprint 57 — Pilotage de production Atelier](sprint-57-pilotage-production-atelier.md)
 
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)

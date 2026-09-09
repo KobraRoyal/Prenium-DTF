@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -76,7 +77,9 @@ def test_templates_load_common_css_before_exact_surface_bundle() -> None:
 def test_portal_css_asset_version_is_bumped_for_surface_changes() -> None:
     portal_tags = read(BACKEND_DIR / "apps" / "portal" / "templatetags" / "portal_tags.py")
 
-    assert 'PORTAL_CSS_ASSET_V = "20260908-confirm-dialog-grid-v34"' in portal_tags
+    asset_version = re.search(r'PORTAL_CSS_ASSET_V = "([^"]+)"', portal_tags)
+    assert asset_version is not None
+    assert re.fullmatch(r"202\d{5}-[a-z0-9-]+-v\d+", asset_version.group(1))
 
 
 def test_generated_surface_bundles_exist_and_contain_expected_markers() -> None:

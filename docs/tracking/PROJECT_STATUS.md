@@ -496,3 +496,10 @@
 - [x] Réimpressions comptabilisées dans la consommation réelle
 - [x] Rail de jauges demi-lune : 7 jours, jour courant et moyenne par impression
 - [x] Accès opérationnel pour les rôles Atelier sans exposer le CA
+
+## Sprint 57 — Pilotage de production Atelier (2026-09-09)
+
+- [x] Activité par statut et alertes OF bloquées, retards et encours > 24 h
+- [x] Taux de réimpression et délai moyen de production sur sept jours
+- [x] Rafraîchissement des KPI lors des notifications live, sans redessiner Chart.js
+- [x] CA toujours réservé aux rôles owner/admin ; KPI opérationnels accessibles aux collaborateurs autorisés

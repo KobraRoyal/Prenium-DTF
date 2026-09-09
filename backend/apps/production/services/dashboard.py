@@ -5,6 +5,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count, Exists, F, OuterRef, Q
 from django.urls import reverse
 from django.utils import timezone
 
@@ -45,6 +46,7 @@ class AtelierDashboardService:
                 unprinted_total=unprinted_total,
             ),
             "activity_kpi_rows": self._build_activity_kpi_rows(),
+            "production_health": self._build_production_health(),
             "production_trend": self._build_production_trend(),
             "printed_meterage_trend": self._build_printed_meterage_trend(),
             "printable_count": sum(row["print_eligible"] for row in rows),
@@ -173,6 +175,142 @@ class AtelierDashboardService:
                     "detail": "vs plus grand tirage",
                     "progress": percentage(average_per_print, largest_print),
                 },
+            ],
+        }
+
+    def _build_production_health(self) -> dict[str, list[dict[str, object]]]:
+        """Indicateurs actionnables du responsable de production."""
+        now = timezone.now()
+        today = timezone.localdate()
+        aging_cutoff = now - timedelta(hours=24)
+        seven_day_start = today - timedelta(days=6)
+        orders_url = reverse("portal:staff-order-list")
+
+        job_counts = ProductionJob.objects.aggregate(
+            blocked=Count(
+                "pk",
+                filter=Q(status=ProductionJob.Status.BLOCKED),
+            ),
+            overdue=Count(
+                "pk",
+                filter=(
+                    ~Q(status=ProductionJob.Status.COMPLETED)
+                    & Q(order__estimated_handover_date__lt=today)
+                ),
+            ),
+            aging=Count(
+                "pk",
+                filter=(
+                    Q(
+                        status__in=(
+                            ProductionJob.Status.QUEUED,
+                            ProductionJob.Status.IN_PROGRESS,
+                        )
+                    )
+                    & (
+                        Q(last_transition_at__lt=aging_cutoff)
+                        | Q(
+                            last_transition_at__isnull=True,
+                            created_at__lt=aging_cutoff,
+                        )
+                    )
+                ),
+            ),
+        )
+
+        recent_prints = ProductionPrintRecord.objects.filter(
+            printed_at__date__gte=seven_day_start,
+        )
+        has_previous_print = Exists(
+            ProductionPrintRecord.objects.filter(
+                production_job_id=OuterRef("production_job_id"),
+                created_at__lt=OuterRef("created_at"),
+            )
+        )
+        print_count = recent_prints.count()
+        reprint_count = (
+            recent_prints.annotate(
+                _has_previous_print=has_previous_print,
+            )
+            .filter(_has_previous_print=True)
+            .count()
+        )
+        reprint_rate = (
+            (Decimal(reprint_count) * Decimal("100") / Decimal(print_count)).quantize(
+                Decimal("0.1")
+            )
+            if print_count
+            else Decimal("0.0")
+        )
+
+        completed_durations = ProductionJob.objects.filter(
+            status=ProductionJob.Status.COMPLETED,
+            completed_at__date__gte=seven_day_start,
+            started_at__isnull=False,
+            completed_at__isnull=False,
+            completed_at__gte=F("started_at"),
+        ).values_list("started_at", "completed_at")
+        duration_seconds = [
+            Decimal(str((completed_at - started_at).total_seconds()))
+            for started_at, completed_at in completed_durations
+        ]
+        average_duration_hours = (
+            (
+                sum(duration_seconds, Decimal("0"))
+                / Decimal(len(duration_seconds))
+                / Decimal("3600")
+            ).quantize(Decimal("0.1"))
+            if duration_seconds
+            else Decimal("0.0")
+        )
+
+        blocked_count = job_counts["blocked"]
+        overdue_count = job_counts["overdue"]
+        aging_count = job_counts["aging"]
+        return {
+            "alerts": [
+                {
+                    "key": "blocked",
+                    "label": "OF bloquées",
+                    "value": blocked_count,
+                    "detail": "À débloquer maintenant" if blocked_count else "Aucun blocage actif",
+                    "tone": "is-danger" if blocked_count else "is-success",
+                    "href": f"{orders_url}?status={ProductionJob.Status.BLOCKED}",
+                },
+                {
+                    "key": "overdue",
+                    "label": "Retards de remise",
+                    "value": overdue_count,
+                    "detail": "Date de remise dépassée" if overdue_count else "Délais tenus",
+                    "tone": "is-danger" if overdue_count else "is-success",
+                },
+                {
+                    "key": "aging",
+                    "label": "Encours > 24 h",
+                    "value": aging_count,
+                    "detail": "Sans progression depuis 24 h" if aging_count else "Encours récents",
+                    "tone": "is-warning" if aging_count else "is-success",
+                },
+            ],
+            "quality": [
+                {
+                    "key": "reprint_rate",
+                    "label": "Taux de réimpression",
+                    "value": reprint_rate,
+                    "unit": "%",
+                    "detail": f"{reprint_count} sur {print_count} impressions · 7 j",
+                    "tone": "is-warning" if reprint_count else "is-success",
+                }
+            ],
+            "flow": [
+                {
+                    "key": "average_production_time",
+                    "label": "Délai moyen de production",
+                    "value": average_duration_hours,
+                    "unit": "h",
+                    "detail": f"{len(duration_seconds)} OF terminés · 7 j",
+                    "tone": "is-neutral",
+                }
             ],
         }
 

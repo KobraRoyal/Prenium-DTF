@@ -34,6 +34,7 @@ class StaffDashboardView(StaffPortalMixin, View):
                 "metrics": {},
                 "kpi_rows": [],
                 "activity_kpi_rows": [],
+                "production_health": {},
                 "production_trend": {},
                 "printed_meterage_trend": {},
                 "printable_count": 0,
@@ -48,6 +49,7 @@ class StaffDashboardView(StaffPortalMixin, View):
             "printable_count": dashboard["printable_count"],
             "dashboard_kpi_rows": dashboard.get("kpi_rows", []),
             "activity_kpi_rows": dashboard.get("activity_kpi_rows", []),
+            "production_health": dashboard.get("production_health", {}),
             "production_trend": dashboard.get("production_trend", {}),
             "printed_meterage_trend": dashboard.get("printed_meterage_trend", {}),
             "financial_trend": (

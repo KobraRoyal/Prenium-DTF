@@ -17,7 +17,7 @@ from apps.orders.references import (
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260908-atelier-chartjs-gauges-v35"
+PORTAL_CSS_ASSET_V = "20260909-production-health-readable-v40"
 
 STATUS_LABELS = {
     "draft": "Brouillon",
