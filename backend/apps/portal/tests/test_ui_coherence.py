@@ -2411,7 +2411,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
                 self.assertNotIn("Aucun visuel", source)
 
         client_items = template_source("portal/client/partials/order_project_items.html")
-        self.assertIn('Ajouter des visuels', client_items)
+        self.assertIn("Ajouter des visuels", client_items)
         self.assertNotIn('cta_button_label="Choisir des fichiers"', client_items)
 
     def test_lot4_portal_header_nav_removes_parasite_borders(self) -> None:
