@@ -2117,8 +2117,6 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("order_project_quality_review.html", items)
         self.assertIn("order_project_preview_stage.html", validation_panel)
         self.assertIn("order_project_rotation_hidden.html", validation_panel)
-        self.assertIn("order_project_item_delete_button.html", validation_panel)
-        self.assertIn("order_project_item_delete_button.html", editor)
         self.assertIn("order_project_item_delete_button.html", items)
         self.assertIn("action='delete'", item_delete)
         self.assertIn("Supprimer", item_delete)
@@ -2170,14 +2168,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("is-analysis-pending", editor)
         self.assertIn("validation_chrome=True", editor)
         self.assertIn("b2b-dialog-actions--editor", editor)
-        self.assertIn(
-            'button_class="b2b-dialog-actions__danger"',
-            editor,
-        )
-        self.assertIn(
-            'button_class="b2b-dialog-actions__danger"',
-            validation_panel,
-        )
+        self.assertNotIn('button_class="b2b-dialog-actions__danger"', editor)
+        self.assertNotIn('button_class="b2b-dialog-actions__danger"', validation_panel)
         self.assertNotIn(">×</button>", items)
         self.assertIn('class="b2b-dialog-close__icon"', items)
         modal_css = portal_client.split(
@@ -2288,6 +2280,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("data-hex-color-preset", configurator_runtime)
         self.assertIn("syncHexColorControlSwatch", configurator_runtime)
         self.assertIn("mountHexPopover", configurator_runtime)
+        self.assertIn("syncVisualConfirmSupportColor", configurator_runtime)
+        self.assertIn('!fieldset.closest("dialog[open]")', configurator_runtime)
+        self.assertIn("supportColorInOpenDialog", configurator_runtime)
+        self.assertIn("data-visual-confirm-support-hex", editor)
+        self.assertNotIn("order_project_item_delete_button.html", editor)
+        self.assertNotIn("order_project_item_delete_button.html", validation_panel)
         self.assertIn("setMulticolorMode", configurator_runtime)
         self.assertIn("handleSupportColorFieldEvent", configurator_runtime)
         self.assertIn("htmx:load", configurator_runtime)
@@ -2411,6 +2409,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
                 source = template_source(path)
                 self.assertIn(needle, source)
                 self.assertNotIn("Aucun visuel", source)
+
+        client_items = template_source("portal/client/partials/order_project_items.html")
+        self.assertIn('Ajouter des visuels', client_items)
+        self.assertNotIn('cta_button_label="Choisir des fichiers"', client_items)
 
     def test_lot4_portal_header_nav_removes_parasite_borders(self) -> None:
         header = template_source("components/nav/portal_header.html")
