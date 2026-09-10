@@ -1,3 +1,4 @@
+from apps.portal.views_staff_push_notifications import ServiceWorkerView
 from django.conf import settings
 from django.urls import include, path, re_path
 from django.views.static import serve
@@ -5,6 +6,7 @@ from django.views.static import serve
 from .admin import restricted_admin_site
 
 urlpatterns = [
+    path("service-worker.js", ServiceWorkerView.as_view(), name="service-worker"),
     path("admin/", restricted_admin_site.urls),
     path("", include("apps.core.urls")),
     path("", include(("apps.accounts.urls", "accounts"), namespace="accounts")),

@@ -412,8 +412,14 @@ class OrderService:
             )
 
             from apps.notifications.services.transactional import schedule_order_created_email
+            from apps.notifications.services.workshop_push import WorkshopNotificationService
 
             schedule_order_created_email(order_public_id=order.public_id)
+            WorkshopNotificationService().publish_order_submitted(
+                order=order,
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                source=source,
+            )
 
         return self.get_customer_order(customer, order.public_id)
 
@@ -525,6 +531,8 @@ class OrderService:
 
         with transaction.atomic():
             order_locked = Order.objects.select_for_update().get(pk=order.pk)
+            if order_locked.status != Order.Status.DRAFT:
+                raise ValidationError("La commande a déjà été soumise.")
             order_locked.status = Order.Status.SUBMITTED
             update_fields = ["status", "updated_at"]
             if order_locked.billing_mode != resolved_mode:
@@ -564,9 +572,15 @@ class OrderService:
                 should_defer_order_created_until_payment,
             )
             from apps.notifications.services.transactional import schedule_order_created_email
+            from apps.notifications.services.workshop_push import WorkshopNotificationService
 
             if not should_defer_order_created_until_payment(order_locked):
                 schedule_order_created_email(order_public_id=order_locked.public_id)
+            WorkshopNotificationService().publish_order_submitted(
+                order=order_locked,
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                source=source,
+            )
 
         return self.get_customer_order(customer, order_locked.public_id)
 

@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
@@ -447,6 +448,8 @@ def test_print_confirmation_is_idempotent_and_reprint_requires_note():
         ),
     )
     order = create_submitted_order(actor=operator)
+    order.meterage_override_linear_m = "1.7500"
+    order.save(update_fields=("meterage_override_linear_m", "updated_at"))
     machine = create_machine(actor=manager)
     job, _assignment, _changed = ProductionMachineAssignmentService().assign(
         order_public_id=order.public_id,
@@ -479,6 +482,7 @@ def test_print_confirmation_is_idempotent_and_reprint_requires_note():
     assert created is True
     assert duplicate_created is False
     assert same_print == first_print
+    assert first_print.printed_linear_m == Decimal("1.7500")
     assert ProductionPrintRecord.objects.count() == 1
 
     with pytest.raises(ValidationError, match="réimpression"):
@@ -496,6 +500,7 @@ def test_print_confirmation_is_idempotent_and_reprint_requires_note():
     )
     assert created is True
     assert reprint.machine_code_snapshot == machine.code
+    assert reprint.printed_linear_m == Decimal("1.7500")
     assert ProductionPrintRecord.objects.count() == 2
     assert AuditLogEntry.objects.filter(action="production.print.reconfirmed").exists()
 

@@ -30,5 +30,7 @@ INTERNAL_NOTIFICATION_EMAILS = []
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 GOOGLE_DRIVE_SYNC_ENABLED = False
+WEB_PUSH_ENABLED = False
+WEB_PUSH_ENCRYPTION_KEYS = ["v1:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="]
 STATIC_ROOT = Path(tempfile.gettempdir()) / "prenium-dtf-test-static"
 MEDIA_ROOT = Path(tempfile.gettempdir()) / "prenium-dtf-test-media"

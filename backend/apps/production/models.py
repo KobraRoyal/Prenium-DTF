@@ -333,6 +333,13 @@ class ProductionPrintRecord(BaseModel):
         related_name="production_print_records",
     )
     printed_at = models.DateTimeField(default=timezone.now)
+    printed_linear_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="Métrage linéaire figé au moment de la confirmation d’impression.",
+    )
     source = models.CharField(max_length=32, default="staff_portal")
     note = models.CharField(max_length=255, blank=True)
     request_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
@@ -348,6 +355,7 @@ class ProductionPrintRecord(BaseModel):
         indexes = [
             models.Index(fields=("production_job", "printed_at")),
             models.Index(fields=("machine", "printed_at")),
+            models.Index(fields=("printed_at",), name="prod_print_record_date_idx"),
         ]
 
     def __str__(self) -> str:

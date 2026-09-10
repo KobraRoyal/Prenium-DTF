@@ -17,12 +17,12 @@ from .views_access_management import (
 )
 from .views_auth import (
     PortalLoginView,
-    PortalLogoutView,
     PortalPasswordResetCompleteView,
     PortalPasswordResetConfirmView,
     PortalPasswordResetDoneView,
     PortalPasswordResetRequestView,
 )
+from .views_auth_logout import PortalLogoutView
 from .views_b2b_order_projects import (
     ClientOrderProjectAutosaveView,
     ClientOrderProjectCancelView,
@@ -138,6 +138,12 @@ from .views_staff_operations import (
     StaffAtelierOperationUploadReviewView,
 )
 from .views_staff_production import StaffOrderPanelProductionView
+from .views_staff_push_notifications import (
+    StaffPushNotificationEventsView,
+    StaffPushNotificationStateView,
+    StaffPushNotificationSubscribeView,
+    StaffPushNotificationUnsubscribeView,
+)
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
     StaffOrderUploadPreviewView,
@@ -672,6 +678,26 @@ urlpatterns = [
         name="staff-order-project-item-asset-download",
     ),
     path("staff/orders/", StaffOrderListView.as_view(), name="staff-order-list"),
+    path(
+        "staff/notifications/push/",
+        StaffPushNotificationStateView.as_view(),
+        name="staff-push-notification-state",
+    ),
+    path(
+        "staff/notifications/push/subscribe/",
+        StaffPushNotificationSubscribeView.as_view(),
+        name="staff-push-notification-subscribe",
+    ),
+    path(
+        "staff/notifications/push/subscriptions/<uuid:subscription_public_id>/unsubscribe/",
+        StaffPushNotificationUnsubscribeView.as_view(),
+        name="staff-push-notification-unsubscribe",
+    ),
+    path(
+        "staff/notifications/push/events/",
+        StaffPushNotificationEventsView.as_view(),
+        name="staff-push-notification-events",
+    ),
     path(
         "staff/orders/manufacturing-orders/batch.pdf",
         StaffManufacturingOrderBatchPdfView.as_view(),

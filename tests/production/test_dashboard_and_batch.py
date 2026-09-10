@@ -2,12 +2,20 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import timedelta
+from decimal import Decimal
 
 import pytest
+from apps.accounts.models import StaffMembership
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer
 from apps.orders.models import Order
-from apps.production.models import ProductionJob
+from apps.production.models import (
+    ProductionJob,
+    ProductionJobMachineAssignment,
+    ProductionMachine,
+    ProductionPrintRecord,
+)
 from apps.production.services.dashboard import AtelierDashboardService
 from apps.production.services.manufacturing_order_batch import (
     ManufacturingOrderBatchService,
@@ -316,6 +324,318 @@ def test_atelier_dashboard_lists_full_unissued_queue():
     assert dashboard["unprinted_of_total"] == expected_count
     assert len(dashboard["rows"]) == expected_count
     assert dashboard["unprinted_of_batch_count"] == ManufacturingOrderBatchService.max_batch_size
+
+
+@pytest.mark.django_db
+def test_atelier_financial_trend_uses_priced_submitted_orders_over_seven_days():
+    actor = get_user_model().objects.create_user(email="revenue-owner@example.com", password="pass")
+    customer = Customer.objects.create(name="CA Atelier")
+    today_order = Order.objects.create(
+        customer=customer,
+        created_by=actor,
+        status=Order.Status.SUBMITTED,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="120.00",
+    )
+    earlier_order = Order.objects.create(
+        customer=customer,
+        created_by=actor,
+        status=Order.Status.SUBMITTED,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="80.00",
+    )
+    excluded_order = Order.objects.create(
+        customer=customer,
+        created_by=actor,
+        status=Order.Status.DRAFT,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="999.00",
+    )
+    earlier_day = timezone.now() - timedelta(days=2)
+    Order.objects.filter(pk=earlier_order.pk).update(created_at=earlier_day)
+    Order.objects.filter(pk=excluded_order.pk).update(created_at=earlier_day)
+
+    trend = AtelierDashboardService().build_financial_trend()
+
+    assert trend["seven_day_total"] == Decimal("200.00")
+    assert trend["today_total"] == Decimal("120.00")
+    assert trend["average_order_total"] == Decimal("100.00")
+    assert trend["order_count"] == 2
+    assert trend["revenue_values"][-1] == 120.0
+    assert trend["revenue_values"][-3] == 80.0
+    assert today_order.pk != excluded_order.pk
+
+
+@pytest.mark.django_db
+def test_atelier_printed_meterage_trend_uses_print_record_snapshots_and_reprints():
+    actor = get_user_model().objects.create_user(
+        email="meterage-owner@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Métrage Atelier")
+    order = create_order(customer=customer, actor=actor)
+    machine = ProductionMachine.objects.create(code="MTR-01", name="Mètre")
+    assignment = ProductionJobMachineAssignment.objects.create(
+        production_job=order.production_job,
+        machine=machine,
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+    )
+    earlier_record = ProductionPrintRecord.objects.create(
+        production_job=order.production_job,
+        machine=machine,
+        assignment=assignment,
+        printed_linear_m="1.2500",
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+        manufacturing_order_number_snapshot=order.production_job.manufacturing_order_number,
+        order_public_id_snapshot=order.public_id,
+        customer_public_id_snapshot=customer.public_id,
+    )
+    ProductionPrintRecord.objects.create(
+        production_job=order.production_job,
+        machine=machine,
+        assignment=assignment,
+        printed_linear_m="0.7500",
+        note="Réimpression de contrôle",
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+        manufacturing_order_number_snapshot=order.production_job.manufacturing_order_number,
+        order_public_id_snapshot=order.public_id,
+        customer_public_id_snapshot=customer.public_id,
+    )
+    ProductionPrintRecord.objects.filter(pk=earlier_record.pk).update(
+        printed_at=timezone.now() - timedelta(days=2)
+    )
+
+    trend = AtelierDashboardService()._build_printed_meterage_trend()
+
+    assert trend["seven_day_total"] == Decimal("2.0000")
+    assert trend["today_total"] == Decimal("0.7500")
+    assert trend["average_per_print"] == Decimal("1.0000")
+    assert trend["print_count"] == 2
+    assert trend["metric_gauges"] == [
+        {
+            "label": "7 jours",
+            "value": Decimal("2.0000"),
+            "detail": "2/7 jours actifs",
+            "progress": 29,
+        },
+        {
+            "label": "Aujourd’hui",
+            "value": Decimal("0.7500"),
+            "detail": "vs pic quotidien",
+            "progress": 60,
+        },
+        {
+            "label": "Par impression",
+            "value": Decimal("1.0000"),
+            "detail": "vs plus grand tirage",
+            "progress": 80,
+        },
+    ]
+
+
+@pytest.mark.django_db
+def test_atelier_production_health_reports_actionable_alerts_quality_and_flow():
+    actor = get_user_model().objects.create_user(
+        email="production-health@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Pilotage production")
+    now = timezone.now()
+
+    blocked_order = create_order(customer=customer, actor=actor)
+    ProductionJob.objects.filter(pk=blocked_order.production_job.pk).update(
+        status=ProductionJob.Status.BLOCKED,
+    )
+
+    overdue_order = create_order(customer=customer, actor=actor)
+    Order.objects.filter(pk=overdue_order.pk).update(
+        estimated_handover_date=timezone.localdate() - timedelta(days=1),
+    )
+    ProductionJob.objects.filter(pk=overdue_order.production_job.pk).update(
+        status=ProductionJob.Status.IN_PROGRESS,
+        last_transition_at=now,
+    )
+
+    aging_order = create_order(customer=customer, actor=actor)
+    ProductionJob.objects.filter(pk=aging_order.production_job.pk).update(
+        status=ProductionJob.Status.QUEUED,
+        last_transition_at=None,
+        created_at=now - timedelta(hours=25),
+    )
+
+    fresh_order = create_order(customer=customer, actor=actor)
+    ProductionJob.objects.filter(pk=fresh_order.production_job.pk).update(
+        status=ProductionJob.Status.QUEUED,
+        last_transition_at=now - timedelta(hours=23),
+    )
+
+    two_hour_order = create_order(customer=customer, actor=actor)
+    four_hour_order = create_order(customer=customer, actor=actor)
+    missing_timestamp_order = create_order(customer=customer, actor=actor)
+    ProductionJob.objects.filter(pk=two_hour_order.production_job.pk).update(
+        status=ProductionJob.Status.COMPLETED,
+        started_at=now - timedelta(hours=2),
+        completed_at=now,
+    )
+    ProductionJob.objects.filter(pk=four_hour_order.production_job.pk).update(
+        status=ProductionJob.Status.COMPLETED,
+        started_at=now - timedelta(hours=5),
+        completed_at=now - timedelta(hours=1),
+    )
+    ProductionJob.objects.filter(pk=missing_timestamp_order.production_job.pk).update(
+        status=ProductionJob.Status.COMPLETED,
+        started_at=None,
+        completed_at=now,
+    )
+
+    print_order = create_order(customer=customer, actor=actor)
+    machine = ProductionMachine.objects.create(code="KPI-01", name="KPI")
+    assignment = ProductionJobMachineAssignment.objects.create(
+        production_job=print_order.production_job,
+        machine=machine,
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+    )
+
+    def create_print_record(*, note: str = ""):
+        return ProductionPrintRecord.objects.create(
+            production_job=print_order.production_job,
+            machine=machine,
+            assignment=assignment,
+            note=note,
+            machine_public_id_snapshot=machine.public_id,
+            machine_code_snapshot=machine.code,
+            machine_name_snapshot=machine.name,
+            manufacturing_order_number_snapshot=(
+                print_order.production_job.manufacturing_order_number
+            ),
+            order_public_id_snapshot=print_order.public_id,
+            customer_public_id_snapshot=customer.public_id,
+        )
+
+    historical_print = create_print_record()
+    first_recent_reprint = create_print_record(note="Réimpression couleur")
+    second_recent_reprint = create_print_record(note="Réimpression contrôle")
+    ProductionPrintRecord.objects.filter(pk=historical_print.pk).update(
+        created_at=now - timedelta(days=8),
+        printed_at=now - timedelta(days=8),
+    )
+    ProductionPrintRecord.objects.filter(pk=first_recent_reprint.pk).update(
+        created_at=now - timedelta(hours=2),
+        printed_at=now - timedelta(hours=2),
+    )
+    ProductionPrintRecord.objects.filter(pk=second_recent_reprint.pk).update(
+        created_at=now - timedelta(hours=1),
+        printed_at=now - timedelta(hours=1),
+    )
+
+    health = AtelierDashboardService()._build_production_health()
+
+    assert health["alerts"] == [
+        {
+            "key": "blocked",
+            "label": "OF bloquées",
+            "value": 1,
+            "detail": "À débloquer maintenant",
+            "tone": "is-danger",
+            "href": f"{reverse('portal:staff-order-list')}?status=blocked",
+        },
+        {
+            "key": "overdue",
+            "label": "Retards de remise",
+            "value": 1,
+            "detail": "Date de remise dépassée",
+            "tone": "is-danger",
+        },
+        {
+            "key": "aging",
+            "label": "Encours > 24 h",
+            "value": 1,
+            "detail": "Sans progression depuis 24 h",
+            "tone": "is-warning",
+        },
+    ]
+    assert health["quality"] == [
+        {
+            "key": "reprint_rate",
+            "label": "Taux de réimpression",
+            "value": Decimal("100.0"),
+            "unit": "%",
+            "detail": "2 sur 2 impressions · 7 j",
+            "tone": "is-warning",
+        }
+    ]
+    assert health["flow"] == [
+        {
+            "key": "average_production_time",
+            "label": "Délai moyen de production",
+            "value": Decimal("3.0"),
+            "unit": "h",
+            "detail": "2 OF terminés · 7 j",
+            "tone": "is-neutral",
+        }
+    ]
+
+
+@pytest.mark.django_db
+def test_atelier_production_health_is_safe_without_activity():
+    health = AtelierDashboardService()._build_production_health()
+
+    assert [alert["value"] for alert in health["alerts"]] == [0, 0, 0]
+    assert [alert["tone"] for alert in health["alerts"]] == [
+        "is-success",
+        "is-success",
+        "is-success",
+    ]
+    assert health["quality"][0]["value"] == Decimal("0.0")
+    assert health["quality"][0]["detail"] == "0 sur 0 impressions · 7 j"
+    assert health["flow"][0]["value"] == Decimal("0.0")
+    assert health["flow"][0]["detail"] == "0 OF terminés · 7 j"
+
+
+@pytest.mark.django_db
+def test_atelier_financial_dashboard_is_only_rendered_for_owner_or_admin_roles():
+    actor = get_user_model().objects.create_user(email="revenue-order@example.com", password="pass")
+    customer = Customer.objects.create(name="Revenus Atelier")
+    Order.objects.create(
+        customer=customer,
+        created_by=actor,
+        status=Order.Status.SUBMITTED,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="150.00",
+    )
+    admin, admin_client = create_staff_client(
+        email="admin-revenue@example.com",
+        permissions=["view_order", "view_productionjob"],
+    )
+    collaborator, collaborator_client = create_staff_client(
+        email="collaborator-revenue@example.com",
+        permissions=["view_order", "view_productionjob"],
+    )
+    StaffMembership.objects.create(user=admin, role=StaffMembership.Role.ADMIN)
+    StaffMembership.objects.create(user=collaborator, role=StaffMembership.Role.MEMBER)
+
+    admin_response = admin_client.get(reverse("portal:staff-dashboard"))
+    collaborator_response = collaborator_client.get(reverse("portal:staff-dashboard"))
+    collaborator_partial = collaborator_client.get(
+        reverse("portal:staff-dashboard"), HTTP_HX_REQUEST="true"
+    )
+
+    assert admin_response.context["can_view_financial_trend"] is True
+    assert admin_response.context["financial_trend"]["seven_day_total"] == Decimal("150.00")
+    assert "Chiffre d’affaires" in admin_response.content.decode()
+    assert 'id="atelier-revenue-chart-data"' in admin_response.content.decode()
+    assert collaborator_response.context["can_view_financial_trend"] is False
+    assert collaborator_response.context["financial_trend"] is None
+    assert "Chiffre d’affaires" not in collaborator_response.content.decode()
+    assert "atelier-revenue-chart-data" not in collaborator_partial.content.decode()
 
 
 @pytest.mark.django_db

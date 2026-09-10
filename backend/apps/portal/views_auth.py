@@ -4,7 +4,6 @@ from django.conf import settings
 from django.contrib.auth.views import (
     INTERNAL_RESET_SESSION_TOKEN,
     LoginView,
-    LogoutView,
     PasswordResetConfirmView,
 )
 from django.shortcuts import redirect, render
@@ -47,10 +46,6 @@ class PortalLoginView(LoginView):
         if access_scope_service.can_access_staff_portal(self.request.user):
             return reverse("portal:staff-dashboard")
         return reverse("portal:client-dashboard")
-
-
-class PortalLogoutView(LogoutView):
-    next_page = "/login/"
 
 
 class PortalPasswordResetRequestView(View):

@@ -52,11 +52,12 @@
       data-visual-confirm
     >
       {% csrf_token %}
+      <input type="hidden" name="support_color_hex" data-visual-confirm-support-hex value="{{ item.support_color_hex|default:'' }}">
+      <input type="hidden" name="support_color_multicolor" data-visual-confirm-support-multicolor value="{% if item.support_color_is_multicolor %}on{% endif %}">
       <label class="b2b-quality-confirm"><input type="checkbox" name="confirm_analysis" required {% if review.confirmed %}checked{% endif %}> <span>J’ai vérifié l’aperçu et les alertes.</span></label>
       <div class="b2b-dialog-actions b2b-dialog-actions--editor">
         <button class="ui-btn ui-btn-primary" type="submit">Confirmer ce visuel</button>
         {% if not item.is_production_gang_sheet_asset %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-project-item-asset-download' customer_public_id=customer.public_id project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>{% endif %}
-        {% include "portal/client/partials/order_project_item_delete_button.html" with include_delete_dialog=True dialog_prefix="editor-" button_class="b2b-dialog-actions__danger" %}
       </div>
     </form>
     {% else %}

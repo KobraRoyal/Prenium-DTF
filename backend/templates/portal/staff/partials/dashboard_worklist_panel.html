@@ -1,5 +1,6 @@
 {% load ui_tags %}
 <div id="atelier-dashboard-panel" class="atelier-dashboard-stack">
+<div class="atelier-dashboard-charts">
 {% if production_trend %}
 <section class="atelier-production-chart" aria-labelledby="atelier-production-chart-title">
   <header><div><h2 class="font-display" id="atelier-production-chart-title">Flux Atelier</h2><p>Nouvelles commandes et commandes terminées · 7 derniers jours.</p></div><a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-list' %}">Voir les commandes</a></header>
@@ -7,6 +8,111 @@
   {{ production_trend|json_script:"atelier-production-chart-data" }}
 </section>
 {% endif %}
+</div>
+<div class="atelier-dashboard-secondary-rail{% if financial_trend %} atelier-dashboard-secondary-rail--with-financials{% endif %}">
+{% if printed_meterage_trend %}
+<section class="atelier-production-chart atelier-production-rail" aria-labelledby="atelier-production-rail-title">
+  <header>
+    <h2 class="font-display" id="atelier-production-rail-title">Production imprimée</h2>
+    <p>Mètres linéaires confirmés · réimpressions incluses.</p>
+  </header>
+  <dl class="atelier-production-rail__gauges" aria-label="Indicateurs de métrage imprimé">
+    {% for gauge in printed_meterage_trend.metric_gauges %}
+    <div class="atelier-production-gauge">
+      <dt>{{ gauge.label }}</dt>
+      <dd>
+        <span class="atelier-production-gauge__arc">
+          <canvas class="atelier-production-gauge__canvas" aria-label="{{ gauge.label }} : {{ gauge.value|floatformat:2 }} mètres, {{ gauge.detail }}" role="img"></canvas>
+          <strong>{{ gauge.value|floatformat:2 }}<small>m</small></strong>
+        </span>
+      </dd>
+      <p>{{ gauge.detail }}</p>
+    </div>
+    {% endfor %}
+  </dl>
+  {% if activity_kpi_rows %}
+  <nav class="atelier-production-activity" aria-label="Activité Atelier en cours">
+    {% for row in activity_kpi_rows %}
+    <a class="atelier-production-activity__item {{ row.tone|default:'' }}" href="{{ row.card_href }}">
+      <span>{{ row.label }}</span>
+      <strong>{{ row.value }}</strong>
+    </a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+  <section id="atelier-production-health" class="atelier-production-health" aria-labelledby="atelier-production-health-title">
+    <div class="atelier-production-health__head">
+      <h3 class="font-display" id="atelier-production-health-title">Pilotage production</h3>
+      <p>Priorités à lever et efficacité du flux.</p>
+    </div>
+    <div class="atelier-production-health__body">
+      <section class="atelier-production-health__group" aria-labelledby="atelier-production-alerts-title">
+        <h4 id="atelier-production-alerts-title">À surveiller</h4>
+        <ul class="atelier-production-alerts" role="list">
+          {% for alert in production_health.alerts %}
+          <li class="atelier-production-alert {{ alert.tone|default:'is-neutral' }}">
+            {% if alert.href %}<a href="{{ alert.href }}">{% else %}<span>{% endif %}
+              <span class="atelier-production-alert__copy">
+                <strong>{{ alert.label }}</strong>
+                <small>{{ alert.detail }}</small>
+              </span>
+              <b>{{ alert.value|default:"0" }}</b>
+            {% if alert.href %}</a>{% else %}</span>{% endif %}
+          </li>
+          {% empty %}
+          <li class="atelier-production-alert is-neutral"><span><span class="atelier-production-alert__copy"><strong>Commandes bloquées</strong><small>Aucune commande à débloquer</small></span><b>0</b></span></li>
+          <li class="atelier-production-alert is-neutral"><span><span class="atelier-production-alert__copy"><strong>Retards de remise</strong><small>Aucun retard signalé</small></span><b>0</b></span></li>
+          <li class="atelier-production-alert is-neutral"><span><span class="atelier-production-alert__copy"><strong>Encours vieillissant</strong><small>Aucun OF en attente prolongée</small></span><b>0</b></span></li>
+          {% endfor %}
+        </ul>
+      </section>
+      <section class="atelier-production-health__group" aria-labelledby="atelier-production-efficiency-title">
+        <h4 id="atelier-production-efficiency-title">Efficacité</h4>
+        <dl class="atelier-production-efficiency">
+          {% for metric in production_health.quality %}
+          <div class="atelier-production-efficiency__item {{ metric.tone|default:'is-neutral' }}">
+            <dt>{{ metric.label }}</dt>
+            <dd>{{ metric.value|default:"0" }}{% if metric.unit %}<small>{{ metric.unit }}</small>{% endif %}</dd>
+            {% if metric.detail %}<dd class="atelier-production-efficiency__detail">{{ metric.detail }}</dd>{% endif %}
+          </div>
+          {% empty %}
+          <div class="atelier-production-efficiency__item is-neutral"><dt>Taux de réimpression</dt><dd>0<small>%</small></dd><dd class="atelier-production-efficiency__detail">Aucune réimpression mesurée</dd></div>
+          {% endfor %}
+          {% for metric in production_health.flow %}
+          <div class="atelier-production-efficiency__item {{ metric.tone|default:'is-neutral' }}">
+            <dt>{{ metric.label }}</dt>
+            <dd>{{ metric.value|default:"0" }}{% if metric.unit %}<small>{{ metric.unit }}</small>{% endif %}</dd>
+            {% if metric.detail %}<dd class="atelier-production-efficiency__detail">{{ metric.detail }}</dd>{% endif %}
+          </div>
+          {% empty %}
+          <div class="atelier-production-efficiency__item is-neutral"><dt>Délai moyen</dt><dd>0<small>h</small></dd><dd class="atelier-production-efficiency__detail">Aucun cycle terminé mesuré</dd></div>
+          {% endfor %}
+        </dl>
+      </section>
+    </div>
+  </section>
+  {{ printed_meterage_trend.metric_gauges|json_script:"atelier-production-gauges-data" }}
+</section>
+{% endif %}
+{% if financial_trend %}
+<section class="atelier-production-chart atelier-revenue-chart" aria-labelledby="atelier-revenue-chart-title">
+  <header>
+    <div>
+      <h2 class="font-display" id="atelier-revenue-chart-title">Chiffre d’affaires</h2>
+      <p>CA TTC des commandes validées · 7 derniers jours.</p>
+    </div>
+  </header>
+  <dl class="atelier-chart-kpis" aria-label="Indicateurs de chiffre d’affaires">
+    <div><dt>7 jours</dt><dd>{{ financial_trend.seven_day_total|floatformat:2 }} €</dd></div>
+    <div><dt>Aujourd’hui</dt><dd>{{ financial_trend.today_total|floatformat:2 }} €</dd></div>
+    <div><dt>Panier moyen</dt><dd>{{ financial_trend.average_order_total|floatformat:2 }} €</dd></div>
+  </dl>
+  <div class="atelier-production-chart__canvas"><canvas id="atelier-revenue-chart-canvas" aria-label="Évolution du chiffre d’affaires TTC sur les sept derniers jours" role="img"></canvas></div>
+  {{ financial_trend|json_script:"atelier-revenue-chart-data" }}
+</section>
+{% endif %}
+</div>
+<div id="atelier-dashboard-live-region">
 {% if dashboard_kpi_rows %}
 <section class="atelier-dashboard-metrics" aria-label="Indicateurs de la file Atelier">
   {% ui_kpi_grid dashboard_kpi_rows %}
@@ -92,4 +198,5 @@
     {% endif %}
   </form>
 </section>
+</div>
 </div>

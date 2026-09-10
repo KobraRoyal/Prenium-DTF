@@ -4,11 +4,14 @@ import uuid
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Sum
 from django.utils import timezone
 
 from apps.accounts.services.access import AccessScopeService
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
+from apps.catalog.models import CatalogService
+from apps.customers.services.volume_discounts import linear_meters_from_sqm
 from apps.orders.models import Order
 from apps.production.models import (
     ProductionJob,
@@ -140,6 +143,9 @@ class ProductionPrintTrackingService:
                             assignment=assignment,
                             recorded_by=self._authenticated_actor(actor),
                             printed_at=now,
+                            printed_linear_m=self._printed_linear_m_for_order(
+                                order=locked_job.order
+                            ),
                             source=source,
                             note=normalized_note,
                             request_token=token,
@@ -177,6 +183,11 @@ class ProductionPrintTrackingService:
                         "machine_code": machine.code,
                         "production_print_public_id": str(print_record.public_id),
                         "is_reprint": is_reprint,
+                        "printed_linear_m": (
+                            str(print_record.printed_linear_m)
+                            if print_record.printed_linear_m is not None
+                            else None
+                        ),
                         "note_present": bool(normalized_note),
                         "source": source,
                     },
@@ -217,6 +228,18 @@ class ProductionPrintTrackingService:
             return uuid.UUID(str(request_token))
         except (TypeError, ValueError, AttributeError) as exc:
             raise ValidationError("Jeton de confirmation invalide.") from exc
+
+    def _printed_linear_m_for_order(self, *, order: Order):
+        """Fige le métrage réellement exploité par l'Atelier au moment du print."""
+        if order.meterage_override_linear_m is not None:
+            return order.meterage_override_linear_m
+        printed_sqm = (
+            order.items.filter(service_type=CatalogService.ServiceType.DTF_TRANSFER).aggregate(
+                total=Sum("quantity")
+            )["total"]
+            or 0
+        )
+        return linear_meters_from_sqm(printed_sqm) if printed_sqm > 0 else None
 
     def _require_permissions(self, actor) -> None:
         if not self.access_scope_service.can_access_staff_portal(actor) or any(

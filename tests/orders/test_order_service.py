@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.catalog.models import CatalogService
@@ -29,15 +31,19 @@ def test_order_service_creates_snapshotted_order_and_audit_entry():
         display_order=2,
     )
 
-    order = OrderService().create_order(
-        customer=customer,
-        actor=user,
-        items=[
-            {"service_public_id": str(dtf_service.public_id), "quantity": "2.50"},
-            {"service_public_id": str(prep_service.public_id), "quantity": 1},
-        ],
-        customer_note="Premiere commande",
-    )
+    with patch(
+        "apps.notifications.services.workshop_push."
+        "WorkshopNotificationService.publish_order_submitted"
+    ) as publish_order_submitted:
+        order = OrderService().create_order(
+            customer=customer,
+            actor=user,
+            items=[
+                {"service_public_id": str(dtf_service.public_id), "quantity": "2.50"},
+                {"service_public_id": str(prep_service.public_id), "quantity": 1},
+            ],
+            customer_note="Premiere commande",
+        )
 
     assert order.customer == customer
     assert order.status == "submitted"
@@ -50,6 +56,12 @@ def test_order_service_creates_snapshotted_order_and_audit_entry():
         action="order.created",
         target_public_id=order.public_id,
     ).exists()
+    publish_order_submitted.assert_called_once()
+    assert publish_order_submitted.call_args.kwargs == {
+        "order": order,
+        "actor": user,
+        "source": "client_api",
+    }
 
 
 @pytest.mark.django_db

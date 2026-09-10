@@ -1574,6 +1574,27 @@ function applySupportColorPickerValue(fieldset, rawValue) {
   updateSupportColorStatus(fieldset);
 }
 
+function syncVisualConfirmSupportColor(form) {
+  if (!(form instanceof HTMLFormElement)) {
+    return;
+  }
+  const dialog = form.closest("dialog");
+  const fieldset = dialog?.querySelector("[data-support-color-field]");
+  if (!(fieldset instanceof HTMLElement)) {
+    return;
+  }
+  const hex = fieldset.querySelector("[data-support-color-hex]");
+  const multicolor = fieldset.querySelector("[data-support-color-multicolor-input]");
+  const confirmHex = form.querySelector("[data-visual-confirm-support-hex]");
+  const confirmMulticolor = form.querySelector("[data-visual-confirm-support-multicolor]");
+  if (confirmHex instanceof HTMLInputElement && hex instanceof HTMLInputElement) {
+    confirmHex.value = hex.value;
+  }
+  if (confirmMulticolor instanceof HTMLInputElement && multicolor instanceof HTMLInputElement) {
+    confirmMulticolor.value = multicolor.value;
+  }
+}
+
 function syncSupportColorFromHex(fieldset) {
   const hexInput = fieldset.querySelector("[data-support-color-hex]");
   if (!(hexInput instanceof HTMLInputElement)) {
@@ -1773,7 +1794,7 @@ function initHexColorControl(control) {
     if (fieldset instanceof HTMLElement) {
       applySupportColorPickerValue(fieldset, normalized);
       const form = fieldset.closest("form[data-order-project-autosave]");
-      if (form instanceof HTMLFormElement) {
+      if (form instanceof HTMLFormElement && !fieldset.closest("dialog[open]")) {
         rememberInlineProjectDraft(form);
         queueOrderProjectAutosave(form);
       }
@@ -1890,7 +1911,7 @@ function bindSupportColorEvents() {
         setMulticolorMode(fieldset, true);
       }
       const form = fieldset.closest("form[data-order-project-autosave]");
-      if (form instanceof HTMLFormElement) {
+      if (form instanceof HTMLFormElement && !fieldset.closest("dialog[open]")) {
         rememberInlineProjectDraft(form);
         queueOrderProjectAutosave(form);
       }
@@ -2401,6 +2422,11 @@ function bindConfiguratorEvents() {
         ? event.target.closest("form[data-order-project-autosave]")
         : null;
       if (form instanceof HTMLFormElement) {
+        const supportColorInOpenDialog =
+          event.target instanceof Element
+          && event.target.closest("[data-support-color-field]")
+          && form.closest("dialog[open]");
+        if (supportColorInOpenDialog) return;
         // Color controls update hidden values in their delegated handlers first.
         queueMicrotask(() => {
           if (!form.isConnected) return;
@@ -2673,6 +2699,7 @@ onBodyReady(() => {
         ? elt
         : elt.closest("form[data-visual-confirm], form[data-add-visual-confirm]");
     if (confirmForm instanceof HTMLFormElement) {
+      syncVisualConfirmSupportColor(confirmForm);
       // Validation / enregistrement support : fermer la modal après succès.
       projectDialogCloseOnSuccess = dialog.id;
       projectDialogToRestore = "";

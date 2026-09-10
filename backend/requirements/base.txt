@@ -9,3 +9,4 @@ reportlab>=4.2,<5
 Pillow>=12.0,<13
 PyMuPDF>=1.26,<2
 psd-tools>=1.17.3,<2
+pywebpush==2.5.0

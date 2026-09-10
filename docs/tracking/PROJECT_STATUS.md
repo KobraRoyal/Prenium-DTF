@@ -42,6 +42,9 @@
 - [x] Sprint 42 — Parc de machines DTF, affectation des OF et preuves d'impression immuables
 - [x] Sprint 43 — Distillation UI/UX de toutes les vues Atelier
 - [x] Sprint 44 — Pilotage Atelier rapide, transitions et Sendcloud sans ouvrir chaque fiche
+- [x] Sprint 54 — Notifications Web Push Atelier sécurisées, avec notification macOS et polling HTMX de secours
+- [x] Sprint 55 — KPI et courbe Chart.js de CA TTC sur le dashboard Atelier,
+  visibles uniquement par les rôles Administrateur et Propriétaire
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement
@@ -486,3 +489,17 @@
 - [x] Date prévisionnelle de retrait/livraison affichée côté client, avec valeur « À confirmer »
 - [x] Modification Atelier protégée par permission `orders.change_order` et auditée
 - [x] 192 tests complets réussis ; Django, migrations, Ruff et format conformes
+
+## Sprint 56 — Pilotage du métrage imprimé Atelier (2026-09-08)
+
+- [x] Mètres linéaires figés à chaque confirmation d’impression
+- [x] Réimpressions comptabilisées dans la consommation réelle
+- [x] Rail de jauges demi-lune : 7 jours, jour courant et moyenne par impression
+- [x] Accès opérationnel pour les rôles Atelier sans exposer le CA
+
+## Sprint 57 — Pilotage de production Atelier (2026-09-09)
+
+- [x] Activité par statut et alertes OF bloquées, retards et encours > 24 h
+- [x] Taux de réimpression et délai moyen de production sur sept jours
+- [x] Rafraîchissement des KPI lors des notifications live, sans redessiner Chart.js
+- [x] CA toujours réservé aux rôles owner/admin ; KPI opérationnels accessibles aux collaborateurs autorisés

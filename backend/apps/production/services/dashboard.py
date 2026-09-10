@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import timedelta
+from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count, Exists, F, OuterRef, Q
 from django.urls import reverse
 from django.utils import timezone
 
@@ -13,7 +15,7 @@ from apps.billing.services.production_payment_gate import (
 )
 from apps.orders.models import Order
 from apps.orders.references import order_business_number, order_client_reference, order_uuid_short
-from apps.production.models import ProductionJob
+from apps.production.models import ProductionJob, ProductionPrintRecord
 from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
 from apps.production.services.workflow import ProductionWorkflowService
@@ -44,7 +46,9 @@ class AtelierDashboardService:
                 unprinted_total=unprinted_total,
             ),
             "activity_kpi_rows": self._build_activity_kpi_rows(),
+            "production_health": self._build_production_health(),
             "production_trend": self._build_production_trend(),
+            "printed_meterage_trend": self._build_printed_meterage_trend(),
             "printable_count": sum(row["print_eligible"] for row in rows),
             "unprinted_of_total": unprinted_total,
             "unprinted_of_batch_count": min(unprinted_total, batch_service.max_batch_size),
@@ -86,6 +90,228 @@ class AtelierDashboardService:
             "completed_values": [completed[day] for day in dates],
             "entries": points(entries),
             "completed": points(completed),
+        }
+
+    def build_financial_trend(self) -> dict[str, object]:
+        """CA TTC des commandes validées, pour le pilotage administratif Atelier."""
+        today = timezone.localdate()
+        dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        revenue_by_day = {day: Decimal("0.00") for day in dates}
+        orders_by_day = {day: 0 for day in dates}
+        priced_orders = Order.objects.filter(
+            status=Order.Status.SUBMITTED,
+            pricing_status=Order.PricingStatus.PRICED,
+            created_at__date__gte=dates[0],
+        ).values_list("created_at__date", "total_amount")
+        for created_on, total_amount in priced_orders:
+            if created_on not in revenue_by_day:
+                continue
+            revenue_by_day[created_on] += total_amount or Decimal("0.00")
+            orders_by_day[created_on] += 1
+
+        total = sum(revenue_by_day.values(), Decimal("0.00"))
+        order_count = sum(orders_by_day.values())
+        return {
+            "labels": [day.strftime("%d/%m") for day in dates],
+            "revenue_values": [float(revenue_by_day[day]) for day in dates],
+            "seven_day_total": total,
+            "today_total": revenue_by_day[today],
+            "average_order_total": total / order_count if order_count else Decimal("0.00"),
+            "order_count": order_count,
+        }
+
+    def _build_printed_meterage_trend(self) -> dict[str, object]:
+        """Métrage linéaire issu des preuves d'impression, réimpressions incluses."""
+        today = timezone.localdate()
+        dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        meterage_by_day = {day: Decimal("0.0000") for day in dates}
+        prints_by_day = {day: 0 for day in dates}
+        printed_meterages: list[Decimal] = []
+        print_records = ProductionPrintRecord.objects.filter(
+            printed_at__date__gte=dates[0],
+            printed_linear_m__isnull=False,
+        ).values_list("printed_at__date", "printed_linear_m")
+        for printed_on, printed_linear_m in print_records:
+            if printed_on not in meterage_by_day:
+                continue
+            meterage_by_day[printed_on] += printed_linear_m
+            prints_by_day[printed_on] += 1
+            printed_meterages.append(printed_linear_m)
+
+        total = sum(meterage_by_day.values(), Decimal("0.0000"))
+        print_count = sum(prints_by_day.values())
+        today_total = meterage_by_day[today]
+        average_per_print = total / print_count if print_count else Decimal("0.0000")
+        peak_day_total = max(meterage_by_day.values(), default=Decimal("0.0000"))
+        largest_print = max(printed_meterages, default=Decimal("0.0000"))
+        active_day_count = sum(1 for meterage in meterage_by_day.values() if meterage > 0)
+
+        def percentage(value: Decimal, reference: Decimal) -> int:
+            if reference <= 0:
+                return 0
+            return min(100, round((value / reference) * 100))
+
+        return {
+            "seven_day_total": total,
+            "today_total": today_total,
+            "average_per_print": average_per_print,
+            "print_count": print_count,
+            "metric_gauges": [
+                {
+                    "label": "7 jours",
+                    "value": total,
+                    "detail": f"{active_day_count}/7 jours actifs",
+                    "progress": round((active_day_count / len(dates)) * 100),
+                },
+                {
+                    "label": "Aujourd’hui",
+                    "value": today_total,
+                    "detail": "vs pic quotidien",
+                    "progress": percentage(today_total, peak_day_total),
+                },
+                {
+                    "label": "Par impression",
+                    "value": average_per_print,
+                    "detail": "vs plus grand tirage",
+                    "progress": percentage(average_per_print, largest_print),
+                },
+            ],
+        }
+
+    def _build_production_health(self) -> dict[str, list[dict[str, object]]]:
+        """Indicateurs actionnables du responsable de production."""
+        now = timezone.now()
+        today = timezone.localdate()
+        aging_cutoff = now - timedelta(hours=24)
+        seven_day_start = today - timedelta(days=6)
+        orders_url = reverse("portal:staff-order-list")
+
+        job_counts = ProductionJob.objects.aggregate(
+            blocked=Count(
+                "pk",
+                filter=Q(status=ProductionJob.Status.BLOCKED),
+            ),
+            overdue=Count(
+                "pk",
+                filter=(
+                    ~Q(status=ProductionJob.Status.COMPLETED)
+                    & Q(order__estimated_handover_date__lt=today)
+                ),
+            ),
+            aging=Count(
+                "pk",
+                filter=(
+                    Q(
+                        status__in=(
+                            ProductionJob.Status.QUEUED,
+                            ProductionJob.Status.IN_PROGRESS,
+                        )
+                    )
+                    & (
+                        Q(last_transition_at__lt=aging_cutoff)
+                        | Q(
+                            last_transition_at__isnull=True,
+                            created_at__lt=aging_cutoff,
+                        )
+                    )
+                ),
+            ),
+        )
+
+        recent_prints = ProductionPrintRecord.objects.filter(
+            printed_at__date__gte=seven_day_start,
+        )
+        has_previous_print = Exists(
+            ProductionPrintRecord.objects.filter(
+                production_job_id=OuterRef("production_job_id"),
+                created_at__lt=OuterRef("created_at"),
+            )
+        )
+        print_count = recent_prints.count()
+        reprint_count = (
+            recent_prints.annotate(
+                _has_previous_print=has_previous_print,
+            )
+            .filter(_has_previous_print=True)
+            .count()
+        )
+        reprint_rate = (
+            (Decimal(reprint_count) * Decimal("100") / Decimal(print_count)).quantize(
+                Decimal("0.1")
+            )
+            if print_count
+            else Decimal("0.0")
+        )
+
+        completed_durations = ProductionJob.objects.filter(
+            status=ProductionJob.Status.COMPLETED,
+            completed_at__date__gte=seven_day_start,
+            started_at__isnull=False,
+            completed_at__isnull=False,
+            completed_at__gte=F("started_at"),
+        ).values_list("started_at", "completed_at")
+        duration_seconds = [
+            Decimal(str((completed_at - started_at).total_seconds()))
+            for started_at, completed_at in completed_durations
+        ]
+        average_duration_hours = (
+            (
+                sum(duration_seconds, Decimal("0"))
+                / Decimal(len(duration_seconds))
+                / Decimal("3600")
+            ).quantize(Decimal("0.1"))
+            if duration_seconds
+            else Decimal("0.0")
+        )
+
+        blocked_count = job_counts["blocked"]
+        overdue_count = job_counts["overdue"]
+        aging_count = job_counts["aging"]
+        return {
+            "alerts": [
+                {
+                    "key": "blocked",
+                    "label": "OF bloquées",
+                    "value": blocked_count,
+                    "detail": "À débloquer maintenant" if blocked_count else "Aucun blocage actif",
+                    "tone": "is-danger" if blocked_count else "is-success",
+                    "href": f"{orders_url}?status={ProductionJob.Status.BLOCKED}",
+                },
+                {
+                    "key": "overdue",
+                    "label": "Retards de remise",
+                    "value": overdue_count,
+                    "detail": "Date de remise dépassée" if overdue_count else "Délais tenus",
+                    "tone": "is-danger" if overdue_count else "is-success",
+                },
+                {
+                    "key": "aging",
+                    "label": "Encours > 24 h",
+                    "value": aging_count,
+                    "detail": "Sans progression depuis 24 h" if aging_count else "Encours récents",
+                    "tone": "is-warning" if aging_count else "is-success",
+                },
+            ],
+            "quality": [
+                {
+                    "key": "reprint_rate",
+                    "label": "Taux de réimpression",
+                    "value": reprint_rate,
+                    "unit": "%",
+                    "detail": f"{reprint_count} sur {print_count} impressions · 7 j",
+                    "tone": "is-warning" if reprint_count else "is-success",
+                }
+            ],
+            "flow": [
+                {
+                    "key": "average_production_time",
+                    "label": "Délai moyen de production",
+                    "value": average_duration_hours,
+                    "unit": "h",
+                    "detail": f"{len(duration_seconds)} OF terminés · 7 j",
+                    "tone": "is-neutral",
+                }
+            ],
         }
 
     def _build_activity_kpi_rows(self) -> list[dict[str, object]]:
