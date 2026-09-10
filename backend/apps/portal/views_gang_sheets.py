@@ -628,8 +628,20 @@ class ClientGangSheetWorkflowActionView(ClientGangSheetMixin, View):
                 gang_sheet_service.request_render(sheet=sheet, actor=request.user)
                 message = "Rendu haute définition lancé."
             elif action == "validate":
-                gang_sheet_service.validate_sheet(sheet=sheet, actor=request.user)
-                message = "Planche validée pour la production."
+                if not request.POST.get("expected_revision") or not request.POST.get(
+                    "preflight_fingerprint"
+                ):
+                    raise GangSheetDomainError(
+                        "STALE_PREFLIGHT", "Actualisez le contrôle qualité avant de confirmer."
+                    )
+                gang_sheet_service.validate_sheet(
+                    sheet=sheet,
+                    actor=request.user,
+                    expected_revision=request.POST.get("expected_revision"),
+                    preflight_fingerprint=request.POST.get("preflight_fingerprint", ""),
+                    acknowledge_quality=request.POST.get("acknowledge_quality") == "true",
+                )
+                message = "Composition confirmée. Le contrôle du PDF reste requis à la commande."
             elif action == "create-order-project":
                 project = gang_sheet_service.create_order_project(
                     sheet=sheet,

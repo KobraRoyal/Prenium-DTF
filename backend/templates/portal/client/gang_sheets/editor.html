@@ -413,6 +413,9 @@
             {% include "portal/client/gang_sheets/partials/icon.html" with name="lock" size="14" %}
             Conserver les proportions
           </label>
+          <p class="ui-field-help" data-ratio-warning hidden>Proportions libres : modifier une dimension peut étirer le visuel à l’impression.</p>
+          <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm" data-restore-ratio hidden>Restaurer les proportions du fichier</button>
+          <p class="ui-field-help" data-item-quality aria-live="polite"></p>
         </div>
         <div class="gang-inspector-section">
           <h3 class="gang-inspector-section__title">Position</h3>
@@ -596,6 +599,17 @@
           <p class="ui-field-help" data-validation-lead>Prépare le rendu HD atelier, puis confirme la composition.</p>
         </div>
         <ul data-issues-list><li class="is-ok">Aucune anomalie de placement.</li></ul>
+        <div data-preflight-panel>
+          <h3 class="gang-inspector-section__title">Qualité des fichiers</h3>
+          <p class="ui-field-help" data-preflight-summary>Contrôle à la taille d’impression.</p>
+          <ul data-preflight-issues></ul>
+          <label class="gang-ratio-lock" data-preflight-ack-field hidden>
+            <input type="checkbox" data-preflight-ack>
+            J’ai vérifié les avertissements et je confirme ces choix d’impression.
+          </label>
+          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-refresh-preflight hidden>Enregistrer et contrôler</button>
+          <p class="ui-field-help">Les espacements d’auto-imposition sont des préférences de placement. Le contrôle qualité du PDF et du support reste requis à la commande.</p>
+        </div>
         <div class="gang-validation-actions">
           <div class="ui-field-group gang-sheet-quantity" data-sheet-quantity-field hidden>
             <label class="ui-label" for="id-sheet-quantity">Exemplaires de planche</label>

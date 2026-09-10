@@ -177,6 +177,45 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 
 ## Hypothèses
 
+### Stabilisation issue de l’audit Studio — septembre 2026
+
+Branche : `codex/gang-sheet-audit-fixes`.
+
+- [x] Conflit de révision : aucun renvoi silencieux du brouillon obsolète ; récupération explicite.
+- [x] Reprise du suivi du rendu après une erreur réseau, sans double lancement.
+- [x] Dimensions vides, nulles ou non finies refusées avant mutation locale.
+- [x] Panneaux mobiles inactifs réellement masqués ; propriétés accessibles sans recouvrement.
+- [x] Préflight distinguant géométrie, avertissements source et résolution à taille finale.
+- [x] Proportions libres expliquées et restauration du ratio source disponible.
+- [x] Tests de comportement JavaScript, services, permissions et rendu hybride sans régression.
+- [x] Relecture sécurité indépendante et recette navigateur desktop/mobile.
+
+Les espacements d’auto-imposition restent des préférences, pas de nouveaux minimums de coupe.
+Les avertissements de source ne sont pas assimilés automatiquement à un refus de fabrication.
+Le contrôle qualité du PDF et du support au checkout ainsi que la validation RIP atelier restent
+distincts du contrôle de composition du Studio. Aucun nouveau profil ICC ni traitement de blanc
+n’est introduit dans ce lot.
+
+Validation du lot : 1 177 tests Python réussis dans Docker ; quatre ignorés, dont les deux
+harness Node exécutés séparément avec succès sur l’hôte. Les deux autres dépendent d’une
+table legacy absente et de verrous PostgreSQL (suite utilisant SQLite). Ruff, contrôle Django,
+absence de migration, build des assets et relecture sécurité indépendants conformes.
+Recette réelle : 390 × 844 et 1280 × 720, canevas inactif de hauteur nulle, défilement de
+l’inspecteur sans superposition, acceptation qualité activant/désactivant la confirmation,
+saisie vide restaurée et console sans erreur. Aucune planche client confirmée pendant la recette.
+
+Préflight : pixels natifs après crop pour PNG/JPEG/TIFF ; aucun DPI global inventé pour les
+PDF mixtes ou formats réencodés. Les avertissements sont regroupés à l’écran, acceptés
+explicitement sur une empreinte de composition courante, puis audités sans messages libres.
+Les informations d’absence de DPI vectoriel restent informatives. Les choix d’espacement
+et de déformation volontaire restent disponibles, avec restauration des proportions source.
+
+Pre-commit est conforme sur les fichiers du lot. Son passage global a également révélé des
+écarts historiques de fins de fichiers/espaces hors périmètre ; ses retouches automatiques
+sur ces fichiers ont été annulées. Le détecteur UI signale le damier de travail et une image
+d’aperçu initialement sans source : ces éléments sont intentionnels (canevas et aperçu chargé
+dynamiquement), pas des défauts visuels observés. Graphe AST actualisé sans appel LLM.
+
 - Le PDF HD est le format intermédiaire de production accepté pour ce lot. La validation RIP réelle
   reste nécessaire avant de déclarer un format TIFF/PNG géant comme alternative.
 - Le prix affiché est une estimation HT fondée sur la surface pleine `laize × hauteur` et le tarif

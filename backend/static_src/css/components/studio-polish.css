@@ -146,6 +146,10 @@ body.product-shell--studio .gang-editor__stage {
   background: var(--gang-stage);
 }
 
+body.product-shell--studio .gang-editor__workspace > [data-editor-panel][hidden] {
+  display: none !important;
+}
+
 body.product-shell--studio .gang-editor__toolbar {
   position: relative;
   top: auto;
@@ -452,9 +456,7 @@ body.product-shell--studio .gang-editor__issue-count:empty {
 }
 
 body.product-shell--studio .gang-inspector-panel--validation {
-  position: sticky;
-  bottom: 0;
-  z-index: 3;
+  position: static;
   margin-top: auto;
   border-color: var(--gang-line);
   background: var(--gang-panel);
@@ -1226,6 +1228,25 @@ html[data-theme="prenium"] body.product-shell--studio .gang-validation-heading p
   line-height: 1.4;
 }
 
+html[data-theme="prenium"] body.product-shell--studio [data-preflight-panel] {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--gang-line);
+}
+
+html[data-theme="prenium"] body.product-shell--studio [data-preflight-panel] > :is(h3, p, ul) {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.product-shell--studio [data-preflight-issues] {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0;
+  list-style: none;
+}
+
 html[data-theme="prenium"] body.product-shell--studio .gang-inspector-note {
   margin: 0.55rem 0 0;
   padding: 0.55rem 0.65rem;
@@ -1496,7 +1517,7 @@ html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__usage-st
   }
 
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace {
-    height: max(30rem, calc(100dvh - 15.5rem));
+    height: max(26rem, calc(100dvh - 15.5rem));
   }
 
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__delete {

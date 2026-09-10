@@ -25,6 +25,7 @@ if (root) {
   let zoomWheelAcc = 0;
   let pollTimer = null;
   let pendingValidateAfterRender = false;
+  let acceptedPreflightFingerprint = "";
   let resizeFrame = null;
   let galleryWasPending = qPendingGallery();
   const canEdit = root.dataset.canEdit === "true";
@@ -146,6 +147,7 @@ if (root) {
 
   function setDirty(value = true) {
     dirty = value;
+    if (dirty) acceptedPreflightFingerprint = "";
     root.dataset.dirty = String(dirty);
   }
 
@@ -836,6 +838,7 @@ if (root) {
     renderMetrics();
     renderAssetGallery();
     renderInspector();
+    renderPreflight();
     renderIssues();
     renderWorkflow();
     renderStatus();
@@ -950,6 +953,7 @@ if (root) {
     }
     if (!item || selectionCount !== 1) return;
     const textItem = isTextItem(item);
+    renderItemQuality(item);
     const kindLabel = q("[data-selected-kind-label]");
     if (kindLabel) kindLabel.textContent = textItem ? "Texte sélectionné" : "Visuel sélectionné";
     q("[data-selected-name]").textContent = item.asset_name;
@@ -1025,6 +1029,89 @@ if (root) {
     q("[data-spacing-y]").value = round(state.spacing_y_mm ?? state.spacing_mm, 2);
   }
 
+  function preflightIsCurrent() {
+    return !dirty && state.preflight && state.preflight.revision === state.revision;
+  }
+
+  function qualityApproved() {
+    if (state.status === "validated") return true;
+    const check = state.preflight;
+    return Boolean(preflightIsCurrent() && !(check.blocking || []).length &&
+      (!check.requires_acknowledgement || acceptedPreflightFingerprint === check.fingerprint));
+  }
+
+  function renderItemQuality(item) {
+    const quality = item.quality || {};
+    const ratio = Number(quality.source_ratio);
+    const distorted = ratio > 0 && Math.abs(item.width_mm / item.height_mm / ratio - 1) > 0.005;
+    const warning = q("[data-ratio-warning]");
+    const restore = q("[data-restore-ratio]");
+    const textItem = isTextItem(item);
+    if (warning) warning.hidden = textItem || (q("[data-lock-ratio]").checked && !distorted);
+    if (restore) {
+      restore.hidden = textItem || !distorted;
+      restore.disabled = !canEdit || busy || ["rendering", "validated"].includes(state.status);
+    }
+    const label = q("[data-item-quality]");
+    if (!label) return;
+    if (textItem || quality.is_vector) {
+      label.textContent = "Vectoriel · résolution indépendante des DPI.";
+      return;
+    }
+    const pixelsW = Number(quality.source_width_px);
+    const pixelsH = Number(quality.source_height_px);
+    if (pixelsW > 0 && pixelsH > 0 && item.width_mm > 0 && item.height_mm > 0) {
+      const dpi = Math.min(pixelsW * 25.4 / item.width_mm, pixelsH * 25.4 / item.height_mm);
+      label.textContent = `${Math.round(dpi)} DPI à cette taille · ${quality.recommended_dpi} DPI recommandés.`;
+    } else {
+      label.textContent = "Résolution non déterminée · contrôle du PDF requis à la commande.";
+    }
+  }
+
+  function renderPreflight() {
+    const panel = q("[data-preflight-panel]");
+    if (!panel) return;
+    const check = state.preflight;
+    const current = preflightIsCurrent();
+    if (!current || acceptedPreflightFingerprint !== check?.fingerprint) {
+      acceptedPreflightFingerprint = "";
+    }
+    const summary = q("[data-preflight-summary]");
+    const rows = [...(check?.blocking || []), ...(check?.warnings || [])];
+    summary.textContent = !current
+      ? "Enregistrez la composition pour actualiser le contrôle à la taille d’impression."
+      : rows.length ? "Vérifiez les points ci-dessous avant de confirmer."
+        : "Aucun avertissement identifié. Sélectionnez un visuel pour consulter sa résolution.";
+    const list = q("[data-preflight-issues]");
+    list.replaceChildren();
+    const grouped = new Map();
+    rows.forEach((row) => {
+      const key = `${row.code}:${row.message}`;
+      if (!grouped.has(key)) grouped.set(key, {message: row.message, ids: new Set()});
+      (row.item_public_ids || []).forEach((id) => grouped.get(key).ids.add(id));
+    });
+    grouped.forEach(({message, ids}) => {
+      const row = document.createElement("li");
+      row.textContent = `${ids.size} visuel${ids.size > 1 ? "s" : ""} — ${message}`;
+      list.append(row);
+    });
+    const mobileCount = q("[data-mobile-issue-count]");
+    if (mobileCount) mobileCount.textContent = String(state.issues.length + grouped.size);
+    const field = q("[data-preflight-ack-field]");
+    const ack = q("[data-preflight-ack]");
+    field.hidden = !current || !check?.requires_acknowledgement || state.status === "validated";
+    ack.checked = Boolean(current && acceptedPreflightFingerprint === check?.fingerprint);
+    ack.disabled = !canEdit || busy || ["rendering", "validated"].includes(state.status);
+    const refresh = q("[data-refresh-preflight]");
+    refresh.hidden = Boolean(current) || state.status === "validated";
+    refresh.disabled = !canEdit || busy || state.status === "rendering";
+  }
+
+  async function refreshPreflight() {
+    if (dirty) await saveLayout({notify: false});
+    await reloadState();
+  }
+
   function renderIssues() {
     const list = q("[data-issues-list]");
     root.dataset.hasIssues = String(state.issues.length > 0);
@@ -1097,7 +1184,7 @@ if (root) {
     const itemCount = state.items.length;
     const issueCount = state.issues.length;
     const compositionComplete = itemCount > 0;
-    const controlComplete = compositionComplete && issueCount === 0;
+    const controlComplete = compositionComplete && issueCount === 0 && qualityApproved();
     const steps = {
       import: assetCount > 0 ? "complete" : "active",
       compose: compositionComplete ? "complete" : assetCount > 0 ? "active" : "pending",
@@ -1108,7 +1195,7 @@ if (root) {
       ? "import"
       : !compositionComplete
         ? "compose"
-        : issueCount > 0
+        : !controlComplete
           ? "control"
           : "validate";
     const stepNumbers = { import: "1", compose: "2", control: "3", validate: "4" };
@@ -1119,7 +1206,7 @@ if (root) {
         ? "Après composition"
         : issueCount > 0
           ? `${issueCount} anomalie${issueCount > 1 ? "s" : ""} à corriger`
-          : "Composition contrôlée",
+          : !qualityApproved() ? "Qualité à vérifier" : "Composition contrôlée",
       validate:
         status === "validated"
           ? "Planche validée"
@@ -1249,11 +1336,12 @@ if (root) {
     const canStartRender =
       canEdit &&
       !busy &&
+      qualityApproved() &&
       state.items.length > 0 &&
       state.issues.length === 0 &&
       !locked &&
       ["draft", "render_failed"].includes(state.status);
-    const canConfirmReady = canEdit && !busy && state.status === "ready" && state.issues.length === 0;
+    const canConfirmReady = canEdit && !busy && qualityApproved() && state.status === "ready" && state.issues.length === 0;
     if (validateBtn) {
       validateBtn.hidden = state.status === "validated";
       if (state.status === "rendering" || pendingValidateAfterRender) {
@@ -1284,8 +1372,9 @@ if (root) {
         validateBtn.disabled = !canStartRender;
         if (validateLabel) validateLabel.textContent = "Confirmer la composition";
         if (validationLead) {
-          validationLead.textContent =
-            "Un seul clic prépare le rendu HD atelier, puis confirme la composition.";
+          validationLead.textContent = qualityApproved()
+            ? "Un seul clic prépare le rendu HD atelier, puis confirme la composition."
+            : "Vérifiez le contrôle qualité pour activer la confirmation.";
         }
       }
     }
@@ -1753,46 +1842,50 @@ if (root) {
     }
   }
 
-  async function saveLayout({ notify = true, retried = false } = {}) {
+  async function saveLayout({ notify = true } = {}) {
     try {
-    const payload = await request(root.dataset.layoutUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        revision: state.revision,
-        items: state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id, kind, text_content, text_font, text_size_mm, text_color, text_align, text_bold }) => ({
-          public_id,
-          x_mm,
-          y_mm,
-          width_mm,
-          height_mm,
-          rotation,
-          layout_group_id: layout_group_id || null,
-          kind: kind || "visual",
-          text_content: text_content || "",
-          text_font: text_font || "",
-          text_size_mm: Number(text_size_mm) || 12,
-          text_color: text_color || "",
-          text_align: text_align || "",
-          text_bold: Boolean(text_bold),
-        })),
-      }),
-    });
-    state.revision = payload.revision;
-    state.height_mm = payload.height_mm;
-    state.surface_sqm = payload.surface_sqm;
-    state.estimated_price_eur = payload.estimated_price_eur;
-    state.issues = payload.issues;
-    state.status = "draft";
-    savedLayoutSignature = layoutSignature();
-    setDirty(false);
-    resetLayoutHistory();
-    render();
-    if (notify) window.preniumToast?.("Brouillon enregistré.", "success");
+      const payload = await request(root.dataset.layoutUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          revision: state.revision,
+          items: state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id, kind, text_content, text_font, text_size_mm, text_color, text_align, text_bold }) => ({
+            public_id,
+            x_mm,
+            y_mm,
+            width_mm,
+            height_mm,
+            rotation,
+            layout_group_id: layout_group_id || null,
+            kind: kind || "visual",
+            text_content: text_content || "",
+            text_font: text_font || "",
+            text_size_mm: Number(text_size_mm) || 12,
+            text_color: text_color || "",
+            text_align: text_align || "",
+            text_bold: Boolean(text_bold),
+          })),
+        }),
+      });
+      state.revision = payload.revision;
+      state.height_mm = payload.height_mm;
+      state.surface_sqm = payload.surface_sqm;
+      state.estimated_price_eur = payload.estimated_price_eur;
+      state.issues = payload.issues;
+      state.status = "draft";
+      savedLayoutSignature = layoutSignature();
+      setDirty(false);
+      resetLayoutHistory();
+      render();
+      if (notify) window.preniumToast?.("Brouillon enregistré.", "success");
     } catch (error) {
-      if (!retried && error.code === "STALE_REVISION" && error.details?.revision != null) {
-        state.revision = error.details.revision;
-        return saveLayout({ notify, retried: true });
+      if (error.code === "STALE_REVISION") {
+        const conflict = new Error(
+          "Cette planche a changé dans un autre onglet. Votre brouillon est conservé ici. Rechargez la page pour récupérer la version la plus récente avant de réappliquer vos modifications."
+        );
+        conflict.code = error.code;
+        conflict.details = error.details;
+        throw conflict;
       }
       throw error;
     }
@@ -1814,6 +1907,17 @@ if (root) {
   async function runAction(action, { saveFirst = false, body = null } = {}) {
     try {
       if (saveFirst) await saveLayout({ notify: false });
+      if (action === "validate") {
+        if (!qualityApproved()) {
+          render();
+          window.preniumToast?.("Vérifiez le contrôle qualité avant de confirmer.", "error");
+          return;
+        }
+        body = new FormData();
+        body.append("expected_revision", String(state.revision));
+        body.append("preflight_fingerprint", state.preflight.fingerprint);
+        body.append("acknowledge_quality", String(acceptedPreflightFingerprint === state.preflight.fingerprint));
+      }
       const url = root.dataset.actionUrlTemplate.replace("ACTION", action);
       const payload = await request(url, { method: "POST", body });
       window.preniumToast?.(payload.message, "success");
@@ -1822,12 +1926,69 @@ if (root) {
         window.location.assign(payload.redirect_url);
         return;
       }
-      await reloadState();
-      if (action === "render") startPolling();
+      if (action === "render") {
+        // The render was accepted server-side. Reflect that lock immediately and
+        // arm polling before the first refresh so a transient GET failure cannot
+        // strand the editor in a stale draft state.
+        state.status = "rendering";
+        renderStatus();
+        startPolling();
+      }
+      try {
+        await reloadState();
+      } catch (error) {
+        if (action !== "render") throw error;
+        window.preniumToast?.(
+          "Rendu lancé. La synchronisation est temporairement indisponible et reprendra automatiquement.",
+          "error"
+        );
+      }
     } catch (error) {
+      if (["STALE_PREFLIGHT", "PREFLIGHT_ACK_REQUIRED", "PREFLIGHT_BLOCKED"].includes(error.code)) {
+        acceptedPreflightFingerprint = "";
+        if (error.details?.preflight) state.preflight = error.details.preflight;
+        else {
+          try { await reloadState(); } catch (_) { /* The user can retry the explicit refresh. */ }
+        }
+        render();
+      }
       window.preniumToast?.(error.message, "error");
     }
   }
+
+  q("[data-preflight-ack]")?.addEventListener("change", (event) => {
+    acceptedPreflightFingerprint = preflightIsCurrent() && event.target.checked
+      ? state.preflight.fingerprint : "";
+    renderPreflight();
+    renderWorkflow();
+    renderStatus();
+  });
+  q("[data-refresh-preflight]")?.addEventListener("click", async () => {
+    if (!canEdit || busy || state.status === "rendering") return;
+    try { await refreshPreflight(); }
+    catch (error) { window.preniumToast?.(error.message, "error"); }
+  });
+  q("[data-lock-ratio]")?.addEventListener("change", () => {
+    const item = selected();
+    if (item) renderItemQuality(item);
+  });
+  q("[data-restore-ratio]")?.addEventListener("click", () => {
+    const item = selected();
+    const ratio = Number(item?.quality?.source_ratio);
+    if (!item || !Number.isFinite(ratio) || ratio <= 0 || !canEdit || busy ||
+      ["rendering", "validated"].includes(state.status)) return;
+    const before = layoutSnapshot();
+    const height = item.width_mm / ratio;
+    const turned = Number(item.rotation) % 180 !== 0;
+    const scale = Math.min(1, state.width_mm / (turned ? height : item.width_mm),
+      state.maximum_height_mm / (turned ? item.width_mm : height));
+    item.width_mm = round(item.width_mm * scale);
+    item.height_mm = round(height * scale);
+    q("[data-lock-ratio]").checked = true;
+    clampItemOnSheet(item);
+    commitLayoutMutation(before);
+    render();
+  });
 
   const cropConfigurator = q("[data-b2b-configurator]");
   const cropFileInput = q("[data-configurator-file]");
@@ -2215,6 +2376,15 @@ if (root) {
 
   async function confirmComposition() {
     if (!canEdit || busy) return;
+    if (!preflightIsCurrent()) {
+      try { await refreshPreflight(); }
+      catch (error) { window.preniumToast?.(error.message, "error"); return; }
+    }
+    if (!qualityApproved()) {
+      window.preniumToast?.("Vérifiez les avertissements qualité avant de confirmer.", "error");
+      render();
+      return;
+    }
     if (state.status === "ready") {
       await runAction("validate");
       return;
@@ -2225,7 +2395,7 @@ if (root) {
       return;
     }
     pendingValidateAfterRender = true;
-    await runAction("render", { saveFirst: true });
+    await runAction("render");
     if (!["rendering", "ready"].includes(state.status)) {
       pendingValidateAfterRender = false;
       renderStatus();
@@ -2292,14 +2462,13 @@ if (root) {
       const panelName = control.dataset.workflowPanelTarget;
       if (window.matchMedia("(max-width: 980px)").matches) {
         setMobilePanel(panelName, { focusTab: true });
-        if (control.closest("[data-workflow-step='validate']")) {
-          window.requestAnimationFrame(() => {
-            q(".gang-inspector-panel--validation")?.scrollIntoView({ block: "start", behavior: "smooth" });
-          });
-        }
       } else {
         q(`[data-editor-panel='${panelName}']`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
+      const target = control.closest("[data-workflow-step='control']")
+        ? q("[data-preflight-panel]")
+        : control.closest("[data-workflow-step='validate']") ? q("[data-validation-panel]") : null;
+      if (target) window.requestAnimationFrame(() => target.scrollIntoView({block: "nearest", behavior: "smooth"}));
     });
   });
 
@@ -2725,6 +2894,31 @@ if (root) {
       item.x_mm = round(nextCenterX - nextSize.width / 2);
       item.y_mm = round(nextCenterY - nextSize.height / 2);
     });
+    if (items.length > 1) {
+      const rotatedBounds = selectionBounds(items);
+      const selectionWidth = rotatedBounds.right - rotatedBounds.left;
+      const selectionHeight = rotatedBounds.bottom - rotatedBounds.top;
+      const sheetWidth = Number(state.width_mm);
+      const sheetHeight = Number(state.maximum_height_mm);
+      if (
+        Number.isFinite(sheetWidth)
+        && Number.isFinite(sheetHeight)
+        && selectionWidth <= sheetWidth
+        && selectionHeight <= sheetHeight
+      ) {
+        const deltaX = rotatedBounds.left < 0
+          ? -rotatedBounds.left
+          : rotatedBounds.right > sheetWidth
+            ? sheetWidth - rotatedBounds.right
+            : 0;
+        const deltaY = rotatedBounds.top < 0
+          ? -rotatedBounds.top
+          : rotatedBounds.bottom > sheetHeight
+            ? sheetHeight - rotatedBounds.bottom
+            : 0;
+        translateItemsBy(items, deltaX, deltaY);
+      }
+    }
     if (items.length === 1) {
       clampItemOnSheet(items[0]);
       applyFittedTextBox(items[0]);
@@ -2805,33 +2999,66 @@ if (root) {
     if (ungroupButton && !ungroupButton.disabled) ungroupSelectedItems();
   });
 
+  function changeSelectedMetric(key, control) {
+    const item = selected(); if (!item) return false;
+    const rawValue = String(control.value).trim();
+    const value = Number(rawValue);
+    const sizeMetric = key === "width_mm" || key === "height_mm";
+    const valid = rawValue !== "" && Number.isFinite(value) && (!sizeMetric || value > 0);
+    const previousValue = round(Number(item[key]) / 10, 2);
+    if (!valid) {
+      control.value = previousValue;
+      window.preniumToast?.(
+        sizeMetric
+          ? "Saisissez une dimension supérieure à zéro. La valeur précédente a été conservée."
+          : "Saisissez une position numérique valide. La valeur précédente a été conservée.",
+        "error"
+      );
+      return false;
+    }
+    const next = round(value * 10);
+    const width = Number(item.width_mm);
+    const height = Number(item.height_mm);
+    if (
+      sizeMetric
+      && (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0)
+    ) {
+      control.value = previousValue;
+      window.preniumToast?.(
+        "Les proportions actuelles sont invalides. La valeur précédente a été conservée.",
+        "error"
+      );
+      return false;
+    }
+    const before = layoutSnapshot();
+    if (key === "width_mm" && isTextItem(item)) {
+      const scale = item.width_mm > 0 ? next / item.width_mm : 1;
+      item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
+      applyFittedTextBox(item);
+    } else if (key === "height_mm" && isTextItem(item)) {
+      const previousHeight = item.height_mm;
+      const scale = previousHeight > 0 ? next / previousHeight : 1;
+      item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
+      applyFittedTextBox(item);
+    } else if (key === "width_mm" && q("[data-lock-ratio]").checked) {
+      const ratio = item.height_mm / item.width_mm;
+      item.width_mm = next;
+      item.height_mm = round(next * ratio);
+    } else if (key === "height_mm" && q("[data-lock-ratio]").checked) {
+      const ratio = item.width_mm / item.height_mm;
+      item.height_mm = next;
+      item.width_mm = round(next * ratio);
+    } else {
+      item[key] = next;
+    }
+    commitLayoutMutation(before);
+    render();
+    return true;
+  }
+
   [["[data-input-width]", "width_mm"], ["[data-input-height]", "height_mm"], ["[data-input-x]", "x_mm"], ["[data-input-y]", "y_mm"]].forEach(([selector, key]) => {
     q(selector).addEventListener("change", (event) => {
-      const item = selected(); if (!item) return;
-      const before = layoutSnapshot();
-      const next = round(Number(event.target.value) * 10);
-      if (key === "width_mm" && isTextItem(item)) {
-        const scale = item.width_mm > 0 ? next / item.width_mm : 1;
-        item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
-        applyFittedTextBox(item);
-      } else if (key === "height_mm" && isTextItem(item)) {
-        const previousHeight = item.height_mm;
-        const scale = previousHeight > 0 ? next / previousHeight : 1;
-        item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
-        applyFittedTextBox(item);
-      } else if (key === "width_mm" && q("[data-lock-ratio]").checked) {
-        const ratio = item.height_mm / item.width_mm;
-        item.width_mm = next;
-        item.height_mm = round(next * ratio);
-      } else if (key === "height_mm" && q("[data-lock-ratio]").checked) {
-        const ratio = item.width_mm / item.height_mm;
-        item.height_mm = next;
-        item.width_mm = round(next * ratio);
-      } else {
-        item[key] = next;
-      }
-      commitLayoutMutation(before);
-      render();
+      changeSelectedMetric(key, event.target);
     });
   });
 

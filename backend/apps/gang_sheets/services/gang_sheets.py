@@ -32,6 +32,7 @@ from apps.gang_sheets.services.cropping import (
 )
 from apps.gang_sheets.services.drive import GangSheetDriveSyncService
 from apps.gang_sheets.services.geometry import GangSheetGeometryService, normalize_rotation
+from apps.gang_sheets.services.preflight import GangSheetPreflightService
 from apps.gang_sheets.services.text_items import (
     DEFAULT_TEXT_ALIGN,
     DEFAULT_TEXT_COLOR,
@@ -54,7 +55,7 @@ from apps.gang_sheets.services.text_items import (
     usable_text_max_width_mm,
 )
 from apps.orders.services.pricing import OrderPricingService
-from apps.uploads.models import AssetVersion
+from apps.uploads.models import AssetAnalysis, AssetVersion
 from apps.uploads.services.assets import AssetDomainError, AssetService
 
 HUNDREDTH = Decimal("0.01")
@@ -924,17 +925,107 @@ class GangSheetService:
         return locked
 
     @transaction.atomic
-    def validate_sheet(self, *, sheet, actor, source="client_portal"):
+    def validate_sheet(
+        self,
+        *,
+        sheet,
+        actor,
+        source="client_portal",
+        expected_revision=None,
+        preflight_fingerprint="",
+        acknowledge_quality=False,
+    ):
         locked = GangSheet.objects.select_for_update().get(pk=sheet.pk)
         if locked.status != GangSheet.Status.READY or not locked.final_file:
             raise GangSheetDomainError(
                 "RENDER_REQUIRED", "Le rendu final doit être terminé avant validation."
             )
-        items = list(locked.items.all())
+        if expected_revision is not None and str(expected_revision) != str(locked.revision):
+            raise GangSheetDomainError(
+                "STALE_PREFLIGHT", "Actualisez le contrôle qualité avant de confirmer."
+            )
+        version_ids = locked.items.exclude(asset_version_id=None).values_list(
+            "asset_version_id", flat=True
+        )
+        # Match AssetAnalysisService's analysis -> version order; lock deterministically.
+        list(
+            AssetAnalysis.objects.filter(
+                version_id__in=version_ids,
+                customer_id=locked.customer_id,
+            )
+            .order_by("pk")
+            .select_for_update()
+        )
+        list(
+            AssetVersion.objects.filter(
+                pk__in=version_ids,
+                customer_id=locked.customer_id,
+            )
+            .order_by("pk")
+            .select_for_update()
+        )
+        items = list(locked.items.select_related("asset_version__analysis"))
         issues = self.geometry.issues(sheet=locked, items=items)
         if issues:
             raise GangSheetDomainError(
                 "INVALID_GEOMETRY", "La géométrie de la planche est invalide."
+            )
+        preflight = GangSheetPreflightService().evaluate(sheet=locked, items=items)
+        if preflight["blocking"]:
+            raise GangSheetDomainError(
+                "PREFLIGHT_BLOCKED",
+                "Terminez l’analyse des fichiers avant confirmation.",
+                {"preflight": preflight},
+            )
+        if preflight["requires_acknowledgement"] or preflight_fingerprint:
+            if (
+                str(expected_revision) != str(locked.revision)
+                or preflight_fingerprint != preflight["fingerprint"]
+            ):
+                raise GangSheetDomainError(
+                    "STALE_PREFLIGHT",
+                    "Actualisez le contrôle qualité avant de confirmer.",
+                    {"preflight": preflight},
+                )
+            if preflight["requires_acknowledgement"] and acknowledge_quality is not True:
+                raise GangSheetDomainError(
+                    "PREFLIGHT_ACK_REQUIRED",
+                    "Prenez connaissance des avertissements qualité.",
+                    {"preflight": preflight},
+                )
+        if preflight["requires_acknowledgement"]:
+            self._audit(
+                "preflight_accepted",
+                sheet=locked,
+                actor=actor,
+                source=source,
+                metadata={
+                    "revision": locked.revision,
+                    "fingerprint": preflight["fingerprint"],
+                    "policy_version": preflight["policy_version"],
+                    "warning_codes": sorted({row["code"] for row in preflight["warnings"]}),
+                    "items": [
+                        {
+                            "item_public_id": str(item.public_id),
+                            "version_public_id": str(item.asset_version.public_id)
+                            if item.asset_version_id
+                            else None,
+                            "effective_dpi": preflight["items"][str(item.public_id)][
+                                "effective_dpi"
+                            ],
+                            "recommended_dpi": settings.B2B_RECOMMENDED_DPI,
+                            "minimum_dpi": settings.B2B_MIN_ACCEPTABLE_DPI,
+                            "codes": sorted(
+                                {
+                                    row["code"]
+                                    for row in preflight["items"][str(item.public_id)]["issues"]
+                                }
+                            ),
+                        }
+                        for item in items
+                        if preflight["items"][str(item.public_id)]["issues"]
+                    ],
+                },
             )
         locked.status = GangSheet.Status.VALIDATED
         locked.validated_at = timezone.now()
@@ -1104,7 +1195,8 @@ class GangSheetService:
         return sheets
 
     def serialize_sheet(self, sheet, *, preview_url_resolver) -> dict:
-        items = list(sheet.items.select_related("asset_version__asset"))
+        items = list(sheet.items.select_related("asset_version__asset", "asset_version__analysis"))
+        preflight = GangSheetPreflightService().evaluate(sheet=sheet, items=items)
         issues = self.geometry.issues(sheet=sheet, items=items)
         issue_ids = {item_id for issue in issues for item_id in issue["item_public_ids"]}
         return {
@@ -1126,13 +1218,25 @@ class GangSheetService:
             "estimated_price_eur": float(sheet.estimated_price_eur),
             "text_fonts": serialized_font_catalog(),
             "issues": issues,
+            "preflight": preflight,
             "items": [
-                self._serialize_item(
-                    item,
-                    issues=issue_ids,
-                    preview_url_resolver=preview_url_resolver,
-                )
+                {
+                    **self._serialize_item(
+                        item,
+                        issues=issue_ids,
+                        preview_url_resolver=preview_url_resolver,
+                    ),
+                    "quality": preflight["items"][str(item.public_id)],
+                }
                 for item in items
+                if item.customer_id == sheet.customer_id
+                and (
+                    not item.asset_version_id
+                    or (
+                        item.asset_version.customer_id == sheet.customer_id
+                        and item.asset_version.asset.customer_id == sheet.customer_id
+                    )
+                )
             ],
         }
 
