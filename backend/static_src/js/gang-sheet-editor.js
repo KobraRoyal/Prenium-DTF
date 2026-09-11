@@ -471,10 +471,15 @@ if (root) {
       : { width: item.width_mm, height: item.height_mm };
   }
 
+  function canResizeItem(item) {
+    return !item.layout_group_id;
+  }
+
   function clampItemOnSheet(item) {
     const size = effectiveSize(item);
-    item.x_mm = round(Math.max(0, Math.min(item.x_mm, state.width_mm - size.width)));
-    item.y_mm = round(Math.max(0, Math.min(item.y_mm, state.height_mm - size.height)));
+    const bounds = sheetUsefulBounds();
+    item.x_mm = round(Math.max(bounds.left, Math.min(item.x_mm, bounds.right - size.width)));
+    item.y_mm = round(Math.max(bounds.top, Math.min(item.y_mm, bounds.bottom - size.height)));
   }
 
   function resizeItemFromPointer(item, { start, deltaX, deltaY, lockRatio, corner = "se" }) {
@@ -720,13 +725,14 @@ if (root) {
 
   function clientIssues() {
     const issues = [];
+    const bounds = sheetUsefulBounds();
     const rects = state.items.map((item) => {
       const size = effectiveSize(item);
       return { item, x: item.x_mm, y: item.y_mm, right: item.x_mm + size.width, bottom: item.y_mm + size.height };
     });
     rects.forEach((rect) => {
-      if (rect.x < 0 || rect.y < 0 || rect.right > state.width_mm || rect.bottom > state.height_mm) {
-        issues.push({ code: "overflow", item_public_ids: [rect.item.public_id], message: "Le visuel déborde de la planche." });
+      if (rect.x < bounds.left || rect.y < bounds.top || rect.right > bounds.right || rect.bottom > bounds.bottom) {
+        issues.push({ code: "overflow", item_public_ids: [rect.item.public_id], message: "Le visuel déborde de la zone utile de la planche." });
       }
     });
     rects.forEach((first, index) => {
@@ -791,7 +797,7 @@ if (root) {
       label.className = "gang-sheet-item__label";
       label.textContent = `${round(item.width_mm / 10, 1)} × ${round(item.height_mm / 10, 1)} cm`;
       node.append(preview, label);
-      if (canEdit && !["rendering", "validated"].includes(state.status)) {
+      if (canEdit && !["rendering", "validated"].includes(state.status) && canResizeItem(item)) {
         RESIZE_CORNERS.forEach((corner) => {
           const handle = document.createElement("span");
           handle.className = `gang-sheet-item__resize gang-sheet-item__resize--${corner}`;
@@ -1050,7 +1056,10 @@ if (root) {
     if (warning) warning.hidden = textItem || (q("[data-lock-ratio]").checked && !distorted);
     if (restore) {
       restore.hidden = textItem || !distorted;
-      restore.disabled = !canEdit || busy || ["rendering", "validated"].includes(state.status);
+      restore.disabled = !canEdit || busy || !canResizeItem(item) || ["rendering", "validated"].includes(state.status);
+      restore.title = canResizeItem(item)
+        ? ""
+        : "Dissociez le groupe avant de restaurer les proportions de cet élément.";
     }
     const label = q("[data-item-quality]");
     if (!label) return;
@@ -1291,23 +1300,44 @@ if (root) {
     root.dataset.sheetStatus = state.status;
     root.dataset.hasIssues = String(issueCount > 0);
     const locked = ["rendering", "validated"].includes(state.status);
+    const hasPersistentGroups = state.items.some((item) => Boolean(item.layout_group_id));
     qa(
       "[data-add-asset], [data-add-text], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection], [data-text-content], [data-text-font], [data-text-size], [data-text-color], [data-text-color-hex], [data-text-align], [data-text-bold]"
     ).forEach((control) => {
       const assetPending = control.matches("[data-add-asset]") && control.dataset.assetReady !== "true";
-      control.disabled = !canEdit || locked || assetPending;
+      const groupedAssetAction = hasPersistentGroups && control.matches("[data-add-asset], [data-asset-quantity]");
+      control.disabled = !canEdit || locked || assetPending || groupedAssetAction;
+      if (control.matches("[data-add-asset], [data-asset-quantity]")) {
+        control.title = hasPersistentGroups
+          ? "Dissociez les groupes avant d’ajouter et placer un visuel."
+          : "";
+      }
     });
+    const selectedItem = selected();
+    const groupedSelectionMember = Boolean(selectedItem?.layout_group_id);
     const widthInput = q("[data-input-width]");
-    if (widthInput && isTextItem(selected())) {
-      widthInput.disabled = true;
-    }
+    const heightInput = q("[data-input-height]");
+    const lockRatio = q("[data-lock-ratio]");
+    [widthInput, heightInput, lockRatio].forEach((control) => {
+      if (!control) return;
+      if (groupedSelectionMember || (control === widthInput && isTextItem(selectedItem))) control.disabled = true;
+      if (groupedSelectionMember) {
+        control.title = "Dissociez le groupe avant de modifier les dimensions d’un de ses éléments.";
+      }
+    });
     syncGroupControls({ locked });
     qa("[data-issue-focus]").forEach((control) => {
       control.disabled = busy;
     });
     syncSaveControl({ locked });
-    q("[data-auto-place]").disabled = !canEdit || locked || state.items.length === 0 || busy;
-    q("[data-apply-spacing]").disabled = !canEdit || locked || state.items.length === 0 || busy;
+    const autoPlaceDisabled = !canEdit || locked || state.items.length === 0 || busy || hasPersistentGroups;
+    q("[data-auto-place]").disabled = autoPlaceDisabled;
+    q("[data-apply-spacing]").disabled = autoPlaceDisabled;
+    const autoPlaceTitle = hasPersistentGroups
+      ? "Dissociez les groupes avant de réorganiser automatiquement la planche."
+      : "Réorganiser tous les visuels selon l’espacement défini";
+    q("[data-auto-place]").title = autoPlaceTitle;
+    q("[data-apply-spacing]").title = autoPlaceTitle;
     qa("[data-align]").forEach((control) => {
       control.disabled = !canEdit || locked || selectedIds.size === 0 || busy;
     });
@@ -1716,6 +1746,17 @@ if (root) {
     canvas.setPointerCapture?.(pointerId);
     const resizing = event.target.closest("[data-resize-handle]");
     const corner = resizing?.dataset.resizeHandle || "se";
+    if (resizing && !canResizeItem(item)) {
+      selectedIds = new Set(
+        state.items
+          .filter((candidate) => candidate.layout_group_id === item.layout_group_id)
+          .map((candidate) => candidate.public_id)
+      );
+      selectedId = item.public_id;
+      window.preniumToast?.("Dissociez ce groupe avant de redimensionner un visuel.", "error");
+      render();
+      return;
+    }
     if (!selectedIds.has(item.public_id) || resizing) {
       if (!resizing && item.layout_group_id) {
         selectedIds = new Set(
@@ -1975,7 +2016,7 @@ if (root) {
   q("[data-restore-ratio]")?.addEventListener("click", () => {
     const item = selected();
     const ratio = Number(item?.quality?.source_ratio);
-    if (!item || !Number.isFinite(ratio) || ratio <= 0 || !canEdit || busy ||
+    if (!item || !Number.isFinite(ratio) || ratio <= 0 || !canEdit || busy || !canResizeItem(item) ||
       ["rendering", "validated"].includes(state.status)) return;
     const before = layoutSnapshot();
     const height = item.width_mm / ratio;
@@ -2562,6 +2603,16 @@ if (root) {
     };
   }
 
+  function sheetMaximumUsefulBounds() {
+    const margin = Math.max(0, Number(state.margin_mm) || 0);
+    return {
+      left: margin,
+      top: margin,
+      right: Math.max(margin, state.width_mm - margin),
+      bottom: Math.max(margin, state.maximum_height_mm - margin),
+    };
+  }
+
   function selectionBounds(items) {
     return items.reduce((bounds, item) => {
       const size = effectiveSize(item);
@@ -2800,8 +2851,10 @@ if (root) {
       const size = horizontal ? unit.bounds.right - unit.bounds.left : unit.bounds.bottom - unit.bounds.top;
       return total + size;
     }, 0) + gap * (sorted.length - 1);
-    const placementLimit = horizontal ? state.width_mm : state.maximum_height_mm;
-    if (cursor < 0 || cursor + requiredSpan > placementLimit) {
+    const usefulBounds = sheetMaximumUsefulBounds();
+    const placementStart = horizontal ? usefulBounds.left : usefulBounds.top;
+    const placementLimit = horizontal ? usefulBounds.right : usefulBounds.bottom;
+    if (cursor < placementStart || cursor + requiredSpan > placementLimit) {
       window.preniumToast?.(`L’écart demandé ferait déborder la sélection ${horizontal ? "de la largeur" : "de la hauteur maximale"} de la planche.`, "error");
       return;
     }
@@ -2898,23 +2951,24 @@ if (root) {
       const rotatedBounds = selectionBounds(items);
       const selectionWidth = rotatedBounds.right - rotatedBounds.left;
       const selectionHeight = rotatedBounds.bottom - rotatedBounds.top;
-      const sheetWidth = Number(state.width_mm);
-      const sheetHeight = Number(state.maximum_height_mm);
+      const usefulBounds = sheetMaximumUsefulBounds();
+      const sheetWidth = usefulBounds.right - usefulBounds.left;
+      const sheetHeight = usefulBounds.bottom - usefulBounds.top;
       if (
         Number.isFinite(sheetWidth)
         && Number.isFinite(sheetHeight)
         && selectionWidth <= sheetWidth
         && selectionHeight <= sheetHeight
       ) {
-        const deltaX = rotatedBounds.left < 0
-          ? -rotatedBounds.left
-          : rotatedBounds.right > sheetWidth
-            ? sheetWidth - rotatedBounds.right
+        const deltaX = rotatedBounds.left < usefulBounds.left
+          ? usefulBounds.left - rotatedBounds.left
+          : rotatedBounds.right > usefulBounds.right
+            ? usefulBounds.right - rotatedBounds.right
             : 0;
-        const deltaY = rotatedBounds.top < 0
-          ? -rotatedBounds.top
-          : rotatedBounds.bottom > sheetHeight
-            ? sheetHeight - rotatedBounds.bottom
+        const deltaY = rotatedBounds.top < usefulBounds.top
+          ? usefulBounds.top - rotatedBounds.top
+          : rotatedBounds.bottom > usefulBounds.bottom
+            ? usefulBounds.bottom - rotatedBounds.bottom
             : 0;
         translateItemsBy(items, deltaX, deltaY);
       }
@@ -3004,6 +3058,11 @@ if (root) {
     const rawValue = String(control.value).trim();
     const value = Number(rawValue);
     const sizeMetric = key === "width_mm" || key === "height_mm";
+    if (sizeMetric && !canResizeItem(item)) {
+      control.value = round(Number(item[key]) / 10, 2);
+      window.preniumToast?.("Dissociez le groupe avant de modifier les dimensions de cet élément.", "error");
+      return false;
+    }
     const valid = rawValue !== "" && Number.isFinite(value) && (!sizeMetric || value > 0);
     const previousValue = round(Number(item[key]) / 10, 2);
     if (!valid) {

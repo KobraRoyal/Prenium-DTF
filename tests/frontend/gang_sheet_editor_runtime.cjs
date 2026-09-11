@@ -38,7 +38,7 @@ class Element {
   getAttribute(name) { return this.attributes[name] ?? null; }
   getBoundingClientRect() { return {left: 0, top: 0, right: 600, bottom: 600, width: 600, height: 600}; }
   hasPointerCapture() { return false; }
-  matches(selector) { return selector === this.selector; }
+  matches(selector) { return selector.split(',').some((part) => part.trim() === this.selector); }
   querySelector() { return null; }
   querySelectorAll() { return []; }
   remove() {}
@@ -158,6 +158,7 @@ const hookPoint = '  syncSpacingControls();\n  setMobilePanel("canvas");';
 assert.equal(source.split(hookPoint).length, 2, 'editor test hook point must remain unique');
 const instrumentedSource = source.replace(hookPoint, `
   Object.assign(window.__gangSheetEditorTestHooks, {
+    canResizeItem,
     changeSelectedMetric,
     confirmComposition,
     getState: () => JSON.parse(JSON.stringify(state)),
@@ -338,7 +339,35 @@ async function runNextTimer() {
   assert.equal(rotated[1].x_mm - rotated[0].x_mm, 200, 'global translation preserves spacing');
   assert.equal(rotated[1].y_mm - rotated[0].y_mm, 0, 'global translation preserves group geometry');
 
-  console.log('Gang sheet editor runtime: conflicts, polling, dimensions and group rotation passed.');
+  const groupedItem = {...initialState.items[0], layout_group_id: 'group-a'};
+  assert.equal(hooks.canResizeItem(groupedItem), false, 'a grouped item must be dissociated before resize');
+  assert.equal(hooks.canResizeItem({...groupedItem, layout_group_id: null}), true);
+  hooks.setState({...initialState, items: [groupedItem]});
+  root.querySelectorAll = (selector) => selector.includes('[data-add-asset]')
+    ? [elementFor('[data-add-asset]')]
+    : [];
+  hooks.render();
+  root.querySelectorAll = () => [];
+  assert.equal(elementFor('[data-auto-place]').disabled, true, 'auto-place cannot break a persisted group');
+  assert.match(elementFor('[data-auto-place]').title, /Dissociez les groupes/);
+  assert.equal(elementFor('[data-add-asset]').disabled, true, 'gallery placement cannot fail after a group exists');
+  assert.match(elementFor('[data-add-asset]').title, /Dissociez les groupes/);
+  hooks.select(['item-a']);
+  const groupedWidth = hooks.getState().items[0].width_mm;
+  width.value = '14';
+  assert.equal(hooks.changeSelectedMetric('width_mm', width), false, 'isolating a group member cannot resize it');
+  assert.equal(hooks.getState().items[0].width_mm, groupedWidth);
+  hooks.renderItemQuality(hooks.getState().items[0]);
+  assert.equal(elementFor('[data-restore-ratio]').disabled, true, 'ratio restore cannot resize a group member');
+
+  const marginState = {...initialState, margin_mm: 5, items: [
+    {...initialState.items[0], x_mm: 0, y_mm: 0},
+  ]};
+  hooks.setState(marginState);
+  hooks.render();
+  assert.equal(hooks.getState().issues[0].code, 'overflow', 'the safety margin is part of client geometry');
+
+  console.log('Gang sheet editor runtime: conflicts, polling, dimensions and group behavior passed.');
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

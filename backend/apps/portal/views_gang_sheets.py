@@ -502,13 +502,19 @@ class ClientGangSheetLayoutView(ClientGangSheetMixin, View):
         sheet = self.get_sheet_or_404(sheet_public_id)
         try:
             body = json.loads(request.body or b"{}")
+            if not isinstance(body, dict):
+                raise GangSheetDomainError("INVALID_JSON", "Le corps JSON doit être un objet.")
+            if not isinstance(body.get("items"), list):
+                raise GangSheetDomainError(
+                    "INVALID_LAYOUT", "La liste des occurrences est invalide."
+                )
             sheet, issues = gang_sheet_service.save_layout(
                 sheet=sheet,
                 payload=body.get("items", []),
                 expected_revision=body.get("revision"),
                 actor=request.user,
             )
-        except (json.JSONDecodeError, GangSheetDomainError) as error:
+        except (json.JSONDecodeError, UnicodeDecodeError, GangSheetDomainError) as error:
             if isinstance(error, GangSheetDomainError):
                 return _json_error(error, status=409 if error.code == "STALE_REVISION" else 400)
             return _json_error(GangSheetDomainError("INVALID_JSON", "Requête invalide."))

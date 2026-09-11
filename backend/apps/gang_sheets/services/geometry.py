@@ -51,18 +51,23 @@ class GangSheetGeometryService:
     def issues(self, *, sheet, items) -> list[dict[str, object]]:
         rects = [self.rect_for(item) for item in items]
         issues: list[dict[str, object]] = []
+        margin = Decimal(sheet.margin_mm)
+        max_right = Decimal(sheet.width_mm) - margin
+        max_bottom = Decimal(sheet.height_mm) - margin
         for rect in rects:
             if (
-                rect.x < 0
-                or rect.y < 0
-                or rect.right > sheet.width_mm
-                or rect.bottom > sheet.height_mm
+                rect.x < margin
+                or rect.y < margin
+                or rect.right > max_right
+                or rect.bottom > max_bottom
             ):
                 issues.append(
                     {
                         "code": "overflow",
                         "item_public_ids": [rect.public_id],
-                        "message": "Le visuel déborde de la planche.",
+                        "message": (
+                            "Le visuel dépasse la zone utile délimitée par la marge de sécurité."
+                        ),
                     }
                 )
         for index, first in enumerate(rects):
@@ -76,6 +81,43 @@ class GangSheetGeometryService:
                         }
                     )
         return issues
+
+    def first_available_position(
+        self, *, sheet, item, existing_items
+    ) -> tuple[Decimal, Decimal] | None:
+        """Trouve une position libre déterministe sans déplacer les éléments existants."""
+
+        margin = Decimal(sheet.margin_mm)
+        spacing_x = Decimal(sheet.item_spacing_x_mm)
+        spacing_y = Decimal(sheet.item_spacing_y_mm)
+        max_right = Decimal(sheet.width_mm) - margin
+        max_bottom = Decimal(sheet.maximum_height_mm) - margin
+        existing = [self.rect_for(existing_item) for existing_item in existing_items]
+        source = self.rect_for(item)
+        width = Decimal(item.effective_width_mm)
+        height = Decimal(item.effective_height_mm)
+        preferred = [
+            (source.right + spacing_x, source.y),
+            (source.x, source.bottom + spacing_y),
+        ]
+        xs = {margin, *(rect.right + spacing_x for rect in existing)}
+        ys = {margin, *(rect.bottom + spacing_y for rect in existing)}
+        candidates = preferred + [
+            (x, y) for y in sorted(ys) for x in sorted(xs) if (x, y) not in preferred
+        ]
+        for x, y in candidates:
+            candidate = Rect(str(item.public_id), x, y, width, height)
+            if (
+                candidate.x < margin
+                or candidate.y < margin
+                or candidate.right > max_right
+                or candidate.bottom > max_bottom
+            ):
+                continue
+            if any(self.overlaps(candidate, placed) for placed in existing):
+                continue
+            return candidate.x.quantize(HUNDREDTH), candidate.y.quantize(HUNDREDTH)
+        return None
 
     @staticmethod
     def overlaps(first: Rect, second: Rect) -> bool:

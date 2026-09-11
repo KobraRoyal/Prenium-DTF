@@ -375,6 +375,8 @@ class GangSheetService:
         source="client_portal",
     ):
         locked = self._lock_editable(sheet)
+        if auto_place:
+            self._ensure_auto_place_has_no_groups(locked)
         version = self._resolve_available_version(locked, asset_version_public_id)
         quantity = self._bounded_positive_int(quantity, label="quantité")
         width, height = self._default_dimensions(locked, version)
@@ -531,8 +533,12 @@ class GangSheetService:
         origin_y = Decimal(source_item.y_mm)
         final_right = origin_x + columns * effective_width + (columns - 1) * spacing_x
         final_bottom = origin_y + rows * effective_height + (rows - 1) * spacing_y
-        if final_right > Decimal(locked.width_mm) or final_bottom > Decimal(
-            locked.maximum_height_mm
+        margin = Decimal(locked.margin_mm)
+        if (
+            origin_x < margin
+            or origin_y < margin
+            or final_right > Decimal(locked.width_mm) - margin
+            or final_bottom > Decimal(locked.maximum_height_mm) - margin
         ):
             raise GangSheetDomainError(
                 "GRID_TOO_LARGE",
@@ -597,10 +603,21 @@ class GangSheetService:
         source_item = locked.items.filter(public_id=item_public_id).first()
         if source_item is None:
             raise GangSheetDomainError("ITEM_NOT_FOUND", "Occurrence introuvable.")
+        existing_items = list(locked.items.all())
+        position = self.geometry.first_available_position(
+            sheet=locked,
+            item=source_item,
+            existing_items=existing_items,
+        )
+        if position is None:
+            raise GangSheetDomainError(
+                "DUPLICATE_NO_SPACE",
+                "Aucun emplacement libre ne permet de dupliquer ce visuel dans la zone utile.",
+            )
         item = GangSheetItem.objects.create(
             **self._clone_item_fields(source_item),
-            x_mm=source_item.x_mm + locked.item_spacing_x_mm,
-            y_mm=source_item.y_mm + locked.item_spacing_y_mm,
+            x_mm=position[0],
+            y_mm=position[1],
             width_mm=source_item.width_mm,
             height_mm=source_item.height_mm,
             rotation=source_item.rotation,
@@ -792,7 +809,26 @@ class GangSheetService:
         self, *, sheet, payload: list[dict], expected_revision, actor, source="client_portal"
     ):
         locked = self._lock_editable(sheet)
-        if expected_revision is not None and int(expected_revision) != locked.revision:
+        if not isinstance(payload, list) or any(not isinstance(row, dict) for row in payload):
+            raise GangSheetDomainError("INVALID_LAYOUT", "La liste des occurrences est invalide.")
+        if expected_revision is None or isinstance(expected_revision, bool):
+            raise GangSheetDomainError(
+                "INVALID_LAYOUT", "La révision du brouillon est obligatoire."
+            )
+        try:
+            parsed_revision = Decimal(str(expected_revision))
+            if (
+                not parsed_revision.is_finite()
+                or parsed_revision != parsed_revision.to_integral_value()
+                or parsed_revision < 0
+            ):
+                raise ValueError
+            parsed_revision = int(parsed_revision)
+        except (InvalidOperation, OverflowError, TypeError, ValueError) as error:
+            raise GangSheetDomainError(
+                "INVALID_LAYOUT", "La révision du brouillon est invalide."
+            ) from error
+        if parsed_revision != locked.revision:
             raise GangSheetDomainError(
                 "STALE_REVISION",
                 "Ce brouillon a été modifié ailleurs. Rechargez la page avant de continuer.",
@@ -861,6 +897,7 @@ class GangSheetService:
         items = list(locked.items.select_for_update())
         if not items:
             raise GangSheetDomainError("ITEMS_REQUIRED", "Ajoutez au moins un visuel ou un texte.")
+        self._ensure_auto_place_has_no_groups(locked, items=items)
         spacing_x = self._spacing_decimal(
             locked.item_spacing_x_mm if spacing_x_mm is None else spacing_x_mm
         )
@@ -1245,6 +1282,19 @@ class GangSheetService:
         if locked.status not in self.editable_statuses:
             raise GangSheetDomainError("SHEET_LOCKED", "Cette planche n'est plus modifiable.")
         return locked
+
+    @staticmethod
+    def _ensure_auto_place_has_no_groups(sheet, *, items=None) -> None:
+        has_groups = (
+            any(item.layout_group_id is not None for item in items)
+            if items is not None
+            else sheet.items.filter(layout_group_id__isnull=False).exists()
+        )
+        if has_groups:
+            raise GangSheetDomainError(
+                "AUTO_PLACE_GROUPED_ITEMS",
+                "Dissociez les groupes avant d'utiliser le placement automatique.",
+            )
 
     def _resolve_available_version(self, sheet, public_id):
         version = self.available_asset_versions(sheet=sheet).filter(public_id=public_id).first()

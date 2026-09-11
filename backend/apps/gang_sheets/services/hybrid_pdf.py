@@ -134,21 +134,31 @@ class GangSheetHybridPdfComposer:
             raise HybridPdfCompositionError("Le document source ne contient aucune page.")
         source_page = source_document.load_page(0)
         source_rect = source_page.rect
-        clip = pymupdf.Rect(
+        visual_clip = pymupdf.Rect(
             source_rect.x0 + float(crop.x) * source_rect.width,
             source_rect.y0 + float(crop.y) * source_rect.height,
             source_rect.x0 + float(crop.x + crop.width) * source_rect.width,
             source_rect.y0 + float(crop.y + crop.height) * source_rect.height,
         )
-        page.show_pdf_page(
-            self._item_rect(item),
-            source_document,
-            0,
-            keep_proportion=False,
-            overlay=True,
-            rotate=int(item.rotation) % 360,
-            clip=clip,
-        )
+        # CropBox is expressed in the orientation shown to the user. PyMuPDF's
+        # show_pdf_page(), however, expects the clip in unrotated page coordinates.
+        clip = visual_clip * source_page.derotation_matrix
+        source_rotation = int(source_page.rotation) % 360
+        source_page.set_rotation(0)
+        try:
+            # PyMuPDF's positive placement angle runs opposite to the clockwise
+            # rotations used by the preview renderer and the editor model.
+            page.show_pdf_page(
+                self._item_rect(item),
+                source_document,
+                0,
+                keep_proportion=False,
+                overlay=True,
+                rotate=(-source_rotation - int(item.rotation)) % 360,
+                clip=clip,
+            )
+        finally:
+            source_page.set_rotation(source_rotation)
 
     def _place_raster(self, *, page, item, stream: bytes, existing_xref: int | None) -> int:
         kwargs = {"xref": existing_xref} if existing_xref else {"stream": stream}

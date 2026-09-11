@@ -863,6 +863,40 @@ def test_selected_occurrence_can_generate_regular_rows_and_columns():
     assert GangSheetGeometryService().issues(sheet=sheet, items=items) == []
 
 
+def test_grid_reserves_the_right_safety_margin():
+    user, customer, project = create_customer_scope(email="grid-margin@example.com")
+    _asset, version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        width_mm="281.00",
+        height_mm="40.00",
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Grille et marge")
+    source = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+
+    with pytest.raises(GangSheetDomainError) as exc:
+        service.repeat_occurrence_grid(
+            sheet=sheet,
+            item_public_id=source.public_id,
+            rows=1,
+            columns=2,
+            spacing_x_mm="0",
+            spacing_y_mm="0",
+            actor=user,
+        )
+
+    assert exc.value.code == "GRID_TOO_LARGE"
+    sheet.refresh_from_db()
+    assert sheet.items.count() == 1
+    assert sheet.revision == initial_revision
+
+
 def test_cross_tenant_asset_is_rejected_even_with_public_uuid():
     user, _customer, project = create_customer_scope(email="first@example.com")
     other_user, other_customer, other_project = create_customer_scope(email="other@example.com")
@@ -911,6 +945,174 @@ def test_stale_revision_cannot_overwrite_a_newer_draft():
         )
 
     assert exc.value.code == "STALE_REVISION"
+
+
+@pytest.mark.parametrize("revision", [None, True, "invalid", "1.5"])
+def test_save_layout_requires_an_explicit_integer_revision(revision):
+    user, customer, project = create_customer_scope(email=f"revision-{revision}@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Révision obligatoire")
+    item = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+
+    with pytest.raises(GangSheetDomainError) as exc:
+        service.save_layout(
+            sheet=sheet,
+            expected_revision=revision,
+            payload=[
+                {
+                    "public_id": str(item.public_id),
+                    "x_mm": "5",
+                    "y_mm": "5",
+                    "width_mm": "100",
+                    "height_mm": "50",
+                    "rotation": 0,
+                }
+            ],
+            actor=user,
+        )
+
+    assert exc.value.code == "INVALID_LAYOUT"
+
+
+def test_manual_layout_and_render_enforce_the_sheet_safety_margin():
+    user, customer, project = create_customer_scope(email="manual-margin@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Marge manuelle")
+    item = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+
+    saved, issues = service.save_layout(
+        sheet=sheet,
+        expected_revision=sheet.revision,
+        payload=[
+            {
+                "public_id": str(item.public_id),
+                "x_mm": "0",
+                "y_mm": "5",
+                "width_mm": "100",
+                "height_mm": "50",
+                "rotation": 0,
+            }
+        ],
+        actor=user,
+    )
+
+    assert [issue["code"] for issue in issues] == ["overflow"]
+    with pytest.raises(GangSheetDomainError) as exc:
+        service.request_render(sheet=saved, actor=user)
+    assert exc.value.code == "INVALID_GEOMETRY"
+
+
+def test_duplicate_uses_a_free_position_inside_the_safety_margin():
+    user, customer, project = create_customer_scope(email="duplicate-position@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Duplication sûre")
+    source = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+
+    duplicate = service.duplicate_occurrence(
+        sheet=sheet, item_public_id=source.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+
+    assert duplicate.x_mm == source.x_mm + source.effective_width_mm + sheet.item_spacing_x_mm
+    assert duplicate.y_mm == source.y_mm
+    assert GangSheetGeometryService().issues(sheet=sheet, items=list(sheet.items.all())) == []
+
+
+def test_duplicate_fails_atomically_when_no_free_position_exists():
+    user, customer, project = create_customer_scope(email="duplicate-full@example.com")
+    _asset, version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        width_mm="560.00",
+        height_mm="1990.00",
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Planche pleine")
+    source = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+
+    with pytest.raises(GangSheetDomainError) as exc:
+        service.duplicate_occurrence(sheet=sheet, item_public_id=source.public_id, actor=user)
+
+    assert exc.value.code == "DUPLICATE_NO_SPACE"
+    sheet.refresh_from_db()
+    assert sheet.items.count() == 1
+    assert sheet.revision == initial_revision
+
+
+def test_duplicate_of_an_invalid_draft_item_is_placed_inside_the_safety_margin():
+    user, customer, project = create_customer_scope(email="duplicate-invalid-source@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Source hors marge")
+    source = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.items.filter(pk=source.pk).update(x_mm="0", y_mm="0")
+    source.refresh_from_db()
+    sheet.refresh_from_db()
+
+    duplicate = service.duplicate_occurrence(
+        sheet=sheet, item_public_id=source.public_id, actor=user
+    )
+    duplicate.refresh_from_db()
+    duplicate_rect = GangSheetGeometryService().rect_for(duplicate)
+
+    assert duplicate_rect.x >= sheet.margin_mm
+    assert duplicate_rect.y >= sheet.margin_mm
+    assert duplicate_rect.right <= sheet.width_mm - sheet.margin_mm
+    assert duplicate_rect.bottom <= sheet.maximum_height_mm - sheet.margin_mm
+
+
+def test_auto_place_refuses_persisted_groups_without_mutating_the_sheet():
+    user, customer, project = create_customer_scope(email="group-auto-place@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Groupe protégé")
+    service.add_occurrences(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        quantity=2,
+        actor=user,
+    )
+    group_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    sheet.items.update(layout_group_id=group_id)
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+    initial_positions = list(sheet.items.values_list("public_id", "x_mm", "y_mm"))
+
+    with pytest.raises(GangSheetDomainError) as exc:
+        service.auto_place(
+            sheet=sheet,
+            actor=user,
+            spacing_x_mm="17",
+            spacing_y_mm="19",
+        )
+
+    assert exc.value.code == "AUTO_PLACE_GROUPED_ITEMS"
+    sheet.refresh_from_db()
+    assert sheet.revision == initial_revision
+    assert sheet.item_spacing_x_mm != Decimal("17")
+    assert list(sheet.items.values_list("public_id", "x_mm", "y_mm")) == initial_positions
+    assert {str(value) for value in sheet.items.values_list("layout_group_id", flat=True)} == {
+        group_id
+    }
 
 
 def test_save_layout_persists_layout_group_id():

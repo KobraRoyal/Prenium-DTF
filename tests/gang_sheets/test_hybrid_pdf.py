@@ -7,10 +7,11 @@ import pymupdf
 import pytest
 from apps.gang_sheets.models import GangSheet, GangSheetItem, GangSheetSourceAsset
 from apps.gang_sheets.services import GangSheetRenderService, GangSheetService
+from apps.gang_sheets.services.cropping import CropBox
 from apps.gang_sheets.services.hybrid_pdf import MM_TO_POINTS, GangSheetHybridPdfComposer
 from apps.uploads.models import Asset, AssetVersion
 from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
+from PIL import Image, ImageChops, ImageStat
 
 from .helpers import create_customer_scope
 
@@ -42,6 +43,29 @@ def _mixed_pdf() -> bytes:
     page = document.new_page(width=200, height=100)
     page.draw_rect(pymupdf.Rect(5, 5, 195, 95), color=(0.1, 0.5, 0.2), width=2)
     page.insert_image(pymupdf.Rect(30, 20, 112, 66), stream=image_output.getvalue())
+    content = document.tobytes()
+    document.close()
+    return content
+
+
+def _rotated_quadrants_pdf(rotation: int) -> bytes:
+    document = pymupdf.open()
+    page = document.new_page(width=200, height=100)
+    quadrants = (
+        ((0, 0, 100, 50), (1, 0, 0)),
+        ((100, 0, 200, 50), (0, 1, 0)),
+        ((0, 50, 100, 100), (0, 0, 1)),
+        ((100, 50, 200, 100), (1, 1, 0)),
+    )
+    for (x0, y0, x1, y1), color in quadrants:
+        page.draw_rect((x0, y0, x1, y1), color=None, fill=color)
+        page.draw_rect((x0 + 5, y0 + 4, x0 + 30, y0 + 15), color=None, fill=(0, 0, 0))
+        page.draw_rect(
+            (x0 + 62, y0 + 27, x0 + 94, y0 + 45),
+            color=None,
+            fill=(1, 1, 1),
+        )
+    page.set_rotation(rotation)
     content = document.tobytes()
     document.close()
     return content
@@ -194,6 +218,77 @@ def test_cropped_vector_pdf_keeps_vector_commands_without_rasterizing():
         assert page.get_drawings()
         assert page.get_images(full=True) == []
         assert page.get_fonts(full=True)
+
+
+@pytest.mark.parametrize("source_rotation", [0, 90, 180, 270])
+@pytest.mark.parametrize("item_rotation", [0, 90])
+@pytest.mark.parametrize(
+    ("crop_name", "crop"),
+    [
+        ("top-left", {"x": "0", "y": "0", "width": "0.50", "height": "0.50"}),
+        ("top-right", {"x": "0.50", "y": "0", "width": "0.50", "height": "0.50"}),
+        ("bottom-left", {"x": "0", "y": "0.50", "width": "0.50", "height": "0.50"}),
+        (
+            "bottom-right",
+            {"x": "0.50", "y": "0.50", "width": "0.50", "height": "0.50"},
+        ),
+        ("full", {"x": "0", "y": "0", "width": "1", "height": "1"}),
+    ],
+)
+def test_pdf_crop_matches_preview_for_every_page_rotation_and_quadrant(
+    source_rotation, item_rotation, crop_name, crop
+):
+    sheet, item = _composition(
+        email=f"hybrid-crop-{source_rotation}-{item_rotation}-{crop_name}@example.com",
+        content=_rotated_quadrants_pdf(source_rotation),
+        filename="rotated-quadrants.pdf",
+        mime_type="application/pdf",
+        rotation=item_rotation,
+        crop=crop,
+    )
+    item.refresh_from_db()
+    crop = GangSheetSourceAsset.objects.get(sheet=sheet)
+    crop_box = CropBox.from_source_asset(crop)
+
+    render_service = GangSheetRenderService()
+    preview_source = render_service._source_image(
+        item.asset_version,
+        crop=crop_box,
+        target_width=240,
+        target_height=120,
+    )
+    preview = preview_source.resize((240, 120), Image.Resampling.LANCZOS)
+    preview_source.close()
+    preview_rotated = render_service._rotate(preview, item.rotation)
+    preview = preview_rotated.convert("RGB")
+    preview_rotated.close()
+
+    content = GangSheetHybridPdfComposer().compose(sheet=sheet, items=[item])
+    with pymupdf.open(stream=content, filetype="pdf") as document:
+        item_rect = pymupdf.Rect(
+            float(item.x_mm) * MM_TO_POINTS,
+            float(item.y_mm) * MM_TO_POINTS,
+            (float(item.x_mm) + float(item.effective_width_mm)) * MM_TO_POINTS,
+            (float(item.y_mm) + float(item.effective_height_mm)) * MM_TO_POINTS,
+        )
+        pixmap = document[0].get_pixmap(
+            matrix=pymupdf.Matrix(3, 3),
+            colorspace=pymupdf.csRGB,
+            alpha=False,
+            clip=item_rect,
+        )
+        rendered_source = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
+        rendered = rendered_source.resize(preview.size, Image.Resampling.LANCZOS)
+        rendered_source.close()
+
+    difference = ImageChops.difference(preview, rendered)
+    channel_means = ImageStat.Stat(difference).mean
+    preview.close()
+    difference.close()
+    try:
+        assert max(channel_means) < 4
+    finally:
+        rendered.close()
 
 
 def test_transparent_png_is_embedded_at_source_definition_with_alpha_mask():

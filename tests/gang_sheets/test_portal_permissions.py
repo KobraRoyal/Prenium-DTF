@@ -481,6 +481,59 @@ def test_readonly_member_cannot_mutate_layout(client):
     assert response.status_code == 403
 
 
+def test_layout_endpoint_rejects_malformed_payloads_and_reports_stale_revision(client):
+    user, customer, project = create_customer_scope(email="layout-payload@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Payload layout")
+    item = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+    url = reverse(
+        "portal:client-gang-sheet-layout",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    item_payload = {
+        "public_id": str(item.public_id),
+        "x_mm": "5",
+        "y_mm": "5",
+        "width_mm": "100",
+        "height_mm": "50",
+        "rotation": 0,
+    }
+    cases = (
+        ("[]", 400, "INVALID_JSON"),
+        (json.dumps({"items": {}}), 400, "INVALID_LAYOUT"),
+        (json.dumps({"items": [item_payload]}), 400, "INVALID_LAYOUT"),
+        (
+            json.dumps({"items": [item_payload], "revision": "invalid"}),
+            400,
+            "INVALID_LAYOUT",
+        ),
+        (
+            json.dumps({"items": [item_payload], "revision": initial_revision - 1}),
+            409,
+            "STALE_REVISION",
+        ),
+    )
+    client.force_login(user)
+
+    for body, status, code in cases:
+        response = client.post(url, data=body, content_type="application/json")
+        assert response.status_code == status
+        assert response.json()["error"]["code"] == code
+
+    sheet.refresh_from_db()
+    item.refresh_from_db()
+    assert sheet.revision == initial_revision
+    assert item.x_mm == Decimal("5.00")
+
+
 def test_owner_can_delete_multiple_selected_occurrences_in_one_request(client):
     user, customer, project = create_customer_scope(email="batch-delete-owner@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
