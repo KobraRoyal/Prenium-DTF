@@ -153,7 +153,8 @@ class StudioPolishUITests(SimpleTestCase):
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
         gallery = source(TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_gallery.html")
 
-        self.assertIn("Ajouter des visuels", editor)
+        self.assertIn("Déposez vos fichiers ici", editor)
+        self.assertIn("Choisir les fichiers", editor)
         self.assertIn("gang-asset-card__place", gallery)
         self.assertIn("Placer sur la planche", gallery)
         empty_state = gallery.split("{% empty %}", 1)[1]
