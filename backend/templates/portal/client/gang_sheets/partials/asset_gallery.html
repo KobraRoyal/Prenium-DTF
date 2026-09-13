@@ -21,15 +21,13 @@
     <div class="gang-asset-card__body">
       <strong title="{{ asset.name }}">{{ asset.name }}</strong>
       <small class="gang-asset-status gang-asset-status--{{ asset.analysis_status }}">{{ asset.analysis_label }}{% if asset.width_mm and asset.height_mm %} · {{ asset.width_mm }} × {{ asset.height_mm }} mm{% endif %}</small>
-      <details class="gang-asset-analysis-disclosure" {% if asset.is_recent_import or asset.analysis_status == "warning" or asset.analysis_status == "failed" %}open{% endif %}>
-        <summary>
-          {% if asset.analysis_status == "pending" or asset.analysis_status == "processing" %}Analyse en cours
-          {% elif asset.analysis_status == "failed" %}Voir l’erreur
-          {% elif asset.has_analysis_warnings %}Voir les anomalies
-          {% else %}Voir le contrôle technique{% endif %}
-        </summary>
-        {% include "portal/client/gang_sheets/partials/asset_analysis_summary.html" with asset=asset %}
-      </details>
+      <div class="gang-asset-card__analysis-line">
+        {% if asset.analysis_status == "pending" or asset.analysis_status == "processing" %}<span>Analyse en cours…</span>
+        {% elif asset.analysis_status == "failed" %}<span>Import à corriger</span>
+        {% elif asset.has_analysis_warnings %}<span>Anomalies détectées</span>
+        {% else %}<span>Contrôle terminé</span>{% endif %}
+        <button type="button" class="gang-asset-card__details" data-dialog-open="gang-asset-detail-{{ asset.source_public_id }}" aria-haspopup="dialog">Détails</button>
+      </div>
       <div class="gang-asset-card__meta-row">
         <small data-asset-usage="{{ asset.public_id }}">{{ asset.usage_count }} sur la planche</small>
         {% if can_manage_gallery %}
@@ -94,8 +92,9 @@
       </div>
     </dialog>
     {% endif %}
+    {% include "portal/client/gang_sheets/partials/asset_detail_dialog.html" with asset=asset %}
   </article>
   {% empty %}
-  {% include "components/ui/empty_state.html" with extra_class="gang-asset-empty" title="Galerie vide" message="Utilisez « Ajouter des fichiers » ci-dessus pour importer votre premier visuel." %}
+  {% include "components/ui/empty_state.html" with extra_class="gang-asset-empty" title="Galerie vide" message="Utilisez « Ajouter des visuels » ci-dessus pour importer votre premier fichier." %}
   {% endfor %}
 </div>

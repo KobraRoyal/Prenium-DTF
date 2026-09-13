@@ -1146,11 +1146,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('data-mobile-panel-tab="canvas"', editor)
         self.assertIn("data-zoom-reset", editor)
         self.assertIn("data-status-detail", editor)
-        self.assertIn("data-gang-crop-box", editor)
-        self.assertIn('name="crop_manifest"', editor)
-        self.assertIn("Recadrage", editor)
-        self.assertIn("data-crop-manual", editor)
-        self.assertIn("data-crop-auto", editor)
+        detail = template_source("portal/client/gang_sheets/partials/asset_detail_dialog.html")
+        self.assertIn("data-asset-crop-box", detail)
+        self.assertIn('name="crop_width"', detail)
+        self.assertIn("Rogner le visuel", detail)
         self.assertIn("Espacement auto-imposition", editor)
         self.assertIn("data-spacing-x", editor)
         self.assertIn("data-spacing-y", editor)
@@ -1241,7 +1240,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         )
         self.assertIn('window.addEventListener("beforeunload"', runtime)
         self.assertIn("allowUnload || !dirty", runtime)
-        self.assertIn(".gang-asset-modal-form", runtime)
+        self.assertIn(".gang-asset-upload-form", runtime)
         self.assertIn("root.dataset.dirty = String(dirty)", runtime)
 
     def test_gang_sheet_editor_exposes_safe_precision_tools(self) -> None:
@@ -2085,8 +2084,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("data-preflight-fade", preflight)
         self.assertIn("data-preflight-thin", preflight)
         self.assertIn("order_project_batch_dropzone.html", add_form)
-        gang_editor = template_source("portal/client/gang_sheets/editor.html")
-        self.assertIn("b2b_configurator_preflight.html", gang_editor)
+        gang_asset_detail = template_source(
+            "portal/client/gang_sheets/partials/asset_detail_dialog.html"
+        )
+        self.assertIn("asset_analysis_summary.html", gang_asset_detail)
         self.assertIn("detectThinZonesFromMedia", configurator_script)
         self.assertIn("data-preflight-thin-overlay", configurator_script)
         self.assertIn("data-preflight-fade-overlay", configurator_script)
@@ -2368,7 +2369,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         gang_editor = template_source("portal/client/gang_sheets/editor.html")
         self.assertNotIn("product-eyebrow", gang_editor)
-        self.assertIn('id="gang-asset-dialog-title"', gang_editor)
+        self.assertIn("data-gang-inline-import", gang_editor)
 
         operations = template_source("portal/staff/operations/index.html")
         self.assertNotIn("terracotta", operations)

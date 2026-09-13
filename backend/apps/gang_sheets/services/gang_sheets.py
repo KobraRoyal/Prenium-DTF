@@ -29,6 +29,7 @@ from apps.gang_sheets.services.cropping import (
     AutoCropError,
     AutoCropService,
     CropBox,
+    CropValidationError,
 )
 from apps.gang_sheets.services.drive import GangSheetDriveSyncService
 from apps.gang_sheets.services.geometry import GangSheetGeometryService, normalize_rotation
@@ -352,6 +353,91 @@ class GangSheetService:
             self._delete_stored_files_safely(stored_files)
             raise
         return imported
+
+    @transaction.atomic
+    def update_source_asset_crop(
+        self,
+        *,
+        sheet,
+        source_asset_public_id,
+        crop: CropBox,
+        expected_revision,
+        actor,
+        source="client_portal",
+    ):
+        """Met à jour le recadrage d'une source existante avec verrou optimiste."""
+        locked = self._lock_editable(sheet)
+        parsed_revision = self._parse_expected_revision(
+            expected_revision,
+            invalid_code="INVALID_CROP",
+        )
+        if parsed_revision != locked.revision:
+            raise GangSheetDomainError(
+                "STALE_REVISION",
+                "Ce brouillon a été modifié ailleurs. Rechargez la page avant de continuer.",
+                {"revision": locked.revision},
+            )
+        source_asset = (
+            locked.source_assets.select_for_update()
+            .select_related("asset")
+            .filter(
+                customer=locked.customer,
+                public_id=source_asset_public_id,
+            )
+            .first()
+        )
+        if source_asset is None:
+            raise GangSheetDomainError(
+                "SOURCE_ASSET_NOT_FOUND",
+                "Ce visuel n’est pas présent dans cette galerie.",
+            )
+        usage_count = locked.items.filter(asset_version__asset_id=source_asset.asset_id).count()
+        if usage_count:
+            raise GangSheetDomainError(
+                "SOURCE_ASSET_IN_USE",
+                (
+                    "Ce visuel est déjà utilisé sur la planche. Supprimez d’abord "
+                    "ses occurrences avant de modifier son recadrage."
+                ),
+                {"usage_count": usage_count},
+            )
+        try:
+            crop.validate()
+        except CropValidationError as error:
+            raise GangSheetDomainError("INVALID_CROP", str(error)) from error
+
+        previous_crop = CropBox.from_source_asset(source_asset)
+        if crop == previous_crop:
+            return locked, source_asset
+
+        source_asset.crop_x = crop.x
+        source_asset.crop_y = crop.y
+        source_asset.crop_width = crop.width
+        source_asset.crop_height = crop.height
+        source_asset.save(
+            update_fields=[
+                "crop_x",
+                "crop_y",
+                "crop_width",
+                "crop_height",
+                "updated_at",
+            ]
+        )
+        self._mark_dirty(locked)
+        self._audit(
+            "source_crop_updated",
+            sheet=locked,
+            actor=actor,
+            source=source,
+            metadata={
+                "source_asset_public_id": str(source_asset.public_id),
+                "asset_public_id": str(source_asset.asset.public_id),
+                "previous_crop": previous_crop.to_metadata(),
+                "crop": crop.to_metadata(),
+                "revision": locked.revision,
+            },
+        )
+        return locked, source_asset
 
     @transaction.atomic
     def add_occurrence(self, *, sheet, asset_version_public_id, actor, source="client_portal"):
@@ -1501,6 +1587,24 @@ class GangSheetService:
         if value in (None, "", "null"):
             return None
         return UUID(str(value))
+
+    @staticmethod
+    def _parse_expected_revision(value, *, invalid_code):
+        if value is None or isinstance(value, bool):
+            raise GangSheetDomainError(
+                invalid_code,
+                "La révision du brouillon est obligatoire.",
+            )
+        try:
+            parsed = Decimal(str(value))
+            if not parsed.is_finite() or parsed != parsed.to_integral_value() or parsed < 0:
+                raise ValueError
+            return int(parsed)
+        except (InvalidOperation, OverflowError, TypeError, ValueError) as error:
+            raise GangSheetDomainError(
+                invalid_code,
+                "La révision du brouillon est invalide.",
+            ) from error
 
     @classmethod
     def _spacing_decimal(cls, value):

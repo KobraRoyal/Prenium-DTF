@@ -3552,43 +3552,21 @@ if (root) {
     event.preventDefault();
     event.returnValue = "";
   });
-  const uploadForm = q(".gang-asset-modal-form");
-  const importResults = q("[data-gang-import-results]");
-  function showImportForm({ reset = false } = {}) {
-    if (!uploadForm) return;
-    if (reset) uploadForm.reset();
-    uploadForm.hidden = false;
-    if (importResults) importResults.hidden = true;
-    window.requestAnimationFrame(() => q("[data-batch-picker]")?.focus());
-  }
-  q("[data-gang-import-new]")?.addEventListener("click", () => showImportForm({ reset: true }));
-  root.addEventListener("click", (event) => {
-    const opener = event.target.closest?.("[data-file-picker-dialog='gang-asset-dialog']");
-    if (opener) showImportForm();
-  });
+  const uploadForm = q(".gang-asset-upload-form");
   function setUploadFormBusy(isBusy) {
     if (!uploadForm) return;
     uploadForm.classList.toggle("is-uploading", isBusy);
-    const dialog = uploadForm.closest("dialog");
-    if (dialog) dialog.setAttribute("aria-busy", String(isBusy));
-    uploadForm.querySelectorAll("[data-dialog-close], [data-batch-picker], [data-configurator-submit]").forEach((control) => {
+    uploadForm.setAttribute("aria-busy", String(isBusy));
+    uploadForm.querySelectorAll("[data-batch-picker]").forEach((control) => {
       if (control instanceof HTMLButtonElement) control.disabled = isBusy;
     });
     const progress = uploadForm.querySelector("[data-batch-upload-progress]");
     if (progress instanceof HTMLElement) progress.hidden = !isBusy;
   }
-  uploadForm?.closest("dialog")?.addEventListener("cancel", (event) => {
-    if (uploadForm.classList.contains("is-uploading")) event.preventDefault();
-  });
   uploadForm?.addEventListener("submit", async (event) => {
     if (allowUnload) return;
     event.preventDefault();
-    const submitter = uploadForm.querySelector("[data-configurator-submit]");
     setUploadFormBusy(true);
-    if (submitter instanceof HTMLButtonElement) {
-      submitter.classList.add("is-loading");
-      submitter.setAttribute("aria-busy", "true");
-    }
     try {
       if (dirty) await saveLayout({ notify: false });
       allowUnload = true;
@@ -3596,10 +3574,67 @@ if (root) {
     } catch (error) {
       allowUnload = false;
       setUploadFormBusy(false);
-      if (submitter instanceof HTMLButtonElement) {
-        submitter.classList.remove("is-loading");
-        submitter.removeAttribute("aria-busy");
-      }
+      window.preniumToast?.(error.message, "error");
+    }
+  });
+  function renderExistingCrop(editor, changedName = "") {
+    if (!(editor instanceof HTMLElement)) return;
+    const values = {};
+    editor.querySelectorAll("[data-crop-value]").forEach((input) => {
+      if (input instanceof HTMLInputElement) values[input.dataset.cropValue] = Number.parseFloat(input.value) || 0;
+    });
+    if (changedName === "x") values.width = Math.min(values.width, 1 - values.x);
+    if (changedName === "y") values.height = Math.min(values.height, 1 - values.y);
+    if (changedName === "width") values.x = Math.min(values.x, 1 - values.width);
+    if (changedName === "height") values.y = Math.min(values.y, 1 - values.height);
+    editor.querySelectorAll("[data-crop-value]").forEach((input) => {
+      if (!(input instanceof HTMLInputElement)) return;
+      const key = input.dataset.cropValue;
+      input.value = String(Math.max(0, Math.min(1, values[key])));
+      const output = input.parentElement?.querySelector("output");
+      if (output) output.textContent = `${Math.round(values[key] * 100)} %`;
+    });
+    const box = editor.querySelector("[data-asset-crop-box]");
+    if (box instanceof HTMLElement) {
+      box.style.left = `${values.x * 100}%`;
+      box.style.top = `${values.y * 100}%`;
+      box.style.width = `${values.width * 100}%`;
+      box.style.height = `${values.height * 100}%`;
+    }
+  }
+  root.querySelectorAll("[data-asset-crop-editor]").forEach((editor) => renderExistingCrop(editor));
+  root.addEventListener("input", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.matches("[data-crop-value]")) return;
+    renderExistingCrop(input.closest("[data-asset-crop-editor]"), input.dataset.cropValue);
+  });
+  root.addEventListener("click", (event) => {
+    const reset = event.target.closest?.("[data-crop-reset-existing]");
+    if (!(reset instanceof HTMLButtonElement)) return;
+    const editor = reset.closest("[data-asset-crop-editor]");
+    editor?.querySelectorAll("[data-crop-value]").forEach((input) => {
+      if (input instanceof HTMLInputElement) input.value = ["width", "height"].includes(input.dataset.cropValue) ? "1" : "0";
+    });
+    renderExistingCrop(editor);
+  });
+  root.addEventListener("submit", async (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches(".gang-asset-crop-form")) return;
+    event.preventDefault();
+    const submitter = form.querySelector("button[type='submit']");
+    if (submitter instanceof HTMLButtonElement) submitter.disabled = true;
+    try {
+      if (dirty) await saveLayout({ notify: false });
+      const revisionInput = form.querySelector("input[name='expected_revision']");
+      if (revisionInput instanceof HTMLInputElement) revisionInput.value = String(state.revision);
+      const response = await fetch(form.action, { method: "POST", body: new FormData(form), headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) throw new Error(payload?.error?.message || "Le cadrage n’a pas pu être enregistré.");
+      window.preniumToast?.("Cadrage enregistré.", "success");
+      allowUnload = true;
+      window.location.reload();
+    } catch (error) {
+      if (submitter instanceof HTMLButtonElement) submitter.disabled = false;
       window.preniumToast?.(error.message, "error");
     }
   });

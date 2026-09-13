@@ -104,7 +104,9 @@ planche (`cqw` du canvas), pas de la boîte. La mesure du cadre utilise une
 poignées d’angle permettent d’agrandir ; le corps se déplace au curseur
 « grab ».
 
-Le recadrage proposé dans la modal d’import est non destructif. La planche stocke une fenêtre
+L’import démarre directement depuis le panneau « Ajouter des visuels » de la bibliothèque. La
+galerie compacte affiche ensuite l’état de l’analyse et ouvre une modale propre à chaque fichier
+pour les anomalies, les overlays techniques et le recadrage. Ce recadrage est non destructif. La planche stocke une fenêtre
 normalisée `(x, y, largeur, hauteur)` sur `GangSheetSourceAsset`, tandis que l’`AssetVersion`
 originale reste inchangée. Les dimensions physiques proposées et les aperçus utilisent cette
 fenêtre. Dans le PDF HD, une source PDF ou mixte est placée avec un clip PDF natif ; ses tracés,
@@ -112,13 +114,15 @@ textes, polices et images embarquées ne sont donc pas aplatis. Les sources EPS/
 d’abord converties en PDF vectoriel selon la voie existante, puis clippées. Pour une source raster,
 seuls les pixels compris dans la fenêtre sont conservés, sans mise à l’échelle ni rééchantillonnage.
 
-La modal propose un mode Manuel et un mode Auto par fichier. Auto utilise la transparence ou le
+La modale détail permet un cadrage manuel sur la source complète médiée par le backend. Le cadrage
+est bloqué dès que le visuel possède une occurrence sur la planche afin de ne pas modifier son ratio
+sans recalculer les dimensions et collisions de la composition. À l’import, le mode Auto peut utiliser la transparence ou le
 fond dominant pour borner les pixels raster. Pour un PDF vectoriel, il unit les limites natives des
 tracés, textes et nuances ; pour un PDF mixte, il ajoute les limites des images embarquées. Les
 formats EPS/AI/PSD/TIFF sans aperçu navigateur sont analysés via leur aperçu serveur sécurisé. La
 proposition visuelle du navigateur reste indicative : lors de l’import, le serveur relit l’original,
 recalcule la fenêtre et audite le type détecté (`vector`, `raster` ou `mixed`). Une modification du
-cadre Auto dans la modal repasse explicitement le fichier en mode Manuel.
+cadre Auto repasse explicitement le fichier en mode Manuel.
 
 L’aperçu client et les diagnostics de finesse/semi-transparence restent volontairement
 rasterisés : ils sont indépendants du livrable HD. Le compositeur crée une page neuve et ne copie

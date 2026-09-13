@@ -75,6 +75,7 @@ from .views_gang_sheets import (
     ClientGangSheetLayoutView,
     ClientGangSheetListCreateView,
     ClientGangSheetPreviewDownloadView,
+    ClientGangSheetSourceAssetCropView,
     ClientGangSheetSourceAssetRemoveView,
     ClientGangSheetStateView,
     ClientGangSheetWorkflowActionView,
@@ -388,6 +389,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/remove/",
         ClientGangSheetSourceAssetRemoveView.as_view(),
         name="client-gang-sheet-source-asset-remove",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/crop/",
+        ClientGangSheetSourceAssetCropView.as_view(),
+        name="client-gang-sheet-source-asset-crop",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/preview/download/",

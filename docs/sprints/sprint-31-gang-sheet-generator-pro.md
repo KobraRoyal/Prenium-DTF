@@ -154,6 +154,8 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   que les outils zoom et historique.
 - [x] Import + recadrage : plus d’alerte « Quitter le site » ; la composition est enregistrée
   avant le POST du formulaire.
+- [x] Import direct depuis « Ajouter des visuels », analyse asynchrone dans la galerie compacte,
+  détail technique par fichier et recadrage post-import interdit après placement.
 - [x] Aligner / répartir : un groupe mémorisé se comporte comme un seul objet (écarts internes
   conservés, visuels isolés inchangés).
 - [x] Inspecteur Réglages : un langage de champs / titres / actions ; bouton « Placer sur la planche » pleine largeur.

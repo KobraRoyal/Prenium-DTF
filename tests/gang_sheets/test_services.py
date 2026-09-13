@@ -19,6 +19,7 @@ from apps.gang_sheets.services import (
     GangSheetRenderService,
     GangSheetService,
 )
+from apps.gang_sheets.services.cropping import CropBox
 from apps.orders.models import Order
 from apps.uploads.models import Asset, AssetAnalysis, AssetVersion, OrderUpload
 from apps.uploads.services.asset_analysis import AssetAnalysisService
@@ -78,6 +79,148 @@ def test_occurrence_uses_the_cropped_physical_dimensions():
 
     assert item.width_mm == Decimal("50.00")
     assert item.height_mm == Decimal("20.00")
+
+
+def test_existing_source_crop_is_updated_audited_and_versions_the_sheet():
+    user, customer, project = create_customer_scope(email="crop-existing@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Crop existant")
+    source_asset = sheet.source_assets.get(asset=asset)
+    initial_revision = sheet.revision
+
+    updated_sheet, updated_source = service.update_source_asset_crop(
+        sheet=sheet,
+        source_asset_public_id=source_asset.public_id,
+        crop=CropBox.from_values(x="0.10", y="0.20", width="0.60", height="0.50"),
+        expected_revision=initial_revision,
+        actor=user,
+        source="test",
+    )
+
+    updated_source.refresh_from_db()
+    assert updated_source.crop_x == Decimal("0.100000")
+    assert updated_source.crop_y == Decimal("0.200000")
+    assert updated_source.crop_width == Decimal("0.600000")
+    assert updated_source.crop_height == Decimal("0.500000")
+    assert updated_source.effective_width_mm == Decimal("60.00")
+    assert updated_source.effective_height_mm == Decimal("25.00")
+    assert updated_sheet.revision == initial_revision + 1
+    event = AuditLogEntry.objects.get(action="gang_sheet.source_crop_updated")
+    assert event.target_public_id == sheet.public_id
+    assert event.metadata["source_asset_public_id"] == str(source_asset.public_id)
+    assert event.metadata["previous_crop"] == {
+        "x": "0.000000",
+        "y": "0.000000",
+        "width": "1.000000",
+        "height": "1.000000",
+    }
+    assert event.metadata["revision"] == initial_revision + 1
+
+
+def test_existing_source_crop_rejects_invalid_crop_stale_revision_and_locked_sheet():
+    user, customer, project = create_customer_scope(email="crop-guards@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Crop protégé")
+    source_asset = sheet.source_assets.get(asset=asset)
+    invalid_crop = CropBox(
+        x=Decimal("0.80"),
+        y=Decimal("0"),
+        width=Decimal("0.40"),
+        height=Decimal("1"),
+    )
+
+    with pytest.raises(GangSheetDomainError) as invalid:
+        service.update_source_asset_crop(
+            sheet=sheet,
+            source_asset_public_id=source_asset.public_id,
+            crop=invalid_crop,
+            expected_revision=sheet.revision,
+            actor=user,
+        )
+    assert invalid.value.code == "INVALID_CROP"
+
+    with pytest.raises(GangSheetDomainError) as stale:
+        service.update_source_asset_crop(
+            sheet=sheet,
+            source_asset_public_id=source_asset.public_id,
+            crop=CropBox.from_values(width="0.80"),
+            expected_revision=sheet.revision + 1,
+            actor=user,
+        )
+    assert stale.value.code == "STALE_REVISION"
+
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.save(update_fields=["status", "updated_at"])
+    with pytest.raises(GangSheetDomainError) as locked:
+        service.update_source_asset_crop(
+            sheet=sheet,
+            source_asset_public_id=source_asset.public_id,
+            crop=CropBox.from_values(width="0.80"),
+            expected_revision=sheet.revision,
+            actor=user,
+        )
+    assert locked.value.code == "SHEET_LOCKED"
+    source_asset.refresh_from_db()
+    assert source_asset.has_crop is False
+
+
+def test_existing_source_crop_cannot_target_another_customer_source_uuid():
+    user_a, customer_a, project_a = create_customer_scope(email="crop-scope-a@example.com")
+    asset_a, _version_a = attach_png_asset(
+        customer=customer_a,
+        project=project_a,
+        user=user_a,
+    )
+    user_b, customer_b, project_b = create_customer_scope(email="crop-scope-b@example.com")
+    attach_png_asset(customer=customer_b, project=project_b, user=user_b)
+    service = GangSheetService()
+    sheet_a = service.create_sheet(project=project_a, actor=user_a, name="Planche A")
+    sheet_b = service.create_sheet(project=project_b, actor=user_b, name="Planche B")
+    foreign_source = sheet_a.source_assets.get(asset=asset_a)
+
+    with pytest.raises(GangSheetDomainError) as error:
+        service.update_source_asset_crop(
+            sheet=sheet_b,
+            source_asset_public_id=foreign_source.public_id,
+            crop=CropBox.from_values(width="0.80"),
+            expected_revision=sheet_b.revision,
+            actor=user_b,
+        )
+
+    assert error.value.code == "SOURCE_ASSET_NOT_FOUND"
+    foreign_source.refresh_from_db()
+    assert foreign_source.has_crop is False
+
+
+def test_existing_source_crop_is_blocked_while_visual_is_used_in_composition():
+    user, customer, project = create_customer_scope(email="crop-used@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Crop utilisé")
+    source_asset = sheet.source_assets.get(asset=asset)
+    service.add_occurrence(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        actor=user,
+    )
+    sheet.refresh_from_db()
+
+    with pytest.raises(GangSheetDomainError) as error:
+        service.update_source_asset_crop(
+            sheet=sheet,
+            source_asset_public_id=source_asset.public_id,
+            crop=CropBox.from_values(width="0.80"),
+            expected_revision=sheet.revision,
+            actor=user,
+        )
+
+    assert error.value.code == "SOURCE_ASSET_IN_USE"
+    assert error.value.details["usage_count"] == 1
+    source_asset.refresh_from_db()
+    assert source_asset.has_crop is False
+    assert not AuditLogEntry.objects.filter(action="gang_sheet.source_crop_updated").exists()
 
 
 def test_draft_sheet_deletion_removes_composition_and_renders_but_preserves_sources(

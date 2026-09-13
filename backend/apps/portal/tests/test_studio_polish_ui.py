@@ -95,7 +95,7 @@ class StudioPolishUITests(SimpleTestCase):
 
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
         overview_start = editor.index('<div class="gang-editor__overview">')
-        overview_end = editor.index('<dialog class="b2b-configurator-dialog', overview_start)
+        overview_end = editor.index('<nav class="gang-editor__mobile-tabs', overview_start)
         overview = editor[overview_start:overview_end]
         self.assertIn('<header class="gang-editor__header">', overview)
         self.assertIn('<div class="gang-editor__progress-row">', overview)
@@ -153,7 +153,7 @@ class StudioPolishUITests(SimpleTestCase):
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
         gallery = source(TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_gallery.html")
 
-        self.assertIn("Ajouter des fichiers", editor)
+        self.assertIn("Ajouter des visuels", editor)
         self.assertIn("gang-asset-card__place", gallery)
         self.assertIn("Placer sur la planche", gallery)
         empty_state = gallery.split("{% empty %}", 1)[1]
@@ -213,7 +213,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn('link.classList.toggle("ui-btn-primary", canCreate)', editor_js)
         self.assertIn("const hasEstimate = state.items.length > 0 && quote.surface > 0", editor_js)
         self.assertNotIn('q("[data-metric-price]")', editor_js)
-        self.assertIn("gang-sheet-editor.js?v=20260913-gang-import-v28", app_js)
+        self.assertIn("gang-sheet-editor.js?v=20260913-inline-import-v29", app_js)
         self.assertNotIn("gang-inspector-panel__context", editor)
         text_css = source(CSS_DIR / "components/gang-sheet-text.css")
         self.assertIn("font-size: 2.18cqw", text_css)

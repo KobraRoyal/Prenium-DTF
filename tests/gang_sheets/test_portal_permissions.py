@@ -184,8 +184,8 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert "data-canvas-clear-zone" in content
     assert "Répétition" not in content
     assert "Créer la grille" not in content
-    assert 'id="gang-asset-dialog"' in content
-    assert 'data-file-picker-dialog="gang-asset-dialog"' in content
+    assert "data-gang-inline-import" in content
+    assert "data-batch-auto-submit" in content
     assert 'name="files"' in content
     assert "multiple" in content
     assert 'data-max-file-bytes="20971520"' in content
@@ -195,16 +195,7 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert "20 Mo" in content
     assert "data-configurator-file-error" in content
     assert "Importer" in content
-    assert "data-configurator-preflight" in content
-    assert "data-preflight-dpi" in content
-    assert "data-preflight-fade" in content
-    assert 'data-recommended-dpi="' in content
-    assert "Recadrage" in content
-    assert 'name="crop_manifest"' in content
-    assert "data-gang-crop-box" in content
-    assert "data-crop-manual" in content
-    assert "data-crop-auto" in content
-    assert "Contenu détecté" in content
+    assert "Le contrôle démarre dès la sélection." in content
     assert "gang-editor__delete" in content
     assert "Supprimer cette planche DTF ?" in content
 
@@ -1313,6 +1304,301 @@ def test_invalid_or_cross_tenant_crop_upload_is_rejected(client, monkeypatch):
     assert json.loads(invalid_response.headers["X-Prenium-Toast"])["variant"] == "error"
     assert cross_tenant_response.status_code == 404
     assert sheet.source_assets.count() == 0
+
+
+def test_owner_can_update_existing_crop_and_gallery_exposes_scoped_modal_data(client):
+    owner, customer, project = create_customer_scope(email="crop-update-owner@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Crop modale")
+    source_asset = sheet.source_assets.get(asset=asset)
+    initial_revision = sheet.revision
+    client.force_login(owner)
+    gallery_url = reverse(
+        "portal:client-gang-sheet-asset-gallery",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+
+    gallery_response = client.get(gallery_url)
+    row = gallery_response.context["assets"][0]
+    update_url = reverse(
+        "portal:client-gang-sheet-source-asset-crop",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": source_asset.public_id,
+        },
+    )
+
+    assert gallery_response.status_code == 200
+    assert row["crop_mode"] == "manual"
+    assert row["crop_x"] == "0.000000"
+    assert row["crop_y"] == "0.000000"
+    assert row["crop_width"] == "1.000000"
+    assert row["crop_height"] == "1.000000"
+    assert row["crop_update_url"] == update_url
+    assert row["expected_revision"] == initial_revision
+    assert row["can_crop"] is True
+    assert row["original_preview_url"].endswith("?original=1")
+    assert str(customer.public_id) in row["original_preview_url"]
+    assert str(sheet.public_id) in row["original_preview_url"]
+    assert str(version.public_id) in row["original_preview_url"]
+
+    response = client.post(
+        update_url,
+        {
+            "crop_x": "0.10",
+            "crop_y": "0.20",
+            "crop_width": "0.60",
+            "crop_height": "0.50",
+            "expected_revision": initial_revision,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response["Cache-Control"] == "private, no-store"
+    assert response.json() == {
+        "ok": True,
+        "revision": initial_revision + 1,
+        "crop": {
+            "x": "0.100000",
+            "y": "0.200000",
+            "width": "0.600000",
+            "height": "0.500000",
+        },
+        "width_mm": "60.00",
+        "height_mm": "25.00",
+    }
+    source_asset.refresh_from_db()
+    assert source_asset.crop_width == Decimal("0.600000")
+    assert AuditLogEntry.objects.filter(
+        action="gang_sheet.source_crop_updated",
+        target_public_id=sheet.public_id,
+    ).exists()
+
+
+def test_existing_crop_endpoint_rejects_invalid_stale_readonly_and_cross_tenant_requests(client):
+    owner_a, customer_a, project_a = create_customer_scope(email="crop-endpoint-a@example.com")
+    asset_a, version_a = attach_png_asset(
+        customer=customer_a,
+        project=project_a,
+        user=owner_a,
+    )
+    sheet_a = GangSheetService().create_sheet(project=project_a, actor=owner_a, name="Crop A")
+    source_a = sheet_a.source_assets.get(asset=asset_a)
+    crop_a_url = reverse(
+        "portal:client-gang-sheet-source-asset-crop",
+        kwargs={
+            "customer_public_id": customer_a.public_id,
+            "sheet_public_id": sheet_a.public_id,
+            "source_asset_public_id": source_a.public_id,
+        },
+    )
+    valid_crop = {
+        "crop_x": "0.10",
+        "crop_y": "0.10",
+        "crop_width": "0.80",
+        "crop_height": "0.80",
+        "expected_revision": sheet_a.revision,
+    }
+    client.force_login(owner_a)
+
+    invalid_response = client.post(
+        crop_a_url,
+        {**valid_crop, "crop_x": "0.80", "crop_width": "0.40"},
+    )
+    missing_revision_payload = {**valid_crop}
+    missing_revision_payload.pop("expected_revision")
+    missing_revision_response = client.post(crop_a_url, missing_revision_payload)
+    stale_response = client.post(
+        crop_a_url,
+        {**valid_crop, "expected_revision": sheet_a.revision + 1},
+    )
+
+    assert invalid_response.status_code == 400
+    assert invalid_response.json()["error"]["code"] == "INVALID_CROP"
+    assert missing_revision_response.status_code == 400
+    assert missing_revision_response.json()["error"]["code"] == "INVALID_CROP"
+    assert stale_response.status_code == 400
+    assert stale_response.json()["error"] == {
+        "code": "STALE_REVISION",
+        "message": "Ce brouillon a été modifié ailleurs. Rechargez la page avant de continuer.",
+        "revision": sheet_a.revision,
+    }
+
+    GangSheetService().add_occurrence(
+        sheet=sheet_a,
+        asset_version_public_id=version_a.public_id,
+        actor=owner_a,
+    )
+    sheet_a.refresh_from_db()
+    used_response = client.post(
+        crop_a_url,
+        {**valid_crop, "expected_revision": sheet_a.revision},
+    )
+    assert used_response.status_code == 400
+    assert used_response.json()["error"]["code"] == "SOURCE_ASSET_IN_USE"
+    assert used_response.json()["error"]["usage_count"] == 1
+    used_gallery = client.get(
+        reverse(
+            "portal:client-gang-sheet-asset-gallery",
+            kwargs={
+                "customer_public_id": customer_a.public_id,
+                "sheet_public_id": sheet_a.public_id,
+            },
+        )
+    )
+    assert used_gallery.context["assets"][0]["can_crop"] is False
+
+    readonly, readonly_customer, readonly_project = create_customer_scope(
+        email="crop-endpoint-readonly@example.com",
+        role=CustomerMembership.Role.READONLY,
+    )
+    readonly_asset, _readonly_version = attach_png_asset(
+        customer=readonly_customer,
+        project=readonly_project,
+        user=readonly,
+    )
+    readonly_sheet = GangSheetService().create_sheet(
+        project=readonly_project,
+        actor=readonly,
+        name="Crop lecture seule",
+    )
+    readonly_source = readonly_sheet.source_assets.get(asset=readonly_asset)
+    client.force_login(readonly)
+    readonly_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": readonly_customer.public_id,
+                "sheet_public_id": readonly_sheet.public_id,
+                "source_asset_public_id": readonly_source.public_id,
+            },
+        ),
+        {**valid_crop, "expected_revision": readonly_sheet.revision},
+    )
+
+    outsider, outsider_customer, outsider_project = create_customer_scope(
+        email="crop-endpoint-outsider@example.com"
+    )
+    attach_png_asset(customer=outsider_customer, project=outsider_project, user=outsider)
+    outsider_sheet = GangSheetService().create_sheet(
+        project=outsider_project,
+        actor=outsider,
+        name="Crop B",
+    )
+    client.force_login(outsider)
+    foreign_sheet_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": sheet_a.public_id,
+                "source_asset_public_id": source_a.public_id,
+            },
+        ),
+        {**valid_crop, "expected_revision": outsider_sheet.revision},
+    )
+    foreign_source_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": outsider_sheet.public_id,
+                "source_asset_public_id": source_a.public_id,
+            },
+        ),
+        {**valid_crop, "expected_revision": outsider_sheet.revision},
+    )
+
+    assert readonly_response.status_code == 403
+    assert foreign_sheet_response.status_code == 404
+    assert foreign_source_response.status_code == 404
+    assert foreign_source_response.json()["error"]["code"] == "SOURCE_ASSET_NOT_FOUND"
+    source_a.refresh_from_db()
+    readonly_source.refresh_from_db()
+    assert source_a.has_crop is False
+    assert readonly_source.has_crop is False
+
+
+def test_original_asset_preview_bypasses_crop_and_remains_tenant_scoped(client):
+    owner, customer, project = create_customer_scope(email="crop-preview-owner@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Aperçu original")
+    source_asset = sheet.source_assets.get(asset=asset)
+    source_asset.crop_x = Decimal("0.25")
+    source_asset.crop_width = Decimal("0.50")
+    source_asset.save(update_fields=["crop_x", "crop_width", "updated_at"])
+    preview_url = reverse(
+        "portal:client-gang-sheet-asset-preview",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "asset_version_public_id": version.public_id,
+        },
+    )
+    client.force_login(owner)
+
+    cropped_response = client.get(preview_url)
+    original_response = client.get(f"{preview_url}?original=1")
+    with Image.open(BytesIO(b"".join(cropped_response.streaming_content))) as cropped:
+        cropped_size = cropped.size
+    with Image.open(BytesIO(b"".join(original_response.streaming_content))) as original:
+        original_size = original.size
+
+    assert cropped_response.status_code == 200
+    assert original_response.status_code == 200
+    assert cropped_size == (150, 150)
+    assert original_size == (300, 150)
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="crop-preview-outsider@example.com"
+    )
+    client.force_login(outsider)
+    cross_tenant_url = reverse(
+        "portal:client-gang-sheet-asset-preview",
+        kwargs={
+            "customer_public_id": outsider_customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "asset_version_public_id": version.public_id,
+        },
+    )
+    assert client.get(f"{cross_tenant_url}?original=1").status_code == 404
+
+
+def test_asset_preview_fails_closed_for_cross_customer_analysis(client):
+    owner, customer, project = create_customer_scope(email="analysis-scope-owner@example.com")
+    _outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="analysis-scope-outsider@example.com"
+    )
+    _asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(
+        project=project,
+        actor=owner,
+        name="Analyse incohérente",
+    )
+    analysis = AssetAnalysis.objects.create(
+        customer=outsider_customer,
+        version=version,
+        metadata={"thin_zone": {"detected": True}},
+    )
+    analysis.thumbnail = SimpleUploadedFile("foreign.webp", b"foreign-thumbnail")
+    analysis.thin_zone_overlay = SimpleUploadedFile("foreign-overlay.webp", b"foreign-overlay")
+    analysis.save(update_fields=["thumbnail", "thin_zone_overlay", "updated_at"])
+    preview_url = reverse(
+        "portal:client-gang-sheet-asset-preview",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "asset_version_public_id": version.public_id,
+        },
+    )
+    client.force_login(owner)
+
+    assert client.get(f"{preview_url}?original=1").status_code == 404
+    assert client.get(f"{preview_url}?overlay=thin_zone").status_code == 404
 
 
 def test_pending_gallery_refreshes_itself_and_exposes_visual_when_analysis_is_ready(client):

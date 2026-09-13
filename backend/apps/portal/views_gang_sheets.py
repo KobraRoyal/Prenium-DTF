@@ -132,7 +132,7 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
         if self.customer_membership.role == CustomerMembership.Role.READONLY:
             raise PermissionDenied
 
-    def preview_url(self, *, sheet, version, overlay=""):
+    def preview_url(self, *, sheet, version, overlay="", original=False):
         url = reverse(
             "portal:client-gang-sheet-asset-preview",
             kwargs={
@@ -141,9 +141,24 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                 "asset_version_public_id": version.public_id,
             },
         )
+        query = {}
         if overlay:
-            return f"{url}?{urlencode({'overlay': overlay})}"
+            query["overlay"] = overlay
+        if original:
+            query["original"] = "1"
+        if query:
+            return f"{url}?{urlencode(query)}"
         return url
+
+    def source_crop_url(self, *, sheet, source_asset):
+        return reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": self.customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "source_asset_public_id": source_asset.public_id,
+            },
+        )
 
     @staticmethod
     def _upload_batch_session_key(sheet):
@@ -287,6 +302,11 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                     "preview_url": (
                         self.preview_url(sheet=sheet, version=version) if is_ready else ""
                     ),
+                    "original_preview_url": (
+                        self.preview_url(sheet=sheet, version=version, original=True)
+                        if is_ready
+                        else ""
+                    ),
                     "analysis_status": version.analysis_status if version else "failed",
                     "analysis_label": version.get_analysis_status_display() if version else "Échec",
                     "analysis_error": _safe_analysis_error(version),
@@ -320,7 +340,18 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                     "width_mm": entry.effective_width_mm,
                     "height_mm": entry.effective_height_mm,
                     "has_crop": entry.has_crop,
+                    "crop_mode": CROP_MODE_MANUAL,
+                    "crop_x": str(entry.crop_x),
+                    "crop_y": str(entry.crop_y),
+                    "crop_width": str(entry.crop_width),
+                    "crop_height": str(entry.crop_height),
+                    "crop_update_url": self.source_crop_url(
+                        sheet=sheet,
+                        source_asset=entry,
+                    ),
+                    "expected_revision": sheet.revision,
                     "usage_count": usage_count,
+                    "can_crop": can_manage_gallery and usage_count == 0,
                     "can_remove": can_manage_gallery and usage_count == 0,
                 }
             )
@@ -528,6 +559,67 @@ class ClientGangSheetSourceAssetRemoveView(ClientGangSheetMixin, View):
             },
         )
         return with_toast(HttpResponseRedirect(editor_url), message, variant)
+
+
+class ClientGangSheetSourceAssetCropView(ClientGangSheetMixin, View):
+    def post(
+        self,
+        request,
+        customer_public_id,
+        sheet_public_id,
+        source_asset_public_id,
+    ):
+        self.require_write_access()
+        sheet = self.get_sheet_or_404(sheet_public_id)
+        try:
+            crop = CropBox.from_values(
+                x=request.POST.get("crop_x"),
+                y=request.POST.get("crop_y"),
+                width=request.POST.get("crop_width"),
+                height=request.POST.get("crop_height"),
+            )
+        except CropValidationError as error:
+            response = _json_error(
+                GangSheetDomainError("INVALID_CROP", str(error)),
+            )
+            response["Cache-Control"] = "private, no-store"
+            return response
+        try:
+            updated_sheet, source_asset = gang_sheet_service.update_source_asset_crop(
+                sheet=sheet,
+                source_asset_public_id=source_asset_public_id,
+                crop=crop,
+                expected_revision=request.POST.get("expected_revision"),
+                actor=request.user,
+                source="client_portal",
+            )
+        except GangSheetDomainError as error:
+            response = _json_error(
+                error,
+                status=404 if error.code == "SOURCE_ASSET_NOT_FOUND" else 400,
+            )
+            response["Cache-Control"] = "private, no-store"
+            return response
+
+        response = JsonResponse(
+            {
+                "ok": True,
+                "revision": updated_sheet.revision,
+                "crop": crop.to_metadata(),
+                "width_mm": (
+                    str(source_asset.effective_width_mm)
+                    if source_asset.effective_width_mm is not None
+                    else None
+                ),
+                "height_mm": (
+                    str(source_asset.effective_height_mm)
+                    if source_asset.effective_height_mm is not None
+                    else None
+                ),
+            }
+        )
+        response["Cache-Control"] = "private, no-store"
+        return response
 
 
 class ClientGangSheetDeleteView(ClientGangSheetMixin, View):
@@ -978,8 +1070,14 @@ class ClientGangSheetAssetPreviewView(ClientGangSheetMixin, View):
         )
         if source_asset is None:
             raise Http404
-        crop = CropBox.from_source_asset(source_asset)
+        crop = (
+            CropBox.full()
+            if request.GET.get("original") == "1"
+            else CropBox.from_source_asset(source_asset)
+        )
         analysis = getattr(version, "analysis", None)
+        if analysis is not None and analysis.customer_id != sheet.customer_id:
+            raise Http404
         requested_overlay = (request.GET.get("overlay") or "").strip()
         overlay_fields = {
             "thin_zone": "thin_zone_overlay",

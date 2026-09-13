@@ -1,0 +1,50 @@
+<dialog class="b2b-configurator-dialog gang-asset-detail-dialog" id="gang-asset-detail-{{ asset.source_public_id }}" aria-labelledby="gang-asset-detail-title-{{ asset.source_public_id }}">
+  <div class="b2b-dialog-shell">
+    <header class="b2b-dialog-head">
+      <div class="b2b-dialog-head__copy">
+        <span class="gang-import-results__eyebrow">Contrôle technique</span>
+        <h2 id="gang-asset-detail-title-{{ asset.source_public_id }}">{{ asset.name }}</h2>
+        <p>Analyse complète et cadrage du fichier destiné à l’impression.</p>
+      </div>
+      <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">×</button>
+    </header>
+    <div class="b2b-dialog-body gang-asset-detail" data-asset-crop-editor>
+      <section class="gang-asset-detail__preview" aria-label="Aperçu et cadrage">
+        <div class="gang-asset-detail__stage">
+          {% if asset.original_preview_url %}
+          <img src="{{ asset.original_preview_url }}" alt="Source complète de {{ asset.name }}">
+          <div class="gang-asset-detail__shade" data-asset-crop-box aria-hidden="true"></div>
+          {% else %}<div class="gang-asset-card__pending"><span></span> Aperçu en préparation</div>{% endif %}
+        </div>
+        {% if asset.thin_zone.overlay_url or asset.semi_transparency.overlay_url %}
+        <div class="gang-asset-detail__overlays">
+          {% if asset.thin_zone.overlay_url %}<a href="{{ asset.thin_zone.overlay_url }}" target="_blank" rel="noopener">Voir les zones trop fines</a>{% endif %}
+          {% if asset.semi_transparency.overlay_url %}<a href="{{ asset.semi_transparency.overlay_url }}" target="_blank" rel="noopener">Voir les semi-transparences</a>{% endif %}
+        </div>
+        {% endif %}
+      </section>
+      <section class="gang-asset-detail__analysis" aria-label="Résultat de l’analyse">
+        {% include "portal/client/gang_sheets/partials/asset_analysis_summary.html" with asset=asset %}
+        {% if asset.crop_update_url %}
+        <form method="post" action="{{ asset.crop_update_url }}" class="gang-asset-crop-form">
+          {% csrf_token %}
+          <input type="hidden" name="expected_revision" value="{{ asset.expected_revision }}">
+          <input type="hidden" name="crop_mode" value="manual">
+          <fieldset {% if not asset.can_crop %}disabled{% endif %}>
+            <legend>Rogner le visuel</legend>
+            <label>X <input type="range" name="crop_x" min="0" max="0.99" step="0.01" value="{{ asset.crop_x }}" data-crop-value="x"><output>{{ asset.crop_x }}</output></label>
+            <label>Y <input type="range" name="crop_y" min="0" max="0.99" step="0.01" value="{{ asset.crop_y }}" data-crop-value="y"><output>{{ asset.crop_y }}</output></label>
+            <label>Largeur <input type="range" name="crop_width" min="0.01" max="1" step="0.01" value="{{ asset.crop_width }}" data-crop-value="width"><output>{{ asset.crop_width }}</output></label>
+            <label>Hauteur <input type="range" name="crop_height" min="0.01" max="1" step="0.01" value="{{ asset.crop_height }}" data-crop-value="height"><output>{{ asset.crop_height }}</output></label>
+          </fieldset>
+          {% if asset.usage_count %}<p class="ui-field-help">Retirez d’abord les occurrences placées pour modifier le cadrage sans déformer la composition.</p>{% elif not asset.can_crop %}<p class="ui-field-help">Le cadrage n’est plus modifiable dans l’état actuel de la planche.</p>{% endif %}
+          <div class="b2b-dialog-actions">
+            <button type="button" class="ui-btn ui-btn-ghost" data-crop-reset-existing {% if not asset.can_crop %}disabled{% endif %}>Tout conserver</button>
+            <button type="submit" class="ui-btn ui-btn-primary" {% if not asset.can_crop %}disabled{% endif %}>Enregistrer le cadrage</button>
+          </div>
+        </form>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+</dialog>
