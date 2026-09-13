@@ -95,8 +95,6 @@ class GangSheetSiteSettings(BaseModel):
             raise ValidationError(
                 {"maximum_height_mm": "La hauteur maximale doit dépasser la hauteur minimale."}
             )
-        if self.margin_mm * 2 >= self.roll_width_mm:
-            raise ValidationError({"margin_mm": "Les marges doivent laisser une largeur utile."})
 
     @classmethod
     def current(cls):

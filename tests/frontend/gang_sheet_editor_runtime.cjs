@@ -159,14 +159,27 @@ assert.equal(source.split(hookPoint).length, 2, 'editor test hook point must rem
 const instrumentedSource = source.replace(hookPoint, `
   Object.assign(window.__gangSheetEditorTestHooks, {
     canResizeItem,
+    calculateSnapForMove,
     changeSelectedMetric,
+    clampSelectedOnSheet: () => clampItemOnSheet(selected()),
+    clampMoveDelta,
     confirmComposition,
+    constrainResizedItemOnSheet,
     getState: () => JSON.parse(JSON.stringify(state)),
     isDirty: () => dirty,
+    moveSelectedBy: (deltaX, deltaY) => {
+      const items = selectedItems();
+      const starts = new Map(items.map((item) => [item.public_id, {x: item.x_mm, y: item.y_mm}]));
+      const clamped = clampMoveDelta(items, starts, deltaX, deltaY);
+      translateItemsBy(items, clamped.deltaX, clamped.deltaY);
+      render();
+      return clamped;
+    },
     rotateSelected,
     render,
     renderItemQuality,
     qualityApproved,
+    resizeItemFromPointer,
     saveLayout,
     select: (publicIds) => {
       selectedIds = new Set(publicIds);
@@ -177,6 +190,7 @@ const instrumentedSource = source.replace(hookPoint, `
       setDirty(false);
       acceptedPreflightFingerprint = "";
     },
+    textMaxWidthMm,
   });
 ${hookPoint}`);
 vm.runInContext(instrumentedSource, context);
@@ -360,14 +374,134 @@ async function runNextTimer() {
   hooks.renderItemQuality(hooks.getState().items[0]);
   assert.equal(elementFor('[data-restore-ratio]').disabled, true, 'ratio restore cannot resize a group member');
 
-  const marginState = {...initialState, margin_mm: 5, items: [
-    {...initialState.items[0], x_mm: 0, y_mm: 0},
+  const marginState = {...initialState, margin_mm: 25, items: [
+    {...initialState.items[0], public_id: 'item-a', x_mm: 0, y_mm: 0},
+    {...initialState.items[0], public_id: 'item-b', x_mm: 480, y_mm: 250},
   ]};
   hooks.setState(marginState);
   hooks.render();
-  assert.equal(hooks.getState().issues[0].code, 'overflow', 'the safety margin is part of client geometry');
+  assert.equal(hooks.getState().issues.length, 0, 'the complete sheet remains printable when margin_mm is non-zero');
+  assert.equal(hooks.getState().height_mm, 300, 'margin_mm does not add a hidden strip below the printed content');
+  assert.equal(hooks.textMaxWidthMm({...marginState.items[1], kind: 'text'}), 100,
+    'text can use the complete remaining width up to the right edge');
 
-  console.log('Gang sheet editor runtime: conflicts, polling, dimensions and group behavior passed.');
+  const snapItem = {...initialState.items[0], x_mm: 2, y_mm: 2};
+  hooks.setState({...initialState, margin_mm: 25, items: [snapItem]});
+  const snapStarts = new Map([[snapItem.public_id, {x: 2, y: 2}]]);
+  const edgeSnap = hooks.calculateSnapForMove([snapItem], snapStarts, 0, 0);
+  assert.deepEqual([edgeSnap.deltaX, edgeSnap.deltaY], [-2, -2],
+    'edge snapping targets zero instead of margin_mm');
+
+  const clampState = {...initialState, margin_mm: 25, items: [
+    {...initialState.items[0], x_mm: -20, y_mm: -30},
+  ]};
+  hooks.setState(clampState);
+  hooks.select(['item-a']);
+  hooks.clampSelectedOnSheet();
+  let clamped = hooks.getState().items[0];
+  assert.deepEqual([clamped.x_mm, clamped.y_mm], [0, 0], 'top and left clamp at zero');
+  hooks.setState({...clampState, items: [{...clampState.items[0], x_mm: 900, y_mm: 900}]});
+  hooks.select(['item-a']);
+  hooks.clampSelectedOnSheet();
+  clamped = hooks.getState().items[0];
+  assert.deepEqual([clamped.x_mm, clamped.y_mm], [480, 250], 'right and bottom clamp at the exact sheet edges');
+
+  const movingItems = [
+    {...initialState.items[0], public_id: 'item-a', x_mm: 20, y_mm: 20},
+    {...initialState.items[0], public_id: 'item-b', x_mm: 160, y_mm: 100},
+  ];
+  const movingStarts = new Map(movingItems.map((item) => [item.public_id, {x: item.x_mm, y: item.y_mm}]));
+  const topLeftDelta = hooks.clampMoveDelta(movingItems, movingStarts, -999, -999);
+  assert.deepEqual(
+    [topLeftDelta.deltaX, topLeftDelta.deltaY],
+    [-20, -20],
+    'a grouped move stops at the top-left edges',
+  );
+  const bottomRightDelta = hooks.clampMoveDelta(movingItems, movingStarts, 999, 999);
+  assert.deepEqual(
+    [bottomRightDelta.deltaX, bottomRightDelta.deltaY],
+    [320, 850],
+    'a grouped move stops at the right and maximum roll edges without changing its geometry',
+  );
+
+  hooks.setState(initialState);
+  hooks.select(['item-a']);
+  hooks.moveSelectedBy(0, 500);
+  assert.equal(hooks.getState().items[0].y_mm, 520);
+  assert.equal(hooks.getState().height_mm, 570,
+    'dragging below the current bottom dynamically extends the roll to the visual bottom');
+  const maximumMove = hooks.moveSelectedBy(0, 999);
+  assert.equal(maximumMove.deltaY, 430, 'the next drag is clamped at maximum_height_mm');
+  assert.equal(hooks.getState().items[0].y_mm + hooks.getState().items[0].height_mm, 1000);
+  assert.equal(hooks.getState().height_mm, 1000, 'the roll never extends beyond maximum_height_mm');
+
+  const resizeFromCorner = (corner, deltaX, deltaY) => {
+    const item = {...initialState.items[0], x_mm: 20, y_mm: 20};
+    const start = {x: item.x_mm, y: item.y_mm, width: item.width_mm, height: item.height_mm};
+    hooks.resizeItemFromPointer(item, {start, deltaX, deltaY, lockRatio: false, corner});
+    hooks.constrainResizedItemOnSheet(item, {start, corner, lockRatio: false});
+    return item;
+  };
+  const northWest = resizeFromCorner('nw', -999, -999);
+  assert.deepEqual([northWest.x_mm, northWest.y_mm], [0, 0]);
+  const northEast = resizeFromCorner('ne', 999, -999);
+  assert.deepEqual([northEast.x_mm + northEast.width_mm, northEast.y_mm], [580, 0]);
+  const southEast = resizeFromCorner('se', 999, 999);
+  assert.deepEqual([southEast.x_mm + southEast.width_mm, southEast.y_mm + southEast.height_mm], [580, 1000]);
+  const southWest = resizeFromCorner('sw', -999, 999);
+  assert.deepEqual([southWest.x_mm, southWest.y_mm + southWest.height_mm], [0, 1000]);
+  const quarterTurn = {...initialState.items[0], x_mm: 20, y_mm: 20, rotation: 90};
+  const quarterStart = {x: 20, y: 20, width: 100, height: 50};
+  hooks.resizeItemFromPointer(quarterTurn, {
+    start: quarterStart, deltaX: 999, deltaY: 999, lockRatio: false, corner: 'se',
+  });
+  hooks.constrainResizedItemOnSheet(quarterTurn, {start: quarterStart, corner: 'se', lockRatio: false});
+  assert.deepEqual(
+    [quarterTurn.x_mm + quarterTurn.height_mm, quarterTurn.y_mm + quarterTurn.width_mm],
+    [580, 1000],
+    'a quarter-turned resize uses its effective width and height at the right-bottom edges',
+  );
+
+  hooks.setState({...initialState, margin_mm: 25});
+  hooks.select(['item-a']);
+  const xInput = elementFor('[data-input-x]');
+  const yInput = elementFor('[data-input-y]');
+  xInput.value = '-5';
+  hooks.changeSelectedMetric('x_mm', xInput);
+  assert.equal(hooks.getState().items[0].x_mm, 0, 'numeric x position clamps at the left edge');
+  hooks.setState({...initialState, margin_mm: 25});
+  hooks.select(['item-a']);
+  yInput.value = '999';
+  hooks.changeSelectedMetric('y_mm', yInput);
+  assert.equal(hooks.getState().items[0].y_mm, 250, 'numeric y position clamps at the bottom edge');
+
+  const ratioAtEdgesState = {...initialState, items: [{
+    ...initialState.items[0], x_mm: 550, y_mm: 970, width_mm: 100, height_mm: 80,
+  }]};
+  hooks.setState(ratioAtEdgesState);
+  hooks.select(['item-a']);
+  elementFor('[data-restore-ratio]').listeners.get('click')();
+  const ratioAtEdges = hooks.getState().items[0];
+  assert.deepEqual(
+    [ratioAtEdges.x_mm + ratioAtEdges.width_mm, ratioAtEdges.y_mm + ratioAtEdges.height_mm],
+    [580, 1000],
+    'ratio restoration returns the visual inside the exact right-bottom edges',
+  );
+
+  const bottomRotationState = {...initialState, margin_mm: 25, items: [
+    {...initialState.items[0], public_id: 'item-a', x_mm: 10, y_mm: 900, width_mm: 180, height_mm: 60},
+    {...initialState.items[0], public_id: 'item-b', x_mm: 210, y_mm: 900, width_mm: 180, height_mm: 60},
+  ]};
+  hooks.setState(bottomRotationState);
+  hooks.select(['item-a', 'item-b']);
+  hooks.rotateSelected();
+  const bottomRotated = hooks.getState().items;
+  assert.equal(Math.max(...bottomRotated.map((item) => item.y_mm + item.width_mm)), 1000,
+    'group rotation stops exactly at the maximum bottom edge');
+  assert.ok(Math.min(...bottomRotated.map((item) => item.x_mm)) >= 0,
+    'group rotation cannot cross the left edge');
+
+  console.log('Gang sheet editor runtime: conflicts, printable bounds, dimensions and group behavior passed.');
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

@@ -11,7 +11,8 @@ from apps.gang_sheets.models import (
 
 @admin.register(GangSheetSiteSettings)
 class GangSheetSiteSettingsAdmin(admin.ModelAdmin):
-    list_display = ("roll_width_mm", "margin_mm", "item_spacing_mm", "updated_at")
+    list_display = ("roll_width_mm", "item_spacing_mm", "updated_at")
+    exclude = ("margin_mm",)
     readonly_fields = ("public_id", "updated_by")
 
     def has_add_permission(self, request):

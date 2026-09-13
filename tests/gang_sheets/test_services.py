@@ -5,6 +5,7 @@ import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.b2b_order_projects.services import B2BOrderProjectService, ProjectDomainError
+from apps.gang_sheets.forms import GangSheetSiteSettingsForm
 from apps.gang_sheets.models import (
     GangSheet,
     GangSheetDriveSync,
@@ -22,6 +23,7 @@ from apps.orders.models import Order
 from apps.uploads.models import Asset, AssetAnalysis, AssetVersion, OrderUpload
 from apps.uploads.services.asset_analysis import AssetAnalysisService
 from apps.uploads.services.assets import AssetService
+from django.contrib import admin
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 
@@ -513,6 +515,59 @@ def test_sheet_snapshots_workshop_width_and_calculates_live_price():
     assert sheet.width_mm == Decimal("570.00")
 
 
+def test_workshop_settings_hide_the_legacy_margin_without_overwriting_it():
+    config = GangSheetSiteSettings.current()
+    config.margin_mm = Decimal("100.00")
+    config.save(update_fields=["margin_mm", "updated_at"])
+    form = GangSheetSiteSettingsForm(
+        data={
+            "roll_width_mm": "100.00",
+            "item_spacing_mm": "3.00",
+            "minimum_height_mm": "100.00",
+            "maximum_height_mm": "2000.00",
+            "height_step_mm": "10.00",
+        },
+        instance=config,
+    )
+
+    assert "margin_mm" not in form.fields
+    assert form.is_valid(), form.errors
+    saved = form.save()
+    assert saved.roll_width_mm == Decimal("100.00")
+    assert saved.margin_mm == Decimal("100.00")
+
+
+def test_django_admin_hides_the_legacy_margin_setting():
+    model_admin = admin.site._registry[GangSheetSiteSettings]
+
+    assert "margin_mm" in model_admin.exclude
+
+
+def test_required_height_and_initial_origin_ignore_the_legacy_margin():
+    user, customer, project = create_customer_scope(email="legacy-margin@example.com")
+    config = GangSheetSiteSettings.current()
+    config.margin_mm = Decimal("37.00")
+    config.save(update_fields=["margin_mm", "updated_at"])
+    _asset, version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        width_mm="100.00",
+        height_mm="100.00",
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Marge historique")
+
+    item = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+
+    assert item.x_mm == Decimal("0.00")
+    assert item.y_mm == Decimal("0.00")
+    assert sheet.height_mm == Decimal("100.00")
+
+
 def test_occurrences_auto_place_without_overlap_and_height_is_automatic():
     user, customer, project = create_customer_scope(email="layout@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
@@ -762,8 +817,8 @@ def test_auto_place_applies_vertical_spacing_when_a_new_column_does_not_fit():
         customer=customer,
         project=project,
         user=user,
-        width_mm="270.00",
-        height_mm="270.00",
+        width_mm="272.00",
+        height_mm="272.00",
     )
     service = GangSheetService()
     sheet = service.create_sheet(project=project, actor=user, name="Espacement vertical")
@@ -853,17 +908,17 @@ def test_selected_occurrence_can_generate_regular_rows_and_columns():
     positions = {(item.x_mm, item.y_mm) for item in items}
     assert len(items) == 6
     assert positions == {
-        (Decimal("5.00"), Decimal("5.00")),
-        (Decimal("108.00"), Decimal("5.00")),
-        (Decimal("211.00"), Decimal("5.00")),
-        (Decimal("5.00"), Decimal("58.00")),
-        (Decimal("108.00"), Decimal("58.00")),
-        (Decimal("211.00"), Decimal("58.00")),
+        (Decimal("0.00"), Decimal("0.00")),
+        (Decimal("103.00"), Decimal("0.00")),
+        (Decimal("206.00"), Decimal("0.00")),
+        (Decimal("0.00"), Decimal("53.00")),
+        (Decimal("103.00"), Decimal("53.00")),
+        (Decimal("206.00"), Decimal("53.00")),
     }
     assert GangSheetGeometryService().issues(sheet=sheet, items=items) == []
 
 
-def test_grid_reserves_the_right_safety_margin():
+def test_grid_rejects_a_true_overflow_of_the_useful_width():
     user, customer, project = create_customer_scope(email="grid-margin@example.com")
     _asset, version = attach_png_asset(
         customer=customer,
@@ -895,6 +950,38 @@ def test_grid_reserves_the_right_safety_margin():
     sheet.refresh_from_db()
     assert sheet.items.count() == 1
     assert sheet.revision == initial_revision
+
+
+def test_grid_accepts_exact_useful_width_and_maximum_height():
+    user, customer, project = create_customer_scope(email="grid-exact-bounds@example.com")
+    _asset, version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        width_mm="275.00",
+        height_mm="100.00",
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Grille aux limites")
+    source = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+
+    service.repeat_occurrence_grid(
+        sheet=sheet,
+        item_public_id=source.public_id,
+        rows=20,
+        columns=2,
+        spacing_x_mm="0",
+        spacing_y_mm="0",
+        actor=user,
+    )
+
+    sheet.refresh_from_db()
+    rects = [service.geometry.rect_for(item) for item in sheet.items.all()]
+    assert max(rect.right for rect in rects) == sheet.width_mm
+    assert max(rect.bottom for rect in rects) == sheet.maximum_height_mm
+    assert service.geometry.issues(sheet=sheet, items=list(sheet.items.all())) == []
 
 
 def test_cross_tenant_asset_is_rejected_even_with_public_uuid():
@@ -978,11 +1065,98 @@ def test_save_layout_requires_an_explicit_integer_revision(revision):
     assert exc.value.code == "INVALID_LAYOUT"
 
 
-def test_manual_layout_and_render_enforce_the_sheet_safety_margin():
-    user, customer, project = create_customer_scope(email="manual-margin@example.com")
+@pytest.mark.parametrize(
+    ("rotation", "effective_width", "effective_height"),
+    [
+        (0, "100.00", "50.00"),
+        (90, "50.00", "100.00"),
+        (180, "100.00", "50.00"),
+        (270, "50.00", "100.00"),
+    ],
+)
+def test_geometry_accepts_exact_useful_edges_for_every_rotation(
+    rotation, effective_width, effective_height
+):
+    user, customer, project = create_customer_scope(email=f"exact-edge-{rotation}@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
     service = GangSheetService()
-    sheet = service.create_sheet(project=project, actor=user, name="Marge manuelle")
+    sheet = service.create_sheet(project=project, actor=user, name="Limites utiles")
+    item = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.height_mm = sheet.maximum_height_mm
+    item.rotation = rotation
+    item.x_mm = sheet.width_mm - Decimal(effective_width)
+    item.y_mm = sheet.height_mm - Decimal(effective_height)
+
+    assert service.geometry.issues(sheet=sheet, items=[item]) == []
+
+    item.x_mm = Decimal("0.00")
+    item.y_mm = Decimal("0.00")
+    assert service.geometry.issues(sheet=sheet, items=[item]) == []
+
+
+@pytest.mark.parametrize("rotation", [0, 90, 180, 270])
+@pytest.mark.parametrize("axis", ["right", "bottom"])
+def test_geometry_rejects_a_point_zero_one_overflow_for_every_rotation(rotation, axis):
+    user, customer, project = create_customer_scope(email=f"overflow-{rotation}-{axis}@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Dépassement réel")
+    item = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.height_mm = sheet.maximum_height_mm
+    item.rotation = rotation
+    effective_width = item.height_mm if rotation in {90, 270} else item.width_mm
+    effective_height = item.width_mm if rotation in {90, 270} else item.height_mm
+    item.x_mm = sheet.width_mm - effective_width
+    item.y_mm = sheet.height_mm - effective_height
+    if axis == "right":
+        item.x_mm += Decimal("0.01")
+    else:
+        item.y_mm += Decimal("0.01")
+
+    issues = service.geometry.issues(sheet=sheet, items=[item])
+    assert [issue["code"] for issue in issues] == ["overflow"]
+
+
+@pytest.mark.parametrize(("x_mm", "y_mm"), [("-0.01", "0"), ("0", "-0.01")])
+def test_manual_layout_rejects_top_or_left_overflow(x_mm, y_mm):
+    user, customer, project = create_customer_scope(email=f"negative-{x_mm}-{y_mm}@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Origine invalide")
+    item = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+
+    with pytest.raises(GangSheetDomainError) as exc:
+        service.save_layout(
+            sheet=sheet,
+            expected_revision=sheet.revision,
+            payload=[
+                {
+                    "public_id": str(item.public_id),
+                    "x_mm": x_mm,
+                    "y_mm": y_mm,
+                    "width_mm": "100",
+                    "height_mm": "50",
+                    "rotation": 0,
+                }
+            ],
+            actor=user,
+        )
+
+    assert exc.value.code == "INVALID_LAYOUT"
+
+
+def test_manual_layout_accepts_zero_origin_and_render_blocks_true_overflow():
+    user, customer, project = create_customer_scope(email="manual-overflow@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Laize utile")
     item = service.add_occurrence(
         sheet=sheet, asset_version_public_id=version.public_id, actor=user
     )
@@ -995,7 +1169,7 @@ def test_manual_layout_and_render_enforce_the_sheet_safety_margin():
             {
                 "public_id": str(item.public_id),
                 "x_mm": "0",
-                "y_mm": "5",
+                "y_mm": "0",
                 "width_mm": "100",
                 "height_mm": "50",
                 "rotation": 0,
@@ -1004,13 +1178,14 @@ def test_manual_layout_and_render_enforce_the_sheet_safety_margin():
         actor=user,
     )
 
-    assert [issue["code"] for issue in issues] == ["overflow"]
+    assert issues == []
+    saved.items.filter(pk=item.pk).update(width_mm=saved.width_mm + Decimal("0.01"))
     with pytest.raises(GangSheetDomainError) as exc:
         service.request_render(sheet=saved, actor=user)
     assert exc.value.code == "INVALID_GEOMETRY"
 
 
-def test_duplicate_uses_a_free_position_inside_the_safety_margin():
+def test_duplicate_uses_a_free_position_inside_the_useful_sheet():
     user, customer, project = create_customer_scope(email="duplicate-position@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
     service = GangSheetService()
@@ -1056,7 +1231,7 @@ def test_duplicate_fails_atomically_when_no_free_position_exists():
     assert sheet.revision == initial_revision
 
 
-def test_duplicate_of_an_invalid_draft_item_is_placed_inside_the_safety_margin():
+def test_duplicate_of_an_invalid_draft_item_is_placed_inside_the_useful_sheet():
     user, customer, project = create_customer_scope(email="duplicate-invalid-source@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
     service = GangSheetService()
@@ -1074,10 +1249,10 @@ def test_duplicate_of_an_invalid_draft_item_is_placed_inside_the_safety_margin()
     duplicate.refresh_from_db()
     duplicate_rect = GangSheetGeometryService().rect_for(duplicate)
 
-    assert duplicate_rect.x >= sheet.margin_mm
-    assert duplicate_rect.y >= sheet.margin_mm
-    assert duplicate_rect.right <= sheet.width_mm - sheet.margin_mm
-    assert duplicate_rect.bottom <= sheet.maximum_height_mm - sheet.margin_mm
+    assert duplicate_rect.x >= 0
+    assert duplicate_rect.y >= 0
+    assert duplicate_rect.right <= sheet.width_mm
+    assert duplicate_rect.bottom <= sheet.maximum_height_mm
 
 
 def test_auto_place_refuses_persisted_groups_without_mutating_the_sheet():

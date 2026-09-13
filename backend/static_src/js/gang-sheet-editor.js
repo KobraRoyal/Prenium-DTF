@@ -114,6 +114,7 @@ if (root) {
       if ("text_color" in saved) item.text_color = saved.text_color;
       if ("text_align" in saved) item.text_align = saved.text_align;
       if ("text_bold" in saved) item.text_bold = Boolean(saved.text_bold);
+      fitItemWithinBounds(item, sheetMaximumUsefulBounds(), { preserveRatio: true });
     });
   }
 
@@ -382,15 +383,14 @@ if (root) {
   }
 
   function textMaxWidthMm(item) {
-    const margin = Math.max(0, Number(state.margin_mm) || 0);
     const quarter = [90, 270].includes(Number(item?.rotation) || 0);
     const sheetLimit = Math.max(
       5,
       Number(quarter ? state.height_mm : state.width_mm) || 0
     );
     const origin = Number(quarter ? item?.y_mm : item?.x_mm) || 0;
-    const usable = Math.max(5, sheetLimit - margin * 2);
-    const remaining = Math.max(5, sheetLimit - origin - margin);
+    const usable = Math.max(5, sheetLimit);
+    const remaining = Math.max(5, sheetLimit - origin);
     return round(Math.min(usable, remaining), 2);
   }
 
@@ -476,10 +476,110 @@ if (root) {
   }
 
   function clampItemOnSheet(item) {
+    clampItemWithinBounds(item, sheetUsefulBounds());
+  }
+
+  function clampItemWithinBounds(item, bounds) {
     const size = effectiveSize(item);
-    const bounds = sheetUsefulBounds();
     item.x_mm = round(Math.max(bounds.left, Math.min(item.x_mm, bounds.right - size.width)));
     item.y_mm = round(Math.max(bounds.top, Math.min(item.y_mm, bounds.bottom - size.height)));
+  }
+
+  function fitItemWithinBounds(item, bounds, { preserveRatio = false } = {}) {
+    const availableWidth = Math.max(1, bounds.right - bounds.left);
+    const availableHeight = Math.max(1, bounds.bottom - bounds.top);
+    const size = effectiveSize(item);
+    if (size.width > availableWidth || size.height > availableHeight) {
+      if (preserveRatio) {
+        const scale = Math.min(1, availableWidth / size.width, availableHeight / size.height);
+        if (isTextItem(item)) {
+          item.text_size_mm = round(Math.max(2, textSizeMm(item) * scale), 2);
+          applyFittedTextBox(item);
+        } else {
+          item.width_mm = round(Math.max(1, item.width_mm * scale));
+          item.height_mm = round(Math.max(1, item.height_mm * scale));
+        }
+      } else if ([90, 270].includes(Number(item.rotation))) {
+        item.height_mm = round(Math.min(item.height_mm, availableWidth));
+        item.width_mm = round(Math.min(item.width_mm, availableHeight));
+      } else {
+        item.width_mm = round(Math.min(item.width_mm, availableWidth));
+        item.height_mm = round(Math.min(item.height_mm, availableHeight));
+      }
+    }
+    const fittedSize = effectiveSize(item);
+    if (fittedSize.width > availableWidth || fittedSize.height > availableHeight) {
+      if ([90, 270].includes(Number(item.rotation))) {
+        item.height_mm = round(Math.min(item.height_mm, availableWidth));
+        item.width_mm = round(Math.min(item.width_mm, availableHeight));
+      } else {
+        item.width_mm = round(Math.min(item.width_mm, availableWidth));
+        item.height_mm = round(Math.min(item.height_mm, availableHeight));
+      }
+    }
+    clampItemWithinBounds(item, bounds);
+  }
+
+  function constrainResizedItemOnSheet(item, { start, corner, lockRatio }) {
+    const bounds = sheetMaximumUsefulBounds();
+    const fromWest = corner.includes("w");
+    const fromNorth = corner.includes("n");
+    const quarterTurn = [90, 270].includes(Number(item.rotation));
+    const startSize = quarterTurn
+      ? { width: start.height, height: start.width }
+      : { width: start.width, height: start.height };
+    const fixedX = fromWest ? start.x + startSize.width : start.x;
+    const fixedY = fromNorth ? start.y + startSize.height : start.y;
+    const availableWidth = Math.max(1, fromWest ? fixedX - bounds.left : bounds.right - fixedX);
+    const availableHeight = Math.max(1, fromNorth ? fixedY - bounds.top : bounds.bottom - fixedY);
+    const size = effectiveSize(item);
+    if (lockRatio) {
+      const scale = Math.min(1, availableWidth / size.width, availableHeight / size.height);
+      if (isTextItem(item)) {
+        item.text_size_mm = round(Math.max(2, textSizeMm(item) * scale), 2);
+        applyFittedTextBox(item);
+      } else {
+        item.width_mm = round(Math.max(1, item.width_mm * scale));
+        item.height_mm = round(Math.max(1, item.height_mm * scale));
+      }
+    } else if (quarterTurn) {
+      item.height_mm = round(Math.min(item.height_mm, availableWidth));
+      item.width_mm = round(Math.min(item.width_mm, availableHeight));
+    } else {
+      item.width_mm = round(Math.min(item.width_mm, availableWidth));
+      item.height_mm = round(Math.min(item.height_mm, availableHeight));
+    }
+    const fittedSize = effectiveSize(item);
+    if (fittedSize.width > availableWidth || fittedSize.height > availableHeight) {
+      if (quarterTurn) {
+        item.height_mm = round(Math.min(item.height_mm, availableWidth));
+        item.width_mm = round(Math.min(item.width_mm, availableHeight));
+      } else {
+        item.width_mm = round(Math.min(item.width_mm, availableWidth));
+        item.height_mm = round(Math.min(item.height_mm, availableHeight));
+      }
+    }
+    const constrainedSize = effectiveSize(item);
+    item.x_mm = round(fromWest ? fixedX - constrainedSize.width : fixedX);
+    item.y_mm = round(fromNorth ? fixedY - constrainedSize.height : fixedY);
+    clampItemWithinBounds(item, bounds);
+  }
+
+  function clampMoveDelta(movingItems, movingStarts, deltaX, deltaY, bounds = sheetMaximumUsefulBounds()) {
+    const startBounds = movingItems.reduce((result, item) => {
+      const start = movingStarts.get(item.public_id);
+      const size = effectiveSize(item);
+      return {
+        left: Math.min(result.left, start.x),
+        top: Math.min(result.top, start.y),
+        right: Math.max(result.right, start.x + size.width),
+        bottom: Math.max(result.bottom, start.y + size.height),
+      };
+    }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
+    return {
+      deltaX: round(Math.max(bounds.left - startBounds.left, Math.min(deltaX, bounds.right - startBounds.right))),
+      deltaY: round(Math.max(bounds.top - startBounds.top, Math.min(deltaY, bounds.bottom - startBounds.bottom))),
+    };
   }
 
   function resizeItemFromPointer(item, { start, deltaX, deltaY, lockRatio, corner = "se" }) {
@@ -707,7 +807,7 @@ if (root) {
       return Math.max(max, item.y_mm + size.height);
     }, 0);
     const rawHeight = Math.max(
-      maxBottom + state.margin_mm,
+      maxBottom,
       state.height_mm ? (state.spacing_y_mm ?? state.spacing_mm) : 1
     );
     state.height_mm = Math.min(
@@ -1584,9 +1684,8 @@ if (root) {
         bottom: Math.max(result.bottom, start.y + deltaY + size.height),
       };
     }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
-    const margin = Math.max(0, Number(state.margin_mm) || 0);
-    const xTargets = [margin, state.width_mm / 2, Math.max(margin, state.width_mm - margin)];
-    const yTargets = [margin, state.height_mm / 2, Math.max(margin, state.height_mm - margin)];
+    const xTargets = [0, state.width_mm / 2, state.width_mm];
+    const yTargets = [0, state.height_mm / 2, state.height_mm];
     state.items.forEach((other) => {
       if (movingIds.has(other.public_id)) return;
       const size = effectiveSize(other);
@@ -1799,11 +1898,21 @@ if (root) {
             corner,
           });
         }
+        constrainResizedItemOnSheet(item, {
+          start,
+          corner,
+          lockRatio: isTextItem(item) || q("[data-lock-ratio]")?.checked !== false,
+        });
       } else {
         const snapped = calculateSnapForMove(movingItems, movingStarts, deltaX, deltaY);
         deltaX = snapped.deltaX;
         deltaY = snapped.deltaY;
         snapGuides = snapped.guides;
+        const clamped = clampMoveDelta(movingItems, movingStarts, deltaX, deltaY);
+        if (clamped.deltaX !== deltaX) snapGuides = snapGuides.filter((guide) => guide.axis !== "x");
+        if (clamped.deltaY !== deltaY) snapGuides = snapGuides.filter((guide) => guide.axis !== "y");
+        deltaX = clamped.deltaX;
+        deltaY = clamped.deltaY;
         movingItems.forEach((movingItem) => {
           const movingStart = movingStarts.get(movingItem.public_id);
           movingItem.x_mm = round(movingStart.x + deltaX);
@@ -2026,7 +2135,7 @@ if (root) {
     item.width_mm = round(item.width_mm * scale);
     item.height_mm = round(height * scale);
     q("[data-lock-ratio]").checked = true;
-    clampItemOnSheet(item);
+    fitItemWithinBounds(item, sheetMaximumUsefulBounds(), { preserveRatio: true });
     commitLayoutMutation(before);
     render();
   });
@@ -2594,22 +2703,20 @@ if (root) {
   }
 
   function sheetUsefulBounds() {
-    const margin = Math.max(0, Number(state.margin_mm) || 0);
     return {
-      left: margin,
-      top: margin,
-      right: Math.max(margin, state.width_mm - margin),
-      bottom: Math.max(margin, state.height_mm - margin),
+      left: 0,
+      top: 0,
+      right: Math.max(0, Number(state.width_mm) || 0),
+      bottom: Math.max(0, Number(state.height_mm) || 0),
     };
   }
 
   function sheetMaximumUsefulBounds() {
-    const margin = Math.max(0, Number(state.margin_mm) || 0);
     return {
-      left: margin,
-      top: margin,
-      right: Math.max(margin, state.width_mm - margin),
-      bottom: Math.max(margin, state.maximum_height_mm - margin),
+      left: 0,
+      top: 0,
+      right: Math.max(0, Number(state.width_mm) || 0),
+      bottom: Math.max(0, Number(state.maximum_height_mm) || 0),
     };
   }
 
@@ -2947,13 +3054,19 @@ if (root) {
       item.x_mm = round(nextCenterX - nextSize.width / 2);
       item.y_mm = round(nextCenterY - nextSize.height / 2);
     });
+    const rotatedBounds = selectionBounds(items);
+    const usefulBounds = sheetMaximumUsefulBounds();
+    const selectionWidth = rotatedBounds.right - rotatedBounds.left;
+    const selectionHeight = rotatedBounds.bottom - rotatedBounds.top;
+    const sheetWidth = usefulBounds.right - usefulBounds.left;
+    const sheetHeight = usefulBounds.bottom - usefulBounds.top;
+    if (selectionWidth > sheetWidth || selectionHeight > sheetHeight) {
+      restoreLayoutSnapshot(before);
+      render();
+      window.preniumToast?.("Cette rotation ferait déborder la sélection de la planche.", "error");
+      return;
+    }
     if (items.length > 1) {
-      const rotatedBounds = selectionBounds(items);
-      const selectionWidth = rotatedBounds.right - rotatedBounds.left;
-      const selectionHeight = rotatedBounds.bottom - rotatedBounds.top;
-      const usefulBounds = sheetMaximumUsefulBounds();
-      const sheetWidth = usefulBounds.right - usefulBounds.left;
-      const sheetHeight = usefulBounds.bottom - usefulBounds.top;
       if (
         Number.isFinite(sheetWidth)
         && Number.isFinite(sheetHeight)
@@ -2974,9 +3087,9 @@ if (root) {
       }
     }
     if (items.length === 1) {
-      clampItemOnSheet(items[0]);
+      clampItemWithinBounds(items[0], usefulBounds);
       applyFittedTextBox(items[0]);
-      clampItemOnSheet(items[0]);
+      fitItemWithinBounds(items[0], usefulBounds, { preserveRatio: true });
     }
     commitLayoutMutation(before);
     render();
@@ -3110,6 +3223,13 @@ if (root) {
     } else {
       item[key] = next;
     }
+    if (sizeMetric) {
+      fitItemWithinBounds(item, sheetMaximumUsefulBounds(), {
+        preserveRatio: isTextItem(item) || q("[data-lock-ratio]").checked,
+      });
+    } else {
+      clampItemOnSheet(item);
+    }
     commitLayoutMutation(before);
     render();
     return true;
@@ -3242,6 +3362,7 @@ if (root) {
     const firstLine = String(next).split("\n")[0].trim() || "Texte";
     item.asset_name = firstLine.slice(0, 48);
     applyFittedTextBox(item);
+    fitItemWithinBounds(item, sheetMaximumUsefulBounds(), { preserveRatio: true });
     canvasTextEditor = null;
     editor.remove();
     setCanvasTextHint(false);
@@ -3258,6 +3379,7 @@ if (root) {
     const firstLine = String(item.text_content || "Texte").split("\n")[0].trim() || "Texte";
     item.asset_name = firstLine.slice(0, 48);
     const boxChanged = applyFittedTextBox(item);
+    fitItemWithinBounds(item, sheetMaximumUsefulBounds(), { preserveRatio: true });
     if (history) commitLayoutMutation(before);
     else syncLayoutDirtyState();
     const editing = Boolean(canvasTextEditor && canvasTextEditor.item.public_id === item.public_id);

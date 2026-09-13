@@ -98,7 +98,7 @@ def test_javascript_module_children_keep_explicit_cache_versions() -> None:
     # a production-proven module-aware storage owns the complete dependency graph.
     app = _source("backend/static_src/js/app.js")
     assert "?v=" in app
-    assert "gang-sheet-editor.js?v=20260911-studio-layout-v26" in app
+    assert "gang-sheet-editor.js?v=20260913-studio-bounds-v27" in app
     assert "?v=" in _source("backend/static_src/js/marketing.js")
 
 

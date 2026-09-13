@@ -21,8 +21,12 @@ Créer l’app dédiée `gang_sheets` autour de quatre modèles :
 - `GangSheetSourceAsset`, galerie source propre à la planche avec dimensions analysées ;
 - `GangSheetItem`, occurrence d’une `AssetVersion` avec position, taille réelle et rotation.
 
-La planche snapshotte la laize, les marges, l’espacement et les bornes de hauteur lors de sa
-création. Un changement de machine ne modifie donc jamais silencieusement un brouillon existant.
+La planche snapshotte la laize utile, l’espacement et les bornes de hauteur lors de sa création.
+`margin_mm` reste stocké sur les anciennes configurations et planches pour compatibilité, mais
+n’intervient plus dans la géométrie et n’est plus proposé dans les réglages Atelier. La largeur
+`width_mm` représente déjà toute la zone imprimable : `x=0`, `y=0` et le contact exact avec les
+bords droit et bas sont valides. Un changement de machine ne modifie donc jamais silencieusement
+un brouillon existant.
 La hauteur, la surface et l’estimation tarifaire sont recalculées par un service serveur. Le
 navigateur fournit un feedback instantané, mais ne constitue pas la source d’autorité.
 
@@ -38,7 +42,8 @@ pour les autres projets et pour la traçabilité documentaire. L’action est te
 
 Le placement automatique utilise une stratégie bottom-left déterministe : occurrences triées par
 surface, test des deux orientations sur les arêtes disponibles, score minimisant la hauteur puis
-l’abscisse. La validation serveur refuse tout débordement ou chevauchement.
+l’abscisse. La validation serveur refuse les coordonnées négatives et tout bord situé au-delà de
+la laize utile ou de la hauteur de planche, rotations comprises, ainsi que tout chevauchement.
 
 La quantité reste dérivée des occurrences afin de conserver une seule source de vérité. Les ajouts
 batch et les répétitions rangées × colonnes sont atomiques, limités à 200 occurrences par action et

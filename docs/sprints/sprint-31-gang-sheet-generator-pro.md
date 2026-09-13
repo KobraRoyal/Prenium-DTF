@@ -35,7 +35,8 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - PDF HD visible uniquement dans le panneau Production Atelier avec permission dédiée.
 - Synchronisation Google Drive privée et asynchrone dès le rendu HD, avant création de commande,
   avec arborescence dédiée, révision, SHA-256, idempotence et suivi d’échec.
-- Réglage Atelier de la laize, des marges, de l’espacement et des bornes de hauteur.
+- Réglage Atelier de la laize utile, de l’espacement et des bornes de hauteur. Le champ historique
+  de marge reste en base pour compatibilité mais n’est plus exposé ni appliqué à la géométrie.
 - Interface client harmonisée avec le portail : en-tête, cartes, boutons, typographies et palette du
   design system IDS Hub, avec progression explicite en quatre étapes.
 - Studio responsive structuré Galerie → Composition → Contrôle, métriques prioritaires, états vides
@@ -189,12 +190,14 @@ Branche : `codex/gang-sheet-audit-fixes`.
 - [x] Proportions libres expliquées et restauration du ratio source disponible.
 - [x] Tests de comportement JavaScript, services, permissions et rendu hybride sans régression.
 - [x] Relecture sécurité indépendante et recette navigateur desktop/mobile.
-- [x] Marge de sécurité appliquée aux placements manuels, grilles, corrections de débordement et rendu.
+- [x] Laize interprétée comme zone imprimable complète : origine `0,0` et contact exact des bords
+  valides ; seuls les dépassements réels sont signalés et bloquent le rendu.
 - [x] Duplication positionnée sans chevauchement, avec refus atomique si aucun espace utile n’est libre.
 - [x] Groupes protégés : redimensionnement individuel et auto-placement refusés avant dissociation.
 - [x] API layout durcie : révision entière obligatoire et payload JSON mal structuré refusé sans erreur 500.
 - [x] Recadrage des PDF avec rotation interne 90°/270° identique entre aperçu et PDF HD.
-- [x] Tests de non-régression dédiés aux marges, groupes, duplication, concurrence et repère PDF tourné.
+- [x] Tests de non-régression dédiés aux limites utiles sur les quatre rotations, groupes,
+  duplication, concurrence et repère PDF tourné.
 
 Les espacements d’auto-imposition restent des préférences, pas de nouveaux minimums de coupe.
 Les avertissements de source ne sont pas assimilés automatiquement à un refus de fabrication.

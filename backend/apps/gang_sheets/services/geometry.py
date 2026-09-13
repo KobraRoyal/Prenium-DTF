@@ -37,7 +37,7 @@ class GangSheetGeometryService:
 
     def required_height(self, *, sheet, items) -> Decimal:
         bottoms = [self.rect_for(item).bottom for item in items]
-        raw = (max(bottoms) if bottoms else Decimal("0")) + Decimal(sheet.margin_mm)
+        raw = max(bottoms) if bottoms else Decimal("0")
         raw = max(
             raw,
             Decimal(sheet.minimum_height_mm),
@@ -51,23 +51,15 @@ class GangSheetGeometryService:
     def issues(self, *, sheet, items) -> list[dict[str, object]]:
         rects = [self.rect_for(item) for item in items]
         issues: list[dict[str, object]] = []
-        margin = Decimal(sheet.margin_mm)
-        max_right = Decimal(sheet.width_mm) - margin
-        max_bottom = Decimal(sheet.height_mm) - margin
+        max_right = Decimal(sheet.width_mm)
+        max_bottom = Decimal(sheet.height_mm)
         for rect in rects:
-            if (
-                rect.x < margin
-                or rect.y < margin
-                or rect.right > max_right
-                or rect.bottom > max_bottom
-            ):
+            if rect.x < 0 or rect.y < 0 or rect.right > max_right or rect.bottom > max_bottom:
                 issues.append(
                     {
                         "code": "overflow",
                         "item_public_ids": [rect.public_id],
-                        "message": (
-                            "Le visuel dépasse la zone utile délimitée par la marge de sécurité."
-                        ),
+                        "message": "Le visuel dépasse la laize utile ou la hauteur de la planche.",
                     }
                 )
         for index, first in enumerate(rects):
@@ -87,11 +79,10 @@ class GangSheetGeometryService:
     ) -> tuple[Decimal, Decimal] | None:
         """Trouve une position libre déterministe sans déplacer les éléments existants."""
 
-        margin = Decimal(sheet.margin_mm)
         spacing_x = Decimal(sheet.item_spacing_x_mm)
         spacing_y = Decimal(sheet.item_spacing_y_mm)
-        max_right = Decimal(sheet.width_mm) - margin
-        max_bottom = Decimal(sheet.maximum_height_mm) - margin
+        max_right = Decimal(sheet.width_mm)
+        max_bottom = Decimal(sheet.maximum_height_mm)
         existing = [self.rect_for(existing_item) for existing_item in existing_items]
         source = self.rect_for(item)
         width = Decimal(item.effective_width_mm)
@@ -100,16 +91,16 @@ class GangSheetGeometryService:
             (source.right + spacing_x, source.y),
             (source.x, source.bottom + spacing_y),
         ]
-        xs = {margin, *(rect.right + spacing_x for rect in existing)}
-        ys = {margin, *(rect.bottom + spacing_y for rect in existing)}
+        xs = {Decimal("0"), *(rect.right + spacing_x for rect in existing)}
+        ys = {Decimal("0"), *(rect.bottom + spacing_y for rect in existing)}
         candidates = preferred + [
             (x, y) for y in sorted(ys) for x in sorted(xs) if (x, y) not in preferred
         ]
         for x, y in candidates:
             candidate = Rect(str(item.public_id), x, y, width, height)
             if (
-                candidate.x < margin
-                or candidate.y < margin
+                candidate.x < 0
+                or candidate.y < 0
                 or candidate.right > max_right
                 or candidate.bottom > max_bottom
             ):
@@ -137,11 +128,10 @@ class GangSheetGeometryService:
         simple remplissage ligne par ligne tout en restant explicable et stable.
         """
 
-        margin = Decimal(sheet.margin_mm)
         spacing_x = Decimal(sheet.item_spacing_x_mm)
         spacing_y = Decimal(sheet.item_spacing_y_mm)
-        max_right = Decimal(sheet.width_mm) - margin
-        max_bottom = Decimal(sheet.maximum_height_mm) - margin
+        max_right = Decimal(sheet.width_mm)
+        max_bottom = Decimal(sheet.maximum_height_mm)
         placed: list[Rect] = []
         ordered = sorted(
             items,
@@ -157,8 +147,8 @@ class GangSheetGeometryService:
             if alternate not in rotations:
                 rotations.append(alternate)
             candidates = []
-            xs = {margin}
-            ys = {margin}
+            xs = {Decimal("0")}
+            ys = {Decimal("0")}
             for rect in placed:
                 xs.add(rect.right + spacing_x)
                 ys.add(rect.bottom + spacing_y)
@@ -190,7 +180,7 @@ class GangSheetGeometryService:
                 rotation = int(item.rotation)
                 candidate = Rect(
                     str(item.public_id),
-                    margin,
+                    Decimal("0"),
                     max_bottom,
                     Decimal(item.effective_width_mm),
                     Decimal(item.effective_height_mm),

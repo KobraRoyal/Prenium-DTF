@@ -388,8 +388,8 @@ class GangSheetService:
                     sheet=locked,
                     kind=GangSheetItem.Kind.VISUAL,
                     asset_version=version,
-                    x_mm=locked.margin_mm,
-                    y_mm=locked.margin_mm,
+                    x_mm=Decimal("0.00"),
+                    y_mm=Decimal("0.00"),
                     width_mm=width,
                     height_mm=height,
                     z_index=first_z_index + offset,
@@ -450,7 +450,6 @@ class GangSheetService:
             raise GangSheetDomainError(error.code, error.message) from error
         width_mm, height_mm = default_box_mm(
             sheet_width_mm=locked.width_mm,
-            margin_mm=locked.margin_mm,
             content=text_content,
             font=text_font,
             bold=text_bold,
@@ -533,12 +532,11 @@ class GangSheetService:
         origin_y = Decimal(source_item.y_mm)
         final_right = origin_x + columns * effective_width + (columns - 1) * spacing_x
         final_bottom = origin_y + rows * effective_height + (rows - 1) * spacing_y
-        margin = Decimal(locked.margin_mm)
         if (
-            origin_x < margin
-            or origin_y < margin
-            or final_right > Decimal(locked.width_mm) - margin
-            or final_bottom > Decimal(locked.maximum_height_mm) - margin
+            origin_x < 0
+            or origin_y < 0
+            or final_right > Decimal(locked.width_mm)
+            or final_bottom > Decimal(locked.maximum_height_mm)
         ):
             raise GangSheetDomainError(
                 "GRID_TOO_LARGE",
@@ -1415,7 +1413,6 @@ class GangSheetService:
         board = sheet or item.sheet
         max_width = usable_text_max_width_mm(
             sheet_width_mm=board.width_mm,
-            margin_mm=board.margin_mm,
             x_mm=item.x_mm,
             sheet_height_mm=board.height_mm,
             y_mm=item.y_mm,

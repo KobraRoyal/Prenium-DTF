@@ -531,7 +531,7 @@ def test_layout_endpoint_rejects_malformed_payloads_and_reports_stale_revision(c
     sheet.refresh_from_db()
     item.refresh_from_db()
     assert sheet.revision == initial_revision
-    assert item.x_mm == Decimal("5.00")
+    assert item.x_mm == Decimal("0.00")
 
 
 def test_owner_can_delete_multiple_selected_occurrences_in_one_request(client):
