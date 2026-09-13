@@ -21,6 +21,15 @@
     <div class="gang-asset-card__body">
       <strong title="{{ asset.name }}">{{ asset.name }}</strong>
       <small class="gang-asset-status gang-asset-status--{{ asset.analysis_status }}">{{ asset.analysis_label }}{% if asset.width_mm and asset.height_mm %} · {{ asset.width_mm }} × {{ asset.height_mm }} mm{% endif %}</small>
+      <details class="gang-asset-analysis-disclosure" {% if asset.is_recent_import or asset.analysis_status == "warning" or asset.analysis_status == "failed" %}open{% endif %}>
+        <summary>
+          {% if asset.analysis_status == "pending" or asset.analysis_status == "processing" %}Analyse en cours
+          {% elif asset.analysis_status == "failed" %}Voir l’erreur
+          {% elif asset.has_analysis_warnings %}Voir les anomalies
+          {% else %}Voir le contrôle technique{% endif %}
+        </summary>
+        {% include "portal/client/gang_sheets/partials/asset_analysis_summary.html" with asset=asset %}
+      </details>
       <div class="gang-asset-card__meta-row">
         <small data-asset-usage="{{ asset.public_id }}">{{ asset.usage_count }} sur la planche</small>
         {% if can_manage_gallery %}

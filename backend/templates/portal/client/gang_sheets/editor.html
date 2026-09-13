@@ -77,11 +77,12 @@
     </div>
   </div>
 
-  <dialog class="b2b-configurator-dialog gang-asset-dialog" id="gang-asset-dialog" aria-labelledby="gang-asset-dialog-title">
+  <dialog class="b2b-configurator-dialog gang-asset-dialog" id="gang-asset-dialog" aria-labelledby="gang-asset-dialog-title" aria-describedby="gang-asset-dialog-description" {% if reopen_gang_sheet_import_dialog %}data-dialog-auto-open{% endif %}>
     <div class="b2b-dialog-shell">
       <header class="b2b-dialog-head">
         <div class="b2b-dialog-head__copy">
-          <h2 id="gang-asset-dialog-title">Importer</h2>
+          <h2 id="gang-asset-dialog-title">Importer et contrôler vos fichiers</h2>
+          <p id="gang-asset-dialog-description">Ajoutez vos visuels, vérifiez le cadrage, puis consultez les anomalies détectées avant leur placement.</p>
         </div>
         <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">×</button>
       </header>
@@ -92,9 +93,17 @@
           action="{% url 'portal:client-gang-sheet-asset-upload' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
           class="gang-asset-modal-form"
           data-submit-loading
+          {% if reopen_gang_sheet_import_results %}hidden{% endif %}
         >
           {% csrf_token %}
-          <div class="b2b-configurator__workspace" data-b2b-configurator data-recommended-dpi="{{ b2b_recommended_dpi }}" data-min-acceptable-dpi="{{ b2b_min_acceptable_dpi }}">
+          {% if gang_sheet_import_error %}
+            <div class="gang-import-error" role="alert">
+              <strong>Import non terminé</strong>
+              <p>{{ gang_sheet_import_error }}</p>
+              <span>Corrigez la sélection puis relancez l’import. Aucun fichier de ce lot n’a été ajouté.</span>
+            </div>
+          {% endif %}
+          <div class="b2b-configurator__workspace" data-b2b-configurator data-batch-upload data-recommended-dpi="{{ b2b_recommended_dpi }}" data-min-acceptable-dpi="{{ b2b_min_acceptable_dpi }}">
             <div class="b2b-configurator__preview">
               <div class="b2b-preview-stage is-checker" data-configurator-stage>
                 <div class="b2b-preview-bounds" data-configurator-bounds hidden>
@@ -121,16 +130,23 @@
               </div>
             </div>
             <div class="b2b-configurator__controls gang-asset-modal-form__controls">
-              <div class="ui-field-group">
-                <label class="ui-label" for="id-gang-asset-files">Fichier(s)</label>
+              <div
+                class="b2b-batch-dropzone gang-import-dropzone"
+                data-batch-dropzone
+                role="group"
+                aria-label="Déposer ou choisir des fichiers à analyser"
+                aria-controls="id-gang-asset-files"
+                aria-describedby="gang-asset-files-help gang-asset-files-summary gang-asset-files-error"
+              >
                 <input
-                  class="ui-input product-file-input w-full"
+                  class="ui-sr-only"
                   id="id-gang-asset-files"
                   type="file"
                   name="files"
                   multiple
                   accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff,.psd,.ai,.eps"
                   data-configurator-file
+                  data-batch-file-input
                   data-max-file-bytes="{{ gang_sheet_upload_max_bytes }}"
                   data-max-files="{{ gang_sheet_upload_max_files }}"
                   data-max-total-bytes="{{ gang_sheet_upload_max_total_bytes }}"
@@ -138,14 +154,25 @@
                   {% if not can_edit %}disabled{% endif %}
                   required
                 >
+                <svg class="b2b-batch-dropzone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M12 15V4m0 0L8 8m4-4 4 4M5 13v5.25A1.75 1.75 0 0 0 6.75 20h10.5A1.75 1.75 0 0 0 19 18.25V13"/>
+                </svg>
+                <div class="b2b-batch-dropzone__copy">
+                  <strong>Déposez vos fichiers ici</strong>
+                  <span>ou sélectionnez-les depuis votre appareil</span>
+                </div>
+                <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-batch-picker>Choisir les fichiers</button>
               </div>
               <p class="ui-field-help" id="gang-asset-files-help">
                 PNG, JPG, TIFF, PDF, EPS, PSD · {{ gang_sheet_upload_max_size_label }}/fichier · {{ gang_sheet_upload_max_files }} fichiers / {{ gang_sheet_upload_max_total_size_label }} max.
               </p>
               <p class="ui-error-text" id="gang-asset-files-error" data-configurator-file-error role="alert" hidden></p>
+              <div class="b2b-batch-selection" aria-live="polite" aria-atomic="true">
+                <p id="gang-asset-files-summary" data-selected-files-summary>Aucun fichier sélectionné.</p>
+                <ul data-selected-files-list hidden></ul>
+              </div>
               <div class="gang-asset-modal-form__params" data-configurator-params hidden>
                 <input type="hidden" name="crop_manifest" value="[]" data-crop-manifest>
-                <p class="gang-asset-modal-form__selection" data-selected-files-summary aria-live="polite">Aucun fichier sélectionné.</p>
                 <p class="b2b-configurator__file-meta"><span data-configurator-pixels>—</span></p>
                 {% include "portal/client/partials/b2b_configurator_preflight.html" %}
                 <section class="gang-crop-controls" data-gang-crop-controls aria-labelledby="gang-crop-title">
@@ -171,10 +198,27 @@
                   <button class="ui-btn ui-btn-primary" type="submit" data-configurator-submit {% if not can_edit %}disabled{% endif %}>Importer et analyser</button>
                 </div>
               </div>
+              <p class="b2b-batch-upload__progress" data-batch-upload-progress role="status" aria-live="polite" hidden>
+                <i aria-hidden="true"></i> Envoi sécurisé et lancement des analyses…
+              </p>
               <p class="ui-field-help" data-configurator-hint>Choisissez un fichier pour continuer.</p>
             </div>
           </div>
         </form>
+        {% if gang_sheet_import_batch.version_public_ids %}
+          <section class="gang-import-results" data-gang-import-results {% if not reopen_gang_sheet_import_results %}hidden{% endif %} aria-labelledby="gang-import-results-title">
+            <header class="gang-import-results__head">
+              <span class="gang-import-results__eyebrow">Contrôle technique</span>
+              <h3 id="gang-import-results-title">Résultats de votre import</h3>
+              <p>Les alertes viennent de l’analyse serveur. Vous pourrez placer les fichiers prêts ou corriger puis réimporter ceux en échec.</p>
+            </header>
+            {% include "portal/client/gang_sheets/partials/import_analysis_results.html" %}
+            <div class="b2b-dialog-actions">
+              <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Fermer</button>
+              <button class="ui-btn ui-btn-primary" type="button" data-gang-import-new>Importer d’autres fichiers</button>
+            </div>
+          </section>
+        {% endif %}
       </div>
     </div>
   </dialog>

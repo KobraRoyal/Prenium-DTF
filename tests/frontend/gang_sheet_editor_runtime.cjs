@@ -34,7 +34,7 @@ class Element {
   append(...nodes) { this.children.push(...nodes); }
   blur() {}
   closest(selector) { return selector === 'label' ? new Element('label') : null; }
-  focus() {}
+  focus() { this.focused = true; }
   getAttribute(name) { return this.attributes[name] ?? null; }
   getBoundingClientRect() { return {left: 0, top: 0, right: 600, bottom: 600, width: 600, height: 600}; }
   hasPointerCapture() { return false; }
@@ -108,6 +108,17 @@ root.querySelector = elementFor;
 root.querySelectorAll = () => [];
 elementFor('[data-csrf]').value = 'csrf-token';
 elementFor('[data-lock-ratio]').checked = true;
+const uploadForm = elementFor('.gang-asset-modal-form');
+const uploadDialog = elementFor('#gang-asset-dialog');
+const uploadControls = [
+  elementFor('[data-dialog-close]'),
+  elementFor('[data-batch-picker]'),
+  elementFor('[data-configurator-submit]'),
+];
+uploadForm.closest = (selector) => selector === 'dialog' ? uploadDialog : null;
+uploadForm.querySelector = elementFor;
+uploadForm.querySelectorAll = (selector) => selector.includes('[data-dialog-close]') ? uploadControls : [];
+uploadForm.reset = () => { uploadForm.wasReset = true; };
 
 const initialNode = {textContent: JSON.stringify(initialState)};
 const document = {
@@ -181,6 +192,8 @@ const instrumentedSource = source.replace(hookPoint, `
     qualityApproved,
     resizeItemFromPointer,
     saveLayout,
+    setUploadFormBusy,
+    showImportForm,
     select: (publicIds) => {
       selectedIds = new Set(publicIds);
       selectedId = publicIds.at(-1) || null;
@@ -501,7 +514,26 @@ async function runNextTimer() {
   assert.ok(Math.min(...bottomRotated.map((item) => item.x_mm)) >= 0,
     'group rotation cannot cross the left edge');
 
-  console.log('Gang sheet editor runtime: conflicts, printable bounds, dimensions and group behavior passed.');
+  const progress = elementFor('[data-batch-upload-progress]');
+  hooks.setUploadFormBusy(true);
+  assert.equal(uploadDialog.getAttribute('aria-busy'), 'true');
+  assert.equal(progress.hidden, false, 'upload progress is announced while files are sent');
+  assert.ok(uploadControls.every((control) => control.disabled), 'dialog actions are locked during upload');
+  hooks.setUploadFormBusy(false);
+  assert.equal(uploadDialog.getAttribute('aria-busy'), 'false');
+  assert.equal(progress.hidden, true);
+  assert.ok(uploadControls.every((control) => !control.disabled));
+
+  const results = elementFor('[data-gang-import-results]');
+  results.hidden = false;
+  uploadForm.hidden = true;
+  hooks.showImportForm({reset: true});
+  assert.equal(uploadForm.hidden, false, 'new import reveals the upload form');
+  assert.equal(results.hidden, true, 'new import hides the previous result panel');
+  assert.equal(uploadForm.wasReset, true, 'new import resets the previous file selection');
+  assert.equal(elementFor('[data-batch-picker]').focused, true, 'new import focuses the file picker');
+
+  console.log('Gang sheet editor runtime: printable bounds, upload states and group behavior passed.');
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

@@ -198,6 +198,8 @@ Branche : `codex/gang-sheet-audit-fixes`.
 - [x] Recadrage des PDF avec rotation interne 90°/270° identique entre aperçu et PDF HD.
 - [x] Tests de non-régression dédiés aux limites utiles sur les quatre rotations, groupes,
   duplication, concurrence et repère PDF tourné.
+- [x] Import multi-fichiers enrichi : dropzone accessible, progression, analyse asynchrone par
+  fichier, anomalies et overlays médiés, reprise des erreurs et résultats récents en modale.
 
 Les espacements d’auto-imposition restent des préférences, pas de nouveaux minimums de coupe.
 Les avertissements de source ne sont pas assimilés automatiquement à un refus de fabrication.

@@ -3553,10 +3553,38 @@ if (root) {
     event.returnValue = "";
   });
   const uploadForm = q(".gang-asset-modal-form");
+  const importResults = q("[data-gang-import-results]");
+  function showImportForm({ reset = false } = {}) {
+    if (!uploadForm) return;
+    if (reset) uploadForm.reset();
+    uploadForm.hidden = false;
+    if (importResults) importResults.hidden = true;
+    window.requestAnimationFrame(() => q("[data-batch-picker]")?.focus());
+  }
+  q("[data-gang-import-new]")?.addEventListener("click", () => showImportForm({ reset: true }));
+  root.addEventListener("click", (event) => {
+    const opener = event.target.closest?.("[data-file-picker-dialog='gang-asset-dialog']");
+    if (opener) showImportForm();
+  });
+  function setUploadFormBusy(isBusy) {
+    if (!uploadForm) return;
+    uploadForm.classList.toggle("is-uploading", isBusy);
+    const dialog = uploadForm.closest("dialog");
+    if (dialog) dialog.setAttribute("aria-busy", String(isBusy));
+    uploadForm.querySelectorAll("[data-dialog-close], [data-batch-picker], [data-configurator-submit]").forEach((control) => {
+      if (control instanceof HTMLButtonElement) control.disabled = isBusy;
+    });
+    const progress = uploadForm.querySelector("[data-batch-upload-progress]");
+    if (progress instanceof HTMLElement) progress.hidden = !isBusy;
+  }
+  uploadForm?.closest("dialog")?.addEventListener("cancel", (event) => {
+    if (uploadForm.classList.contains("is-uploading")) event.preventDefault();
+  });
   uploadForm?.addEventListener("submit", async (event) => {
     if (allowUnload) return;
     event.preventDefault();
     const submitter = uploadForm.querySelector("[data-configurator-submit]");
+    setUploadFormBusy(true);
     if (submitter instanceof HTMLButtonElement) {
       submitter.classList.add("is-loading");
       submitter.setAttribute("aria-busy", "true");
@@ -3567,6 +3595,7 @@ if (root) {
       uploadForm.submit();
     } catch (error) {
       allowUnload = false;
+      setUploadFormBusy(false);
       if (submitter instanceof HTMLButtonElement) {
         submitter.classList.remove("is-loading");
         submitter.removeAttribute("aria-busy");

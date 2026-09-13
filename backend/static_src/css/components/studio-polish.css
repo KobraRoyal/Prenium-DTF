@@ -1287,6 +1287,267 @@ body.product-shell--studio .b2b-configurator-dialog.gang-asset-dialog {
   width: min(64rem, calc(100vw - 1.5rem));
 }
 
+body.product-shell--studio .gang-asset-dialog .b2b-dialog-head__copy p {
+  max-width: 48rem;
+  margin: 0.25rem 0 0;
+  color: var(--gang-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+body.product-shell--studio .gang-import-dropzone {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 7.5rem;
+  padding: 1rem;
+  border: 1px dashed color-mix(in srgb, var(--gang-accent) 58%, var(--gang-line));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--gang-accent-soft) 38%, var(--gang-panel));
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+body.product-shell--studio .gang-import-dropzone:is(:hover, .is-dragging) {
+  border-color: var(--gang-accent);
+  background: color-mix(in srgb, var(--gang-accent-soft) 72%, var(--gang-panel));
+}
+
+body.product-shell--studio .gang-import-dropzone:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gang-accent) 28%, transparent);
+}
+
+body.product-shell--studio .gang-import-dropzone .b2b-batch-dropzone__icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--gang-accent-strong);
+}
+
+body.product-shell--studio .gang-import-dropzone .b2b-batch-dropzone__copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+body.product-shell--studio .gang-import-dropzone .b2b-batch-dropzone__copy strong {
+  color: var(--gang-ink);
+  font-size: 0.92rem;
+}
+
+body.product-shell--studio .gang-import-dropzone .b2b-batch-dropzone__copy span,
+body.product-shell--studio .gang-asset-dialog .b2b-batch-selection {
+  color: var(--gang-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+body.product-shell--studio .gang-asset-dialog .b2b-batch-selection :is(p, ul) { margin: 0; }
+
+body.product-shell--studio .gang-asset-dialog .b2b-batch-selection ul {
+  display: grid;
+  gap: 0.2rem;
+  max-height: 6rem;
+  padding: 0.55rem 0.7rem 0.55rem 1.65rem;
+  overflow: auto;
+  border: 1px solid var(--gang-line);
+  border-radius: var(--radius-sm);
+  background: var(--gang-panel);
+}
+
+body.product-shell--studio .gang-asset-dialog .b2b-batch-upload__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--gang-accent-soft) 65%, var(--gang-panel));
+  color: var(--gang-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+body.product-shell--studio .gang-asset-dialog .b2b-batch-upload__progress[hidden] { display: none; }
+
+body.product-shell--studio .gang-asset-dialog .b2b-batch-upload__progress i {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid color-mix(in srgb, var(--gang-accent) 32%, transparent);
+  border-top-color: var(--gang-accent-strong);
+  border-radius: 999px;
+  animation: gang-import-spin 700ms linear infinite;
+}
+
+@keyframes gang-import-spin { to { transform: rotate(360deg); } }
+
+body.product-shell--studio .gang-import-results {
+  display: grid;
+  gap: 1rem;
+}
+
+body.product-shell--studio .gang-import-results[hidden] { display: none; }
+
+body.product-shell--studio .gang-import-results__head {
+  display: grid;
+  gap: 0.25rem;
+}
+
+body.product-shell--studio .gang-import-results__eyebrow {
+  color: var(--gang-accent-strong);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+body.product-shell--studio .gang-import-results__head :is(h3, p) { margin: 0; }
+body.product-shell--studio .gang-import-results__head h3 { font-size: 1.15rem; }
+body.product-shell--studio .gang-import-results__head p {
+  max-width: 54rem;
+  color: var(--gang-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+body.product-shell--studio .gang-import-error {
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.85rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--error) 50%, var(--gang-line));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--error) 8%, var(--gang-panel));
+}
+
+body.product-shell--studio .gang-import-error :is(p, span) { margin: 0; }
+body.product-shell--studio .gang-import-error strong { color: var(--error); font-size: 0.82rem; }
+body.product-shell--studio .gang-import-error p { color: var(--gang-ink); font-size: 0.76rem; }
+body.product-shell--studio .gang-import-error span { color: var(--gang-muted); font-size: 0.7rem; }
+
+body.product-shell--studio .gang-import-results__list {
+  display: grid;
+  gap: 0.65rem;
+  max-height: min(34rem, 58vh);
+  overflow: auto;
+}
+
+body.product-shell--studio .gang-import-result {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border: 1px solid var(--gang-line);
+  border-radius: var(--radius-sm);
+  background: var(--gang-panel);
+}
+
+body.product-shell--studio .gang-import-result__preview {
+  display: grid;
+  min-height: 5rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--gang-panel-subtle);
+}
+
+body.product-shell--studio .gang-import-result__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+body.product-shell--studio .gang-import-result__body { display: grid; gap: 0.45rem; min-width: 0; }
+body.product-shell--studio .gang-import-result__body > strong { overflow-wrap: anywhere; }
+
+body.product-shell--studio .gang-asset-analysis-disclosure {
+  border-top: 1px solid color-mix(in srgb, var(--gang-line) 72%, transparent);
+}
+
+body.product-shell--studio .gang-asset-analysis-disclosure summary {
+  padding: 0.4rem 0;
+  color: var(--gang-muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+body.product-shell--studio .gang-analysis-summary {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--gang-panel-subtle);
+}
+
+body.product-shell--studio .gang-analysis-summary__status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+}
+
+body.product-shell--studio .gang-analysis-summary__status > span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--gang-muted);
+}
+
+body.product-shell--studio .gang-analysis-summary--ready .gang-analysis-summary__status > span { background: var(--success); }
+body.product-shell--studio .gang-analysis-summary--warning .gang-analysis-summary__status > span { background: var(--warning); }
+body.product-shell--studio .gang-analysis-summary--failed .gang-analysis-summary__status > span { background: var(--error); }
+
+body.product-shell--studio .gang-analysis-summary__message {
+  margin: 0;
+  color: var(--gang-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+body.product-shell--studio .gang-analysis-summary__message--ok { color: var(--success); }
+
+body.product-shell--studio .gang-analysis-summary__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.4rem;
+  margin: 0;
+}
+
+body.product-shell--studio .gang-analysis-summary__facts div { display: grid; gap: 0.05rem; }
+body.product-shell--studio .gang-analysis-summary__facts dt { color: var(--gang-muted); font-size: 0.62rem; }
+body.product-shell--studio .gang-analysis-summary__facts dd { margin: 0; font-size: 0.7rem; font-weight: 750; }
+
+body.product-shell--studio .gang-analysis-summary__issues {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--warning-strong, #7a4b00);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+body.product-shell--studio .gang-analysis-summary__overlays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+@media (max-width: 47.99rem) {
+  body.product-shell--studio .gang-import-dropzone {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    min-height: 0;
+  }
+
+  body.product-shell--studio .gang-import-dropzone .ui-btn { width: 100%; }
+
+  body.product-shell--studio .gang-import-result { grid-template-columns: 3.75rem minmax(0, 1fr); }
+}
+
 body.product-shell--studio .gang-crop-controls {
   display: grid;
   gap: 0.55rem;

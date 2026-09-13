@@ -4,6 +4,7 @@ import json
 import logging
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.cache import cache
@@ -38,6 +39,33 @@ logger = logging.getLogger(__name__)
 
 GANG_SHEET_MAX_FILES_PER_UPLOAD = 20
 GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES = 60 * 1024 * 1024
+GANG_SHEET_UPLOAD_BATCH_SESSION_PREFIX = "gang_sheet_upload_batch"
+GANG_SHEET_UPLOAD_ERROR_SESSION_PREFIX = "gang_sheet_upload_error"
+
+
+def _decimal_display(value) -> str:
+    if value is None:
+        return ""
+    return f"{value:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _safe_analysis_error(version) -> str:
+    if version and version.analysis_status == version.AnalysisStatus.FAILED:
+        return (
+            "L’analyse technique n’a pas abouti. Réimportez le fichier ou contactez "
+            "l’atelier si le problème persiste."
+        )
+    return ""
+
+
+def _safe_analysis_warnings(analysis) -> list[str]:
+    if analysis is None:
+        return []
+    return list(
+        dict.fromkeys(
+            str(value).strip()[:240] for value in (analysis.warnings or []) if str(value).strip()
+        )
+    )
 
 
 def _format_upload_size(size_bytes: int) -> str:
@@ -104,8 +132,8 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
         if self.customer_membership.role == CustomerMembership.Role.READONLY:
             raise PermissionDenied
 
-    def preview_url(self, *, sheet, version):
-        return reverse(
+    def preview_url(self, *, sheet, version, overlay=""):
+        url = reverse(
             "portal:client-gang-sheet-asset-preview",
             kwargs={
                 "customer_public_id": self.customer.public_id,
@@ -113,10 +141,87 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                 "asset_version_public_id": version.public_id,
             },
         )
+        if overlay:
+            return f"{url}?{urlencode({'overlay': overlay})}"
+        return url
+
+    @staticmethod
+    def _upload_batch_session_key(sheet):
+        return f"{GANG_SHEET_UPLOAD_BATCH_SESSION_PREFIX}:{sheet.public_id}"
+
+    @staticmethod
+    def _upload_error_session_key(sheet):
+        return f"{GANG_SHEET_UPLOAD_ERROR_SESSION_PREFIX}:{sheet.public_id}"
+
+    def store_import_error(self, *, sheet, message):
+        safe_message = " ".join(str(message or "").split())[:400]
+        if safe_message:
+            self.request.session[self._upload_error_session_key(sheet)] = safe_message
+
+    def consume_import_error(self, *, sheet):
+        value = self.request.session.pop(self._upload_error_session_key(sheet), "")
+        return value if isinstance(value, str) else ""
+
+    def _recent_upload_batch(self, *, sheet):
+        raw = self.request.session.get(self._upload_batch_session_key(sheet), {})
+        if not isinstance(raw, dict):
+            return {"version_public_ids": set(), "open_results": False}
+        values = raw.get("version_public_ids", [])
+        if not isinstance(values, list):
+            values = []
+        return {
+            "version_public_ids": {
+                str(value) for value in values[:GANG_SHEET_MAX_FILES_PER_UPLOAD]
+            },
+            "open_results": raw.get("open_results") is True,
+        }
+
+    def consume_recent_upload_signal(self, *, sheet, available_version_public_ids):
+        key = self._upload_batch_session_key(sheet)
+        batch = self._recent_upload_batch(sheet=sheet)
+        scoped_ids = batch["version_public_ids"] & set(available_version_public_ids)
+        should_open = bool(batch["open_results"] and scoped_ids)
+        if should_open:
+            self.request.session[key] = {
+                "version_public_ids": sorted(scoped_ids),
+                "open_results": False,
+            }
+        elif not scoped_ids:
+            self.request.session.pop(key, None)
+        return {
+            "should_open": should_open,
+            "version_public_ids": sorted(scoped_ids),
+        }
+
+    def _analysis_detection_context(self, *, sheet, version, analysis, key, overlay):
+        metadata = (analysis.metadata or {}) if analysis else {}
+        detection = metadata.get(key) or {}
+        detected = detection.get("detected") is True
+        overlay_field = getattr(analysis, overlay, None) if analysis else None
+        overlay_available = bool(
+            detected
+            and overlay_field
+            and version.analysis_status
+            in {version.AnalysisStatus.READY, version.AnalysisStatus.WARNING}
+        )
+        return {
+            "detected": detected,
+            "coverage_percent": detection.get("coverage_percent"),
+            "resolution_limited": detection.get("resolution_limited") is True,
+            "overlay_available": overlay_available,
+            "overlay_url": (
+                self.preview_url(sheet=sheet, version=version, overlay=key)
+                if overlay_available
+                else ""
+            ),
+        }
 
     def asset_gallery_context(self, *, sheet):
         assets = []
         has_pending_assets = False
+        recent_batch = self._recent_upload_batch(sheet=sheet)
+        available_version_public_ids = set()
+        recent_pending = False
         usage_by_asset_id = {}
         for item in sheet.items.all():
             if not item.asset_version_id:
@@ -127,6 +232,13 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
         can_manage_gallery = can_edit and sheet.status in gang_sheet_service.editable_statuses
         for entry in gang_sheet_service.source_asset_entries(sheet=sheet):
             version = entry.asset.current_version
+            if version and (
+                version.customer_id != sheet.customer_id or version.asset_id != entry.asset_id
+            ):
+                version = None
+            version_public_id = str(version.public_id) if version else ""
+            if version_public_id:
+                available_version_public_ids.add(version_public_id)
             usage_count = usage_by_asset_id.get(entry.asset_id, 0)
             is_pending = bool(
                 version
@@ -139,6 +251,34 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                 in {version.AnalysisStatus.READY, version.AnalysisStatus.WARNING}
             )
             has_pending_assets = has_pending_assets or is_pending
+            is_recent = version_public_id in recent_batch["version_public_ids"]
+            recent_pending = recent_pending or (is_recent and is_pending)
+            analysis = getattr(version, "analysis", None) if version else None
+            if analysis and analysis.customer_id != sheet.customer_id:
+                analysis = None
+            warnings = _safe_analysis_warnings(analysis)
+            thin_zone = (
+                self._analysis_detection_context(
+                    sheet=sheet,
+                    version=version,
+                    analysis=analysis,
+                    key="thin_zone",
+                    overlay="thin_zone_overlay",
+                )
+                if version
+                else {}
+            )
+            semi_transparency = (
+                self._analysis_detection_context(
+                    sheet=sheet,
+                    version=version,
+                    analysis=analysis,
+                    key="semi_transparency",
+                    overlay="semi_transparency_overlay",
+                )
+                if version
+                else {}
+            )
             assets.append(
                 {
                     "source_public_id": str(entry.public_id),
@@ -149,6 +289,33 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                     ),
                     "analysis_status": version.analysis_status if version else "failed",
                     "analysis_label": version.get_analysis_status_display() if version else "Échec",
+                    "analysis_error": _safe_analysis_error(version),
+                    "analysis_warnings": warnings,
+                    "has_analysis_warnings": bool(
+                        warnings or thin_zone.get("detected") or semi_transparency.get("detected")
+                    ),
+                    "source_width_px": analysis.image_width if analysis else None,
+                    "source_height_px": analysis.image_height if analysis else None,
+                    "dpi_x": analysis.dpi_x if analysis else None,
+                    "dpi_y": analysis.dpi_y if analysis else None,
+                    "resolution_label": (
+                        f"{analysis.image_width} × {analysis.image_height} px"
+                        if analysis and analysis.image_width and analysis.image_height
+                        else ""
+                    ),
+                    "dpi_label": (
+                        f"{_decimal_display(analysis.dpi_x)} × "
+                        f"{_decimal_display(analysis.dpi_y)} DPI"
+                        if analysis and analysis.dpi_x is not None and analysis.dpi_y is not None
+                        else ""
+                    ),
+                    "has_alpha": analysis.has_alpha if analysis else None,
+                    "probable_white_background": (
+                        analysis.probable_white_background if analysis else None
+                    ),
+                    "thin_zone": thin_zone,
+                    "semi_transparency": semi_transparency,
+                    "is_recent_import": is_recent,
                     "is_ready": is_ready,
                     "width_mm": entry.effective_width_mm,
                     "height_mm": entry.effective_height_mm,
@@ -157,12 +324,19 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                     "can_remove": can_manage_gallery and usage_count == 0,
                 }
             )
+        batch_ids = recent_batch["version_public_ids"] & available_version_public_ids
+        if recent_batch["version_public_ids"] and not batch_ids:
+            self.request.session.pop(self._upload_batch_session_key(sheet), None)
+        elif batch_ids and not recent_pending and not recent_batch["open_results"]:
+            self.request.session.pop(self._upload_batch_session_key(sheet), None)
         return {
             "sheet": sheet,
             "assets": assets,
             "has_pending_assets": has_pending_assets,
             "can_edit": can_edit,
             "can_manage_gallery": can_manage_gallery,
+            "recent_import_version_public_ids": sorted(batch_ids),
+            "has_pending_recent_imports": recent_pending,
         }
 
 
@@ -238,6 +412,13 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
             preview_url_resolver=lambda version: self.preview_url(sheet=sheet, version=version),
         )
         gallery_context = self.asset_gallery_context(sheet=sheet)
+        recent_import_batch = self.consume_recent_upload_signal(
+            sheet=sheet,
+            available_version_public_ids={
+                asset["public_id"] for asset in gallery_context["assets"]
+            },
+        )
+        import_error = self.consume_import_error(sheet=sheet)
         prep_fee = "0.00"
         try:
             from apps.orders.services.pricing import OrderPricingService
@@ -253,6 +434,12 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
             self.context(
                 gang_sheet_state=state,
                 **gallery_context,
+                gang_sheet_import_batch=recent_import_batch,
+                gang_sheet_import_error=import_error,
+                reopen_gang_sheet_import_results=recent_import_batch["should_open"],
+                reopen_gang_sheet_import_dialog=bool(
+                    import_error or recent_import_batch["should_open"]
+                ),
                 can_create_order=sheet.status == GangSheet.Status.VALIDATED
                 and bool(sheet.final_file),
                 create_order_project_url=reverse(
@@ -279,12 +466,18 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
 
 class ClientGangSheetAssetGalleryView(ClientGangSheetMixin, View):
     template_name = "portal/client/gang_sheets/partials/asset_gallery.html"
+    import_results_template_name = "portal/client/gang_sheets/partials/import_analysis_results.html"
 
     def get(self, request, customer_public_id, sheet_public_id):
         sheet = self.get_sheet_or_404(sheet_public_id)
+        template_name = (
+            self.import_results_template_name
+            if request.GET.get("view") == "import-results"
+            else self.template_name
+        )
         response = render(
             request,
-            self.template_name,
+            template_name,
             self.context(**self.asset_gallery_context(sheet=sheet)),
         )
         response["Cache-Control"] = "private, no-store"
@@ -376,39 +569,39 @@ class ClientGangSheetAssetUploadView(ClientGangSheetMixin, View):
         self.require_write_access()
         sheet = self.get_sheet_or_404(sheet_public_id)
         if _gang_sheet_upload_rate_limited(customer=self.customer, actor=request.user):
-            response = with_toast(
-                HttpResponseRedirect(self._editor_url(sheet)),
-                "Trop d’imports ont été lancés. Patientez avant de réessayer.",
-                "error",
+            response = self._reject(
+                request=request,
+                sheet=sheet,
+                message="Trop d’imports ont été lancés. Patientez avant de réessayer.",
+                status=429,
             )
-            response.status_code = 429
             response["Retry-After"] = str(settings.GANG_SHEET_UPLOAD_RATE_LIMIT_WINDOW_SECONDS)
             return response
         uploaded_files = request.FILES.getlist("files")
         if not uploaded_files:
-            return with_toast(
-                HttpResponseRedirect(self._editor_url(sheet)),
-                "Sélectionnez au moins un fichier.",
-                "error",
+            return self._reject(
+                request=request,
+                sheet=sheet,
+                message="Sélectionnez au moins un fichier.",
             )
         if len(uploaded_files) > self.max_files_per_request:
-            return with_toast(
-                HttpResponseRedirect(self._editor_url(sheet)),
-                f"Importez au maximum {self.max_files_per_request} fichiers à la fois.",
-                "error",
+            return self._reject(
+                request=request,
+                sheet=sheet,
+                message=f"Importez au maximum {self.max_files_per_request} fichiers à la fois.",
             )
         total_size_bytes = sum(
             int(getattr(uploaded_file, "size", 0) or 0) for uploaded_file in uploaded_files
         )
         if total_size_bytes > GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES:
-            return with_toast(
-                HttpResponseRedirect(self._editor_url(sheet)),
-                (
+            return self._reject(
+                request=request,
+                sheet=sheet,
+                message=(
                     "La sélection dépasse la limite de "
                     f"{_format_upload_size(GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES)} par import. "
                     "Réduisez le nombre de fichiers puis réessayez."
                 ),
-                "error",
             )
         oversized_file = next(
             (
@@ -429,14 +622,14 @@ class ClientGangSheetAssetUploadView(ClientGangSheetMixin, View):
                     "upload_max_bytes": settings.ORDER_UPLOAD_MAX_BYTES,
                 },
             )
-            return with_toast(
-                HttpResponseRedirect(self._editor_url(sheet)),
-                (
+            return self._reject(
+                request=request,
+                sheet=sheet,
+                message=(
                     f"{display_name} dépasse la limite de "
                     f"{_format_upload_size(settings.ORDER_UPLOAD_MAX_BYTES)} par fichier. "
                     "Réduisez ou compressez le visuel avant de réessayer."
                 ),
-                "error",
             )
         try:
             crops = parse_crop_manifest(
@@ -444,10 +637,10 @@ class ClientGangSheetAssetUploadView(ClientGangSheetMixin, View):
                 file_count=len(uploaded_files),
             )
         except CropValidationError as error:
-            return with_toast(
-                HttpResponseRedirect(self._editor_url(sheet)),
-                str(error),
-                "error",
+            return self._reject(
+                request=request,
+                sheet=sheet,
+                message=str(error),
             )
         uploads = []
         for index, uploaded_file in enumerate(uploaded_files):
@@ -463,12 +656,25 @@ class ClientGangSheetAssetUploadView(ClientGangSheetMixin, View):
                 uploads=uploads,
             )
         except GangSheetDomainError as error:
-            message = error.message
-            level = "error"
+            return self._reject(request=request, sheet=sheet, message=error.message)
         else:
+            request.session.pop(self._upload_error_session_key(sheet), None)
+            request.session[self._upload_batch_session_key(sheet)] = {
+                "version_public_ids": [str(version.public_id) for _source, version in imported],
+                "open_results": True,
+            }
             message = f"{len(imported)} fichier(s) importé(s). Analyse technique lancée."
-            level = "success"
-        return with_toast(HttpResponseRedirect(self._editor_url(sheet)), message, level)
+        return with_toast(HttpResponseRedirect(self._editor_url(sheet)), message, "success")
+
+    def _reject(self, *, request, sheet, message, status=302):
+        self.store_import_error(sheet=sheet, message=message)
+        response = with_toast(
+            HttpResponseRedirect(self._editor_url(sheet)),
+            message,
+            "error",
+        )
+        response.status_code = status
+        return response
 
     def _editor_url(self, sheet):
         return reverse(
@@ -774,6 +980,24 @@ class ClientGangSheetAssetPreviewView(ClientGangSheetMixin, View):
             raise Http404
         crop = CropBox.from_source_asset(source_asset)
         analysis = getattr(version, "analysis", None)
+        requested_overlay = (request.GET.get("overlay") or "").strip()
+        overlay_fields = {
+            "thin_zone": "thin_zone_overlay",
+            "semi_transparency": "semi_transparency_overlay",
+        }
+        if requested_overlay:
+            overlay_field_name = overlay_fields.get(requested_overlay)
+            detection = ((analysis.metadata or {}).get(requested_overlay) or {}) if analysis else {}
+            overlay_file = (
+                getattr(analysis, overlay_field_name, None) if overlay_field_name else None
+            )
+            if detection.get("detected") is not True or not overlay_file:
+                raise Http404
+            overlay_file.open("rb")
+            response = FileResponse(overlay_file, content_type="image/webp")
+            response["Cache-Control"] = "private, max-age=300"
+            response["X-Content-Type-Options"] = "nosniff"
+            return response
         if analysis is not None and analysis.thumbnail and crop.is_full:
             analysis.thumbnail.open("rb")
             response = FileResponse(analysis.thumbnail, content_type="image/webp")

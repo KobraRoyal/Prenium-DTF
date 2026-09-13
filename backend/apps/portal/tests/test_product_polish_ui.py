@@ -521,8 +521,14 @@ class ProductPolishUITests(SimpleTestCase):
         studio_entry = source(CSS_DIR / "entries/studio.css")
 
         self.assertNotIn("product-eyebrow", editor)
-        self.assertIn('id="gang-asset-dialog-title">Importer', editor)
+        self.assertIn('id="gang-asset-dialog-title">Importer et contrôler vos fichiers', editor)
         self.assertIn("b2b-dialog-head", editor)
+        self.assertIn("data-batch-dropzone", editor)
+        self.assertIn("data-selected-files-list", editor)
+        self.assertIn("data-batch-upload-progress", editor)
+        self.assertIn("reopen_gang_sheet_import_dialog", editor)
+        self.assertIn("gang_sheet_import_error", editor)
+        self.assertIn("import_analysis_results.html", editor)
         self.assertIn(".gang-asset-modal-form__controls", studio_entry)
 
     def test_marketing_entry_neutralizes_agency_defaults_on_conversion_pages(self) -> None:

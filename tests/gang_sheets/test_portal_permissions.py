@@ -1065,6 +1065,80 @@ def test_gang_sheet_upload_rolls_back_database_files_audits_and_jobs_on_mid_batc
     assert list(path for path in tmp_path.rglob("*") if path.is_file()) == []
     assert callbacks == []
     assert scheduled == []
+    error_session_key = f"gang_sheet_upload_error:{sheet.public_id}"
+    assert client.session[error_session_key] == "source-1.png : Échec technique simulé."
+
+    editor_response = client.get(response.url)
+    assert editor_response.status_code == 200
+    assert editor_response.context["gang_sheet_import_error"] == (
+        "source-1.png : Échec technique simulé."
+    )
+    assert editor_response.context["reopen_gang_sheet_import_dialog"] is True
+    assert error_session_key not in client.session
+
+    second_editor_response = client.get(response.url)
+    assert second_editor_response.context["gang_sheet_import_error"] == ""
+    assert second_editor_response.context["reopen_gang_sheet_import_dialog"] is False
+
+
+def test_gang_sheet_import_error_session_is_scoped_by_sheet_and_customer(client):
+    cache.clear()
+    owner, customer, _project = create_customer_scope(email="error-scope@example.com")
+    sheet_a = GangSheetService().create_sheet(customer=customer, actor=owner, name="Planche A")
+    sheet_b = GangSheetService().create_sheet(customer=customer, actor=owner, name="Planche B")
+    client.force_login(owner)
+    upload_url = reverse(
+        "portal:client-gang-sheet-asset-upload",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet_a.public_id,
+        },
+    )
+
+    upload_response = client.post(upload_url, {})
+    sheet_a_error_key = f"gang_sheet_upload_error:{sheet_a.public_id}"
+
+    assert upload_response.status_code == 302
+    assert client.session[sheet_a_error_key] == "Sélectionnez au moins un fichier."
+
+    sheet_b_response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet_b.public_id,
+            },
+        )
+    )
+    assert sheet_b_response.context["gang_sheet_import_error"] == ""
+    assert sheet_b_response.context["reopen_gang_sheet_import_dialog"] is False
+    assert sheet_a_error_key in client.session
+
+    sheet_a_response = client.get(upload_response.url)
+    assert sheet_a_response.context["gang_sheet_import_error"] == (
+        "Sélectionnez au moins un fichier."
+    )
+    assert sheet_a_response.context["reopen_gang_sheet_import_dialog"] is True
+    assert sheet_a_error_key not in client.session
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="error-scope-outsider@example.com"
+    )
+    client.force_login(outsider)
+    outsider_session = client.session
+    outsider_session[sheet_a_error_key] = "Message qui ne doit jamais être exposé"
+    outsider_session.save()
+    cross_tenant_response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": sheet_a.public_id,
+            },
+        )
+    )
+    assert cross_tenant_response.status_code == 404
+    assert sheet_a_error_key in client.session
 
 
 def test_readonly_member_cannot_upload_a_gang_sheet_source(client):
@@ -1273,6 +1347,326 @@ def test_pending_gallery_refreshes_itself_and_exposes_visual_when_analysis_is_re
     assert 'hx-trigger="every 2s"' not in ready_content
     assert 'data-asset-ready="true"' in ready_content
     assert "Placer sur la planche" in ready_content
+
+
+@pytest.mark.parametrize(
+    ("analysis_status", "expected_ready", "expected_label"),
+    [
+        (AssetVersion.AnalysisStatus.PENDING, False, "En attente"),
+        (AssetVersion.AnalysisStatus.PROCESSING, False, "Analyse en cours"),
+        (AssetVersion.AnalysisStatus.READY, True, "Analysé"),
+        (AssetVersion.AnalysisStatus.FAILED, False, "Échec"),
+    ],
+)
+def test_gallery_exposes_safe_analysis_states_and_source_metrics(
+    client,
+    analysis_status,
+    expected_ready,
+    expected_label,
+):
+    user, customer, project = create_customer_scope(email=f"gallery-{analysis_status}@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    sheet = GangSheetService().create_sheet(project=project, actor=user, name="Analyse galerie")
+    version.analysis_status = analysis_status
+    version.analysis_error = "/private/storage/customer-secret/source.png"
+    version.save(update_fields=["analysis_status", "analysis_error", "updated_at"])
+    AssetAnalysis.objects.create(
+        customer=customer,
+        version=version,
+        image_width=2400,
+        image_height=1200,
+        dpi_x="300.00",
+        dpi_y="299.50",
+        has_alpha=True,
+        probable_white_background=False,
+        warnings=[],
+    )
+    client.force_login(user)
+
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-asset-gallery",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+
+    row = response.context["assets"][0]
+    assert response.status_code == 200
+    assert row["analysis_status"] == analysis_status
+    assert row["analysis_label"] == expected_label
+    assert row["is_ready"] is expected_ready
+    assert row["source_width_px"] == 2400
+    assert row["source_height_px"] == 1200
+    assert row["resolution_label"] == "2400 × 1200 px"
+    assert row["dpi_label"] == "300 × 299,5 DPI"
+    assert row["has_alpha"] is True
+    assert row["probable_white_background"] is False
+    assert "/private/storage" not in row["analysis_error"]
+    if analysis_status == AssetVersion.AnalysisStatus.FAILED:
+        assert "n’a pas abouti" in row["analysis_error"]
+    else:
+        assert row["analysis_error"] == ""
+
+
+def test_warning_gallery_exposes_diagnostics_and_mediated_overlays(client):
+    user, customer, project = create_customer_scope(email="gallery-warning@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    sheet = GangSheetService().create_sheet(project=project, actor=user, name="Alertes galerie")
+    version.analysis_status = AssetVersion.AnalysisStatus.WARNING
+    version.save(update_fields=["analysis_status", "updated_at"])
+    analysis = AssetAnalysis.objects.create(
+        customer=customer,
+        version=version,
+        image_width=900,
+        image_height=600,
+        warnings=["Fond blanc probable détecté.", "Fond blanc probable détecté."],
+        metadata={
+            "thin_zone": {
+                "detected": True,
+                "coverage_percent": 2.5,
+                "resolution_limited": True,
+            },
+            "semi_transparency": {"detected": True, "coverage_percent": 4.75},
+        },
+    )
+    analysis.thin_zone_overlay = SimpleUploadedFile(
+        "thin.webp", b"thin-overlay", content_type="image/webp"
+    )
+    analysis.semi_transparency_overlay = SimpleUploadedFile(
+        "fade.webp", b"fade-overlay", content_type="image/webp"
+    )
+    analysis.save(update_fields=["thin_zone_overlay", "semi_transparency_overlay", "updated_at"])
+    client.force_login(user)
+
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-asset-gallery",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+
+    row = response.context["assets"][0]
+    assert row["analysis_status"] == AssetVersion.AnalysisStatus.WARNING
+    assert row["analysis_warnings"] == ["Fond blanc probable détecté."]
+    assert row["has_analysis_warnings"] is True
+    assert row["thin_zone"] == {
+        "detected": True,
+        "coverage_percent": 2.5,
+        "resolution_limited": True,
+        "overlay_available": True,
+        "overlay_url": row["thin_zone"]["overlay_url"],
+    }
+    assert row["semi_transparency"]["detected"] is True
+    assert row["semi_transparency"]["coverage_percent"] == 4.75
+    assert row["semi_transparency"]["overlay_available"] is True
+    assert "?overlay=thin_zone" in row["thin_zone"]["overlay_url"]
+    assert "?overlay=semi_transparency" in row["semi_transparency"]["overlay_url"]
+    assert "/media/" not in row["thin_zone"]["overlay_url"]
+
+    thin_response = client.get(row["thin_zone"]["overlay_url"])
+    assert thin_response.status_code == 200
+    assert thin_response["Content-Type"] == "image/webp"
+    assert b"".join(thin_response.streaming_content) == b"thin-overlay"
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="gallery-overlay-outsider@example.com"
+    )
+    client.force_login(outsider)
+    cross_tenant_url = reverse(
+        "portal:client-gang-sheet-asset-preview",
+        kwargs={
+            "customer_public_id": outsider_customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "asset_version_public_id": version.public_id,
+        },
+    )
+    assert client.get(f"{cross_tenant_url}?overlay=thin_zone").status_code == 404
+
+
+def test_successful_upload_batch_reopens_results_once_and_remains_scoped(client, monkeypatch):
+    user, customer, _project = create_customer_scope(email="gallery-session@example.com")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Lot récent")
+    monkeypatch.setattr(
+        "apps.uploads.services.assets.AssetService.schedule_analysis",
+        lambda self, version: None,
+    )
+    client.force_login(user)
+    editor_url = reverse(
+        "portal:client-gang-sheet-editor",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+
+    upload_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": SimpleUploadedFile(
+                "recent.png",
+                b"\x89PNG\r\n\x1a\n" + b"0" * 64,
+                content_type="image/png",
+            )
+        },
+    )
+    version = sheet.source_assets.get().asset.current_version
+    session_key = f"gang_sheet_upload_batch:{sheet.public_id}"
+
+    assert upload_response.status_code == 302
+    assert client.session[session_key] == {
+        "version_public_ids": [str(version.public_id)],
+        "open_results": True,
+    }
+
+    first_editor_response = client.get(editor_url)
+    first_row = first_editor_response.context["assets"][0]
+    assert first_editor_response.context["reopen_gang_sheet_import_results"] is True
+    assert first_editor_response.context["reopen_gang_sheet_import_dialog"] is True
+    assert first_editor_response.context["gang_sheet_import_batch"] == {
+        "should_open": True,
+        "version_public_ids": [str(version.public_id)],
+    }
+    assert first_row["is_recent_import"] is True
+    assert first_row["analysis_status"] == AssetVersion.AnalysisStatus.PENDING
+
+    second_editor_response = client.get(editor_url)
+    assert second_editor_response.context["reopen_gang_sheet_import_results"] is False
+    assert second_editor_response.context["reopen_gang_sheet_import_dialog"] is False
+    assert second_editor_response.context["recent_import_version_public_ids"] == [
+        str(version.public_id)
+    ]
+
+    version.analysis_status = AssetVersion.AnalysisStatus.READY
+    version.save(update_fields=["analysis_status", "updated_at"])
+    gallery_response = client.get(
+        reverse(
+            "portal:client-gang-sheet-asset-gallery",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+    assert gallery_response.context["assets"][0]["is_recent_import"] is True
+    assert gallery_response.context["assets"][0]["analysis_status"] == "ready"
+    assert session_key not in client.session
+
+
+def test_recent_upload_session_cannot_reference_another_customer_asset(client):
+    owner_a, customer_a, project_a = create_customer_scope(email="batch-a@example.com")
+    _asset_a, version_a = attach_png_asset(
+        customer=customer_a,
+        project=project_a,
+        user=owner_a,
+    )
+    owner_b, customer_b, project_b = create_customer_scope(email="batch-b@example.com")
+    _asset_b, version_b = attach_png_asset(
+        customer=customer_b,
+        project=project_b,
+        user=owner_b,
+    )
+    AssetAnalysis.objects.create(
+        customer=customer_a,
+        version=version_b,
+        warnings=["Diagnostic privé du client A"],
+        metadata={"thin_zone": {"detected": True}},
+    )
+    sheet_b = GangSheetService().create_sheet(project=project_b, actor=owner_b, name="Galerie B")
+    session_key = f"gang_sheet_upload_batch:{sheet_b.public_id}"
+    session = client.session
+    session[session_key] = {
+        "version_public_ids": [str(version_a.public_id)],
+        "open_results": True,
+    }
+    session.save()
+    client.force_login(owner_b)
+
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": customer_b.public_id,
+                "sheet_public_id": sheet_b.public_id,
+            },
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.context["reopen_gang_sheet_import_results"] is False
+    assert response.context["recent_import_version_public_ids"] == []
+    assert all(row["public_id"] != str(version_a.public_id) for row in response.context["assets"])
+    assert response.context["assets"][0]["analysis_warnings"] == []
+    assert response.context["assets"][0]["thin_zone"]["detected"] is False
+    assert session_key not in client.session
+
+
+def test_import_results_gallery_is_no_store_tenant_scoped_and_uses_session_batch(client):
+    owner, customer, project = create_customer_scope(email="results-owner@example.com")
+    _recent_asset, recent_version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=owner,
+        name="recent-only.png",
+    )
+    attach_png_asset(
+        customer=customer,
+        project=project,
+        user=owner,
+        name="older-hidden.png",
+    )
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Résultats privés")
+    recent_version.analysis_status = AssetVersion.AnalysisStatus.PROCESSING
+    recent_version.save(update_fields=["analysis_status", "updated_at"])
+    session_key = f"gang_sheet_upload_batch:{sheet.public_id}"
+    session = client.session
+    session[session_key] = {
+        "version_public_ids": [str(recent_version.public_id)],
+        "open_results": False,
+    }
+    session.save()
+    client.force_login(owner)
+    results_url = reverse(
+        "portal:client-gang-sheet-asset-gallery",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+
+    response = client.get(f"{results_url}?view=import-results")
+
+    assert response.status_code == 200
+    assert response["Cache-Control"] == "private, no-store"
+    assert response.context["has_pending_recent_imports"] is True
+    assert response.context["recent_import_version_public_ids"] == [str(recent_version.public_id)]
+    content = response.content.decode()
+    assert "recent-only.png" in content
+    assert "older-hidden.png" not in content
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="results-outsider@example.com"
+    )
+    client.force_login(outsider)
+    cross_tenant_url = reverse(
+        "portal:client-gang-sheet-asset-gallery",
+        kwargs={
+            "customer_public_id": outsider_customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    assert client.get(f"{cross_tenant_url}?view=import-results").status_code == 404
 
 
 def test_owner_can_remove_an_unused_visual_from_gallery_with_htmx(client):
