@@ -2,34 +2,54 @@
   <div class="b2b-dialog-shell">
     <header class="b2b-dialog-head">
       <div class="b2b-dialog-head__copy">
-        <span class="gang-import-results__eyebrow">Contrôle technique</span>
         <h2 id="gang-asset-detail-title-{{ asset.source_public_id }}">{{ asset.name }}</h2>
-        <p>Analyse complète et cadrage du fichier destiné à l’impression.</p>
+        <p>Contrôle d’impression, visualisation des anomalies et cadrage du fichier.</p>
       </div>
       <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">×</button>
     </header>
-    <div class="b2b-dialog-body gang-asset-detail" data-asset-crop-editor>
+    <div class="b2b-dialog-body gang-asset-detail" data-asset-crop-editor data-can-crop="{{ asset.can_crop|yesno:'true,false' }}">
       <section class="gang-asset-detail__preview" aria-label="Aperçu et cadrage">
         <div class="gang-asset-detail__stage">
           {% if asset.original_preview_url %}
           <img src="{{ asset.original_preview_url }}" alt="Source complète de {{ asset.name }}">
-          <div class="gang-asset-detail__shade" data-asset-crop-box aria-hidden="true"></div>
+          {% if asset.thin_zone.overlay_url %}<img class="gang-asset-detail__overlay" src="{{ asset.thin_zone.overlay_url }}" alt="" aria-hidden="true" data-analysis-overlay="thin">{% endif %}
+          {% if asset.semi_transparency.overlay_url %}<img class="gang-asset-detail__overlay" src="{{ asset.semi_transparency.overlay_url }}" alt="" aria-hidden="true" data-analysis-overlay="fade">{% endif %}
+          <div class="gang-asset-detail__shade" data-asset-crop-box tabindex="0" role="group" aria-label="Zone de recadrage manuel">
+            <span data-existing-crop-handle="nw" aria-hidden="true"></span><span data-existing-crop-handle="ne" aria-hidden="true"></span>
+            <span data-existing-crop-handle="se" aria-hidden="true"></span><span data-existing-crop-handle="sw" aria-hidden="true"></span>
+          </div>
           {% else %}<div class="gang-asset-card__pending"><span></span> Aperçu en préparation</div>{% endif %}
         </div>
         {% if asset.thin_zone.overlay_url or asset.semi_transparency.overlay_url %}
-        <div class="gang-asset-detail__overlays">
-          {% if asset.thin_zone.overlay_url %}<a href="{{ asset.thin_zone.overlay_url }}" target="_blank" rel="noopener">Voir les zones trop fines</a>{% endif %}
-          {% if asset.semi_transparency.overlay_url %}<a href="{{ asset.semi_transparency.overlay_url }}" target="_blank" rel="noopener">Voir les semi-transparences</a>{% endif %}
+        <div class="gang-asset-detail__overlays" role="group" aria-label="Afficher les anomalies sur l’aperçu">
+          {% if asset.thin_zone.overlay_url %}<button type="button" class="gang-analysis-toggle is-active" data-analysis-overlay-toggle="thin" aria-pressed="true">Zones trop fines</button>{% endif %}
+          {% if asset.semi_transparency.overlay_url %}<button type="button" class="gang-analysis-toggle is-active" data-analysis-overlay-toggle="fade" aria-pressed="true">Semi-transparences</button>{% endif %}
         </div>
         {% endif %}
+        <div class="gang-asset-detail__preview-tools">
+          <div class="b2b-preview-zoom" role="group" aria-label="Zoom sur l’aperçu">
+            <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Dézoomer" data-existing-preview-zoom-out disabled>−</button>
+            <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Réinitialiser le zoom" data-existing-preview-zoom-reset><span data-existing-preview-zoom-label>100 %</span></button>
+            <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" aria-label="Zoomer" data-existing-preview-zoom-in>+</button>
+          </div>
+          <div class="b2b-background-tools" aria-label="Fond de l’aperçu">
+            <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-existing-preview-bg="checker" aria-label="Damier" aria-pressed="true"></button>
+            <button type="button" class="b2b-swatch-btn b2b-swatch-btn--white b2b-bg-button is-white" data-existing-preview-bg="#ffffff" aria-label="Blanc" aria-pressed="false"></button>
+            <button type="button" class="b2b-swatch-btn b2b-swatch-btn--black b2b-bg-button is-black" data-existing-preview-bg="#111111" aria-label="Noir" aria-pressed="false"></button>
+          </div>
+        </div>
       </section>
       <section class="gang-asset-detail__analysis" aria-label="Résultat de l’analyse">
-        {% include "portal/client/gang_sheets/partials/asset_analysis_summary.html" with asset=asset %}
+        {% include "portal/client/gang_sheets/partials/asset_analysis_summary.html" with asset=asset hide_overlay_links=True %}
         {% if asset.crop_update_url %}
         <form method="post" action="{{ asset.crop_update_url }}" class="gang-asset-crop-form">
           {% csrf_token %}
           <input type="hidden" name="expected_revision" value="{{ asset.expected_revision }}">
-          <input type="hidden" name="crop_mode" value="manual">
+          <input type="hidden" name="crop_mode" value="manual" data-existing-crop-mode>
+          <div class="gang-crop-mode" role="group" aria-label="Mode de recadrage">
+            <button type="button" class="is-active" data-existing-crop-manual aria-pressed="true" {% if not asset.can_crop %}disabled{% endif %}><strong>Rogner manuellement</strong><span>Ajuster le cadre</span></button>
+            <button type="button" data-existing-crop-auto aria-pressed="false" {% if not asset.can_crop %}disabled{% endif %}><strong>Rogner automatiquement</strong><span>Détecter le contenu</span></button>
+          </div>
           <fieldset {% if not asset.can_crop %}disabled{% endif %}>
             <legend>Rogner le visuel</legend>
             <label>X <input type="range" name="crop_x" min="0" max="0.99" step="0.01" value="{{ asset.crop_x }}" data-crop-value="x"><output>{{ asset.crop_x }}</output></label>
@@ -39,7 +59,7 @@
           </fieldset>
           {% if asset.usage_count %}<p class="ui-field-help">Retirez d’abord les occurrences placées pour modifier le cadrage sans déformer la composition.</p>{% elif not asset.can_crop %}<p class="ui-field-help">Le cadrage n’est plus modifiable dans l’état actuel de la planche.</p>{% endif %}
           <div class="b2b-dialog-actions">
-            <button type="button" class="ui-btn ui-btn-ghost" data-crop-reset-existing {% if not asset.can_crop %}disabled{% endif %}>Tout conserver</button>
+            <button type="button" class="ui-btn ui-btn-secondary" data-crop-reset-existing {% if not asset.can_crop %}disabled{% endif %}>Conserver le visuel complet</button>
             <button type="submit" class="ui-btn ui-btn-primary" {% if not asset.can_crop %}disabled{% endif %}>Enregistrer le cadrage</button>
           </div>
         </form>

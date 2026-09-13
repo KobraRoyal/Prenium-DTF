@@ -12,7 +12,9 @@ from apps.gang_sheets.services import (
     GangSheetRenderService,
     GangSheetService,
 )
+from apps.gang_sheets.services.cropping import AutoCropResult, CropBox
 from apps.orders.models import Order
+from apps.portal import views_gang_sheets as gang_sheet_views
 from apps.uploads.models import Asset, AssetAnalysis, AssetVersion
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -1379,6 +1381,94 @@ def test_owner_can_update_existing_crop_and_gallery_exposes_scoped_modal_data(cl
     ).exists()
 
 
+def test_existing_crop_endpoint_auto_mode_uses_server_file_and_returns_detected_crop(
+    client, monkeypatch
+):
+    owner, customer, project = create_customer_scope(email="crop-endpoint-auto@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    expected_content = version.file.read()
+    version.file.close()
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Crop auto")
+    source_asset = sheet.source_assets.get(asset=asset)
+    detected_crop = CropBox.from_values(x="0.20", y="0.15", width="0.60", height="0.70")
+
+    def detect_server_file(uploaded_file):
+        assert uploaded_file.read() == expected_content
+        return AutoCropResult(
+            crop=detected_crop,
+            content_kind="raster",
+            basis="visible_pixels",
+        )
+
+    monkeypatch.setattr(gang_sheet_views.gang_sheet_service.auto_crop, "detect", detect_server_file)
+    client.force_login(owner)
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "source_asset_public_id": source_asset.public_id,
+            },
+        ),
+        {
+            "crop_mode": "auto",
+            "crop_x": "0.95",
+            "crop_y": "0.95",
+            "crop_width": "0.95",
+            "crop_height": "0.95",
+            "expected_revision": sheet.revision,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["crop"] == detected_crop.to_metadata()
+    source_asset.refresh_from_db()
+    assert CropBox.from_source_asset(source_asset) == detected_crop
+
+
+def test_existing_crop_endpoint_returns_safe_error_when_private_file_cannot_be_read(
+    client, monkeypatch
+):
+    owner, customer, project = create_customer_scope(email="crop-endpoint-file-error@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(
+        project=project,
+        actor=owner,
+        name="Crop fichier absent",
+    )
+    source_asset = sheet.source_assets.get(asset=asset)
+
+    def fail_open(*args, **kwargs):
+        raise OSError("/private/customer-secret/source.png")
+
+    monkeypatch.setattr(version.file.storage, "open", fail_open)
+    client.force_login(owner)
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "source_asset_public_id": source_asset.public_id,
+            },
+        ),
+        {"crop_mode": "auto", "expected_revision": sheet.revision},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == {
+        "code": "AUTO_CROP_FAILED",
+        "message": "Le fichier original de ce visuel ne peut pas être lu.",
+    }
+    assert "/private/" not in response.content.decode()
+    sheet.refresh_from_db()
+    source_asset.refresh_from_db()
+    assert sheet.revision == 1
+    assert source_asset.has_crop is False
+    assert not AuditLogEntry.objects.filter(action="gang_sheet.source_crop_updated").exists()
+
+
 def test_existing_crop_endpoint_rejects_invalid_stale_readonly_and_cross_tenant_requests(client):
     owner_a, customer_a, project_a = create_customer_scope(email="crop-endpoint-a@example.com")
     asset_a, version_a = attach_png_asset(
@@ -1416,6 +1506,10 @@ def test_existing_crop_endpoint_rejects_invalid_stale_readonly_and_cross_tenant_
         crop_a_url,
         {**valid_crop, "expected_revision": sheet_a.revision + 1},
     )
+    invalid_mode_response = client.post(
+        crop_a_url,
+        {**valid_crop, "crop_mode": "full"},
+    )
 
     assert invalid_response.status_code == 400
     assert invalid_response.json()["error"]["code"] == "INVALID_CROP"
@@ -1427,6 +1521,8 @@ def test_existing_crop_endpoint_rejects_invalid_stale_readonly_and_cross_tenant_
         "message": "Ce brouillon a été modifié ailleurs. Rechargez la page avant de continuer.",
         "revision": sheet_a.revision,
     }
+    assert invalid_mode_response.status_code == 400
+    assert invalid_mode_response.json()["error"]["code"] == "INVALID_CROP_MODE"
 
     GangSheetService().add_occurrence(
         sheet=sheet_a,
@@ -1510,7 +1606,7 @@ def test_existing_crop_endpoint_rejects_invalid_stale_readonly_and_cross_tenant_
                 "source_asset_public_id": source_a.public_id,
             },
         ),
-        {**valid_crop, "expected_revision": outsider_sheet.revision},
+        {**valid_crop, "crop_mode": "auto", "expected_revision": outsider_sheet.revision},
     )
 
     assert readonly_response.status_code == 403

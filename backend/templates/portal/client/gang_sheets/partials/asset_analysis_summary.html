@@ -32,7 +32,7 @@
       <p class="gang-analysis-summary__message gang-analysis-summary__message--ok">Aucune anomalie source détectée. Le DPI final sera contrôlé selon la taille placée.</p>
     {% endif %}
 
-    {% if asset.thin_zone.overlay_available or asset.semi_transparency.overlay_available %}
+    {% if not hide_overlay_links and asset.thin_zone.overlay_available or not hide_overlay_links and asset.semi_transparency.overlay_available %}
       <div class="gang-analysis-summary__overlays" aria-label="Aperçus des anomalies">
         {% if asset.thin_zone.overlay_available %}<a class="ui-btn ui-btn-ghost ui-btn-sm" href="{{ asset.thin_zone.overlay_url }}" target="_blank" rel="noopener">Voir les détails fins</a>{% endif %}
         {% if asset.semi_transparency.overlay_available %}<a class="ui-btn ui-btn-ghost ui-btn-sm" href="{{ asset.semi_transparency.overlay_url }}" target="_blank" rel="noopener">Voir la transparence</a>{% endif %}

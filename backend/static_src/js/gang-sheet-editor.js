@@ -3609,13 +3609,119 @@ if (root) {
     renderExistingCrop(input.closest("[data-asset-crop-editor]"), input.dataset.cropValue);
   });
   root.addEventListener("click", (event) => {
+    const zoomControl = event.target.closest?.("[data-existing-preview-zoom-in], [data-existing-preview-zoom-out], [data-existing-preview-zoom-reset]");
+    if (zoomControl instanceof HTMLButtonElement) {
+      const editor = zoomControl.closest("[data-asset-crop-editor]");
+      const stage = editor?.querySelector(".gang-asset-detail__stage");
+      if (!(stage instanceof HTMLElement)) return;
+      let zoom = Number.parseFloat(stage.dataset.previewZoom || "1");
+      if (zoomControl.matches("[data-existing-preview-zoom-in]")) zoom = Math.min(3, zoom + 0.25);
+      else if (zoomControl.matches("[data-existing-preview-zoom-out]")) zoom = Math.max(1, zoom - 0.25);
+      else zoom = 1;
+      stage.dataset.previewZoom = String(zoom);
+      stage.style.setProperty("--gang-detail-zoom", String(zoom));
+      const label = editor.querySelector("[data-existing-preview-zoom-label]");
+      if (label) label.textContent = `${Math.round(zoom * 100)} %`;
+      const out = editor.querySelector("[data-existing-preview-zoom-out]");
+      if (out instanceof HTMLButtonElement) out.disabled = zoom <= 1;
+      const inside = editor.querySelector("[data-existing-preview-zoom-in]");
+      if (inside instanceof HTMLButtonElement) inside.disabled = zoom >= 3;
+      return;
+    }
+    const background = event.target.closest?.("[data-existing-preview-bg]");
+    if (background instanceof HTMLButtonElement) {
+      const editor = background.closest("[data-asset-crop-editor]");
+      const stage = editor?.querySelector(".gang-asset-detail__stage");
+      if (!(stage instanceof HTMLElement)) return;
+      editor.querySelectorAll("[data-existing-preview-bg]").forEach((button) => {
+        const active = button === background;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      stage.classList.toggle("is-checker", background.dataset.existingPreviewBg === "checker");
+      stage.style.backgroundColor = background.dataset.existingPreviewBg === "checker" ? "" : background.dataset.existingPreviewBg;
+      return;
+    }
+    const overlayToggle = event.target.closest?.("[data-analysis-overlay-toggle]");
+    if (overlayToggle instanceof HTMLButtonElement) {
+      const editor = overlayToggle.closest("[data-asset-crop-editor]");
+      const overlay = editor?.querySelector(`[data-analysis-overlay='${overlayToggle.dataset.analysisOverlayToggle}']`);
+      const pressed = overlayToggle.getAttribute("aria-pressed") !== "true";
+      overlayToggle.setAttribute("aria-pressed", String(pressed));
+      overlayToggle.classList.toggle("is-active", pressed);
+      if (overlay instanceof HTMLElement) overlay.hidden = !pressed;
+      return;
+    }
+    const manual = event.target.closest?.("[data-existing-crop-manual]");
+    if (manual instanceof HTMLButtonElement) {
+      const editor = manual.closest("[data-asset-crop-editor]");
+      const mode = editor?.querySelector("[data-existing-crop-mode]");
+      if (mode instanceof HTMLInputElement) mode.value = "manual";
+      manual.classList.add("is-active");
+      manual.setAttribute("aria-pressed", "true");
+      const auto = editor?.querySelector("[data-existing-crop-auto]");
+      auto?.classList.remove("is-active");
+      auto?.setAttribute("aria-pressed", "false");
+      return;
+    }
+    const auto = event.target.closest?.("[data-existing-crop-auto]");
+    if (auto instanceof HTMLButtonElement) {
+      const editor = auto.closest("[data-asset-crop-editor]");
+      const mode = editor?.querySelector("[data-existing-crop-mode]");
+      if (mode instanceof HTMLInputElement) mode.value = "auto";
+      auto.classList.add("is-active");
+      auto.setAttribute("aria-pressed", "true");
+      const manualButton = editor?.querySelector("[data-existing-crop-manual]");
+      manualButton?.classList.remove("is-active");
+      manualButton?.setAttribute("aria-pressed", "false");
+      auto.closest("form")?.requestSubmit();
+      return;
+    }
     const reset = event.target.closest?.("[data-crop-reset-existing]");
     if (!(reset instanceof HTMLButtonElement)) return;
     const editor = reset.closest("[data-asset-crop-editor]");
     editor?.querySelectorAll("[data-crop-value]").forEach((input) => {
       if (input instanceof HTMLInputElement) input.value = ["width", "height"].includes(input.dataset.cropValue) ? "1" : "0";
     });
+    const mode = editor?.querySelector("[data-existing-crop-mode]");
+    if (mode instanceof HTMLInputElement) mode.value = "manual";
     renderExistingCrop(editor);
+  });
+  root.addEventListener("pointerdown", (event) => {
+    const box = event.target.closest?.("[data-asset-crop-box]");
+    if (!(box instanceof HTMLElement) || event.button !== 0) return;
+    const editor = box.closest("[data-asset-crop-editor]");
+    if (!editor || editor.dataset.canCrop !== "true") return;
+    event.preventDefault();
+    const stage = box.closest(".gang-asset-detail__stage");
+    if (!(stage instanceof HTMLElement)) return;
+    const rect = stage.getBoundingClientRect();
+    const inputs = Object.fromEntries(Array.from(editor.querySelectorAll("[data-crop-value]")).map((input) => [input.dataset.cropValue, input]));
+    const start = Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, Number.parseFloat(input.value)]));
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const handle = event.target.closest?.("[data-existing-crop-handle]")?.dataset.existingCropHandle || "move";
+    const move = (moveEvent) => {
+      const dx = (moveEvent.clientX - startX) / Math.max(rect.width, 1);
+      const dy = (moveEvent.clientY - startY) / Math.max(rect.height, 1);
+      const next = { ...start };
+      if (handle === "move") {
+        next.x = Math.max(0, Math.min(1 - start.width, start.x + dx));
+        next.y = Math.max(0, Math.min(1 - start.height, start.y + dy));
+      } else {
+        if (handle.includes("w")) { const right = start.x + start.width; next.x = Math.max(0, Math.min(right - 0.01, start.x + dx)); next.width = right - next.x; }
+        if (handle.includes("e")) next.width = Math.max(0.01, Math.min(1 - start.x, start.width + dx));
+        if (handle.includes("n")) { const bottom = start.y + start.height; next.y = Math.max(0, Math.min(bottom - 0.01, start.y + dy)); next.height = bottom - next.y; }
+        if (handle.includes("s")) next.height = Math.max(0.01, Math.min(1 - start.y, start.height + dy));
+      }
+      Object.entries(next).forEach(([key, value]) => { inputs[key].value = String(value); });
+      const mode = editor.querySelector("[data-existing-crop-mode]");
+      if (mode instanceof HTMLInputElement) mode.value = "manual";
+      renderExistingCrop(editor);
+    };
+    const end = () => window.removeEventListener("pointermove", move);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end, { once: true });
   });
   root.addEventListener("submit", async (event) => {
     const form = event.target;

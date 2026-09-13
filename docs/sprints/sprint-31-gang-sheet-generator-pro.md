@@ -156,6 +156,8 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   avant le POST du formulaire.
 - [x] Import direct depuis « Ajouter des visuels », analyse asynchrone dans la galerie compacte,
   détail technique par fichier et recadrage post-import interdit après placement.
+- [x] Zone de dépôt toujours visible et modale fichier alignée sur la commande : overlays, zoom,
+  fonds de contrôle, recadrage manuel/automatique et conservation de l’original.
 - [x] Aligner / répartir : un groupe mémorisé se comporte comme un seul objet (écarts internes
   conservés, visuels isolés inchangés).
 - [x] Inspecteur Réglages : un langage de champs / titres / actions ; bouton « Placer sur la planche » pleine largeur.

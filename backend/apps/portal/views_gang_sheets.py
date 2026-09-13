@@ -21,7 +21,9 @@ from apps.gang_sheets.forms import GangSheetSiteSettingsForm
 from apps.gang_sheets.models import GangSheet, GangSheetSiteSettings
 from apps.gang_sheets.services import GangSheetDomainError, GangSheetService
 from apps.gang_sheets.services.cropping import (
+    CROP_MODE_AUTO,
     CROP_MODE_MANUAL,
+    VALID_CROP_MODES,
     CropBox,
     CropInstruction,
     CropValidationError,
@@ -571,24 +573,37 @@ class ClientGangSheetSourceAssetCropView(ClientGangSheetMixin, View):
     ):
         self.require_write_access()
         sheet = self.get_sheet_or_404(sheet_public_id)
-        try:
-            crop = CropBox.from_values(
-                x=request.POST.get("crop_x"),
-                y=request.POST.get("crop_y"),
-                width=request.POST.get("crop_width"),
-                height=request.POST.get("crop_height"),
-            )
-        except CropValidationError as error:
+        crop_mode = request.POST.get("crop_mode", CROP_MODE_MANUAL)
+        if crop_mode not in VALID_CROP_MODES:
             response = _json_error(
-                GangSheetDomainError("INVALID_CROP", str(error)),
+                GangSheetDomainError(
+                    "INVALID_CROP_MODE",
+                    "Le mode de recadrage est invalide.",
+                ),
             )
             response["Cache-Control"] = "private, no-store"
             return response
+        crop = None
+        if crop_mode != CROP_MODE_AUTO:
+            try:
+                crop = CropBox.from_values(
+                    x=request.POST.get("crop_x"),
+                    y=request.POST.get("crop_y"),
+                    width=request.POST.get("crop_width"),
+                    height=request.POST.get("crop_height"),
+                )
+            except CropValidationError as error:
+                response = _json_error(
+                    GangSheetDomainError("INVALID_CROP", str(error)),
+                )
+                response["Cache-Control"] = "private, no-store"
+                return response
         try:
             updated_sheet, source_asset = gang_sheet_service.update_source_asset_crop(
                 sheet=sheet,
                 source_asset_public_id=source_asset_public_id,
                 crop=crop,
+                crop_mode=crop_mode,
                 expected_revision=request.POST.get("expected_revision"),
                 actor=request.user,
                 source="client_portal",
@@ -605,7 +620,7 @@ class ClientGangSheetSourceAssetCropView(ClientGangSheetMixin, View):
             {
                 "ok": True,
                 "revision": updated_sheet.revision,
-                "crop": crop.to_metadata(),
+                "crop": CropBox.from_source_asset(source_asset).to_metadata(),
                 "width_mm": (
                     str(source_asset.effective_width_mm)
                     if source_asset.effective_width_mm is not None

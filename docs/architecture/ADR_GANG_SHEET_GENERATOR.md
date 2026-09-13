@@ -114,7 +114,9 @@ textes, polices et images embarquées ne sont donc pas aplatis. Les sources EPS/
 d’abord converties en PDF vectoriel selon la voie existante, puis clippées. Pour une source raster,
 seuls les pixels compris dans la fenêtre sont conservés, sans mise à l’échelle ni rééchantillonnage.
 
-La modale détail permet un cadrage manuel sur la source complète médiée par le backend. Le cadrage
+La modale détail reprend les contrôles de la commande par fichier : source complète médiée,
+overlays d’anomalies activables, zoom, fonds de contrôle, cadrage manuel manipulable, cadrage
+automatique recalculé depuis l’original côté serveur et conservation du visuel complet. Le cadrage
 est bloqué dès que le visuel possède une occurrence sur la planche afin de ne pas modifier son ratio
 sans recalculer les dimensions et collisions de la composition. À l’import, le mode Auto peut utiliser la transparence ou le
 fond dominant pour borner les pixels raster. Pour un PDF vectoriel, il unit les limites natives des

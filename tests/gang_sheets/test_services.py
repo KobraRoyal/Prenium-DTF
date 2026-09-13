@@ -19,7 +19,7 @@ from apps.gang_sheets.services import (
     GangSheetRenderService,
     GangSheetService,
 )
-from apps.gang_sheets.services.cropping import CropBox
+from apps.gang_sheets.services.cropping import AutoCropResult, CropBox
 from apps.orders.models import Order
 from apps.uploads.models import Asset, AssetAnalysis, AssetVersion, OrderUpload
 from apps.uploads.services.asset_analysis import AssetAnalysisService
@@ -116,6 +116,48 @@ def test_existing_source_crop_is_updated_audited_and_versions_the_sheet():
         "height": "1.000000",
     }
     assert event.metadata["revision"] == initial_revision + 1
+
+
+def test_existing_source_auto_crop_reads_current_private_file_and_ignores_client_crop():
+    user, customer, project = create_customer_scope(email="crop-existing-auto@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    expected_content = version.file.read()
+    version.file.close()
+    detected_crop = CropBox.from_values(x="0.15", y="0.10", width="0.70", height="0.80")
+
+    class RecordingAutoCrop:
+        def detect(self, uploaded_file):
+            assert uploaded_file.read() == expected_content
+            return AutoCropResult(
+                crop=detected_crop,
+                content_kind="raster",
+                basis="visible_pixels",
+            )
+
+    service = GangSheetService(auto_crop=RecordingAutoCrop())
+    sheet = service.create_sheet(project=project, actor=user, name="Crop auto existant")
+    source_asset = sheet.source_assets.get(asset=asset)
+
+    updated_sheet, updated_source = service.update_source_asset_crop(
+        sheet=sheet,
+        source_asset_public_id=source_asset.public_id,
+        crop=CropBox.full(),
+        crop_mode="auto",
+        expected_revision=sheet.revision,
+        actor=user,
+        source="test",
+    )
+
+    updated_source.refresh_from_db()
+    assert CropBox.from_source_asset(updated_source) == detected_crop
+    assert updated_sheet.revision == sheet.revision + 1
+    event = AuditLogEntry.objects.get(action="gang_sheet.source_crop_updated")
+    assert event.metadata["crop_mode"] == "auto"
+    assert event.metadata["auto_crop"] == {
+        "content_kind": "raster",
+        "basis": "visible_pixels",
+        "crop": detected_crop.to_metadata(),
+    }
 
 
 def test_existing_source_crop_rejects_invalid_crop_stale_revision_and_locked_sheet():

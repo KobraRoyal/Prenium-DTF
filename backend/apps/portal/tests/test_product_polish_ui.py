@@ -525,12 +525,17 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertNotIn('id="gang-asset-dialog"', editor)
         self.assertIn("data-gang-inline-import", editor)
         self.assertIn("data-batch-auto-submit", editor)
+        self.assertNotIn("<details class=\"gang-inline-import\"", editor)
         self.assertIn("data-batch-dropzone", editor)
         self.assertIn("data-selected-files-list", editor)
         self.assertIn("data-batch-upload-progress", editor)
         self.assertIn("gang_sheet_import_error", editor)
         self.assertIn("data-dialog-open=\"gang-asset-detail-", gallery)
         self.assertIn("data-asset-crop-editor", detail)
+        self.assertIn("data-existing-crop-manual", detail)
+        self.assertIn("data-existing-crop-auto", detail)
+        self.assertIn("data-analysis-overlay-toggle", detail)
+        self.assertIn("data-existing-preview-zoom-in", detail)
         self.assertIn("asset_analysis_summary.html", detail)
 
     def test_marketing_entry_neutralizes_agency_defaults_on_conversion_pages(self) -> None:

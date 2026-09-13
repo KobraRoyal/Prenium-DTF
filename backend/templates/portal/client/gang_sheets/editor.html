@@ -172,14 +172,11 @@
         <span class="gang-editor__panel-label-icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="files" size="16" %}</span>
         <div><strong>Fichiers</strong></div>
       </div>
-      <div class="gang-editor__panel-head">
-        <h2>Fichiers</h2>
-      </div>
-      <details class="gang-inline-import" data-gang-inline-import {% if gang_sheet_import_error %}open{% endif %}>
-        <summary class="ui-btn ui-btn-primary ui-btn-sm">
-          {% include "portal/client/gang_sheets/partials/icon.html" with name="plus" size="16" %}
-          Ajouter des visuels
-        </summary>
+      <section class="gang-inline-import" data-gang-inline-import aria-labelledby="gang-inline-import-title">
+        <div class="gang-inline-import__heading">
+          <strong id="gang-inline-import-title">Ajouter des visuels</strong>
+          <span>Déposez vos fichiers : leur analyse démarre automatiquement.</span>
+        </div>
         <form
           method="post"
           enctype="multipart/form-data"
@@ -210,7 +207,7 @@
           </div>
           <p class="gang-inline-import__progress" data-batch-upload-progress role="status" aria-live="polite" hidden><i aria-hidden="true"></i> Envoi sécurisé et analyse en cours…</p>
         </form>
-      </details>
+      </section>
       {% if gang_sheet_import_batch.version_public_ids %}
       <section class="gang-recent-import" aria-labelledby="gang-recent-import-title">
         <strong id="gang-recent-import-title">Dernier import</strong>

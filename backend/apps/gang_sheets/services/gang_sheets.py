@@ -360,9 +360,10 @@ class GangSheetService:
         *,
         sheet,
         source_asset_public_id,
-        crop: CropBox,
+        crop: CropBox | None,
         expected_revision,
         actor,
+        crop_mode: str = CROP_MODE_MANUAL,
         source="client_portal",
     ):
         """Met à jour le recadrage d'une source existante avec verrou optimiste."""
@@ -401,6 +402,44 @@ class GangSheetService:
                 ),
                 {"usage_count": usage_count},
             )
+        if crop_mode not in VALID_CROP_MODES:
+            raise GangSheetDomainError(
+                "INVALID_CROP_MODE",
+                "Le mode de recadrage est invalide.",
+            )
+
+        auto_crop_metadata = None
+        if crop_mode == CROP_MODE_AUTO:
+            version = (
+                AssetVersion.objects.for_customer(locked.customer)
+                .filter(
+                    pk=source_asset.asset.current_version_id,
+                    asset=source_asset.asset,
+                )
+                .first()
+            )
+            if version is None or not version.file.name:
+                raise GangSheetDomainError(
+                    "AUTO_CROP_FAILED",
+                    "Le fichier original de ce visuel n’est pas disponible.",
+                )
+            try:
+                with version.file.open("rb") as original_file:
+                    auto_crop_result = self.auto_crop.detect(original_file)
+            except AutoCropError as error:
+                raise GangSheetDomainError("AUTO_CROP_FAILED", str(error)) from error
+            except (OSError, ValueError) as error:
+                raise GangSheetDomainError(
+                    "AUTO_CROP_FAILED",
+                    "Le fichier original de ce visuel ne peut pas être lu.",
+                ) from error
+            crop = auto_crop_result.crop
+            auto_crop_metadata = auto_crop_result.to_metadata()
+        elif crop is None:
+            raise GangSheetDomainError(
+                "INVALID_CROP",
+                "Les données de recadrage sont invalides.",
+            )
         try:
             crop.validate()
         except CropValidationError as error:
@@ -433,7 +472,9 @@ class GangSheetService:
                 "source_asset_public_id": str(source_asset.public_id),
                 "asset_public_id": str(source_asset.asset.public_id),
                 "previous_crop": previous_crop.to_metadata(),
+                "crop_mode": crop_mode,
                 "crop": crop.to_metadata(),
+                "auto_crop": auto_crop_metadata,
                 "revision": locked.revision,
             },
         )
