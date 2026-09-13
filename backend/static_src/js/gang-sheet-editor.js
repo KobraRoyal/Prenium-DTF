@@ -3702,8 +3702,9 @@ if (root) {
     const startY = event.clientY;
     const handle = event.target.closest?.("[data-existing-crop-handle]")?.dataset.existingCropHandle || "move";
     const move = (moveEvent) => {
-      const dx = (moveEvent.clientX - startX) / Math.max(rect.width, 1);
-      const dy = (moveEvent.clientY - startY) / Math.max(rect.height, 1);
+      const zoom = Math.max(Number.parseFloat(stage.dataset.previewZoom || "1"), 1);
+      const dx = (moveEvent.clientX - startX) / Math.max(rect.width * zoom, 1);
+      const dy = (moveEvent.clientY - startY) / Math.max(rect.height * zoom, 1);
       const next = { ...start };
       if (handle === "move") {
         next.x = Math.max(0, Math.min(1 - start.width, start.x + dx));
@@ -3722,6 +3723,26 @@ if (root) {
     const end = () => window.removeEventListener("pointermove", move);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", end, { once: true });
+  });
+  root.addEventListener("keydown", (event) => {
+    const box = event.target.closest?.("[data-asset-crop-box]");
+    if (!(box instanceof HTMLElement) || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    const editor = box.closest("[data-asset-crop-editor]");
+    if (!editor || editor.dataset.canCrop !== "true") return;
+    event.preventDefault();
+    const inputs = Object.fromEntries(Array.from(editor.querySelectorAll("[data-crop-value]")).map((input) => [input.dataset.cropValue, input]));
+    const step = event.shiftKey ? 0.05 : 0.01;
+    const x = Number.parseFloat(inputs.x.value);
+    const y = Number.parseFloat(inputs.y.value);
+    const width = Number.parseFloat(inputs.width.value);
+    const height = Number.parseFloat(inputs.height.value);
+    if (event.key === "ArrowLeft") inputs.x.value = String(Math.max(0, x - step));
+    if (event.key === "ArrowRight") inputs.x.value = String(Math.min(1 - width, x + step));
+    if (event.key === "ArrowUp") inputs.y.value = String(Math.max(0, y - step));
+    if (event.key === "ArrowDown") inputs.y.value = String(Math.min(1 - height, y + step));
+    const mode = editor.querySelector("[data-existing-crop-mode]");
+    if (mode instanceof HTMLInputElement) mode.value = "manual";
+    renderExistingCrop(editor);
   });
   root.addEventListener("submit", async (event) => {
     const form = event.target;
