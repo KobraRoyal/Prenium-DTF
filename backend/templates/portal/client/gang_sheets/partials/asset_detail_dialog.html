@@ -1,22 +1,21 @@
-<dialog class="b2b-configurator-dialog gang-asset-detail-dialog" id="gang-asset-detail-{{ asset.source_public_id }}" aria-labelledby="gang-asset-detail-title-{{ asset.source_public_id }}">
+<dialog class="b2b-configurator-dialog gang-asset-dialog gang-asset-detail-dialog" id="gang-asset-detail-{{ asset.source_public_id }}" aria-labelledby="gang-asset-detail-title-{{ asset.source_public_id }}">
   <div class="b2b-dialog-shell">
     <header class="b2b-dialog-head">
-      <div class="b2b-dialog-head__copy">
-        <h2 id="gang-asset-detail-title-{{ asset.source_public_id }}">{{ asset.name }}</h2>
-        <p>Contrôle d’impression, visualisation des anomalies et cadrage du fichier.</p>
-      </div>
-      <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">×</button>
+      <div><h2 id="gang-asset-detail-title-{{ asset.source_public_id }}">{{ asset.name }}</h2></div>
+      <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre"><svg class="b2b-dialog-close__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6.75 6.75 17.25 17.25M17.25 6.75 6.75 17.25"/></svg></button>
     </header>
-    <div class="b2b-dialog-body gang-asset-detail" data-asset-crop-editor data-can-crop="{{ asset.can_crop|yesno:'true,false' }}">
-      <section class="gang-asset-detail__preview" aria-label="Aperçu et cadrage">
-        <div class="gang-asset-detail__stage">
+    <div class="b2b-dialog-body b2b-dialog-editor gang-asset-detail" data-asset-crop-editor data-can-crop="{{ asset.can_crop|yesno:'true,false' }}">
+      <section class="gang-asset-detail__preview b2b-configurator__preview" aria-label="Aperçu et cadrage">
+        <div class="b2b-preview-stage gang-asset-detail__stage is-checker">
           {% if asset.original_preview_url %}
-          <img src="{{ asset.original_preview_url }}" alt="Source complète de {{ asset.name }}">
-          {% if asset.thin_zone.overlay_url %}<img class="gang-asset-detail__overlay" src="{{ asset.thin_zone.overlay_url }}" alt="" aria-hidden="true" data-analysis-overlay="thin">{% endif %}
-          {% if asset.semi_transparency.overlay_url %}<img class="gang-asset-detail__overlay" src="{{ asset.semi_transparency.overlay_url }}" alt="" aria-hidden="true" data-analysis-overlay="fade">{% endif %}
-          <div class="gang-asset-detail__shade" data-asset-crop-box tabindex="0" role="group" aria-label="Zone de recadrage manuel">
-            <span data-existing-crop-handle="nw" aria-hidden="true"></span><span data-existing-crop-handle="ne" aria-hidden="true"></span>
-            <span data-existing-crop-handle="se" aria-hidden="true"></span><span data-existing-crop-handle="sw" aria-hidden="true"></span>
+          <div class="gang-asset-detail__bounds" data-asset-crop-bounds>
+            <img src="{{ asset.original_preview_url }}" alt="Aperçu de {{ asset.name }}">
+            {% if asset.thin_zone.overlay_url %}<img class="gang-asset-detail__overlay" src="{{ asset.thin_zone.overlay_url }}" alt="" aria-hidden="true" data-analysis-overlay="thin">{% endif %}
+            {% if asset.semi_transparency.overlay_url %}<img class="gang-asset-detail__overlay" src="{{ asset.semi_transparency.overlay_url }}" alt="" aria-hidden="true" data-analysis-overlay="fade">{% endif %}
+            <div class="gang-asset-detail__shade" data-asset-crop-box tabindex="0" role="group" aria-label="Zone de recadrage manuel">
+              <span data-existing-crop-handle="nw" aria-hidden="true"></span><span data-existing-crop-handle="ne" aria-hidden="true"></span>
+              <span data-existing-crop-handle="se" aria-hidden="true"></span><span data-existing-crop-handle="sw" aria-hidden="true"></span>
+            </div>
           </div>
           {% else %}<div class="gang-asset-card__pending"><span></span> Aperçu en préparation</div>{% endif %}
         </div>
@@ -39,7 +38,12 @@
           </div>
         </div>
       </section>
-      <section class="gang-asset-detail__analysis" aria-label="Résultat de l’analyse">
+      <section class="gang-asset-detail__analysis b2b-visual-card__details" aria-label="Résultat de l’analyse">
+        <div class="gang-quality-chips" aria-label="Contrôles qualité">
+          {% if asset.dpi_label %}<span>{{ asset.dpi_label }}</span>{% endif %}
+          {% if asset.thin_zone.detected %}<span class="is-warning">Zones &lt; 0,5 mm</span>{% endif %}
+          <span>{% if asset.semi_transparency.detected %}Dégradés détectés{% else %}Pas de dégradé{% endif %}</span>
+        </div>
         {% include "portal/client/gang_sheets/partials/asset_analysis_summary.html" with asset=asset hide_overlay_links=True %}
         {% if asset.crop_update_url %}
         <form method="post" action="{{ asset.crop_update_url }}" class="gang-asset-crop-form">
@@ -55,7 +59,7 @@
           <input type="hidden" name="crop_width" value="{{ asset.crop_width }}" data-crop-value="width">
           <input type="hidden" name="crop_height" value="{{ asset.crop_height }}" data-crop-value="height">
           {% if asset.usage_count %}<p class="ui-field-help">Retirez d’abord les occurrences placées pour modifier le cadrage sans déformer la composition.</p>{% elif not asset.can_crop %}<p class="ui-field-help">Le cadrage n’est plus modifiable dans l’état actuel de la planche.</p>{% endif %}
-          <div class="b2b-dialog-actions">
+          <div class="b2b-dialog-actions b2b-dialog-actions--editor">
             <button type="button" class="ui-btn ui-btn-secondary" data-crop-reset-existing {% if not asset.can_crop %}disabled{% endif %}>Conserver le visuel complet</button>
             <button type="submit" class="ui-btn ui-btn-primary" {% if not asset.can_crop %}disabled{% endif %}>Enregistrer le cadrage</button>
           </div>

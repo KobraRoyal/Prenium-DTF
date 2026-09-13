@@ -3688,25 +3688,33 @@ if (root) {
     renderExistingCrop(editor);
   });
   root.addEventListener("pointerdown", (event) => {
-    const box = event.target.closest?.("[data-asset-crop-box]");
-    if (!(box instanceof HTMLElement) || event.button !== 0) return;
+    const bounds = event.target.closest?.("[data-asset-crop-bounds]");
+    const box = bounds?.querySelector("[data-asset-crop-box]");
+    if (!(bounds instanceof HTMLElement) || !(box instanceof HTMLElement) || event.button !== 0) return;
     const editor = box.closest("[data-asset-crop-editor]");
     if (!editor || editor.dataset.canCrop !== "true") return;
     event.preventDefault();
-    const stage = box.closest(".gang-asset-detail__stage");
-    if (!(stage instanceof HTMLElement)) return;
-    const rect = stage.getBoundingClientRect();
+    const rect = bounds.getBoundingClientRect();
     const inputs = Object.fromEntries(Array.from(editor.querySelectorAll("[data-crop-value]")).map((input) => [input.dataset.cropValue, input]));
     const start = Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, Number.parseFloat(input.value)]));
     const startX = event.clientX;
     const startY = event.clientY;
-    const handle = event.target.closest?.("[data-existing-crop-handle]")?.dataset.existingCropHandle || "move";
+    const clickedCrop = event.target.closest?.("[data-asset-crop-box]");
+    const handle = event.target.closest?.("[data-existing-crop-handle]")?.dataset.existingCropHandle || (clickedCrop ? "move" : "draw");
+    const originX = Math.max(0, Math.min(1, (startX - rect.left) / Math.max(rect.width, 1)));
+    const originY = Math.max(0, Math.min(1, (startY - rect.top) / Math.max(rect.height, 1)));
     const move = (moveEvent) => {
-      const zoom = Math.max(Number.parseFloat(stage.dataset.previewZoom || "1"), 1);
-      const dx = (moveEvent.clientX - startX) / Math.max(rect.width * zoom, 1);
-      const dy = (moveEvent.clientY - startY) / Math.max(rect.height * zoom, 1);
+      const dx = (moveEvent.clientX - startX) / Math.max(rect.width, 1);
+      const dy = (moveEvent.clientY - startY) / Math.max(rect.height, 1);
       const next = { ...start };
-      if (handle === "move") {
+      if (handle === "draw") {
+        const pointerX = Math.max(0, Math.min(1, originX + dx));
+        const pointerY = Math.max(0, Math.min(1, originY + dy));
+        next.x = Math.min(originX, pointerX);
+        next.y = Math.min(originY, pointerY);
+        next.width = Math.max(0.01, Math.abs(pointerX - originX));
+        next.height = Math.max(0.01, Math.abs(pointerY - originY));
+      } else if (handle === "move") {
         next.x = Math.max(0, Math.min(1 - start.width, start.x + dx));
         next.y = Math.max(0, Math.min(1 - start.height, start.y + dy));
       } else {

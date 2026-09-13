@@ -1284,7 +1284,8 @@ body.product-shell--studio .b2b-quality-strip.is-pending {
 }
 
 body.product-shell--studio .b2b-configurator-dialog.gang-asset-dialog {
-  width: min(64rem, calc(100vw - 1.5rem));
+  width: min(76rem, calc(100vw - 2rem));
+  max-width: none;
 }
 
 body.product-shell--studio .gang-asset-dialog .b2b-dialog-head__copy p {
@@ -1401,13 +1402,13 @@ body.product-shell--studio .gang-asset-card { grid-template-columns: 3.75rem min
 body.product-shell--studio .gang-asset-card__preview { min-height: 5.75rem; }
 body.product-shell--studio .gang-asset-card__body { gap: 0.22rem; padding: 0.42rem 0.5rem; }
 body.product-shell--studio .gang-asset-card__body > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-body.product-shell--studio .gang-asset-detail-dialog { width: min(62rem, calc(100vw - 2rem)); }
-body.product-shell--studio .gang-asset-detail { display: grid; grid-template-columns: minmax(16rem, 1.1fr) minmax(18rem, 0.9fr); gap: 1rem; }
+body.product-shell--studio .gang-asset-detail-dialog { width: min(76rem, calc(100vw - 2rem)); }
+body.product-shell--studio .gang-asset-detail { display: grid; grid-template-columns: minmax(0, 2fr) minmax(18rem, 0.9fr); gap: 1rem; }
 body.product-shell--studio .gang-asset-detail__preview, body.product-shell--studio .gang-asset-detail__analysis { display: grid; align-content: start; gap: 0.75rem; }
-body.product-shell--studio .gang-asset-detail__stage { position: relative; display: grid; place-items: center; min-height: 20rem; overflow: hidden; border: 1px solid var(--gang-line); border-radius: 0.75rem; background: #f4f4f5; }
-body.product-shell--studio .gang-asset-detail__stage > :is(img, [data-asset-crop-box]) { transform: scale(var(--gang-detail-zoom, 1)); transform-origin: center; }
-body.product-shell--studio .gang-asset-detail__stage img { display: block; max-width: 100%; max-height: 27rem; object-fit: contain; }
-body.product-shell--studio .gang-asset-detail__stage .gang-asset-detail__overlay { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; object-fit: contain; pointer-events: none; }
+body.product-shell--studio .gang-asset-detail__stage { position: relative; display: flex; align-items: center; justify-content: center; min-height: 28rem; overflow: hidden; border: 0; border-radius: var(--radius-sm); background-color: #fff; }
+body.product-shell--studio .gang-asset-detail__bounds { position: relative; display: inline-block; max-width: 100%; max-height: 30rem; line-height: 0; transform: scale(var(--gang-detail-zoom, 1)); transform-origin: center; }
+body.product-shell--studio .gang-asset-detail__bounds > img:first-child { display: block; width: auto; height: auto; max-width: 100%; max-height: 30rem; object-fit: contain; }
+body.product-shell--studio .gang-asset-detail__stage .gang-asset-detail__overlay { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; object-fit: fill; pointer-events: none; }
 body.product-shell--studio .gang-asset-detail__overlay[hidden] { display: none; }
 body.product-shell--studio .gang-asset-detail__shade { position: absolute; border: 2px solid var(--gang-accent); box-shadow: 0 0 0 100vmax rgb(26 24 21 / 42%); cursor: grab; }
 body.product-shell--studio .gang-asset-detail__shade:focus-visible { outline: 3px solid var(--gang-focus); outline-offset: 2px; }
@@ -1420,6 +1421,9 @@ body.product-shell--studio .gang-asset-detail__overlays { display: flex; flex-wr
 body.product-shell--studio .gang-asset-detail__preview-tools { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 body.product-shell--studio .gang-analysis-toggle { min-height: 2.25rem; padding: 0.35rem 0.65rem; border: 1px solid var(--gang-line); border-radius: 999px; background: var(--gang-panel); color: var(--gang-ink); font: inherit; cursor: pointer; }
 body.product-shell--studio .gang-analysis-toggle.is-active { border-color: var(--gang-accent); background: var(--gang-accent-soft); }
+body.product-shell--studio .gang-quality-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+body.product-shell--studio .gang-quality-chips span { padding: 0.42rem 0.65rem; border: 1px solid color-mix(in srgb, var(--success) 45%, var(--gang-line)); border-radius: 999px; background: color-mix(in srgb, var(--success) 8%, var(--gang-panel)); color: var(--gang-ink); font-size: 0.72rem; font-weight: 750; }
+body.product-shell--studio .gang-quality-chips span.is-warning { border-color: color-mix(in srgb, var(--warning) 52%, var(--gang-line)); background: color-mix(in srgb, var(--warning) 9%, var(--gang-panel)); }
 body.product-shell--studio .gang-asset-crop-form fieldset { display: grid; gap: 0.55rem; margin: 0; padding: 0.7rem; border: 1px solid var(--gang-line); border-radius: 0.65rem; }
 body.product-shell--studio .gang-asset-crop-form label { display: grid; grid-template-columns: 4rem 1fr 3.4rem; align-items: center; gap: 0.45rem; font-size: 0.72rem; }
 body.product-shell--studio .gang-asset-crop-form output { text-align: right; font-variant-numeric: tabular-nums; }
