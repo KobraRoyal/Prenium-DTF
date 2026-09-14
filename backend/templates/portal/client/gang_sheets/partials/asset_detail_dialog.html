@@ -51,9 +51,11 @@
           <input type="hidden" name="expected_revision" value="{{ asset.expected_revision }}">
           <input type="hidden" name="crop_mode" value="manual" data-existing-crop-mode>
           <div class="gang-crop-mode" role="group" aria-label="Mode de recadrage">
-            <button type="button" class="is-active" data-existing-crop-manual aria-pressed="true" {% if not asset.can_crop %}disabled{% endif %}><strong>Rogner manuellement</strong><span>Ajuster le cadre</span></button>
+            <button type="button" class="is-active" data-existing-crop-manual aria-pressed="true" {% if not asset.can_crop %}disabled{% endif %}><strong>Rogner manuellement</strong><span>Tracer sur l’aperçu</span></button>
             <button type="button" data-existing-crop-auto aria-pressed="false" {% if not asset.can_crop %}disabled{% endif %}><strong>Rogner automatiquement</strong><span>Détecter le contenu</span></button>
           </div>
+          {% if asset.can_crop %}<p class="gang-crop-hint">Cliquez sur « Rogner manuellement », puis tracez le cadrage directement sur l’image.</p>{% endif %}
+          <p class="ui-error-text gang-crop-error" data-existing-crop-error role="alert" hidden></p>
           <input type="hidden" name="crop_x" value="{{ asset.crop_x }}" data-crop-value="x">
           <input type="hidden" name="crop_y" value="{{ asset.crop_y }}" data-crop-value="y">
           <input type="hidden" name="crop_width" value="{{ asset.crop_width }}" data-crop-value="width">

@@ -2678,6 +2678,7 @@ if (root) {
   root.addEventListener("htmx:afterSwap", (event) => {
     if (!event.target.matches("[data-asset-list]")) return;
     renderAssetGallery();
+    event.target.querySelectorAll("[data-asset-crop-editor]").forEach((editor) => renderExistingCrop(editor));
     renderStatus();
     filterAssetGallery();
     const isPending = qPendingGallery();
@@ -3657,6 +3658,10 @@ if (root) {
       const editor = manual.closest("[data-asset-crop-editor]");
       const mode = editor?.querySelector("[data-existing-crop-mode]");
       if (mode instanceof HTMLInputElement) mode.value = "manual";
+      if (editor instanceof HTMLElement) {
+        editor.dataset.cropDraw = "true";
+        editor.classList.add("is-crop-drawing");
+      }
       manual.classList.add("is-active");
       manual.setAttribute("aria-pressed", "true");
       const auto = editor?.querySelector("[data-existing-crop-auto]");
@@ -3685,6 +3690,10 @@ if (root) {
     });
     const mode = editor?.querySelector("[data-existing-crop-mode]");
     if (mode instanceof HTMLInputElement) mode.value = "manual";
+    if (editor instanceof HTMLElement) {
+      editor.dataset.cropDraw = "true";
+      editor.classList.add("is-crop-drawing");
+    }
     renderExistingCrop(editor);
   });
   root.addEventListener("pointerdown", (event) => {
@@ -3700,7 +3709,10 @@ if (root) {
     const startX = event.clientX;
     const startY = event.clientY;
     const clickedCrop = event.target.closest?.("[data-asset-crop-box]");
-    const handle = event.target.closest?.("[data-existing-crop-handle]")?.dataset.existingCropHandle || (clickedCrop ? "move" : "draw");
+    const selectedHandle = event.target.closest?.("[data-existing-crop-handle]")?.dataset.existingCropHandle;
+    const fullSelection = start.x <= 0.0001 && start.y <= 0.0001 && start.width >= 0.9999 && start.height >= 0.9999;
+    const shouldDraw = editor.dataset.cropDraw === "true" || !clickedCrop || fullSelection;
+    const handle = selectedHandle || (shouldDraw ? "draw" : "move");
     const originX = Math.max(0, Math.min(1, (startX - rect.left) / Math.max(rect.width, 1)));
     const originY = Math.max(0, Math.min(1, (startY - rect.top) / Math.max(rect.height, 1)));
     const move = (moveEvent) => {
@@ -3728,7 +3740,11 @@ if (root) {
       if (mode instanceof HTMLInputElement) mode.value = "manual";
       renderExistingCrop(editor);
     };
-    const end = () => window.removeEventListener("pointermove", move);
+    const end = () => {
+      window.removeEventListener("pointermove", move);
+      delete editor.dataset.cropDraw;
+      editor.classList.remove("is-crop-drawing");
+    };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", end, { once: true });
   });
@@ -3756,6 +3772,12 @@ if (root) {
     const form = event.target;
     if (!(form instanceof HTMLFormElement) || !form.matches(".gang-asset-crop-form")) return;
     event.preventDefault();
+    const errorNode = form.querySelector("[data-existing-crop-error]");
+    if (errorNode instanceof HTMLElement) {
+      errorNode.textContent = "";
+      errorNode.hidden = true;
+    }
+    form.setAttribute("aria-busy", "true");
     const submitter = form.querySelector("button[type='submit']");
     if (submitter instanceof HTMLButtonElement) submitter.disabled = true;
     try {
@@ -3770,7 +3792,13 @@ if (root) {
       window.location.reload();
     } catch (error) {
       if (submitter instanceof HTMLButtonElement) submitter.disabled = false;
+      if (errorNode instanceof HTMLElement) {
+        errorNode.textContent = error.message;
+        errorNode.hidden = false;
+      }
       window.preniumToast?.(error.message, "error");
+    } finally {
+      form.removeAttribute("aria-busy");
     }
   });
   window.addEventListener("resize", () => {

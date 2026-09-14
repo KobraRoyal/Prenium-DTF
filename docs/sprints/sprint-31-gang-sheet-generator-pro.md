@@ -121,6 +121,7 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - [x] Tests de crop : manifeste multi-fichiers, bornes serveur, isolation client, dimensions utiles,
   pixels natifs raster et conservation des commandes vectorielles/mixes dans le PDF HD.
 - [x] Tests de crop Auto : transparence PNG, fond opaque JPEG, objets PDF vectoriels, union PDF mixte,
+- [x] Recadrage post-import opérationnel : cadre initialisé après HTMX, tracé direct sur l’image réelle et MIME restauré pour l’auto-crop des fichiers privés.
   recalcul serveur autoritaire et contrat UI Manuel/Auto.
 - [x] Test de non-régression canvas : absence de hauteur minimale déformante, calque d’aperçu clipsé
   et inversion des axes lors du redimensionnement d’une occurrence tournée.

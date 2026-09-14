@@ -20,6 +20,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
 from PIL import Image, ImageDraw
 
@@ -1425,6 +1426,44 @@ def test_existing_crop_endpoint_auto_mode_uses_server_file_and_returns_detected_
     assert response.json()["crop"] == detected_crop.to_metadata()
     source_asset.refresh_from_db()
     assert CropBox.from_source_asset(source_asset) == detected_crop
+
+
+@override_settings(
+    GANG_SHEET_AUTO_CROP_RATE_LIMIT_MAX_REQUESTS=1,
+    GANG_SHEET_AUTO_CROP_RATE_LIMIT_WINDOW_SECONDS=60,
+)
+def test_existing_crop_endpoint_rate_limits_repeated_auto_noop(client, monkeypatch):
+    cache.clear()
+    owner, customer, project = create_customer_scope(email="crop-endpoint-rate@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Crop auto limité")
+    source_asset = sheet.source_assets.get(asset=asset)
+    detections = 0
+
+    def detect_server_file(_uploaded_file):
+        nonlocal detections
+        detections += 1
+        return AutoCropResult(crop=CropBox.full(), content_kind="raster", basis="visible_pixels")
+
+    monkeypatch.setattr(gang_sheet_views.gang_sheet_service.auto_crop, "detect", detect_server_file)
+    client.force_login(owner)
+    url = reverse(
+        "portal:client-gang-sheet-source-asset-crop",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": source_asset.public_id,
+        },
+    )
+    payload = {"crop_mode": "auto", "expected_revision": sheet.revision}
+
+    assert client.post(url, payload).status_code == 200
+    limited = client.post(url, payload)
+
+    assert limited.status_code == 429
+    assert limited["Retry-After"] == "60"
+    assert limited.json()["error"]["code"] == "AUTO_CROP_RATE_LIMITED"
+    assert detections == 1
 
 
 def test_existing_crop_endpoint_returns_safe_error_when_private_file_cannot_be_read(

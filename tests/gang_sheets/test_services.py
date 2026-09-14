@@ -127,6 +127,8 @@ def test_existing_source_auto_crop_reads_current_private_file_and_ignores_client
 
     class RecordingAutoCrop:
         def detect(self, uploaded_file):
+            assert uploaded_file.name == version.original_filename
+            assert uploaded_file.content_type == version.mime_type
             assert uploaded_file.read() == expected_content
             return AutoCropResult(
                 crop=detected_crop,

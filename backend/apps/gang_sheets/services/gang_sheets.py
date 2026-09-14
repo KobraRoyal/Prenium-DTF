@@ -9,6 +9,7 @@ from uuid import UUID
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files import File
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
@@ -425,7 +426,12 @@ class GangSheetService:
                 )
             try:
                 with version.file.open("rb") as original_file:
-                    auto_crop_result = self.auto_crop.detect(original_file)
+                    uploaded_file = SimpleUploadedFile(
+                        version.original_filename,
+                        original_file.read(),
+                        content_type=version.mime_type,
+                    )
+                    auto_crop_result = self.auto_crop.detect(uploaded_file)
             except AutoCropError as error:
                 raise GangSheetDomainError("AUTO_CROP_FAILED", str(error)) from error
             except (OSError, ValueError) as error:

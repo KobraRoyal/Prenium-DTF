@@ -108,6 +108,24 @@ def _gang_sheet_upload_rate_limited(*, customer, actor) -> bool:
     return attempts > maximum
 
 
+def _gang_sheet_auto_crop_rate_limited(*, customer, actor) -> bool:
+    customer_id = str(customer.public_id)
+    actor_id = str(getattr(actor, "pk", "anonymous"))
+    key = f"gang-sheet-auto-crop:{customer_id}:{actor_id}"
+    window = int(settings.GANG_SHEET_AUTO_CROP_RATE_LIMIT_WINDOW_SECONDS)
+    maximum = int(settings.GANG_SHEET_AUTO_CROP_RATE_LIMIT_MAX_REQUESTS)
+    if maximum <= 0:
+        return False
+    if cache.add(key, 1, timeout=window):
+        return False
+    try:
+        attempts = cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=window)
+        return False
+    return attempts > maximum
+
+
 def _json_error(error: GangSheetDomainError, *, status=400):
     return JsonResponse(
         {"ok": False, "error": {"code": error.code, "message": error.message, **error.details}},
@@ -580,6 +598,22 @@ class ClientGangSheetSourceAssetCropView(ClientGangSheetMixin, View):
                     "INVALID_CROP_MODE",
                     "Le mode de recadrage est invalide.",
                 ),
+            )
+            response["Cache-Control"] = "private, no-store"
+            return response
+        if crop_mode == CROP_MODE_AUTO and _gang_sheet_auto_crop_rate_limited(
+            customer=self.customer,
+            actor=request.user,
+        ):
+            response = _json_error(
+                GangSheetDomainError(
+                    "AUTO_CROP_RATE_LIMITED",
+                    "Trop de recadrages automatiques ont été lancés. Patientez avant de réessayer.",
+                ),
+                status=429,
+            )
+            response["Retry-After"] = str(
+                settings.GANG_SHEET_AUTO_CROP_RATE_LIMIT_WINDOW_SECONDS
             )
             response["Cache-Control"] = "private, no-store"
             return response

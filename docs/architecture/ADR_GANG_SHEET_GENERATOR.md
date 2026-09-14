@@ -142,6 +142,9 @@ audités et aucun identifiant Drive n’est envoyé au portail client.
 - Tous les objets client sont filtrés par `Customer` et exposés par UUID public.
 - Une occurrence ne peut référencer que la version courante analysée d’un asset de sa galerie.
 - Les coordonnées de crop sont revalidées côté serveur et contraintes à la surface du visuel.
+- Le cadre manuel est calculé sur les limites rendues du fichier, réinitialisé après chaque échange HTMX et peut être tracé directement sur l’aperçu.
+- Le recadrage automatique reconstitue l’upload interne depuis le nom et le MIME de l’`AssetVersion`; les coordonnées du navigateur sont ignorées.
+- Les demandes d’auto-recadrage sont limitées par acteur et client avant toute lecture ou analyse du fichier privé.
 - Le mode Auto ignore les coordonnées proposées par le navigateur et recalcule depuis l’original.
 - Les membres `readonly` ne peuvent modifier, rendre ou valider une planche.
 - Aucun chemin de stockage ni `MEDIA_URL` n’est exposé.

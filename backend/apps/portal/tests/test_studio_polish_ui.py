@@ -214,7 +214,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn('link.classList.toggle("ui-btn-primary", canCreate)', editor_js)
         self.assertIn("const hasEstimate = state.items.length > 0 && quote.surface > 0", editor_js)
         self.assertNotIn('q("[data-metric-price]")', editor_js)
-        self.assertIn("gang-sheet-editor.js?v=20260913-crop-bounds-v32", app_js)
+        self.assertIn("gang-sheet-editor.js?v=20260914-crop-draw-v33", app_js)
         self.assertNotIn("gang-inspector-panel__context", editor)
         text_css = source(CSS_DIR / "components/gang-sheet-text.css")
         self.assertIn("font-size: 2.18cqw", text_css)
