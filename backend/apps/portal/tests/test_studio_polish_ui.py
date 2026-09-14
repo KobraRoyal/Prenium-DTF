@@ -163,6 +163,7 @@ class StudioPolishUITests(SimpleTestCase):
 
         self.assertIn("Déposez vos fichiers ici", editor)
         self.assertIn("Choisir les fichiers", editor)
+        self.assertIn('class="b2b-batch-dropzone gang-import-dropzone"', editor)
         self.assertIn('data-batch-dropzone role="group"', editor)
         self.assertNotIn('data-batch-dropzone role="button"', editor)
         self.assertNotIn('data-batch-dropzone role="group" tabindex="0"', editor)

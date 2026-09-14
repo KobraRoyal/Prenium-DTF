@@ -39,7 +39,7 @@ gang_sheet_service = GangSheetService()
 asset_preview_renderer = AssetPreviewRenderer()
 logger = logging.getLogger(__name__)
 
-GANG_SHEET_MAX_FILES_PER_UPLOAD = 20
+GANG_SHEET_MAX_FILES_PER_UPLOAD = 5
 GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES = 60 * 1024 * 1024
 GANG_SHEET_UPLOAD_BATCH_SESSION_PREFIX = "gang_sheet_upload_batch"
 GANG_SHEET_UPLOAD_ERROR_SESSION_PREFIX = "gang_sheet_upload_error"

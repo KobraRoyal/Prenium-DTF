@@ -1405,13 +1405,45 @@ body.product-shell--studio .gang-inline-import {
   margin: 0.65rem 0;
   container: gang-import / inline-size;
 }
-body.product-shell--studio .gang-inline-import__form { display: grid; gap: 0.45rem; padding: 0; }
+body.product-shell--studio .gang-inline-import__form { display: grid; gap: 0.65rem; padding: 0; }
 body.product-shell--studio .gang-inline-import__form.is-uploading { opacity: 0.72; pointer-events: none; }
-body.product-shell--studio .gang-inline-import .gang-import-dropzone { min-height: 7.5rem; padding: 1rem; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.85rem; text-align: left; border: 1px dashed var(--gang-line-strong); border-radius: var(--radius-sm); background: var(--gang-panel-subtle); cursor: pointer; }
-body.product-shell--studio .gang-inline-import .gang-import-dropzone:is(:hover, :focus-within, .is-dragging) { border-color: var(--gang-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gang-accent) 14%, transparent); outline: none; }
+body.product-shell--studio .gang-inline-import .gang-import-dropzone {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 9rem;
+  padding: 1.15rem;
+  border: 1px dashed color-mix(in srgb, var(--brand) 55%, var(--product-line));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--brand) 5%, var(--product-panel));
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+body.product-shell--studio .gang-inline-import .gang-import-dropzone:is(:hover, :focus-within, .is-dragging) {
+  border-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 10%, var(--product-panel));
+  box-shadow: 0 0 0 3px var(--field-focus-ring, color-mix(in srgb, var(--brand) 30%, transparent));
+  outline: none;
+}
+body.product-shell--studio .gang-inline-import .b2b-batch-dropzone__copy strong {
+  font-family: var(--ui-font-display);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+body.product-shell--studio .gang-inline-import .b2b-batch-dropzone__copy span,
+body.product-shell--studio .gang-inline-import__rules,
+body.product-shell--studio .gang-inline-import__selection {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
 body.product-shell--studio .gang-inline-import__rules { min-width: 0; margin: 0; overflow-wrap: anywhere; }
 body.product-shell--studio .gang-inline-import__selection :is(p, ul), body.product-shell--studio .gang-recent-import :is(strong, span) { margin: 0; }
-body.product-shell--studio .gang-inline-import__selection { min-width: 0; color: var(--gang-muted); font-size: 0.7rem; }
+body.product-shell--studio .gang-inline-import__selection { min-width: 0; color: var(--gang-muted); }
 body.product-shell--studio .gang-inline-import__selection ul { max-height: 5rem; overflow-x: hidden; overflow-y: auto; padding-left: 1rem; }
 body.product-shell--studio .gang-inline-import__selection li { min-width: 0; overflow-wrap: anywhere; }
 body.product-shell--studio .gang-inline-import__progress { margin: 0; color: var(--gang-accent); font-size: 0.72rem; font-weight: 700; }

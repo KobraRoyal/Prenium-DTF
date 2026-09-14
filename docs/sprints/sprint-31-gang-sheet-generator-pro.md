@@ -211,7 +211,8 @@ Branche : `codex/gang-sheet-audit-fixes`.
   fichier, anomalies et overlays médiés, reprise des erreurs et résultats récents en modale.
 - [x] Import et galerie adaptés à leur largeur réelle : dropzone compact sans colonne écrasée,
   noms longs repliés sans défilement horizontal, contrôles uniques accessibles et actions tactiles
-  de 44 px sur les cartes.
+  de 44 px sur les cartes ; style partagé avec la commande par fichier et limite réelle de cinq
+  fichiers par lot.
 
 Les espacements d’auto-imposition restent des préférences, pas de nouveaux minimums de coupe.
 Les avertissements de source ne sont pas assimilés automatiquement à un refus de fabrication.

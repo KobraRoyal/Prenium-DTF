@@ -192,7 +192,7 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert 'name="files"' in content
     assert "multiple" in content
     assert 'data-max-file-bytes="20971520"' in content
-    assert 'data-max-files="20"' in content
+    assert 'data-max-files="5"' in content
     assert 'data-max-total-bytes="62914560"' in content
     assert 'aria-describedby="gang-asset-files-help gang-asset-files-error"' in content
     assert "20 Mo" in content
@@ -908,6 +908,45 @@ def test_owner_can_upload_multiple_visuals_with_independent_non_destructive_crop
     assert sources[0].crop_width == Decimal("0.500000")
     assert sources[1].crop_y == Decimal("0.100000")
     assert sources[1].crop_height == Decimal("0.800000")
+
+
+def test_gang_sheet_batch_rejects_more_than_five_files_before_asset_creation(client):
+    user, customer, _project = create_customer_scope(email="five-files-gang@example.com")
+    sheet = GangSheetService().create_sheet(
+        customer=customer,
+        actor=user,
+        name="Lot de cinq fichiers",
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": [
+                SimpleUploadedFile(
+                    f"source-{index}.png",
+                    b"\x89PNG\r\n\x1a\n" + bytes([index]) * 32,
+                    content_type="image/png",
+                )
+                for index in range(6)
+            ]
+        },
+    )
+
+    toast = json.loads(response.headers["X-Prenium-Toast"])
+    assert response.status_code == 302
+    assert toast == {
+        "message": "Importez au maximum 5 fichiers à la fois.",
+        "variant": "error",
+    }
+    assert sheet.source_assets.count() == 0
+    assert AssetVersion.objects.filter(customer=customer).count() == 0
 
 
 def test_oversized_gang_sheet_batch_is_rejected_before_any_asset_is_created(
