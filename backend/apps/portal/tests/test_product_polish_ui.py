@@ -519,7 +519,9 @@ class ProductPolishUITests(SimpleTestCase):
     def test_studio_import_is_inline_and_details_use_a_dialog(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
         gallery = source(TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_gallery.html")
-        detail = source(TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_detail_dialog.html")
+        detail = source(
+            TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_detail_dialog.html"
+        )
 
         self.assertNotIn("product-eyebrow", editor)
         self.assertNotIn('id="gang-asset-dialog"', editor)
@@ -536,7 +538,9 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn("data-existing-crop-auto", detail)
         self.assertIn("data-analysis-overlay-toggle", detail)
         self.assertIn("data-existing-preview-zoom-in", detail)
-        self.assertIn("asset_analysis_summary.html", detail)
+        self.assertIn("gang-asset-detail__file-info", detail)
+        self.assertIn("data-existing-crop-dimensions", detail)
+        self.assertNotIn("asset_analysis_summary.html", detail)
 
     def test_marketing_entry_neutralizes_agency_defaults_on_conversion_pages(self) -> None:
         entry = source(CSS_DIR / "entries/marketing.css")

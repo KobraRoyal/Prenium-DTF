@@ -98,8 +98,17 @@ def test_javascript_module_children_keep_explicit_cache_versions() -> None:
     # a production-proven module-aware storage owns the complete dependency graph.
     app = _source("backend/static_src/js/app.js")
     assert "?v=" in app
-    assert "gang-sheet-editor.js?v=20260914-crop-draw-v33" in app
+    assert "gang-sheet-editor.js?v=20260914-crop-modal-v34" in app
     assert "?v=" in _source("backend/static_src/js/marketing.js")
+
+
+def test_existing_crop_updates_in_place_without_closing_the_modal() -> None:
+    editor = _source("backend/static_src/js/gang-sheet-editor.js")
+
+    assert "applyExistingCropResponse(form, payload)" in editor
+    assert 'form.dataset.cropAction = "full"' in editor
+    assert "form.requestSubmit()" in editor
+    assert "window.location.reload()" not in editor
 
 
 def test_css_resolves_fonts_from_static_root() -> None:

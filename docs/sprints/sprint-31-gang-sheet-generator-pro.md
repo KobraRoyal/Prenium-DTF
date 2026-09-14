@@ -159,6 +159,10 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   détail technique par fichier et recadrage post-import interdit après placement.
 - [x] Zone de dépôt toujours visible et modale fichier alignée sur la commande : overlays, zoom,
   fonds de contrôle, recadrage manuel/automatique et conservation de l’original.
+- [x] Actions de recadrage post-import maintenues dans la modale : l’auto-crop, le cadrage manuel
+  et le rétablissement de l’original enregistrent immédiatement le résultat, synchronisent la
+  révision et les dimensions sans rechargement ; le résumé retire le statut redondant et les
+  anomalies dupliquées.
 - [x] Aligner / répartir : un groupe mémorisé se comporte comme un seul objet (écarts internes
   conservés, visuels isolés inchangés).
 - [x] Inspecteur Réglages : un langage de champs / titres / actions ; bouton « Placer sur la planche » pleine largeur.

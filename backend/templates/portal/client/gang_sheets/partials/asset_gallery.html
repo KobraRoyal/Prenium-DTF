@@ -20,7 +20,7 @@
     </div>
     <div class="gang-asset-card__body">
       <strong title="{{ asset.name }}">{{ asset.name }}</strong>
-      <small class="gang-asset-status gang-asset-status--{{ asset.analysis_status }}">{{ asset.analysis_label }}{% if asset.width_mm and asset.height_mm %} · {{ asset.width_mm }} × {{ asset.height_mm }} mm{% endif %}</small>
+      <small class="gang-asset-status gang-asset-status--{{ asset.analysis_status }}">{{ asset.analysis_label }}{% if asset.width_mm and asset.height_mm %} · <span data-source-asset-dimensions="{{ asset.source_public_id }}">{{ asset.width_mm|floatformat:2 }} × {{ asset.height_mm|floatformat:2 }} mm</span>{% endif %}</small>
       <div class="gang-asset-card__analysis-line">
         {% if asset.analysis_status == "pending" or asset.analysis_status == "processing" %}<span>Analyse en cours…</span>
         {% elif asset.analysis_status == "failed" %}<span>Import à corriger</span>

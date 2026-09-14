@@ -1152,7 +1152,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('name="crop_width"', detail)
         self.assertNotIn('type="range"', detail)
         self.assertIn('type="hidden" name="crop_width"', detail)
-        self.assertIn("Conserver le visuel complet", detail)
+        self.assertIn("Rétablir l’original", detail)
+        self.assertIn("Appliquer le cadrage", detail)
         self.assertIn("data-existing-crop-manual", detail)
         self.assertIn("data-existing-crop-auto", detail)
         self.assertIn("b2b-dialog-editor", detail)
@@ -2100,7 +2101,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         gang_asset_detail = template_source(
             "portal/client/gang_sheets/partials/asset_detail_dialog.html"
         )
-        self.assertIn("asset_analysis_summary.html", gang_asset_detail)
+        self.assertIn("gang-asset-detail__file-info", gang_asset_detail)
+        self.assertNotIn("asset_analysis_summary.html", gang_asset_detail)
         self.assertIn("detectThinZonesFromMedia", configurator_script)
         self.assertIn("data-preflight-thin-overlay", configurator_script)
         self.assertIn("data-preflight-fade-overlay", configurator_script)

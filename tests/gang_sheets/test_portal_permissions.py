@@ -1348,6 +1348,11 @@ def test_owner_can_update_existing_crop_and_gallery_exposes_scoped_modal_data(cl
     assert str(customer.public_id) in row["original_preview_url"]
     assert str(sheet.public_id) in row["original_preview_url"]
     assert str(version.public_id) in row["original_preview_url"]
+    gallery_html = gallery_response.content.decode()
+    assert "Rétablir l’original" in gallery_html
+    assert "Appliquer le cadrage" in gallery_html
+    assert 'data-existing-crop-dimensions' in gallery_html
+    assert "gang-analysis-summary__status" not in gallery_html
 
     response = client.post(
         update_url,

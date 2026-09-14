@@ -3603,6 +3603,60 @@ if (root) {
       box.style.height = `${values.height * 100}%`;
     }
   }
+
+  function cropDimensionLabel(width, height) {
+    const format = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const widthNumber = Number.parseFloat(width);
+    const heightNumber = Number.parseFloat(height);
+    if (!Number.isFinite(widthNumber) || !Number.isFinite(heightNumber)) return "—";
+    return `${format.format(widthNumber)} × ${format.format(heightNumber)} mm`;
+  }
+
+  function applyExistingCropResponse(form, payload) {
+    const editor = form.closest("[data-asset-crop-editor]");
+    if (!(editor instanceof HTMLElement) || !payload?.crop) return;
+    Object.entries(payload.crop).forEach(([key, value]) => {
+      const input = editor.querySelector(`[data-crop-value='${key}']`);
+      if (input instanceof HTMLInputElement) input.value = String(value);
+    });
+    renderExistingCrop(editor);
+
+    const revision = Number.parseInt(payload.revision, 10);
+    if (Number.isFinite(revision)) {
+      state.revision = revision;
+      root.querySelectorAll(".gang-asset-crop-form input[name='expected_revision']").forEach((input) => {
+        if (input instanceof HTMLInputElement) input.value = String(revision);
+      });
+    }
+
+    const dimensions = cropDimensionLabel(payload.width_mm, payload.height_mm);
+    const modalDimensions = editor.querySelector("[data-existing-crop-dimensions]");
+    if (modalDimensions) modalDimensions.textContent = dimensions;
+    const sourcePublicId = editor.dataset.sourcePublicId;
+    root.querySelectorAll("[data-source-asset-dimensions]").forEach((node) => {
+      if (node.dataset.sourceAssetDimensions === sourcePublicId) node.textContent = dimensions;
+    });
+
+    const card = editor.closest("[data-asset-card]");
+    if (!(card instanceof HTMLElement)) return;
+    const crop = Object.fromEntries(Object.entries(payload.crop).map(([key, value]) => [key, Number.parseFloat(value)]));
+    const isFull = crop.x <= 0.0001 && crop.y <= 0.0001 && crop.width >= 0.9999 && crop.height >= 0.9999;
+    let badge = card.querySelector(".gang-asset-card__crop-badge");
+    if (isFull) badge?.remove();
+    else if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "gang-asset-card__crop-badge";
+      badge.textContent = "Recadré";
+      card.querySelector(".gang-asset-card__preview")?.append(badge);
+    }
+    const cardPreview = card.querySelector(".gang-asset-card__preview > img");
+    if (cardPreview instanceof HTMLImageElement && Number.isFinite(revision)) {
+      const previewUrl = new URL(cardPreview.src, window.location.origin);
+      previewUrl.searchParams.set("crop_revision", String(revision));
+      cardPreview.src = previewUrl.toString();
+    }
+  }
+
   root.querySelectorAll("[data-asset-crop-editor]").forEach((editor) => renderExistingCrop(editor));
   root.addEventListener("input", (event) => {
     const input = event.target;
@@ -3656,6 +3710,8 @@ if (root) {
     const manual = event.target.closest?.("[data-existing-crop-manual]");
     if (manual instanceof HTMLButtonElement) {
       const editor = manual.closest("[data-asset-crop-editor]");
+      const form = manual.closest("form");
+      if (form instanceof HTMLFormElement) form.dataset.cropAction = "manual";
       const mode = editor?.querySelector("[data-existing-crop-mode]");
       if (mode instanceof HTMLInputElement) mode.value = "manual";
       if (editor instanceof HTMLElement) {
@@ -3672,6 +3728,8 @@ if (root) {
     const auto = event.target.closest?.("[data-existing-crop-auto]");
     if (auto instanceof HTMLButtonElement) {
       const editor = auto.closest("[data-asset-crop-editor]");
+      const form = auto.closest("form");
+      if (form instanceof HTMLFormElement) form.dataset.cropAction = "auto";
       const mode = editor?.querySelector("[data-existing-crop-mode]");
       if (mode instanceof HTMLInputElement) mode.value = "auto";
       auto.classList.add("is-active");
@@ -3679,7 +3737,13 @@ if (root) {
       const manualButton = editor?.querySelector("[data-existing-crop-manual]");
       manualButton?.classList.remove("is-active");
       manualButton?.setAttribute("aria-pressed", "false");
-      auto.closest("form")?.requestSubmit();
+      form?.requestSubmit();
+      return;
+    }
+    const save = event.target.closest?.("[data-existing-crop-save]");
+    if (save instanceof HTMLButtonElement) {
+      const form = save.closest("form");
+      if (form instanceof HTMLFormElement) form.dataset.cropAction = "manual";
       return;
     }
     const reset = event.target.closest?.("[data-crop-reset-existing]");
@@ -3690,11 +3754,12 @@ if (root) {
     });
     const mode = editor?.querySelector("[data-existing-crop-mode]");
     if (mode instanceof HTMLInputElement) mode.value = "manual";
-    if (editor instanceof HTMLElement) {
-      editor.dataset.cropDraw = "true";
-      editor.classList.add("is-crop-drawing");
-    }
     renderExistingCrop(editor);
+    const form = reset.closest("form");
+    if (form instanceof HTMLFormElement) {
+      form.dataset.cropAction = "full";
+      form.requestSubmit();
+    }
   });
   root.addEventListener("pointerdown", (event) => {
     const bounds = event.target.closest?.("[data-asset-crop-bounds]");
@@ -3738,6 +3803,8 @@ if (root) {
       Object.entries(next).forEach(([key, value]) => { inputs[key].value = String(value); });
       const mode = editor.querySelector("[data-existing-crop-mode]");
       if (mode instanceof HTMLInputElement) mode.value = "manual";
+      const form = editor.querySelector(".gang-asset-crop-form");
+      if (form instanceof HTMLFormElement) form.dataset.cropAction = "manual";
       renderExistingCrop(editor);
     };
     const end = () => {
@@ -3778,8 +3845,10 @@ if (root) {
       errorNode.hidden = true;
     }
     form.setAttribute("aria-busy", "true");
-    const submitter = form.querySelector("button[type='submit']");
-    if (submitter instanceof HTMLButtonElement) submitter.disabled = true;
+    const actionButtons = Array.from(form.querySelectorAll("button"));
+    const disabledStates = new Map(actionButtons.map((button) => [button, button.disabled]));
+    actionButtons.forEach((button) => { button.disabled = true; });
+    const cropAction = form.dataset.cropAction || "manual";
     try {
       if (dirty) await saveLayout({ notify: false });
       const revisionInput = form.querySelector("input[name='expected_revision']");
@@ -3787,17 +3856,30 @@ if (root) {
       const response = await fetch(form.action, { method: "POST", body: new FormData(form), headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" });
       const payload = await response.json();
       if (!response.ok || !payload.ok) throw new Error(payload?.error?.message || "Le cadrage n’a pas pu être enregistré.");
-      window.preniumToast?.("Cadrage enregistré.", "success");
-      allowUnload = true;
-      window.location.reload();
+      applyExistingCropResponse(form, payload);
+      const messages = {
+        auto: "Recadrage automatique appliqué.",
+        full: "Fichier original rétabli.",
+        manual: "Cadrage appliqué.",
+      };
+      window.preniumToast?.(messages[cropAction] || messages.manual, "success");
+      const mode = form.querySelector("[data-existing-crop-mode]");
+      if (mode instanceof HTMLInputElement) mode.value = "manual";
+      const manualButton = form.querySelector("[data-existing-crop-manual]");
+      const autoButton = form.querySelector("[data-existing-crop-auto]");
+      manualButton?.classList.add("is-active");
+      manualButton?.setAttribute("aria-pressed", "true");
+      autoButton?.classList.remove("is-active");
+      autoButton?.setAttribute("aria-pressed", "false");
     } catch (error) {
-      if (submitter instanceof HTMLButtonElement) submitter.disabled = false;
       if (errorNode instanceof HTMLElement) {
         errorNode.textContent = error.message;
         errorNode.hidden = false;
       }
       window.preniumToast?.(error.message, "error");
     } finally {
+      actionButtons.forEach((button) => { button.disabled = disabledStates.get(button); });
+      delete form.dataset.cropAction;
       form.removeAttribute("aria-busy");
     }
   });
