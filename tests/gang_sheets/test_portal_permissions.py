@@ -198,7 +198,7 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert "20 Mo" in content
     assert "data-configurator-file-error" in content
     assert "Importer" in content
-    assert "Le contrôle démarre dès la sélection." in content
+    assert "Aucun fichier sélectionné." in content
     assert "gang-editor__delete" in content
     assert "Supprimer cette planche DTF ?" in content
 

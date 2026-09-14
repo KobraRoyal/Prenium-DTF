@@ -3558,6 +3558,7 @@ if (root) {
     if (!uploadForm) return;
     uploadForm.classList.toggle("is-uploading", isBusy);
     uploadForm.setAttribute("aria-busy", String(isBusy));
+    uploadForm.querySelector("[data-batch-dropzone]")?.setAttribute("aria-disabled", String(isBusy));
     uploadForm.querySelectorAll("[data-batch-picker]").forEach((control) => {
       if (control instanceof HTMLButtonElement) control.disabled = isBusy;
     });

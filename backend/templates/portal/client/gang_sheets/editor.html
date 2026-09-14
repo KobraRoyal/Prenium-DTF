@@ -188,8 +188,8 @@
             <p>{{ gang_sheet_import_error }}</p>
           </div>
           {% endif %}
-          <div class="gang-import-dropzone" data-batch-dropzone role="button" tabindex="0" aria-label="Déposer ou choisir des fichiers à analyser" aria-controls="id-gang-asset-files" aria-describedby="gang-asset-files-help gang-asset-files-summary gang-asset-files-error">
-            <input class="ui-sr-only" id="id-gang-asset-files" type="file" name="files" multiple accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff,.psd,.ai,.eps" data-batch-file-input data-max-file-bytes="{{ gang_sheet_upload_max_bytes }}" data-max-files="{{ gang_sheet_upload_max_files }}" data-max-total-bytes="{{ gang_sheet_upload_max_total_bytes }}" aria-describedby="gang-asset-files-help gang-asset-files-error" {% if not can_edit %}disabled{% endif %} required>
+          <div class="gang-import-dropzone" data-batch-dropzone role="group" aria-label="Dépôt de visuels" aria-controls="id-gang-asset-files" aria-describedby="gang-asset-files-help gang-asset-files-summary gang-asset-files-error">
+            <input class="ui-sr-only" id="id-gang-asset-files" type="file" name="files" multiple accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff,.psd,.ai,.eps" data-batch-file-input data-max-file-bytes="{{ gang_sheet_upload_max_bytes }}" data-max-files="{{ gang_sheet_upload_max_files }}" data-max-total-bytes="{{ gang_sheet_upload_max_total_bytes }}" aria-label="Fichiers à analyser" aria-describedby="gang-asset-files-help gang-asset-files-error" tabindex="-1" {% if not can_edit %}disabled{% endif %} required>
             <span class="b2b-batch-dropzone__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="upload" size="24" %}</span>
             <span class="b2b-batch-dropzone__copy"><strong>Déposez vos fichiers ici</strong><span>ou sélectionnez-les depuis votre appareil</span></span>
             <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-batch-picker {% if not can_edit %}disabled{% endif %}>Choisir les fichiers</button>
@@ -197,7 +197,7 @@
           <p class="ui-field-help gang-inline-import__rules" id="gang-asset-files-help">PNG, JPG, PDF, PSD, TIFF, EPS ou AI · {{ gang_sheet_upload_max_files }} fichiers maximum · {{ gang_sheet_upload_max_size_label }} par fichier.</p>
           <p class="ui-error-text" id="gang-asset-files-error" data-configurator-file-error role="alert" hidden></p>
           <div class="gang-inline-import__selection" aria-live="polite" aria-atomic="true">
-            <p id="gang-asset-files-summary" data-selected-files-summary>Le contrôle démarre dès la sélection.</p>
+            <p id="gang-asset-files-summary" data-selected-files-summary>Aucun fichier sélectionné.</p>
             <ul data-selected-files-list hidden></ul>
           </div>
           <p class="gang-inline-import__progress" data-batch-upload-progress role="status" aria-live="polite" hidden><i aria-hidden="true"></i> Envoi sécurisé et analyse en cours…</p>

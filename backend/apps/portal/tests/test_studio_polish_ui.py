@@ -38,6 +38,14 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn(".gang-editor__inspector button", polish)
         self.assertIn(".gang-sheet-item-action", polish)
         self.assertIn(".gang-import-dropzone", polish)
+        self.assertIn("container: gang-import / inline-size", polish)
+        self.assertIn("@container gang-import (max-width: 29.99rem)", polish)
+        self.assertIn('"icon copy"', polish)
+        self.assertIn('"action action"', polish)
+        self.assertIn("overflow-x: hidden", polish)
+        self.assertIn("overflow-wrap: anywhere", polish)
+        self.assertIn("white-space: normal", polish)
+        self.assertIn("-webkit-line-clamp: 2", polish)
         self.assertIn(".b2b-batch-upload__progress", polish)
         self.assertIn("background: var(--gang-panel);", polish)
         self.assertIn(".gang-sheet-canvas-scroll", polish)
@@ -155,6 +163,10 @@ class StudioPolishUITests(SimpleTestCase):
 
         self.assertIn("Déposez vos fichiers ici", editor)
         self.assertIn("Choisir les fichiers", editor)
+        self.assertIn('data-batch-dropzone role="group"', editor)
+        self.assertNotIn('data-batch-dropzone role="button"', editor)
+        self.assertNotIn('data-batch-dropzone role="group" tabindex="0"', editor)
+        self.assertIn("Aucun fichier sélectionné.", editor)
         self.assertIn("gang-asset-card__place", gallery)
         self.assertIn("Placer sur la planche", gallery)
         empty_state = gallery.split("{% empty %}", 1)[1]
@@ -164,6 +176,7 @@ class StudioPolishUITests(SimpleTestCase):
             self.assertIn(attribute, gallery)
         self.assertIn('class="gang-asset-card__usage-state"', gallery)
         self.assertNotIn('class="gang-asset-card__remove"\n            disabled', gallery)
+        self.assertIn("Importez votre premier fichier avec la zone ci-dessus.", gallery)
 
     def test_final_step_uses_one_confirm_cta(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
