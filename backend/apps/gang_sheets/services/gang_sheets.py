@@ -902,8 +902,16 @@ class GangSheetService:
         return [source_item, *clones]
 
     @transaction.atomic
-    def duplicate_occurrence(self, *, sheet, item_public_id, actor, source="client_portal"):
+    def duplicate_occurrence(
+        self, *, sheet, item_public_id, expected_revision, actor, source="client_portal"
+    ):
         locked = self._lock_editable(sheet)
+        if str(expected_revision) != str(locked.revision):
+            raise GangSheetDomainError(
+                "STALE_REVISION",
+                "La planche a changé. Rechargez-la avant de dupliquer ce visuel.",
+                {"revision": locked.revision},
+            )
         source_item = locked.items.filter(public_id=item_public_id).first()
         if source_item is None:
             raise GangSheetDomainError("ITEM_NOT_FOUND", "Occurrence introuvable.")

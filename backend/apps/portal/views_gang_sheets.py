@@ -1033,7 +1033,10 @@ class ClientGangSheetItemActionView(ClientGangSheetMixin, View):
         try:
             if action == "duplicate":
                 gang_sheet_service.duplicate_occurrence(
-                    sheet=sheet, item_public_id=item_public_id, actor=request.user
+                    sheet=sheet,
+                    item_public_id=item_public_id,
+                    expected_revision=request.POST.get("expected_revision"),
+                    actor=request.user,
                 )
             elif action == "delete":
                 gang_sheet_service.delete_occurrence(
@@ -1052,7 +1055,7 @@ class ClientGangSheetItemActionView(ClientGangSheetMixin, View):
             else:
                 raise Http404
         except GangSheetDomainError as error:
-            return _json_error(error)
+            return _json_error(error, status=409 if error.code == "STALE_REVISION" else 400)
         return JsonResponse({"ok": True})
 
 

@@ -936,7 +936,12 @@ def test_occurrences_auto_place_without_overlap_and_height_is_automatic():
         sheet=sheet, asset_version_public_id=version.public_id, actor=user
     )
     sheet.refresh_from_db()
-    second = service.duplicate_occurrence(sheet=sheet, item_public_id=first.public_id, actor=user)
+    second = service.duplicate_occurrence(
+        sheet=sheet,
+        item_public_id=first.public_id,
+        expected_revision=sheet.revision,
+        actor=user,
+    )
 
     sheet.refresh_from_db()
     service.auto_place(sheet=sheet, actor=user)
@@ -1555,7 +1560,10 @@ def test_duplicate_uses_a_free_position_inside_the_useful_sheet():
     sheet.refresh_from_db()
 
     duplicate = service.duplicate_occurrence(
-        sheet=sheet, item_public_id=source.public_id, actor=user
+        sheet=sheet,
+        item_public_id=source.public_id,
+        expected_revision=sheet.revision,
+        actor=user,
     )
     sheet.refresh_from_db()
 
@@ -1582,7 +1590,12 @@ def test_duplicate_fails_atomically_when_no_free_position_exists():
     initial_revision = sheet.revision
 
     with pytest.raises(GangSheetDomainError) as exc:
-        service.duplicate_occurrence(sheet=sheet, item_public_id=source.public_id, actor=user)
+        service.duplicate_occurrence(
+            sheet=sheet,
+            item_public_id=source.public_id,
+            expected_revision=sheet.revision,
+            actor=user,
+        )
 
     assert exc.value.code == "DUPLICATE_NO_SPACE"
     sheet.refresh_from_db()
@@ -1603,7 +1616,10 @@ def test_duplicate_of_an_invalid_draft_item_is_placed_inside_the_useful_sheet():
     sheet.refresh_from_db()
 
     duplicate = service.duplicate_occurrence(
-        sheet=sheet, item_public_id=source.public_id, actor=user
+        sheet=sheet,
+        item_public_id=source.public_id,
+        expected_revision=sheet.revision,
+        actor=user,
     )
     duplicate.refresh_from_db()
     duplicate_rect = GangSheetGeometryService().rect_for(duplicate)

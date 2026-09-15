@@ -671,6 +671,114 @@ def test_batch_delete_is_readonly_protected_and_tenant_scoped(client):
     assert readonly_sheet.items.filter(public_id=readonly_item.public_id).exists()
 
 
+def test_duplicate_item_is_revisioned_readonly_protected_and_tenant_scoped(client):
+    owner, customer, project = create_customer_scope(email="duplicate-scope@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=owner, name="Duplication privée")
+    item = service.add_occurrence(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        actor=owner,
+    )
+    other_sheet = service.create_sheet(project=project, actor=owner, name="Autre planche")
+    foreign_item = service.add_occurrence(
+        sheet=other_sheet,
+        asset_version_public_id=version.public_id,
+        actor=owner,
+    )
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+    initial_count = sheet.items.count()
+    initial_audits = AuditLogEntry.objects.filter(
+        action="gang_sheet.item_duplicated",
+        target_public_id=sheet.public_id,
+    ).count()
+    url = reverse(
+        "portal:client-gang-sheet-item-action",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "item_public_id": item.public_id,
+            "action": "duplicate",
+        },
+    )
+    client.force_login(owner)
+
+    stale = client.post(url, {"expected_revision": initial_revision + 1})
+    foreign_item_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-item-action",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "item_public_id": foreign_item.public_id,
+                "action": "duplicate",
+            },
+        ),
+        {"expected_revision": initial_revision},
+    )
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="duplicate-outsider@example.com"
+    )
+    client.force_login(outsider)
+    cross_tenant = client.post(
+        reverse(
+            "portal:client-gang-sheet-item-action",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "item_public_id": item.public_id,
+                "action": "duplicate",
+            },
+        ),
+        {"expected_revision": initial_revision},
+    )
+
+    readonly = get_user_model().objects.create_user(
+        email="duplicate-readonly@example.com", password="pass"
+    )
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=readonly,
+        role=CustomerMembership.Role.READONLY,
+    )
+    client.force_login(readonly)
+    readonly_response = client.post(url, {"expected_revision": initial_revision})
+
+    sheet.refresh_from_db()
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "STALE_REVISION"
+    assert foreign_item_response.status_code == 400
+    assert foreign_item_response.json()["error"]["code"] == "ITEM_NOT_FOUND"
+    assert cross_tenant.status_code == 404
+    assert readonly_response.status_code == 403
+    assert sheet.revision == initial_revision
+    assert sheet.items.count() == initial_count
+    assert (
+        AuditLogEntry.objects.filter(
+            action="gang_sheet.item_duplicated",
+            target_public_id=sheet.public_id,
+        ).count()
+        == initial_audits
+    )
+
+    client.force_login(owner)
+    success = client.post(url, {"expected_revision": initial_revision})
+    sheet.refresh_from_db()
+    assert success.status_code == 200
+    assert sheet.items.count() == initial_count + 1
+    assert sheet.revision == initial_revision + 1
+    assert (
+        AuditLogEntry.objects.filter(
+            action="gang_sheet.item_duplicated",
+            target_public_id=sheet.public_id,
+        ).count()
+        == initial_audits + 1
+    )
+
+
 def test_owner_can_apply_axis_spacing_through_the_scoped_workflow_action(client):
     user, customer, project = create_customer_scope(email="spacing-owner@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
@@ -1940,6 +2048,7 @@ def test_warning_gallery_exposes_diagnostics_and_mediated_overlays(client):
     assert "/media/" not in row["thin_zone"]["overlay_url"]
     content = response.content.decode()
     assert "Contrôler le visuel" in content
+    assert f'data-asset-version-id="{version.public_id}"' in content
     assert "300 DPI" in content
     assert "Zones &lt; 0,5 mm" in content
     assert "Dégradés détectés" in content

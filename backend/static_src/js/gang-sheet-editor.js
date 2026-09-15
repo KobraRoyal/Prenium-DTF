@@ -722,6 +722,20 @@ if (root) {
       attribute: "data-canvas-rotate-item",
     });
     rotateButton.setAttribute("aria-label", `Pivoter ${item.asset_name} de 90 degrés`);
+    const duplicateButton = createItemAction({
+      label: "Dupliquer",
+      icon: "⧉",
+      attribute: "data-canvas-duplicate-item",
+    });
+    duplicateButton.setAttribute("aria-label", `Dupliquer ${item.asset_name}`);
+    const cropButton = !isTextItem(item) && item.asset_version_public_id
+      ? createItemAction({
+          label: "Recadrer",
+          icon: "⌗",
+          attribute: "data-canvas-crop-item",
+        })
+      : null;
+    cropButton?.setAttribute("aria-label", `Recadrer ${item.asset_name}`);
     const deleteButton = createItemAction({
       label: "Supprimer",
       icon: "×",
@@ -729,7 +743,9 @@ if (root) {
       danger: true,
     });
     deleteButton.setAttribute("aria-label", `Supprimer ${item.asset_name} de la planche`);
-    toolbar.append(rotateButton, deleteButton);
+    toolbar.append(rotateButton, duplicateButton);
+    if (cropButton) toolbar.append(cropButton);
+    toolbar.append(deleteButton);
     canvas.append(toolbar);
     window.requestAnimationFrame(positionSelectedItemToolbar);
   }
@@ -1403,7 +1419,7 @@ if (root) {
     const locked = ["rendering", "validated"].includes(state.status);
     const hasPersistentGroups = state.items.some((item) => Boolean(item.layout_group_id));
     qa(
-      "[data-add-asset], [data-add-text], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection], [data-text-content], [data-text-font], [data-text-size], [data-text-color], [data-text-color-hex], [data-text-align], [data-text-bold]"
+      "[data-add-asset], [data-add-text], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-duplicate-item], [data-canvas-crop-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection], [data-text-content], [data-text-font], [data-text-size], [data-text-color], [data-text-color-hex], [data-text-align], [data-text-bold]"
     ).forEach((control) => {
       const assetPending = control.matches("[data-add-asset]") && control.dataset.assetReady !== "true";
       const groupedAssetAction = hasPersistentGroups && control.matches("[data-add-asset], [data-asset-quantity]");
@@ -3170,10 +3186,34 @@ if (root) {
     try {
       await saveLayout({ notify: false });
       const url = root.dataset.itemUrlTemplate.replace("00000000-0000-0000-0000-000000000000", item.public_id).replace("ACTION", "duplicate");
-      await request(url, { method: "POST" }); await reloadState(); window.preniumToast?.("Occurrence dupliquée.", "success");
+      const body = new FormData();
+      body.append("expected_revision", String(state.revision));
+      await request(url, { method: "POST", body }); await reloadState(); window.preniumToast?.("Occurrence dupliquée.", "success");
     } catch (error) { window.preniumToast?.(error.message, "error"); }
   }
   q("[data-duplicate-item]").addEventListener("click", duplicateSelected);
+
+  function openSelectedCropDialog() {
+    const item = selected();
+    if (!item || isTextItem(item) || !item.asset_version_public_id) return;
+    const card = qa("[data-asset-card]").find(
+      (candidate) => candidate.dataset.assetVersionId === item.asset_version_public_id
+    );
+    const opener = card?.querySelector("[data-dialog-open^='gang-asset-detail-']");
+    const dialog = opener?.dataset.dialogOpen
+      ? document.getElementById(opener.dataset.dialogOpen)
+      : null;
+    if (!(opener instanceof HTMLButtonElement) || !(dialog instanceof HTMLDialogElement)) {
+      window.preniumToast?.("Le recadrage de ce visuel n’est pas disponible.", "error");
+      return;
+    }
+    const returnToCanvas = window.matchMedia("(max-width: 980px)").matches;
+    if (returnToCanvas) {
+      setMobilePanel("assets");
+      dialog.addEventListener("close", () => setMobilePanel("canvas"), { once: true });
+    }
+    opener.click();
+  }
 
   async function deleteSelected() {
     const items = selectedItems();
@@ -3212,6 +3252,16 @@ if (root) {
     const rotateButton = event.target.closest("[data-canvas-rotate-item]");
     if (rotateButton && !rotateButton.disabled) {
       rotateSelected();
+      return;
+    }
+    const duplicateButton = event.target.closest("[data-canvas-duplicate-item]");
+    if (duplicateButton && !duplicateButton.disabled) {
+      duplicateSelected();
+      return;
+    }
+    const cropButton = event.target.closest("[data-canvas-crop-item]");
+    if (cropButton && !cropButton.disabled) {
+      openSelectedCropDialog();
       return;
     }
     const deleteButton = event.target.closest("[data-canvas-delete-item]");

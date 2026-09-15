@@ -49,8 +49,8 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   pour le vectoriel et union illustration + pixels pour les documents mixtes, confirmée côté serveur.
 - Canvas physique non déformé : ratio laize/hauteur respecté même sur les planches courtes, aperçu
   clipsé dans son cadre et redimensionnement 90°/270° aligné sur les axes visibles.
-- Barre contextuelle sur le visuel sélectionné : rotation et suppression accessibles directement
-  sur le canevas ; l’inspecteur conserve duplication, dimensions, position et proportions.
+- Barre contextuelle sur le visuel sélectionné : rotation, duplication, recadrage et suppression
+  accessibles directement sur le canevas ; le recadrage ouvre la modale d’analyse de la source.
 - Panneau d’espacement simplifié sans création de grille : réglages X/Y indépendants, accessibles
   sans sélection, puis application explicite avec réorganisation automatique de la planche.
 - Crop HD adapté aux sources raster, vectorielles et mixtes : pixels natifs sans rééchantillonnage,
@@ -125,8 +125,9 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   recalcul serveur autoritaire et contrat UI Manuel/Auto.
 - [x] Test de non-régression canvas : absence de hauteur minimale déformante, calque d’aperçu clipsé
   et inversion des axes lors du redimensionnement d’une occurrence tournée.
-- [x] Test UX des actions contextuelles : rotation et suppression accessibles sur le canevas,
-  panneau X/Y sans répétition, application serveur et comportement responsive.
+- [x] Test UX des actions contextuelles : rotation, duplication, recadrage et suppression accessibles
+  sur le canevas, duplication révisionnée sous verrou, panneau X/Y sans répétition, application
+  serveur et comportement responsive.
 - [x] Multi-sélection avec Maj/Ctrl/Cmd, déplacement groupé et six alignements selon deux
   référentiels explicites : cadre global de la sélection ou zone utile de la planche.
 - [x] Historique Annuler/Rétablir, aimantation et guides, cadre de sélection, multi-tap tactile,
@@ -231,7 +232,7 @@ Le contrôle qualité du PDF et du support au checkout ainsi que la validation R
 distincts du contrôle de composition du Studio. Aucun nouveau profil ICC ni traitement de blanc
 n’est introduit dans ce lot.
 
-Validation du lot : 1 273 tests Python réussis dans Docker ; quatre ignorés, dont les deux
+Validation du lot : 1 274 tests Python réussis dans Docker ; quatre ignorés, dont les deux
 harness Node exécutés séparément avec succès sur l’hôte. Les deux autres dépendent d’une
 table legacy absente et de verrous PostgreSQL (suite utilisant SQLite). Ruff, contrôle Django,
 absence de migration, build des assets et relecture sécurité indépendants conformes.

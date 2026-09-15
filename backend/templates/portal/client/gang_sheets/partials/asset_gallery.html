@@ -14,7 +14,7 @@
   {% endif %}
 >
   {% for asset in assets %}
-  <article class="gang-asset-card" data-asset-card data-asset-name="{{ asset.name|lower }}" data-source-asset-id="{{ asset.source_public_id }}" data-asset-ready="{{ asset.is_ready|yesno:'true,false' }}">
+  <article class="gang-asset-card" data-asset-card data-asset-name="{{ asset.name|lower }}" data-source-asset-id="{{ asset.source_public_id }}" data-asset-version-id="{{ asset.public_id }}" data-asset-ready="{{ asset.is_ready|yesno:'true,false' }}">
     <div class="gang-asset-card__preview">
       {% if asset.preview_url %}<img src="{{ asset.preview_url }}" alt="Aperçu de {{ asset.name }}" loading="lazy">{% else %}<div class="gang-asset-card__pending" aria-hidden="true"><span></span></div>{% endif %}
       {% if asset.has_crop %}<span class="gang-asset-card__crop-badge">Recadré</span>{% endif %}

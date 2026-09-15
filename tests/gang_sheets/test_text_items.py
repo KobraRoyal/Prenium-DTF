@@ -232,7 +232,13 @@ def test_text_item_can_be_duplicated_and_saved_with_layout():
     service = GangSheetService()
     sheet = service.create_sheet(customer=customer, actor=user, name="Texte duplicable")
     item = service.add_text_item(sheet=sheet, actor=user, content="Studio DTF")
-    clone = service.duplicate_occurrence(sheet=sheet, item_public_id=item.public_id, actor=user)
+    sheet.refresh_from_db()
+    clone = service.duplicate_occurrence(
+        sheet=sheet,
+        item_public_id=item.public_id,
+        expected_revision=sheet.revision,
+        actor=user,
+    )
 
     assert clone.kind == GangSheetItem.Kind.TEXT
     assert clone.text_content == "Studio DTF"
