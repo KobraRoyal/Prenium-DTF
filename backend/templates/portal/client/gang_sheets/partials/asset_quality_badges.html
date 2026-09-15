@@ -11,7 +11,7 @@
     {% endif %}
     {% if review.semi_transparency %}
     <p class="b2b-quality-strip {% if review.semi_transparency.detected %}is-warning{% else %}is-good{% endif %}">
-      <strong class="b2b-quality-strip__label">{% if review.semi_transparency.detected %}Transparence détectée{% else %}Transparence OK{% endif %}</strong>
+      <strong class="b2b-quality-strip__label">{% if review.semi_transparency.detected %}Dégradés détectés{% else %}Pas de dégradé{% endif %}</strong>
     </p>
     {% endif %}
   </div>

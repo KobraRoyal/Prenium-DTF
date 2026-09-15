@@ -160,6 +160,9 @@ class StudioPolishUITests(SimpleTestCase):
     def test_empty_gallery_has_one_import_path_and_keeps_htmx_contract(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
         gallery = source(TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_gallery.html")
+        quality_badges = source(
+            TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_quality_badges.html"
+        )
 
         self.assertIn("Déposez vos fichiers ici", editor)
         self.assertIn("Choisir les fichiers", editor)
@@ -178,6 +181,10 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn('class="gang-placement-state is-placed"', gallery)
         self.assertNotIn('class="gang-asset-card__remove"\n            disabled', gallery)
         self.assertIn("Importez votre premier fichier avec la zone ci-dessus.", gallery)
+        self.assertIn("Zones &lt; 0,5 mm", quality_badges)
+        self.assertIn("Dégradés détectés", quality_badges)
+        self.assertIn("Pas de dégradé", quality_badges)
+        self.assertNotIn("Transparence OK", quality_badges)
 
     def test_final_step_uses_one_confirm_cta(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")

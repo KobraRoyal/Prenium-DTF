@@ -1942,7 +1942,8 @@ def test_warning_gallery_exposes_diagnostics_and_mediated_overlays(client):
     assert "Contrôler le visuel" in content
     assert "300 DPI" in content
     assert "Zones &lt; 0,5 mm" in content
-    assert "Transparence détectée" in content
+    assert "Dégradés détectés" in content
+    assert "Pas de dégradé" not in content
     assert "Couleur du support" not in content
     assert ">Détails<" not in content
 

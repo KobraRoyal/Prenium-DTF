@@ -22,7 +22,7 @@
         {% if asset.thin_zone.overlay_url or asset.semi_transparency.overlay_url %}
         <div class="gang-asset-detail__overlays" role="group" aria-label="Afficher les anomalies sur l’aperçu">
           {% if asset.thin_zone.overlay_url %}<button type="button" class="gang-analysis-toggle is-active" data-analysis-overlay-toggle="thin" aria-pressed="true">Zones trop fines</button>{% endif %}
-          {% if asset.semi_transparency.overlay_url %}<button type="button" class="gang-analysis-toggle is-active" data-analysis-overlay-toggle="fade" aria-pressed="true">Semi-transparences</button>{% endif %}
+          {% if asset.semi_transparency.overlay_url %}<button type="button" class="gang-analysis-toggle is-active" data-analysis-overlay-toggle="fade" aria-pressed="true">Dégradés</button>{% endif %}
         </div>
         {% endif %}
         <div class="gang-asset-detail__preview-tools">
@@ -42,7 +42,7 @@
         <div class="gang-quality-chips" aria-label="Contrôles qualité">
           {% if asset.dpi_label %}<span>{{ asset.dpi_label }}</span>{% endif %}
           {% if asset.thin_zone.detected %}<span class="is-warning">Zones &lt; 0,5 mm</span>{% endif %}
-          <span>{% if asset.semi_transparency.detected %}Transparence détectée{% else %}Transparence OK{% endif %}</span>
+          <span>{% if asset.semi_transparency.detected %}Dégradés détectés{% else %}Pas de dégradé{% endif %}</span>
         </div>
         <div class="gang-asset-detail__file-info" aria-label="Informations utiles du fichier">
           <p>

@@ -24,7 +24,7 @@
           <li>Détails fins détectés{% if asset.thin_zone.coverage_percent is not None %} · {{ asset.thin_zone.coverage_percent|floatformat:1 }} % de la surface{% endif %}{% if asset.thin_zone.resolution_limited %} · aperçu partiel{% endif %}.</li>
         {% endif %}
         {% if asset.semi_transparency.detected %}
-          <li>Semi-transparence détectée{% if asset.semi_transparency.coverage_percent is not None %} · {{ asset.semi_transparency.coverage_percent|floatformat:1 }} % de la surface{% endif %}.</li>
+          <li>Dégradés détectés{% if asset.semi_transparency.coverage_percent is not None %} · {{ asset.semi_transparency.coverage_percent|floatformat:1 }} % de la surface{% endif %}.</li>
         {% endif %}
         {% if asset.probable_white_background %}<li>Fond blanc probablement présent.</li>{% endif %}
       </ul>
@@ -35,7 +35,7 @@
     {% if not hide_overlay_links and asset.thin_zone.overlay_available or not hide_overlay_links and asset.semi_transparency.overlay_available %}
       <div class="gang-analysis-summary__overlays" aria-label="Aperçus des anomalies">
         {% if asset.thin_zone.overlay_available %}<a class="ui-btn ui-btn-ghost ui-btn-sm" href="{{ asset.thin_zone.overlay_url }}" target="_blank" rel="noopener">Voir les détails fins</a>{% endif %}
-        {% if asset.semi_transparency.overlay_available %}<a class="ui-btn ui-btn-ghost ui-btn-sm" href="{{ asset.semi_transparency.overlay_url }}" target="_blank" rel="noopener">Voir la transparence</a>{% endif %}
+        {% if asset.semi_transparency.overlay_available %}<a class="ui-btn ui-btn-ghost ui-btn-sm" href="{{ asset.semi_transparency.overlay_url }}" target="_blank" rel="noopener">Voir les dégradés</a>{% endif %}
       </div>
     {% endif %}
   {% endif %}

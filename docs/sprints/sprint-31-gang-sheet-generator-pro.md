@@ -214,8 +214,8 @@ Branche : `codex/gang-sheet-audit-fixes`.
   noms longs repliés sans défilement horizontal, contrôles uniques accessibles et actions tactiles
   de 44 px sur les cartes ; style partagé avec la commande par fichier et limite réelle de cinq
   fichiers par lot.
-- [x] Galerie alignée sur la commande par fichier : badges résolution, détails fins et
-  transparence, action « Contrôler le visuel », informations secondaires retirées et aucune
+- [x] Galerie alignée sur la commande par fichier : badges « 300 DPI », « Zones < 0,5 mm » et
+  « Pas de dégradé » / « Dégradés détectés », action « Contrôler le visuel » et aucune
   couleur de support.
 - [x] Placement initial automatique par POST révisionné et idempotent : verrouillage planche/source,
   contrôle tenant et version courante, respect des groupes et des coordonnées existantes, rotation
