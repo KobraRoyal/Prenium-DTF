@@ -163,8 +163,9 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   fonds de contrôle, recadrage manuel/automatique et conservation de l’original.
 - [x] Actions de recadrage post-import maintenues dans la modale : l’auto-crop, le cadrage manuel
   et le rétablissement de l’original enregistrent immédiatement le résultat, synchronisent la
-  révision et les dimensions sans rechargement ; le résumé retire le statut redondant et les
-  anomalies dupliquées.
+  révision et les dimensions sans rechargement, puis ferment la modale après le rafraîchissement
+  du canvas ; en cas d’erreur, la modale reste ouverte avec le motif et les anomalies dupliquées
+  restent retirées du résumé.
 - [x] Aligner / répartir : un groupe mémorisé se comporte comme un seul objet (écarts internes
   conservés, visuels isolés inchangés).
 - [x] Inspecteur Réglages : un langage de champs / titres / actions ; les nouveaux imports sont

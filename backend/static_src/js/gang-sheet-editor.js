@@ -3960,6 +3960,7 @@ if (root) {
     const form = event.target;
     if (!(form instanceof HTMLFormElement) || !form.matches(".gang-asset-crop-form")) return;
     event.preventDefault();
+    const dialog = form.closest("dialog");
     const errorNode = form.querySelector("[data-existing-crop-error]");
     if (errorNode instanceof HTMLElement) {
       errorNode.textContent = "";
@@ -3985,6 +3986,7 @@ if (root) {
         manual: "Cadrage appliqué.",
       };
       window.preniumToast?.(messages[cropAction] || messages.manual, "success");
+      if (dialog instanceof HTMLDialogElement && dialog.open) dialog.close();
       const mode = form.querySelector("[data-existing-crop-mode]");
       if (mode instanceof HTMLInputElement) mode.value = "manual";
       const manualButton = form.querySelector("[data-existing-crop-manual]");
