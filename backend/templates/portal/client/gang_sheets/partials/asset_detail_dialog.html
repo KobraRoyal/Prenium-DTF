@@ -42,7 +42,7 @@
         <div class="gang-quality-chips" aria-label="Contrôles qualité">
           {% if asset.dpi_label %}<span>{{ asset.dpi_label }}</span>{% endif %}
           {% if asset.thin_zone.detected %}<span class="is-warning">Zones &lt; 0,5 mm</span>{% endif %}
-          <span>{% if asset.semi_transparency.detected %}Dégradés détectés{% else %}Pas de dégradé{% endif %}</span>
+          <span>{% if asset.semi_transparency.detected %}Transparence détectée{% else %}Transparence OK{% endif %}</span>
         </div>
         <div class="gang-asset-detail__file-info" aria-label="Informations utiles du fichier">
           <p>
@@ -76,7 +76,7 @@
           <input type="hidden" name="crop_y" value="{{ asset.crop_y }}" data-crop-value="y">
           <input type="hidden" name="crop_width" value="{{ asset.crop_width }}" data-crop-value="width">
           <input type="hidden" name="crop_height" value="{{ asset.crop_height }}" data-crop-value="height">
-          {% if asset.usage_count %}<p class="ui-field-help">Retirez d’abord les occurrences placées pour modifier le cadrage sans déformer la composition.</p>{% elif not asset.can_crop %}<p class="ui-field-help">Le cadrage n’est plus modifiable dans l’état actuel de la planche.</p>{% endif %}
+          {% if asset.usage_count %}<p class="ui-field-help">Le cadrage ajustera automatiquement les occurrences déjà placées.</p>{% elif not asset.can_crop %}<p class="ui-field-help">Le cadrage n’est plus modifiable dans l’état actuel de la planche.</p>{% endif %}
           <div class="b2b-dialog-actions b2b-dialog-actions--editor">
             <button type="button" class="ui-btn ui-btn-secondary" data-crop-reset-existing {% if not asset.can_crop %}disabled{% endif %}>Rétablir l’original</button>
             <button type="submit" class="ui-btn ui-btn-primary" data-existing-crop-save {% if not asset.can_crop %}disabled{% endif %}>Appliquer le cadrage</button>

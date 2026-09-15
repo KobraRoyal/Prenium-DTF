@@ -5,6 +5,7 @@ import logging
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlencode
+from uuid import UUID
 
 from django.conf import settings
 from django.core.cache import cache
@@ -68,6 +69,48 @@ def _safe_analysis_warnings(analysis) -> list[str]:
             str(value).strip()[:240] for value in (analysis.warnings or []) if str(value).strip()
         )
     )
+
+
+def _source_quality_review(*, version, analysis, thin_zone, semi_transparency):
+    if version is None or version.analysis_status in {
+        version.AnalysisStatus.PENDING,
+        version.AnalysisStatus.PROCESSING,
+    }:
+        level, label, resolution = "pending", "Analyse en cours", "Analyse…"
+    elif version.analysis_status == version.AnalysisStatus.FAILED:
+        level, label, resolution = "error", "Analyse impossible", "À corriger"
+    else:
+        metadata = (analysis.metadata or {}) if analysis else {}
+        if metadata.get("is_pure_vector") is True:
+            level, label, resolution = "good", "Résolution validée", "Vectoriel · OK"
+        else:
+            dpi_values = [
+                float(value)
+                for value in (
+                    getattr(analysis, "dpi_x", None),
+                    getattr(analysis, "dpi_y", None),
+                )
+                if value is not None
+            ]
+            dpi = min(dpi_values) if dpi_values else None
+            recommended = int(settings.B2B_RECOMMENDED_DPI)
+            minimum = int(settings.B2B_MIN_ACCEPTABLE_DPI)
+            resolution = f"{dpi:.0f} DPI" if dpi is not None else "DPI à contrôler"
+            if dpi is None:
+                level, label = "warning", "Résolution à vérifier"
+            elif round(dpi) >= recommended:
+                level, label = "good", "Résolution source validée"
+            elif round(dpi) >= minimum:
+                level, label = "warning", "Résolution source acceptable"
+            else:
+                level, label = "error", "Résolution source insuffisante"
+    return {
+        "level": level,
+        "label": label,
+        "resolution_display": resolution,
+        "thin_zone": thin_zone,
+        "semi_transparency": semi_transparency if analysis is not None else None,
+    }
 
 
 def _format_upload_size(size_bytes: int) -> str:
@@ -257,6 +300,7 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
         recent_batch = self._recent_upload_batch(sheet=sheet)
         available_version_public_ids = set()
         recent_pending = False
+        has_ready_auto_placement = False
         usage_by_asset_id = {}
         for item in sheet.items.all():
             if not item.asset_version_id:
@@ -314,6 +358,17 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                 if version
                 else {}
             )
+            auto_placement_status = entry.auto_placement_status
+            ready_for_auto_placement = bool(
+                is_ready and auto_placement_status == entry.AutoPlacementStatus.AWAITING_ANALYSIS
+            )
+            has_ready_auto_placement = has_ready_auto_placement or ready_for_auto_placement
+            quality_review = _source_quality_review(
+                version=version,
+                analysis=analysis,
+                thin_zone=thin_zone,
+                semi_transparency=semi_transparency,
+            )
             assets.append(
                 {
                     "source_public_id": str(entry.public_id),
@@ -355,6 +410,7 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                     ),
                     "thin_zone": thin_zone,
                     "semi_transparency": semi_transparency,
+                    "quality_review": quality_review,
                     "is_recent_import": is_recent,
                     "is_ready": is_ready,
                     "width_mm": entry.effective_width_mm,
@@ -371,7 +427,10 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                     ),
                     "expected_revision": sheet.revision,
                     "usage_count": usage_count,
-                    "can_crop": can_manage_gallery and usage_count == 0,
+                    "auto_placement_status": auto_placement_status,
+                    "auto_placement_error": entry.auto_placement_error,
+                    "ready_for_auto_placement": ready_for_auto_placement,
+                    "can_crop": can_manage_gallery,
                     "can_remove": can_manage_gallery and usage_count == 0,
                 }
             )
@@ -384,6 +443,7 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
             "sheet": sheet,
             "assets": assets,
             "has_pending_assets": has_pending_assets,
+            "has_ready_auto_placement": has_ready_auto_placement,
             "can_edit": can_edit,
             "can_manage_gallery": can_manage_gallery,
             "recent_import_version_public_ids": sorted(batch_ids),
@@ -612,9 +672,7 @@ class ClientGangSheetSourceAssetCropView(ClientGangSheetMixin, View):
                 ),
                 status=429,
             )
-            response["Retry-After"] = str(
-                settings.GANG_SHEET_AUTO_CROP_RATE_LIMIT_WINDOW_SECONDS
-            )
+            response["Retry-After"] = str(settings.GANG_SHEET_AUTO_CROP_RATE_LIMIT_WINDOW_SECONDS)
             response["Cache-Control"] = "private, no-store"
             return response
         crop = None
@@ -839,6 +897,40 @@ class ClientGangSheetStateView(ClientGangSheetMixin, View):
                         sheet=sheet, version=version
                     ),
                 ),
+            }
+        )
+
+
+class ClientGangSheetAutoPlaceReadySourcesView(ClientGangSheetMixin, View):
+    def post(self, request, customer_public_id, sheet_public_id):
+        self.require_write_access()
+        sheet = self.get_sheet_or_404(sheet_public_id)
+        retry_source_public_id = request.POST.get("retry_source_public_id") or None
+        if retry_source_public_id:
+            try:
+                retry_source_public_id = UUID(retry_source_public_id)
+            except (TypeError, ValueError, AttributeError):
+                return _json_error(
+                    GangSheetDomainError(
+                        "INVALID_SOURCE_ASSET_ID", "L’identifiant du visuel est invalide."
+                    ),
+                    status=400,
+                )
+        try:
+            sheet, items, no_space_count = gang_sheet_service.auto_place_ready_sources(
+                sheet=sheet,
+                expected_revision=request.POST.get("expected_revision"),
+                retry_source_public_id=retry_source_public_id,
+                actor=request.user,
+            )
+        except GangSheetDomainError as error:
+            return _json_error(error, status=409 if error.code == "STALE_REVISION" else 400)
+        return JsonResponse(
+            {
+                "ok": True,
+                "created_count": len(items),
+                "no_space_count": no_space_count,
+                "revision": sheet.revision,
             }
         )
 

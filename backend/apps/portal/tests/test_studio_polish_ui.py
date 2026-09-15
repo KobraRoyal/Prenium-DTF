@@ -168,14 +168,14 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertNotIn('data-batch-dropzone role="button"', editor)
         self.assertNotIn('data-batch-dropzone role="group" tabindex="0"', editor)
         self.assertIn("Aucun fichier sélectionné.", editor)
-        self.assertIn("gang-asset-card__place", gallery)
-        self.assertIn("Placer sur la planche", gallery)
+        self.assertIn("gang-asset-card__manual-place", gallery)
+        self.assertIn("Ajouter à la planche", gallery)
         empty_state = gallery.split("{% empty %}", 1)[1]
         self.assertNotIn("<button", empty_state.split("{% endfor %}", 1)[0])
         self.assertNotIn("Ajouter un visuel", empty_state)
         for attribute in ["hx-get", "hx-trigger", "hx-target", "hx-swap", "hx-sync"]:
             self.assertIn(attribute, gallery)
-        self.assertIn('class="gang-asset-card__usage-state"', gallery)
+        self.assertIn('class="gang-placement-state is-placed"', gallery)
         self.assertNotIn('class="gang-asset-card__remove"\n            disabled', gallery)
         self.assertIn("Importez votre premier fichier avec la zone ci-dessus.", gallery)
 
@@ -228,7 +228,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn('link.classList.toggle("ui-btn-primary", canCreate)', editor_js)
         self.assertIn("const hasEstimate = state.items.length > 0 && quote.surface > 0", editor_js)
         self.assertNotIn('q("[data-metric-price]")', editor_js)
-        self.assertIn("gang-sheet-editor.js?v=20260914-crop-modal-v34", app_js)
+        self.assertIn("gang-sheet-editor.js?v=20260915-auto-gallery-v35", app_js)
         self.assertNotIn("gang-inspector-panel__context", editor)
         text_css = source(CSS_DIR / "components/gang-sheet-text.css")
         self.assertIn("font-size: 2.18cqw", text_css)

@@ -857,6 +857,10 @@ def test_owner_can_create_sheet_and_upload_gallery_without_project(client, monke
     assert sheet.project is None
     assert upload_response.status_code == 302
     assert sheet.source_assets.count() == 1
+    assert (
+        sheet.source_assets.get().auto_placement_status
+        == GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS
+    )
 
 
 def test_owner_can_upload_multiple_visuals_with_independent_non_destructive_crops(
@@ -1390,7 +1394,7 @@ def test_owner_can_update_existing_crop_and_gallery_exposes_scoped_modal_data(cl
     gallery_html = gallery_response.content.decode()
     assert "Rétablir l’original" in gallery_html
     assert "Appliquer le cadrage" in gallery_html
-    assert 'data-existing-crop-dimensions' in gallery_html
+    assert "data-existing-crop-dimensions" in gallery_html
     assert "gang-analysis-summary__status" not in gallery_html
 
     response = client.post(
@@ -1617,9 +1621,8 @@ def test_existing_crop_endpoint_rejects_invalid_stale_readonly_and_cross_tenant_
         crop_a_url,
         {**valid_crop, "expected_revision": sheet_a.revision},
     )
-    assert used_response.status_code == 400
-    assert used_response.json()["error"]["code"] == "SOURCE_ASSET_IN_USE"
-    assert used_response.json()["error"]["usage_count"] == 1
+    assert used_response.status_code == 200
+    assert used_response.json()["width_mm"] == "80.00"
     used_gallery = client.get(
         reverse(
             "portal:client-gang-sheet-asset-gallery",
@@ -1629,7 +1632,7 @@ def test_existing_crop_endpoint_rejects_invalid_stale_readonly_and_cross_tenant_
             },
         )
     )
-    assert used_gallery.context["assets"][0]["can_crop"] is False
+    assert used_gallery.context["assets"][0]["can_crop"] is True
 
     readonly, readonly_customer, readonly_project = create_customer_scope(
         email="crop-endpoint-readonly@example.com",
@@ -1698,7 +1701,7 @@ def test_existing_crop_endpoint_rejects_invalid_stale_readonly_and_cross_tenant_
     assert foreign_source_response.json()["error"]["code"] == "SOURCE_ASSET_NOT_FOUND"
     source_a.refresh_from_db()
     readonly_source.refresh_from_db()
-    assert source_a.has_crop is False
+    assert source_a.has_crop is True
     assert readonly_source.has_crop is False
 
 
@@ -1811,7 +1814,7 @@ def test_pending_gallery_refreshes_itself_and_exposes_visual_when_analysis_is_re
     assert 'data-has-pending="false"' in ready_content
     assert 'hx-trigger="every 2s"' not in ready_content
     assert 'data-asset-ready="true"' in ready_content
-    assert "Placer sur la planche" in ready_content
+    assert "Ajouter à la planche" in ready_content
 
 
 @pytest.mark.parametrize(
@@ -1887,6 +1890,8 @@ def test_warning_gallery_exposes_diagnostics_and_mediated_overlays(client):
         version=version,
         image_width=900,
         image_height=600,
+        dpi_x=300,
+        dpi_y=300,
         warnings=["Fond blanc probable détecté.", "Fond blanc probable détecté."],
         metadata={
             "thin_zone": {
@@ -1933,6 +1938,13 @@ def test_warning_gallery_exposes_diagnostics_and_mediated_overlays(client):
     assert "?overlay=thin_zone" in row["thin_zone"]["overlay_url"]
     assert "?overlay=semi_transparency" in row["semi_transparency"]["overlay_url"]
     assert "/media/" not in row["thin_zone"]["overlay_url"]
+    content = response.content.decode()
+    assert "Contrôler le visuel" in content
+    assert "300 DPI" in content
+    assert "Zones &lt; 0,5 mm" in content
+    assert "Transparence détectée" in content
+    assert "Couleur du support" not in content
+    assert ">Détails<" not in content
 
     thin_response = client.get(row["thin_zone"]["overlay_url"])
     assert thin_response.status_code == 200
@@ -1952,6 +1964,92 @@ def test_warning_gallery_exposes_diagnostics_and_mediated_overlays(client):
         },
     )
     assert client.get(f"{cross_tenant_url}?overlay=thin_zone").status_code == 404
+
+
+def test_auto_place_ready_endpoint_is_scoped_revisioned_and_idempotent(client):
+    user, customer, project = create_customer_scope(email="auto-endpoint@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=user)
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Auto endpoint")
+    source = GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset,
+        added_by=user,
+        width_mm="40.00",
+        height_mm="20.00",
+        auto_placement_status=GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
+    )
+    url = reverse(
+        "portal:client-gang-sheet-auto-place-ready-sources",
+        kwargs={"customer_public_id": customer.public_id, "sheet_public_id": sheet.public_id},
+    )
+    client.force_login(user)
+
+    stale = client.post(url, {"expected_revision": sheet.revision + 1})
+    assert stale.status_code == 409
+    assert sheet.items.count() == 0
+    placed = client.post(url, {"expected_revision": sheet.revision})
+    assert placed.status_code == 200
+    assert placed.json()["created_count"] == 1
+    sheet.refresh_from_db()
+    repeated = client.post(url, {"expected_revision": sheet.revision})
+    assert repeated.status_code == 200
+    assert repeated.json()["created_count"] == 0
+    assert sheet.items.count() == 1
+    source.refresh_from_db()
+    assert source.auto_placement_status == GangSheetSourceAsset.AutoPlacementStatus.PLACED
+
+    malformed = client.post(
+        url,
+        {"expected_revision": sheet.revision, "retry_source_public_id": "not-a-uuid"},
+    )
+    assert malformed.status_code == 400
+    assert malformed.json()["error"]["code"] == "INVALID_SOURCE_ASSET_ID"
+
+    foreign_asset, _foreign_version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        name="foreign-retry.png",
+    )
+    foreign_source = GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=GangSheetService().create_sheet(customer=customer, actor=user, name="Autre planche"),
+        asset=foreign_asset,
+        added_by=user,
+        auto_placement_status=GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE,
+    )
+    foreign = client.post(
+        url,
+        {
+            "expected_revision": sheet.revision,
+            "retry_source_public_id": foreign_source.public_id,
+        },
+    )
+    assert foreign.status_code == 400
+    assert foreign.json()["error"]["code"] == "SOURCE_ASSET_NOT_FOUND"
+
+    outsider, outsider_customer, _project = create_customer_scope(email="auto-outsider@example.com")
+    client.force_login(outsider)
+    cross_tenant = reverse(
+        "portal:client-gang-sheet-auto-place-ready-sources",
+        kwargs={
+            "customer_public_id": outsider_customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    assert client.post(cross_tenant, {"expected_revision": sheet.revision}).status_code == 404
+
+    readonly = get_user_model().objects.create_user(
+        email="auto-readonly@example.com", password="pass"
+    )
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=readonly,
+        role=CustomerMembership.Role.READONLY,
+    )
+    client.force_login(readonly)
+    assert client.post(url, {"expected_revision": sheet.revision}).status_code == 403
 
 
 def test_successful_upload_batch_reopens_results_once_and_remains_scoped(client, monkeypatch):
@@ -2199,9 +2297,9 @@ def test_used_visual_must_be_removed_from_composition_before_gallery(client):
 
     editor_content = editor_response.content.decode()
     assert editor_response.status_code == 200
-    assert ">Utilisé</span>" in editor_content
-    assert "gang-asset-card__usage-state" in editor_content
-    assert "Supprimez d’abord toutes les occurrences" in editor_content
+    assert ">1 sur la planche</span>" in editor_content
+    assert "gang-placement-state is-placed" in editor_content
+    assert "Retirer de la galerie" not in editor_content
     assert remove_response.status_code == 400
     assert GangSheetSourceAsset.objects.filter(pk=source_asset.pk).exists()
     toast = json.loads(remove_response.headers["X-Prenium-Toast"])

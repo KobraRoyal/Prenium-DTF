@@ -16,6 +16,7 @@ if (root) {
   let savedLayoutSignature = "";
   let busy = false;
   let dirty = false;
+  let autoPlacementRequest = null;
   let allowUnload = false;
   let zoom = 1;
   const ZOOM_MIN = 0.5;
@@ -2054,6 +2055,53 @@ if (root) {
     render();
   }
 
+  function refreshAssetGallery() {
+    const list = q("[data-asset-list]");
+    if (!list || !window.htmx || !root.dataset.assetGalleryUrl) return;
+    window.htmx.ajax("GET", root.dataset.assetGalleryUrl, { target: list, swap: "outerHTML" });
+  }
+
+  async function autoPlaceReadySources({ retrySourceId = "", notify = true } = {}) {
+    const list = q("[data-asset-list]");
+    if (!canEdit || !list || (!retrySourceId && list.dataset.hasReadyAutoPlacement !== "true")) {
+      return null;
+    }
+    if (autoPlacementRequest) return autoPlacementRequest;
+    autoPlacementRequest = (async () => {
+      if (dirty) await saveLayout({ notify: false });
+      let payload;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const body = new FormData();
+        body.append("expected_revision", String(state.revision));
+        if (retrySourceId) body.append("retry_source_public_id", retrySourceId);
+        try {
+          payload = await request(root.dataset.autoPlaceReadyUrl, { method: "POST", body });
+          break;
+        } catch (error) {
+          if (error.code !== "STALE_REVISION" || attempt > 0) throw error;
+          await reloadState();
+        }
+      }
+      await reloadState();
+      refreshAssetGallery();
+      if (notify && payload?.created_count) {
+        window.preniumToast?.(
+          `${payload.created_count} visuel${payload.created_count > 1 ? "s" : ""} ajouté${payload.created_count > 1 ? "s" : ""} au canvas.`,
+          "success"
+        );
+      }
+      if (payload?.no_space_count) {
+        window.preniumToast?.("Certains visuels manquent de place sur la planche.", "error");
+      }
+      return payload;
+    })();
+    try {
+      return await autoPlacementRequest;
+    } finally {
+      autoPlacementRequest = null;
+    }
+  }
+
   async function runAction(action, { saveFirst = false, body = null } = {}) {
     try {
       if (saveFirst) await saveLayout({ notify: false });
@@ -2553,6 +2601,15 @@ if (root) {
   }
 
   root.addEventListener("click", async (event) => {
+    const retryAutoPlace = event.target.closest("[data-retry-auto-place]");
+    if (retryAutoPlace && !retryAutoPlace.disabled) {
+      try {
+        await autoPlaceReadySources({ retrySourceId: retryAutoPlace.dataset.retryAutoPlace });
+      } catch (error) {
+        window.preniumToast?.(error.message, "error");
+      }
+      return;
+    }
     const addText = event.target.closest("[data-add-text]");
     if (addText && !addText.disabled) {
       try {
@@ -2580,7 +2637,8 @@ if (root) {
     const button = event.target.closest("[data-add-asset]");
     if (!button || button.disabled) return;
     const card = button.closest("[data-asset-card]");
-    const quantity = Math.max(1, Math.min(200, Number(card.querySelector("[data-asset-quantity]").value) || 1));
+    const quantityField = card.querySelector("[data-asset-quantity]");
+    const quantity = Math.max(1, Math.min(200, Number(quantityField?.value) || 1));
     const body = new FormData();
     body.append("asset_version_public_id", button.dataset.addAsset);
     body.append("quantity", quantity);
@@ -2686,6 +2744,9 @@ if (root) {
       window.preniumToast?.("Analyse terminée. Les visuels prêts sont disponibles.", "success");
     }
     galleryWasPending = isPending;
+    autoPlaceReadySources({ notify: true }).catch((error) => {
+      window.preniumToast?.(error.message, "error");
+    });
   });
 
   function spacingRequestBody() {
@@ -3858,6 +3919,7 @@ if (root) {
       const payload = await response.json();
       if (!response.ok || !payload.ok) throw new Error(payload?.error?.message || "Le cadrage n’a pas pu être enregistré.");
       applyExistingCropResponse(form, payload);
+      await reloadState();
       const messages = {
         auto: "Recadrage automatique appliqué.",
         full: "Fichier original rétabli.",
@@ -3898,4 +3960,7 @@ if (root) {
   savedLayoutSignature = layoutSignature();
   setDirty(false);
   if (state.status === "rendering") startPolling();
+  autoPlaceReadySources({ notify: true }).catch((error) => {
+    window.preniumToast?.(error.message, "error");
+  });
 }

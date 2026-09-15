@@ -67,6 +67,7 @@ from .views_gang_sheets import (
     ClientGangSheetAssetGalleryView,
     ClientGangSheetAssetPreviewView,
     ClientGangSheetAssetUploadView,
+    ClientGangSheetAutoPlaceReadySourcesView,
     ClientGangSheetBatchDeleteItemsView,
     ClientGangSheetCreateOrderProjectView,
     ClientGangSheetDeleteView,
@@ -354,6 +355,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/add/",
         ClientGangSheetAddItemView.as_view(),
         name="client-gang-sheet-item-add",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/auto-place-ready/",
+        ClientGangSheetAutoPlaceReadySourcesView.as_view(),
+        name="client-gang-sheet-auto-place-ready-sources",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/delete-batch/",

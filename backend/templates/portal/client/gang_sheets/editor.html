@@ -12,6 +12,8 @@
   data-state-url="{% url 'portal:client-gang-sheet-state' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-layout-url="{% url 'portal:client-gang-sheet-layout' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-add-url="{% url 'portal:client-gang-sheet-item-add' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+  data-auto-place-ready-url="{% url 'portal:client-gang-sheet-auto-place-ready-sources' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+  data-asset-gallery-url="{% url 'portal:client-gang-sheet-asset-gallery' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-batch-delete-url="{% url 'portal:client-gang-sheet-items-delete-batch' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-action-url-template="{% url 'portal:client-gang-sheet-workflow-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id action='ACTION' %}"
   data-item-url-template="{% url 'portal:client-gang-sheet-item-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id item_public_id='00000000-0000-0000-0000-000000000000' action='ACTION' %}"

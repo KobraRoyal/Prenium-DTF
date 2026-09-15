@@ -1,5 +1,6 @@
 import hashlib
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
@@ -116,6 +117,121 @@ def test_existing_source_crop_is_updated_audited_and_versions_the_sheet():
         "height": "1.000000",
     }
     assert event.metadata["revision"] == initial_revision + 1
+
+
+def test_ready_import_is_placed_once_without_moving_existing_group():
+    user, customer, project = create_customer_scope(email="auto-source@example.com")
+    asset_a, version_a = attach_png_asset(
+        customer=customer, project=project, user=user, name="already.png"
+    )
+    asset_b, _version_b = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        name="new.png",
+        width_mm="30.00",
+        height_mm="20.00",
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(customer=customer, actor=user, name="Placement initial")
+    GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset_a,
+        added_by=user,
+        width_mm="40.00",
+        height_mm="20.00",
+    )
+    awaited = GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset_b,
+        added_by=user,
+        width_mm="30.00",
+        height_mm="20.00",
+        auto_placement_status=GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
+        sort_order=2,
+    )
+    existing = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version_a.public_id, actor=user
+    )
+    group_id = uuid4()
+    existing.x_mm = Decimal("12.00")
+    existing.y_mm = Decimal("14.00")
+    existing.layout_group_id = group_id
+    existing.save(update_fields=["x_mm", "y_mm", "layout_group_id", "updated_at"])
+    sheet.refresh_from_db()
+
+    updated, created, no_space = service.auto_place_ready_sources(
+        sheet=sheet,
+        expected_revision=sheet.revision,
+        actor=user,
+        source="test",
+    )
+
+    existing.refresh_from_db()
+    awaited.refresh_from_db()
+    assert len(created) == 1
+    assert no_space == 0
+    assert (existing.x_mm, existing.y_mm, existing.layout_group_id) == (
+        Decimal("12.00"),
+        Decimal("14.00"),
+        group_id,
+    )
+    assert awaited.auto_placement_status == GangSheetSourceAsset.AutoPlacementStatus.PLACED
+    assert service.geometry.issues(sheet=updated, items=list(updated.items.all())) == []
+    placed_event_count = AuditLogEntry.objects.filter(
+        action="gang_sheet.source_auto_placed"
+    ).count()
+
+    updated.refresh_from_db()
+    _updated, repeated, repeated_no_space = service.auto_place_ready_sources(
+        sheet=updated,
+        expected_revision=updated.revision,
+        actor=user,
+        source="test",
+    )
+    assert repeated == []
+    assert repeated_no_space == 0
+    assert updated.items.count() == 2
+    assert (
+        AuditLogEntry.objects.filter(action="gang_sheet.source_auto_placed").count()
+        == placed_event_count
+    )
+
+
+def test_ready_import_no_space_is_terminal_and_does_not_change_revision():
+    user, customer, project = create_customer_scope(email="auto-no-space@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(customer=customer, actor=user, name="Sans place")
+    source = GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset,
+        added_by=user,
+        width_mm="600.00",
+        height_mm="600.00",
+        auto_placement_status=GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
+    )
+    initial_revision = sheet.revision
+
+    updated, created, no_space = service.auto_place_ready_sources(
+        sheet=sheet,
+        expected_revision=sheet.revision,
+        actor=user,
+        source="test",
+    )
+
+    source.refresh_from_db()
+    assert created == []
+    assert no_space == 1
+    assert updated.revision == initial_revision
+    assert updated.items.count() == 0
+    assert source.auto_placement_status == GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE
+    with pytest.raises(GangSheetDomainError) as blocked:
+        service.request_render(sheet=updated, actor=user, source="test")
+    assert blocked.value.code == "AUTO_PLACEMENT_PENDING"
 
 
 def test_existing_source_auto_crop_reads_current_private_file_and_ignores_client_crop():
@@ -238,7 +354,7 @@ def test_existing_source_crop_cannot_target_another_customer_source_uuid():
     assert foreign_source.has_crop is False
 
 
-def test_existing_source_crop_is_blocked_while_visual_is_used_in_composition():
+def test_existing_source_crop_resizes_placed_visual_without_distorting_it():
     user, customer, project = create_customer_scope(email="crop-used@example.com")
     asset, version = attach_png_asset(customer=customer, project=project, user=user)
     service = GangSheetService()
@@ -251,20 +367,76 @@ def test_existing_source_crop_is_blocked_while_visual_is_used_in_composition():
     )
     sheet.refresh_from_db()
 
-    with pytest.raises(GangSheetDomainError) as error:
+    updated, _source = service.update_source_asset_crop(
+        sheet=sheet,
+        source_asset_public_id=source_asset.public_id,
+        crop=CropBox.from_values(width="0.80"),
+        expected_revision=sheet.revision,
+        actor=user,
+    )
+
+    source_asset.refresh_from_db()
+    item = updated.items.get()
+    assert source_asset.has_crop is True
+    assert item.width_mm == Decimal("80.00")
+    assert item.height_mm == Decimal("50.00")
+    event = AuditLogEntry.objects.get(action="gang_sheet.source_crop_updated")
+    assert event.metadata["updated_occurrence_count"] == 1
+
+
+def test_existing_source_crop_rolls_back_when_expansion_would_overlap():
+    user, customer, project = create_customer_scope(email="crop-overlap@example.com")
+    asset_a, version_a = attach_png_asset(
+        customer=customer, project=project, user=user, name="crop-a.png"
+    )
+    asset_b, version_b = attach_png_asset(
+        customer=customer, project=project, user=user, name="crop-b.png"
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(customer=customer, actor=user, name="Crop collision")
+    source_a = GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset_a,
+        width_mm="100.00",
+        height_mm="50.00",
+        crop_width="0.500000",
+    )
+    GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset_b,
+        width_mm="50.00",
+        height_mm="50.00",
+        sort_order=2,
+    )
+    first = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version_a.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+    second = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version_b.public_id, actor=user
+    )
+    first.x_mm, first.y_mm = Decimal("0"), Decimal("0")
+    second.x_mm, second.y_mm = Decimal("55"), Decimal("0")
+    first.save(update_fields=["x_mm", "y_mm", "updated_at"])
+    second.save(update_fields=["x_mm", "y_mm", "updated_at"])
+    sheet.refresh_from_db()
+
+    with pytest.raises(GangSheetDomainError) as conflict:
         service.update_source_asset_crop(
             sheet=sheet,
-            source_asset_public_id=source_asset.public_id,
-            crop=CropBox.from_values(width="0.80"),
+            source_asset_public_id=source_a.public_id,
+            crop=CropBox.full(),
             expected_revision=sheet.revision,
             actor=user,
         )
 
-    assert error.value.code == "SOURCE_ASSET_IN_USE"
-    assert error.value.details["usage_count"] == 1
-    source_asset.refresh_from_db()
-    assert source_asset.has_crop is False
-    assert not AuditLogEntry.objects.filter(action="gang_sheet.source_crop_updated").exists()
+    assert conflict.value.code == "CROP_LAYOUT_CONFLICT"
+    source_a.refresh_from_db()
+    first.refresh_from_db()
+    assert source_a.crop_width == Decimal("0.500000")
+    assert first.width_mm == Decimal("50.00")
 
 
 def test_draft_sheet_deletion_removes_composition_and_renders_but_preserves_sources(

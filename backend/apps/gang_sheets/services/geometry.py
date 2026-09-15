@@ -110,6 +110,40 @@ class GangSheetGeometryService:
             return candidate.x.quantize(HUNDREDTH), candidate.y.quantize(HUNDREDTH)
         return None
 
+    def first_free_placement(self, *, sheet, item, existing_items):
+        """Place un nouvel élément sans déplacer la composition existante."""
+
+        spacing_x = Decimal(sheet.item_spacing_x_mm)
+        spacing_y = Decimal(sheet.item_spacing_y_mm)
+        max_right = Decimal(sheet.width_mm)
+        max_bottom = Decimal(sheet.maximum_height_mm)
+        existing = [self.rect_for(existing_item) for existing_item in existing_items]
+        xs = {Decimal("0"), *(rect.right + spacing_x for rect in existing)}
+        ys = {Decimal("0"), *(rect.bottom + spacing_y for rect in existing)}
+        original_rotation = item.rotation
+        rotations = [original_rotation]
+        alternate = (int(original_rotation) + 90) % 360
+        if alternate not in rotations:
+            rotations.append(alternate)
+        for rotation in rotations:
+            item.rotation = rotation
+            width = Decimal(item.effective_width_mm)
+            height = Decimal(item.effective_height_mm)
+            for y in sorted(ys):
+                for x in sorted(xs):
+                    candidate = Rect(str(item.public_id), x, y, width, height)
+                    if candidate.right > max_right or candidate.bottom > max_bottom:
+                        continue
+                    if any(self.overlaps(candidate, placed) for placed in existing):
+                        continue
+                    return (
+                        candidate.x.quantize(HUNDREDTH),
+                        candidate.y.quantize(HUNDREDTH),
+                        rotation,
+                    )
+        item.rotation = original_rotation
+        return None
+
     @staticmethod
     def overlaps(first: Rect, second: Rect) -> bool:
         return not (

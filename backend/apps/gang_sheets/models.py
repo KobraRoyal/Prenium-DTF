@@ -340,6 +340,12 @@ class GangSheetSourceAssetQuerySet(models.QuerySet):
 class GangSheetSourceAsset(BaseModel):
     """Fichier source importé dans la galerie autonome d'une planche."""
 
+    class AutoPlacementStatus(models.TextChoices):
+        MANUAL = "manual", "Placement manuel"
+        AWAITING_ANALYSIS = "awaiting_analysis", "En attente d’analyse"
+        PLACED = "placed", "Placé automatiquement"
+        NO_SPACE = "no_space", "Aucun emplacement libre"
+
     customer = models.ForeignKey(
         "customers.Customer",
         on_delete=models.CASCADE,
@@ -381,6 +387,12 @@ class GangSheetSourceAsset(BaseModel):
     crop_width = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("1"))
     crop_height = models.DecimalField(max_digits=7, decimal_places=6, default=Decimal("1"))
     sort_order = models.PositiveIntegerField(default=1)
+    auto_placement_status = models.CharField(
+        max_length=24,
+        choices=AutoPlacementStatus.choices,
+        default=AutoPlacementStatus.MANUAL,
+    )
+    auto_placement_error = models.CharField(max_length=255, blank=True)
 
     objects = GangSheetSourceAssetQuerySet.as_manager()
 

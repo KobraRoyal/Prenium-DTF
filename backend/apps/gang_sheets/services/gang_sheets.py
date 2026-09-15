@@ -289,6 +289,7 @@ class GangSheetService:
                 crop_width=crop.width,
                 crop_height=crop.height,
                 sort_order=next_position,
+                auto_placement_status=GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
             )
             self._audit(
                 "source_uploaded",
@@ -298,6 +299,7 @@ class GangSheetService:
                 metadata={
                     "asset_public_id": str(version.asset.public_id),
                     "asset_version_public_id": str(version.public_id),
+                    "initial_auto_place_requested": True,
                     "crop_mode": crop_mode,
                     "crop": crop.to_metadata(),
                     "auto_crop": auto_crop_metadata,
@@ -393,16 +395,11 @@ class GangSheetService:
                 "SOURCE_ASSET_NOT_FOUND",
                 "Ce visuel n’est pas présent dans cette galerie.",
             )
-        usage_count = locked.items.filter(asset_version__asset_id=source_asset.asset_id).count()
-        if usage_count:
-            raise GangSheetDomainError(
-                "SOURCE_ASSET_IN_USE",
-                (
-                    "Ce visuel est déjà utilisé sur la planche. Supprimez d’abord "
-                    "ses occurrences avant de modifier son recadrage."
-                ),
-                {"usage_count": usage_count},
+        placed_items = list(
+            locked.items.select_for_update(of=("self",)).filter(
+                asset_version__asset_id=source_asset.asset_id
             )
+        )
         if crop_mode not in VALID_CROP_MODES:
             raise GangSheetDomainError(
                 "INVALID_CROP_MODE",
@@ -455,6 +452,38 @@ class GangSheetService:
         if crop == previous_crop:
             return locked, source_asset
 
+        if placed_items:
+            width_ratio = crop.width / previous_crop.width
+            height_ratio = crop.height / previous_crop.height
+            for item in placed_items:
+                item.width_mm = max(
+                    HUNDREDTH,
+                    (Decimal(item.width_mm) * width_ratio).quantize(HUNDREDTH),
+                )
+                item.height_mm = max(
+                    HUNDREDTH,
+                    (Decimal(item.height_mm) * height_ratio).quantize(HUNDREDTH),
+                )
+            all_items = list(locked.items.all())
+            changed_by_id = {item.pk: item for item in placed_items}
+            all_items = [changed_by_id.get(item.pk, item) for item in all_items]
+            current_height = locked.height_mm
+            locked.height_mm = locked.maximum_height_mm
+            issues = self.geometry.issues(sheet=locked, items=all_items)
+            locked.height_mm = current_height
+            affected_ids = {str(item.public_id) for item in placed_items}
+            affected_issues = [
+                issue
+                for issue in issues
+                if affected_ids.intersection(issue.get("item_public_ids", []))
+            ]
+            if affected_issues:
+                raise GangSheetDomainError(
+                    "CROP_LAYOUT_CONFLICT",
+                    "Ce cadrage ferait déborder ou chevaucher un visuel sur la planche.",
+                    {"issues": affected_issues},
+                )
+
         source_asset.crop_x = crop.x
         source_asset.crop_y = crop.y
         source_asset.crop_width = crop.width
@@ -468,7 +497,13 @@ class GangSheetService:
                 "updated_at",
             ]
         )
+        if placed_items:
+            GangSheetItem.objects.bulk_update(
+                placed_items,
+                ["width_mm", "height_mm", "updated_at"],
+            )
         self._mark_dirty(locked)
+        self._refresh_sheet(locked)
         self._audit(
             "source_crop_updated",
             sheet=locked,
@@ -482,6 +517,7 @@ class GangSheetService:
                 "crop": crop.to_metadata(),
                 "auto_crop": auto_crop_metadata,
                 "revision": locked.revision,
+                "updated_occurrence_count": len(placed_items),
             },
         )
         return locked, source_asset
@@ -556,6 +592,143 @@ class GangSheetService:
             },
         )
         return items
+
+    @transaction.atomic
+    def auto_place_ready_sources(
+        self,
+        *,
+        sheet,
+        expected_revision,
+        actor,
+        retry_source_public_id=None,
+        source="client_portal",
+    ):
+        """Ajoute une fois chaque nouvel import prêt, sans déplacer les éléments existants."""
+
+        locked = self._lock_editable(sheet)
+        if str(expected_revision) != str(locked.revision):
+            raise GangSheetDomainError(
+                "STALE_REVISION",
+                "La planche a changé. Actualisez-la avant le placement automatique.",
+                {"revision": locked.revision},
+            )
+        statuses = [GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS]
+        if retry_source_public_id:
+            statuses.extend(
+                (
+                    GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE,
+                    GangSheetSourceAsset.AutoPlacementStatus.MANUAL,
+                )
+            )
+        sources = (
+            GangSheetSourceAsset.objects.for_sheet(locked)
+            .select_for_update(of=("self", "asset"))
+            .select_related("asset", "asset__current_version")
+            .filter(auto_placement_status__in=statuses)
+            .order_by("sort_order", "created_at")
+        )
+        if retry_source_public_id:
+            sources = sources.filter(public_id=retry_source_public_id)
+        source_rows = list(sources)
+        if retry_source_public_id and not source_rows:
+            raise GangSheetDomainError(
+                "SOURCE_ASSET_NOT_FOUND", "Ce visuel n’est pas disponible pour être replacé."
+            )
+
+        existing_items = list(locked.items.select_related("asset_version__asset"))
+        created_items = []
+        no_space_count = 0
+        for entry in source_rows:
+            version = entry.asset.current_version
+            if (
+                entry.customer_id != locked.customer_id
+                or entry.asset.customer_id != locked.customer_id
+                or version is None
+                or version.customer_id != locked.customer_id
+                or version.asset_id != entry.asset_id
+                or version.analysis_status
+                not in {AssetVersion.AnalysisStatus.READY, AssetVersion.AnalysisStatus.WARNING}
+            ):
+                continue
+            if any(
+                item.asset_version_id and item.asset_version.asset_id == entry.asset_id
+                for item in existing_items
+            ):
+                entry.auto_placement_status = GangSheetSourceAsset.AutoPlacementStatus.PLACED
+                entry.auto_placement_error = ""
+                entry.save(
+                    update_fields=["auto_placement_status", "auto_placement_error", "updated_at"]
+                )
+                continue
+            width, height = self._default_dimensions(locked, version)
+            candidate = GangSheetItem(
+                customer=locked.customer,
+                sheet=locked,
+                kind=GangSheetItem.Kind.VISUAL,
+                asset_version=version,
+                x_mm=Decimal("0.00"),
+                y_mm=Decimal("0.00"),
+                width_mm=width,
+                height_mm=height,
+                z_index=len(existing_items) + 1,
+            )
+            placement = self.geometry.first_free_placement(
+                sheet=locked,
+                item=candidate,
+                existing_items=existing_items,
+            )
+            if placement is None:
+                entry.auto_placement_status = GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE
+                entry.auto_placement_error = (
+                    "Aucun emplacement libre. Libérez de la place puis réessayez."
+                )
+                entry.save(
+                    update_fields=["auto_placement_status", "auto_placement_error", "updated_at"]
+                )
+                no_space_count += 1
+                self._audit(
+                    "source_auto_place_failed",
+                    sheet=locked,
+                    actor=actor,
+                    source=source,
+                    metadata={
+                        "source_asset_public_id": str(entry.public_id),
+                        "asset_public_id": str(entry.asset.public_id),
+                        "asset_version_public_id": str(version.public_id),
+                        "reason": "no_space",
+                        "revision": locked.revision,
+                    },
+                )
+                continue
+            candidate.x_mm, candidate.y_mm, candidate.rotation = placement
+            candidate.save()
+            existing_items.append(candidate)
+            created_items.append(candidate)
+            entry.auto_placement_status = GangSheetSourceAsset.AutoPlacementStatus.PLACED
+            entry.auto_placement_error = ""
+            entry.save(
+                update_fields=["auto_placement_status", "auto_placement_error", "updated_at"]
+            )
+            self._audit(
+                "source_auto_placed",
+                sheet=locked,
+                actor=actor,
+                source=source,
+                metadata={
+                    "source_asset_public_id": str(entry.public_id),
+                    "asset_public_id": str(entry.asset.public_id),
+                    "asset_version_public_id": str(version.public_id),
+                    "item_public_id": str(candidate.public_id),
+                    "x_mm": str(candidate.x_mm),
+                    "y_mm": str(candidate.y_mm),
+                    "rotation": candidate.rotation,
+                    "revision": locked.revision + 1,
+                },
+            )
+        if created_items:
+            self._mark_dirty(locked)
+            self._refresh_sheet(locked)
+        return locked, created_items, no_space_count
 
     @transaction.atomic
     def add_text_item(
@@ -1072,6 +1245,7 @@ class GangSheetService:
     @transaction.atomic
     def request_render(self, *, sheet, actor, source="client_portal"):
         locked = self._lock_editable(sheet)
+        self._ensure_auto_placements_resolved(locked)
         items = list(locked.items.select_related("asset_version").select_for_update(of=("self",)))
         issues = self.geometry.issues(sheet=locked, items=items)
         if not items:
@@ -1104,6 +1278,7 @@ class GangSheetService:
         acknowledge_quality=False,
     ):
         locked = GangSheet.objects.select_for_update().get(pk=sheet.pk)
+        self._ensure_auto_placements_resolved(locked)
         if locked.status != GangSheet.Status.READY or not locked.final_file:
             raise GangSheetDomainError(
                 "RENDER_REQUIRED", "Le rendu final doit être terminé avant validation."
@@ -1413,6 +1588,20 @@ class GangSheetService:
         if locked.status not in self.editable_statuses:
             raise GangSheetDomainError("SHEET_LOCKED", "Cette planche n'est plus modifiable.")
         return locked
+
+    @staticmethod
+    def _ensure_auto_placements_resolved(sheet):
+        unresolved = sheet.source_assets.filter(
+            auto_placement_status__in=(
+                GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
+                GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE,
+            )
+        )
+        if unresolved.exists():
+            raise GangSheetDomainError(
+                "AUTO_PLACEMENT_PENDING",
+                "Terminez le placement automatique des fichiers importés avant de continuer.",
+            )
 
     @staticmethod
     def _ensure_auto_place_has_no_groups(sheet, *, items=None) -> None:

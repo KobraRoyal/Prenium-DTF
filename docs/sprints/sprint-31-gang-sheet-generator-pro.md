@@ -155,8 +155,8 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   que les outils zoom et historique.
 - [x] Import + recadrage : plus d’alerte « Quitter le site » ; la composition est enregistrée
   avant le POST du formulaire.
-- [x] Import direct depuis « Ajouter des visuels », analyse asynchrone dans la galerie compacte,
-  détail technique par fichier et recadrage post-import interdit après placement.
+- [x] Import direct depuis la zone de dépôt, analyse asynchrone dans la galerie compacte,
+  détail technique par fichier et recadrage post-import synchronisé avec les occurrences placées.
 - [x] Zone de dépôt toujours visible et modale fichier alignée sur la commande : overlays, zoom,
   fonds de contrôle, recadrage manuel/automatique et conservation de l’original.
 - [x] Actions de recadrage post-import maintenues dans la modale : l’auto-crop, le cadrage manuel
@@ -165,7 +165,8 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   anomalies dupliquées.
 - [x] Aligner / répartir : un groupe mémorisé se comporte comme un seul objet (écarts internes
   conservés, visuels isolés inchangés).
-- [x] Inspecteur Réglages : un langage de champs / titres / actions ; bouton « Placer sur la planche » pleine largeur.
+- [x] Inspecteur Réglages : un langage de champs / titres / actions ; les nouveaux imports sont
+  placés automatiquement après analyse sans réorganiser la composition.
 - [x] Recette du sélecteur direct Gang Sheet et Order Project : annulation sans modale, sélection puis
   aperçu automatique, import galerie et modale plein écran sans overflow à 375 px.
 - [x] Tests de suppression : composition et rendus supprimés, sources conservées, statuts liés,
@@ -213,6 +214,16 @@ Branche : `codex/gang-sheet-audit-fixes`.
   noms longs repliés sans défilement horizontal, contrôles uniques accessibles et actions tactiles
   de 44 px sur les cartes ; style partagé avec la commande par fichier et limite réelle de cinq
   fichiers par lot.
+- [x] Galerie alignée sur la commande par fichier : badges résolution, détails fins et
+  transparence, action « Contrôler le visuel », informations secondaires retirées et aucune
+  couleur de support.
+- [x] Placement initial automatique par POST révisionné et idempotent : verrouillage planche/source,
+  contrôle tenant et version courante, respect des groupes et des coordonnées existantes, rotation
+  0°/90° au premier emplacement libre et reprise explicite en cas de manque de place. Les sources
+  historiques restent en placement manuel ; seuls les nouveaux imports demandent ce placement.
+- [x] Recadrage manuel, automatique et retour à l’original conservés après placement ; les
+  occurrences sont redimensionnées atomiquement et toute collision ou sortie de laize annule
+  l’opération.
 
 Les espacements d’auto-imposition restent des préférences, pas de nouveaux minimums de coupe.
 Les avertissements de source ne sont pas assimilés automatiquement à un refus de fabrication.
@@ -220,7 +231,7 @@ Le contrôle qualité du PDF et du support au checkout ainsi que la validation R
 distincts du contrôle de composition du Studio. Aucun nouveau profil ICC ni traitement de blanc
 n’est introduit dans ce lot.
 
-Validation du lot : 1 177 tests Python réussis dans Docker ; quatre ignorés, dont les deux
+Validation du lot : 1 273 tests Python réussis dans Docker ; quatre ignorés, dont les deux
 harness Node exécutés séparément avec succès sur l’hôte. Les deux autres dépendent d’une
 table legacy absente et de verrous PostgreSQL (suite utilisant SQLite). Ruff, contrôle Django,
 absence de migration, build des assets et relecture sécurité indépendants conformes.
