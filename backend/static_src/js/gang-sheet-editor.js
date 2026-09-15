@@ -3193,9 +3193,16 @@ if (root) {
   }
   q("[data-duplicate-item]").addEventListener("click", duplicateSelected);
 
-  function openSelectedCropDialog() {
-    const item = selected();
+  async function openSelectedCropDialog() {
+    let item = selected();
     if (!item || isTextItem(item) || !item.asset_version_public_id) return;
+    if (dirty) await saveLayout({ notify: false });
+    else await reloadState();
+    item = selected();
+    if (!item || isTextItem(item) || !item.asset_version_public_id) {
+      window.preniumToast?.("Ce visuel n’est plus disponible sur la planche.", "error");
+      return;
+    }
     const card = qa("[data-asset-card]").find(
       (candidate) => candidate.dataset.assetVersionId === item.asset_version_public_id
     );
@@ -3261,7 +3268,9 @@ if (root) {
     }
     const cropButton = event.target.closest("[data-canvas-crop-item]");
     if (cropButton && !cropButton.disabled) {
-      openSelectedCropDialog();
+      openSelectedCropDialog().catch((error) => {
+        window.preniumToast?.(error.message, "error");
+      });
       return;
     }
     const deleteButton = event.target.closest("[data-canvas-delete-item]");

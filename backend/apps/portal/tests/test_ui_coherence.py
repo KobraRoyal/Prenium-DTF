@@ -1221,6 +1221,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('attribute: "data-canvas-crop-item"', runtime)
         self.assertIn('attribute: "data-canvas-delete-item"', runtime)
         self.assertIn("function openSelectedCropDialog", runtime)
+        self.assertIn("else await reloadState()", runtime)
+        self.assertIn("item = selected()", runtime)
         self.assertIn("candidate.dataset.assetVersionId === item.asset_version_public_id", runtime)
         self.assertIn('dialog.addEventListener("close", () => setMobilePanel("canvas")', runtime)
         self.assertIn("function spacingRequestBody", runtime)

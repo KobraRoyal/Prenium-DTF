@@ -50,7 +50,8 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - Canvas physique non déformé : ratio laize/hauteur respecté même sur les planches courtes, aperçu
   clipsé dans son cadre et redimensionnement 90°/270° aligné sur les axes visibles.
 - Barre contextuelle sur le visuel sélectionné : rotation, duplication, recadrage et suppression
-  accessibles directement sur le canevas ; le recadrage ouvre la modale d’analyse de la source.
+  accessibles directement sur le canevas ; le recadrage synchronise la révision courante avant
+  d’ouvrir la modale d’analyse de la source, puis redessine le canvas après application.
 - Panneau d’espacement simplifié sans création de grille : réglages X/Y indépendants, accessibles
   sans sélection, puis application explicite avec réorganisation automatique de la planche.
 - Crop HD adapté aux sources raster, vectorielles et mixtes : pixels natifs sans rééchantillonnage,
