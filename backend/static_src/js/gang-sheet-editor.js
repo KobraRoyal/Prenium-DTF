@@ -42,14 +42,19 @@ if (root) {
   const HISTORY_LIMIT = 40;
   const ASSET_VERSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  function trustedAssetPreviewSrc(versionPublicId) {
+  function trustedAssetPreviewSrc(versionPublicId, cacheRevision) {
     if (typeof versionPublicId !== "string" || !ASSET_VERSION_ID_RE.test(versionPublicId)) {
       return "";
     }
     const basePath = window.location.pathname.endsWith("/")
       ? window.location.pathname
       : `${window.location.pathname}/`;
-    return `${basePath}assets/${encodeURIComponent(versionPublicId)}/preview/`;
+    const previewSrc = `${basePath}assets/${encodeURIComponent(versionPublicId)}/preview/`;
+    const revision = Number.parseInt(cacheRevision, 10);
+    if (!Number.isSafeInteger(revision) || revision < 0) {
+      return previewSrc;
+    }
+    return `${previewSrc}?crop_revision=${revision}`;
   }
 
   function layoutSnapshot() {
@@ -897,7 +902,7 @@ if (root) {
         preview.append(rotator);
       } else {
         const image = document.createElement("img");
-        const previewSrc = trustedAssetPreviewSrc(item.asset_version_public_id);
+        const previewSrc = trustedAssetPreviewSrc(item.asset_version_public_id, state.revision);
         if (previewSrc) {
           image.src = previewSrc;
         }

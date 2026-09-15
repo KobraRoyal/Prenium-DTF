@@ -235,7 +235,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn('link.classList.toggle("ui-btn-primary", canCreate)', editor_js)
         self.assertIn("const hasEstimate = state.items.length > 0 && quote.surface > 0", editor_js)
         self.assertNotIn('q("[data-metric-price]")', editor_js)
-        self.assertIn("gang-sheet-editor.js?v=20260915-crop-apply-v38", app_js)
+        self.assertIn("gang-sheet-editor.js?v=20260915-crop-apply-v39", app_js)
         self.assertNotIn("gang-inspector-panel__context", editor)
         text_css = source(CSS_DIR / "components/gang-sheet-text.css")
         self.assertIn("font-size: 2.18cqw", text_css)
@@ -256,7 +256,14 @@ class StudioPolishUITests(SimpleTestCase):
         editor_js = source(BASE_DIR / "static_src/js/gang-sheet-editor.js")
         after_helper = editor_js.split("function trustedAssetPreviewSrc", 1)[1]
 
-        self.assertIn("function trustedAssetPreviewSrc(versionPublicId)", editor_js)
+        self.assertIn("function trustedAssetPreviewSrc(versionPublicId, cacheRevision)", editor_js)
         self.assertIn("encodeURIComponent(versionPublicId)", editor_js)
+        self.assertIn("Number.parseInt(cacheRevision, 10)", editor_js)
+        self.assertIn("Number.isSafeInteger(revision)", editor_js)
+        self.assertIn("?crop_revision=${revision}", editor_js)
+        self.assertIn(
+            "trustedAssetPreviewSrc(item.asset_version_public_id, state.revision)",
+            editor_js,
+        )
         self.assertIn("image.src = previewSrc", editor_js)
         self.assertNotIn("item.preview_url", after_helper)

@@ -98,7 +98,7 @@ def test_javascript_module_children_keep_explicit_cache_versions() -> None:
     # a production-proven module-aware storage owns the complete dependency graph.
     app = _source("backend/static_src/js/app.js")
     assert "?v=" in app
-    assert "gang-sheet-editor.js?v=20260915-crop-apply-v38" in app
+    assert "gang-sheet-editor.js?v=20260915-crop-apply-v39" in app
     assert "?v=" in _source("backend/static_src/js/marketing.js")
 
 
@@ -112,6 +112,8 @@ def test_existing_crop_updates_canvas_then_closes_the_modal() -> None:
     assert 'form.dataset.cropAction = "full"' in editor
     assert "form.requestSubmit()" in editor
     assert "window.location.reload()" not in editor
+    assert "trustedAssetPreviewSrc(item.asset_version_public_id, state.revision)" in editor
+    assert "?crop_revision=${revision}" in editor
     assert crop_submit.index("applyExistingCropResponse(form, payload)") < crop_submit.index(
         "await reloadState();"
     )
