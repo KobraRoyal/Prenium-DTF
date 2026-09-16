@@ -82,6 +82,175 @@ def test_occurrence_uses_the_cropped_physical_dimensions():
     assert item.height_mm == Decimal("20.00")
 
 
+def test_source_quantity_preserves_existing_positions_and_tracks_actual_occurrences():
+    user, customer, project = create_customer_scope(email="quantity-source@example.com")
+    asset, _version = attach_png_asset(
+        customer=customer, project=project, user=user, width_mm="70.00", height_mm="35.00"
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Quantités")
+    entry = sheet.source_assets.get(asset=asset)
+    original, count = service.set_source_quantity(
+        sheet=sheet,
+        source_asset_public_id=entry.public_id,
+        quantity="1",
+        expected_revision=sheet.revision,
+        actor=user,
+    )
+    assert count == 1
+    first = sheet.items.get()
+    original_position = (first.x_mm, first.y_mm, first.rotation)
+    updated, count = service.set_source_quantity(
+        sheet=sheet,
+        source_asset_public_id=entry.public_id,
+        quantity="3",
+        expected_revision=original.revision,
+        actor=user,
+    )
+    first.refresh_from_db()
+    assert count == 3
+    assert sheet.items.count() == 3
+    assert (first.x_mm, first.y_mm, first.rotation) == original_position
+    assert not service.geometry.issues(sheet=updated, items=list(sheet.items.all()))
+    no_change, count = service.set_source_quantity(
+        sheet=sheet,
+        source_asset_public_id=entry.public_id,
+        quantity="3",
+        expected_revision=updated.revision,
+        actor=user,
+    )
+    assert count == 3
+    assert no_change.revision == updated.revision
+    reduced, count = service.set_source_quantity(
+        sheet=sheet,
+        source_asset_public_id=entry.public_id,
+        quantity="0",
+        expected_revision=updated.revision,
+        actor=user,
+    )
+    assert count == 0
+    assert sheet.items.count() == 0
+    assert reduced.revision == updated.revision + 1
+    assert AuditLogEntry.objects.filter(action="gang_sheet.source_quantity_updated").count() == 3
+
+
+def test_source_quantity_rolls_back_if_new_occurrences_do_not_fit():
+    user, customer, project = create_customer_scope(email="quantity-no-space@example.com")
+    asset, _version = attach_png_asset(
+        customer=customer, project=project, user=user, width_mm="500.00", height_mm="100.00"
+    )
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Quantité limitée")
+    entry = sheet.source_assets.get(asset=asset)
+    sheet.maximum_height_mm = Decimal("100.00")
+    sheet.save(update_fields=["maximum_height_mm"])
+    revision = sheet.revision
+    with pytest.raises(GangSheetDomainError) as error:
+        service.set_source_quantity(
+            sheet=sheet,
+            source_asset_public_id=entry.public_id,
+            quantity="2",
+            expected_revision=revision,
+            actor=user,
+        )
+    assert error.value.code == "QUANTITY_NO_SPACE"
+    sheet.refresh_from_db()
+    assert sheet.revision == revision
+    assert sheet.items.count() == 0
+    assert not AuditLogEntry.objects.filter(action="gang_sheet.source_quantity_updated").exists()
+
+
+def test_source_quantity_counts_old_asset_versions_and_adds_only_current_version():
+    user, customer, project = create_customer_scope(email="quantity-versions@example.com")
+    asset, old_version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Versions source")
+    entry = sheet.source_assets.get(asset=asset)
+    old_item = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=old_version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+    with old_version.file.open("rb") as file:
+        content = file.read()
+    current = AssetVersion.objects.create(
+        customer=customer,
+        asset=asset,
+        uploaded_by=user,
+        version_number=2,
+        file=SimpleUploadedFile("logo-v2.png", content, content_type="image/png"),
+        original_filename="logo-v2.png",
+        mime_type="image/png",
+        size_bytes=len(content),
+        sha256=hashlib.sha256(content).hexdigest(),
+        analysis_status=AssetVersion.AnalysisStatus.READY,
+    )
+    asset.current_version = current
+    asset.save(update_fields=["current_version", "updated_at"])
+    updated, count = service.set_source_quantity(
+        sheet=sheet,
+        source_asset_public_id=entry.public_id,
+        quantity="2",
+        expected_revision=sheet.revision,
+        actor=user,
+    )
+    assert count == 2
+    assert sheet.items.filter(asset_version=old_version, public_id=old_item.public_id).count() == 1
+    assert sheet.items.filter(asset_version=current).count() == 1
+    serialized = service.serialize_sheet(updated, preview_url_resolver=lambda _version: "")
+    assert {item["asset_public_id"] for item in serialized["items"]} == {str(asset.public_id)}
+
+
+def test_source_quantity_rejects_invalid_stale_foreign_and_grouped_decrease():
+    user, customer, project = create_customer_scope(email="quantity-guard@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Quantité contrôlée")
+    entry = sheet.source_assets.get(asset=asset)
+    other_user, other_customer, other_project = create_customer_scope(
+        email="quantity-foreign@example.com"
+    )
+    foreign_asset, _ = attach_png_asset(
+        customer=other_customer, project=other_project, user=other_user
+    )
+    foreign_sheet = service.create_sheet(project=other_project, actor=other_user, name="Autre")
+    foreign_entry = foreign_sheet.source_assets.get(asset=foreign_asset)
+    for quantity, revision, source_id, expected in (
+        ("1.5", sheet.revision, entry.public_id, "INVALID_QUANTITY"),
+        ("201", sheet.revision, entry.public_id, "INVALID_QUANTITY"),
+        ("1", sheet.revision + 1, entry.public_id, "STALE_REVISION"),
+        ("1", sheet.revision, foreign_entry.public_id, "SOURCE_ASSET_NOT_FOUND"),
+    ):
+        with pytest.raises(GangSheetDomainError) as error:
+            service.set_source_quantity(
+                sheet=sheet,
+                source_asset_public_id=source_id,
+                quantity=quantity,
+                expected_revision=revision,
+                actor=user,
+            )
+        assert error.value.code == expected
+    updated, _ = service.set_source_quantity(
+        sheet=sheet,
+        source_asset_public_id=entry.public_id,
+        quantity="1",
+        expected_revision=sheet.revision,
+        actor=user,
+    )
+    first = sheet.items.get()
+    first.layout_group_id = uuid4()
+    first.save(update_fields=["layout_group_id"])
+    with pytest.raises(GangSheetDomainError) as error:
+        service.set_source_quantity(
+            sheet=sheet,
+            source_asset_public_id=entry.public_id,
+            quantity="0",
+            expected_revision=updated.revision,
+            actor=user,
+        )
+    assert error.value.code == "GROUPED_ITEMS"
+    assert sheet.items.count() == 1
+
+
 def test_existing_source_crop_is_updated_audited_and_versions_the_sheet():
     user, customer, project = create_customer_scope(email="crop-existing@example.com")
     asset, _version = attach_png_asset(customer=customer, project=project, user=user)

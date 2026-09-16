@@ -372,6 +372,7 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
             assets.append(
                 {
                     "source_public_id": str(entry.public_id),
+                    "asset_public_id": str(entry.asset.public_id),
                     "public_id": str(version.public_id) if version else "",
                     "name": entry.asset.name,
                     "preview_url": (
@@ -1004,6 +1005,23 @@ class ClientGangSheetAddItemView(ClientGangSheetMixin, View):
         except GangSheetDomainError as error:
             return _json_error(error)
         return JsonResponse({"ok": True, "created_count": len(items)}, status=201)
+
+
+class ClientGangSheetSourceQuantityView(ClientGangSheetMixin, View):
+    def post(self, request, customer_public_id, sheet_public_id, source_asset_public_id):
+        self.require_write_access()
+        sheet = self.get_sheet_or_404(sheet_public_id)
+        try:
+            updated_sheet, quantity = gang_sheet_service.set_source_quantity(
+                sheet=sheet,
+                source_asset_public_id=source_asset_public_id,
+                quantity=request.POST.get("quantity"),
+                expected_revision=request.POST.get("expected_revision"),
+                actor=request.user,
+            )
+        except GangSheetDomainError as error:
+            return _json_error(error, status=409 if error.code == "STALE_REVISION" else 400)
+        return JsonResponse({"ok": True, "quantity": quantity, "revision": updated_sheet.revision})
 
 
 class ClientGangSheetBatchDeleteItemsView(ClientGangSheetMixin, View):

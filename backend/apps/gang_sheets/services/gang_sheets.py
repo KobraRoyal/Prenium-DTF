@@ -594,6 +594,132 @@ class GangSheetService:
         return items
 
     @transaction.atomic
+    def set_source_quantity(
+        self,
+        *,
+        sheet,
+        source_asset_public_id,
+        quantity,
+        expected_revision,
+        actor,
+        source="client_portal",
+    ):
+        """Ajuste les occurrences d'une source sans déplacer les visuels déjà placés."""
+        locked = self._lock_editable(sheet)
+        revision = self._parse_expected_revision(expected_revision, invalid_code="INVALID_QUANTITY")
+        if revision != locked.revision:
+            raise GangSheetDomainError(
+                "STALE_REVISION",
+                "La planche a changé. Actualisez-la avant de modifier la quantité.",
+                {"revision": locked.revision},
+            )
+        try:
+            desired = int(quantity)
+            if (
+                isinstance(quantity, bool)
+                or str(desired) != str(quantity)
+                or not 0 <= desired <= MAX_BATCH_OCCURRENCES
+            ):
+                raise ValueError
+        except (TypeError, ValueError) as error:
+            raise GangSheetDomainError(
+                "INVALID_QUANTITY", f"Saisissez une quantité entre 0 et {MAX_BATCH_OCCURRENCES}."
+            ) from error
+        entry = (
+            locked.source_assets.select_for_update(of=("self",))
+            .select_related("asset", "asset__current_version")
+            .filter(customer=locked.customer, public_id=source_asset_public_id)
+            .first()
+        )
+        if entry is None:
+            raise GangSheetDomainError(
+                "SOURCE_ASSET_NOT_FOUND", "Ce visuel n’est pas présent dans cette galerie."
+            )
+        existing = list(
+            locked.items.select_for_update(of=("self",))
+            .select_related("asset_version")
+            .order_by("z_index", "created_at", "pk")
+        )
+        matching = [
+            item
+            for item in existing
+            if item.asset_version_id and item.asset_version.asset_id == entry.asset_id
+        ]
+        previous = len(matching)
+        if desired == previous:
+            return locked, previous
+        changed_ids = []
+        if desired < previous:
+            removable = [item for item in reversed(matching) if not item.layout_group_id]
+            if len(removable) < previous - desired:
+                raise GangSheetDomainError(
+                    "GROUPED_ITEMS", "Dissociez les visuels groupés avant de réduire leur quantité."
+                )
+            removed = removable[: previous - desired]
+            changed_ids = [str(item.public_id) for item in removed]
+            GangSheetItem.objects.filter(pk__in=[item.pk for item in removed]).delete()
+            self._normalize_z_indexes(locked)
+        else:
+            version = entry.asset.current_version
+            if version is None:
+                raise GangSheetDomainError(
+                    "ASSET_NOT_AVAILABLE", "Ce fichier n'est plus disponible."
+                )
+            version = self._resolve_available_version(locked, version.public_id)
+            width, height = self._default_dimensions(locked, version)
+            for _ in range(desired - previous):
+                item = GangSheetItem(
+                    customer=locked.customer,
+                    sheet=locked,
+                    kind=GangSheetItem.Kind.VISUAL,
+                    asset_version=version,
+                    width_mm=width,
+                    height_mm=height,
+                    x_mm=Decimal("0.00"),
+                    y_mm=Decimal("0.00"),
+                    z_index=max((placed.z_index for placed in existing), default=0) + 1,
+                )
+                placement = self.geometry.first_free_placement(
+                    sheet=locked, item=item, existing_items=existing
+                )
+                if placement is None:
+                    raise GangSheetDomainError(
+                        "QUANTITY_NO_SPACE",
+                        "La quantité demandée ne tient pas sur la planche. "
+                        "Réduisez-la ou libérez de la place.",
+                    )
+                item.x_mm, item.y_mm, item.rotation = placement
+                item.save()
+                changed_ids.append(str(item.public_id))
+                existing.append(item)
+        if entry.auto_placement_status in {
+            GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE,
+            GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
+        }:
+            entry.auto_placement_status = GangSheetSourceAsset.AutoPlacementStatus.MANUAL
+            entry.auto_placement_error = ""
+            entry.save(
+                update_fields=["auto_placement_status", "auto_placement_error", "updated_at"]
+            )
+        self._refresh_sheet(locked)
+        self._mark_dirty(locked)
+        self._audit(
+            "source_quantity_updated",
+            sheet=locked,
+            actor=actor,
+            source=source,
+            metadata={
+                "source_asset_public_id": str(entry.public_id),
+                "asset_public_id": str(entry.asset.public_id),
+                "previous_quantity": previous,
+                "quantity": desired,
+                "item_public_ids": changed_ids,
+                "revision": locked.revision,
+            },
+        )
+        return locked, desired
+
+    @transaction.atomic
     def auto_place_ready_sources(
         self,
         *,
@@ -1761,14 +1887,17 @@ class GangSheetService:
         text = is_text_item(item)
         preview_url = ""
         asset_version_public_id = None
+        asset_public_id = None
         if item.asset_version_id:
             asset_version_public_id = str(item.asset_version.public_id)
+            asset_public_id = str(item.asset_version.asset.public_id)
             preview_url = preview_url_resolver(item.asset_version)
         return {
             "public_id": str(item.public_id),
             "kind": item.kind,
             "asset_name": display_name(item),
             "asset_version_public_id": asset_version_public_id,
+            "asset_public_id": asset_public_id,
             "preview_url": preview_url,
             "x_mm": float(item.x_mm),
             "y_mm": float(item.y_mm),

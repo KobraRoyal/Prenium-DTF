@@ -29,6 +29,8 @@ if (root) {
   let acceptedPreflightFingerprint = "";
   let resizeFrame = null;
   let galleryWasPending = qPendingGallery();
+  const quantityTimers = new WeakMap();
+  const quantityUpdating = new WeakSet();
   const canEdit = root.dataset.canEdit === "true";
   const canvas = root.querySelector("[data-sheet-canvas]");
   const csrf = root.querySelector("[data-csrf]").value;
@@ -992,13 +994,19 @@ if (root) {
 
   function renderAssetGallery() {
     const counts = state.items.reduce((result, item) => {
-      if (!item.asset_version_public_id) return result;
-      result[item.asset_version_public_id] = (result[item.asset_version_public_id] || 0) + 1;
+      if (!item.asset_public_id) return result;
+      result[item.asset_public_id] = (result[item.asset_public_id] || 0) + 1;
       return result;
     }, {});
-    qa("[data-asset-usage]").forEach((node) => {
-      const count = counts[node.dataset.assetUsage] || 0;
-      node.textContent = count ? `${count} exemplaire${count > 1 ? "s" : ""} sur la planche` : "Pas encore utilisé";
+    qa("[data-asset-card]").forEach((card) => {
+      const count = counts[card.dataset.assetPublicId] || 0;
+      const input = card.querySelector("[data-asset-quantity]");
+      if (input && !input.dataset.quantityEditing) input.value = String(count);
+      const usage = card.querySelector("[data-asset-placement-count]");
+      if (usage) {
+        usage.textContent = `${count} sur la planche`;
+        usage.classList.toggle("is-placed", count > 0);
+      }
     });
   }
 
@@ -1427,9 +1435,9 @@ if (root) {
       "[data-add-asset], [data-add-text], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-duplicate-item], [data-canvas-crop-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection], [data-text-content], [data-text-font], [data-text-size], [data-text-color], [data-text-color-hex], [data-text-align], [data-text-bold]"
     ).forEach((control) => {
       const assetPending = control.matches("[data-add-asset]") && control.dataset.assetReady !== "true";
-      const groupedAssetAction = hasPersistentGroups && control.matches("[data-add-asset], [data-asset-quantity]");
-      control.disabled = !canEdit || locked || assetPending || groupedAssetAction;
-      if (control.matches("[data-add-asset], [data-asset-quantity]")) {
+      const groupedAssetAction = hasPersistentGroups && control.matches("[data-add-asset]");
+      control.disabled = !canEdit || locked || busy || assetPending || groupedAssetAction || quantityUpdating.has(control);
+      if (control.matches("[data-add-asset]")) {
         control.title = hasPersistentGroups
           ? "Dissociez les groupes avant d’ajouter et placer un visuel."
           : "";
@@ -2658,11 +2666,9 @@ if (root) {
     const button = event.target.closest("[data-add-asset]");
     if (!button || button.disabled) return;
     const card = button.closest("[data-asset-card]");
-    const quantityField = card.querySelector("[data-asset-quantity]");
-    const quantity = Math.max(1, Math.min(200, Number(quantityField?.value) || 1));
     const body = new FormData();
     body.append("asset_version_public_id", button.dataset.addAsset);
-    body.append("quantity", quantity);
+    body.append("quantity", "1");
     body.append("auto_place", "1");
     try {
       if (state.items.length) await saveLayout({ notify: false });
@@ -2670,6 +2676,75 @@ if (root) {
       await reloadState();
       window.preniumToast?.(`${payload.created_count} exemplaire${payload.created_count > 1 ? "s" : ""} ajouté${payload.created_count > 1 ? "s" : ""} et placé${payload.created_count > 1 ? "s" : ""}.`, "success");
     } catch (error) { window.preniumToast?.(error.message, "error"); }
+  });
+
+  async function applyAssetQuantity(input) {
+    if (!input.isConnected || quantityUpdating.has(input) || !canEdit) return;
+    const card = input.closest("[data-asset-card]");
+    if (!card || !input.dataset.quantityUrl) return;
+    const raw = input.value.trim();
+    const desired = Number(raw);
+    const help = card.querySelector("[data-asset-quantity-help]");
+    const fail = (message) => {
+      input.setAttribute("aria-invalid", "true");
+      if (help) help.textContent = message;
+    };
+    if (!/^\d{1,3}$/.test(raw) || !Number.isSafeInteger(desired) || desired > 200) {
+      fail("Saisissez un nombre entier entre 0 et 200.");
+      return;
+    }
+    const current = state.items.filter((item) => item.asset_public_id === card.dataset.assetPublicId).length;
+    if (desired === current) {
+      delete input.dataset.quantityEditing;
+      input.removeAttribute("aria-invalid");
+      if (help) help.textContent = "0 = retirer · max 200";
+      return;
+    }
+    quantityUpdating.add(input);
+    input.disabled = true;
+    if (help) help.textContent = "Mise à jour de la planche…";
+    let layoutWasSaved = !dirty;
+    try {
+      if (dirty) {
+        await saveLayout({ notify: false });
+        layoutWasSaved = true;
+      }
+      const body = new FormData();
+      body.append("quantity", String(desired));
+      body.append("expected_revision", String(state.revision));
+      await request(input.dataset.quantityUrl, { method: "POST", body });
+      delete input.dataset.quantityEditing;
+      await reloadState();
+      if (help) help.textContent = "0 = retirer · max 200";
+      if ((desired === 0) !== (current === 0)) refreshAssetGallery();
+      window.preniumToast?.(`${desired} exemplaire${desired > 1 ? "s" : ""} sur la planche.`, "success");
+    } catch (error) {
+      if (error.code === "STALE_REVISION" && layoutWasSaved) await reloadState();
+      fail(error.message);
+      window.preniumToast?.(error.message, "error");
+    } finally {
+      quantityUpdating.delete(input);
+      delete input.dataset.quantityEditing;
+      renderStatus();
+      if (input.isConnected) renderAssetGallery();
+    }
+  }
+
+  root.addEventListener("input", (event) => {
+    const input = event.target.closest("[data-asset-quantity]");
+    if (!input) return;
+    input.dataset.quantityEditing = "true";
+    input.removeAttribute("aria-invalid");
+    const timer = quantityTimers.get(input);
+    if (timer) window.clearTimeout(timer);
+    quantityTimers.set(input, window.setTimeout(() => applyAssetQuantity(input), 650));
+  });
+  root.addEventListener("change", (event) => {
+    const input = event.target.closest("[data-asset-quantity]");
+    if (!input) return;
+    const timer = quantityTimers.get(input);
+    if (timer) window.clearTimeout(timer);
+    applyAssetQuantity(input);
   });
 
   function filterAssetGallery() {

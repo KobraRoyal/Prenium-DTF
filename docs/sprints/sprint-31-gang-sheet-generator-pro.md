@@ -54,6 +54,10 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   d’ouvrir la modale d’analyse de la source, puis redessine le canvas après application. L’URL
   d’aperçu du canvas porte la révision validée de la planche afin d’afficher immédiatement le
   nouveau cadrage malgré le cache privé des aperçus.
+- La carte d’un visuel prêt présente sa quantité réelle sur la planche (0 à 200). La saisie
+  ajuste atomiquement les occurrences après sauvegarde du brouillon : les nouveaux exemplaires
+  sont placés dans l’espace libre sans déplacer les existants, une réduction préserve les groupes,
+  et un manque de place ou une révision obsolète n’applique aucune modification partielle.
 - Panneau d’espacement simplifié sans création de grille : réglages X/Y indépendants, accessibles
   sans sélection, puis application explicite avec réorganisation automatique de la planche.
 - Crop HD adapté aux sources raster, vectorielles et mixtes : pixels natifs sans rééchantillonnage,

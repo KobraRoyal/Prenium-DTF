@@ -928,6 +928,99 @@ def test_owner_can_add_a_quantity_and_auto_place_from_the_gallery(client):
     assert sheet.items.count() == 4
 
 
+def test_gallery_quantity_endpoint_updates_canvas_count_and_enforces_revision(client):
+    user, customer, project = create_customer_scope(email="gallery-quantity@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Quantité galerie")
+    entry = sheet.source_assets.get(asset=asset)
+    url = reverse(
+        "portal:client-gang-sheet-source-quantity",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": entry.public_id,
+        },
+    )
+    client.force_login(user)
+    response = client.post(url, {"quantity": "3", "expected_revision": sheet.revision})
+    assert response.status_code == 200
+    assert response.json()["quantity"] == sheet.items.count() == 3
+    state = client.get(
+        reverse(
+            "portal:client-gang-sheet-state",
+            kwargs={"customer_public_id": customer.public_id, "sheet_public_id": sheet.public_id},
+        )
+    )
+    assert len(state.json()["sheet"]["items"]) == 3
+    assert all(
+        item["asset_public_id"] == str(asset.public_id) for item in state.json()["sheet"]["items"]
+    )
+    stale = client.post(url, {"quantity": "0", "expected_revision": sheet.revision})
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "STALE_REVISION"
+    assert sheet.items.count() == 3
+    removal = client.post(url, {"quantity": "0", "expected_revision": response.json()["revision"]})
+    assert removal.status_code == 200
+    assert removal.json()["quantity"] == sheet.items.count() == 0
+
+
+def test_gallery_quantity_endpoint_is_readonly_and_tenant_scoped(client):
+    owner, customer, project = create_customer_scope(email="quantity-owner@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Quantité privée")
+    entry = sheet.source_assets.get(asset=asset)
+    url = reverse(
+        "portal:client-gang-sheet-source-quantity",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": entry.public_id,
+        },
+    )
+    readonly, _readonly_customer, _readonly_project = create_customer_scope(
+        email="quantity-readonly@example.com", role=CustomerMembership.Role.READONLY
+    )
+    CustomerMembership.objects.create(
+        customer=customer, user=readonly, role=CustomerMembership.Role.READONLY
+    )
+    client.force_login(readonly)
+    assert (
+        client.post(url, {"quantity": "1", "expected_revision": sheet.revision}).status_code == 403
+    )
+    outsider, _other_customer, _other_project = create_customer_scope(
+        email="quantity-outsider@example.com"
+    )
+    client.force_login(outsider)
+    assert client.post(url, {"quantity": "1", "expected_revision": sheet.revision}).status_code in {
+        403,
+        404,
+    }
+    client.force_login(owner)
+    another, another_customer, another_project = create_customer_scope(
+        email="quantity-another@example.com"
+    )
+    other_asset, _ = attach_png_asset(
+        customer=another_customer, project=another_project, user=another
+    )
+    other_sheet = GangSheetService().create_sheet(
+        project=another_project, actor=another, name="Quantité externe"
+    )
+    foreign_source = other_sheet.source_assets.get(asset=other_asset)
+    foreign_url = reverse(
+        "portal:client-gang-sheet-source-quantity",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": foreign_source.public_id,
+        },
+    )
+    response = client.post(foreign_url, {"quantity": "1", "expected_revision": sheet.revision})
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "SOURCE_ASSET_NOT_FOUND"
+    assert sheet.items.count() == 0
+
+
 def test_owner_can_create_sheet_and_upload_gallery_without_project(client, monkeypatch):
     user, customer, _project = create_customer_scope(email="autonomous-owner@example.com")
     client.force_login(user)
@@ -1922,7 +2015,8 @@ def test_pending_gallery_refreshes_itself_and_exposes_visual_when_analysis_is_re
     assert 'data-has-pending="false"' in ready_content
     assert 'hx-trigger="every 2s"' not in ready_content
     assert 'data-asset-ready="true"' in ready_content
-    assert "Ajouter à la planche" in ready_content
+    assert "<span>Quantité</span>" in ready_content
+    assert "data-asset-quantity data-quantity-url=" in ready_content
 
 
 @pytest.mark.parametrize(

@@ -72,6 +72,7 @@ const initialState = {
   text_fonts: [],
   items: [{
     public_id: 'item-a',
+    asset_public_id: '22222222-2222-4222-8222-222222222222',
     asset_version_public_id: '11111111-1111-4111-8111-111111111111',
     asset_name: 'Visuel A',
     kind: 'visual',
@@ -164,6 +165,7 @@ const hookPoint = '  syncSpacingControls();\n  setMobilePanel("canvas");';
 assert.equal(source.split(hookPoint).length, 2, 'editor test hook point must remain unique');
 const instrumentedSource = source.replace(hookPoint, `
   Object.assign(window.__gangSheetEditorTestHooks, {
+    applyAssetQuantity,
     canResizeItem,
     calculateSnapForMove,
     changeSelectedMetric,
@@ -255,6 +257,28 @@ async function runNextTimer() {
   await assert.rejects(hooks.saveLayout(), /brouillon est conservé/);
   assert.equal(saveCalls, 1, 'a stale snapshot must never be submitted twice');
   assert.equal(hooks.getState().revision, 7);
+  assert.equal(hooks.getState().items[0].width_mm, 120);
+  assert.equal(hooks.isDirty(), true);
+
+  const card = new Element('[data-asset-card]');
+  card.dataset.assetPublicId = initialState.items[0].asset_public_id;
+  const qtyHelp = new Element('[data-asset-quantity-help]');
+  card.querySelector = (selector) => selector === '[data-asset-quantity-help]' ? qtyHelp : null;
+  const qtyInput = new Input('[data-asset-quantity]');
+  qtyInput.isConnected = true;
+  qtyInput.value = '2';
+  qtyInput.dataset.quantityUrl = '/assets/source/quantity/';
+  qtyInput.closest = () => card;
+  let staleQuantityStateReads = 0;
+  fetchHandler = async (url) => {
+    if (url === '/state/') staleQuantityStateReads += 1;
+    if (url === '/layout/') return response({
+      ok: false, error: {code: 'STALE_REVISION', message: 'Révision obsolète'},
+    }, false);
+    throw new Error('No quantity mutation or state refresh is allowed when the draft is stale');
+  };
+  await hooks.applyAssetQuantity(qtyInput);
+  assert.equal(staleQuantityStateReads, 0, 'the quantity action must not discard a stale local draft');
   assert.equal(hooks.getState().items[0].width_mm, 120);
   assert.equal(hooks.isDirty(), true);
 

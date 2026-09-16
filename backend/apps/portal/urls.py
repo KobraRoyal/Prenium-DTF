@@ -78,6 +78,7 @@ from .views_gang_sheets import (
     ClientGangSheetPreviewDownloadView,
     ClientGangSheetSourceAssetCropView,
     ClientGangSheetSourceAssetRemoveView,
+    ClientGangSheetSourceQuantityView,
     ClientGangSheetStateView,
     ClientGangSheetWorkflowActionView,
     StaffGangSheetFinalDownloadView,
@@ -400,6 +401,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/crop/",
         ClientGangSheetSourceAssetCropView.as_view(),
         name="client-gang-sheet-source-asset-crop",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/quantity/",
+        ClientGangSheetSourceQuantityView.as_view(),
+        name="client-gang-sheet-source-quantity",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/preview/download/",
