@@ -29,6 +29,7 @@ class StripeGateway:
     def __init__(self):
         self.secret_key = settings.STRIPE_SECRET_KEY
         self.api_base_url = settings.STRIPE_API_BASE_URL.rstrip("/")
+        self.api_version = getattr(settings, "STRIPE_API_VERSION", "2026-07-29.dahlia")
         self.timeout_seconds = settings.STRIPE_TIMEOUT_SECONDS
         self.webhook_secret = settings.STRIPE_WEBHOOK_SECRET
         if not self.secret_key:
@@ -42,6 +43,7 @@ class StripeGateway:
         order: Order,
         success_url: str,
         cancel_url: str,
+        idempotency_key: str = "",
     ) -> CheckoutCreateResult:
         amount_cents = int((Decimal(order.total_amount) * Decimal("100")).quantize(Decimal("1")))
         if amount_cents <= 0:
@@ -64,7 +66,12 @@ class StripeGateway:
         }
         # Stripe ignore les valeurs None ; on filtre.
         body = {k: v for k, v in form.items() if v is not None}
-        payload = self._request_form(method="POST", path="/v1/checkout/sessions", form=body)
+        payload = self._request_form(
+            method="POST",
+            path="/v1/checkout/sessions",
+            form=body,
+            idempotency_key=idempotency_key or str(order.public_id),
+        )
         return CheckoutCreateResult(
             provider_payment_id=str(payload.get("id", "")).strip(),
             status=str(payload.get("status", "")).strip() or "open",
@@ -156,16 +163,22 @@ class StripeGateway:
         method: str,
         path: str,
         form: dict[str, str] | None,
+        idempotency_key: str = "",
     ) -> dict[str, object]:
         data = None if form is None else parse.urlencode(form).encode()
+        headers = {
+            "Authorization": f"Bearer {self.secret_key}",
+            "Accept": "application/json",
+            "Stripe-Version": str(self.api_version),
+        }
+        if data:
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+        if idempotency_key:
+            headers["Idempotency-Key"] = idempotency_key
         http_request = request.Request(
             url=f"{self.api_base_url}{path}",
             data=data,
-            headers={
-                "Authorization": f"Bearer {self.secret_key}",
-                "Accept": "application/json",
-                **({"Content-Type": "application/x-www-form-urlencoded"} if data else {}),
-            },
+            headers=headers,
             method=method,
         )
         try:

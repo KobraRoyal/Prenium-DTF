@@ -56,6 +56,8 @@ class PaymentAdmin(admin.ModelAdmin):
         "currency",
         "paypal_order_id",
         "paypal_capture_id",
+        "stripe_checkout_session_id",
+        "stripe_payment_intent_id",
         "created_by",
         "created_at",
     )
@@ -65,6 +67,8 @@ class PaymentAdmin(admin.ModelAdmin):
         "order__customer__name",
         "paypal_order_id",
         "paypal_capture_id",
+        "stripe_checkout_session_id",
+        "stripe_payment_intent_id",
     )
     readonly_fields = (
         "public_id",
@@ -76,6 +80,8 @@ class PaymentAdmin(admin.ModelAdmin):
         "currency",
         "paypal_order_id",
         "paypal_capture_id",
+        "stripe_checkout_session_id",
+        "stripe_payment_intent_id",
         "approval_url",
         "source",
         "request_snapshot",

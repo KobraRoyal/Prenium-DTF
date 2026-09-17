@@ -17,6 +17,7 @@ from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.billing.models import Payment
 from apps.billing.services.gateways import PaymentGatewayError
+from apps.billing.services.paypal import PayPalGateway
 from apps.billing.services.stripe_gateway import StripeGateway
 from apps.customers.permissions import HasScopedCustomerAccess
 
@@ -320,9 +321,80 @@ class BackendPayPalCaptureView(APIView):
         )
 
 
+class BackendPayPalWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        payload = request.body
+        header_map = {key.lower(): value for key, value in request.headers.items()}
+        try:
+            gateway = PayPalGateway()
+            event = gateway.verify_and_parse_webhook(payload=payload, headers=header_map)
+        except PaymentGatewayError as exc:
+            logger.warning("paypal_webhook_rejected", extra={"reason": str(exc)})
+            record_event(
+                action="security.paypal_webhook_rejected",
+                status=AuditLogEntry.Status.FAILURE,
+                message=str(exc)[:255],
+                metadata={"path": request.path},
+            )
+            raise PermissionDenied("Invalid PayPal webhook.") from exc
+
+        event_type = str(event.get("event_type", "")).strip().upper()
+        event_id = str(event.get("id", "")).strip()
+        if event_type not in {"CHECKOUT.ORDER.APPROVED", "PAYMENT.CAPTURE.COMPLETED"}:
+            return Response({"received": True, "ignored": event_type})
+
+        paypal_order_id = PayPalGateway.extract_order_id_from_webhook(event)
+        if not paypal_order_id:
+            return Response({"received": True, "matched": False}, status=202)
+
+        try:
+            order, payment, invoice = payment_service.confirm_capture(
+                order_public_id="",
+                paypal_order_id=paypal_order_id,
+                actor=None,
+                source="paypal_webhook",
+            )
+        except DjangoValidationError as error:
+            raise_api_validation_error(error)
+
+        if payment is None:
+            record_event(
+                action="billing.paypal_webhook_unknown_order",
+                status=AuditLogEntry.Status.FAILURE,
+                message="PayPal order not found locally.",
+                metadata={
+                    "paypal_event_id": event_id,
+                    "paypal_order_id": paypal_order_id,
+                    "event_type": event_type,
+                },
+            )
+            return Response({"received": True, "matched": False}, status=202)
+
+        return Response(
+            {
+                "received": True,
+                "matched": True,
+                "order_public_id": str(order.public_id) if order else None,
+                "payment": serialize_payment(payment),
+                "invoice": serialize_invoice(invoice) if invoice else None,
+            }
+        )
+
+
 class BackendStripeWebhookView(APIView):
     authentication_classes = []
     permission_classes = []
+
+    CAPTURE_EVENT_TYPES = {
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+    }
+    FAIL_EVENT_TYPES = {
+        "checkout.session.async_payment_failed",
+    }
 
     def post(self, request):
         payload = request.body
@@ -346,9 +418,6 @@ class BackendStripeWebhookView(APIView):
         event_type = str(event.get("type", "")).strip()
         event_id = str(event.get("id", "")).strip()
         data_object = (event.get("data") or {}).get("object") or {}
-        if event_type != "checkout.session.completed":
-            return Response({"received": True, "ignored": event_type})
-
         session_id = str(data_object.get("id", "")).strip()
         payment_intent = data_object.get("payment_intent")
         if isinstance(payment_intent, dict):
@@ -356,8 +425,25 @@ class BackendStripeWebhookView(APIView):
         else:
             payment_intent_id = str(payment_intent or "").strip()
         payment_status = str(data_object.get("payment_status", "")).strip().lower()
-        if not session_id or payment_status != "paid":
+
+        if event_type in self.FAIL_EVENT_TYPES:
+            if not session_id:
+                return Response({"received": True, "ignored": "missing_session"})
+            payment = payment_service.mark_stripe_checkout_failed(
+                checkout_session_id=session_id,
+                source="stripe_webhook",
+                message="Stripe async payment failed.",
+                event_id=event_id,
+            )
+            return Response({"received": True, "matched": payment is not None, "failed": True})
+
+        if event_type not in self.CAPTURE_EVENT_TYPES:
+            return Response({"received": True, "ignored": event_type})
+
+        if event_type == "checkout.session.completed" and payment_status != "paid":
             return Response({"received": True, "ignored": "not_paid"})
+        if not session_id:
+            return Response({"received": True, "ignored": "missing_session"})
 
         try:
             order, payment, invoice = payment_service.confirm_stripe_checkout_session(

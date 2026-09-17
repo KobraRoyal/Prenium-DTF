@@ -59,11 +59,13 @@ class PayPalGateway:
         order: Order,
         success_url: str,
         cancel_url: str,
+        idempotency_key: str = "",
     ) -> CheckoutCreateResult:
         result = self.create_order(
             order=order,
             return_url=success_url,
             cancel_url=cancel_url,
+            request_id=idempotency_key,
         )
         return CheckoutCreateResult(
             provider_payment_id=result.paypal_order_id,
@@ -87,6 +89,7 @@ class PayPalGateway:
         order: Order,
         return_url: str = "",
         cancel_url: str = "",
+        request_id: str = "",
     ) -> PayPalCreateOrderResult:
         access_token = self._get_access_token()
         application_context = {
@@ -120,6 +123,7 @@ class PayPalGateway:
             url=f"{self.base_url}/v2/checkout/orders",
             payload=payload,
             access_token=access_token,
+            extra_headers={"PayPal-Request-Id": request_id} if request_id else None,
         )
         approval_url = ""
         for link in response_payload.get("links", []):
@@ -135,13 +139,116 @@ class PayPalGateway:
 
     def capture_order(self, *, paypal_order_id: str) -> PayPalCaptureResult:
         access_token = self._get_access_token()
-        response_payload = self._request_json(
+        try:
+            response_payload = self._request_json(
+                method="POST",
+                url=f"{self.base_url}/v2/checkout/orders/{paypal_order_id}/capture",
+                payload={},
+                access_token=access_token,
+            )
+        except PayPalAPIError as exc:
+            if not self._is_already_captured(exc):
+                raise
+            response_payload = self.get_order(
+                paypal_order_id=paypal_order_id,
+                access_token=access_token,
+            )
+        return self._capture_result_from_order_payload(response_payload=response_payload)
+
+    def get_order(
+        self, *, paypal_order_id: str, access_token: str | None = None
+    ) -> dict[str, object]:
+        token = access_token or self._get_access_token()
+        return self._request_json(
+            method="GET",
+            url=f"{self.base_url}/v2/checkout/orders/{paypal_order_id}",
+            payload=None,
+            access_token=token,
+        )
+
+    def verify_and_parse_webhook(
+        self,
+        *,
+        payload: bytes,
+        headers: dict[str, str],
+    ) -> dict[str, object]:
+        webhook_id = getattr(settings, "PAYPAL_WEBHOOK_ID", "") or ""
+        if not webhook_id:
+            raise PayPalConfigurationError(
+                "PayPal webhook id must be configured via PAYPAL_WEBHOOK_ID."
+            )
+        try:
+            event = json.loads(payload.decode("utf-8"))
+        except json.JSONDecodeError as exc:
+            raise PayPalAPIError("Invalid PayPal webhook payload.") from exc
+        if not isinstance(event, dict):
+            raise PayPalAPIError("Invalid PayPal webhook payload.")
+
+        verification_payload = {
+            "auth_algo": headers.get("paypal-auth-algo") or headers.get("PAYPAL-AUTH-ALGO") or "",
+            "cert_url": headers.get("paypal-cert-url") or headers.get("PAYPAL-CERT-URL") or "",
+            "transmission_id": headers.get("paypal-transmission-id")
+            or headers.get("PAYPAL-TRANSMISSION-ID")
+            or "",
+            "transmission_sig": headers.get("paypal-transmission-sig")
+            or headers.get("PAYPAL-TRANSMISSION-SIG")
+            or "",
+            "transmission_time": headers.get("paypal-transmission-time")
+            or headers.get("PAYPAL-TRANSMISSION-TIME")
+            or "",
+            "webhook_id": webhook_id,
+            "webhook_event": event,
+        }
+        if not all(
+            verification_payload[key]
+            for key in (
+                "auth_algo",
+                "cert_url",
+                "transmission_id",
+                "transmission_sig",
+                "transmission_time",
+            )
+        ):
+            raise PayPalAPIError("Missing PayPal webhook signature headers.")
+
+        access_token = self._get_access_token()
+        result = self._request_json(
             method="POST",
-            url=f"{self.base_url}/v2/checkout/orders/{paypal_order_id}/capture",
-            payload={},
+            url=f"{self.base_url}/v1/notifications/verify-webhook-signature",
+            payload=verification_payload,
             access_token=access_token,
         )
+        if str(result.get("verification_status", "")).strip().upper() != "SUCCESS":
+            raise PayPalAPIError("Invalid PayPal webhook signature.")
+        return event
+
+    @staticmethod
+    def extract_order_id_from_webhook(event: dict[str, object]) -> str:
+        resource = event.get("resource") if isinstance(event.get("resource"), dict) else {}
+        event_type = str(event.get("event_type", "")).strip().upper()
+        if event_type == "CHECKOUT.ORDER.APPROVED":
+            return str(resource.get("id", "")).strip()
+        supplementary = resource.get("supplementary_data") if isinstance(resource, dict) else {}
+        related = (
+            supplementary.get("related_ids") if isinstance(supplementary, dict) else {}
+        ) or {}
+        order_id = str(related.get("order_id", "")).strip() if isinstance(related, dict) else ""
+        if order_id:
+            return order_id
+        return str(resource.get("id", "")).strip()
+
+    @staticmethod
+    def _is_already_captured(exc: PayPalAPIError) -> bool:
+        message = str(exc).upper()
+        return "ORDER_ALREADY_CAPTURED" in message or "ALREADY_CAPTURED" in message
+
+    @staticmethod
+    def _capture_result_from_order_payload(
+        *,
+        response_payload: dict[str, object],
+    ) -> PayPalCaptureResult:
         capture_id = ""
+        capture_status = ""
         purchase_units = response_payload.get("purchase_units") or []
         if purchase_units:
             captures = (
@@ -149,13 +256,54 @@ class PayPalGateway:
                 if isinstance(purchase_units[0], dict)
                 else []
             )
-            if captures:
+            if captures and isinstance(captures[0], dict):
                 capture_id = str(captures[0].get("id", "")).strip()
+                capture_status = str(captures[0].get("status", "")).strip()
+        order_status = str(response_payload.get("status", "")).strip()
+        normalized = (capture_status or order_status).upper()
+        if capture_status.upper() == "PENDING":
+            normalized = "PENDING"
+        elif capture_status.upper() == "COMPLETED" or (
+            order_status.upper() == "COMPLETED" and not capture_status
+        ):
+            normalized = "COMPLETED"
         return PayPalCaptureResult(
             capture_id=capture_id,
-            status=str(response_payload.get("status", "")).strip(),
+            status=normalized,
             payload=response_payload,
         )
+
+    def _request_json(
+        self,
+        *,
+        method: str,
+        url: str,
+        payload: dict[str, object] | None,
+        access_token: str,
+        extra_headers: dict[str, str] | None = None,
+    ) -> dict[str, object]:
+        data = None if payload is None else json.dumps(payload).encode()
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        }
+        if data is not None:
+            headers["Content-Type"] = "application/json"
+        if extra_headers:
+            headers.update(extra_headers)
+        http_request = request.Request(
+            url=url,
+            data=data,
+            headers=headers,
+            method=method,
+        )
+        try:
+            with request.urlopen(http_request, timeout=self.timeout_seconds) as response:
+                return json.loads(response.read().decode())
+        except error.HTTPError as exc:
+            raise PayPalAPIError(self._build_api_error_message(exc)) from exc
+        except error.URLError as exc:
+            raise PayPalAPIError("Unable to reach PayPal.") from exc
 
     @staticmethod
     def _sanitize_redirect_url(url: str) -> str:
@@ -201,41 +349,24 @@ class PayPalGateway:
         except error.URLError as exc:
             raise PayPalAPIError("Unable to reach PayPal.") from exc
 
-    def _request_json(
-        self,
-        *,
-        method: str,
-        url: str,
-        payload: dict[str, object],
-        access_token: str,
-    ) -> dict[str, object]:
-        http_request = request.Request(
-            url=url,
-            data=json.dumps(payload).encode(),
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-            method=method,
-        )
-        try:
-            with request.urlopen(http_request, timeout=self.timeout_seconds) as response:
-                return json.loads(response.read().decode())
-        except error.HTTPError as exc:
-            raise PayPalAPIError(self._build_api_error_message(exc)) from exc
-        except error.URLError as exc:
-            raise PayPalAPIError("Unable to reach PayPal.") from exc
-
     def _build_api_error_message(self, exc: error.HTTPError) -> str:
         try:
             payload = json.loads(exc.read().decode())
         except Exception:
             return f"PayPal request failed with HTTP {exc.code}."
+        issues = []
+        details = payload.get("details") if isinstance(payload, dict) else None
+        if isinstance(details, list):
+            for item in details:
+                if isinstance(item, dict) and item.get("issue"):
+                    issues.append(str(item.get("issue")))
         detail = (
-            payload.get("message")
+            payload.get("name")
+            or payload.get("message")
             or payload.get("error_description")
             or payload.get("error")
             or f"PayPal request failed with HTTP {exc.code}."
         )
+        if issues:
+            detail = f"{detail} {' '.join(issues)}"
         return str(detail).strip()[:255]

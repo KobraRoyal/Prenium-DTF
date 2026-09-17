@@ -45,17 +45,41 @@ PaymentService
 ### Backend
 
 - `POST /api/backend/paypal/capture/` — jeton interne `X-Internal-Token` (existant)
+- `POST /api/backend/paypal/webhook/` — vérification `/v1/notifications/verify-webhook-signature`
 - `POST /api/backend/stripe/webhook/` — signature `Stripe-Signature`
 
 ## Configuration
 
 Voir `.env.example` :
 
-- PayPal : `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_INTERNAL_CONFIRM_TOKEN`, …
-- Stripe : `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, …
+- PayPal : `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_INTERNAL_CONFIRM_TOKEN`,
+  `PAYPAL_WEBHOOK_ID`, …
+- Stripe : `STRIPE_SECRET_KEY` (clé secrète `sk_` ou de préférence restricted `rk_`),
+  `STRIPE_PUBLISHABLE_KEY` (optionnel, Checkout hébergé), `STRIPE_WEBHOOK_SECRET`,
+  `STRIPE_API_VERSION` (défaut `2026-07-29.dahlia`).
 
-Webhook Stripe à enregistrer : `checkout.session.completed` →  
+### Brancher Stripe (runbook)
+
+1. Créer un compte / sandbox Stripe et une **restricted API key** (paiements + Checkout).
+2. Renseigner `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` dans `.env` (Compose les
+   injecte via `env_file`).
+3. Dashboard Stripe → Developers → Webhooks → endpoint  
+   `{PUBLIC_BASE_URL}/api/backend/stripe/webhook/`  
+   Événements : `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+   `checkout.session.async_payment_failed`.
+4. Recréer / relancer `web` + `worker` pour prendre les variables.
+5. Dans le portail client, une commande `immediate` tarifée affiche **Carte bancaire**.
+
+Webhook Stripe à enregistrer :  
 `{PUBLIC_BASE_URL}/api/backend/stripe/webhook/`
+
+Webhook PayPal (recommandé, en plus du retour navigateur) :  
+`{PUBLIC_BASE_URL}/api/backend/paypal/webhook/`  
+Événements : `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`.  
+Copier l’ID du webhook dans `PAYPAL_WEBHOOK_ID`.
+
+Fallback PayPal sans webhook : retour `?token=` + endpoint interne
+`POST /api/backend/paypal/capture/` (`X-Internal-Token`).
 
 ## Documents post-paiement
 
@@ -66,13 +90,15 @@ La **facture fiscale / comptable** est émise hors plateforme via l’outil **RC
 
 ## Checklist validation
 
-- [ ] Client immédiat + PayPal : CTA → redirect → return → facture PDF
-- [ ] Client immédiat + Stripe : CTA → Checkout → webhook ou return → facture PDF
+- [ ] Client immédiat + PayPal : CTA → redirect → return **ou webhook** → justificatif PDF
+- [ ] Client immédiat + Stripe : CTA → Checkout → webhook (`completed` / async) ou return → justificatif PDF
 - [ ] Client `deferred` : initiate → 400 / pas de CTA
 - [ ] Client A ne peut pas initier / confirmer la commande de B
 - [ ] Webhook Stripe signature invalide → 403 + audit
+- [ ] Webhook PayPal signature invalide → 403 + audit
 - [ ] Capture PayPal / Stripe idempotente (pas de double facture)
-- [ ] Staff voit provider + refs PayPal/Stripe dans panneau facturation
+- [ ] Retour Stripe non payé (async) ne passe **pas** le paiement en failed
+- [ ] Staff voit provider + refs PayPal/Stripe dans panneau facturation / admin
 
 ## Notification post-tarification
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -16,6 +18,8 @@ from apps.billing.services.gateways import (
 from apps.billing.services.invoices import InvoiceService
 from apps.customers.models import Customer
 from apps.orders.models import Order
+
+IN_FLIGHT_CAPTURE_STATUSES = {"PENDING", "OPEN", "APPROVED", "UNPAID"}
 
 
 class PaymentService:
@@ -89,6 +93,7 @@ class PaymentService:
                 order=order,
                 success_url=success_url,
                 cancel_url=cancel_url,
+                idempotency_key=str(payment.public_id),
             )
         except PaymentGatewayError as exc:
             self._mark_failed(payment=payment, actor=actor, source=source, message=str(exc))
@@ -147,6 +152,8 @@ class PaymentService:
         source: str,
     ):
         resolved_provider_payment_id = (provider_payment_id or paypal_order_id or "").strip()
+        if not order_public_id and not resolved_provider_payment_id and not payment_public_id:
+            return None, None, None
         payment = self._resolve_payment(
             order_public_id=order_public_id,
             provider_payment_id=resolved_provider_payment_id,
@@ -183,7 +190,10 @@ class PaymentService:
         except PaymentGatewayError as exc:
             self._mark_failed(payment=payment, actor=actor, source=source, message=str(exc))
 
+        self._assert_amount_matches(payment=payment, result=result)
         capture_status = str(result.status).upper()
+        if capture_status in IN_FLIGHT_CAPTURE_STATUSES:
+            return payment.order, payment, None
         if capture_status != "COMPLETED":
             self._mark_failed(
                 payment=payment,
@@ -243,14 +253,63 @@ class PaymentService:
             )
             return payment.order, payment, invoice
 
+        gateway = self._get_gateway(provider=Payment.Provider.STRIPE)
+        try:
+            result = gateway.confirm_checkout(provider_payment_id=checkout_session_id)
+        except PaymentGatewayError as exc:
+            self._mark_failed(payment=payment, actor=actor, source=source, message=str(exc))
+
+        self._assert_amount_matches(payment=payment, result=result)
+        capture_status = str(result.status).upper()
+        if capture_status in IN_FLIGHT_CAPTURE_STATUSES:
+            return payment.order, payment, None
+        if capture_status != "COMPLETED":
+            self._mark_failed(
+                payment=payment,
+                actor=actor,
+                source=source,
+                message=f"stripe capture status is '{result.status}'.",
+            )
+
         return self._finalize_captured_payment(
             payment=payment,
-            provider_capture_id=payment_intent_id or payment.stripe_payment_intent_id,
-            provider_payload=payload or payment.provider_payload,
+            provider_capture_id=(
+                result.provider_capture_id or payment_intent_id or payment.stripe_payment_intent_id
+            ),
+            provider_payload=result.payload or payload or payment.provider_payload,
             actor=actor,
             source=source,
             extra_metadata={"stripe_event_id": event_id} if event_id else None,
         )
+
+    def mark_stripe_checkout_failed(
+        self,
+        *,
+        checkout_session_id: str,
+        actor=None,
+        source: str,
+        message: str,
+        event_id: str = "",
+    ):
+        payment = (
+            Payment.objects.select_related("order", "order__customer")
+            .filter(
+                provider=Payment.Provider.STRIPE,
+                stripe_checkout_session_id=checkout_session_id,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if payment is None:
+            return None
+        if payment.status == Payment.Status.CAPTURED:
+            return payment
+        try:
+            self._mark_failed(payment=payment, actor=actor, source=source, message=message)
+        except ValidationError:
+            payment.refresh_from_db()
+            return payment
+        return payment
 
     def get_customer_invoice(self, *, customer, order_public_id):
         order = self._get_customer_order(customer=customer, order_public_id=order_public_id)
@@ -436,9 +495,9 @@ class PaymentService:
         provider_payment_id: str,
         payment_public_id=None,
     ):
-        queryset = Payment.objects.select_related("order", "order__customer").filter(
-            order__public_id=order_public_id
-        )
+        queryset = Payment.objects.select_related("order", "order__customer")
+        if order_public_id:
+            queryset = queryset.filter(order__public_id=order_public_id)
         if payment_public_id:
             queryset = queryset.filter(public_id=payment_public_id)
         if provider_payment_id:
@@ -446,6 +505,31 @@ class PaymentService:
                 models_Q_paypal_or_stripe(provider_payment_id=provider_payment_id)
             )
         return queryset.order_by("-created_at").first()
+
+    def _assert_amount_matches(self, *, payment: Payment, result) -> None:
+        expected_cents = int((Decimal(payment.amount) * Decimal("100")).quantize(Decimal("1")))
+        actual_cents = getattr(result, "amount_total_cents", None)
+        if actual_cents is not None and int(actual_cents) != expected_cents:
+            self._mark_failed(
+                payment=payment,
+                actor=None,
+                source="amount_guard",
+                message=(
+                    f"Montant {payment.provider} incohérent "
+                    f"({actual_cents} cents vs {expected_cents} attendus)."
+                ),
+            )
+        actual_currency = str(getattr(result, "currency", None) or "").strip().upper()
+        if actual_currency and actual_currency != str(payment.currency or "").upper():
+            self._mark_failed(
+                payment=payment,
+                actor=None,
+                source="amount_guard",
+                message=(
+                    f"Devise {payment.provider} incohérente "
+                    f"({actual_currency} vs {payment.currency})."
+                ),
+            )
 
     def _get_gateway(self, *, provider: str | None = None) -> PaymentGateway:
         if self.gateway is not None:

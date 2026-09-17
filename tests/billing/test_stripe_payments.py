@@ -130,7 +130,7 @@ def test_stripe_webhook_captures_and_creates_invoice(monkeypatch):
     assert response.status_code == status.HTTP_200_OK
     payment.refresh_from_db()
     assert payment.status == Payment.Status.CAPTURED
-    assert payment.stripe_payment_intent_id == "pi_test_captured"
+    assert payment.stripe_payment_intent_id == f"pi_from_{payment.stripe_checkout_session_id}"
     assert Invoice.objects.filter(order=order).exists()
     assert AuditLogEntry.objects.filter(action="billing.payment_captured").exists()
 
@@ -181,3 +181,225 @@ def test_client_a_cannot_initiate_stripe_for_customer_b(monkeypatch):
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert Payment.objects.count() == 0
     assert customer_a.public_id != customer_b.public_id
+
+
+@pytest.mark.django_db
+@override_settings(
+    STRIPE_SECRET_KEY="sk_test_dummy",
+    STRIPE_WEBHOOK_SECRET="whsec_test",
+)
+def test_stripe_async_payment_succeeded_captures(monkeypatch):
+    user, customer = create_customer_scope(email="stripe-async@example.com", customer_name="Async")
+    order = create_order(customer, user)
+    service = PaymentService(gateway=FakeStripeGateway())
+    monkeypatch.setattr(billing_views, "payment_service", service)
+    _order, payment = service.initiate_payment_for_customer_order(
+        customer=customer,
+        order_public_id=order.public_id,
+        actor=user,
+        source="test",
+        provider=Payment.Provider.STRIPE,
+        success_url="http://localhost/success",
+        cancel_url="http://localhost/cancel",
+    )
+    event = {
+        "id": "evt_async_1",
+        "type": "checkout.session.async_payment_succeeded",
+        "data": {
+            "object": {
+                "id": payment.stripe_checkout_session_id,
+                "payment_status": "paid",
+                "payment_intent": "pi_async",
+            }
+        },
+    }
+    raw = json.dumps(event).encode()
+    response = APIClient().post(
+        reverse("billing:backend-stripe-webhook"),
+        data=raw,
+        content_type="application/json",
+        HTTP_STRIPE_SIGNATURE=_stripe_signature(payload=raw, secret="whsec_test"),
+    )
+    assert response.status_code == status.HTTP_200_OK
+    payment.refresh_from_db()
+    assert payment.status == Payment.Status.CAPTURED
+    assert Invoice.objects.filter(order=order).exists()
+
+
+@pytest.mark.django_db
+@override_settings(
+    STRIPE_SECRET_KEY="sk_test_dummy",
+    STRIPE_WEBHOOK_SECRET="whsec_test",
+)
+def test_stripe_unpaid_completed_webhook_does_not_fail_payment(monkeypatch):
+    user, customer = create_customer_scope(
+        email="stripe-unpaid@example.com", customer_name="Unpaid"
+    )
+    order = create_order(customer, user)
+    service = PaymentService(gateway=FakeStripeGateway(pending_confirm=True))
+    monkeypatch.setattr(billing_views, "payment_service", service)
+    _order, payment = service.initiate_payment_for_customer_order(
+        customer=customer,
+        order_public_id=order.public_id,
+        actor=user,
+        source="test",
+        provider=Payment.Provider.STRIPE,
+        success_url="http://localhost/success",
+        cancel_url="http://localhost/cancel",
+    )
+    event = {
+        "id": "evt_unpaid_1",
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "id": payment.stripe_checkout_session_id,
+                "payment_status": "unpaid",
+                "payment_intent": "pi_later",
+            }
+        },
+    }
+    raw = json.dumps(event).encode()
+    response = APIClient().post(
+        reverse("billing:backend-stripe-webhook"),
+        data=raw,
+        content_type="application/json",
+        HTTP_STRIPE_SIGNATURE=_stripe_signature(payload=raw, secret="whsec_test"),
+    )
+    assert response.status_code == status.HTTP_200_OK
+    payment.refresh_from_db()
+    assert payment.status != Payment.Status.FAILED
+    assert payment.status != Payment.Status.CAPTURED
+    assert not Invoice.objects.filter(order=order).exists()
+
+
+@pytest.mark.django_db
+@override_settings(
+    STRIPE_SECRET_KEY="sk_test_dummy",
+    STRIPE_WEBHOOK_SECRET="whsec_test",
+)
+def test_stripe_async_payment_failed_marks_payment_failed(monkeypatch):
+    user, customer = create_customer_scope(email="stripe-fail@example.com", customer_name="Fail")
+    order = create_order(customer, user)
+    service = PaymentService(gateway=FakeStripeGateway())
+    monkeypatch.setattr(billing_views, "payment_service", service)
+    _order, payment = service.initiate_payment_for_customer_order(
+        customer=customer,
+        order_public_id=order.public_id,
+        actor=user,
+        source="test",
+        provider=Payment.Provider.STRIPE,
+        success_url="http://localhost/success",
+        cancel_url="http://localhost/cancel",
+    )
+    event = {
+        "id": "evt_fail_1",
+        "type": "checkout.session.async_payment_failed",
+        "data": {"object": {"id": payment.stripe_checkout_session_id}},
+    }
+    raw = json.dumps(event).encode()
+    response = APIClient().post(
+        reverse("billing:backend-stripe-webhook"),
+        data=raw,
+        content_type="application/json",
+        HTTP_STRIPE_SIGNATURE=_stripe_signature(payload=raw, secret="whsec_test"),
+    )
+    assert response.status_code == status.HTTP_200_OK
+    payment.refresh_from_db()
+    assert payment.status == Payment.Status.FAILED
+    assert AuditLogEntry.objects.filter(action="billing.payment_failed").exists()
+
+
+@pytest.mark.django_db
+@override_settings(STRIPE_SECRET_KEY="sk_test_dummy")
+def test_stripe_pending_return_does_not_mark_failed():
+    user, customer = create_customer_scope(
+        email="stripe-pending@example.com", customer_name="Pending"
+    )
+    order = create_order(customer, user)
+    service = PaymentService(gateway=FakeStripeGateway(pending_confirm=True))
+    _order, payment = service.initiate_payment_for_customer_order(
+        customer=customer,
+        order_public_id=order.public_id,
+        actor=user,
+        source="test",
+        provider=Payment.Provider.STRIPE,
+        success_url="http://localhost/success",
+        cancel_url="http://localhost/cancel",
+    )
+    order, payment, invoice = service.confirm_capture(
+        order_public_id=order.public_id,
+        provider_payment_id=payment.stripe_checkout_session_id,
+        actor=user,
+        source="client_portal_return",
+    )
+    payment.refresh_from_db()
+    assert payment.status != Payment.Status.FAILED
+    assert payment.status != Payment.Status.CAPTURED
+    assert invoice is None
+
+
+@pytest.mark.django_db
+@override_settings(STRIPE_SECRET_KEY="sk_test_dummy")
+def test_stripe_amount_mismatch_is_rejected():
+    user, customer = create_customer_scope(email="stripe-amt@example.com", customer_name="Amt")
+    order = create_order(customer, user)
+    service = PaymentService(gateway=FakeStripeGateway(amount_total_cents=1))
+    _order, payment = service.initiate_payment_for_customer_order(
+        customer=customer,
+        order_public_id=order.public_id,
+        actor=user,
+        source="test",
+        provider=Payment.Provider.STRIPE,
+        success_url="http://localhost/success",
+        cancel_url="http://localhost/cancel",
+    )
+    with pytest.raises(Exception, match="incohérent"):
+        service.confirm_capture(
+            order_public_id=order.public_id,
+            provider_payment_id=payment.stripe_checkout_session_id,
+            actor=user,
+            source="test",
+        )
+    payment.refresh_from_db()
+    assert payment.status == Payment.Status.FAILED
+    assert not Invoice.objects.filter(order=order).exists()
+
+
+@override_settings(
+    STRIPE_SECRET_KEY="sk_test_x",
+    STRIPE_API_VERSION="2026-07-29.dahlia",
+)
+def test_stripe_requests_pin_api_version_and_idempotency_key(monkeypatch):
+    from apps.billing.services.stripe_gateway import StripeGateway
+
+    captured = {}
+
+    class FakeResponse:
+        def read(self):
+            return json.dumps(
+                {"id": "cs_test_headers", "status": "open", "url": "https://x"}
+            ).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def fake_urlopen(req, timeout=None):
+        captured["headers"] = {key.lower(): value for key, value in req.header_items()}
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr("apps.billing.services.stripe_gateway.request.urlopen", fake_urlopen)
+    gateway = StripeGateway()
+    payload = gateway._request_form(
+        method="POST",
+        path="/v1/checkout/sessions",
+        form={"mode": "payment"},
+        idempotency_key="pay-public-id",
+    )
+    assert payload["id"] == "cs_test_headers"
+    assert captured["headers"].get("stripe-version") == "2026-07-29.dahlia"
+    assert captured["headers"].get("idempotency-key") == "pay-public-id"
+    assert captured["headers"].get("authorization") == "Bearer sk_test_x"
