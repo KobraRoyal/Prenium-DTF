@@ -2134,7 +2134,8 @@ function submitBatchUploadWhenReady(input) {
   if (!(input instanceof HTMLInputElement) || input.disabled || !input.files?.length) return;
   const form = input.closest("form[data-batch-auto-submit]");
   if (!(form instanceof HTMLFormElement) || form.classList.contains("is-uploading")) return;
-  if (form.querySelector("[data-order-external-link]")?.value.trim()) return;
+  const externalLink = form.querySelector("[data-order-external-link]");
+  if (externalLink instanceof HTMLInputElement && externalLink.value.trim()) return;
   if (form.dataset.orderStartForm !== undefined) {
     const nameInput = form.querySelector('input[name="name"]');
     if (nameInput instanceof HTMLInputElement && !nameInput.value.trim()) {
@@ -2165,7 +2166,9 @@ function syncOrderExternalLink(input) {
 }
 
 function bindBatchUploadEvents() {
-  document.querySelectorAll("[data-order-external-link]").forEach(syncOrderExternalLink);
+  if (typeof document.querySelectorAll === "function") {
+    document.querySelectorAll("[data-order-external-link]").forEach(syncOrderExternalLink);
+  }
   document.body.addEventListener("input", (event) => {
     if (event.target instanceof HTMLInputElement && event.target.matches("[data-order-external-link]")) {
       syncOrderExternalLink(event.target);
@@ -2252,7 +2255,8 @@ function bindBatchUploadEvents() {
     if (!(form instanceof HTMLFormElement) || !form.querySelector("[data-batch-upload]")) {
       return;
     }
-    if (form.querySelector("[data-order-external-link]")?.value.trim()) return;
+    const externalLink = form.querySelector("[data-order-external-link]");
+    if (externalLink instanceof HTMLInputElement && externalLink.value.trim()) return;
     const progress = form.querySelector("[data-batch-upload-progress]");
     if (progress instanceof HTMLElement && form.checkValidity()) {
       progress.hidden = false;
