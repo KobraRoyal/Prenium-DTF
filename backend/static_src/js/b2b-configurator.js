@@ -2123,6 +2123,7 @@ function completeInlineProjectRequest(xhr) {
 }
 
 function setBatchUploadFiles(root, input, files) {
+  if (input.disabled) return;
   const transfer = new DataTransfer();
   Array.from(files || []).forEach((file) => transfer.items.add(file));
   input.files = transfer.files;
@@ -2130,9 +2131,10 @@ function setBatchUploadFiles(root, input, files) {
 }
 
 function submitBatchUploadWhenReady(input) {
-  if (!(input instanceof HTMLInputElement) || !input.files?.length) return;
+  if (!(input instanceof HTMLInputElement) || input.disabled || !input.files?.length) return;
   const form = input.closest("form[data-batch-auto-submit]");
   if (!(form instanceof HTMLFormElement) || form.classList.contains("is-uploading")) return;
+  if (form.querySelector("[data-order-external-link]")?.value.trim()) return;
   if (form.dataset.orderStartForm !== undefined) {
     const nameInput = form.querySelector('input[name="name"]');
     if (nameInput instanceof HTMLInputElement && !nameInput.value.trim()) {
@@ -2151,7 +2153,24 @@ function submitBatchUploadWhenReady(input) {
   }
 }
 
+function syncOrderExternalLink(input) {
+  const form = input.closest("form[data-order-start-form]");
+  if (!form) return;
+  const useLink = Boolean(input.value.trim());
+  form.querySelectorAll("[data-batch-file-input], [data-batch-picker]").forEach((control) => {
+    control.disabled = useLink;
+  });
+  const dropzone = form.querySelector("[data-batch-dropzone]");
+  dropzone?.setAttribute("aria-disabled", String(useLink));
+}
+
 function bindBatchUploadEvents() {
+  document.querySelectorAll("[data-order-external-link]").forEach(syncOrderExternalLink);
+  document.body.addEventListener("input", (event) => {
+    if (event.target instanceof HTMLInputElement && event.target.matches("[data-order-external-link]")) {
+      syncOrderExternalLink(event.target);
+    }
+  });
   document.body.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
@@ -2233,6 +2252,7 @@ function bindBatchUploadEvents() {
     if (!(form instanceof HTMLFormElement) || !form.querySelector("[data-batch-upload]")) {
       return;
     }
+    if (form.querySelector("[data-order-external-link]")?.value.trim()) return;
     const progress = form.querySelector("[data-batch-upload-progress]");
     if (progress instanceof HTMLElement && form.checkValidity()) {
       progress.hidden = false;

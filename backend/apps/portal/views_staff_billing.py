@@ -72,6 +72,7 @@ class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
                 order=self.order,
                 actor=request.user,
                 raw_value=raw,
+                external_visual_count=request.POST.get("external_visual_count"),
             )
         except ValidationError as exc:
             msg = exc.messages[0] if getattr(exc, "messages", None) else str(exc)

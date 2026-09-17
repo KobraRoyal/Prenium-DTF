@@ -52,6 +52,12 @@ class B2BOrderReorderService:
                 "ORDER_HAS_NO_UPLOADS",
                 "Aucun visuel disponible pour préparer une recommande.",
             )
+        if any(upload.is_external for upload in uploads):
+            raise ProjectDomainError(
+                "EXTERNAL_FILE_UNAVAILABLE",
+                "Cette commande utilise un lien externe : "
+                "aucun visuel conservé pour la recommande.",
+            )
 
         order_ref = order_client_reference(order) or short_public_ref(order.public_id)
         project = self.project_service.create_project(

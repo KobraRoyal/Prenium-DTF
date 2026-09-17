@@ -1,0 +1,29 @@
+{% load billing_tags %}
+<section class="order-billing-breakdown" aria-label="Détail du montant">
+  <header class="order-billing-breakdown__head">
+    <h4>Détail du montant</h4>
+    {% if priced %}<span>Prix hors taxes</span>{% endif %}
+  </header>
+  {% if priced %}
+  <dl class="order-billing-breakdown__list">
+    {% for row in rows %}
+    <div>
+      <dt>{{ row.label }}<small>{% if row.linear_m is not None %}{{ row.linear_m|billing_quantity }} m linéaires · {% endif %}{{ row.quantity|billing_quantity }} {{ row.unit }}{% if row.unit_price is not None %} × {{ row.unit_price|floatformat:2 }} {{ order.currency }}{% endif %}</small></dt>
+      <dd>{{ row.amount|floatformat:2 }} {{ order.currency }}</dd>
+    </div>
+    {% endfor %}
+    {% if discount %}
+    <div class="order-billing-breakdown__discount">
+      <dt>Remise volume{% if order.volume_discount_percent %} · {{ order.volume_discount_percent|floatformat:"-2" }} %{% endif %}{% if not separate_discount %}<small>Déjà incluse dans les lignes ci-dessus</small>{% endif %}</dt>
+      <dd>{% if separate_discount %}−{% endif %}{{ discount|floatformat:2 }} {{ order.currency }}</dd>
+    </div>
+    {% endif %}
+    <div><dt>Sous-total HT</dt><dd>{{ order.subtotal_amount|floatformat:2 }} {{ order.currency }}</dd></div>
+    <div><dt>Frais de port HT{% if order.shipping_method_name %}<small>{{ order.shipping_method_name }}</small>{% endif %}</dt><dd>{{ order.shipping_amount|floatformat:2 }} {{ order.currency }}</dd></div>
+    <div><dt>TVA · {{ vat_percent|floatformat:"-2" }} %</dt><dd>{{ order.tax_amount|floatformat:2 }} {{ order.currency }}</dd></div>
+    <div class="order-billing-breakdown__total"><dt>Total TTC</dt><dd>{{ order.total_amount|floatformat:2 }} {{ order.currency }}</dd></div>
+  </dl>
+  {% else %}
+  <p class="muted">Le détail sera disponible après le calcul du prix.</p>
+  {% endif %}
+</section>

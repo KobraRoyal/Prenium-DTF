@@ -14,6 +14,7 @@ from apps.billing.services.gateways import (
     resolve_online_provider,
 )
 from apps.billing.services.invoices import InvoiceService
+from apps.customers.models import Customer
 from apps.orders.models import Order
 
 
@@ -38,47 +39,51 @@ class PaymentService:
         success_url: str = "",
         cancel_url: str = "",
     ):
-        order = self._get_customer_order(customer=customer, order_public_id=order_public_id)
-        if order is None:
-            return None, None
-        if order.billing_mode == Order.BillingMode.DEFERRED:
-            raise ValidationError(
-                "Les commandes en facturation différée ne sont pas payées en ligne."
-            )
-        if order.total_amount <= 0:
-            raise ValidationError("Montant de commande invalide pour un paiement.")
+        # Même ordre de verrouillage que les corrections de métrage et de tarif.
+        with transaction.atomic():
+            Customer.objects.select_for_update().get(pk=customer.pk)
+            order = self._get_customer_order(customer=customer, order_public_id=order_public_id)
+            if order is None:
+                return None, None
+            order = Order.objects.select_for_update().select_related("customer").get(pk=order.pk)
+            if order.billing_mode == Order.BillingMode.DEFERRED:
+                raise ValidationError(
+                    "Les commandes en facturation différée ne sont pas payées en ligne."
+                )
+            if order.total_amount <= 0:
+                raise ValidationError("Montant de commande invalide pour un paiement.")
 
-        # Abandonne les tentatives ouvertes pour permettre une reprise propre.
-        Payment.objects.filter(
-            order_id=order.pk,
-            status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
-        ).update(status=Payment.Status.CANCELLED)
+            # Abandonne les tentatives ouvertes pour permettre une reprise propre.
+            Payment.objects.filter(
+                order_id=order.pk,
+                status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
+            ).update(status=Payment.Status.CANCELLED)
 
-        injected_provider = getattr(self.gateway, "provider", None) if self.gateway else None
-        if injected_provider and (not provider or provider == injected_provider):
-            resolved_provider = injected_provider
-        else:
-            resolved_provider = resolve_online_provider(
-                customer=customer,
-                requested_provider=provider,
+            injected_provider = getattr(self.gateway, "provider", None) if self.gateway else None
+            if injected_provider and (not provider or provider == injected_provider):
+                resolved_provider = injected_provider
+            else:
+                resolved_provider = resolve_online_provider(
+                    customer=customer,
+                    requested_provider=provider,
+                )
+            gateway = self._get_gateway(provider=resolved_provider)
+            payment = Payment.objects.create(
+                order=order,
+                created_by=actor if getattr(actor, "is_authenticated", False) else None,
+                provider=resolved_provider,
+                status=Payment.Status.PENDING,
+                amount=order.total_amount,
+                currency=order.currency,
+                source=source,
+                request_snapshot={
+                    "order_public_id": str(order.public_id),
+                    "customer_public_id": str(order.customer.public_id),
+                    "amount": f"{order.total_amount:.2f}",
+                    "currency": order.currency,
+                    "provider": resolved_provider,
+                },
             )
-        gateway = self._get_gateway(provider=resolved_provider)
-        payment = Payment.objects.create(
-            order=order,
-            created_by=actor if getattr(actor, "is_authenticated", False) else None,
-            provider=resolved_provider,
-            status=Payment.Status.PENDING,
-            amount=order.total_amount,
-            currency=order.currency,
-            source=source,
-            request_snapshot={
-                "order_public_id": str(order.public_id),
-                "customer_public_id": str(order.customer.public_id),
-                "amount": f"{order.total_amount:.2f}",
-                "currency": order.currency,
-                "provider": resolved_provider,
-            },
-        )
         try:
             result = gateway.create_checkout(
                 order=order,

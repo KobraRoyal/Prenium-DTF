@@ -181,7 +181,11 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
                 shipment=shipment,
                 active_panel=request.GET.get("panel", ""),
                 awaits_client_payment=awaits_client_payment,
-                can_reorder=reorder_enabled and order.uploads.exists(),
+                can_reorder=(
+                    reorder_enabled
+                    and order.uploads.exists()
+                    and not order.uploads.exclude(external_url="").exists()
+                ),
             )
             | {
                 "order_status_banner": client_order_status_banner(

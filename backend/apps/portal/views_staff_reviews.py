@@ -52,7 +52,7 @@ def _inspection_context(request, *, order, form_error: str = "", error_upload_id
             else None
         )
         inspection = getattr(upload, "inspection", None)
-        if inspection is None or inspection.status in {"warning", "error"}:
+        if not upload.is_external and getattr(inspection, "status", None) != "ok":
             automatic_attention_count += 1
         review = getattr(upload, "atelier_review", None)
         review_counter[

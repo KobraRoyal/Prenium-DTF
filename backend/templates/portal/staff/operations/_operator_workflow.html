@@ -67,13 +67,17 @@
       {% for upload in uploads %}
       {% with review=upload.atelier_review inspection=upload.inspection upload_id=upload.public_id|stringformat:"s" %}
       <li class="atelier-operator-upload{% if review and review.status == 'approved' %} is-approved{% elif review and review.status == 'changes_requested' %} is-rejected{% endif %}">
+        {% if upload.is_external %}<span class="badge is-neutral">Lien externe</span>{% else %}
         <a class="atelier-operator-upload__preview" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
           <img src="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="" loading="lazy">
         </a>
+        {% endif %}
         <div class="atelier-operator-upload__body">
           <strong>{{ upload.original_filename }}</strong>
           <span class="muted">{{ upload.production_specs.dimensions_label }}</span>
-          {% if upload.drive_hd_url %}
+          {% if upload.is_external %}
+{% if has_upload_view_permission %}{% include "portal/partials/external_upload_link.html" %}{% endif %}
+{% elif upload.drive_hd_url %}
           <a
             class="ui-inline-action"
             href="{{ upload.drive_hd_url }}"
@@ -85,6 +89,9 @@
           <span class="badge is-danger">HD Drive indisponible</span>
           {% elif has_upload_view_permission %}
           <span class="badge is-neutral">HD Drive en attente</span>
+          {% endif %}
+          {% if upload.is_external %}
+          {% include "portal/staff/operations/_external_file_count.html" %}
           {% endif %}
           {% if review and review.status == 'approved' %}
           <span class="badge is-success">Approuvé</span>

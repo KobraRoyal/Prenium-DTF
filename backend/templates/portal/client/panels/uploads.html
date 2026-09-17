@@ -18,9 +18,13 @@
         {% for upload in uploads %}
         <tr class="{% if upload.inspection and upload.inspection.status == 'error' %}ui-row-anomaly{% elif upload.inspection and upload.inspection.status == 'warning' %}ui-row-warning{% endif %}">
           <td>
-            <a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
+            {% if upload.is_external %}
+<span class="badge is-neutral">Lien externe</span>
+{% else %}
+<a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
               <img src="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
             </a>
+{% endif %}
           </td>
           <td>
             <div class="ui-table-primary-cell">{{ upload.original_filename }}</div>
@@ -30,7 +34,9 @@
             {% include "components/tables/upload_support_color.html" with upload=upload %}
           </td>
           <td>
-            {% if upload.inspection %}
+            {% if upload.is_external %}
+<span class="badge is-neutral">Contrôle manuel</span>
+{% elif upload.inspection %}
             <span class="badge {{ upload.inspection.status|badge_tone }}">{{ upload.inspection.status|human_status }}</span>
             {% else %}
             <span class="badge is-neutral">En attente</span>
@@ -38,7 +44,11 @@
           </td>
           <td>
             <div class="ui-table-actions">
-              <a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
+              {% if upload.is_external %}
+{% include "portal/partials/external_upload_link.html" with external_link_audience="client" %}
+{% else %}
+<a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
+{% endif %}
             </div>
           </td>
         </tr>
@@ -51,9 +61,13 @@
     {% for upload in uploads %}
     <article class="product-mobile-file-card">
       <div class="client-order-upload-mobile-head">
-        <a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
+        {% if upload.is_external %}
+<span class="badge is-neutral">Lien externe</span>
+{% else %}
+<a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
           <img src="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
         </a>
+{% endif %}
         <div>
           <p class="font-medium text-[color:var(--ink)] break-words m-0">{{ upload.original_filename }}</p>
         </div>
@@ -66,7 +80,9 @@
         <div>
           <dt class="muted text-xs">Statut</dt>
           <dd>
-            {% if upload.inspection %}
+            {% if upload.is_external %}
+<span class="badge is-neutral">Contrôle manuel</span>
+{% elif upload.inspection %}
             <span class="badge {{ upload.inspection.status|badge_tone }}">{{ upload.inspection.status|human_status }}</span>
             {% else %}
             <span class="badge is-neutral">En attente</span>
@@ -81,7 +97,11 @@
         {% endif %}
       </dl>
       <div class="mt-4 flex flex-wrap gap-2">
-        <a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
+        {% if upload.is_external %}
+{% include "portal/partials/external_upload_link.html" with external_link_audience="client" %}
+{% else %}
+<a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
+{% endif %}
       </div>
     </article>
     {% endfor %}

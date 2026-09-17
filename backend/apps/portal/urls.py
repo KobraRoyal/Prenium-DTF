@@ -62,6 +62,12 @@ from .views_client import (
     ClientOrderUploadPreviewView,
 )
 from .views_client_dashboard import ClientDashboardResultsView
+from .views_external_orders import (
+    ClientExternalOrderCreateView,
+    ClientExternalUploadLinkView,
+    StaffExternalOrderCreateView,
+    StaffExternalUploadLinkView,
+)
 from .views_gang_sheets import (
     ClientGangSheetAddItemView,
     ClientGangSheetAssetGalleryView,
@@ -117,6 +123,7 @@ from .views_staff_customers import (
 )
 from .views_staff_dashboard import StaffDashboardView
 from .views_staff_documents import StaffManufacturingOrderBatchPdfView
+from .views_staff_external_counts import StaffAtelierExternalCountView
 from .views_staff_machine_jobs import (
     StaffOrderMachineAssignmentView,
     StaffOrderPrintConfirmView,
@@ -524,6 +531,11 @@ urlpatterns = [
         name="staff-atelier-operation-print-confirm",
     ),
     path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/external-count/",
+        StaffAtelierExternalCountView.as_view(),
+        name="staff-atelier-operation-external-count",
+    ),
+    path(
         "staff/atelier/pilotage/<uuid:order_public_id>/meterage/",
         StaffAtelierOperationMeterageView.as_view(),
         name="staff-atelier-operation-meterage",
@@ -694,6 +706,26 @@ urlpatterns = [
         "staff/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/asset/download/",
         StaffOrderProjectItemAssetDownloadView.as_view(),
         name="staff-order-project-item-asset-download",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/by-link/",
+        ClientExternalOrderCreateView.as_view(),
+        name="client-external-order-create",
+    ),
+    path(
+        "staff/orders/manual/",
+        StaffExternalOrderCreateView.as_view(),
+        name="staff-external-order-create",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/external/",
+        ClientExternalUploadLinkView.as_view(),
+        name="client-external-upload-link",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/external/",
+        StaffExternalUploadLinkView.as_view(),
+        name="staff-external-upload-link",
     ),
     path("staff/orders/", StaffOrderListView.as_view(), name="staff-order-list"),
     path(

@@ -133,6 +133,7 @@ def meterage_context_for_order(request, order: Order, form_error: str = "") -> d
     return {
         "form_error": form_error,
         "order_billable_sqm_preview": order_billable_sqm_preview,
+        "external_order_upload": next((u for u in order.uploads.all() if u.is_external), None),
         "can_set_meterage_override": can_set_meterage_override(request, order),
         "dtf_laize_cm": int(getattr(settings, "DTF_LAIZE_CM", 55)),
     }

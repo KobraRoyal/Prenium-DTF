@@ -111,6 +111,13 @@ class ProductionPrintTrackingService:
                         "L’impression peut être confirmée uniquement pendant "
                         "ou après la production."
                     )
+                from apps.production.services.external_order_gate import (
+                    external_order_blocked_reason,
+                )
+
+                external_block = external_order_blocked_reason(locked_job.order)
+                if external_block is not None:
+                    raise ValidationError(external_block)
                 machine = locked_job.assigned_machine
                 if machine is None:
                     raise ValidationError("Attribuez d’abord une imprimante à ce dossier.")

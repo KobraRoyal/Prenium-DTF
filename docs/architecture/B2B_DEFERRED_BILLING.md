@@ -277,3 +277,8 @@ L’encours (`deferred`) n’est pas soumis à cette gate.
 - Au premier passage sur un nouveau seuil du mois courant : e-mail client
   `volume_discount_tier_reached`, idempotent par client/mois/seuil et éditable dans le même
   catalogue Atelier.
+
+## Commandes par lien et saisie manuelle
+
+Le parcours sans téléversement utilise une source externe et le métrage global Atelier.
+Voir [Commandes par lien](EXTERNAL_LINK_ORDERS.md) pour les droits, la tarification et la recette.

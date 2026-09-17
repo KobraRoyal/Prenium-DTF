@@ -101,6 +101,8 @@ def raise_api_validation_error(error: DjangoValidationError):
 
 
 def build_download_response(order_upload):
+    if order_upload.is_external or not order_upload.file:
+        raise Http404
     response = FileResponse(
         order_upload.file.open("rb"),
         as_attachment=True,

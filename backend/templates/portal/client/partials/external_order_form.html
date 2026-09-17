@@ -1,0 +1,9 @@
+<section class="portal-page-surface">
+  <h2 class="font-display text-lg">Votre fichier dépasse 20 Mo ?</h2>
+  <p class="ui-field-help">Transmettez un lien de téléchargement à l’atelier. Aucun visuel à joindre : l’équipe contrôlera le fichier et renseignera le métrage avant de calculer le prix.</p>
+  <form method="post" action="{% url 'portal:client-external-order-create' customer_public_id=customer.public_id %}" class="ui-form-stack" data-submit-loading>
+    {% csrf_token %}
+    {% include "portal/partials/external_order_fields.html" with form=external_order_form %}
+    <button type="submit" class="ui-btn ui-btn-primary">Transmettre la commande par lien</button>
+  </form>
+</section>

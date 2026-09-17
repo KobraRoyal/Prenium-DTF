@@ -27,6 +27,7 @@
     data-submit-loading
   >
     {% csrf_token %}
+    {% include "components/portal/external_visual_count_field.html" %}
     <div class="staff-meterage-section__row">
       <div class="ui-field-group staff-meterage-field">
         <label class="ui-label" for="order-meterage-linear">Métrage linéaire (m)</label>
@@ -43,7 +44,7 @@
         />
       </div>
       <div class="ui-form-actions staff-meterage-actions ui-form-actions--stacked">
-        <button type="submit" class="ui-btn ui-btn-primary">Enregistrer le métrage</button>
+        <button type="submit" class="ui-btn ui-btn-primary">{% if external_order_upload %}Enregistrer métrage et visuels{% else %}Enregistrer le métrage{% endif %}</button>
       </div>
       {% if order_billable_sqm_preview is not None %}
       <p class="staff-meterage-preview muted">

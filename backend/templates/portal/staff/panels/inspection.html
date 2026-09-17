@@ -22,6 +22,7 @@
     {% for upload in uploads %}
     {% with review=upload.atelier_review inspection=upload.inspection upload_id=upload.public_id|stringformat:"s" %}
     <article class="atelier-inspection__file">
+      {% if upload.is_external %}<span class="badge is-neutral">Lien externe</span>{% else %}
       <a
         class="atelier-inspection__preview"
         href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}"
@@ -32,6 +33,7 @@
         <img src="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
         <span class="atelier-inspection__preview-label" aria-hidden="true">Ouvrir en grand</span>
       </a>
+      {% endif %}
 
       <div class="atelier-inspection__body">
         <div class="atelier-inspection__head">
@@ -47,7 +49,7 @@
             {% else %}
             <span class="badge is-warning shrink-0">À contrôler</span>
             {% endif %}
-            <a class="atelier-inspection__open-link ui-inline-action" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>
+            {% if upload.is_external %}{% if has_upload_view_permission %}{% include "portal/partials/external_upload_link.html" %}{% endif %}{% else %}<a class="atelier-inspection__open-link ui-inline-action" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>{% endif %}
           </div>
         </div>
 
@@ -75,7 +77,9 @@
           <section class="atelier-inspection__review-block atelier-inspection__review-block--automatic" aria-label="Analyse automatique">
             <div class="atelier-inspection__review-head">
               <h5 class="atelier-inspection__section-title">Analyse automatique</h5>
-              {% if inspection and inspection.status == 'ok' %}
+              {% if upload.is_external %}
+<span>Non applicable — contrôle manuel</span>
+{% elif inspection and inspection.status == 'ok' %}
               <span class="badge is-neutral">Analyse réussie</span>
               {% elif inspection and inspection.status == 'warning' %}
               <span class="badge is-warning">Attention technique</span>
@@ -85,7 +89,9 @@
               <span class="badge is-neutral">Non analysé</span>
               {% endif %}
             </div>
-            {% if inspection and inspection.status == 'ok' %}
+            {% if upload.is_external %}
+<span>Non applicable — contrôle manuel</span>
+{% elif inspection and inspection.status == 'ok' %}
             <p class="atelier-inspection__review-copy">Contrôle technique terminé. Les métadonnées disponibles ont été extraites.</p>
             {% elif inspection.summary_message %}
             <p class="atelier-inspection__review-copy">{{ inspection.summary_message }}</p>

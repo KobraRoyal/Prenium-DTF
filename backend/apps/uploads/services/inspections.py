@@ -19,6 +19,8 @@ class OrderUploadInspectionService:
         actor,
         source: str,
     ) -> OrderUploadInspection:
+        if order_upload.is_external:
+            return None
         try:
             extracted = self.metadata_service.extract(order_upload)
             inspection = OrderUploadInspection.objects.update_or_create(
@@ -104,6 +106,8 @@ class OrderUploadInspectionService:
         actor,
         source: str,
     ) -> OrderUploadInspection:
+        if order_upload.is_external:
+            return None
         inspection = getattr(order_upload, "inspection", None)
         if inspection is not None:
             return inspection
