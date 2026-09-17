@@ -27,12 +27,14 @@ from apps.gang_sheets.models import GangSheet
 from apps.orders.models import Order
 from apps.orders.references import project_client_reference
 from apps.orders.services.pricing import OrderPricingService
+from apps.portal.forms_external_orders import ExternalOrderForm
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
     StaffDomainPermissionMixin,
     access_scope_service,
     status_label,
 )
+from apps.portal.views_external_orders import create_external_order_from_project_form
 from apps.uploads.models import AssetVersion
 from apps.uploads.services.assets import AssetDomainError, AssetService
 
@@ -277,6 +279,7 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
             "nav_key": "client-checkout",
             "status_label": status_label,
             "analysis_pending": analysis_pending,
+            "external_order_form": ExternalOrderForm(),
             "b2b_visual_batch_max_files": B2B_VISUAL_BATCH_MAX_FILES,
             "b2b_visual_batch_max_file_bytes": settings.ORDER_UPLOAD_MAX_BYTES,
             "b2b_visual_batch_max_total_bytes": (
@@ -382,6 +385,13 @@ class ClientOrderProjectCreateView(ClientProjectFeatureMixin, View):
     def post(self, request, customer_public_id):
         if customer_requires_gang_sheet_orders(self.customer):
             return HttpResponseRedirect(client_new_order_url(customer=self.customer))
+        if (
+            request.POST.get("external_url", "").strip()
+            or request.POST.get("source") == "external_link"
+        ):
+            return create_external_order_from_project_form(
+                request, customer=self.customer, context=self.context()
+            )
         uploaded_files = request.FILES.getlist("file")
         batch_error = _visual_batch_request_error(uploaded_files)
         if batch_error:

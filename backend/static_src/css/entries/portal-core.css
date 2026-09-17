@@ -1,6 +1,7 @@
 /* Socle portail partagé (header, workflow, shell, profil). */
 @import "../components/access-management.css";
 @import "../components/workflow.css";
+@import "../components/order-billing-breakdown.css";
 @import "../components/product-shell.css";
 @import "../components/product-polish.css";
 @import "../components/auth-login.css";

@@ -7,6 +7,10 @@
 <div class="portal-page portal-page--staff staff-orders-page">
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_orders_list.html" title="Commandes" subtitle="Vue opérationnelle centralisée avec lecture rapide des statuts et prochaines actions." %}
 
+{% if perms.orders.add_order and perms.orders.change_order %}
+<p><a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-external-order-create' %}">Créer une commande manuelle</a></p>
+{% endif %}
+
 {% if request.GET.deleted == "1" %}
 <div class="alert alert--success workflow-panel__feedback workflow-panel__feedback--ephemeral mb-4" role="status">
   <p>Commande retirée de la file Atelier.</p>

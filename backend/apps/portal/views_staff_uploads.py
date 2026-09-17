@@ -40,6 +40,8 @@ class StaffOrderPanelUploadsView(StaffOrderContextMixin, View):
 
 def _upload_needs_drive_attention(upload) -> bool:
     """True si pas de synchro, synchro non OK, ou erreur résiduelle."""
+    if upload.is_external:
+        return False
     sync = getattr(upload, "drive_sync", None)
     if sync is None:
         return True

@@ -101,6 +101,9 @@
   </div>
 </section>
 </section>
+{% if customer.default_billing_mode != "immediate" %}
+{% include "portal/client/partials/external_order_form.html" %}
+{% endif %}
 </div>
 {% endblock %}
 

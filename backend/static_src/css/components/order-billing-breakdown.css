@@ -1,0 +1,33 @@
+.order-billing-breakdown {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.order-billing-breakdown__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .5rem;
+}
+.order-billing-breakdown__head h4 { margin: 0; font-size: 1rem; }
+.order-billing-breakdown__head span,
+.order-billing-breakdown__list small { color: var(--muted); font-size: .8rem; font-weight: 400; }
+.order-billing-breakdown__list { margin: 0; }
+.order-billing-breakdown__list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: .75rem;
+  padding: .8rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: .9rem;
+}
+.order-billing-breakdown__list dt { font-weight: 600; overflow-wrap: anywhere; }
+.order-billing-breakdown__list small { display: block; margin-top: .2rem; }
+.order-billing-breakdown__list dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.order-billing-breakdown__list > .order-billing-breakdown__discount { color: var(--success); }
+.order-billing-breakdown__list > .order-billing-breakdown__total { border-bottom: 0; padding-bottom: 0; font-size: 1.1rem; font-weight: 750; }

@@ -448,6 +448,12 @@ def _build_uploads_table(
             Spacer(1, 0.12 * cm),
             _build_file_qr_code(filename=qr_filename),
         ]
+        if upload.get("is_external"):
+            file_block = [
+                _paragraph(upload.get("original_filename"), styles["body"]),
+                Paragraph("Visuel externe — contrôle manuel", styles["body"]),
+                Paragraph("Lien client dans l’onglet Fichiers", styles["body"]),
+            ]
         rows.append(
             [
                 _build_preview_cell(

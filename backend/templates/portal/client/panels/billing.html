@@ -1,4 +1,4 @@
-{% load portal_tags %}
+{% load portal_tags billing_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="billing" %}
 <div class="client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}" aria-label="Règlement">
   {% if payment and payment.status == "captured" and invoice %}
@@ -38,6 +38,7 @@
       La facture fiscale sera émise séparément.
     </p>
   </section>
+  {% billing_breakdown order %}
   {% else %}
 
   <p class="client-order-panel__lead">
@@ -102,6 +103,8 @@
     </article>
     {% endif %}
   </section>
+
+  {% billing_breakdown order %}
 
   {% if order.billing_mode == "deferred" %}
   {% if order.pricing_status == "priced" and order.monthly_volume_linear_m is not None or order.credit_hold_status == "warning" or order.credit_hold_status == "blocked" %}

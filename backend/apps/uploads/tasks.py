@@ -9,7 +9,7 @@ def sync_order_upload_to_drive_task(order_upload_public_id: str, source: str = "
         order_upload_public_id=order_upload_public_id,
         source=source,
     )
-    return sync.status
+    return sync.status if sync is not None else None
 
 
 @shared_task(name="uploads.analyze_asset_version")

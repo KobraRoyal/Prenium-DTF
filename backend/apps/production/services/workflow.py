@@ -197,6 +197,7 @@ class ProductionWorkflowService:
             "public_id": str(order_upload.public_id),
             "original_filename": order_upload.original_filename,
             "drive_filename": drive_filename,
+            "is_external": order_upload.is_external,
             "quantity": order_upload.quantity,
             "mime_type": order_upload.mime_type,
             "size_bytes": order_upload.size_bytes,

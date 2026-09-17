@@ -374,6 +374,8 @@ class AssetService:
         return analysis.semi_transparency_overlay, "image/webp"
 
     def prepare_order_upload_preview(self, *, order_upload):
+        if order_upload.is_external:
+            return None
         version = getattr(order_upload, "asset_version", None)
         if version is not None:
             return self.prepare_version_preview(version=version)

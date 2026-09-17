@@ -39,6 +39,7 @@ _ADMIN_PERMISSIONS = (
     "prospects.review_prospectprofile",
     "orders.view_order",
     "orders.change_order",
+    "orders.add_order",
     "orders.delete_atelier_order",
     "uploads.view_orderupload",
     "uploads.view_orderuploadinspection",

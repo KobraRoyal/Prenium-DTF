@@ -593,6 +593,8 @@ class AtelierDashboardService:
         )
 
     def _drive_needs_attention(self, upload) -> bool:
+        if upload.is_external:
+            return False
         try:
             drive_sync = upload.drive_sync
         except ObjectDoesNotExist:

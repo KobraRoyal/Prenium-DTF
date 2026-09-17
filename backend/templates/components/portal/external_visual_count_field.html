@@ -1,0 +1,7 @@
+{% if external_order_upload %}
+<div class="ui-field-group">
+  <label class="ui-label" for="external-visual-count">Nombre de fichiers dans le lien</label>
+  <input class="ui-input" id="external-visual-count" name="external_visual_count" type="number" min="1" max="10000" step="1" required value="{{ external_order_upload.external_visual_count }}">
+  <p class="ui-help">Un lien peut contenir plusieurs visuels à préparer. Le métrage reste le total de la commande.</p>
+</div>
+{% endif %}

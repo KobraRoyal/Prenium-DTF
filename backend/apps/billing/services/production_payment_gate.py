@@ -86,6 +86,11 @@ def count_orders_awaiting_client_payment(customer) -> int:
 
 def production_start_blocked_reason(order: Order) -> str | None:
     """Motif de refus du lancement production, ou None si autorisé."""
+    from apps.production.services.external_order_gate import external_order_blocked_reason
+
+    external_block = external_order_blocked_reason(order)
+    if external_block is not None:
+        return external_block
     if not requires_captured_payment_before_production(order):
         return None
     if order_has_captured_payment(order):

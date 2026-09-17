@@ -156,15 +156,8 @@ class StaffAtelierOperationsView(StaffAtelierOperationsContextMixin, View):
         context = self._workspace_context(request)
         if request.headers.get("HX-Request") == "true":
             return render(request, self.workspace_template_name, context)
-        return render(
-            request,
-            self.template_name,
-            {
-                **context,
-                "nav_mode": "staff",
-                "nav_key": "staff-operations",
-            },
-        )
+        context.update(nav_mode="staff", nav_key="staff-operations")
+        return render(request, self.template_name, context)
 
 
 class StaffAtelierOperationTransitionView(StaffAtelierOperationsContextMixin, View):
@@ -326,6 +319,7 @@ class StaffAtelierOperationMeterageView(StaffAtelierOperationsContextMixin, View
                 order=order,
                 actor=request.user,
                 raw_value=raw,
+                external_visual_count=request.POST.get("external_visual_count"),
             )
         except ValidationError as exc:
             message = exc.messages[0] if getattr(exc, "messages", None) else str(exc)

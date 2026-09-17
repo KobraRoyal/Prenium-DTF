@@ -1021,8 +1021,10 @@ class OrderPricingService:
             line_total = (meterage * unit_price).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
             priced_lines.append((upload, meterage, line_total))
 
-        n_uploads = len(priced_lines)
-        prep_line_total = (Decimal(n_uploads) * prep_fee_per_file).quantize(
+        preparation_count = sum(
+            upload.external_visual_count if upload.is_external else 1 for upload in uploads
+        )
+        prep_line_total = (Decimal(preparation_count) * prep_fee_per_file).quantize(
             TWOPLACES,
             rounding=ROUND_HALF_UP,
         )
@@ -1132,7 +1134,7 @@ class OrderPricingService:
                 service_name=prep_service.name,
                 service_type=prep_service.service_type,
                 unit=prep_service.unit,
-                quantity=Decimal(str(n_uploads)),
+                quantity=Decimal(preparation_count),
                 unit_price=prep_fee_per_file,
                 line_total=prep_line_total,
             )

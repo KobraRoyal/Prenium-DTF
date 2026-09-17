@@ -1,4 +1,4 @@
-{% load portal_tags %}
+{% load portal_tags billing_tags %}
 <div class="workflow-panel workflow-panel--operator billing-station">
   <header class="workflow-panel__hero operator-panel-hero">
     <div>
@@ -33,17 +33,7 @@
     </div>
   </section>
 
-  <details class="workflow-disclosure billing-breakdown">
-    <summary><span>Détail du montant</span><strong>HT, livraison et TVA</strong></summary>
-    <dl class="billing-breakdown__list">
-      <div><dt>Sous-total HT</dt><dd>{{ order.subtotal_amount }} {{ order.currency }}</dd></div>
-      <div><dt>Livraison</dt><dd>{{ order.shipping_amount }} {{ order.currency }}{% if order.shipping_method_name %} · {{ order.shipping_method_name }}{% endif %}</dd></div>
-      <div><dt>TVA</dt><dd>{{ order.tax_amount }} {{ order.currency }}{% if order.tax_rate %} · {{ order.tax_rate }}{% endif %}</dd></div>
-      {% if order.monthly_volume_linear_m is not None %}
-      <div><dt>Remise volume</dt><dd>{% if order.volume_discount_percent %}-{{ order.volume_discount_percent }} %{% else %}Aucun palier{% endif %} · {{ order.monthly_volume_linear_m }} m ce mois{% if order.volume_discount_amount %} · -{{ order.volume_discount_amount }} {{ order.currency }} HT{% endif %}</dd></div>
-      {% endif %}
-    </dl>
-  </details>
+  {% billing_breakdown order %}
 
   {% if payment or invoice or order.billing_mode == "immediate" %}
   <div class="billing-grid">

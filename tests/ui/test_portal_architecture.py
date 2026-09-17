@@ -110,7 +110,10 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
                 "apps.portal.views_payments",
             },
         ),
-        ("views_checkout", {"apps.portal.htmx", "apps.portal.views_common"}),
+        (
+            "views_checkout",
+            {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.forms_external_orders"},
+        ),
         (
             "views_staff",
             {"apps.portal.order_status_presentation", "apps.portal.views_common"},

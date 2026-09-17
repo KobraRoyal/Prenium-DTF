@@ -1702,7 +1702,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("shipping-readiness", shipping)
         self.assertIn("Pilotage Sendcloud", shipping)
         self.assertIn("billing-total", billing)
-        self.assertIn("workflow-disclosure billing-breakdown", billing)
+        self.assertIn("billing_breakdown order", billing)
         self.assertNotIn("Pièces de la commande", billing)
 
     def test_staff_handover_date_uses_shared_calendar_picker(self) -> None:

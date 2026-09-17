@@ -1,0 +1,16 @@
+{% if can_set_meterage_override %}
+<form
+  class="ui-form-stack"
+  hx-post="{% url 'portal:staff-atelier-operation-external-count' order_public_id=order.public_id %}"
+  hx-target="#atelier-operations-panel"
+  hx-swap="outerHTML"
+  hx-indicator="#portal-htmx-indicator"
+  data-submit-loading
+>
+  {% csrf_token %}
+  <input type="hidden" name="q" value="{{ query }}">
+  <input type="hidden" name="queue" value="{{ queue }}">
+  {% include "components/portal/external_visual_count_field.html" with external_order_upload=upload %}
+  <button type="submit" class="ui-btn ui-btn-secondary ui-btn-sm">Enregistrer le nombre de fichiers</button>
+</form>
+{% endif %}

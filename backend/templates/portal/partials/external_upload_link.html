@@ -1,0 +1,8 @@
+{% if external_link_audience == "client" %}
+{% url 'portal:client-external-upload-link' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id as external_link_url %}
+{% else %}
+{% url 'portal:staff-external-upload-link' order_public_id=order.public_id upload_public_id=upload.public_id as external_link_url %}
+{% endif %}
+<a class="ui-inline-action" href="{{ external_link_url }}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Ouvrir le lien client<span class="ui-sr-only"> — {{ upload.original_filename }} (nouvel onglet)</span></a>
+
+<span class="muted">{{ upload.external_visual_count }} visuel{{ upload.external_visual_count|pluralize }}</span>

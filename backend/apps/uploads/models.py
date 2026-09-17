@@ -4,13 +4,14 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.utils import validate_file_name
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.text import get_valid_filename
 
 from apps.core.models import BaseModel
 from apps.orders.models import Order
+from apps.uploads.validators import validate_external_url
 
 ZERO_AMOUNT = Decimal("0.00")
 MIN_QTY = 1
@@ -319,9 +320,19 @@ class OrderUpload(BaseModel):
         on_delete=models.SET_NULL,
         related_name="order_uploads",
     )
-    file = models.FileField(upload_to=order_upload_path, max_length=500)
+    file = models.FileField(upload_to=order_upload_path, max_length=500, blank=True)
+    external_url = models.URLField(
+        max_length=2000,
+        blank=True,
+        default="",
+        validators=[validate_external_url],
+    )
+    external_visual_count = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(10000)],
+    )
     original_filename = models.CharField(max_length=255)
-    mime_type = models.CharField(max_length=255)
+    mime_type = models.CharField(max_length=255, blank=True)
     size_bytes = models.PositiveBigIntegerField()
     sort_order = models.PositiveIntegerField(default=0)
     quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(MIN_QTY)])
@@ -409,6 +420,21 @@ class OrderUpload(BaseModel):
         ]
         constraints = [
             models.CheckConstraint(
+                condition=models.Q(external_visual_count__gte=1, external_visual_count__lte=10000),
+                name="uploads_external_visual_count_range",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(external_url="")
+                    | (
+                        models.Q(file="")
+                        & models.Q(size_bytes=0)
+                        & models.Q(asset_version__isnull=True)
+                    )
+                ),
+                name="uploads_external_link_no_local_file",
+            ),
+            models.CheckConstraint(
                 condition=(
                     models.Q(width_mm__isnull=True, height_mm__isnull=True)
                     | models.Q(width_mm__isnull=False, height_mm__isnull=False)
@@ -427,6 +453,19 @@ class OrderUpload(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.order.public_id} - {self.original_filename}"
+
+    @property
+    def is_external(self) -> bool:
+        return bool(self.external_url)
+
+    def clean(self):
+        super().clean()
+        if self.external_url:
+            self.external_url = validate_external_url(self.external_url)
+            if self.file.name or self.size_bytes or self.asset_version_id:
+                raise ValidationError(
+                    "Un lien externe ne peut pas être associé à un fichier local ou à un asset."
+                )
 
     @property
     def support_color_is_multicolor(self) -> bool:
