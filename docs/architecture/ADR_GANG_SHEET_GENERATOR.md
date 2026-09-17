@@ -21,8 +21,12 @@ Créer l’app dédiée `gang_sheets` autour de quatre modèles :
 - `GangSheetSourceAsset`, galerie source propre à la planche avec dimensions analysées ;
 - `GangSheetItem`, occurrence d’une `AssetVersion` avec position, taille réelle et rotation.
 
-La planche snapshotte la laize, les marges, l’espacement et les bornes de hauteur lors de sa
-création. Un changement de machine ne modifie donc jamais silencieusement un brouillon existant.
+La planche snapshotte la laize utile, l’espacement et les bornes de hauteur lors de sa création.
+`margin_mm` reste stocké sur les anciennes configurations et planches pour compatibilité, mais
+n’intervient plus dans la géométrie et n’est plus proposé dans les réglages Atelier. La largeur
+`width_mm` représente déjà toute la zone imprimable : `x=0`, `y=0` et le contact exact avec les
+bords droit et bas sont valides. Un changement de machine ne modifie donc jamais silencieusement
+un brouillon existant.
 La hauteur, la surface et l’estimation tarifaire sont recalculées par un service serveur. Le
 navigateur fournit un feedback instantané, mais ne constitue pas la source d’autorité.
 
@@ -38,7 +42,8 @@ pour les autres projets et pour la traçabilité documentaire. L’action est te
 
 Le placement automatique utilise une stratégie bottom-left déterministe : occurrences triées par
 surface, test des deux orientations sur les arêtes disponibles, score minimisant la hauteur puis
-l’abscisse. La validation serveur refuse tout débordement ou chevauchement.
+l’abscisse. La validation serveur refuse les coordonnées négatives et tout bord situé au-delà de
+la laize utile ou de la hauteur de planche, rotations comprises, ainsi que tout chevauchement.
 
 La quantité reste dérivée des occurrences afin de conserver une seule source de vérité. Les ajouts
 batch et les répétitions rangées × colonnes sont atomiques, limités à 200 occurrences par action et
@@ -99,7 +104,9 @@ planche (`cqw` du canvas), pas de la boîte. La mesure du cadre utilise une
 poignées d’angle permettent d’agrandir ; le corps se déplace au curseur
 « grab ».
 
-Le recadrage proposé dans la modal d’import est non destructif. La planche stocke une fenêtre
+L’import démarre directement depuis le panneau « Ajouter des visuels » de la bibliothèque. La
+galerie compacte affiche ensuite l’état de l’analyse et ouvre une modale propre à chaque fichier
+pour les anomalies, les overlays techniques et le recadrage. Ce recadrage est non destructif. La planche stocke une fenêtre
 normalisée `(x, y, largeur, hauteur)` sur `GangSheetSourceAsset`, tandis que l’`AssetVersion`
 originale reste inchangée. Les dimensions physiques proposées et les aperçus utilisent cette
 fenêtre. Dans le PDF HD, une source PDF ou mixte est placée avec un clip PDF natif ; ses tracés,
@@ -107,13 +114,17 @@ textes, polices et images embarquées ne sont donc pas aplatis. Les sources EPS/
 d’abord converties en PDF vectoriel selon la voie existante, puis clippées. Pour une source raster,
 seuls les pixels compris dans la fenêtre sont conservés, sans mise à l’échelle ni rééchantillonnage.
 
-La modal propose un mode Manuel et un mode Auto par fichier. Auto utilise la transparence ou le
+La modale détail reprend les contrôles de la commande par fichier : source complète médiée,
+overlays d’anomalies activables, zoom, fonds de contrôle, cadrage manuel manipulable, cadrage
+automatique recalculé depuis l’original côté serveur et conservation du visuel complet. Le cadrage
+est bloqué dès que le visuel possède une occurrence sur la planche afin de ne pas modifier son ratio
+sans recalculer les dimensions et collisions de la composition. À l’import, le mode Auto peut utiliser la transparence ou le
 fond dominant pour borner les pixels raster. Pour un PDF vectoriel, il unit les limites natives des
 tracés, textes et nuances ; pour un PDF mixte, il ajoute les limites des images embarquées. Les
 formats EPS/AI/PSD/TIFF sans aperçu navigateur sont analysés via leur aperçu serveur sécurisé. La
 proposition visuelle du navigateur reste indicative : lors de l’import, le serveur relit l’original,
 recalcule la fenêtre et audite le type détecté (`vector`, `raster` ou `mixed`). Une modification du
-cadre Auto dans la modal repasse explicitement le fichier en mode Manuel.
+cadre Auto repasse explicitement le fichier en mode Manuel.
 
 L’aperçu client et les diagnostics de finesse/semi-transparence restent volontairement
 rasterisés : ils sont indépendants du livrable HD. Le compositeur crée une page neuve et ne copie
@@ -131,6 +142,9 @@ audités et aucun identifiant Drive n’est envoyé au portail client.
 - Tous les objets client sont filtrés par `Customer` et exposés par UUID public.
 - Une occurrence ne peut référencer que la version courante analysée d’un asset de sa galerie.
 - Les coordonnées de crop sont revalidées côté serveur et contraintes à la surface du visuel.
+- Le cadre manuel est calculé sur les limites rendues du fichier, réinitialisé après chaque échange HTMX et peut être tracé directement sur l’aperçu.
+- Le recadrage automatique reconstitue l’upload interne depuis le nom et le MIME de l’`AssetVersion`; les coordonnées du navigateur sont ignorées.
+- Les demandes d’auto-recadrage sont limitées par acteur et client avant toute lecture ou analyse du fichier privé.
 - Le mode Auto ignore les coordonnées proposées par le navigateur et recalcule depuis l’original.
 - Les membres `readonly` ne peuvent modifier, rendre ou valider une planche.
 - Aucun chemin de stockage ni `MEDIA_URL` n’est exposé.

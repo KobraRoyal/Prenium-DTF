@@ -37,13 +37,23 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn(".gang-editor__save-icon--done", polish)
         self.assertIn(".gang-editor__inspector button", polish)
         self.assertIn(".gang-sheet-item-action", polish)
+        self.assertIn(".gang-import-dropzone", polish)
+        self.assertIn("container: gang-import / inline-size", polish)
+        self.assertIn("@container gang-import (max-width: 29.99rem)", polish)
+        self.assertIn('"icon copy"', polish)
+        self.assertIn('"action action"', polish)
+        self.assertIn("overflow-x: hidden", polish)
+        self.assertIn("overflow-wrap: anywhere", polish)
+        self.assertIn("white-space: normal", polish)
+        self.assertIn("-webkit-line-clamp: 2", polish)
+        self.assertIn(".b2b-batch-upload__progress", polish)
         self.assertIn("background: var(--gang-panel);", polish)
         self.assertIn(".gang-sheet-canvas-scroll", polish)
         self.assertIn("overflow: hidden", polish)
         self.assertIn("minmax(0, 14.5rem) minmax(0, 1fr) minmax(0, 16.25rem)", polish)
         self.assertIn("repeat(3, minmax(0, 1fr))", polish)
         self.assertIn("min(1540px, calc(100vw - 1.5rem))", polish)
-        self.assertIn("height: max(30rem, calc(100dvh - 15.5rem))", polish)
+        self.assertIn("height: max(26rem, calc(100dvh - 15.5rem))", polish)
         self.assertIn("16rem minmax(0, 1fr) 18rem", polish)
         self.assertIn("@media (min-width: 88rem)", polish)
         self.assertIn(".gang-editor__overview", polish)
@@ -67,7 +77,8 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn(".gang-asset-card__place", polish)
         self.assertIn(".gang-inspector-danger", polish)
         self.assertIn(".gang-inspector-panel--multi", polish)
-        self.assertIn("position: sticky", polish)
+        self.assertIn("position: static", polish)
+        self.assertNotIn("position: sticky", polish)
         self.assertIn(".gang-editor__mobile-tabs button.is-active", polish)
         self.assertIn(".gang-editor__mobile-tabs button > svg", polish)
         self.assertIn(".gang-inspector-panel--validation li.is-ok", polish)
@@ -92,7 +103,7 @@ class StudioPolishUITests(SimpleTestCase):
 
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
         overview_start = editor.index('<div class="gang-editor__overview">')
-        overview_end = editor.index('<dialog class="b2b-configurator-dialog', overview_start)
+        overview_end = editor.index('<nav class="gang-editor__mobile-tabs', overview_start)
         overview = editor[overview_start:overview_end]
         self.assertIn('<header class="gang-editor__header">', overview)
         self.assertIn('<div class="gang-editor__progress-row">', overview)
@@ -149,17 +160,35 @@ class StudioPolishUITests(SimpleTestCase):
     def test_empty_gallery_has_one_import_path_and_keeps_htmx_contract(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
         gallery = source(TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_gallery.html")
+        quality_badges = source(
+            TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_quality_badges.html"
+        )
 
-        self.assertIn("Ajouter des fichiers", editor)
-        self.assertIn("gang-asset-card__place", gallery)
-        self.assertIn("Placer sur la planche", gallery)
+        self.assertIn("Déposez vos fichiers ici", editor)
+        self.assertIn("Choisir les fichiers", editor)
+        self.assertIn('class="b2b-batch-dropzone gang-import-dropzone"', editor)
+        self.assertIn('data-batch-dropzone role="group"', editor)
+        self.assertNotIn('data-batch-dropzone role="button"', editor)
+        self.assertNotIn('data-batch-dropzone role="group" tabindex="0"', editor)
+        self.assertIn("Aucun fichier sélectionné.", editor)
+        self.assertIn("<span>Quantité</span>", gallery)
+        self.assertIn('sur la planche" aria-describedby=', gallery)
+        self.assertIn("data-asset-quantity data-quantity-url=", gallery)
+        self.assertIn('min="0" max="200" step="1"', gallery)
+        self.assertIn("data-asset-placement-count", gallery)
+        self.assertNotIn("gang-asset-card__manual-place", gallery)
         empty_state = gallery.split("{% empty %}", 1)[1]
         self.assertNotIn("<button", empty_state.split("{% endfor %}", 1)[0])
         self.assertNotIn("Ajouter un visuel", empty_state)
         for attribute in ["hx-get", "hx-trigger", "hx-target", "hx-swap", "hx-sync"]:
             self.assertIn(attribute, gallery)
-        self.assertIn('class="gang-asset-card__usage-state"', gallery)
+        self.assertIn('class="gang-placement-state is-placed"', gallery)
         self.assertNotIn('class="gang-asset-card__remove"\n            disabled', gallery)
+        self.assertIn("Importez votre premier fichier avec la zone ci-dessus.", gallery)
+        self.assertIn("Zones &lt; 0,5 mm", quality_badges)
+        self.assertIn("Dégradés détectés", quality_badges)
+        self.assertIn("Pas de dégradé", quality_badges)
+        self.assertNotIn("Transparence OK", quality_badges)
 
     def test_final_step_uses_one_confirm_cta(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
@@ -210,7 +239,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn('link.classList.toggle("ui-btn-primary", canCreate)', editor_js)
         self.assertIn("const hasEstimate = state.items.length > 0 && quote.surface > 0", editor_js)
         self.assertNotIn('q("[data-metric-price]")', editor_js)
-        self.assertIn("gang-sheet-editor.js?v=20260828-studio-groups-v23", app_js)
+        self.assertIn("gang-sheet-editor.js?v=20260916-source-quantity-v41", app_js)
         self.assertNotIn("gang-inspector-panel__context", editor)
         text_css = source(CSS_DIR / "components/gang-sheet-text.css")
         self.assertIn("font-size: 2.18cqw", text_css)
@@ -231,7 +260,14 @@ class StudioPolishUITests(SimpleTestCase):
         editor_js = source(BASE_DIR / "static_src/js/gang-sheet-editor.js")
         after_helper = editor_js.split("function trustedAssetPreviewSrc", 1)[1]
 
-        self.assertIn("function trustedAssetPreviewSrc(versionPublicId)", editor_js)
+        self.assertIn("function trustedAssetPreviewSrc(versionPublicId, cacheRevision)", editor_js)
         self.assertIn("encodeURIComponent(versionPublicId)", editor_js)
+        self.assertIn("Number.parseInt(cacheRevision, 10)", editor_js)
+        self.assertIn("Number.isSafeInteger(revision)", editor_js)
+        self.assertIn("?crop_revision=${revision}", editor_js)
+        self.assertIn(
+            "trustedAssetPreviewSrc(item.asset_version_public_id, state.revision)",
+            editor_js,
+        )
         self.assertIn("image.src = previewSrc", editor_js)
         self.assertNotIn("item.preview_url", after_helper)

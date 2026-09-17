@@ -278,13 +278,11 @@ def wrap_text_to_width(
 def usable_text_max_width_mm(
     *,
     sheet_width_mm,
-    margin_mm,
     x_mm=None,
     sheet_height_mm=None,
     y_mm=None,
     rotation=0,
 ) -> Decimal:
-    margin = max(Decimal("0.00"), Decimal(margin_mm))
     quarter = int(rotation or 0) % 360 in {90, 270}
     if quarter:
         limit = max(
@@ -295,10 +293,10 @@ def usable_text_max_width_mm(
     else:
         limit = max(MIN_TEXT_BOX_MM, Decimal(sheet_width_mm))
         origin = x_mm
-    usable = max(MIN_TEXT_BOX_MM, limit - (margin * 2))
+    usable = limit
     if origin is None:
         return usable.quantize(Decimal("0.01"))
-    remaining = max(MIN_TEXT_BOX_MM, limit - Decimal(origin) - margin)
+    remaining = max(MIN_TEXT_BOX_MM, limit - Decimal(origin))
     return min(usable, remaining).quantize(Decimal("0.01"))
 
 
@@ -395,7 +393,6 @@ def fitted_fontsize(item, rect) -> float:
 def default_box_mm(
     *,
     sheet_width_mm,
-    margin_mm,
     content=DEFAULT_TEXT_CONTENT,
     font=DEFAULT_TEXT_FONT,
     bold=False,
@@ -403,7 +400,6 @@ def default_box_mm(
 ) -> tuple[Decimal, Decimal]:
     max_width = usable_text_max_width_mm(
         sheet_width_mm=sheet_width_mm,
-        margin_mm=margin_mm,
     )
     return fitted_box_mm(
         content=content,
@@ -415,12 +411,11 @@ def default_box_mm(
 
 
 def default_origin_mm(*, sheet, width_mm, height_mm) -> tuple[Decimal, Decimal]:
-    margin = Decimal(sheet.margin_mm)
-    usable_width = Decimal(sheet.width_mm) - (margin * 2)
-    usable_height = Decimal(sheet.height_mm) - (margin * 2)
-    x = margin + max(Decimal("0.00"), (usable_width - Decimal(width_mm)) / 2)
+    usable_width = Decimal(sheet.width_mm)
+    usable_height = Decimal(sheet.height_mm)
+    x = max(Decimal("0.00"), (usable_width - Decimal(width_mm)) / 2)
     offset_y = min(Decimal("20.00"), (usable_height - Decimal(height_mm)) / 2)
-    y = margin + max(Decimal("0.00"), offset_y)
+    y = max(Decimal("0.00"), offset_y)
     return x.quantize(Decimal("0.01")), y.quantize(Decimal("0.01"))
 
 

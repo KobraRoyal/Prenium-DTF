@@ -142,7 +142,6 @@ def test_save_layout_persists_font_and_size():
         content="Studio",
         max_width_mm=usable_text_max_width_mm(
             sheet_width_mm=sheet.width_mm,
-            margin_mm=sheet.margin_mm,
             x_mm=Decimal("20"),
         ),
         font="oswald",
@@ -191,7 +190,6 @@ def test_save_layout_ignores_payload_box_and_fits_the_text():
         content="Ligne 1\nLigne 2\nLigne 3\nLigne 4",
         max_width_mm=usable_text_max_width_mm(
             sheet_width_mm=sheet.width_mm,
-            margin_mm=sheet.margin_mm,
             x_mm=Decimal("20"),
         ),
         font="sans",
@@ -234,7 +232,13 @@ def test_text_item_can_be_duplicated_and_saved_with_layout():
     service = GangSheetService()
     sheet = service.create_sheet(customer=customer, actor=user, name="Texte duplicable")
     item = service.add_text_item(sheet=sheet, actor=user, content="Studio DTF")
-    clone = service.duplicate_occurrence(sheet=sheet, item_public_id=item.public_id, actor=user)
+    sheet.refresh_from_db()
+    clone = service.duplicate_occurrence(
+        sheet=sheet,
+        item_public_id=item.public_id,
+        expected_revision=sheet.revision,
+        actor=user,
+    )
 
     assert clone.kind == GangSheetItem.Kind.TEXT
     assert clone.text_content == "Studio DTF"
@@ -441,7 +445,6 @@ def test_text_item_is_isolated_across_customers(client):
 def test_usable_text_max_width_follows_the_visible_axis_when_rotated():
     horizontal = usable_text_max_width_mm(
         sheet_width_mm=550,
-        margin_mm=5,
         x_mm=500,
         sheet_height_mm=200,
         y_mm=10,
@@ -449,14 +452,13 @@ def test_usable_text_max_width_follows_the_visible_axis_when_rotated():
     )
     vertical = usable_text_max_width_mm(
         sheet_width_mm=550,
-        margin_mm=5,
         x_mm=500,
         sheet_height_mm=200,
         y_mm=10,
         rotation=90,
     )
-    assert horizontal == Decimal("45.00")
-    assert vertical == Decimal("185.00")
+    assert horizontal == Decimal("50.00")
+    assert vertical == Decimal("190.00")
 
 
 def test_save_layout_rotated_text_does_not_wrap_on_the_hidden_axis():
@@ -469,7 +471,6 @@ def test_save_layout_rotated_text_does_not_wrap_on_the_hidden_axis():
         content="Prenium",
         max_width_mm=usable_text_max_width_mm(
             sheet_width_mm=sheet.width_mm,
-            margin_mm=sheet.margin_mm,
             x_mm=Decimal("480"),
             sheet_height_mm=sheet.height_mm,
             y_mm=Decimal("10"),

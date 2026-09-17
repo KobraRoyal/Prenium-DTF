@@ -137,6 +137,104 @@ html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__add {
   gap: 0.4rem !important;
 }
 
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card .b2b-quality-review {
+  min-width: 0;
+  padding: 0 !important;
+  overflow: visible;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card .b2b-quality-review__chips {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card .b2b-quality-strip {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.25rem 0.38rem;
+  border-radius: 999px;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card .b2b-quality-strip__label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.58rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__dimensions {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__details {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.15rem 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--brand-strong);
+  font-size: 0.67rem;
+  font-weight: 800;
+  text-align: left;
+  text-decoration: underline;
+  text-overflow: ellipsis;
+  text-underline-offset: 0.16rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__placement {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.61rem;
+  font-weight: 750;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-placement-state {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-placement-state.is-placed {
+  color: var(--success-text);
+}
+
+html[data-theme="prenium"] body.product-shell--studio .gang-placement-state.is-error {
+  color: var(--danger-text);
+}
+
+html[data-theme="prenium"] body.product-shell--studio :is(.gang-asset-card__retry, .gang-asset-card__manual-place) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-strong);
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.15rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__place {
   width: 100% !important;
   min-height: 2.75rem !important;

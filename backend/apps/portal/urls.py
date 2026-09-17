@@ -67,6 +67,7 @@ from .views_gang_sheets import (
     ClientGangSheetAssetGalleryView,
     ClientGangSheetAssetPreviewView,
     ClientGangSheetAssetUploadView,
+    ClientGangSheetAutoPlaceReadySourcesView,
     ClientGangSheetBatchDeleteItemsView,
     ClientGangSheetCreateOrderProjectView,
     ClientGangSheetDeleteView,
@@ -75,7 +76,9 @@ from .views_gang_sheets import (
     ClientGangSheetLayoutView,
     ClientGangSheetListCreateView,
     ClientGangSheetPreviewDownloadView,
+    ClientGangSheetSourceAssetCropView,
     ClientGangSheetSourceAssetRemoveView,
+    ClientGangSheetSourceQuantityView,
     ClientGangSheetStateView,
     ClientGangSheetWorkflowActionView,
     StaffGangSheetFinalDownloadView,
@@ -355,6 +358,11 @@ urlpatterns = [
         name="client-gang-sheet-item-add",
     ),
     path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/auto-place-ready/",
+        ClientGangSheetAutoPlaceReadySourcesView.as_view(),
+        name="client-gang-sheet-auto-place-ready-sources",
+    ),
+    path(
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/delete-batch/",
         ClientGangSheetBatchDeleteItemsView.as_view(),
         name="client-gang-sheet-items-delete-batch",
@@ -388,6 +396,16 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/remove/",
         ClientGangSheetSourceAssetRemoveView.as_view(),
         name="client-gang-sheet-source-asset-remove",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/crop/",
+        ClientGangSheetSourceAssetCropView.as_view(),
+        name="client-gang-sheet-source-asset-crop",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/quantity/",
+        ClientGangSheetSourceQuantityView.as_view(),
+        name="client-gang-sheet-source-quantity",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/preview/download/",

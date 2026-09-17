@@ -16,6 +16,7 @@ if (root) {
   let savedLayoutSignature = "";
   let busy = false;
   let dirty = false;
+  let autoPlacementRequest = null;
   let allowUnload = false;
   let zoom = 1;
   const ZOOM_MIN = 0.5;
@@ -25,8 +26,11 @@ if (root) {
   let zoomWheelAcc = 0;
   let pollTimer = null;
   let pendingValidateAfterRender = false;
+  let acceptedPreflightFingerprint = "";
   let resizeFrame = null;
   let galleryWasPending = qPendingGallery();
+  const quantityTimers = new WeakMap();
+  const quantityUpdating = new WeakSet();
   const canEdit = root.dataset.canEdit === "true";
   const canvas = root.querySelector("[data-sheet-canvas]");
   const csrf = root.querySelector("[data-csrf]").value;
@@ -40,14 +44,19 @@ if (root) {
   const HISTORY_LIMIT = 40;
   const ASSET_VERSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  function trustedAssetPreviewSrc(versionPublicId) {
+  function trustedAssetPreviewSrc(versionPublicId, cacheRevision) {
     if (typeof versionPublicId !== "string" || !ASSET_VERSION_ID_RE.test(versionPublicId)) {
       return "";
     }
     const basePath = window.location.pathname.endsWith("/")
       ? window.location.pathname
       : `${window.location.pathname}/`;
-    return `${basePath}assets/${encodeURIComponent(versionPublicId)}/preview/`;
+    const previewSrc = `${basePath}assets/${encodeURIComponent(versionPublicId)}/preview/`;
+    const revision = Number.parseInt(cacheRevision, 10);
+    if (!Number.isSafeInteger(revision) || revision < 0) {
+      return previewSrc;
+    }
+    return `${previewSrc}?crop_revision=${revision}`;
   }
 
   function layoutSnapshot() {
@@ -113,6 +122,7 @@ if (root) {
       if ("text_color" in saved) item.text_color = saved.text_color;
       if ("text_align" in saved) item.text_align = saved.text_align;
       if ("text_bold" in saved) item.text_bold = Boolean(saved.text_bold);
+      fitItemWithinBounds(item, sheetMaximumUsefulBounds(), { preserveRatio: true });
     });
   }
 
@@ -146,6 +156,7 @@ if (root) {
 
   function setDirty(value = true) {
     dirty = value;
+    if (dirty) acceptedPreflightFingerprint = "";
     root.dataset.dirty = String(dirty);
   }
 
@@ -380,15 +391,14 @@ if (root) {
   }
 
   function textMaxWidthMm(item) {
-    const margin = Math.max(0, Number(state.margin_mm) || 0);
     const quarter = [90, 270].includes(Number(item?.rotation) || 0);
     const sheetLimit = Math.max(
       5,
       Number(quarter ? state.height_mm : state.width_mm) || 0
     );
     const origin = Number(quarter ? item?.y_mm : item?.x_mm) || 0;
-    const usable = Math.max(5, sheetLimit - margin * 2);
-    const remaining = Math.max(5, sheetLimit - origin - margin);
+    const usable = Math.max(5, sheetLimit);
+    const remaining = Math.max(5, sheetLimit - origin);
     return round(Math.min(usable, remaining), 2);
   }
 
@@ -469,10 +479,115 @@ if (root) {
       : { width: item.width_mm, height: item.height_mm };
   }
 
+  function canResizeItem(item) {
+    return !item.layout_group_id;
+  }
+
   function clampItemOnSheet(item) {
+    clampItemWithinBounds(item, sheetUsefulBounds());
+  }
+
+  function clampItemWithinBounds(item, bounds) {
     const size = effectiveSize(item);
-    item.x_mm = round(Math.max(0, Math.min(item.x_mm, state.width_mm - size.width)));
-    item.y_mm = round(Math.max(0, Math.min(item.y_mm, state.height_mm - size.height)));
+    item.x_mm = round(Math.max(bounds.left, Math.min(item.x_mm, bounds.right - size.width)));
+    item.y_mm = round(Math.max(bounds.top, Math.min(item.y_mm, bounds.bottom - size.height)));
+  }
+
+  function fitItemWithinBounds(item, bounds, { preserveRatio = false } = {}) {
+    const availableWidth = Math.max(1, bounds.right - bounds.left);
+    const availableHeight = Math.max(1, bounds.bottom - bounds.top);
+    const size = effectiveSize(item);
+    if (size.width > availableWidth || size.height > availableHeight) {
+      if (preserveRatio) {
+        const scale = Math.min(1, availableWidth / size.width, availableHeight / size.height);
+        if (isTextItem(item)) {
+          item.text_size_mm = round(Math.max(2, textSizeMm(item) * scale), 2);
+          applyFittedTextBox(item);
+        } else {
+          item.width_mm = round(Math.max(1, item.width_mm * scale));
+          item.height_mm = round(Math.max(1, item.height_mm * scale));
+        }
+      } else if ([90, 270].includes(Number(item.rotation))) {
+        item.height_mm = round(Math.min(item.height_mm, availableWidth));
+        item.width_mm = round(Math.min(item.width_mm, availableHeight));
+      } else {
+        item.width_mm = round(Math.min(item.width_mm, availableWidth));
+        item.height_mm = round(Math.min(item.height_mm, availableHeight));
+      }
+    }
+    const fittedSize = effectiveSize(item);
+    if (fittedSize.width > availableWidth || fittedSize.height > availableHeight) {
+      if ([90, 270].includes(Number(item.rotation))) {
+        item.height_mm = round(Math.min(item.height_mm, availableWidth));
+        item.width_mm = round(Math.min(item.width_mm, availableHeight));
+      } else {
+        item.width_mm = round(Math.min(item.width_mm, availableWidth));
+        item.height_mm = round(Math.min(item.height_mm, availableHeight));
+      }
+    }
+    clampItemWithinBounds(item, bounds);
+  }
+
+  function constrainResizedItemOnSheet(item, { start, corner, lockRatio }) {
+    const bounds = sheetMaximumUsefulBounds();
+    const fromWest = corner.includes("w");
+    const fromNorth = corner.includes("n");
+    const quarterTurn = [90, 270].includes(Number(item.rotation));
+    const startSize = quarterTurn
+      ? { width: start.height, height: start.width }
+      : { width: start.width, height: start.height };
+    const fixedX = fromWest ? start.x + startSize.width : start.x;
+    const fixedY = fromNorth ? start.y + startSize.height : start.y;
+    const availableWidth = Math.max(1, fromWest ? fixedX - bounds.left : bounds.right - fixedX);
+    const availableHeight = Math.max(1, fromNorth ? fixedY - bounds.top : bounds.bottom - fixedY);
+    const size = effectiveSize(item);
+    if (lockRatio) {
+      const scale = Math.min(1, availableWidth / size.width, availableHeight / size.height);
+      if (isTextItem(item)) {
+        item.text_size_mm = round(Math.max(2, textSizeMm(item) * scale), 2);
+        applyFittedTextBox(item);
+      } else {
+        item.width_mm = round(Math.max(1, item.width_mm * scale));
+        item.height_mm = round(Math.max(1, item.height_mm * scale));
+      }
+    } else if (quarterTurn) {
+      item.height_mm = round(Math.min(item.height_mm, availableWidth));
+      item.width_mm = round(Math.min(item.width_mm, availableHeight));
+    } else {
+      item.width_mm = round(Math.min(item.width_mm, availableWidth));
+      item.height_mm = round(Math.min(item.height_mm, availableHeight));
+    }
+    const fittedSize = effectiveSize(item);
+    if (fittedSize.width > availableWidth || fittedSize.height > availableHeight) {
+      if (quarterTurn) {
+        item.height_mm = round(Math.min(item.height_mm, availableWidth));
+        item.width_mm = round(Math.min(item.width_mm, availableHeight));
+      } else {
+        item.width_mm = round(Math.min(item.width_mm, availableWidth));
+        item.height_mm = round(Math.min(item.height_mm, availableHeight));
+      }
+    }
+    const constrainedSize = effectiveSize(item);
+    item.x_mm = round(fromWest ? fixedX - constrainedSize.width : fixedX);
+    item.y_mm = round(fromNorth ? fixedY - constrainedSize.height : fixedY);
+    clampItemWithinBounds(item, bounds);
+  }
+
+  function clampMoveDelta(movingItems, movingStarts, deltaX, deltaY, bounds = sheetMaximumUsefulBounds()) {
+    const startBounds = movingItems.reduce((result, item) => {
+      const start = movingStarts.get(item.public_id);
+      const size = effectiveSize(item);
+      return {
+        left: Math.min(result.left, start.x),
+        top: Math.min(result.top, start.y),
+        right: Math.max(result.right, start.x + size.width),
+        bottom: Math.max(result.bottom, start.y + size.height),
+      };
+    }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
+    return {
+      deltaX: round(Math.max(bounds.left - startBounds.left, Math.min(deltaX, bounds.right - startBounds.right))),
+      deltaY: round(Math.max(bounds.top - startBounds.top, Math.min(deltaY, bounds.bottom - startBounds.bottom))),
+    };
   }
 
   function resizeItemFromPointer(item, { start, deltaX, deltaY, lockRatio, corner = "se" }) {
@@ -614,6 +729,20 @@ if (root) {
       attribute: "data-canvas-rotate-item",
     });
     rotateButton.setAttribute("aria-label", `Pivoter ${item.asset_name} de 90 degrés`);
+    const duplicateButton = createItemAction({
+      label: "Dupliquer",
+      icon: "⧉",
+      attribute: "data-canvas-duplicate-item",
+    });
+    duplicateButton.setAttribute("aria-label", `Dupliquer ${item.asset_name}`);
+    const cropButton = !isTextItem(item) && item.asset_version_public_id
+      ? createItemAction({
+          label: "Recadrer",
+          icon: "⌗",
+          attribute: "data-canvas-crop-item",
+        })
+      : null;
+    cropButton?.setAttribute("aria-label", `Recadrer ${item.asset_name}`);
     const deleteButton = createItemAction({
       label: "Supprimer",
       icon: "×",
@@ -621,7 +750,9 @@ if (root) {
       danger: true,
     });
     deleteButton.setAttribute("aria-label", `Supprimer ${item.asset_name} de la planche`);
-    toolbar.append(rotateButton, deleteButton);
+    toolbar.append(rotateButton, duplicateButton);
+    if (cropButton) toolbar.append(cropButton);
+    toolbar.append(deleteButton);
     canvas.append(toolbar);
     window.requestAnimationFrame(positionSelectedItemToolbar);
   }
@@ -700,7 +831,7 @@ if (root) {
       return Math.max(max, item.y_mm + size.height);
     }, 0);
     const rawHeight = Math.max(
-      maxBottom + state.margin_mm,
+      maxBottom,
       state.height_mm ? (state.spacing_y_mm ?? state.spacing_mm) : 1
     );
     state.height_mm = Math.min(
@@ -718,13 +849,14 @@ if (root) {
 
   function clientIssues() {
     const issues = [];
+    const bounds = sheetUsefulBounds();
     const rects = state.items.map((item) => {
       const size = effectiveSize(item);
       return { item, x: item.x_mm, y: item.y_mm, right: item.x_mm + size.width, bottom: item.y_mm + size.height };
     });
     rects.forEach((rect) => {
-      if (rect.x < 0 || rect.y < 0 || rect.right > state.width_mm || rect.bottom > state.height_mm) {
-        issues.push({ code: "overflow", item_public_ids: [rect.item.public_id], message: "Le visuel déborde de la planche." });
+      if (rect.x < bounds.left || rect.y < bounds.top || rect.right > bounds.right || rect.bottom > bounds.bottom) {
+        issues.push({ code: "overflow", item_public_ids: [rect.item.public_id], message: "Le visuel déborde de la zone utile de la planche." });
       }
     });
     rects.forEach((first, index) => {
@@ -772,7 +904,7 @@ if (root) {
         preview.append(rotator);
       } else {
         const image = document.createElement("img");
-        const previewSrc = trustedAssetPreviewSrc(item.asset_version_public_id);
+        const previewSrc = trustedAssetPreviewSrc(item.asset_version_public_id, state.revision);
         if (previewSrc) {
           image.src = previewSrc;
         }
@@ -789,7 +921,7 @@ if (root) {
       label.className = "gang-sheet-item__label";
       label.textContent = `${round(item.width_mm / 10, 1)} × ${round(item.height_mm / 10, 1)} cm`;
       node.append(preview, label);
-      if (canEdit && !["rendering", "validated"].includes(state.status)) {
+      if (canEdit && !["rendering", "validated"].includes(state.status) && canResizeItem(item)) {
         RESIZE_CORNERS.forEach((corner) => {
           const handle = document.createElement("span");
           handle.className = `gang-sheet-item__resize gang-sheet-item__resize--${corner}`;
@@ -836,6 +968,7 @@ if (root) {
     renderMetrics();
     renderAssetGallery();
     renderInspector();
+    renderPreflight();
     renderIssues();
     renderWorkflow();
     renderStatus();
@@ -861,13 +994,19 @@ if (root) {
 
   function renderAssetGallery() {
     const counts = state.items.reduce((result, item) => {
-      if (!item.asset_version_public_id) return result;
-      result[item.asset_version_public_id] = (result[item.asset_version_public_id] || 0) + 1;
+      if (!item.asset_public_id) return result;
+      result[item.asset_public_id] = (result[item.asset_public_id] || 0) + 1;
       return result;
     }, {});
-    qa("[data-asset-usage]").forEach((node) => {
-      const count = counts[node.dataset.assetUsage] || 0;
-      node.textContent = count ? `${count} exemplaire${count > 1 ? "s" : ""} sur la planche` : "Pas encore utilisé";
+    qa("[data-asset-card]").forEach((card) => {
+      const count = counts[card.dataset.assetPublicId] || 0;
+      const input = card.querySelector("[data-asset-quantity]");
+      if (input && !input.dataset.quantityEditing) input.value = String(count);
+      const usage = card.querySelector("[data-asset-placement-count]");
+      if (usage) {
+        usage.textContent = `${count} sur la planche`;
+        usage.classList.toggle("is-placed", count > 0);
+      }
     });
   }
 
@@ -950,6 +1089,7 @@ if (root) {
     }
     if (!item || selectionCount !== 1) return;
     const textItem = isTextItem(item);
+    renderItemQuality(item);
     const kindLabel = q("[data-selected-kind-label]");
     if (kindLabel) kindLabel.textContent = textItem ? "Texte sélectionné" : "Visuel sélectionné";
     q("[data-selected-name]").textContent = item.asset_name;
@@ -1025,6 +1165,92 @@ if (root) {
     q("[data-spacing-y]").value = round(state.spacing_y_mm ?? state.spacing_mm, 2);
   }
 
+  function preflightIsCurrent() {
+    return !dirty && state.preflight && state.preflight.revision === state.revision;
+  }
+
+  function qualityApproved() {
+    if (state.status === "validated") return true;
+    const check = state.preflight;
+    return Boolean(preflightIsCurrent() && !(check.blocking || []).length &&
+      (!check.requires_acknowledgement || acceptedPreflightFingerprint === check.fingerprint));
+  }
+
+  function renderItemQuality(item) {
+    const quality = item.quality || {};
+    const ratio = Number(quality.source_ratio);
+    const distorted = ratio > 0 && Math.abs(item.width_mm / item.height_mm / ratio - 1) > 0.005;
+    const warning = q("[data-ratio-warning]");
+    const restore = q("[data-restore-ratio]");
+    const textItem = isTextItem(item);
+    if (warning) warning.hidden = textItem || (q("[data-lock-ratio]").checked && !distorted);
+    if (restore) {
+      restore.hidden = textItem || !distorted;
+      restore.disabled = !canEdit || busy || !canResizeItem(item) || ["rendering", "validated"].includes(state.status);
+      restore.title = canResizeItem(item)
+        ? ""
+        : "Dissociez le groupe avant de restaurer les proportions de cet élément.";
+    }
+    const label = q("[data-item-quality]");
+    if (!label) return;
+    if (textItem || quality.is_vector) {
+      label.textContent = "Vectoriel · résolution indépendante des DPI.";
+      return;
+    }
+    const pixelsW = Number(quality.source_width_px);
+    const pixelsH = Number(quality.source_height_px);
+    if (pixelsW > 0 && pixelsH > 0 && item.width_mm > 0 && item.height_mm > 0) {
+      const dpi = Math.min(pixelsW * 25.4 / item.width_mm, pixelsH * 25.4 / item.height_mm);
+      label.textContent = `${Math.round(dpi)} DPI à cette taille · ${quality.recommended_dpi} DPI recommandés.`;
+    } else {
+      label.textContent = "Résolution non déterminée · contrôle du PDF requis à la commande.";
+    }
+  }
+
+  function renderPreflight() {
+    const panel = q("[data-preflight-panel]");
+    if (!panel) return;
+    const check = state.preflight;
+    const current = preflightIsCurrent();
+    if (!current || acceptedPreflightFingerprint !== check?.fingerprint) {
+      acceptedPreflightFingerprint = "";
+    }
+    const summary = q("[data-preflight-summary]");
+    const rows = [...(check?.blocking || []), ...(check?.warnings || [])];
+    summary.textContent = !current
+      ? "Enregistrez la composition pour actualiser le contrôle à la taille d’impression."
+      : rows.length ? "Vérifiez les points ci-dessous avant de confirmer."
+        : "Aucun avertissement identifié. Sélectionnez un visuel pour consulter sa résolution.";
+    const list = q("[data-preflight-issues]");
+    list.replaceChildren();
+    const grouped = new Map();
+    rows.forEach((row) => {
+      const key = `${row.code}:${row.message}`;
+      if (!grouped.has(key)) grouped.set(key, {message: row.message, ids: new Set()});
+      (row.item_public_ids || []).forEach((id) => grouped.get(key).ids.add(id));
+    });
+    grouped.forEach(({message, ids}) => {
+      const row = document.createElement("li");
+      row.textContent = `${ids.size} visuel${ids.size > 1 ? "s" : ""} — ${message}`;
+      list.append(row);
+    });
+    const mobileCount = q("[data-mobile-issue-count]");
+    if (mobileCount) mobileCount.textContent = String(state.issues.length + grouped.size);
+    const field = q("[data-preflight-ack-field]");
+    const ack = q("[data-preflight-ack]");
+    field.hidden = !current || !check?.requires_acknowledgement || state.status === "validated";
+    ack.checked = Boolean(current && acceptedPreflightFingerprint === check?.fingerprint);
+    ack.disabled = !canEdit || busy || ["rendering", "validated"].includes(state.status);
+    const refresh = q("[data-refresh-preflight]");
+    refresh.hidden = Boolean(current) || state.status === "validated";
+    refresh.disabled = !canEdit || busy || state.status === "rendering";
+  }
+
+  async function refreshPreflight() {
+    if (dirty) await saveLayout({notify: false});
+    await reloadState();
+  }
+
   function renderIssues() {
     const list = q("[data-issues-list]");
     root.dataset.hasIssues = String(state.issues.length > 0);
@@ -1097,7 +1323,7 @@ if (root) {
     const itemCount = state.items.length;
     const issueCount = state.issues.length;
     const compositionComplete = itemCount > 0;
-    const controlComplete = compositionComplete && issueCount === 0;
+    const controlComplete = compositionComplete && issueCount === 0 && qualityApproved();
     const steps = {
       import: assetCount > 0 ? "complete" : "active",
       compose: compositionComplete ? "complete" : assetCount > 0 ? "active" : "pending",
@@ -1108,7 +1334,7 @@ if (root) {
       ? "import"
       : !compositionComplete
         ? "compose"
-        : issueCount > 0
+        : !controlComplete
           ? "control"
           : "validate";
     const stepNumbers = { import: "1", compose: "2", control: "3", validate: "4" };
@@ -1119,7 +1345,7 @@ if (root) {
         ? "Après composition"
         : issueCount > 0
           ? `${issueCount} anomalie${issueCount > 1 ? "s" : ""} à corriger`
-          : "Composition contrôlée",
+          : !qualityApproved() ? "Qualité à vérifier" : "Composition contrôlée",
       validate:
         status === "validated"
           ? "Planche validée"
@@ -1204,23 +1430,44 @@ if (root) {
     root.dataset.sheetStatus = state.status;
     root.dataset.hasIssues = String(issueCount > 0);
     const locked = ["rendering", "validated"].includes(state.status);
+    const hasPersistentGroups = state.items.some((item) => Boolean(item.layout_group_id));
     qa(
-      "[data-add-asset], [data-add-text], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection], [data-text-content], [data-text-font], [data-text-size], [data-text-color], [data-text-color-hex], [data-text-align], [data-text-bold]"
+      "[data-add-asset], [data-add-text], [data-asset-quantity], [data-save-layout], [data-auto-place], [data-input-width], [data-input-height], [data-input-x], [data-input-y], [data-lock-ratio], [data-rotate-item], [data-rotate-selection], [data-duplicate-item], [data-delete-item], [data-delete-selected], [data-align], [data-align-reference], [data-distribute], [data-selection-gap], [data-apply-selection-gap], [data-spacing-x], [data-spacing-y], [data-apply-spacing], [data-canvas-rotate-item], [data-canvas-duplicate-item], [data-canvas-crop-item], [data-canvas-delete-item], [data-snap-toggle], [data-select-all], [data-touch-multiselect], [data-issue-fix], [data-group-selection], [data-ungroup-selection], [data-text-content], [data-text-font], [data-text-size], [data-text-color], [data-text-color-hex], [data-text-align], [data-text-bold]"
     ).forEach((control) => {
       const assetPending = control.matches("[data-add-asset]") && control.dataset.assetReady !== "true";
-      control.disabled = !canEdit || locked || assetPending;
+      const groupedAssetAction = hasPersistentGroups && control.matches("[data-add-asset]");
+      control.disabled = !canEdit || locked || busy || assetPending || groupedAssetAction || quantityUpdating.has(control);
+      if (control.matches("[data-add-asset]")) {
+        control.title = hasPersistentGroups
+          ? "Dissociez les groupes avant d’ajouter et placer un visuel."
+          : "";
+      }
     });
+    const selectedItem = selected();
+    const groupedSelectionMember = Boolean(selectedItem?.layout_group_id);
     const widthInput = q("[data-input-width]");
-    if (widthInput && isTextItem(selected())) {
-      widthInput.disabled = true;
-    }
+    const heightInput = q("[data-input-height]");
+    const lockRatio = q("[data-lock-ratio]");
+    [widthInput, heightInput, lockRatio].forEach((control) => {
+      if (!control) return;
+      if (groupedSelectionMember || (control === widthInput && isTextItem(selectedItem))) control.disabled = true;
+      if (groupedSelectionMember) {
+        control.title = "Dissociez le groupe avant de modifier les dimensions d’un de ses éléments.";
+      }
+    });
     syncGroupControls({ locked });
     qa("[data-issue-focus]").forEach((control) => {
       control.disabled = busy;
     });
     syncSaveControl({ locked });
-    q("[data-auto-place]").disabled = !canEdit || locked || state.items.length === 0 || busy;
-    q("[data-apply-spacing]").disabled = !canEdit || locked || state.items.length === 0 || busy;
+    const autoPlaceDisabled = !canEdit || locked || state.items.length === 0 || busy || hasPersistentGroups;
+    q("[data-auto-place]").disabled = autoPlaceDisabled;
+    q("[data-apply-spacing]").disabled = autoPlaceDisabled;
+    const autoPlaceTitle = hasPersistentGroups
+      ? "Dissociez les groupes avant de réorganiser automatiquement la planche."
+      : "Réorganiser tous les visuels selon l’espacement défini";
+    q("[data-auto-place]").title = autoPlaceTitle;
+    q("[data-apply-spacing]").title = autoPlaceTitle;
     qa("[data-align]").forEach((control) => {
       control.disabled = !canEdit || locked || selectedIds.size === 0 || busy;
     });
@@ -1249,11 +1496,12 @@ if (root) {
     const canStartRender =
       canEdit &&
       !busy &&
+      qualityApproved() &&
       state.items.length > 0 &&
       state.issues.length === 0 &&
       !locked &&
       ["draft", "render_failed"].includes(state.status);
-    const canConfirmReady = canEdit && !busy && state.status === "ready" && state.issues.length === 0;
+    const canConfirmReady = canEdit && !busy && qualityApproved() && state.status === "ready" && state.issues.length === 0;
     if (validateBtn) {
       validateBtn.hidden = state.status === "validated";
       if (state.status === "rendering" || pendingValidateAfterRender) {
@@ -1284,8 +1532,9 @@ if (root) {
         validateBtn.disabled = !canStartRender;
         if (validateLabel) validateLabel.textContent = "Confirmer la composition";
         if (validationLead) {
-          validationLead.textContent =
-            "Un seul clic prépare le rendu HD atelier, puis confirme la composition.";
+          validationLead.textContent = qualityApproved()
+            ? "Un seul clic prépare le rendu HD atelier, puis confirme la composition."
+            : "Vérifiez le contrôle qualité pour activer la confirmation.";
         }
       }
     }
@@ -1465,9 +1714,8 @@ if (root) {
         bottom: Math.max(result.bottom, start.y + deltaY + size.height),
       };
     }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
-    const margin = Math.max(0, Number(state.margin_mm) || 0);
-    const xTargets = [margin, state.width_mm / 2, Math.max(margin, state.width_mm - margin)];
-    const yTargets = [margin, state.height_mm / 2, Math.max(margin, state.height_mm - margin)];
+    const xTargets = [0, state.width_mm / 2, state.width_mm];
+    const yTargets = [0, state.height_mm / 2, state.height_mm];
     state.items.forEach((other) => {
       if (movingIds.has(other.public_id)) return;
       const size = effectiveSize(other);
@@ -1627,6 +1875,17 @@ if (root) {
     canvas.setPointerCapture?.(pointerId);
     const resizing = event.target.closest("[data-resize-handle]");
     const corner = resizing?.dataset.resizeHandle || "se";
+    if (resizing && !canResizeItem(item)) {
+      selectedIds = new Set(
+        state.items
+          .filter((candidate) => candidate.layout_group_id === item.layout_group_id)
+          .map((candidate) => candidate.public_id)
+      );
+      selectedId = item.public_id;
+      window.preniumToast?.("Dissociez ce groupe avant de redimensionner un visuel.", "error");
+      render();
+      return;
+    }
     if (!selectedIds.has(item.public_id) || resizing) {
       if (!resizing && item.layout_group_id) {
         selectedIds = new Set(
@@ -1669,11 +1928,21 @@ if (root) {
             corner,
           });
         }
+        constrainResizedItemOnSheet(item, {
+          start,
+          corner,
+          lockRatio: isTextItem(item) || q("[data-lock-ratio]")?.checked !== false,
+        });
       } else {
         const snapped = calculateSnapForMove(movingItems, movingStarts, deltaX, deltaY);
         deltaX = snapped.deltaX;
         deltaY = snapped.deltaY;
         snapGuides = snapped.guides;
+        const clamped = clampMoveDelta(movingItems, movingStarts, deltaX, deltaY);
+        if (clamped.deltaX !== deltaX) snapGuides = snapGuides.filter((guide) => guide.axis !== "x");
+        if (clamped.deltaY !== deltaY) snapGuides = snapGuides.filter((guide) => guide.axis !== "y");
+        deltaX = clamped.deltaX;
+        deltaY = clamped.deltaY;
         movingItems.forEach((movingItem) => {
           const movingStart = movingStarts.get(movingItem.public_id);
           movingItem.x_mm = round(movingStart.x + deltaX);
@@ -1753,46 +2022,50 @@ if (root) {
     }
   }
 
-  async function saveLayout({ notify = true, retried = false } = {}) {
+  async function saveLayout({ notify = true } = {}) {
     try {
-    const payload = await request(root.dataset.layoutUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        revision: state.revision,
-        items: state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id, kind, text_content, text_font, text_size_mm, text_color, text_align, text_bold }) => ({
-          public_id,
-          x_mm,
-          y_mm,
-          width_mm,
-          height_mm,
-          rotation,
-          layout_group_id: layout_group_id || null,
-          kind: kind || "visual",
-          text_content: text_content || "",
-          text_font: text_font || "",
-          text_size_mm: Number(text_size_mm) || 12,
-          text_color: text_color || "",
-          text_align: text_align || "",
-          text_bold: Boolean(text_bold),
-        })),
-      }),
-    });
-    state.revision = payload.revision;
-    state.height_mm = payload.height_mm;
-    state.surface_sqm = payload.surface_sqm;
-    state.estimated_price_eur = payload.estimated_price_eur;
-    state.issues = payload.issues;
-    state.status = "draft";
-    savedLayoutSignature = layoutSignature();
-    setDirty(false);
-    resetLayoutHistory();
-    render();
-    if (notify) window.preniumToast?.("Brouillon enregistré.", "success");
+      const payload = await request(root.dataset.layoutUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          revision: state.revision,
+          items: state.items.map(({ public_id, x_mm, y_mm, width_mm, height_mm, rotation, layout_group_id, kind, text_content, text_font, text_size_mm, text_color, text_align, text_bold }) => ({
+            public_id,
+            x_mm,
+            y_mm,
+            width_mm,
+            height_mm,
+            rotation,
+            layout_group_id: layout_group_id || null,
+            kind: kind || "visual",
+            text_content: text_content || "",
+            text_font: text_font || "",
+            text_size_mm: Number(text_size_mm) || 12,
+            text_color: text_color || "",
+            text_align: text_align || "",
+            text_bold: Boolean(text_bold),
+          })),
+        }),
+      });
+      state.revision = payload.revision;
+      state.height_mm = payload.height_mm;
+      state.surface_sqm = payload.surface_sqm;
+      state.estimated_price_eur = payload.estimated_price_eur;
+      state.issues = payload.issues;
+      state.status = "draft";
+      savedLayoutSignature = layoutSignature();
+      setDirty(false);
+      resetLayoutHistory();
+      render();
+      if (notify) window.preniumToast?.("Brouillon enregistré.", "success");
     } catch (error) {
-      if (!retried && error.code === "STALE_REVISION" && error.details?.revision != null) {
-        state.revision = error.details.revision;
-        return saveLayout({ notify, retried: true });
+      if (error.code === "STALE_REVISION") {
+        const conflict = new Error(
+          "Cette planche a changé dans un autre onglet. Votre brouillon est conservé ici. Rechargez la page pour récupérer la version la plus récente avant de réappliquer vos modifications."
+        );
+        conflict.code = error.code;
+        conflict.details = error.details;
+        throw conflict;
       }
       throw error;
     }
@@ -1811,9 +2084,67 @@ if (root) {
     render();
   }
 
+  function refreshAssetGallery() {
+    const list = q("[data-asset-list]");
+    if (!list || !window.htmx || !root.dataset.assetGalleryUrl) return;
+    window.htmx.ajax("GET", root.dataset.assetGalleryUrl, { target: list, swap: "outerHTML" });
+  }
+
+  async function autoPlaceReadySources({ retrySourceId = "", notify = true } = {}) {
+    const list = q("[data-asset-list]");
+    if (!canEdit || !list || (!retrySourceId && list.dataset.hasReadyAutoPlacement !== "true")) {
+      return null;
+    }
+    if (autoPlacementRequest) return autoPlacementRequest;
+    autoPlacementRequest = (async () => {
+      if (dirty) await saveLayout({ notify: false });
+      let payload;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const body = new FormData();
+        body.append("expected_revision", String(state.revision));
+        if (retrySourceId) body.append("retry_source_public_id", retrySourceId);
+        try {
+          payload = await request(root.dataset.autoPlaceReadyUrl, { method: "POST", body });
+          break;
+        } catch (error) {
+          if (error.code !== "STALE_REVISION" || attempt > 0) throw error;
+          await reloadState();
+        }
+      }
+      await reloadState();
+      refreshAssetGallery();
+      if (notify && payload?.created_count) {
+        window.preniumToast?.(
+          `${payload.created_count} visuel${payload.created_count > 1 ? "s" : ""} ajouté${payload.created_count > 1 ? "s" : ""} au canvas.`,
+          "success"
+        );
+      }
+      if (payload?.no_space_count) {
+        window.preniumToast?.("Certains visuels manquent de place sur la planche.", "error");
+      }
+      return payload;
+    })();
+    try {
+      return await autoPlacementRequest;
+    } finally {
+      autoPlacementRequest = null;
+    }
+  }
+
   async function runAction(action, { saveFirst = false, body = null } = {}) {
     try {
       if (saveFirst) await saveLayout({ notify: false });
+      if (action === "validate") {
+        if (!qualityApproved()) {
+          render();
+          window.preniumToast?.("Vérifiez le contrôle qualité avant de confirmer.", "error");
+          return;
+        }
+        body = new FormData();
+        body.append("expected_revision", String(state.revision));
+        body.append("preflight_fingerprint", state.preflight.fingerprint);
+        body.append("acknowledge_quality", String(acceptedPreflightFingerprint === state.preflight.fingerprint));
+      }
       const url = root.dataset.actionUrlTemplate.replace("ACTION", action);
       const payload = await request(url, { method: "POST", body });
       window.preniumToast?.(payload.message, "success");
@@ -1822,12 +2153,69 @@ if (root) {
         window.location.assign(payload.redirect_url);
         return;
       }
-      await reloadState();
-      if (action === "render") startPolling();
+      if (action === "render") {
+        // The render was accepted server-side. Reflect that lock immediately and
+        // arm polling before the first refresh so a transient GET failure cannot
+        // strand the editor in a stale draft state.
+        state.status = "rendering";
+        renderStatus();
+        startPolling();
+      }
+      try {
+        await reloadState();
+      } catch (error) {
+        if (action !== "render") throw error;
+        window.preniumToast?.(
+          "Rendu lancé. La synchronisation est temporairement indisponible et reprendra automatiquement.",
+          "error"
+        );
+      }
     } catch (error) {
+      if (["STALE_PREFLIGHT", "PREFLIGHT_ACK_REQUIRED", "PREFLIGHT_BLOCKED"].includes(error.code)) {
+        acceptedPreflightFingerprint = "";
+        if (error.details?.preflight) state.preflight = error.details.preflight;
+        else {
+          try { await reloadState(); } catch (_) { /* The user can retry the explicit refresh. */ }
+        }
+        render();
+      }
       window.preniumToast?.(error.message, "error");
     }
   }
+
+  q("[data-preflight-ack]")?.addEventListener("change", (event) => {
+    acceptedPreflightFingerprint = preflightIsCurrent() && event.target.checked
+      ? state.preflight.fingerprint : "";
+    renderPreflight();
+    renderWorkflow();
+    renderStatus();
+  });
+  q("[data-refresh-preflight]")?.addEventListener("click", async () => {
+    if (!canEdit || busy || state.status === "rendering") return;
+    try { await refreshPreflight(); }
+    catch (error) { window.preniumToast?.(error.message, "error"); }
+  });
+  q("[data-lock-ratio]")?.addEventListener("change", () => {
+    const item = selected();
+    if (item) renderItemQuality(item);
+  });
+  q("[data-restore-ratio]")?.addEventListener("click", () => {
+    const item = selected();
+    const ratio = Number(item?.quality?.source_ratio);
+    if (!item || !Number.isFinite(ratio) || ratio <= 0 || !canEdit || busy || !canResizeItem(item) ||
+      ["rendering", "validated"].includes(state.status)) return;
+    const before = layoutSnapshot();
+    const height = item.width_mm / ratio;
+    const turned = Number(item.rotation) % 180 !== 0;
+    const scale = Math.min(1, state.width_mm / (turned ? height : item.width_mm),
+      state.maximum_height_mm / (turned ? item.width_mm : height));
+    item.width_mm = round(item.width_mm * scale);
+    item.height_mm = round(height * scale);
+    q("[data-lock-ratio]").checked = true;
+    fitItemWithinBounds(item, sheetMaximumUsefulBounds(), { preserveRatio: true });
+    commitLayoutMutation(before);
+    render();
+  });
 
   const cropConfigurator = q("[data-b2b-configurator]");
   const cropFileInput = q("[data-configurator-file]");
@@ -2215,6 +2603,15 @@ if (root) {
 
   async function confirmComposition() {
     if (!canEdit || busy) return;
+    if (!preflightIsCurrent()) {
+      try { await refreshPreflight(); }
+      catch (error) { window.preniumToast?.(error.message, "error"); return; }
+    }
+    if (!qualityApproved()) {
+      window.preniumToast?.("Vérifiez les avertissements qualité avant de confirmer.", "error");
+      render();
+      return;
+    }
     if (state.status === "ready") {
       await runAction("validate");
       return;
@@ -2225,7 +2622,7 @@ if (root) {
       return;
     }
     pendingValidateAfterRender = true;
-    await runAction("render", { saveFirst: true });
+    await runAction("render");
     if (!["rendering", "ready"].includes(state.status)) {
       pendingValidateAfterRender = false;
       renderStatus();
@@ -2233,6 +2630,15 @@ if (root) {
   }
 
   root.addEventListener("click", async (event) => {
+    const retryAutoPlace = event.target.closest("[data-retry-auto-place]");
+    if (retryAutoPlace && !retryAutoPlace.disabled) {
+      try {
+        await autoPlaceReadySources({ retrySourceId: retryAutoPlace.dataset.retryAutoPlace });
+      } catch (error) {
+        window.preniumToast?.(error.message, "error");
+      }
+      return;
+    }
     const addText = event.target.closest("[data-add-text]");
     if (addText && !addText.disabled) {
       try {
@@ -2260,10 +2666,9 @@ if (root) {
     const button = event.target.closest("[data-add-asset]");
     if (!button || button.disabled) return;
     const card = button.closest("[data-asset-card]");
-    const quantity = Math.max(1, Math.min(200, Number(card.querySelector("[data-asset-quantity]").value) || 1));
     const body = new FormData();
     body.append("asset_version_public_id", button.dataset.addAsset);
-    body.append("quantity", quantity);
+    body.append("quantity", "1");
     body.append("auto_place", "1");
     try {
       if (state.items.length) await saveLayout({ notify: false });
@@ -2271,6 +2676,75 @@ if (root) {
       await reloadState();
       window.preniumToast?.(`${payload.created_count} exemplaire${payload.created_count > 1 ? "s" : ""} ajouté${payload.created_count > 1 ? "s" : ""} et placé${payload.created_count > 1 ? "s" : ""}.`, "success");
     } catch (error) { window.preniumToast?.(error.message, "error"); }
+  });
+
+  async function applyAssetQuantity(input) {
+    if (!input.isConnected || quantityUpdating.has(input) || !canEdit) return;
+    const card = input.closest("[data-asset-card]");
+    if (!card || !input.dataset.quantityUrl) return;
+    const raw = input.value.trim();
+    const desired = Number(raw);
+    const help = card.querySelector("[data-asset-quantity-help]");
+    const fail = (message) => {
+      input.setAttribute("aria-invalid", "true");
+      if (help) help.textContent = message;
+    };
+    if (!/^\d{1,3}$/.test(raw) || !Number.isSafeInteger(desired) || desired > 200) {
+      fail("Saisissez un nombre entier entre 0 et 200.");
+      return;
+    }
+    const current = state.items.filter((item) => item.asset_public_id === card.dataset.assetPublicId).length;
+    if (desired === current) {
+      delete input.dataset.quantityEditing;
+      input.removeAttribute("aria-invalid");
+      if (help) help.textContent = "0 = retirer · max 200";
+      return;
+    }
+    quantityUpdating.add(input);
+    input.disabled = true;
+    if (help) help.textContent = "Mise à jour de la planche…";
+    let layoutWasSaved = !dirty;
+    try {
+      if (dirty) {
+        await saveLayout({ notify: false });
+        layoutWasSaved = true;
+      }
+      const body = new FormData();
+      body.append("quantity", String(desired));
+      body.append("expected_revision", String(state.revision));
+      await request(input.dataset.quantityUrl, { method: "POST", body });
+      delete input.dataset.quantityEditing;
+      await reloadState();
+      if (help) help.textContent = "0 = retirer · max 200";
+      if ((desired === 0) !== (current === 0)) refreshAssetGallery();
+      window.preniumToast?.(`${desired} exemplaire${desired > 1 ? "s" : ""} sur la planche.`, "success");
+    } catch (error) {
+      if (error.code === "STALE_REVISION" && layoutWasSaved) await reloadState();
+      fail(error.message);
+      window.preniumToast?.(error.message, "error");
+    } finally {
+      quantityUpdating.delete(input);
+      delete input.dataset.quantityEditing;
+      renderStatus();
+      if (input.isConnected) renderAssetGallery();
+    }
+  }
+
+  root.addEventListener("input", (event) => {
+    const input = event.target.closest("[data-asset-quantity]");
+    if (!input) return;
+    input.dataset.quantityEditing = "true";
+    input.removeAttribute("aria-invalid");
+    const timer = quantityTimers.get(input);
+    if (timer) window.clearTimeout(timer);
+    quantityTimers.set(input, window.setTimeout(() => applyAssetQuantity(input), 650));
+  });
+  root.addEventListener("change", (event) => {
+    const input = event.target.closest("[data-asset-quantity]");
+    if (!input) return;
+    const timer = quantityTimers.get(input);
+    if (timer) window.clearTimeout(timer);
+    applyAssetQuantity(input);
   });
 
   function filterAssetGallery() {
@@ -2292,14 +2766,13 @@ if (root) {
       const panelName = control.dataset.workflowPanelTarget;
       if (window.matchMedia("(max-width: 980px)").matches) {
         setMobilePanel(panelName, { focusTab: true });
-        if (control.closest("[data-workflow-step='validate']")) {
-          window.requestAnimationFrame(() => {
-            q(".gang-inspector-panel--validation")?.scrollIntoView({ block: "start", behavior: "smooth" });
-          });
-        }
       } else {
         q(`[data-editor-panel='${panelName}']`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
+      const target = control.closest("[data-workflow-step='control']")
+        ? q("[data-preflight-panel]")
+        : control.closest("[data-workflow-step='validate']") ? q("[data-validation-panel]") : null;
+      if (target) window.requestAnimationFrame(() => target.scrollIntoView({block: "nearest", behavior: "smooth"}));
     });
   });
 
@@ -2359,6 +2832,7 @@ if (root) {
   root.addEventListener("htmx:afterSwap", (event) => {
     if (!event.target.matches("[data-asset-list]")) return;
     renderAssetGallery();
+    event.target.querySelectorAll("[data-asset-crop-editor]").forEach((editor) => renderExistingCrop(editor));
     renderStatus();
     filterAssetGallery();
     const isPending = qPendingGallery();
@@ -2366,6 +2840,9 @@ if (root) {
       window.preniumToast?.("Analyse terminée. Les visuels prêts sont disponibles.", "success");
     }
     galleryWasPending = isPending;
+    autoPlaceReadySources({ notify: true }).catch((error) => {
+      window.preniumToast?.(error.message, "error");
+    });
   });
 
   function spacingRequestBody() {
@@ -2384,12 +2861,20 @@ if (root) {
   }
 
   function sheetUsefulBounds() {
-    const margin = Math.max(0, Number(state.margin_mm) || 0);
     return {
-      left: margin,
-      top: margin,
-      right: Math.max(margin, state.width_mm - margin),
-      bottom: Math.max(margin, state.height_mm - margin),
+      left: 0,
+      top: 0,
+      right: Math.max(0, Number(state.width_mm) || 0),
+      bottom: Math.max(0, Number(state.height_mm) || 0),
+    };
+  }
+
+  function sheetMaximumUsefulBounds() {
+    return {
+      left: 0,
+      top: 0,
+      right: Math.max(0, Number(state.width_mm) || 0),
+      bottom: Math.max(0, Number(state.maximum_height_mm) || 0),
     };
   }
 
@@ -2631,8 +3116,10 @@ if (root) {
       const size = horizontal ? unit.bounds.right - unit.bounds.left : unit.bounds.bottom - unit.bounds.top;
       return total + size;
     }, 0) + gap * (sorted.length - 1);
-    const placementLimit = horizontal ? state.width_mm : state.maximum_height_mm;
-    if (cursor < 0 || cursor + requiredSpan > placementLimit) {
+    const usefulBounds = sheetMaximumUsefulBounds();
+    const placementStart = horizontal ? usefulBounds.left : usefulBounds.top;
+    const placementLimit = horizontal ? usefulBounds.right : usefulBounds.bottom;
+    if (cursor < placementStart || cursor + requiredSpan > placementLimit) {
       window.preniumToast?.(`L’écart demandé ferait déborder la sélection ${horizontal ? "de la largeur" : "de la hauteur maximale"} de la planche.`, "error");
       return;
     }
@@ -2725,10 +3212,42 @@ if (root) {
       item.x_mm = round(nextCenterX - nextSize.width / 2);
       item.y_mm = round(nextCenterY - nextSize.height / 2);
     });
+    const rotatedBounds = selectionBounds(items);
+    const usefulBounds = sheetMaximumUsefulBounds();
+    const selectionWidth = rotatedBounds.right - rotatedBounds.left;
+    const selectionHeight = rotatedBounds.bottom - rotatedBounds.top;
+    const sheetWidth = usefulBounds.right - usefulBounds.left;
+    const sheetHeight = usefulBounds.bottom - usefulBounds.top;
+    if (selectionWidth > sheetWidth || selectionHeight > sheetHeight) {
+      restoreLayoutSnapshot(before);
+      render();
+      window.preniumToast?.("Cette rotation ferait déborder la sélection de la planche.", "error");
+      return;
+    }
+    if (items.length > 1) {
+      if (
+        Number.isFinite(sheetWidth)
+        && Number.isFinite(sheetHeight)
+        && selectionWidth <= sheetWidth
+        && selectionHeight <= sheetHeight
+      ) {
+        const deltaX = rotatedBounds.left < usefulBounds.left
+          ? usefulBounds.left - rotatedBounds.left
+          : rotatedBounds.right > usefulBounds.right
+            ? usefulBounds.right - rotatedBounds.right
+            : 0;
+        const deltaY = rotatedBounds.top < usefulBounds.top
+          ? usefulBounds.top - rotatedBounds.top
+          : rotatedBounds.bottom > usefulBounds.bottom
+            ? usefulBounds.bottom - rotatedBounds.bottom
+            : 0;
+        translateItemsBy(items, deltaX, deltaY);
+      }
+    }
     if (items.length === 1) {
-      clampItemOnSheet(items[0]);
+      clampItemWithinBounds(items[0], usefulBounds);
       applyFittedTextBox(items[0]);
-      clampItemOnSheet(items[0]);
+      fitItemWithinBounds(items[0], usefulBounds, { preserveRatio: true });
     }
     commitLayoutMutation(before);
     render();
@@ -2747,10 +3266,41 @@ if (root) {
     try {
       await saveLayout({ notify: false });
       const url = root.dataset.itemUrlTemplate.replace("00000000-0000-0000-0000-000000000000", item.public_id).replace("ACTION", "duplicate");
-      await request(url, { method: "POST" }); await reloadState(); window.preniumToast?.("Occurrence dupliquée.", "success");
+      const body = new FormData();
+      body.append("expected_revision", String(state.revision));
+      await request(url, { method: "POST", body }); await reloadState(); window.preniumToast?.("Occurrence dupliquée.", "success");
     } catch (error) { window.preniumToast?.(error.message, "error"); }
   }
   q("[data-duplicate-item]").addEventListener("click", duplicateSelected);
+
+  async function openSelectedCropDialog() {
+    let item = selected();
+    if (!item || isTextItem(item) || !item.asset_version_public_id) return;
+    if (dirty) await saveLayout({ notify: false });
+    else await reloadState();
+    item = selected();
+    if (!item || isTextItem(item) || !item.asset_version_public_id) {
+      window.preniumToast?.("Ce visuel n’est plus disponible sur la planche.", "error");
+      return;
+    }
+    const card = qa("[data-asset-card]").find(
+      (candidate) => candidate.dataset.assetVersionId === item.asset_version_public_id
+    );
+    const opener = card?.querySelector("[data-dialog-open^='gang-asset-detail-']");
+    const dialog = opener?.dataset.dialogOpen
+      ? document.getElementById(opener.dataset.dialogOpen)
+      : null;
+    if (!(opener instanceof HTMLButtonElement) || !(dialog instanceof HTMLDialogElement)) {
+      window.preniumToast?.("Le recadrage de ce visuel n’est pas disponible.", "error");
+      return;
+    }
+    const returnToCanvas = window.matchMedia("(max-width: 980px)").matches;
+    if (returnToCanvas) {
+      setMobilePanel("assets");
+      dialog.addEventListener("close", () => setMobilePanel("canvas"), { once: true });
+    }
+    opener.click();
+  }
 
   async function deleteSelected() {
     const items = selectedItems();
@@ -2791,6 +3341,18 @@ if (root) {
       rotateSelected();
       return;
     }
+    const duplicateButton = event.target.closest("[data-canvas-duplicate-item]");
+    if (duplicateButton && !duplicateButton.disabled) {
+      duplicateSelected();
+      return;
+    }
+    const cropButton = event.target.closest("[data-canvas-crop-item]");
+    if (cropButton && !cropButton.disabled) {
+      openSelectedCropDialog().catch((error) => {
+        window.preniumToast?.(error.message, "error");
+      });
+      return;
+    }
     const deleteButton = event.target.closest("[data-canvas-delete-item]");
     if (deleteButton && !deleteButton.disabled) {
       deleteSelected();
@@ -2805,33 +3367,78 @@ if (root) {
     if (ungroupButton && !ungroupButton.disabled) ungroupSelectedItems();
   });
 
+  function changeSelectedMetric(key, control) {
+    const item = selected(); if (!item) return false;
+    const rawValue = String(control.value).trim();
+    const value = Number(rawValue);
+    const sizeMetric = key === "width_mm" || key === "height_mm";
+    if (sizeMetric && !canResizeItem(item)) {
+      control.value = round(Number(item[key]) / 10, 2);
+      window.preniumToast?.("Dissociez le groupe avant de modifier les dimensions de cet élément.", "error");
+      return false;
+    }
+    const valid = rawValue !== "" && Number.isFinite(value) && (!sizeMetric || value > 0);
+    const previousValue = round(Number(item[key]) / 10, 2);
+    if (!valid) {
+      control.value = previousValue;
+      window.preniumToast?.(
+        sizeMetric
+          ? "Saisissez une dimension supérieure à zéro. La valeur précédente a été conservée."
+          : "Saisissez une position numérique valide. La valeur précédente a été conservée.",
+        "error"
+      );
+      return false;
+    }
+    const next = round(value * 10);
+    const width = Number(item.width_mm);
+    const height = Number(item.height_mm);
+    if (
+      sizeMetric
+      && (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0)
+    ) {
+      control.value = previousValue;
+      window.preniumToast?.(
+        "Les proportions actuelles sont invalides. La valeur précédente a été conservée.",
+        "error"
+      );
+      return false;
+    }
+    const before = layoutSnapshot();
+    if (key === "width_mm" && isTextItem(item)) {
+      const scale = item.width_mm > 0 ? next / item.width_mm : 1;
+      item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
+      applyFittedTextBox(item);
+    } else if (key === "height_mm" && isTextItem(item)) {
+      const previousHeight = item.height_mm;
+      const scale = previousHeight > 0 ? next / previousHeight : 1;
+      item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
+      applyFittedTextBox(item);
+    } else if (key === "width_mm" && q("[data-lock-ratio]").checked) {
+      const ratio = item.height_mm / item.width_mm;
+      item.width_mm = next;
+      item.height_mm = round(next * ratio);
+    } else if (key === "height_mm" && q("[data-lock-ratio]").checked) {
+      const ratio = item.width_mm / item.height_mm;
+      item.height_mm = next;
+      item.width_mm = round(next * ratio);
+    } else {
+      item[key] = next;
+    }
+    if (sizeMetric) {
+      fitItemWithinBounds(item, sheetMaximumUsefulBounds(), {
+        preserveRatio: isTextItem(item) || q("[data-lock-ratio]").checked,
+      });
+    } else {
+      clampItemOnSheet(item);
+    }
+    commitLayoutMutation(before);
+    render();
+    return true;
+  }
+
   [["[data-input-width]", "width_mm"], ["[data-input-height]", "height_mm"], ["[data-input-x]", "x_mm"], ["[data-input-y]", "y_mm"]].forEach(([selector, key]) => {
     q(selector).addEventListener("change", (event) => {
-      const item = selected(); if (!item) return;
-      const before = layoutSnapshot();
-      const next = round(Number(event.target.value) * 10);
-      if (key === "width_mm" && isTextItem(item)) {
-        const scale = item.width_mm > 0 ? next / item.width_mm : 1;
-        item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
-        applyFittedTextBox(item);
-      } else if (key === "height_mm" && isTextItem(item)) {
-        const previousHeight = item.height_mm;
-        const scale = previousHeight > 0 ? next / previousHeight : 1;
-        item.text_size_mm = round(Math.max(2, Math.min(80, textSizeMm(item) * scale)));
-        applyFittedTextBox(item);
-      } else if (key === "width_mm" && q("[data-lock-ratio]").checked) {
-        const ratio = item.height_mm / item.width_mm;
-        item.width_mm = next;
-        item.height_mm = round(next * ratio);
-      } else if (key === "height_mm" && q("[data-lock-ratio]").checked) {
-        const ratio = item.width_mm / item.height_mm;
-        item.height_mm = next;
-        item.width_mm = round(next * ratio);
-      } else {
-        item[key] = next;
-      }
-      commitLayoutMutation(before);
-      render();
+      changeSelectedMetric(key, event.target);
     });
   });
 
@@ -2956,6 +3563,7 @@ if (root) {
     const firstLine = String(next).split("\n")[0].trim() || "Texte";
     item.asset_name = firstLine.slice(0, 48);
     applyFittedTextBox(item);
+    fitItemWithinBounds(item, sheetMaximumUsefulBounds(), { preserveRatio: true });
     canvasTextEditor = null;
     editor.remove();
     setCanvasTextHint(false);
@@ -2972,6 +3580,7 @@ if (root) {
     const firstLine = String(item.text_content || "Texte").split("\n")[0].trim() || "Texte";
     item.asset_name = firstLine.slice(0, 48);
     const boxChanged = applyFittedTextBox(item);
+    fitItemWithinBounds(item, sheetMaximumUsefulBounds(), { preserveRatio: true });
     if (history) commitLayoutMutation(before);
     else syncLayoutDirtyState();
     const editing = Boolean(canvasTextEditor && canvasTextEditor.item.public_id === item.public_id);
@@ -3144,26 +3753,338 @@ if (root) {
     event.preventDefault();
     event.returnValue = "";
   });
-  const uploadForm = q(".gang-asset-modal-form");
+  const uploadForm = q(".gang-asset-upload-form");
+  function setUploadFormBusy(isBusy) {
+    if (!uploadForm) return;
+    uploadForm.classList.toggle("is-uploading", isBusy);
+    uploadForm.setAttribute("aria-busy", String(isBusy));
+    uploadForm.querySelector("[data-batch-dropzone]")?.setAttribute("aria-disabled", String(isBusy));
+    uploadForm.querySelectorAll("[data-batch-picker]").forEach((control) => {
+      if (control instanceof HTMLButtonElement) control.disabled = isBusy;
+    });
+    const progress = uploadForm.querySelector("[data-batch-upload-progress]");
+    if (progress instanceof HTMLElement) progress.hidden = !isBusy;
+  }
   uploadForm?.addEventListener("submit", async (event) => {
     if (allowUnload) return;
     event.preventDefault();
-    const submitter = uploadForm.querySelector("[data-configurator-submit]");
-    if (submitter instanceof HTMLButtonElement) {
-      submitter.classList.add("is-loading");
-      submitter.setAttribute("aria-busy", "true");
-    }
+    setUploadFormBusy(true);
     try {
       if (dirty) await saveLayout({ notify: false });
       allowUnload = true;
       uploadForm.submit();
     } catch (error) {
       allowUnload = false;
-      if (submitter instanceof HTMLButtonElement) {
-        submitter.classList.remove("is-loading");
-        submitter.removeAttribute("aria-busy");
+      setUploadFormBusy(false);
+      window.preniumToast?.(error.message, "error");
+    }
+  });
+  function renderExistingCrop(editor, changedName = "") {
+    if (!(editor instanceof HTMLElement)) return;
+    const values = {};
+    editor.querySelectorAll("[data-crop-value]").forEach((input) => {
+      if (input instanceof HTMLInputElement) values[input.dataset.cropValue] = Number.parseFloat(input.value) || 0;
+    });
+    if (changedName === "x") values.width = Math.min(values.width, 1 - values.x);
+    if (changedName === "y") values.height = Math.min(values.height, 1 - values.y);
+    if (changedName === "width") values.x = Math.min(values.x, 1 - values.width);
+    if (changedName === "height") values.y = Math.min(values.y, 1 - values.height);
+    editor.querySelectorAll("[data-crop-value]").forEach((input) => {
+      if (!(input instanceof HTMLInputElement)) return;
+      const key = input.dataset.cropValue;
+      input.value = String(Math.max(0, Math.min(1, values[key])));
+      const output = input.parentElement?.querySelector("output");
+      if (output) output.textContent = `${Math.round(values[key] * 100)} %`;
+    });
+    const box = editor.querySelector("[data-asset-crop-box]");
+    if (box instanceof HTMLElement) {
+      box.style.left = `${values.x * 100}%`;
+      box.style.top = `${values.y * 100}%`;
+      box.style.width = `${values.width * 100}%`;
+      box.style.height = `${values.height * 100}%`;
+    }
+  }
+
+  function cropDimensionLabel(width, height) {
+    const format = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const widthNumber = Number.parseFloat(width);
+    const heightNumber = Number.parseFloat(height);
+    if (!Number.isFinite(widthNumber) || !Number.isFinite(heightNumber)) return "—";
+    return `${format.format(widthNumber)} × ${format.format(heightNumber)} mm`;
+  }
+
+  function applyExistingCropResponse(form, payload) {
+    const editor = form.closest("[data-asset-crop-editor]");
+    if (!(editor instanceof HTMLElement) || !payload?.crop) return;
+    Object.entries(payload.crop).forEach(([key, value]) => {
+      const input = editor.querySelector(`[data-crop-value='${key}']`);
+      if (input instanceof HTMLInputElement) input.value = String(value);
+    });
+    renderExistingCrop(editor);
+
+    const revision = Number.parseInt(payload.revision, 10);
+    if (Number.isFinite(revision)) {
+      state.revision = revision;
+      root.querySelectorAll(".gang-asset-crop-form input[name='expected_revision']").forEach((input) => {
+        if (input instanceof HTMLInputElement) input.value = String(revision);
+      });
+    }
+
+    const dimensions = cropDimensionLabel(payload.width_mm, payload.height_mm);
+    const modalDimensions = editor.querySelector("[data-existing-crop-dimensions]");
+    if (modalDimensions) modalDimensions.textContent = dimensions;
+    const sourcePublicId = editor.dataset.sourcePublicId;
+    root.querySelectorAll("[data-source-asset-dimensions]").forEach((node) => {
+      if (node.dataset.sourceAssetDimensions === sourcePublicId) node.textContent = dimensions;
+    });
+
+    const card = editor.closest("[data-asset-card]");
+    if (!(card instanceof HTMLElement)) return;
+    const crop = Object.fromEntries(Object.entries(payload.crop).map(([key, value]) => [key, Number.parseFloat(value)]));
+    const isFull = crop.x <= 0.0001 && crop.y <= 0.0001 && crop.width >= 0.9999 && crop.height >= 0.9999;
+    let badge = card.querySelector(".gang-asset-card__crop-badge");
+    if (isFull) badge?.remove();
+    else if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "gang-asset-card__crop-badge";
+      badge.textContent = "Recadré";
+      card.querySelector(".gang-asset-card__preview")?.append(badge);
+    }
+    const cardPreview = card.querySelector(".gang-asset-card__preview > img");
+    if (cardPreview instanceof HTMLImageElement && Number.isFinite(revision)) {
+      const previewUrl = new URL(cardPreview.src, window.location.origin);
+      previewUrl.searchParams.set("crop_revision", String(revision));
+      cardPreview.src = previewUrl.toString();
+    }
+  }
+
+  root.querySelectorAll("[data-asset-crop-editor]").forEach((editor) => renderExistingCrop(editor));
+  root.addEventListener("input", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.matches("[data-crop-value]")) return;
+    renderExistingCrop(input.closest("[data-asset-crop-editor]"), input.dataset.cropValue);
+  });
+  root.addEventListener("click", (event) => {
+    const zoomControl = event.target.closest?.("[data-existing-preview-zoom-in], [data-existing-preview-zoom-out], [data-existing-preview-zoom-reset]");
+    if (zoomControl instanceof HTMLButtonElement) {
+      const editor = zoomControl.closest("[data-asset-crop-editor]");
+      const stage = editor?.querySelector(".gang-asset-detail__stage");
+      if (!(stage instanceof HTMLElement)) return;
+      let zoom = Number.parseFloat(stage.dataset.previewZoom || "1");
+      if (zoomControl.matches("[data-existing-preview-zoom-in]")) zoom = Math.min(3, zoom + 0.25);
+      else if (zoomControl.matches("[data-existing-preview-zoom-out]")) zoom = Math.max(1, zoom - 0.25);
+      else zoom = 1;
+      stage.dataset.previewZoom = String(zoom);
+      stage.style.setProperty("--gang-detail-zoom", String(zoom));
+      const label = editor.querySelector("[data-existing-preview-zoom-label]");
+      if (label) label.textContent = `${Math.round(zoom * 100)} %`;
+      const out = editor.querySelector("[data-existing-preview-zoom-out]");
+      if (out instanceof HTMLButtonElement) out.disabled = zoom <= 1;
+      const inside = editor.querySelector("[data-existing-preview-zoom-in]");
+      if (inside instanceof HTMLButtonElement) inside.disabled = zoom >= 3;
+      return;
+    }
+    const background = event.target.closest?.("[data-existing-preview-bg]");
+    if (background instanceof HTMLButtonElement) {
+      const editor = background.closest("[data-asset-crop-editor]");
+      const stage = editor?.querySelector(".gang-asset-detail__stage");
+      if (!(stage instanceof HTMLElement)) return;
+      editor.querySelectorAll("[data-existing-preview-bg]").forEach((button) => {
+        const active = button === background;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      stage.classList.toggle("is-checker", background.dataset.existingPreviewBg === "checker");
+      stage.style.backgroundColor = background.dataset.existingPreviewBg === "checker" ? "" : background.dataset.existingPreviewBg;
+      return;
+    }
+    const overlayToggle = event.target.closest?.("[data-analysis-overlay-toggle]");
+    if (overlayToggle instanceof HTMLButtonElement) {
+      const editor = overlayToggle.closest("[data-asset-crop-editor]");
+      const overlay = editor?.querySelector(`[data-analysis-overlay='${overlayToggle.dataset.analysisOverlayToggle}']`);
+      const pressed = overlayToggle.getAttribute("aria-pressed") !== "true";
+      overlayToggle.setAttribute("aria-pressed", String(pressed));
+      overlayToggle.classList.toggle("is-active", pressed);
+      if (overlay instanceof HTMLElement) overlay.hidden = !pressed;
+      return;
+    }
+    const manual = event.target.closest?.("[data-existing-crop-manual]");
+    if (manual instanceof HTMLButtonElement) {
+      const editor = manual.closest("[data-asset-crop-editor]");
+      const form = manual.closest("form");
+      if (form instanceof HTMLFormElement) form.dataset.cropAction = "manual";
+      const mode = editor?.querySelector("[data-existing-crop-mode]");
+      if (mode instanceof HTMLInputElement) mode.value = "manual";
+      if (editor instanceof HTMLElement) {
+        editor.dataset.cropDraw = "true";
+        editor.classList.add("is-crop-drawing");
+      }
+      manual.classList.add("is-active");
+      manual.setAttribute("aria-pressed", "true");
+      const auto = editor?.querySelector("[data-existing-crop-auto]");
+      auto?.classList.remove("is-active");
+      auto?.setAttribute("aria-pressed", "false");
+      return;
+    }
+    const auto = event.target.closest?.("[data-existing-crop-auto]");
+    if (auto instanceof HTMLButtonElement) {
+      const editor = auto.closest("[data-asset-crop-editor]");
+      const form = auto.closest("form");
+      if (form instanceof HTMLFormElement) form.dataset.cropAction = "auto";
+      const mode = editor?.querySelector("[data-existing-crop-mode]");
+      if (mode instanceof HTMLInputElement) mode.value = "auto";
+      auto.classList.add("is-active");
+      auto.setAttribute("aria-pressed", "true");
+      const manualButton = editor?.querySelector("[data-existing-crop-manual]");
+      manualButton?.classList.remove("is-active");
+      manualButton?.setAttribute("aria-pressed", "false");
+      form?.requestSubmit();
+      return;
+    }
+    const save = event.target.closest?.("[data-existing-crop-save]");
+    if (save instanceof HTMLButtonElement) {
+      const form = save.closest("form");
+      if (form instanceof HTMLFormElement) form.dataset.cropAction = "manual";
+      return;
+    }
+    const reset = event.target.closest?.("[data-crop-reset-existing]");
+    if (!(reset instanceof HTMLButtonElement)) return;
+    const editor = reset.closest("[data-asset-crop-editor]");
+    editor?.querySelectorAll("[data-crop-value]").forEach((input) => {
+      if (input instanceof HTMLInputElement) input.value = ["width", "height"].includes(input.dataset.cropValue) ? "1" : "0";
+    });
+    const mode = editor?.querySelector("[data-existing-crop-mode]");
+    if (mode instanceof HTMLInputElement) mode.value = "manual";
+    renderExistingCrop(editor);
+    const form = reset.closest("form");
+    if (form instanceof HTMLFormElement) {
+      form.dataset.cropAction = "full";
+      form.requestSubmit();
+    }
+  });
+  root.addEventListener("pointerdown", (event) => {
+    const bounds = event.target.closest?.("[data-asset-crop-bounds]");
+    const box = bounds?.querySelector("[data-asset-crop-box]");
+    if (!(bounds instanceof HTMLElement) || !(box instanceof HTMLElement) || event.button !== 0) return;
+    const editor = box.closest("[data-asset-crop-editor]");
+    if (!editor || editor.dataset.canCrop !== "true") return;
+    event.preventDefault();
+    const rect = bounds.getBoundingClientRect();
+    const inputs = Object.fromEntries(Array.from(editor.querySelectorAll("[data-crop-value]")).map((input) => [input.dataset.cropValue, input]));
+    const start = Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, Number.parseFloat(input.value)]));
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const clickedCrop = event.target.closest?.("[data-asset-crop-box]");
+    const selectedHandle = event.target.closest?.("[data-existing-crop-handle]")?.dataset.existingCropHandle;
+    const fullSelection = start.x <= 0.0001 && start.y <= 0.0001 && start.width >= 0.9999 && start.height >= 0.9999;
+    const shouldDraw = editor.dataset.cropDraw === "true" || !clickedCrop || fullSelection;
+    const handle = selectedHandle || (shouldDraw ? "draw" : "move");
+    const originX = Math.max(0, Math.min(1, (startX - rect.left) / Math.max(rect.width, 1)));
+    const originY = Math.max(0, Math.min(1, (startY - rect.top) / Math.max(rect.height, 1)));
+    const move = (moveEvent) => {
+      const dx = (moveEvent.clientX - startX) / Math.max(rect.width, 1);
+      const dy = (moveEvent.clientY - startY) / Math.max(rect.height, 1);
+      const next = { ...start };
+      if (handle === "draw") {
+        const pointerX = Math.max(0, Math.min(1, originX + dx));
+        const pointerY = Math.max(0, Math.min(1, originY + dy));
+        next.x = Math.min(originX, pointerX);
+        next.y = Math.min(originY, pointerY);
+        next.width = Math.max(0.01, Math.abs(pointerX - originX));
+        next.height = Math.max(0.01, Math.abs(pointerY - originY));
+      } else if (handle === "move") {
+        next.x = Math.max(0, Math.min(1 - start.width, start.x + dx));
+        next.y = Math.max(0, Math.min(1 - start.height, start.y + dy));
+      } else {
+        if (handle.includes("w")) { const right = start.x + start.width; next.x = Math.max(0, Math.min(right - 0.01, start.x + dx)); next.width = right - next.x; }
+        if (handle.includes("e")) next.width = Math.max(0.01, Math.min(1 - start.x, start.width + dx));
+        if (handle.includes("n")) { const bottom = start.y + start.height; next.y = Math.max(0, Math.min(bottom - 0.01, start.y + dy)); next.height = bottom - next.y; }
+        if (handle.includes("s")) next.height = Math.max(0.01, Math.min(1 - start.y, start.height + dy));
+      }
+      Object.entries(next).forEach(([key, value]) => { inputs[key].value = String(value); });
+      const mode = editor.querySelector("[data-existing-crop-mode]");
+      if (mode instanceof HTMLInputElement) mode.value = "manual";
+      const form = editor.querySelector(".gang-asset-crop-form");
+      if (form instanceof HTMLFormElement) form.dataset.cropAction = "manual";
+      renderExistingCrop(editor);
+    };
+    const end = () => {
+      window.removeEventListener("pointermove", move);
+      delete editor.dataset.cropDraw;
+      editor.classList.remove("is-crop-drawing");
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end, { once: true });
+  });
+  root.addEventListener("keydown", (event) => {
+    const box = event.target.closest?.("[data-asset-crop-box]");
+    if (!(box instanceof HTMLElement) || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    const editor = box.closest("[data-asset-crop-editor]");
+    if (!editor || editor.dataset.canCrop !== "true") return;
+    event.preventDefault();
+    const inputs = Object.fromEntries(Array.from(editor.querySelectorAll("[data-crop-value]")).map((input) => [input.dataset.cropValue, input]));
+    const step = event.shiftKey ? 0.05 : 0.01;
+    const x = Number.parseFloat(inputs.x.value);
+    const y = Number.parseFloat(inputs.y.value);
+    const width = Number.parseFloat(inputs.width.value);
+    const height = Number.parseFloat(inputs.height.value);
+    if (event.key === "ArrowLeft") inputs.x.value = String(Math.max(0, x - step));
+    if (event.key === "ArrowRight") inputs.x.value = String(Math.min(1 - width, x + step));
+    if (event.key === "ArrowUp") inputs.y.value = String(Math.max(0, y - step));
+    if (event.key === "ArrowDown") inputs.y.value = String(Math.min(1 - height, y + step));
+    const mode = editor.querySelector("[data-existing-crop-mode]");
+    if (mode instanceof HTMLInputElement) mode.value = "manual";
+    renderExistingCrop(editor);
+  });
+  root.addEventListener("submit", async (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches(".gang-asset-crop-form")) return;
+    event.preventDefault();
+    const dialog = form.closest("dialog");
+    const errorNode = form.querySelector("[data-existing-crop-error]");
+    if (errorNode instanceof HTMLElement) {
+      errorNode.textContent = "";
+      errorNode.hidden = true;
+    }
+    form.setAttribute("aria-busy", "true");
+    const actionButtons = Array.from(form.querySelectorAll("button"));
+    const disabledStates = new Map(actionButtons.map((button) => [button, button.disabled]));
+    actionButtons.forEach((button) => { button.disabled = true; });
+    const cropAction = form.dataset.cropAction || "manual";
+    try {
+      if (dirty) await saveLayout({ notify: false });
+      const revisionInput = form.querySelector("input[name='expected_revision']");
+      if (revisionInput instanceof HTMLInputElement) revisionInput.value = String(state.revision);
+      const response = await fetch(form.action, { method: "POST", body: new FormData(form), headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) throw new Error(payload?.error?.message || "Le cadrage n’a pas pu être enregistré.");
+      applyExistingCropResponse(form, payload);
+      await reloadState();
+      const messages = {
+        auto: "Recadrage automatique appliqué.",
+        full: "Fichier original rétabli.",
+        manual: "Cadrage appliqué.",
+      };
+      window.preniumToast?.(messages[cropAction] || messages.manual, "success");
+      if (dialog instanceof HTMLDialogElement && dialog.open) dialog.close();
+      const mode = form.querySelector("[data-existing-crop-mode]");
+      if (mode instanceof HTMLInputElement) mode.value = "manual";
+      const manualButton = form.querySelector("[data-existing-crop-manual]");
+      const autoButton = form.querySelector("[data-existing-crop-auto]");
+      manualButton?.classList.add("is-active");
+      manualButton?.setAttribute("aria-pressed", "true");
+      autoButton?.classList.remove("is-active");
+      autoButton?.setAttribute("aria-pressed", "false");
+    } catch (error) {
+      if (errorNode instanceof HTMLElement) {
+        errorNode.textContent = error.message;
+        errorNode.hidden = false;
       }
       window.preniumToast?.(error.message, "error");
+    } finally {
+      actionButtons.forEach((button) => { button.disabled = disabledStates.get(button); });
+      delete form.dataset.cropAction;
+      form.removeAttribute("aria-busy");
     }
   });
   window.addEventListener("resize", () => {
@@ -3180,4 +4101,7 @@ if (root) {
   savedLayoutSignature = layoutSignature();
   setDirty(false);
   if (state.status === "rendering") startPolling();
+  autoPlaceReadySources({ notify: true }).catch((error) => {
+    window.preniumToast?.(error.message, "error");
+  });
 }

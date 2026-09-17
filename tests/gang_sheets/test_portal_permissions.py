@@ -12,12 +12,15 @@ from apps.gang_sheets.services import (
     GangSheetRenderService,
     GangSheetService,
 )
+from apps.gang_sheets.services.cropping import AutoCropResult, CropBox
 from apps.orders.models import Order
+from apps.portal import views_gang_sheets as gang_sheet_views
 from apps.uploads.models import Asset, AssetAnalysis, AssetVersion
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
 from PIL import Image, ImageDraw
 
@@ -184,27 +187,18 @@ def test_gang_sheet_editor_exposes_the_professional_four_step_workflow(client):
     assert "data-canvas-clear-zone" in content
     assert "Répétition" not in content
     assert "Créer la grille" not in content
-    assert 'id="gang-asset-dialog"' in content
-    assert 'data-file-picker-dialog="gang-asset-dialog"' in content
+    assert "data-gang-inline-import" in content
+    assert "data-batch-auto-submit" in content
     assert 'name="files"' in content
     assert "multiple" in content
     assert 'data-max-file-bytes="20971520"' in content
-    assert 'data-max-files="20"' in content
+    assert 'data-max-files="5"' in content
     assert 'data-max-total-bytes="62914560"' in content
     assert 'aria-describedby="gang-asset-files-help gang-asset-files-error"' in content
     assert "20 Mo" in content
     assert "data-configurator-file-error" in content
     assert "Importer" in content
-    assert "data-configurator-preflight" in content
-    assert "data-preflight-dpi" in content
-    assert "data-preflight-fade" in content
-    assert 'data-recommended-dpi="' in content
-    assert "Recadrage" in content
-    assert 'name="crop_manifest"' in content
-    assert "data-gang-crop-box" in content
-    assert "data-crop-manual" in content
-    assert "data-crop-auto" in content
-    assert "Contenu détecté" in content
+    assert "Aucun fichier sélectionné." in content
     assert "gang-editor__delete" in content
     assert "Supprimer cette planche DTF ?" in content
 
@@ -481,6 +475,59 @@ def test_readonly_member_cannot_mutate_layout(client):
     assert response.status_code == 403
 
 
+def test_layout_endpoint_rejects_malformed_payloads_and_reports_stale_revision(client):
+    user, customer, project = create_customer_scope(email="layout-payload@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Payload layout")
+    item = service.add_occurrence(
+        sheet=sheet, asset_version_public_id=version.public_id, actor=user
+    )
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+    url = reverse(
+        "portal:client-gang-sheet-layout",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    item_payload = {
+        "public_id": str(item.public_id),
+        "x_mm": "5",
+        "y_mm": "5",
+        "width_mm": "100",
+        "height_mm": "50",
+        "rotation": 0,
+    }
+    cases = (
+        ("[]", 400, "INVALID_JSON"),
+        (json.dumps({"items": {}}), 400, "INVALID_LAYOUT"),
+        (json.dumps({"items": [item_payload]}), 400, "INVALID_LAYOUT"),
+        (
+            json.dumps({"items": [item_payload], "revision": "invalid"}),
+            400,
+            "INVALID_LAYOUT",
+        ),
+        (
+            json.dumps({"items": [item_payload], "revision": initial_revision - 1}),
+            409,
+            "STALE_REVISION",
+        ),
+    )
+    client.force_login(user)
+
+    for body, status, code in cases:
+        response = client.post(url, data=body, content_type="application/json")
+        assert response.status_code == status
+        assert response.json()["error"]["code"] == code
+
+    sheet.refresh_from_db()
+    item.refresh_from_db()
+    assert sheet.revision == initial_revision
+    assert item.x_mm == Decimal("0.00")
+
+
 def test_owner_can_delete_multiple_selected_occurrences_in_one_request(client):
     user, customer, project = create_customer_scope(email="batch-delete-owner@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
@@ -622,6 +669,114 @@ def test_batch_delete_is_readonly_protected_and_tenant_scoped(client):
     assert readonly_response.status_code == 403
     assert sheet.items.filter(public_id=item.public_id).exists()
     assert readonly_sheet.items.filter(public_id=readonly_item.public_id).exists()
+
+
+def test_duplicate_item_is_revisioned_readonly_protected_and_tenant_scoped(client):
+    owner, customer, project = create_customer_scope(email="duplicate-scope@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=owner, name="Duplication privée")
+    item = service.add_occurrence(
+        sheet=sheet,
+        asset_version_public_id=version.public_id,
+        actor=owner,
+    )
+    other_sheet = service.create_sheet(project=project, actor=owner, name="Autre planche")
+    foreign_item = service.add_occurrence(
+        sheet=other_sheet,
+        asset_version_public_id=version.public_id,
+        actor=owner,
+    )
+    sheet.refresh_from_db()
+    initial_revision = sheet.revision
+    initial_count = sheet.items.count()
+    initial_audits = AuditLogEntry.objects.filter(
+        action="gang_sheet.item_duplicated",
+        target_public_id=sheet.public_id,
+    ).count()
+    url = reverse(
+        "portal:client-gang-sheet-item-action",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "item_public_id": item.public_id,
+            "action": "duplicate",
+        },
+    )
+    client.force_login(owner)
+
+    stale = client.post(url, {"expected_revision": initial_revision + 1})
+    foreign_item_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-item-action",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "item_public_id": foreign_item.public_id,
+                "action": "duplicate",
+            },
+        ),
+        {"expected_revision": initial_revision},
+    )
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="duplicate-outsider@example.com"
+    )
+    client.force_login(outsider)
+    cross_tenant = client.post(
+        reverse(
+            "portal:client-gang-sheet-item-action",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "item_public_id": item.public_id,
+                "action": "duplicate",
+            },
+        ),
+        {"expected_revision": initial_revision},
+    )
+
+    readonly = get_user_model().objects.create_user(
+        email="duplicate-readonly@example.com", password="pass"
+    )
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=readonly,
+        role=CustomerMembership.Role.READONLY,
+    )
+    client.force_login(readonly)
+    readonly_response = client.post(url, {"expected_revision": initial_revision})
+
+    sheet.refresh_from_db()
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "STALE_REVISION"
+    assert foreign_item_response.status_code == 400
+    assert foreign_item_response.json()["error"]["code"] == "ITEM_NOT_FOUND"
+    assert cross_tenant.status_code == 404
+    assert readonly_response.status_code == 403
+    assert sheet.revision == initial_revision
+    assert sheet.items.count() == initial_count
+    assert (
+        AuditLogEntry.objects.filter(
+            action="gang_sheet.item_duplicated",
+            target_public_id=sheet.public_id,
+        ).count()
+        == initial_audits
+    )
+
+    client.force_login(owner)
+    success = client.post(url, {"expected_revision": initial_revision})
+    sheet.refresh_from_db()
+    assert success.status_code == 200
+    assert sheet.items.count() == initial_count + 1
+    assert sheet.revision == initial_revision + 1
+    assert (
+        AuditLogEntry.objects.filter(
+            action="gang_sheet.item_duplicated",
+            target_public_id=sheet.public_id,
+        ).count()
+        == initial_audits + 1
+    )
 
 
 def test_owner_can_apply_axis_spacing_through_the_scoped_workflow_action(client):
@@ -773,6 +928,99 @@ def test_owner_can_add_a_quantity_and_auto_place_from_the_gallery(client):
     assert sheet.items.count() == 4
 
 
+def test_gallery_quantity_endpoint_updates_canvas_count_and_enforces_revision(client):
+    user, customer, project = create_customer_scope(email="gallery-quantity@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=user)
+    service = GangSheetService()
+    sheet = service.create_sheet(project=project, actor=user, name="Quantité galerie")
+    entry = sheet.source_assets.get(asset=asset)
+    url = reverse(
+        "portal:client-gang-sheet-source-quantity",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": entry.public_id,
+        },
+    )
+    client.force_login(user)
+    response = client.post(url, {"quantity": "3", "expected_revision": sheet.revision})
+    assert response.status_code == 200
+    assert response.json()["quantity"] == sheet.items.count() == 3
+    state = client.get(
+        reverse(
+            "portal:client-gang-sheet-state",
+            kwargs={"customer_public_id": customer.public_id, "sheet_public_id": sheet.public_id},
+        )
+    )
+    assert len(state.json()["sheet"]["items"]) == 3
+    assert all(
+        item["asset_public_id"] == str(asset.public_id) for item in state.json()["sheet"]["items"]
+    )
+    stale = client.post(url, {"quantity": "0", "expected_revision": sheet.revision})
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "STALE_REVISION"
+    assert sheet.items.count() == 3
+    removal = client.post(url, {"quantity": "0", "expected_revision": response.json()["revision"]})
+    assert removal.status_code == 200
+    assert removal.json()["quantity"] == sheet.items.count() == 0
+
+
+def test_gallery_quantity_endpoint_is_readonly_and_tenant_scoped(client):
+    owner, customer, project = create_customer_scope(email="quantity-owner@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Quantité privée")
+    entry = sheet.source_assets.get(asset=asset)
+    url = reverse(
+        "portal:client-gang-sheet-source-quantity",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": entry.public_id,
+        },
+    )
+    readonly, _readonly_customer, _readonly_project = create_customer_scope(
+        email="quantity-readonly@example.com", role=CustomerMembership.Role.READONLY
+    )
+    CustomerMembership.objects.create(
+        customer=customer, user=readonly, role=CustomerMembership.Role.READONLY
+    )
+    client.force_login(readonly)
+    assert (
+        client.post(url, {"quantity": "1", "expected_revision": sheet.revision}).status_code == 403
+    )
+    outsider, _other_customer, _other_project = create_customer_scope(
+        email="quantity-outsider@example.com"
+    )
+    client.force_login(outsider)
+    assert client.post(url, {"quantity": "1", "expected_revision": sheet.revision}).status_code in {
+        403,
+        404,
+    }
+    client.force_login(owner)
+    another, another_customer, another_project = create_customer_scope(
+        email="quantity-another@example.com"
+    )
+    other_asset, _ = attach_png_asset(
+        customer=another_customer, project=another_project, user=another
+    )
+    other_sheet = GangSheetService().create_sheet(
+        project=another_project, actor=another, name="Quantité externe"
+    )
+    foreign_source = other_sheet.source_assets.get(asset=other_asset)
+    foreign_url = reverse(
+        "portal:client-gang-sheet-source-quantity",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": foreign_source.public_id,
+        },
+    )
+    response = client.post(foreign_url, {"quantity": "1", "expected_revision": sheet.revision})
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "SOURCE_ASSET_NOT_FOUND"
+    assert sheet.items.count() == 0
+
+
 def test_owner_can_create_sheet_and_upload_gallery_without_project(client, monkeypatch):
     user, customer, _project = create_customer_scope(email="autonomous-owner@example.com")
     client.force_login(user)
@@ -810,6 +1058,10 @@ def test_owner_can_create_sheet_and_upload_gallery_without_project(client, monke
     assert sheet.project is None
     assert upload_response.status_code == 302
     assert sheet.source_assets.count() == 1
+    assert (
+        sheet.source_assets.get().auto_placement_status
+        == GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS
+    )
 
 
 def test_owner_can_upload_multiple_visuals_with_independent_non_destructive_crops(
@@ -861,6 +1113,45 @@ def test_owner_can_upload_multiple_visuals_with_independent_non_destructive_crop
     assert sources[0].crop_width == Decimal("0.500000")
     assert sources[1].crop_y == Decimal("0.100000")
     assert sources[1].crop_height == Decimal("0.800000")
+
+
+def test_gang_sheet_batch_rejects_more_than_five_files_before_asset_creation(client):
+    user, customer, _project = create_customer_scope(email="five-files-gang@example.com")
+    sheet = GangSheetService().create_sheet(
+        customer=customer,
+        actor=user,
+        name="Lot de cinq fichiers",
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": [
+                SimpleUploadedFile(
+                    f"source-{index}.png",
+                    b"\x89PNG\r\n\x1a\n" + bytes([index]) * 32,
+                    content_type="image/png",
+                )
+                for index in range(6)
+            ]
+        },
+    )
+
+    toast = json.loads(response.headers["X-Prenium-Toast"])
+    assert response.status_code == 302
+    assert toast == {
+        "message": "Importez au maximum 5 fichiers à la fois.",
+        "variant": "error",
+    }
+    assert sheet.source_assets.count() == 0
+    assert AssetVersion.objects.filter(customer=customer).count() == 0
 
 
 def test_oversized_gang_sheet_batch_is_rejected_before_any_asset_is_created(
@@ -1012,6 +1303,80 @@ def test_gang_sheet_upload_rolls_back_database_files_audits_and_jobs_on_mid_batc
     assert list(path for path in tmp_path.rglob("*") if path.is_file()) == []
     assert callbacks == []
     assert scheduled == []
+    error_session_key = f"gang_sheet_upload_error:{sheet.public_id}"
+    assert client.session[error_session_key] == "source-1.png : Échec technique simulé."
+
+    editor_response = client.get(response.url)
+    assert editor_response.status_code == 200
+    assert editor_response.context["gang_sheet_import_error"] == (
+        "source-1.png : Échec technique simulé."
+    )
+    assert editor_response.context["reopen_gang_sheet_import_dialog"] is True
+    assert error_session_key not in client.session
+
+    second_editor_response = client.get(response.url)
+    assert second_editor_response.context["gang_sheet_import_error"] == ""
+    assert second_editor_response.context["reopen_gang_sheet_import_dialog"] is False
+
+
+def test_gang_sheet_import_error_session_is_scoped_by_sheet_and_customer(client):
+    cache.clear()
+    owner, customer, _project = create_customer_scope(email="error-scope@example.com")
+    sheet_a = GangSheetService().create_sheet(customer=customer, actor=owner, name="Planche A")
+    sheet_b = GangSheetService().create_sheet(customer=customer, actor=owner, name="Planche B")
+    client.force_login(owner)
+    upload_url = reverse(
+        "portal:client-gang-sheet-asset-upload",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet_a.public_id,
+        },
+    )
+
+    upload_response = client.post(upload_url, {})
+    sheet_a_error_key = f"gang_sheet_upload_error:{sheet_a.public_id}"
+
+    assert upload_response.status_code == 302
+    assert client.session[sheet_a_error_key] == "Sélectionnez au moins un fichier."
+
+    sheet_b_response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet_b.public_id,
+            },
+        )
+    )
+    assert sheet_b_response.context["gang_sheet_import_error"] == ""
+    assert sheet_b_response.context["reopen_gang_sheet_import_dialog"] is False
+    assert sheet_a_error_key in client.session
+
+    sheet_a_response = client.get(upload_response.url)
+    assert sheet_a_response.context["gang_sheet_import_error"] == (
+        "Sélectionnez au moins un fichier."
+    )
+    assert sheet_a_response.context["reopen_gang_sheet_import_dialog"] is True
+    assert sheet_a_error_key not in client.session
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="error-scope-outsider@example.com"
+    )
+    client.force_login(outsider)
+    outsider_session = client.session
+    outsider_session[sheet_a_error_key] = "Message qui ne doit jamais être exposé"
+    outsider_session.save()
+    cross_tenant_response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": sheet_a.public_id,
+            },
+        )
+    )
+    assert cross_tenant_response.status_code == 404
+    assert sheet_a_error_key in client.session
 
 
 def test_readonly_member_cannot_upload_a_gang_sheet_source(client):
@@ -1188,6 +1553,437 @@ def test_invalid_or_cross_tenant_crop_upload_is_rejected(client, monkeypatch):
     assert sheet.source_assets.count() == 0
 
 
+def test_owner_can_update_existing_crop_and_gallery_exposes_scoped_modal_data(client):
+    owner, customer, project = create_customer_scope(email="crop-update-owner@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Crop modale")
+    source_asset = sheet.source_assets.get(asset=asset)
+    initial_revision = sheet.revision
+    client.force_login(owner)
+    gallery_url = reverse(
+        "portal:client-gang-sheet-asset-gallery",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+
+    gallery_response = client.get(gallery_url)
+    row = gallery_response.context["assets"][0]
+    update_url = reverse(
+        "portal:client-gang-sheet-source-asset-crop",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": source_asset.public_id,
+        },
+    )
+
+    assert gallery_response.status_code == 200
+    assert row["crop_mode"] == "manual"
+    assert row["crop_x"] == "0.000000"
+    assert row["crop_y"] == "0.000000"
+    assert row["crop_width"] == "1.000000"
+    assert row["crop_height"] == "1.000000"
+    assert row["crop_update_url"] == update_url
+    assert row["expected_revision"] == initial_revision
+    assert row["can_crop"] is True
+    assert row["original_preview_url"].endswith("?original=1")
+    assert str(customer.public_id) in row["original_preview_url"]
+    assert str(sheet.public_id) in row["original_preview_url"]
+    assert str(version.public_id) in row["original_preview_url"]
+    gallery_html = gallery_response.content.decode()
+    assert "Rétablir l’original" in gallery_html
+    assert "Appliquer le cadrage" in gallery_html
+    assert "data-existing-crop-dimensions" in gallery_html
+    assert "gang-analysis-summary__status" not in gallery_html
+
+    response = client.post(
+        update_url,
+        {
+            "crop_x": "0.10",
+            "crop_y": "0.20",
+            "crop_width": "0.60",
+            "crop_height": "0.50",
+            "expected_revision": initial_revision,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response["Cache-Control"] == "private, no-store"
+    assert response.json() == {
+        "ok": True,
+        "revision": initial_revision + 1,
+        "crop": {
+            "x": "0.100000",
+            "y": "0.200000",
+            "width": "0.600000",
+            "height": "0.500000",
+        },
+        "width_mm": "60.00",
+        "height_mm": "25.00",
+    }
+    source_asset.refresh_from_db()
+    assert source_asset.crop_width == Decimal("0.600000")
+    assert AuditLogEntry.objects.filter(
+        action="gang_sheet.source_crop_updated",
+        target_public_id=sheet.public_id,
+    ).exists()
+
+
+def test_existing_crop_endpoint_auto_mode_uses_server_file_and_returns_detected_crop(
+    client, monkeypatch
+):
+    owner, customer, project = create_customer_scope(email="crop-endpoint-auto@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    expected_content = version.file.read()
+    version.file.close()
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Crop auto")
+    source_asset = sheet.source_assets.get(asset=asset)
+    detected_crop = CropBox.from_values(x="0.20", y="0.15", width="0.60", height="0.70")
+
+    def detect_server_file(uploaded_file):
+        assert uploaded_file.read() == expected_content
+        return AutoCropResult(
+            crop=detected_crop,
+            content_kind="raster",
+            basis="visible_pixels",
+        )
+
+    monkeypatch.setattr(gang_sheet_views.gang_sheet_service.auto_crop, "detect", detect_server_file)
+    client.force_login(owner)
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "source_asset_public_id": source_asset.public_id,
+            },
+        ),
+        {
+            "crop_mode": "auto",
+            "crop_x": "0.95",
+            "crop_y": "0.95",
+            "crop_width": "0.95",
+            "crop_height": "0.95",
+            "expected_revision": sheet.revision,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["crop"] == detected_crop.to_metadata()
+    source_asset.refresh_from_db()
+    assert CropBox.from_source_asset(source_asset) == detected_crop
+
+
+@override_settings(
+    GANG_SHEET_AUTO_CROP_RATE_LIMIT_MAX_REQUESTS=1,
+    GANG_SHEET_AUTO_CROP_RATE_LIMIT_WINDOW_SECONDS=60,
+)
+def test_existing_crop_endpoint_rate_limits_repeated_auto_noop(client, monkeypatch):
+    cache.clear()
+    owner, customer, project = create_customer_scope(email="crop-endpoint-rate@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Crop auto limité")
+    source_asset = sheet.source_assets.get(asset=asset)
+    detections = 0
+
+    def detect_server_file(_uploaded_file):
+        nonlocal detections
+        detections += 1
+        return AutoCropResult(crop=CropBox.full(), content_kind="raster", basis="visible_pixels")
+
+    monkeypatch.setattr(gang_sheet_views.gang_sheet_service.auto_crop, "detect", detect_server_file)
+    client.force_login(owner)
+    url = reverse(
+        "portal:client-gang-sheet-source-asset-crop",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "source_asset_public_id": source_asset.public_id,
+        },
+    )
+    payload = {"crop_mode": "auto", "expected_revision": sheet.revision}
+
+    assert client.post(url, payload).status_code == 200
+    limited = client.post(url, payload)
+
+    assert limited.status_code == 429
+    assert limited["Retry-After"] == "60"
+    assert limited.json()["error"]["code"] == "AUTO_CROP_RATE_LIMITED"
+    assert detections == 1
+
+
+def test_existing_crop_endpoint_returns_safe_error_when_private_file_cannot_be_read(
+    client, monkeypatch
+):
+    owner, customer, project = create_customer_scope(email="crop-endpoint-file-error@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(
+        project=project,
+        actor=owner,
+        name="Crop fichier absent",
+    )
+    source_asset = sheet.source_assets.get(asset=asset)
+
+    def fail_open(*args, **kwargs):
+        raise OSError("/private/customer-secret/source.png")
+
+    monkeypatch.setattr(version.file.storage, "open", fail_open)
+    client.force_login(owner)
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+                "source_asset_public_id": source_asset.public_id,
+            },
+        ),
+        {"crop_mode": "auto", "expected_revision": sheet.revision},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == {
+        "code": "AUTO_CROP_FAILED",
+        "message": "Le fichier original de ce visuel ne peut pas être lu.",
+    }
+    assert "/private/" not in response.content.decode()
+    sheet.refresh_from_db()
+    source_asset.refresh_from_db()
+    assert sheet.revision == 1
+    assert source_asset.has_crop is False
+    assert not AuditLogEntry.objects.filter(action="gang_sheet.source_crop_updated").exists()
+
+
+def test_existing_crop_endpoint_rejects_invalid_stale_readonly_and_cross_tenant_requests(client):
+    owner_a, customer_a, project_a = create_customer_scope(email="crop-endpoint-a@example.com")
+    asset_a, version_a = attach_png_asset(
+        customer=customer_a,
+        project=project_a,
+        user=owner_a,
+    )
+    sheet_a = GangSheetService().create_sheet(project=project_a, actor=owner_a, name="Crop A")
+    source_a = sheet_a.source_assets.get(asset=asset_a)
+    crop_a_url = reverse(
+        "portal:client-gang-sheet-source-asset-crop",
+        kwargs={
+            "customer_public_id": customer_a.public_id,
+            "sheet_public_id": sheet_a.public_id,
+            "source_asset_public_id": source_a.public_id,
+        },
+    )
+    valid_crop = {
+        "crop_x": "0.10",
+        "crop_y": "0.10",
+        "crop_width": "0.80",
+        "crop_height": "0.80",
+        "expected_revision": sheet_a.revision,
+    }
+    client.force_login(owner_a)
+
+    invalid_response = client.post(
+        crop_a_url,
+        {**valid_crop, "crop_x": "0.80", "crop_width": "0.40"},
+    )
+    missing_revision_payload = {**valid_crop}
+    missing_revision_payload.pop("expected_revision")
+    missing_revision_response = client.post(crop_a_url, missing_revision_payload)
+    stale_response = client.post(
+        crop_a_url,
+        {**valid_crop, "expected_revision": sheet_a.revision + 1},
+    )
+    invalid_mode_response = client.post(
+        crop_a_url,
+        {**valid_crop, "crop_mode": "full"},
+    )
+
+    assert invalid_response.status_code == 400
+    assert invalid_response.json()["error"]["code"] == "INVALID_CROP"
+    assert missing_revision_response.status_code == 400
+    assert missing_revision_response.json()["error"]["code"] == "INVALID_CROP"
+    assert stale_response.status_code == 400
+    assert stale_response.json()["error"] == {
+        "code": "STALE_REVISION",
+        "message": "Ce brouillon a été modifié ailleurs. Rechargez la page avant de continuer.",
+        "revision": sheet_a.revision,
+    }
+    assert invalid_mode_response.status_code == 400
+    assert invalid_mode_response.json()["error"]["code"] == "INVALID_CROP_MODE"
+
+    GangSheetService().add_occurrence(
+        sheet=sheet_a,
+        asset_version_public_id=version_a.public_id,
+        actor=owner_a,
+    )
+    sheet_a.refresh_from_db()
+    used_response = client.post(
+        crop_a_url,
+        {**valid_crop, "expected_revision": sheet_a.revision},
+    )
+    assert used_response.status_code == 200
+    assert used_response.json()["width_mm"] == "80.00"
+    used_gallery = client.get(
+        reverse(
+            "portal:client-gang-sheet-asset-gallery",
+            kwargs={
+                "customer_public_id": customer_a.public_id,
+                "sheet_public_id": sheet_a.public_id,
+            },
+        )
+    )
+    assert used_gallery.context["assets"][0]["can_crop"] is True
+
+    readonly, readonly_customer, readonly_project = create_customer_scope(
+        email="crop-endpoint-readonly@example.com",
+        role=CustomerMembership.Role.READONLY,
+    )
+    readonly_asset, _readonly_version = attach_png_asset(
+        customer=readonly_customer,
+        project=readonly_project,
+        user=readonly,
+    )
+    readonly_sheet = GangSheetService().create_sheet(
+        project=readonly_project,
+        actor=readonly,
+        name="Crop lecture seule",
+    )
+    readonly_source = readonly_sheet.source_assets.get(asset=readonly_asset)
+    client.force_login(readonly)
+    readonly_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": readonly_customer.public_id,
+                "sheet_public_id": readonly_sheet.public_id,
+                "source_asset_public_id": readonly_source.public_id,
+            },
+        ),
+        {**valid_crop, "expected_revision": readonly_sheet.revision},
+    )
+
+    outsider, outsider_customer, outsider_project = create_customer_scope(
+        email="crop-endpoint-outsider@example.com"
+    )
+    attach_png_asset(customer=outsider_customer, project=outsider_project, user=outsider)
+    outsider_sheet = GangSheetService().create_sheet(
+        project=outsider_project,
+        actor=outsider,
+        name="Crop B",
+    )
+    client.force_login(outsider)
+    foreign_sheet_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": sheet_a.public_id,
+                "source_asset_public_id": source_a.public_id,
+            },
+        ),
+        {**valid_crop, "expected_revision": outsider_sheet.revision},
+    )
+    foreign_source_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-source-asset-crop",
+            kwargs={
+                "customer_public_id": outsider_customer.public_id,
+                "sheet_public_id": outsider_sheet.public_id,
+                "source_asset_public_id": source_a.public_id,
+            },
+        ),
+        {**valid_crop, "crop_mode": "auto", "expected_revision": outsider_sheet.revision},
+    )
+
+    assert readonly_response.status_code == 403
+    assert foreign_sheet_response.status_code == 404
+    assert foreign_source_response.status_code == 404
+    assert foreign_source_response.json()["error"]["code"] == "SOURCE_ASSET_NOT_FOUND"
+    source_a.refresh_from_db()
+    readonly_source.refresh_from_db()
+    assert source_a.has_crop is True
+    assert readonly_source.has_crop is False
+
+
+def test_original_asset_preview_bypasses_crop_and_remains_tenant_scoped(client):
+    owner, customer, project = create_customer_scope(email="crop-preview-owner@example.com")
+    asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Aperçu original")
+    source_asset = sheet.source_assets.get(asset=asset)
+    source_asset.crop_x = Decimal("0.25")
+    source_asset.crop_width = Decimal("0.50")
+    source_asset.save(update_fields=["crop_x", "crop_width", "updated_at"])
+    preview_url = reverse(
+        "portal:client-gang-sheet-asset-preview",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "asset_version_public_id": version.public_id,
+        },
+    )
+    client.force_login(owner)
+
+    cropped_response = client.get(preview_url)
+    original_response = client.get(f"{preview_url}?original=1")
+    with Image.open(BytesIO(b"".join(cropped_response.streaming_content))) as cropped:
+        cropped_size = cropped.size
+    with Image.open(BytesIO(b"".join(original_response.streaming_content))) as original:
+        original_size = original.size
+
+    assert cropped_response.status_code == 200
+    assert original_response.status_code == 200
+    assert cropped_size == (150, 150)
+    assert original_size == (300, 150)
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="crop-preview-outsider@example.com"
+    )
+    client.force_login(outsider)
+    cross_tenant_url = reverse(
+        "portal:client-gang-sheet-asset-preview",
+        kwargs={
+            "customer_public_id": outsider_customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "asset_version_public_id": version.public_id,
+        },
+    )
+    assert client.get(f"{cross_tenant_url}?original=1").status_code == 404
+
+
+def test_asset_preview_fails_closed_for_cross_customer_analysis(client):
+    owner, customer, project = create_customer_scope(email="analysis-scope-owner@example.com")
+    _outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="analysis-scope-outsider@example.com"
+    )
+    _asset, version = attach_png_asset(customer=customer, project=project, user=owner)
+    sheet = GangSheetService().create_sheet(
+        project=project,
+        actor=owner,
+        name="Analyse incohérente",
+    )
+    analysis = AssetAnalysis.objects.create(
+        customer=outsider_customer,
+        version=version,
+        metadata={"thin_zone": {"detected": True}},
+    )
+    analysis.thumbnail = SimpleUploadedFile("foreign.webp", b"foreign-thumbnail")
+    analysis.thin_zone_overlay = SimpleUploadedFile("foreign-overlay.webp", b"foreign-overlay")
+    analysis.save(update_fields=["thumbnail", "thin_zone_overlay", "updated_at"])
+    preview_url = reverse(
+        "portal:client-gang-sheet-asset-preview",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "asset_version_public_id": version.public_id,
+        },
+    )
+    client.force_login(owner)
+
+    assert client.get(f"{preview_url}?original=1").status_code == 404
+    assert client.get(f"{preview_url}?overlay=thin_zone").status_code == 404
+
+
 def test_pending_gallery_refreshes_itself_and_exposes_visual_when_analysis_is_ready(client):
     user, customer, project = create_customer_scope(email="dynamic-gallery@example.com")
     _asset, version = attach_png_asset(customer=customer, project=project, user=user)
@@ -1219,7 +2015,425 @@ def test_pending_gallery_refreshes_itself_and_exposes_visual_when_analysis_is_re
     assert 'data-has-pending="false"' in ready_content
     assert 'hx-trigger="every 2s"' not in ready_content
     assert 'data-asset-ready="true"' in ready_content
-    assert "Placer sur la planche" in ready_content
+    assert "<span>Quantité</span>" in ready_content
+    assert "data-asset-quantity data-quantity-url=" in ready_content
+
+
+@pytest.mark.parametrize(
+    ("analysis_status", "expected_ready", "expected_label"),
+    [
+        (AssetVersion.AnalysisStatus.PENDING, False, "En attente"),
+        (AssetVersion.AnalysisStatus.PROCESSING, False, "Analyse en cours"),
+        (AssetVersion.AnalysisStatus.READY, True, "Analysé"),
+        (AssetVersion.AnalysisStatus.FAILED, False, "Échec"),
+    ],
+)
+def test_gallery_exposes_safe_analysis_states_and_source_metrics(
+    client,
+    analysis_status,
+    expected_ready,
+    expected_label,
+):
+    user, customer, project = create_customer_scope(email=f"gallery-{analysis_status}@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    sheet = GangSheetService().create_sheet(project=project, actor=user, name="Analyse galerie")
+    version.analysis_status = analysis_status
+    version.analysis_error = "/private/storage/customer-secret/source.png"
+    version.save(update_fields=["analysis_status", "analysis_error", "updated_at"])
+    AssetAnalysis.objects.create(
+        customer=customer,
+        version=version,
+        image_width=2400,
+        image_height=1200,
+        dpi_x="300.00",
+        dpi_y="299.50",
+        has_alpha=True,
+        probable_white_background=False,
+        warnings=[],
+    )
+    client.force_login(user)
+
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-asset-gallery",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+
+    row = response.context["assets"][0]
+    assert response.status_code == 200
+    assert row["analysis_status"] == analysis_status
+    assert row["analysis_label"] == expected_label
+    assert row["is_ready"] is expected_ready
+    assert row["source_width_px"] == 2400
+    assert row["source_height_px"] == 1200
+    assert row["resolution_label"] == "2400 × 1200 px"
+    assert row["dpi_label"] == "300 × 299,5 DPI"
+    assert row["has_alpha"] is True
+    assert row["probable_white_background"] is False
+    assert "/private/storage" not in row["analysis_error"]
+    if analysis_status == AssetVersion.AnalysisStatus.FAILED:
+        assert "n’a pas abouti" in row["analysis_error"]
+    else:
+        assert row["analysis_error"] == ""
+
+
+def test_warning_gallery_exposes_diagnostics_and_mediated_overlays(client):
+    user, customer, project = create_customer_scope(email="gallery-warning@example.com")
+    _asset, version = attach_png_asset(customer=customer, project=project, user=user)
+    sheet = GangSheetService().create_sheet(project=project, actor=user, name="Alertes galerie")
+    version.analysis_status = AssetVersion.AnalysisStatus.WARNING
+    version.save(update_fields=["analysis_status", "updated_at"])
+    analysis = AssetAnalysis.objects.create(
+        customer=customer,
+        version=version,
+        image_width=900,
+        image_height=600,
+        dpi_x=300,
+        dpi_y=300,
+        warnings=["Fond blanc probable détecté.", "Fond blanc probable détecté."],
+        metadata={
+            "thin_zone": {
+                "detected": True,
+                "coverage_percent": 2.5,
+                "resolution_limited": True,
+            },
+            "semi_transparency": {"detected": True, "coverage_percent": 4.75},
+        },
+    )
+    analysis.thin_zone_overlay = SimpleUploadedFile(
+        "thin.webp", b"thin-overlay", content_type="image/webp"
+    )
+    analysis.semi_transparency_overlay = SimpleUploadedFile(
+        "fade.webp", b"fade-overlay", content_type="image/webp"
+    )
+    analysis.save(update_fields=["thin_zone_overlay", "semi_transparency_overlay", "updated_at"])
+    client.force_login(user)
+
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-asset-gallery",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+
+    row = response.context["assets"][0]
+    assert row["analysis_status"] == AssetVersion.AnalysisStatus.WARNING
+    assert row["analysis_warnings"] == ["Fond blanc probable détecté."]
+    assert row["has_analysis_warnings"] is True
+    assert row["thin_zone"] == {
+        "detected": True,
+        "coverage_percent": 2.5,
+        "resolution_limited": True,
+        "overlay_available": True,
+        "overlay_url": row["thin_zone"]["overlay_url"],
+    }
+    assert row["semi_transparency"]["detected"] is True
+    assert row["semi_transparency"]["coverage_percent"] == 4.75
+    assert row["semi_transparency"]["overlay_available"] is True
+    assert "?overlay=thin_zone" in row["thin_zone"]["overlay_url"]
+    assert "?overlay=semi_transparency" in row["semi_transparency"]["overlay_url"]
+    assert "/media/" not in row["thin_zone"]["overlay_url"]
+    content = response.content.decode()
+    assert "Contrôler le visuel" in content
+    assert f'data-asset-version-id="{version.public_id}"' in content
+    assert "300 DPI" in content
+    assert "Zones &lt; 0,5 mm" in content
+    assert "Dégradés détectés" in content
+    assert "Pas de dégradé" not in content
+    assert "Couleur du support" not in content
+    assert ">Détails<" not in content
+
+    thin_response = client.get(row["thin_zone"]["overlay_url"])
+    assert thin_response.status_code == 200
+    assert thin_response["Content-Type"] == "image/webp"
+    assert b"".join(thin_response.streaming_content) == b"thin-overlay"
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="gallery-overlay-outsider@example.com"
+    )
+    client.force_login(outsider)
+    cross_tenant_url = reverse(
+        "portal:client-gang-sheet-asset-preview",
+        kwargs={
+            "customer_public_id": outsider_customer.public_id,
+            "sheet_public_id": sheet.public_id,
+            "asset_version_public_id": version.public_id,
+        },
+    )
+    assert client.get(f"{cross_tenant_url}?overlay=thin_zone").status_code == 404
+
+
+def test_auto_place_ready_endpoint_is_scoped_revisioned_and_idempotent(client):
+    user, customer, project = create_customer_scope(email="auto-endpoint@example.com")
+    asset, _version = attach_png_asset(customer=customer, project=project, user=user)
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Auto endpoint")
+    source = GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset,
+        added_by=user,
+        width_mm="40.00",
+        height_mm="20.00",
+        auto_placement_status=GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
+    )
+    url = reverse(
+        "portal:client-gang-sheet-auto-place-ready-sources",
+        kwargs={"customer_public_id": customer.public_id, "sheet_public_id": sheet.public_id},
+    )
+    client.force_login(user)
+
+    stale = client.post(url, {"expected_revision": sheet.revision + 1})
+    assert stale.status_code == 409
+    assert sheet.items.count() == 0
+    placed = client.post(url, {"expected_revision": sheet.revision})
+    assert placed.status_code == 200
+    assert placed.json()["created_count"] == 1
+    sheet.refresh_from_db()
+    repeated = client.post(url, {"expected_revision": sheet.revision})
+    assert repeated.status_code == 200
+    assert repeated.json()["created_count"] == 0
+    assert sheet.items.count() == 1
+    source.refresh_from_db()
+    assert source.auto_placement_status == GangSheetSourceAsset.AutoPlacementStatus.PLACED
+
+    malformed = client.post(
+        url,
+        {"expected_revision": sheet.revision, "retry_source_public_id": "not-a-uuid"},
+    )
+    assert malformed.status_code == 400
+    assert malformed.json()["error"]["code"] == "INVALID_SOURCE_ASSET_ID"
+
+    foreign_asset, _foreign_version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=user,
+        name="foreign-retry.png",
+    )
+    foreign_source = GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=GangSheetService().create_sheet(customer=customer, actor=user, name="Autre planche"),
+        asset=foreign_asset,
+        added_by=user,
+        auto_placement_status=GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE,
+    )
+    foreign = client.post(
+        url,
+        {
+            "expected_revision": sheet.revision,
+            "retry_source_public_id": foreign_source.public_id,
+        },
+    )
+    assert foreign.status_code == 400
+    assert foreign.json()["error"]["code"] == "SOURCE_ASSET_NOT_FOUND"
+
+    outsider, outsider_customer, _project = create_customer_scope(email="auto-outsider@example.com")
+    client.force_login(outsider)
+    cross_tenant = reverse(
+        "portal:client-gang-sheet-auto-place-ready-sources",
+        kwargs={
+            "customer_public_id": outsider_customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    assert client.post(cross_tenant, {"expected_revision": sheet.revision}).status_code == 404
+
+    readonly = get_user_model().objects.create_user(
+        email="auto-readonly@example.com", password="pass"
+    )
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=readonly,
+        role=CustomerMembership.Role.READONLY,
+    )
+    client.force_login(readonly)
+    assert client.post(url, {"expected_revision": sheet.revision}).status_code == 403
+
+
+def test_successful_upload_batch_reopens_results_once_and_remains_scoped(client, monkeypatch):
+    user, customer, _project = create_customer_scope(email="gallery-session@example.com")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Lot récent")
+    monkeypatch.setattr(
+        "apps.uploads.services.assets.AssetService.schedule_analysis",
+        lambda self, version: None,
+    )
+    client.force_login(user)
+    editor_url = reverse(
+        "portal:client-gang-sheet-editor",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+
+    upload_response = client.post(
+        reverse(
+            "portal:client-gang-sheet-asset-upload",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "files": SimpleUploadedFile(
+                "recent.png",
+                b"\x89PNG\r\n\x1a\n" + b"0" * 64,
+                content_type="image/png",
+            )
+        },
+    )
+    version = sheet.source_assets.get().asset.current_version
+    session_key = f"gang_sheet_upload_batch:{sheet.public_id}"
+
+    assert upload_response.status_code == 302
+    assert client.session[session_key] == {
+        "version_public_ids": [str(version.public_id)],
+        "open_results": True,
+    }
+
+    first_editor_response = client.get(editor_url)
+    first_row = first_editor_response.context["assets"][0]
+    assert first_editor_response.context["reopen_gang_sheet_import_results"] is True
+    assert first_editor_response.context["reopen_gang_sheet_import_dialog"] is True
+    assert first_editor_response.context["gang_sheet_import_batch"] == {
+        "should_open": True,
+        "version_public_ids": [str(version.public_id)],
+    }
+    assert first_row["is_recent_import"] is True
+    assert first_row["analysis_status"] == AssetVersion.AnalysisStatus.PENDING
+
+    second_editor_response = client.get(editor_url)
+    assert second_editor_response.context["reopen_gang_sheet_import_results"] is False
+    assert second_editor_response.context["reopen_gang_sheet_import_dialog"] is False
+    assert second_editor_response.context["recent_import_version_public_ids"] == [
+        str(version.public_id)
+    ]
+
+    version.analysis_status = AssetVersion.AnalysisStatus.READY
+    version.save(update_fields=["analysis_status", "updated_at"])
+    gallery_response = client.get(
+        reverse(
+            "portal:client-gang-sheet-asset-gallery",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+    assert gallery_response.context["assets"][0]["is_recent_import"] is True
+    assert gallery_response.context["assets"][0]["analysis_status"] == "ready"
+    assert session_key not in client.session
+
+
+def test_recent_upload_session_cannot_reference_another_customer_asset(client):
+    owner_a, customer_a, project_a = create_customer_scope(email="batch-a@example.com")
+    _asset_a, version_a = attach_png_asset(
+        customer=customer_a,
+        project=project_a,
+        user=owner_a,
+    )
+    owner_b, customer_b, project_b = create_customer_scope(email="batch-b@example.com")
+    _asset_b, version_b = attach_png_asset(
+        customer=customer_b,
+        project=project_b,
+        user=owner_b,
+    )
+    AssetAnalysis.objects.create(
+        customer=customer_a,
+        version=version_b,
+        warnings=["Diagnostic privé du client A"],
+        metadata={"thin_zone": {"detected": True}},
+    )
+    sheet_b = GangSheetService().create_sheet(project=project_b, actor=owner_b, name="Galerie B")
+    session_key = f"gang_sheet_upload_batch:{sheet_b.public_id}"
+    session = client.session
+    session[session_key] = {
+        "version_public_ids": [str(version_a.public_id)],
+        "open_results": True,
+    }
+    session.save()
+    client.force_login(owner_b)
+
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": customer_b.public_id,
+                "sheet_public_id": sheet_b.public_id,
+            },
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.context["reopen_gang_sheet_import_results"] is False
+    assert response.context["recent_import_version_public_ids"] == []
+    assert all(row["public_id"] != str(version_a.public_id) for row in response.context["assets"])
+    assert response.context["assets"][0]["analysis_warnings"] == []
+    assert response.context["assets"][0]["thin_zone"]["detected"] is False
+    assert session_key not in client.session
+
+
+def test_import_results_gallery_is_no_store_tenant_scoped_and_uses_session_batch(client):
+    owner, customer, project = create_customer_scope(email="results-owner@example.com")
+    _recent_asset, recent_version = attach_png_asset(
+        customer=customer,
+        project=project,
+        user=owner,
+        name="recent-only.png",
+    )
+    attach_png_asset(
+        customer=customer,
+        project=project,
+        user=owner,
+        name="older-hidden.png",
+    )
+    sheet = GangSheetService().create_sheet(project=project, actor=owner, name="Résultats privés")
+    recent_version.analysis_status = AssetVersion.AnalysisStatus.PROCESSING
+    recent_version.save(update_fields=["analysis_status", "updated_at"])
+    session_key = f"gang_sheet_upload_batch:{sheet.public_id}"
+    session = client.session
+    session[session_key] = {
+        "version_public_ids": [str(recent_version.public_id)],
+        "open_results": False,
+    }
+    session.save()
+    client.force_login(owner)
+    results_url = reverse(
+        "portal:client-gang-sheet-asset-gallery",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+
+    response = client.get(f"{results_url}?view=import-results")
+
+    assert response.status_code == 200
+    assert response["Cache-Control"] == "private, no-store"
+    assert response.context["has_pending_recent_imports"] is True
+    assert response.context["recent_import_version_public_ids"] == [str(recent_version.public_id)]
+    content = response.content.decode()
+    assert "recent-only.png" in content
+    assert "older-hidden.png" not in content
+
+    outsider, outsider_customer, _outsider_project = create_customer_scope(
+        email="results-outsider@example.com"
+    )
+    client.force_login(outsider)
+    cross_tenant_url = reverse(
+        "portal:client-gang-sheet-asset-gallery",
+        kwargs={
+            "customer_public_id": outsider_customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    assert client.get(f"{cross_tenant_url}?view=import-results").status_code == 404
 
 
 def test_owner_can_remove_an_unused_visual_from_gallery_with_htmx(client):
@@ -1287,9 +2501,9 @@ def test_used_visual_must_be_removed_from_composition_before_gallery(client):
 
     editor_content = editor_response.content.decode()
     assert editor_response.status_code == 200
-    assert ">Utilisé</span>" in editor_content
-    assert "gang-asset-card__usage-state" in editor_content
-    assert "Supprimez d’abord toutes les occurrences" in editor_content
+    assert ">1 sur la planche</span>" in editor_content
+    assert "gang-placement-state is-placed" in editor_content
+    assert "Retirer de la galerie" not in editor_content
     assert remove_response.status_code == 400
     assert GangSheetSourceAsset.objects.filter(pk=source_asset.pk).exists()
     toast = json.loads(remove_response.headers["X-Prenium-Toast"])

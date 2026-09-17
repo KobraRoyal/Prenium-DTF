@@ -1,0 +1,30 @@
+<div
+  class="gang-import-results__list"
+  data-gang-import-results-list
+  data-has-pending="{{ has_pending_recent_imports|yesno:'true,false' }}"
+  aria-live="polite"
+  aria-busy="{{ has_pending_recent_imports|yesno:'true,false' }}"
+  {% if has_pending_recent_imports %}
+    hx-get="{% url 'portal:client-gang-sheet-asset-gallery' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}?view=import-results"
+    hx-trigger="every 2s"
+    hx-target="this"
+    hx-swap="outerHTML"
+    hx-sync="this:replace"
+  {% endif %}
+>
+  {% for asset in assets %}
+    {% if asset.is_recent_import %}
+      <article class="gang-import-result" data-import-result="{{ asset.public_id }}">
+        <div class="gang-import-result__preview">
+          {% if asset.preview_url %}<img src="{{ asset.preview_url }}" alt="Aperçu de {{ asset.name }}">{% else %}<span class="gang-asset-card__pending" aria-hidden="true"></span>{% endif %}
+        </div>
+        <div class="gang-import-result__body">
+          <strong>{{ asset.name }}</strong>
+          {% include "portal/client/gang_sheets/partials/asset_analysis_summary.html" with asset=asset %}
+        </div>
+      </article>
+    {% endif %}
+  {% empty %}
+    <p class="gang-analysis-summary__message">Aucun fichier récent à contrôler.</p>
+  {% endfor %}
+</div>

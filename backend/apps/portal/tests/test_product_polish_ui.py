@@ -516,14 +516,31 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn("Suivre mon colis", shipping)
         self.assertIn('target="_blank" rel="noopener noreferrer"', shipping)
 
-    def test_studio_dialog_uses_b2b_dialog_head_instead_of_hidden_eyebrow(self) -> None:
+    def test_studio_import_is_inline_and_details_use_a_dialog(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
-        studio_entry = source(CSS_DIR / "entries/studio.css")
+        gallery = source(TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_gallery.html")
+        detail = source(
+            TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_detail_dialog.html"
+        )
 
         self.assertNotIn("product-eyebrow", editor)
-        self.assertIn('id="gang-asset-dialog-title">Importer', editor)
-        self.assertIn("b2b-dialog-head", editor)
-        self.assertIn(".gang-asset-modal-form__controls", studio_entry)
+        self.assertNotIn('id="gang-asset-dialog"', editor)
+        self.assertIn("data-gang-inline-import", editor)
+        self.assertIn("data-batch-auto-submit", editor)
+        self.assertNotIn('<details class="gang-inline-import"', editor)
+        self.assertIn("data-batch-dropzone", editor)
+        self.assertIn("data-selected-files-list", editor)
+        self.assertIn("data-batch-upload-progress", editor)
+        self.assertIn("gang_sheet_import_error", editor)
+        self.assertIn('data-dialog-open="gang-asset-detail-', gallery)
+        self.assertIn("data-asset-crop-editor", detail)
+        self.assertIn("data-existing-crop-manual", detail)
+        self.assertIn("data-existing-crop-auto", detail)
+        self.assertIn("data-analysis-overlay-toggle", detail)
+        self.assertIn("data-existing-preview-zoom-in", detail)
+        self.assertIn("gang-asset-detail__file-info", detail)
+        self.assertIn("data-existing-crop-dimensions", detail)
+        self.assertNotIn("asset_analysis_summary.html", detail)
 
     def test_marketing_entry_neutralizes_agency_defaults_on_conversion_pages(self) -> None:
         entry = source(CSS_DIR / "entries/marketing.css")

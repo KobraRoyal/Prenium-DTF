@@ -98,8 +98,26 @@ def test_javascript_module_children_keep_explicit_cache_versions() -> None:
     # a production-proven module-aware storage owns the complete dependency graph.
     app = _source("backend/static_src/js/app.js")
     assert "?v=" in app
-    assert "gang-sheet-editor.js?v=20260828-studio-groups-v23" in app
+    assert "gang-sheet-editor.js?v=20260916-source-quantity-v41" in app
     assert "?v=" in _source("backend/static_src/js/marketing.js")
+
+
+def test_existing_crop_updates_canvas_then_closes_the_modal() -> None:
+    editor = _source("backend/static_src/js/gang-sheet-editor.js")
+    crop_submit = editor[editor.index('root.addEventListener("submit", async (event) => {') :]
+
+    assert "applyExistingCropResponse(form, payload)" in editor
+    assert "dialog instanceof HTMLDialogElement && dialog.open" in editor
+    assert "dialog.close();" in editor
+    assert 'form.dataset.cropAction = "full"' in editor
+    assert "form.requestSubmit()" in editor
+    assert "window.location.reload()" not in editor
+    assert "trustedAssetPreviewSrc(item.asset_version_public_id, state.revision)" in editor
+    assert "?crop_revision=${revision}" in editor
+    assert crop_submit.index("applyExistingCropResponse(form, payload)") < crop_submit.index(
+        "await reloadState();"
+    )
+    assert crop_submit.index("await reloadState();") < crop_submit.index("dialog.close();")
 
 
 def test_css_resolves_fonts_from_static_root() -> None:

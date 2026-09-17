@@ -35,7 +35,8 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - PDF HD visible uniquement dans le panneau Production Atelier avec permission dédiée.
 - Synchronisation Google Drive privée et asynchrone dès le rendu HD, avant création de commande,
   avec arborescence dédiée, révision, SHA-256, idempotence et suivi d’échec.
-- Réglage Atelier de la laize, des marges, de l’espacement et des bornes de hauteur.
+- Réglage Atelier de la laize utile, de l’espacement et des bornes de hauteur. Le champ historique
+  de marge reste en base pour compatibilité mais n’est plus exposé ni appliqué à la géométrie.
 - Interface client harmonisée avec le portail : en-tête, cartes, boutons, typographies et palette du
   design system IDS Hub, avec progression explicite en quatre étapes.
 - Studio responsive structuré Galerie → Composition → Contrôle, métriques prioritaires, états vides
@@ -48,8 +49,15 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   pour le vectoriel et union illustration + pixels pour les documents mixtes, confirmée côté serveur.
 - Canvas physique non déformé : ratio laize/hauteur respecté même sur les planches courtes, aperçu
   clipsé dans son cadre et redimensionnement 90°/270° aligné sur les axes visibles.
-- Barre contextuelle sur le visuel sélectionné : rotation et suppression accessibles directement
-  sur le canevas ; l’inspecteur conserve duplication, dimensions, position et proportions.
+- Barre contextuelle sur le visuel sélectionné : rotation, duplication, recadrage et suppression
+  accessibles directement sur le canevas ; le recadrage synchronise la révision courante avant
+  d’ouvrir la modale d’analyse de la source, puis redessine le canvas après application. L’URL
+  d’aperçu du canvas porte la révision validée de la planche afin d’afficher immédiatement le
+  nouveau cadrage malgré le cache privé des aperçus.
+- La carte d’un visuel prêt présente sa quantité réelle sur la planche (0 à 200). La saisie
+  ajuste atomiquement les occurrences après sauvegarde du brouillon : les nouveaux exemplaires
+  sont placés dans l’espace libre sans déplacer les existants, une réduction préserve les groupes,
+  et un manque de place ou une révision obsolète n’applique aucune modification partielle.
 - Panneau d’espacement simplifié sans création de grille : réglages X/Y indépendants, accessibles
   sans sélection, puis application explicite avec réorganisation automatique de la planche.
 - Crop HD adapté aux sources raster, vectorielles et mixtes : pixels natifs sans rééchantillonnage,
@@ -120,11 +128,13 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - [x] Tests de crop : manifeste multi-fichiers, bornes serveur, isolation client, dimensions utiles,
   pixels natifs raster et conservation des commandes vectorielles/mixes dans le PDF HD.
 - [x] Tests de crop Auto : transparence PNG, fond opaque JPEG, objets PDF vectoriels, union PDF mixte,
+- [x] Recadrage post-import opérationnel : cadre initialisé après HTMX, tracé direct sur l’image réelle et MIME restauré pour l’auto-crop des fichiers privés.
   recalcul serveur autoritaire et contrat UI Manuel/Auto.
 - [x] Test de non-régression canvas : absence de hauteur minimale déformante, calque d’aperçu clipsé
   et inversion des axes lors du redimensionnement d’une occurrence tournée.
-- [x] Test UX des actions contextuelles : rotation et suppression accessibles sur le canevas,
-  panneau X/Y sans répétition, application serveur et comportement responsive.
+- [x] Test UX des actions contextuelles : rotation, duplication, recadrage et suppression accessibles
+  sur le canevas, duplication révisionnée sous verrou, panneau X/Y sans répétition, application
+  serveur et comportement responsive.
 - [x] Multi-sélection avec Maj/Ctrl/Cmd, déplacement groupé et six alignements selon deux
   référentiels explicites : cadre global de la sélection ou zone utile de la planche.
 - [x] Historique Annuler/Rétablir, aimantation et guides, cadre de sélection, multi-tap tactile,
@@ -153,9 +163,19 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   que les outils zoom et historique.
 - [x] Import + recadrage : plus d’alerte « Quitter le site » ; la composition est enregistrée
   avant le POST du formulaire.
+- [x] Import direct depuis la zone de dépôt, analyse asynchrone dans la galerie compacte,
+  détail technique par fichier et recadrage post-import synchronisé avec les occurrences placées.
+- [x] Zone de dépôt toujours visible et modale fichier alignée sur la commande : overlays, zoom,
+  fonds de contrôle, recadrage manuel/automatique et conservation de l’original.
+- [x] Actions de recadrage post-import maintenues dans la modale : l’auto-crop, le cadrage manuel
+  et le rétablissement de l’original enregistrent immédiatement le résultat, synchronisent la
+  révision et les dimensions sans rechargement, puis ferment la modale après le rafraîchissement
+  du canvas ; en cas d’erreur, la modale reste ouverte avec le motif et les anomalies dupliquées
+  restent retirées du résumé.
 - [x] Aligner / répartir : un groupe mémorisé se comporte comme un seul objet (écarts internes
   conservés, visuels isolés inchangés).
-- [x] Inspecteur Réglages : un langage de champs / titres / actions ; bouton « Placer sur la planche » pleine largeur.
+- [x] Inspecteur Réglages : un langage de champs / titres / actions ; les nouveaux imports sont
+  placés automatiquement après analyse sans réorganiser la composition.
 - [x] Recette du sélecteur direct Gang Sheet et Order Project : annulation sans modale, sélection puis
   aperçu automatique, import galerie et modale plein écran sans overflow à 375 px.
 - [x] Tests de suppression : composition et rendus supprimés, sources conservées, statuts liés,
@@ -176,6 +196,69 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - [ ] Test RIP/Atelier du PDF HD sur la machine de production cible.
 
 ## Hypothèses
+
+### Stabilisation issue de l’audit Studio — septembre 2026
+
+Branche : `codex/gang-sheet-audit-fixes`.
+
+- [x] Conflit de révision : aucun renvoi silencieux du brouillon obsolète ; récupération explicite.
+- [x] Reprise du suivi du rendu après une erreur réseau, sans double lancement.
+- [x] Dimensions vides, nulles ou non finies refusées avant mutation locale.
+- [x] Panneaux mobiles inactifs réellement masqués ; propriétés accessibles sans recouvrement.
+- [x] Préflight distinguant géométrie, avertissements source et résolution à taille finale.
+- [x] Proportions libres expliquées et restauration du ratio source disponible.
+- [x] Tests de comportement JavaScript, services, permissions et rendu hybride sans régression.
+- [x] Relecture sécurité indépendante et recette navigateur desktop/mobile.
+- [x] Laize interprétée comme zone imprimable complète : origine `0,0` et contact exact des bords
+  valides ; seuls les dépassements réels sont signalés et bloquent le rendu.
+- [x] Duplication positionnée sans chevauchement, avec refus atomique si aucun espace utile n’est libre.
+- [x] Groupes protégés : redimensionnement individuel et auto-placement refusés avant dissociation.
+- [x] API layout durcie : révision entière obligatoire et payload JSON mal structuré refusé sans erreur 500.
+- [x] Recadrage des PDF avec rotation interne 90°/270° identique entre aperçu et PDF HD.
+- [x] Tests de non-régression dédiés aux limites utiles sur les quatre rotations, groupes,
+  duplication, concurrence et repère PDF tourné.
+- [x] Import multi-fichiers enrichi : dropzone accessible, progression, analyse asynchrone par
+  fichier, anomalies et overlays médiés, reprise des erreurs et résultats récents en modale.
+- [x] Import et galerie adaptés à leur largeur réelle : dropzone compact sans colonne écrasée,
+  noms longs repliés sans défilement horizontal, contrôles uniques accessibles et actions tactiles
+  de 44 px sur les cartes ; style partagé avec la commande par fichier et limite réelle de cinq
+  fichiers par lot.
+- [x] Galerie alignée sur la commande par fichier : badges « 300 DPI », « Zones < 0,5 mm » et
+  « Pas de dégradé » / « Dégradés détectés », action « Contrôler le visuel » et aucune
+  couleur de support.
+- [x] Placement initial automatique par POST révisionné et idempotent : verrouillage planche/source,
+  contrôle tenant et version courante, respect des groupes et des coordonnées existantes, rotation
+  0°/90° au premier emplacement libre et reprise explicite en cas de manque de place. Les sources
+  historiques restent en placement manuel ; seuls les nouveaux imports demandent ce placement.
+- [x] Recadrage manuel, automatique et retour à l’original conservés après placement ; les
+  occurrences sont redimensionnées atomiquement et toute collision ou sortie de laize annule
+  l’opération.
+
+Les espacements d’auto-imposition restent des préférences, pas de nouveaux minimums de coupe.
+Les avertissements de source ne sont pas assimilés automatiquement à un refus de fabrication.
+Le contrôle qualité du PDF et du support au checkout ainsi que la validation RIP atelier restent
+distincts du contrôle de composition du Studio. Aucun nouveau profil ICC ni traitement de blanc
+n’est introduit dans ce lot.
+
+Validation du lot : 1 274 tests Python réussis dans Docker ; quatre ignorés, dont les deux
+harness Node exécutés séparément avec succès sur l’hôte. Les deux autres dépendent d’une
+table legacy absente et de verrous PostgreSQL (suite utilisant SQLite). Ruff, contrôle Django,
+absence de migration, build des assets et relecture sécurité indépendants conformes.
+Recette réelle : 390 × 844 et 1280 × 720, canevas inactif de hauteur nulle, défilement de
+l’inspecteur sans superposition, acceptation qualité activant/désactivant la confirmation,
+saisie vide restaurée et console sans erreur. Aucune planche client confirmée pendant la recette.
+
+Préflight : pixels natifs après crop pour PNG/JPEG/TIFF ; aucun DPI global inventé pour les
+PDF mixtes ou formats réencodés. Les avertissements sont regroupés à l’écran, acceptés
+explicitement sur une empreinte de composition courante, puis audités sans messages libres.
+Les informations d’absence de DPI vectoriel restent informatives. Les choix d’espacement
+et de déformation volontaire restent disponibles, avec restauration des proportions source.
+
+Pre-commit est conforme sur les fichiers du lot. Son passage global a également révélé des
+écarts historiques de fins de fichiers/espaces hors périmètre ; ses retouches automatiques
+sur ces fichiers ont été annulées. Le détecteur UI signale le damier de travail et une image
+d’aperçu initialement sans source : ces éléments sont intentionnels (canevas et aperçu chargé
+dynamiquement), pas des défauts visuels observés. Graphe AST actualisé sans appel LLM.
 
 - Le PDF HD est le format intermédiaire de production accepté pour ce lot. La validation RIP réelle
   reste nécessaire avant de déclarer un format TIFF/PNG géant comme alternative.

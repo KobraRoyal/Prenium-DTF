@@ -12,6 +12,8 @@
   data-state-url="{% url 'portal:client-gang-sheet-state' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-layout-url="{% url 'portal:client-gang-sheet-layout' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-add-url="{% url 'portal:client-gang-sheet-item-add' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+  data-auto-place-ready-url="{% url 'portal:client-gang-sheet-auto-place-ready-sources' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+  data-asset-gallery-url="{% url 'portal:client-gang-sheet-asset-gallery' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-batch-delete-url="{% url 'portal:client-gang-sheet-items-delete-batch' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-action-url-template="{% url 'portal:client-gang-sheet-workflow-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id action='ACTION' %}"
   data-item-url-template="{% url 'portal:client-gang-sheet-item-action' customer_public_id=customer.public_id sheet_public_id=sheet.public_id item_public_id='00000000-0000-0000-0000-000000000000' action='ACTION' %}"
@@ -76,108 +78,6 @@
       </div>
     </div>
   </div>
-
-  <dialog class="b2b-configurator-dialog gang-asset-dialog" id="gang-asset-dialog" aria-labelledby="gang-asset-dialog-title">
-    <div class="b2b-dialog-shell">
-      <header class="b2b-dialog-head">
-        <div class="b2b-dialog-head__copy">
-          <h2 id="gang-asset-dialog-title">Importer</h2>
-        </div>
-        <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer">×</button>
-      </header>
-      <div class="b2b-dialog-body">
-        <form
-          method="post"
-          enctype="multipart/form-data"
-          action="{% url 'portal:client-gang-sheet-asset-upload' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
-          class="gang-asset-modal-form"
-          data-submit-loading
-        >
-          {% csrf_token %}
-          <div class="b2b-configurator__workspace" data-b2b-configurator data-recommended-dpi="{{ b2b_recommended_dpi }}" data-min-acceptable-dpi="{{ b2b_min_acceptable_dpi }}">
-            <div class="b2b-configurator__preview">
-              <div class="b2b-preview-stage is-checker" data-configurator-stage>
-                <div class="b2b-preview-bounds" data-configurator-bounds hidden>
-          <!-- impeccable-disable-next-line broken-image: le JS assigne src avant de retirer hidden. -->
-          <img class="b2b-preview-image" alt="Aperçu du fichier sélectionné" data-configurator-preview hidden>
-                  <div class="gang-crop-box" data-gang-crop-box tabindex="0" role="group" aria-label="Zone de recadrage" hidden>
-                    <span data-crop-handle="nw" aria-hidden="true"></span><span data-crop-handle="ne" aria-hidden="true"></span>
-                    <span data-crop-handle="se" aria-hidden="true"></span><span data-crop-handle="sw" aria-hidden="true"></span>
-                  </div>
-                </div>
-                <div class="b2b-preview-bounds" data-configurator-bounds hidden>
-                  <canvas class="b2b-preview-document" role="img" aria-label="Aperçu du PDF sélectionné" data-configurator-document-preview hidden></canvas>
-                  <div class="gang-crop-box" data-gang-crop-box tabindex="0" role="group" aria-label="Zone de recadrage" hidden>
-                    <span data-crop-handle="nw" aria-hidden="true"></span><span data-crop-handle="ne" aria-hidden="true"></span>
-                    <span data-crop-handle="se" aria-hidden="true"></span><span data-crop-handle="sw" aria-hidden="true"></span>
-                  </div>
-                </div>
-                <div class="b2b-preview-placeholder" data-configurator-placeholder><strong>Aucun fichier</strong><span>L’aperçu s’affiche ici.</span></div>
-              </div>
-              <div class="b2b-background-tools" aria-label="Fond de l’aperçu">
-                <button type="button" class="b2b-swatch-btn b2b-swatch-btn--checker b2b-bg-button is-active" data-configurator-bg="checker" aria-label="Damier" aria-pressed="true" title="Damier"></button>
-                <button type="button" class="b2b-swatch-btn b2b-swatch-btn--white b2b-bg-button is-white" data-configurator-bg="#ffffff" aria-label="Blanc" aria-pressed="false" title="Blanc"></button>
-                <button type="button" class="b2b-swatch-btn b2b-swatch-btn--black b2b-bg-button is-black" data-configurator-bg="#111111" aria-label="Noir" aria-pressed="false" title="Noir"></button>
-              </div>
-            </div>
-            <div class="b2b-configurator__controls gang-asset-modal-form__controls">
-              <div class="ui-field-group">
-                <label class="ui-label" for="id-gang-asset-files">Fichier(s)</label>
-                <input
-                  class="ui-input product-file-input w-full"
-                  id="id-gang-asset-files"
-                  type="file"
-                  name="files"
-                  multiple
-                  accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff,.psd,.ai,.eps"
-                  data-configurator-file
-                  data-max-file-bytes="{{ gang_sheet_upload_max_bytes }}"
-                  data-max-files="{{ gang_sheet_upload_max_files }}"
-                  data-max-total-bytes="{{ gang_sheet_upload_max_total_bytes }}"
-                  aria-describedby="gang-asset-files-help gang-asset-files-error"
-                  {% if not can_edit %}disabled{% endif %}
-                  required
-                >
-              </div>
-              <p class="ui-field-help" id="gang-asset-files-help">
-                PNG, JPG, TIFF, PDF, EPS, PSD · {{ gang_sheet_upload_max_size_label }}/fichier · {{ gang_sheet_upload_max_files }} fichiers / {{ gang_sheet_upload_max_total_size_label }} max.
-              </p>
-              <p class="ui-error-text" id="gang-asset-files-error" data-configurator-file-error role="alert" hidden></p>
-              <div class="gang-asset-modal-form__params" data-configurator-params hidden>
-                <input type="hidden" name="crop_manifest" value="[]" data-crop-manifest>
-                <p class="gang-asset-modal-form__selection" data-selected-files-summary aria-live="polite">Aucun fichier sélectionné.</p>
-                <p class="b2b-configurator__file-meta"><span data-configurator-pixels>—</span></p>
-                {% include "portal/client/partials/b2b_configurator_preflight.html" %}
-                <section class="gang-crop-controls" data-gang-crop-controls aria-labelledby="gang-crop-title">
-                  <div class="gang-crop-controls__head">
-                    <div><strong id="gang-crop-title">Recadrage</strong><span data-crop-status>Visuel complet</span></div>
-                    <div class="gang-crop-controls__nav" data-crop-file-nav hidden>
-                      <button type="button" data-crop-file-previous aria-label="Fichier précédent">‹</button>
-                      <span data-crop-file-label></span>
-                      <button type="button" data-crop-file-next aria-label="Fichier suivant">›</button>
-                    </div>
-                  </div>
-                  <div class="gang-crop-mode" role="group" aria-label="Mode de recadrage">
-                    <button type="button" class="is-active" data-crop-manual aria-pressed="true" disabled><strong>Manuel</strong><span>Cadre libre</span></button>
-                    <button type="button" data-crop-auto aria-pressed="false" disabled><strong>Auto</strong><span>Contenu détecté</span></button>
-                  </div>
-                  <div class="gang-crop-controls__actions">
-                    <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" data-crop-reset disabled>Tout conserver</button>
-                  </div>
-                  <p class="ui-sr-only" data-crop-help>Manuel pour cadrer librement, Auto pour détecter le contenu.</p>
-                </section>
-                <div class="b2b-dialog-actions">
-                  <button class="ui-btn ui-btn-secondary" type="button" data-dialog-close>Annuler</button>
-                  <button class="ui-btn ui-btn-primary" type="submit" data-configurator-submit {% if not can_edit %}disabled{% endif %}>Importer et analyser</button>
-                </div>
-              </div>
-              <p class="ui-field-help" data-configurator-hint>Choisissez un fichier pour continuer.</p>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  </dialog>
 
   <nav class="gang-editor__mobile-tabs ui-selection-rail ui-selection-rail--horizontal" role="tablist" aria-label="Sections du studio">
     <button id="gang-editor-tab-assets" type="button" class="ui-selection-control" role="tab" tabindex="-1" data-mobile-panel-tab="assets" aria-controls="gang-editor-assets" aria-selected="false">
@@ -274,17 +174,43 @@
         <span class="gang-editor__panel-label-icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="files" size="16" %}</span>
         <div><strong>Fichiers</strong></div>
       </div>
-      <div class="gang-editor__panel-head">
-        <h2>Fichiers</h2>
-      </div>
-      <div class="gang-asset-launcher">
-        <span class="gang-asset-dropzone__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="upload" size="22" %}</span>
-        <div><strong>Importer des visuels</strong></div>
-        <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" data-file-picker-dialog="gang-asset-dialog" aria-controls="gang-asset-dialog" aria-haspopup="dialog" {% if not can_edit %}disabled{% endif %}>
-          {% include "portal/client/gang_sheets/partials/icon.html" with name="plus" size="16" %}
-          Ajouter des fichiers
-        </button>
-      </div>
+      <section class="gang-inline-import" data-gang-inline-import aria-label="Ajouter des visuels">
+        <form
+          method="post"
+          enctype="multipart/form-data"
+          action="{% url 'portal:client-gang-sheet-asset-upload' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+          class="gang-inline-import__form gang-asset-upload-form"
+          data-batch-upload
+          data-batch-auto-submit
+        >
+          {% csrf_token %}
+          {% if gang_sheet_import_error %}
+          <div class="gang-import-error" role="alert">
+            <strong>Import non terminé</strong>
+            <p>{{ gang_sheet_import_error }}</p>
+          </div>
+          {% endif %}
+          <div class="b2b-batch-dropzone gang-import-dropzone" data-batch-dropzone role="group" aria-label="Dépôt de visuels" aria-controls="id-gang-asset-files" aria-describedby="gang-asset-files-help gang-asset-files-summary gang-asset-files-error">
+            <input class="ui-sr-only" id="id-gang-asset-files" type="file" name="files" multiple accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff,.psd,.ai,.eps" data-batch-file-input data-max-file-bytes="{{ gang_sheet_upload_max_bytes }}" data-max-files="{{ gang_sheet_upload_max_files }}" data-max-total-bytes="{{ gang_sheet_upload_max_total_bytes }}" aria-label="Fichiers à analyser" aria-describedby="gang-asset-files-help gang-asset-files-error" tabindex="-1" {% if not can_edit %}disabled{% endif %} required>
+            <span class="b2b-batch-dropzone__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="upload" size="24" %}</span>
+            <span class="b2b-batch-dropzone__copy"><strong>Déposez vos fichiers ici</strong><span>ou sélectionnez-les depuis votre appareil</span></span>
+            <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-batch-picker {% if not can_edit %}disabled{% endif %}>Choisir les fichiers</button>
+          </div>
+          <p class="ui-field-help gang-inline-import__rules" id="gang-asset-files-help">PNG, JPG, PDF, PSD, TIFF, EPS ou AI · {{ gang_sheet_upload_max_files }} fichiers maximum · {{ gang_sheet_upload_max_size_label }} par fichier.</p>
+          <p class="ui-error-text" id="gang-asset-files-error" data-configurator-file-error role="alert" hidden></p>
+          <div class="gang-inline-import__selection" aria-live="polite" aria-atomic="true">
+            <p id="gang-asset-files-summary" data-selected-files-summary>Aucun fichier sélectionné.</p>
+            <ul data-selected-files-list hidden></ul>
+          </div>
+          <p class="gang-inline-import__progress" data-batch-upload-progress role="status" aria-live="polite" hidden><i aria-hidden="true"></i> Envoi sécurisé et analyse en cours…</p>
+        </form>
+      </section>
+      {% if gang_sheet_import_batch.version_public_ids %}
+      <section class="gang-recent-import" aria-labelledby="gang-recent-import-title">
+        <strong id="gang-recent-import-title">Dernier import</strong>
+        <span>Les résultats apparaissent dans la liste ci-dessous.</span>
+      </section>
+      {% endif %}
       <label class="gang-asset-search">
         <span class="sr-only">Rechercher un visuel</span>
         <span class="gang-asset-search__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="search" size="16" %}</span>
@@ -413,6 +339,9 @@
             {% include "portal/client/gang_sheets/partials/icon.html" with name="lock" size="14" %}
             Conserver les proportions
           </label>
+          <p class="ui-field-help" data-ratio-warning hidden>Proportions libres : modifier une dimension peut étirer le visuel à l’impression.</p>
+          <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm" data-restore-ratio hidden>Restaurer les proportions du fichier</button>
+          <p class="ui-field-help" data-item-quality aria-live="polite"></p>
         </div>
         <div class="gang-inspector-section">
           <h3 class="gang-inspector-section__title">Position</h3>
@@ -596,6 +525,17 @@
           <p class="ui-field-help" data-validation-lead>Prépare le rendu HD atelier, puis confirme la composition.</p>
         </div>
         <ul data-issues-list><li class="is-ok">Aucune anomalie de placement.</li></ul>
+        <div data-preflight-panel>
+          <h3 class="gang-inspector-section__title">Qualité des fichiers</h3>
+          <p class="ui-field-help" data-preflight-summary>Contrôle à la taille d’impression.</p>
+          <ul data-preflight-issues></ul>
+          <label class="gang-ratio-lock" data-preflight-ack-field hidden>
+            <input type="checkbox" data-preflight-ack>
+            J’ai vérifié les avertissements et je confirme ces choix d’impression.
+          </label>
+          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-refresh-preflight hidden>Enregistrer et contrôler</button>
+          <p class="ui-field-help">Les espacements d’auto-imposition sont des préférences de placement. Le contrôle qualité du PDF et du support reste requis à la commande.</p>
+        </div>
         <div class="gang-validation-actions">
           <div class="ui-field-group gang-sheet-quantity" data-sheet-quantity-field hidden>
             <label class="ui-label" for="id-sheet-quantity">Exemplaires de planche</label>
