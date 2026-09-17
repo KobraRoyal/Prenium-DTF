@@ -172,10 +172,10 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertNotIn('data-batch-dropzone role="group" tabindex="0"', editor)
         self.assertIn("Aucun fichier sélectionné.", editor)
         self.assertIn("<span>Quantité</span>", gallery)
-        self.assertIn("sur la planche\" aria-describedby=", gallery)
-        self.assertIn('data-asset-quantity data-quantity-url=', gallery)
+        self.assertIn('sur la planche" aria-describedby=', gallery)
+        self.assertIn("data-asset-quantity data-quantity-url=", gallery)
         self.assertIn('min="0" max="200" step="1"', gallery)
-        self.assertIn('data-asset-placement-count', gallery)
+        self.assertIn("data-asset-placement-count", gallery)
         self.assertNotIn("gang-asset-card__manual-place", gallery)
         empty_state = gallery.split("{% empty %}", 1)[1]
         self.assertNotIn("<button", empty_state.split("{% endfor %}", 1)[0])

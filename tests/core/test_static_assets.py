@@ -104,7 +104,7 @@ def test_javascript_module_children_keep_explicit_cache_versions() -> None:
 
 def test_existing_crop_updates_canvas_then_closes_the_modal() -> None:
     editor = _source("backend/static_src/js/gang-sheet-editor.js")
-    crop_submit = editor[editor.index('root.addEventListener("submit", async (event) => {'):]
+    crop_submit = editor[editor.index('root.addEventListener("submit", async (event) => {') :]
 
     assert "applyExistingCropResponse(form, payload)" in editor
     assert "dialog instanceof HTMLDialogElement && dialog.open" in editor
