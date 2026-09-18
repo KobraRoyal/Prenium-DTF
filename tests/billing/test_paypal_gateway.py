@@ -3,6 +3,7 @@ import json
 import pytest
 from apps.billing import views as billing_views
 from apps.billing.models import Invoice, Payment
+from apps.billing.services.gateways import PaymentGatewayError
 from apps.billing.services.payments import PaymentService
 from apps.billing.services.paypal import PayPalAPIError, PayPalGateway
 from django.test import override_settings
@@ -64,7 +65,7 @@ def test_paypal_create_order_sends_request_id(monkeypatch):
         return {
             "id": "ORDER-REQ",
             "status": "CREATED",
-            "links": [{"rel": "approve", "href": "https://paypal.test/approve"}],
+            "links": [{"rel": "approve", "href": "https://www.sandbox.paypal.com/approve"}],
         }
 
     class DummyOrder:
@@ -80,6 +81,28 @@ def test_paypal_create_order_sends_request_id(monkeypatch):
     result = gateway.create_order(order=DummyOrder(), request_id="pay-123")
     assert result.paypal_order_id == "ORDER-REQ"
     assert captured["extra_headers"] == {"PayPal-Request-Id": "pay-123"}
+
+
+@override_settings(PAYPAL_CLIENT_ID="paypal-id", PAYPAL_CLIENT_SECRET="paypal-secret")
+def test_paypal_rejects_untrusted_approval_url(monkeypatch):
+    gateway = PayPalGateway()
+    monkeypatch.setattr(gateway, "_get_access_token", lambda: "tok")
+    monkeypatch.setattr(
+        gateway,
+        "_request_json",
+        lambda **_kwargs: {
+            "id": "ORDER-UNTRUSTED",
+            "status": "CREATED",
+            "links": [{"rel": "approve", "href": "https://www.paypal.com.evil.test/approve"}],
+        },
+    )
+    order = type(
+        "Order",
+        (),
+        {"public_id": "id", "short_ref": "REF", "total_amount": "1", "currency": "EUR"},
+    )()
+    with pytest.raises(PaymentGatewayError, match="URL de paiement PayPal invalide"):
+        gateway.create_order(order=order)
 
 
 @pytest.mark.django_db

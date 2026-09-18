@@ -11,7 +11,7 @@ from apps.b2b_order_projects.services import (
     B2BOrderProjectService,
     ProjectDomainError,
 )
-from apps.billing.models import Payment
+from apps.billing.models import Payment, PaymentGatewaySettings
 from apps.billing.services.production_payment_gate import (
     order_awaits_client_payment,
     requires_captured_payment_before_production,
@@ -437,8 +437,18 @@ def test_studio_checkout_payment_source_fits_payment_field():
 
 
 @pytest.mark.django_db
-@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+@override_settings(
+    B2B_DTF_ORDER_PROJECT_ENABLED=True,
+    GOOGLE_DRIVE_SYNC_ENABLED=False,
+    PAYPAL_CLIENT_ID="",
+    PAYPAL_CLIENT_SECRET="",
+    PAYPAL_WEBHOOK_ID="",
+    STRIPE_PUBLISHABLE_KEY="",
+    STRIPE_SECRET_KEY="",
+    STRIPE_WEBHOOK_SECRET="",
+)
 def test_studio_checkout_creates_priced_order_without_project_hop():
+    PaymentGatewaySettings.objects.all().delete()
     _seed_catalog()
     user = get_user_model().objects.create_user(email="studio-pay@example.com", password="pass")
     customer = Customer.objects.create(
@@ -490,11 +500,15 @@ def test_studio_checkout_creates_priced_order_without_project_hop():
     order = sheet.order
     assert order.billing_mode == Order.BillingMode.IMMEDIATE
     assert order.pricing_status == Order.PricingStatus.PRICED
-    assert (
-        str(order.public_id) in location
-        or "paypal.com" in location
-        or "stripe.com" in location
-        or "checkout.stripe.com" in location
+    assert location == (
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+        + "?panel=billing&checkout=success&pay=1"
     )
     upload = order.uploads.get()
     assert upload.quantity == 2

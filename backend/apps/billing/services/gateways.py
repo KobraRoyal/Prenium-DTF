@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol
+from urllib.parse import urlsplit
 
 from django.core.exceptions import ValidationError
 
@@ -34,6 +35,26 @@ class PaymentGatewayError(Exception):
 
 class PaymentGatewayConfigurationError(PaymentGatewayError):
     pass
+
+
+def validate_provider_checkout_url(*, url: str, provider: str, allowed_hosts: set[str]) -> str:
+    """Accept only the HTTPS checkout origin owned by the selected provider."""
+    cleaned = str(url or "").strip()
+    parsed = urlsplit(cleaned)
+    hostname = (parsed.hostname or "").lower().rstrip(".")
+    try:
+        port = parsed.port
+    except ValueError:
+        port = -1
+    if (
+        parsed.scheme != "https"
+        or hostname not in allowed_hosts
+        or port not in {None, 443}
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        raise PaymentGatewayError(f"URL de paiement {provider} invalide.")
+    return cleaned
 
 
 class PaymentGateway(Protocol):

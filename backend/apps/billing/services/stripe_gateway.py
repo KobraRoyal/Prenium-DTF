@@ -15,6 +15,7 @@ from apps.billing.services.gateways import (
     CheckoutCreateResult,
     PaymentGatewayConfigurationError,
     PaymentGatewayError,
+    validate_provider_checkout_url,
 )
 from apps.orders.models import Order
 
@@ -78,7 +79,11 @@ class StripeGateway:
         return CheckoutCreateResult(
             provider_payment_id=str(payload.get("id", "")).strip(),
             status=str(payload.get("status", "")).strip() or "open",
-            checkout_url=str(payload.get("url", "")).strip(),
+            checkout_url=validate_provider_checkout_url(
+                url=str(payload.get("url", "")).strip(),
+                provider="Stripe",
+                allowed_hosts={"checkout.stripe.com"},
+            ),
             payload=payload,
             provider_capture_id=str(payload.get("payment_intent") or "").strip(),
         )

@@ -354,7 +354,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("order_status_banner", detail)
         self.assertIn("client-order-detail-banner", detail)
         self.assertIn(
-            'class="ui-btn ui-btn-secondary ui-btn-sm" href="?panel=billing&amp;pay=1#client-billing-pay"',
+            (
+                'class="ui-btn ui-btn-secondary ui-btn-sm" '
+                'href="?panel=billing&amp;pay=1#client-billing-pay"'
+            ),
             detail,
         )
         self.assertNotIn('class="link font-medium"', detail)

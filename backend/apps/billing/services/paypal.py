@@ -13,6 +13,7 @@ from apps.billing.services.gateways import (
     CheckoutCreateResult,
     PaymentGatewayConfigurationError,
     PaymentGatewayError,
+    validate_provider_checkout_url,
 )
 from apps.orders.models import Order
 
@@ -137,7 +138,11 @@ class PayPalGateway:
         return PayPalCreateOrderResult(
             paypal_order_id=str(response_payload.get("id", "")).strip(),
             status=str(response_payload.get("status", "")).strip(),
-            approval_url=approval_url,
+            approval_url=validate_provider_checkout_url(
+                url=approval_url,
+                provider="PayPal",
+                allowed_hosts={"www.paypal.com", "www.sandbox.paypal.com"},
+            ),
             payload=response_payload,
         )
 

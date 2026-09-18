@@ -88,7 +88,12 @@ class PaymentGatewaySettingsService:
     view_permission = VIEW_PERMISSION
 
     def __init__(self, crypto: PaymentSecretCrypto | None = None) -> None:
-        self.crypto = crypto or PaymentSecretCrypto()
+        self._crypto = crypto
+
+    @property
+    def crypto(self) -> PaymentSecretCrypto:
+        """Resolve settings at use time so Django setting overrides remain effective."""
+        return self._crypto or PaymentSecretCrypto()
 
     def current_settings(self) -> PaymentGatewaySettings | None:
         return PaymentGatewaySettings.objects.filter(singleton_key=1).first()
@@ -166,8 +171,7 @@ class PaymentGatewaySettingsService:
         urls = self.webhook_urls()
         row = self.current_settings()
         has_paypal_secret = bool(
-            config.paypal_client_secret
-            or (row and row.paypal_client_secret_encrypted)
+            config.paypal_client_secret or (row and row.paypal_client_secret_encrypted)
         )
         has_stripe_secret = bool(
             config.stripe_secret_key or (row and row.stripe_secret_key_encrypted)
@@ -228,9 +232,7 @@ class PaymentGatewaySettingsService:
             else ""
         )
         stored_stripe_secret = (
-            self.crypto.decrypt_or_empty(existing.stripe_secret_key_encrypted)
-            if existing
-            else ""
+            self.crypto.decrypt_or_empty(existing.stripe_secret_key_encrypted) if existing else ""
         )
         paypal_ready = bool(
             (paypal_id or env_paypal_id)
@@ -238,13 +240,9 @@ class PaymentGatewaySettingsService:
         )
         stripe_ready = bool(stripe_secret or stored_stripe_secret or env_stripe_secret)
         if paypal_enabled and not paypal_ready:
-            raise ValidationError(
-                {"paypal_client_secret": "Connectez PayPal avant de l’activer."}
-            )
+            raise ValidationError({"paypal_client_secret": "Connectez PayPal avant de l’activer."})
         if stripe_enabled and not stripe_ready:
-            raise ValidationError(
-                {"stripe_secret_key": "Connectez Stripe avant de l’activer."}
-            )
+            raise ValidationError({"stripe_secret_key": "Connectez Stripe avant de l’activer."})
 
         with transaction.atomic():
             row, _created = PaymentGatewaySettings.objects.select_for_update().get_or_create(
