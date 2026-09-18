@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Exists, OuterRef, Q, QuerySet
 
+from apps.billing.models import Payment
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
+from apps.production.services.workflow import production_ready_orders_queryset
 from apps.uploads.models import OrderUpload, OrderUploadReview
 
 
@@ -11,12 +14,15 @@ class StaffOrderListFilterService:
     """Filtres opérationnels de la liste staff /staff/orders/."""
 
     default_queue = ""
+    administrative_queues = frozenset({"to_price", "awaiting_payment"})
     queue_definitions = (
         ("", "Toutes"),
         ("unprinted", "OF non imprimés"),
         ("to_review", "À contrôler"),
         ("changes", "Corrections"),
         ("approved", "Fichiers validés"),
+        ("to_price", "À tarifer"),
+        ("awaiting_payment", "En attente de paiement"),
     )
     status_definitions = (
         ("", "Tous statuts"),
@@ -52,6 +58,7 @@ class StaffOrderListFilterService:
                 "is_active": key == active_queue,
             }
             for key, label in self.queue_definitions
+            if key in counts
         ]
 
     def build_status_tabs(
@@ -67,31 +74,71 @@ class StaffOrderListFilterService:
             for key, label in self.status_definitions
         ]
 
-    def count_by_queue(self, queryset: QuerySet) -> dict[str, int]:
-        base = queryset.exclude(status=Order.Status.CANCELLED)
+    def build_visible_status_tabs(
+        self, *, active_queue: str, active_status: str, counts: dict[str, int]
+    ) -> list[dict[str, object]]:
+        if active_queue in self.administrative_queues:
+            return []
+        return self.build_status_tabs(active_status=active_status, counts=counts)
+
+    def count_by_queue(self, queryset: QuerySet, *, can_price: bool = False) -> dict[str, int]:
+        base = production_ready_orders_queryset(queryset.exclude(status=Order.Status.CANCELLED))
         unissued = self._unissued_queryset_from(base)
         issued = self._issued_queryset_from(base)
-        return {
+        counts = {
             "": base.count(),
             "unprinted": unissued.count(),
             "to_review": self._filter_to_review(issued).count(),
             "changes": self._filter_changes(issued).count(),
             "approved": self._filter_approved(issued).count(),
         }
+        if can_price:
+            administrative = self._unpaid_immediate_queryset(queryset)
+            counts["to_price"] = administrative.exclude(
+                pricing_status=Order.PricingStatus.PRICED
+            ).count()
+            counts["awaiting_payment"] = administrative.filter(
+                pricing_status=Order.PricingStatus.PRICED
+            ).count()
+        return counts
 
     def count_by_status(self, queryset: QuerySet) -> dict[str, int]:
-        base = queryset.exclude(status=Order.Status.CANCELLED)
+        production_base = production_ready_orders_queryset(
+            queryset.exclude(status=Order.Status.CANCELLED)
+        )
         return {
-            "": base.count(),
+            "": production_base.count(),
             **{
-                status: base.filter(production_job__status=status).count()
+                status: production_base.filter(production_job__status=status).count()
                 for status, _label in self.status_definitions
                 if status
             },
         }
 
-    def apply_filter(self, queryset: QuerySet, *, queue: str) -> QuerySet:
+    def filter_list(
+        self,
+        queryset: QuerySet,
+        *,
+        queue: str,
+        status: str,
+        query: str,
+        can_price: bool,
+    ) -> QuerySet:
+        filtered = self.apply_filter(queryset, queue=queue, can_price=can_price)
+        if queue not in self.administrative_queues:
+            filtered = self.apply_status_filter(filtered, status=status)
+        return self.apply_search(filtered, query=query, queue=queue, can_price=can_price)
+
+    def apply_filter(self, queryset: QuerySet, *, queue: str, can_price: bool = False) -> QuerySet:
         normalized = self.normalize_queue(queue)
+        if normalized in self.administrative_queues:
+            if not can_price:
+                raise PermissionDenied
+            administrative = self._unpaid_immediate_queryset(queryset)
+            if normalized == "to_price":
+                return administrative.exclude(pricing_status=Order.PricingStatus.PRICED)
+            return administrative.filter(pricing_status=Order.PricingStatus.PRICED)
+        queryset = production_ready_orders_queryset(queryset)
         if not normalized:
             return queryset
         if normalized == "unprinted":
@@ -107,11 +154,20 @@ class StaffOrderListFilterService:
 
     def apply_status_filter(self, queryset: QuerySet, *, status: str | None) -> QuerySet:
         normalized = self.normalize_status(status)
+        queryset = production_ready_orders_queryset(queryset)
         if not normalized:
             return queryset
         return queryset.filter(production_job__status=normalized)
 
-    def apply_search(self, queryset: QuerySet, *, query: str) -> QuerySet:
+    def apply_search(
+        self, queryset: QuerySet, *, query: str, queue: str = "", can_price: bool = False
+    ) -> QuerySet:
+        if self.normalize_queue(queue) in self.administrative_queues:
+            if not can_price:
+                raise PermissionDenied
+            queryset = self.apply_filter(queryset, queue=queue, can_price=True)
+        else:
+            queryset = production_ready_orders_queryset(queryset)
         cleaned = str(query or "").strip()
         if not cleaned:
             return queryset
@@ -125,6 +181,17 @@ class StaffOrderListFilterService:
             | Q(customer_note__icontains=cleaned)
         ).distinct()
 
+    def _unpaid_immediate_queryset(self, queryset: QuerySet) -> QuerySet:
+        captured = Payment.objects.filter(order_id=OuterRef("pk"), status=Payment.Status.CAPTURED)
+        return (
+            queryset.filter(
+                status=Order.Status.SUBMITTED,
+                billing_mode=Order.BillingMode.IMMEDIATE,
+            )
+            .annotate(_admin_payment_captured=Exists(captured))
+            .filter(_admin_payment_captured=False)
+        )
+
     def _unissued_queryset_from(self, queryset: QuerySet) -> QuerySet:
         return self._active_queryset_from(queryset).filter(
             production_job__of_document_issued_at__isnull=True,
@@ -137,7 +204,8 @@ class StaffOrderListFilterService:
 
     def _active_queryset_from(self, queryset: QuerySet) -> QuerySet:
         return (
-            queryset.filter(
+            production_ready_orders_queryset(queryset)
+            .filter(
                 status=Order.Status.SUBMITTED,
             )
             .exclude(production_job__status=ProductionJob.Status.COMPLETED)

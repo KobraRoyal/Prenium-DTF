@@ -16,6 +16,24 @@
 - [x] Sprint 09 — Frontend produit (espace client + backoffice staff)
 - [x] Sprint 10 — Paiement PayPal + facturation automatique
 - [x] Extension paiements en ligne multi-provider (PayPal + Stripe Checkout) hors facturation différée
+- [x] Durcissement paiement préproduction : tentative unique, rapprochement des checkouts,
+  capture durable, webhooks réessayables, rapprochement périodique des captures distantes,
+  fermeture manuelle auditée des tentatives sans référence, sonde API des clés live et
+  verrou Atelier jusqu'à encaissement
+- [x] Compatibilité des sessions Stripe historiques déjà liées, carte seule pour les nouveaux
+  checkouts, contrôle live des tentatives Stripe et PayPal ouvertes/fermées et des routes
+  webhook publiques ; suite complète 1 501 réussis / 4 ignorés, relecture sécurité faite
+- [x] Image backend prod locale construite depuis cette branche ; routes webhook PayPal et
+  Stripe présentes dans l'image et `check --deploy --fail-level WARNING` sans anomalie
+- [x] Recette Docker locale : migration `billing.0011` et index PostgreSQL vérifiés,
+  tâches Celery exécutées par Beat/worker, webhook Stripe signé accepté et signature
+  invalide refusée ; PayPal sandbox crée et relit une commande
+- [ ] Mise en production paiement : migration `billing.0011` sur copie, préflight live,
+  credentials/webhooks réels et achats de contrôle PayPal + Stripe
+- [ ] Route publique PayPal webhook : le 19/09/2026, `https://dtf.ids.supply/api/backend/paypal/webhook/`
+  répond `404` alors que la route Stripe répond `405` avec `POST` autorisé. Déployer cette
+  branche et relancer le préflight live avant toute activation ; le préflight vérifie
+  désormais les deux routes publiques en lecture seule.
 - [x] Studio Gang Sheet : valider couleur support + visuels et payer sans vue projet intermédiaire
 - [x] Studio checkout : devis TTC détaillé + choix livraison sans saut de scroll
 - [x] Studio checkout : modale paiement (PayPal/CB) + adresse de livraison si différente de la facturation

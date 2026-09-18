@@ -628,6 +628,7 @@ def test_staff_can_confirm_pickup_and_complete_the_production_job():
         customer=customer,
         created_by=staff_user,
         shipping_method_code="pickup",
+        billing_mode=Order.BillingMode.DEFERRED,
     )
     job = ProductionJob.objects.create(
         order=order,
@@ -839,6 +840,7 @@ def test_staff_order_list_is_paginated_in_portal():
         customer=customer,
         created_by=staff_user,
         status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
         currency="EUR",
         subtotal_amount="10.00",
         total_amount="10.00",
@@ -847,6 +849,7 @@ def test_staff_order_list_is_paginated_in_portal():
         customer=customer,
         created_by=staff_user,
         status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
         currency="EUR",
         subtotal_amount="20.00",
         total_amount="20.00",
@@ -855,6 +858,7 @@ def test_staff_order_list_is_paginated_in_portal():
         customer=customer,
         created_by=staff_user,
         status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
         currency="EUR",
         subtotal_amount="30.00",
         total_amount="30.00",

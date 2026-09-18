@@ -26,7 +26,19 @@ def test_paypal_capture_treats_already_captured_as_success(monkeypatch):
         return {
             "id": "ORDER1",
             "status": "COMPLETED",
-            "purchase_units": [{"payments": {"captures": [{"id": "CAP1", "status": "COMPLETED"}]}}],
+            "purchase_units": [
+                {
+                    "payments": {
+                        "captures": [
+                            {
+                                "id": "CAP1",
+                                "status": "COMPLETED",
+                                "amount": {"value": "25.00", "currency_code": "EUR"},
+                            }
+                        ]
+                    }
+                }
+            ],
         }
 
     monkeypatch.setattr(gateway, "_get_access_token", lambda: "tok")

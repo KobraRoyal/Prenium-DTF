@@ -16,7 +16,7 @@ from apps.accounts.permissions import HasStaffBillingReadAccess
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.billing.models import Payment
-from apps.billing.services.gateways import PaymentGatewayError
+from apps.billing.services.gateways import PaymentGatewayError, PaymentGatewayTransientError
 from apps.billing.services.paypal import PayPalGateway
 from apps.billing.services.stripe_gateway import StripeGateway
 from apps.customers.permissions import HasScopedCustomerAccess
@@ -130,6 +130,8 @@ class ClientPayPalPaymentInitiateView(APIView):
                 success_url=success_url,
                 cancel_url=cancel_url,
             )
+        except PaymentGatewayTransientError:
+            return Response({"detail": "Prestataire temporairement indisponible."}, status=503)
         except DjangoValidationError as error:
             raise_api_validation_error(error)
         if payment is None:
@@ -160,6 +162,8 @@ class ClientOnlinePaymentInitiateView(APIView):
                 success_url=success_url,
                 cancel_url=cancel_url,
             )
+        except PaymentGatewayTransientError:
+            return Response({"detail": "Prestataire temporairement indisponible."}, status=503)
         except DjangoValidationError as error:
             raise_api_validation_error(error)
         if payment is None:
@@ -307,6 +311,8 @@ class BackendPayPalCaptureView(APIView):
                 actor=None,
                 source="backend_api",
             )
+        except PaymentGatewayTransientError:
+            return Response({"detail": "Confirmation en attente du prestataire."}, status=503)
         except DjangoValidationError as error:
             raise_api_validation_error(error)
 
@@ -331,6 +337,8 @@ class BackendPayPalWebhookView(APIView):
         try:
             gateway = PayPalGateway()
             event = gateway.verify_and_parse_webhook(payload=payload, headers=header_map)
+        except PaymentGatewayTransientError:
+            return Response({"received": False, "retry": True}, status=503)
         except PaymentGatewayError as exc:
             logger.warning("paypal_webhook_rejected", extra={"reason": str(exc)})
             record_event(
@@ -347,18 +355,47 @@ class BackendPayPalWebhookView(APIView):
             return Response({"received": True, "ignored": event_type})
 
         paypal_order_id = PayPalGateway.extract_order_id_from_webhook(event)
+        payment_public_id = PayPalGateway.extract_payment_public_id_from_webhook(event)
         if not paypal_order_id:
-            return Response({"received": True, "matched": False}, status=202)
+            return Response({"received": False, "matched": False}, status=503)
 
         try:
             order, payment, invoice = payment_service.confirm_capture(
                 order_public_id="",
                 paypal_order_id=paypal_order_id,
+                payment_public_id=payment_public_id or None,
                 actor=None,
                 source="paypal_webhook",
             )
+        except PaymentGatewayTransientError:
+            return Response({"received": False, "retry": True}, status=503)
         except DjangoValidationError as error:
             raise_api_validation_error(error)
+
+        if payment is None and not payment_public_id:
+            # Certains événements CAPTURE omettent custom_id ; l'ordre distant
+            # conserve la référence de notre tentative, même si create a perdu
+            # sa réponse avant la sauvegarde de paypal_order_id.
+            try:
+                remote_order = gateway.get_order(paypal_order_id=paypal_order_id)
+            except PaymentGatewayError:
+                return Response({"received": False, "retry": True}, status=503)
+            payment_public_id = PayPalGateway.extract_payment_public_id_from_webhook(
+                {"resource": remote_order}
+            )
+            if payment_public_id:
+                try:
+                    order, payment, invoice = payment_service.confirm_capture(
+                        order_public_id="",
+                        paypal_order_id=paypal_order_id,
+                        payment_public_id=payment_public_id,
+                        actor=None,
+                        source="paypal_webhook",
+                    )
+                except PaymentGatewayTransientError:
+                    return Response({"received": False, "retry": True}, status=503)
+                except DjangoValidationError as error:
+                    raise_api_validation_error(error)
 
         if payment is None:
             record_event(
@@ -371,7 +408,7 @@ class BackendPayPalWebhookView(APIView):
                     "event_type": event_type,
                 },
             )
-            return Response({"received": True, "matched": False}, status=202)
+            return Response({"received": False, "matched": False}, status=503)
 
         return Response(
             {
@@ -425,17 +462,35 @@ class BackendStripeWebhookView(APIView):
         else:
             payment_intent_id = str(payment_intent or "").strip()
         payment_status = str(data_object.get("payment_status", "")).strip().lower()
+        metadata = data_object.get("metadata") if isinstance(data_object, dict) else {}
+        payment_public_id = (
+            str(metadata.get("payment_public_id", "")).strip() if isinstance(metadata, dict) else ""
+        )
 
         if event_type in self.FAIL_EVENT_TYPES:
             if not session_id:
                 return Response({"received": True, "ignored": "missing_session"})
-            payment = payment_service.mark_stripe_checkout_failed(
-                checkout_session_id=session_id,
-                source="stripe_webhook",
-                message="Stripe async payment failed.",
-                event_id=event_id,
+            try:
+                payment = payment_service.mark_stripe_checkout_failed(
+                    checkout_session_id=session_id,
+                    payment_public_id=payment_public_id,
+                    source="stripe_webhook",
+                    message="Stripe async payment failed.",
+                    event_id=event_id,
+                )
+            except PaymentGatewayTransientError:
+                return Response({"received": False, "retry": True}, status=503)
+            except DjangoValidationError as error:
+                raise_api_validation_error(error)
+            if payment is None:
+                return Response({"detail": "Unknown payment; retry webhook."}, status=503)
+            return Response(
+                {
+                    "received": True,
+                    "matched": True,
+                    "failed": payment.status == Payment.Status.FAILED,
+                }
             )
-            return Response({"received": True, "matched": payment is not None, "failed": True})
 
         if event_type not in self.CAPTURE_EVENT_TYPES:
             return Response({"received": True, "ignored": event_type})
@@ -453,12 +508,16 @@ class BackendStripeWebhookView(APIView):
                 source="stripe_webhook",
                 event_id=event_id,
                 payload=data_object if isinstance(data_object, dict) else {},
+                payment_public_id=payment_public_id,
             )
+        except PaymentGatewayTransientError:
+            return Response({"received": False, "retry": True}, status=503)
         except DjangoValidationError as error:
             raise_api_validation_error(error)
 
         if payment is None:
-            # Session inconnue : on n'échoue pas le webhook (évite retry infini) mais on audit.
+            # Une notification peut précéder l'enregistrement de l'ID distant.
+            # Le 503 demande au prestataire de réessayer au lieu de perdre la capture.
             record_event(
                 action="billing.stripe_webhook_unknown_session",
                 status=AuditLogEntry.Status.FAILURE,
@@ -468,7 +527,7 @@ class BackendStripeWebhookView(APIView):
                     "checkout_session_id": session_id,
                 },
             )
-            return Response({"received": True, "matched": False}, status=202)
+            return Response({"received": False, "matched": False}, status=503)
 
         return Response(
             {

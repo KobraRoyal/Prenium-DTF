@@ -53,6 +53,13 @@ class StaffOrderMachineAssignmentView(
     )
 
     def post(self, request, order_public_id):
+        if (
+            production_workflow_service.get_staff_job_for_document(order_public_id=order_public_id)[
+                1
+            ]
+            is None
+        ):
+            raise Http404
         machine_error = ""
         changed = False
         try:
@@ -94,6 +101,13 @@ class StaffOrderPrintConfirmView(StaffOrderMachinePermissionMixin, StaffOrderCon
     )
 
     def post(self, request, order_public_id):
+        if (
+            production_workflow_service.get_staff_job_for_document(order_public_id=order_public_id)[
+                1
+            ]
+            is None
+        ):
+            raise Http404
         print_error = ""
         created = False
         try:

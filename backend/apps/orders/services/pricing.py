@@ -439,6 +439,7 @@ class OrderPricingService:
             return declared
         return self.estimate_meterage_from_inspection(upload=upload)
 
+    @transaction.atomic
     def apply_declared_size_self_service_pricing(
         self,
         *,
@@ -447,6 +448,15 @@ class OrderPricingService:
         source: str,
     ) -> Order:
         """Fige le métrage depuis les dimensions déclarées (réassort comptant) puis prix."""
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().get(pk=order.pk)
+        from apps.billing.models import Payment
+
+        if Payment.objects.filter(
+            order=order,
+            status__in=(Payment.Status.PENDING, Payment.Status.APPROVED, Payment.Status.CAPTURED),
+        ).exists():
+            raise ValidationError("Le tarif est figé dès l'ouverture du paiement.")
         if order.billing_mode != Order.BillingMode.IMMEDIATE:
             raise ValidationError(
                 "Le tarif automatique dimensions s’applique aux commandes comptant CB."
@@ -496,6 +506,7 @@ class OrderPricingService:
             source=source,
         )
 
+    @transaction.atomic
     def apply_gang_sheet_self_service_pricing(
         self,
         *,
@@ -509,6 +520,21 @@ class OrderPricingService:
         connue, sans attente de métrage atelier.
         """
         from apps.gang_sheets.models import GangSheet
+
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().get(pk=order.pk)
+        if order.billing_mode == Order.BillingMode.IMMEDIATE:
+            from apps.billing.models import Payment
+
+            if Payment.objects.filter(
+                order=order,
+                status__in=(
+                    Payment.Status.PENDING,
+                    Payment.Status.APPROVED,
+                    Payment.Status.CAPTURED,
+                ),
+            ).exists():
+                raise ValidationError("Le tarif est figé dès l'ouverture du paiement.")
 
         if order.billing_mode not in {
             Order.BillingMode.IMMEDIATE,
@@ -918,6 +944,23 @@ class OrderPricingService:
             return
         with transaction.atomic():
             locked = Order.objects.select_for_update().get(pk=order.pk)
+            if locked.billing_mode == Order.BillingMode.IMMEDIATE:
+                from apps.billing.models import Payment
+
+                payment_statuses = set(
+                    Payment.objects.filter(
+                        order=locked,
+                        status__in=(
+                            Payment.Status.PENDING,
+                            Payment.Status.APPROVED,
+                            Payment.Status.CAPTURED,
+                        ),
+                    ).values_list("status", flat=True)
+                )
+                if Payment.Status.CAPTURED in payment_statuses:
+                    raise ValidationError("Le tarif est figé après paiement.")
+                if payment_statuses:
+                    raise ValidationError("Le tarif est figé dès l'ouverture du paiement.")
             if locked.billing_statement_id is not None:
                 raise ValidationError(
                     "La tarification est figée car la commande appartient à un "
@@ -1000,10 +1043,23 @@ class OrderPricingService:
                 "La tarification est figée car la commande appartient à un "
                 "récapitulatif de facturation."
             )
-        from apps.billing.services.production_payment_gate import order_has_captured_payment
+        if order.billing_mode == Order.BillingMode.IMMEDIATE:
+            from apps.billing.models import Payment
 
-        if order.billing_mode == Order.BillingMode.IMMEDIATE and order_has_captured_payment(order):
-            raise ValidationError("Le tarif est figé après paiement.")
+            payment_statuses = set(
+                Payment.objects.filter(
+                    order=order,
+                    status__in=(
+                        Payment.Status.PENDING,
+                        Payment.Status.APPROVED,
+                        Payment.Status.CAPTURED,
+                    ),
+                ).values_list("status", flat=True)
+            )
+            if Payment.Status.CAPTURED in payment_statuses:
+                raise ValidationError("Le tarif est figé après paiement.")
+            if payment_statuses:
+                raise ValidationError("Le tarif est figé dès l'ouverture du paiement.")
         if not order.uses_atelier_pricing():
             raise ValidationError(
                 "Le calcul automatique s'applique aux commandes atelier (encours ou comptant CB)."

@@ -58,24 +58,27 @@ class StaffOrderListView(StaffDomainPermissionMixin, View):
 
     def get(self, request):
         active_queue = staff_order_list_filter_service.normalize_queue(request.GET.get("queue"))
+        can_price = request.user.has_perm("orders.change_order")
+        is_administrative_queue = (
+            active_queue in staff_order_list_filter_service.administrative_queues
+        )
+        if is_administrative_queue and not can_price:
+            raise PermissionDenied
         active_production_status = staff_order_list_filter_service.normalize_status(
-            request.GET.get("status")
+            None if is_administrative_queue else request.GET.get("status")
         )
         search_query = request.GET.get("q", "").strip()[:120]
         base_queryset = order_service.list_staff_orders()
-        queue_counts = staff_order_list_filter_service.count_by_queue(base_queryset)
+        queue_counts = staff_order_list_filter_service.count_by_queue(
+            base_queryset, can_price=can_price
+        )
         status_counts = staff_order_list_filter_service.count_by_status(base_queryset)
-        filtered_queryset = staff_order_list_filter_service.apply_filter(
+        filtered_queryset = staff_order_list_filter_service.filter_list(
             base_queryset,
             queue=active_queue,
-        )
-        filtered_queryset = staff_order_list_filter_service.apply_status_filter(
-            filtered_queryset,
             status=active_production_status,
-        )
-        filtered_queryset = staff_order_list_filter_service.apply_search(
-            filtered_queryset,
             query=search_query,
+            can_price=can_price,
         )
         page_obj = order_service.paginate_orders(
             filtered_queryset,
@@ -93,13 +96,12 @@ class StaffOrderListView(StaffDomainPermissionMixin, View):
                 active_queue=active_queue,
                 counts=queue_counts,
             ),
-            "status_tabs": staff_order_list_filter_service.build_status_tabs(
+            "status_tabs": staff_order_list_filter_service.build_visible_status_tabs(
+                active_queue=active_queue,
                 active_status=active_production_status,
                 counts=status_counts,
             ),
-            "staff_orders_preserved_params": {
-                "queue": active_queue,
-            },
+            "staff_orders_preserved_params": {"queue": active_queue},
             "nav_mode": "staff",
             "nav_key": "staff-orders",
             "badge_tone_for_status": badge_tone_for_status,

@@ -57,6 +57,13 @@ class StaffOrderPanelProductionView(StaffOrderContextMixin, View):
         )
 
     def post(self, request, order_public_id):
+        if (
+            production_workflow_service.get_staff_job_for_document(
+                order_public_id=self.order.public_id
+            )[1]
+            is None
+        ):
+            raise Http404
         if request.POST.get("action") == "update_handover_date":
             if not request.user.has_perm("orders.change_order"):
                 raise PermissionDenied
@@ -106,6 +113,8 @@ class StaffOrderPanelProductionView(StaffOrderContextMixin, View):
         except ValidationError as exc:
             job = production_workflow_service.get_or_create_for_order(order=self.order)
             transition_error = "; ".join(exc.messages)
+        if job is None:
+            raise Http404
         self.order.refresh_from_db()
         response = render(
             request,

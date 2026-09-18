@@ -1,4 +1,4 @@
-"""Règles de gate paiement / production pour les commandes comptant CB atelier."""
+"""Règles de paiement avant l'entrée en production des commandes comptant."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from apps.orders.models import Order
 
 
 def requires_captured_payment_before_production(order: Order) -> bool:
-    """True pour les dépôts atelier en paiement comptant CB."""
-    return order.billing_mode == Order.BillingMode.IMMEDIATE and order.uses_atelier_pricing()
+    """Toute commande comptant exige une capture avant l'Atelier."""
+    return order.billing_mode == Order.BillingMode.IMMEDIATE
 
 
 def order_has_captured_payment(order: Order) -> bool:
@@ -63,14 +63,14 @@ def attach_awaits_client_payment(orders: list[Order]) -> list[Order]:
 
 
 def count_orders_awaiting_client_payment(customer) -> int:
-    """Nombre de commandes client encore à régler (comptant CB atelier)."""
+    """Nombre de commandes comptant tarifées encore à régler."""
     from django.db.models import Exists, OuterRef
 
     captured = Payment.objects.filter(
         order_id=OuterRef("pk"),
         status=Payment.Status.CAPTURED,
     )
-    candidates = list(
+    return (
         Order.objects.for_customer(customer)
         .filter(
             billing_mode=Order.BillingMode.IMMEDIATE,
@@ -79,9 +79,8 @@ def count_orders_awaiting_client_payment(customer) -> int:
         )
         .annotate(_has_captured_payment=Exists(captured))
         .filter(_has_captured_payment=False)
-        .prefetch_related("items", "uploads")
+        .count()
     )
-    return sum(1 for order in candidates if order.uses_atelier_pricing())
 
 
 def production_start_blocked_reason(order: Order) -> str | None:

@@ -173,7 +173,7 @@ class FakeStripeGateway:
                     "status": "open",
                     "url": f"https://checkout.stripe.test/pay/{session_id}",
                 },
-                "provider_capture_id": f"pi_{order.public_id.hex[:8]}",
+                "provider_capture_id": f"pi_{session_id}",
             },
         )()
 
@@ -430,7 +430,7 @@ def test_staff_without_billing_permissions_is_refused():
 
 
 @pytest.mark.django_db
-def test_paypal_error_is_mapped_to_failed_status(monkeypatch):
+def test_paypal_error_preserves_uncertain_attempt(monkeypatch):
     user, customer = create_customer_scope(email="client-a@example.com", customer_name="Acme A")
     order = create_order(customer, user)
     monkeypatch.setattr(
@@ -447,10 +447,9 @@ def test_paypal_error_is_mapped_to_failed_status(monkeypatch):
         format="json",
     )
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"] == ["PayPal unavailable."]
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     payment = Payment.objects.get(order=order)
-    assert payment.status == Payment.Status.FAILED
+    assert payment.status == Payment.Status.PENDING
 
 
 @pytest.mark.django_db

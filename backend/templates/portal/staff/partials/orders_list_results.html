@@ -16,6 +16,10 @@
           OF émis — corrections client en attente.
         {% elif active_queue == "approved" %}
           OF émis — tous les fichiers sont validés pour la production.
+        {% elif active_queue == "to_price" %}
+          Commandes comptant à chiffrer avant le paiement client.
+        {% elif active_queue == "awaiting_payment" %}
+          Commandes comptant tarifées en attente de confirmation du paiement.
         {% else %}
           Toutes les commandes Atelier actives.
         {% endif %}

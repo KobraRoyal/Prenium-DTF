@@ -8,13 +8,17 @@ from django.db.models import Count
 from django.utils import timezone
 
 from apps.auditlog.services import record_event
+from apps.billing.services.production_payment_gate import order_has_captured_payment
 from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
 from apps.production.services.manufacturing_order_pdf import (
     render_manufacturing_order_pdf_bytes,
 )
-from apps.production.services.workflow import ProductionWorkflowService
+from apps.production.services.workflow import (
+    ProductionWorkflowService,
+    production_ready_orders_queryset,
+)
 from apps.uploads.models import OrderUploadReview
 
 
@@ -129,7 +133,8 @@ class ManufacturingOrderBatchService:
 
     def _unissued_queryset(self):
         return (
-            Order.objects.filter(status=Order.Status.SUBMITTED)
+            production_ready_orders_queryset(Order.objects)
+            .filter(status=Order.Status.SUBMITTED)
             .filter(
                 production_job__of_document_issued_at__isnull=True,
             )
@@ -148,6 +153,10 @@ class ManufacturingOrderBatchService:
         )
 
     def _is_batch_eligible(self, *, order: Order) -> bool:
+        if order.billing_mode == Order.BillingMode.IMMEDIATE and not order_has_captured_payment(
+            order
+        ):
+            return False
         try:
             production_job = order.production_job
         except ProductionJob.DoesNotExist:
@@ -159,6 +168,8 @@ class ManufacturingOrderBatchService:
         return order.status == Order.Status.SUBMITTED
 
     def mark_of_documents_issued(self, *, orders: list[Order], actor, source: str) -> None:
+        if any(not self._is_batch_eligible(order=order) for order in orders):
+            raise ValidationError("Impression OF impossible avant confirmation du paiement.")
         now = timezone.now()
         job_ids = []
         for order in orders:

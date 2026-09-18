@@ -411,10 +411,14 @@ class OrderService:
                 },
             )
 
+            from apps.billing.services.production_payment_gate import (
+                should_defer_order_created_until_payment,
+            )
             from apps.notifications.services.transactional import schedule_order_created_email
             from apps.notifications.services.workshop_push import WorkshopNotificationService
 
-            schedule_order_created_email(order_public_id=order.public_id)
+            if not should_defer_order_created_until_payment(order):
+                schedule_order_created_email(order_public_id=order.public_id)
             WorkshopNotificationService().publish_order_submitted(
                 order=order,
                 actor=actor if getattr(actor, "is_authenticated", False) else None,

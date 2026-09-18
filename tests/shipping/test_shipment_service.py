@@ -105,6 +105,29 @@ class FakeSendcloudGateway:
 
 
 @pytest.mark.django_db
+def test_unpaid_immediate_order_cannot_be_declared_to_sendcloud_even_with_legacy_ready_job():
+    actor, customer, _ = create_customer_scope("unpaid-ship@example.com", "Unpaid")
+    order = create_order(customer, actor)
+    order.billing_mode = Order.BillingMode.IMMEDIATE
+    order.save(update_fields=("billing_mode", "updated_at"))
+    ProductionJob.objects.create(
+        order=order,
+        manufacturing_order_number="OF-LEGACY-UNPAID",
+        status=ProductionJob.Status.READY_TO_SHIP,
+    )
+    gateway = FakeSendcloudGateway()
+    with pytest.raises(ValidationError, match="paiement doit être confirmé"):
+        ShipmentService(gateway=gateway).create_shipment(
+            order_public_id=order.public_id,
+            actor=actor,
+            source="test",
+            payload=build_payload(),
+        )
+    assert gateway.last_payload is None
+    assert not Shipment.objects.filter(order=order).exists()
+
+
+@pytest.mark.django_db
 def test_create_shipment_declares_order_without_label():
     staff_user = get_user_model().objects.create_user(
         email="staff@example.com",

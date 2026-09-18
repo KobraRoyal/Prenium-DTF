@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
+from uuid import UUID
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from apps.auditlog.models import AuditLogEntry
@@ -12,14 +15,23 @@ from apps.billing.models import Invoice, Payment
 from apps.billing.services.gateways import (
     PaymentGateway,
     PaymentGatewayError,
+    PaymentGatewayTransientError,
     get_payment_gateway,
     resolve_online_provider,
 )
 from apps.billing.services.invoices import InvoiceService
+from apps.billing.services.paypal import PayPalBindingError
 from apps.customers.models import Customer
 from apps.orders.models import Order
 
 IN_FLIGHT_CAPTURE_STATUSES = {"PENDING", "OPEN", "APPROVED", "UNPAID"}
+UNKNOWN_CHECKOUT_RETRY_WINDOWS = {
+    Payment.Provider.STRIPE: timedelta(hours=23),
+    Payment.Provider.PAYPAL: timedelta(hours=5),
+}
+STRIPE_FAILURE_RECONCILIATION_MESSAGE = (
+    "Échec Stripe signalé ; vérification du règlement en cours avant nouvel essai."
+)
 
 
 class PaymentService:
@@ -43,6 +55,11 @@ class PaymentService:
         success_url: str = "",
         cancel_url: str = "",
     ):
+        self._reconcile_active_checkout(
+            customer=customer,
+            order_public_id=order_public_id,
+            requested_provider=provider,
+        )
         # Même ordre de verrouillage que les corrections de métrage et de tarif.
         with transaction.atomic():
             Customer.objects.select_for_update().get(pk=customer.pk)
@@ -54,8 +71,16 @@ class PaymentService:
                 raise ValidationError(
                     "Les commandes en facturation différée ne sont pas payées en ligne."
                 )
+            if order.status != Order.Status.SUBMITTED:
+                raise ValidationError("Cette commande ne peut pas être payée en ligne.")
+            if order.uses_atelier_pricing() and order.pricing_status != Order.PricingStatus.PRICED:
+                raise ValidationError(
+                    "Le tarif de cette commande doit être confirmé avant paiement."
+                )
             if order.total_amount <= 0:
                 raise ValidationError("Montant de commande invalide pour un paiement.")
+            if Payment.objects.filter(order=order, status=Payment.Status.CAPTURED).exists():
+                raise ValidationError("Cette commande est déjà réglée.")
 
             injected_provider = getattr(self.gateway, "provider", None) if self.gateway else None
             if injected_provider and (not provider or provider == injected_provider):
@@ -69,89 +94,203 @@ class PaymentService:
                 Payment.objects.select_for_update()
                 .filter(
                     order_id=order.pk,
-                    provider=resolved_provider,
                     status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
                 )
-                .exclude(approval_url="")
                 .order_by("-created_at")
                 .first()
             )
             if existing is not None:
-                return order, existing
-
-            Payment.objects.filter(
-                order_id=order.pk,
-                status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
-            ).update(status=Payment.Status.CANCELLED)
+                if existing.provider != resolved_provider:
+                    raise ValidationError(
+                        "Un paiement est déjà ouvert. Terminez-le avant de changer "
+                        "de moyen de paiement."
+                    )
+                if existing.last_error_message == STRIPE_FAILURE_RECONCILIATION_MESSAGE:
+                    raise ValidationError(existing.last_error_message)
+                if existing.approval_url:
+                    return order, existing
+                payment = existing
+            else:
+                payment = Payment.objects.create(
+                    order=order,
+                    created_by=actor if getattr(actor, "is_authenticated", False) else None,
+                    provider=resolved_provider,
+                    status=Payment.Status.PENDING,
+                    amount=order.total_amount,
+                    currency=order.currency,
+                    source=source,
+                    request_snapshot={
+                        "order_public_id": str(order.public_id),
+                        "customer_public_id": str(order.customer.public_id),
+                        "amount": f"{order.total_amount:.2f}",
+                        "currency": order.currency,
+                        "provider": resolved_provider,
+                        "success_url": success_url,
+                        "cancel_url": cancel_url,
+                    },
+                )
             gateway = self._get_gateway(provider=resolved_provider)
-            payment = Payment.objects.create(
-                order=order,
-                created_by=actor if getattr(actor, "is_authenticated", False) else None,
-                provider=resolved_provider,
-                status=Payment.Status.PENDING,
-                amount=order.total_amount,
-                currency=order.currency,
-                source=source,
-                request_snapshot={
+            snapshot = payment.request_snapshot or {}
+            checkout_success_url = str(snapshot.get("success_url") or success_url)
+            checkout_cancel_url = str(snapshot.get("cancel_url") or cancel_url)
+        try:
+            if payment.provider_payment_id:
+                resume = getattr(gateway, "resume_checkout", None)
+                if resume is None:
+                    raise ValidationError(
+                        "Ce paiement doit être rapproché avant de reprendre son lien."
+                    )
+                result = resume(
+                    provider_payment_id=payment.provider_payment_id,
+                    order=order,
+                    payment_public_id=payment.public_id,
+                )
+            else:
+                retry_window = UNKNOWN_CHECKOUT_RETRY_WINDOWS[resolved_provider]
+                if timezone.now() - payment.created_at >= retry_window:
+                    raise ValidationError(
+                        "La réponse du prestataire manque depuis trop longtemps. "
+                        "Contactez le support pour rapprocher cette tentative avant "
+                        "tout nouveau paiement."
+                    )
+                result = gateway.create_checkout(
+                    order=order,
+                    success_url=checkout_success_url,
+                    cancel_url=checkout_cancel_url,
+                    idempotency_key=str(payment.public_id),
+                )
+        except PaymentGatewayTransientError:
+            raise
+        except PaymentGatewayError as exc:
+            # Une erreur HTTP ne prouve pas que la création distante a échoué.
+            # Garder la même tentative et la même clé idempotente au prochain essai.
+            raise PaymentGatewayTransientError(str(exc)) from exc
+
+        if not result.provider_payment_id:
+            raise ValidationError("Le prestataire n'a pas fourni de référence de paiement.")
+        with transaction.atomic():
+            Order.objects.select_for_update().get(pk=order.pk)
+            payment = Payment.objects.select_for_update().get(pk=payment.pk)
+            if payment.status == Payment.Status.CAPTURED:
+                if payment.provider_payment_id != result.provider_payment_id:
+                    raise ValidationError("Référence de paiement incohérente après capture.")
+                return order, payment
+            if payment.status in (Payment.Status.FAILED, Payment.Status.CANCELLED):
+                raise ValidationError("Cette tentative de paiement n'est plus active.")
+            payment.status = (
+                Payment.Status.APPROVED
+                if str(result.status).upper() in {"APPROVED", "COMPLETE", "OPEN"}
+                else Payment.Status.PENDING
+            )
+            self._apply_provider_ids(
+                payment=payment,
+                provider_payment_id=result.provider_payment_id,
+                provider_capture_id=result.provider_capture_id,
+            )
+            payment.approval_url = result.checkout_url
+            payment.provider_payload = result.payload
+            payment.last_error_message = ""
+            payment.save(
+                update_fields=[
+                    "status",
+                    "paypal_order_id",
+                    "paypal_capture_id",
+                    "stripe_checkout_session_id",
+                    "stripe_payment_intent_id",
+                    "approval_url",
+                    "provider_payload",
+                    "last_error_message",
+                    "updated_at",
+                ]
+            )
+            record_event(
+                action="billing.payment_initiated",
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=payment,
+                metadata={
                     "order_public_id": str(order.public_id),
                     "customer_public_id": str(order.customer.public_id),
-                    "amount": f"{order.total_amount:.2f}",
-                    "currency": order.currency,
-                    "provider": resolved_provider,
+                    "payment_public_id": str(payment.public_id),
+                    "provider": payment.provider,
+                    "provider_payment_id": payment.provider_payment_id,
+                    "source": source,
                 },
             )
-        try:
-            result = gateway.create_checkout(
-                order=order,
-                success_url=success_url,
-                cancel_url=cancel_url,
-                idempotency_key=str(payment.public_id),
-            )
-        except PaymentGatewayError as exc:
-            self._mark_failed(payment=payment, actor=actor, source=source, message=str(exc))
-
-        payment.status = (
-            Payment.Status.APPROVED
-            if str(result.status).upper() in {"APPROVED", "COMPLETE", "OPEN"}
-            else Payment.Status.PENDING
-        )
-        self._apply_provider_ids(
-            payment=payment,
-            provider_payment_id=result.provider_payment_id,
-            provider_capture_id=result.provider_capture_id,
-        )
-        payment.approval_url = result.checkout_url
-        payment.provider_payload = result.payload
-        payment.last_error_message = ""
-        payment.save(
-            update_fields=[
-                "status",
-                "paypal_order_id",
-                "paypal_capture_id",
-                "stripe_checkout_session_id",
-                "stripe_payment_intent_id",
-                "approval_url",
-                "provider_payload",
-                "last_error_message",
-                "updated_at",
-            ]
-        )
-        record_event(
-            action="billing.payment_initiated",
-            actor=actor if getattr(actor, "is_authenticated", False) else None,
-            target=payment,
-            metadata={
-                "order_public_id": str(order.public_id),
-                "customer_public_id": str(order.customer.public_id),
-                "payment_public_id": str(payment.public_id),
-                "provider": payment.provider,
-                "provider_payment_id": payment.provider_payment_id,
-                "paypal_order_id": payment.paypal_order_id,
-                "stripe_checkout_session_id": payment.stripe_checkout_session_id,
-                "source": source,
-            },
-        )
         return order, payment
+
+    def _reconcile_active_checkout(self, *, customer, order_public_id, requested_provider):
+        order = self._get_customer_order(customer=customer, order_public_id=order_public_id)
+        if order is None:
+            return
+        payment = (
+            Payment.objects.filter(
+                order=order,
+                status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if payment is None or not payment.provider_payment_id:
+            return
+        if self.gateway is not None and self.gateway.provider != payment.provider:
+            return
+        gateway = self._get_gateway(provider=payment.provider)
+        self._verify_checkout_binding(gateway=gateway, payment=payment)
+        inspect = getattr(gateway, "checkout_state", None)
+        if inspect is None:
+            return
+        try:
+            state = str(inspect(provider_payment_id=payment.provider_payment_id)).upper()
+            if (
+                state == "OPEN"
+                and payment.provider == Payment.Provider.STRIPE
+                and requested_provider
+                and requested_provider != payment.provider
+            ):
+                state = str(
+                    gateway.expire_checkout(provider_payment_id=payment.provider_payment_id)
+                ).upper()
+        except PaymentGatewayError as exc:
+            raise PaymentGatewayTransientError(str(exc)) from exc
+        if state == "COMPLETED":
+            if payment.provider == Payment.Provider.STRIPE:
+                self.confirm_stripe_checkout_session(
+                    checkout_session_id=payment.provider_payment_id,
+                    source="checkout_reconciliation",
+                )
+            else:
+                self.confirm_capture(
+                    order_public_id=order.public_id,
+                    provider_payment_id=payment.provider_payment_id,
+                    source="checkout_reconciliation",
+                )
+            return
+        if state == "APPROVED" and payment.provider == Payment.Provider.PAYPAL:
+            self.confirm_capture(
+                order_public_id=order.public_id,
+                provider_payment_id=payment.provider_payment_id,
+                source="checkout_reconciliation",
+            )
+            return
+        if state not in {"EXPIRED", "VOIDED"}:
+            return
+        with transaction.atomic():
+            Order.objects.select_for_update().get(pk=order.pk)
+            locked = Payment.objects.select_for_update().get(pk=payment.pk)
+            if locked.status not in (Payment.Status.PENDING, Payment.Status.APPROVED):
+                return
+            locked.status = Payment.Status.CANCELLED
+            locked.save(update_fields=("status", "updated_at"))
+            record_event(
+                action="billing.payment_checkout_expired",
+                target=locked,
+                metadata={
+                    "order_public_id": str(order.public_id),
+                    "payment_public_id": str(locked.public_id),
+                    "provider": locked.provider,
+                    "provider_payment_id": locked.provider_payment_id,
+                },
+            )
 
     def confirm_capture(
         self,
@@ -171,48 +310,106 @@ class PaymentService:
             provider_payment_id=resolved_provider_payment_id,
             payment_public_id=payment_public_id,
         )
+        if payment is None and payment_public_id and resolved_provider_payment_id:
+            try:
+                candidate_id = UUID(str(payment_public_id))
+            except (TypeError, ValueError, AttributeError):
+                candidate_id = None
+            if candidate_id:
+                candidates = Payment.objects.filter(
+                    public_id=candidate_id,
+                    provider=Payment.Provider.PAYPAL,
+                    status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+                )
+                if order_public_id:
+                    candidates = candidates.filter(order__public_id=order_public_id)
+                candidate = candidates.select_related("order").first()
+                if candidate and candidate.paypal_order_id in ("", resolved_provider_payment_id):
+                    gateway = self._get_gateway(provider=Payment.Provider.PAYPAL)
+                    verify_binding = getattr(gateway, "verify_checkout_binding", None)
+                    if verify_binding:
+                        try:
+                            verify_binding(
+                                provider_payment_id=resolved_provider_payment_id,
+                                payment_public_id=candidate.public_id,
+                                order_public_id=candidate.order.public_id,
+                                amount=candidate.amount,
+                                currency=candidate.currency,
+                                allow_legacy_custom_id=False,
+                            )
+                        except PayPalBindingError as exc:
+                            raise ValidationError(str(exc)) from exc
+                        except PaymentGatewayError as exc:
+                            raise PaymentGatewayTransientError(str(exc)) from exc
+                with transaction.atomic():
+                    if candidate is not None:
+                        Order.objects.select_for_update().get(pk=candidate.order_id)
+                    candidate = (
+                        Payment.objects.select_for_update()
+                        .filter(
+                            public_id=candidate_id,
+                            provider=Payment.Provider.PAYPAL,
+                            status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+                            **({"order__public_id": order_public_id} if order_public_id else {}),
+                        )
+                        .first()
+                    )
+                    if candidate and candidate.paypal_order_id in (
+                        "",
+                        resolved_provider_payment_id,
+                    ):
+                        candidate.paypal_order_id = resolved_provider_payment_id
+                        candidate.save(update_fields=("paypal_order_id", "updated_at"))
+                        payment = candidate
         if payment is None:
             return None, None, None
 
         if payment.status == Payment.Status.CAPTURED and payment.provider_capture_id:
-            invoice = self.invoice_service.ensure_invoice_for_captured_payment(
-                order=payment.order,
+            return self._finalize_captured_payment(
                 payment=payment,
+                provider_capture_id=payment.provider_capture_id,
+                provider_payload=payment.provider_payload,
+                actor=actor,
                 source=source,
             )
-            record_event(
-                action="billing.payment_capture_idempotent",
-                actor=actor if getattr(actor, "is_authenticated", False) else None,
-                target=payment,
-                metadata={
-                    "order_public_id": str(payment.order.public_id),
-                    "customer_public_id": str(payment.order.customer.public_id),
-                    "payment_public_id": str(payment.public_id),
-                    "provider": payment.provider,
-                    "source": source,
-                },
-            )
-            return payment.order, payment, invoice
 
         gateway = self._get_gateway(provider=payment.provider)
         try:
+            if payment.provider == Payment.Provider.PAYPAL:
+                if (
+                    payment.amount != payment.order.total_amount
+                    or payment.currency.upper() != payment.order.currency.upper()
+                ):
+                    raise ValidationError(
+                        "Le montant de la commande a changé depuis l'ouverture du paiement."
+                    )
+                verify_binding = getattr(gateway, "verify_checkout_binding", None)
+                if verify_binding:
+                    verify_binding(
+                        provider_payment_id=payment.provider_payment_id
+                        or resolved_provider_payment_id,
+                        payment_public_id=payment.public_id,
+                        order_public_id=payment.order.public_id,
+                        amount=payment.amount,
+                        currency=payment.currency,
+                        allow_legacy_custom_id=True,
+                    )
             result = gateway.confirm_checkout(
                 provider_payment_id=payment.provider_payment_id or resolved_provider_payment_id
             )
+        except PaymentGatewayTransientError:
+            raise
+        except PayPalBindingError as exc:
+            raise ValidationError(str(exc)) from exc
         except PaymentGatewayError as exc:
-            self._mark_failed(payment=payment, actor=actor, source=source, message=str(exc))
+            raise PaymentGatewayTransientError(str(exc)) from exc
 
         self._assert_amount_matches(payment=payment, result=result)
         capture_status = str(result.status).upper()
         if capture_status in IN_FLIGHT_CAPTURE_STATUSES:
             return payment.order, payment, None
         if capture_status != "COMPLETED":
-            self._mark_failed(
-                payment=payment,
-                actor=actor,
-                source=source,
-                message=f"{payment.provider} capture status is '{result.status}'.",
-            )
+            raise ValidationError(f"État du paiement à vérifier : {result.status}.")
 
         return self._finalize_captured_payment(
             payment=payment,
@@ -231,6 +428,7 @@ class PaymentService:
         source: str,
         event_id: str = "",
         payload: dict | None = None,
+        payment_public_id: str = "",
     ):
         payment = (
             Payment.objects.select_related("order", "order__customer")
@@ -241,53 +439,62 @@ class PaymentService:
             .order_by("-created_at")
             .first()
         )
+        if payment is None and payment_public_id:
+            with transaction.atomic():
+                candidate = (
+                    Payment.objects.select_for_update()
+                    .select_related("order", "order__customer")
+                    .filter(
+                        public_id=payment_public_id,
+                        provider=Payment.Provider.STRIPE,
+                        status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+                    )
+                    .first()
+                )
+                if candidate is not None and candidate.stripe_checkout_session_id in (
+                    "",
+                    checkout_session_id,
+                ):
+                    self._verify_checkout_binding(
+                        gateway=self._get_gateway(provider=Payment.Provider.STRIPE),
+                        payment=candidate,
+                        provider_payment_id=checkout_session_id,
+                    )
+                    candidate.stripe_checkout_session_id = checkout_session_id
+                    candidate.save(update_fields=("stripe_checkout_session_id", "updated_at"))
+                    payment = candidate
         if payment is None:
             return None, None, None
 
         if payment.status == Payment.Status.CAPTURED and payment.stripe_payment_intent_id:
-            invoice = self.invoice_service.ensure_invoice_for_captured_payment(
-                order=payment.order,
+            return self._finalize_captured_payment(
                 payment=payment,
+                provider_capture_id=payment.stripe_payment_intent_id,
+                provider_payload=payment.provider_payload,
+                actor=actor,
                 source=source,
+                extra_metadata={"stripe_event_id": event_id} if event_id else None,
             )
-            record_event(
-                action="billing.payment_capture_idempotent",
-                actor=actor if getattr(actor, "is_authenticated", False) else None,
-                target=payment,
-                metadata={
-                    "order_public_id": str(payment.order.public_id),
-                    "customer_public_id": str(payment.order.customer.public_id),
-                    "payment_public_id": str(payment.public_id),
-                    "provider": payment.provider,
-                    "stripe_event_id": event_id,
-                    "source": source,
-                },
-            )
-            return payment.order, payment, invoice
 
         gateway = self._get_gateway(provider=Payment.Provider.STRIPE)
         try:
+            self._verify_checkout_binding(gateway=gateway, payment=payment)
             result = gateway.confirm_checkout(provider_payment_id=checkout_session_id)
+        except PaymentGatewayTransientError:
+            raise
         except PaymentGatewayError as exc:
-            self._mark_failed(payment=payment, actor=actor, source=source, message=str(exc))
+            raise PaymentGatewayTransientError(str(exc)) from exc
 
         self._assert_amount_matches(payment=payment, result=result)
         capture_status = str(result.status).upper()
         if capture_status in IN_FLIGHT_CAPTURE_STATUSES:
             return payment.order, payment, None
         if capture_status != "COMPLETED":
-            self._mark_failed(
-                payment=payment,
-                actor=actor,
-                source=source,
-                message=f"stripe capture status is '{result.status}'.",
-            )
+            raise ValidationError(f"État du paiement à vérifier : {result.status}.")
 
         return self._finalize_captured_payment(
             payment=payment,
-            provider_capture_id=(
-                result.provider_capture_id or payment_intent_id or payment.stripe_payment_intent_id
-            ),
+            provider_capture_id=result.provider_capture_id,
             provider_payload=result.payload or payload or payment.provider_payload,
             actor=actor,
             source=source,
@@ -298,6 +505,7 @@ class PaymentService:
         self,
         *,
         checkout_session_id: str,
+        payment_public_id: str = "",
         actor=None,
         source: str,
         message: str,
@@ -312,10 +520,52 @@ class PaymentService:
             .order_by("-created_at")
             .first()
         )
+        if payment is None and payment_public_id:
+            with transaction.atomic():
+                candidate = (
+                    Payment.objects.select_for_update()
+                    .filter(
+                        public_id=payment_public_id,
+                        provider=Payment.Provider.STRIPE,
+                        status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+                    )
+                    .first()
+                )
+                if candidate and candidate.stripe_checkout_session_id in ("", checkout_session_id):
+                    self._verify_checkout_binding(
+                        gateway=self._get_gateway(provider=Payment.Provider.STRIPE),
+                        payment=candidate,
+                        provider_payment_id=checkout_session_id,
+                    )
+                    candidate.stripe_checkout_session_id = checkout_session_id
+                    candidate.save(update_fields=("stripe_checkout_session_id", "updated_at"))
+                    payment = candidate
         if payment is None:
             return None
         if payment.status == Payment.Status.CAPTURED:
             return payment
+        gateway = self._get_gateway(provider=Payment.Provider.STRIPE)
+        self._verify_checkout_binding(gateway=gateway, payment=payment)
+        try:
+            current = gateway.confirm_checkout(provider_payment_id=checkout_session_id)
+        except PaymentGatewayTransientError:
+            raise
+        except PaymentGatewayError as exc:
+            raise PaymentGatewayTransientError(str(exc)) from exc
+        if str(current.status).upper() == "COMPLETED":
+            # Les webhooks peuvent arriver dans le désordre : l'état actuel du
+            # prestataire prime sur l'ancien événement d'échec.
+            _, payment, _ = self.confirm_stripe_checkout_session(
+                checkout_session_id=checkout_session_id,
+                actor=actor,
+                source=f"{source}.failure_event_reconciliation",
+                event_id=event_id,
+            )
+            return payment
+        if str(current.status).upper() != "EXPIRED":
+            return self._hold_stripe_failure_for_reconciliation(
+                payment=payment, actor=actor, source=source, event_id=event_id
+            )
         try:
             self._mark_failed(payment=payment, actor=actor, source=source, message=message)
         except ValidationError:
@@ -392,94 +642,120 @@ class PaymentService:
         source: str,
         extra_metadata: dict | None = None,
     ):
+        if not provider_capture_id:
+            raise ValidationError("La référence de capture du prestataire est manquante.")
         with transaction.atomic():
+            order = (
+                Order.objects.select_for_update()
+                .select_related("customer")
+                .get(pk=payment.order_id)
+            )
             payment = (
                 Payment.objects.select_for_update()
                 .select_related("order", "order__customer")
                 .get(pk=payment.pk)
             )
-            if payment.status == Payment.Status.CAPTURED and payment.provider_capture_id:
-                invoice = self.invoice_service.ensure_invoice_for_captured_payment(
-                    order=payment.order,
-                    payment=payment,
-                    source=source,
+            if (
+                payment.amount != order.total_amount
+                or payment.currency.upper() != order.currency.upper()
+            ):
+                raise ValidationError(
+                    "Le montant de la commande a changé depuis l'ouverture du paiement."
                 )
-                return payment.order, payment, invoice
+            if (
+                Payment.objects.filter(order=order, status=Payment.Status.CAPTURED)
+                .exclude(pk=payment.pk)
+                .exists()
+            ):
+                raise ValidationError("Cette commande possède déjà un autre paiement capturé.")
+            if payment.status == Payment.Status.CAPTURED and payment.provider_capture_id:
+                if payment.provider_capture_id != provider_capture_id:
+                    raise ValidationError("Référence de capture incohérente.")
+                newly_captured = False
+            else:
+                if payment.status in (Payment.Status.FAILED, Payment.Status.CANCELLED):
+                    raise ValidationError("Cette tentative de paiement n'est plus active.")
+                payment.status = Payment.Status.CAPTURED
+                self._apply_provider_ids(
+                    payment=payment,
+                    provider_payment_id=payment.provider_payment_id,
+                    provider_capture_id=provider_capture_id,
+                )
+                payment.provider_payload = provider_payload
+                payment.captured_at = timezone.now()
+                payment.last_error_message = ""
+                payment.save(
+                    update_fields=[
+                        "status",
+                        "paypal_capture_id",
+                        "stripe_payment_intent_id",
+                        "provider_payload",
+                        "captured_at",
+                        "last_error_message",
+                        "updated_at",
+                    ]
+                )
+                newly_captured = True
+                record_event(
+                    action="billing.payment_captured",
+                    actor=actor if getattr(actor, "is_authenticated", False) else None,
+                    target=payment,
+                    metadata={
+                        "order_public_id": str(order.public_id),
+                        "customer_public_id": str(order.customer.public_id),
+                        "payment_public_id": str(payment.public_id),
+                        "provider": payment.provider,
+                        "provider_capture_id": payment.provider_capture_id,
+                        "source": source,
+                        **(extra_metadata or {}),
+                    },
+                )
 
-            payment.status = Payment.Status.CAPTURED
-            self._apply_provider_ids(
+        # Le débit confirmé est durable avant PDF/notifications/Atelier. Si une
+        # dépendance échoue, le webhook répond 5xx et son retry reprend ici.
+        with transaction.atomic():
+            order = Order.objects.select_for_update().select_related("customer").get(pk=order.pk)
+            payment = Payment.objects.select_for_update().get(pk=payment.pk)
+            invoice_existed = Invoice.objects.filter(order=order).exists()
+            invoice = self.invoice_service.ensure_invoice_for_captured_payment(
+                order=order,
                 payment=payment,
-                provider_payment_id=payment.provider_payment_id,
-                provider_capture_id=provider_capture_id or payment.provider_capture_id,
+                source=source,
             )
-            payment.provider_payload = provider_payload
-            payment.captured_at = timezone.now()
-            payment.last_error_message = ""
-            payment.save(
-                update_fields=[
-                    "status",
-                    "paypal_capture_id",
-                    "stripe_payment_intent_id",
-                    "provider_payload",
-                    "captured_at",
-                    "last_error_message",
-                    "updated_at",
-                ]
-            )
+            if newly_captured or not invoice_existed:
+                from apps.customers.services.volume_discounts import (
+                    CustomerVolumeDiscountTierService,
+                )
+                from apps.notifications.services.transactional import (
+                    schedule_order_created_email,
+                    schedule_payment_captured_email,
+                )
 
-        invoice = self.invoice_service.ensure_invoice_for_captured_payment(
-            order=payment.order,
-            payment=payment,
-            source=source,
-        )
-        metadata = {
-            "order_public_id": str(payment.order.public_id),
-            "customer_public_id": str(payment.order.customer.public_id),
-            "payment_public_id": str(payment.public_id),
-            "invoice_public_id": str(invoice.public_id),
-            "provider": payment.provider,
-            "provider_capture_id": payment.provider_capture_id,
-            "paypal_capture_id": payment.paypal_capture_id,
-            "stripe_payment_intent_id": payment.stripe_payment_intent_id,
-            "source": source,
-        }
-        if extra_metadata:
-            metadata.update(extra_metadata)
-        record_event(
-            action="billing.payment_captured",
-            actor=actor if getattr(actor, "is_authenticated", False) else None,
-            target=payment,
-            metadata=metadata,
-        )
-        from apps.billing.services.production_payment_gate import (
-            should_defer_order_created_until_payment,
-        )
-        from apps.notifications.services.transactional import schedule_payment_captured_email
-
-        schedule_payment_captured_email(order_public_id=payment.order.public_id)
-        if should_defer_order_created_until_payment(payment.order):
-            from apps.notifications.services.transactional import schedule_order_created_email
-
-            schedule_order_created_email(order_public_id=payment.order.public_id)
-        from apps.customers.services.volume_discounts import CustomerVolumeDiscountTierService
-
-        CustomerVolumeDiscountTierService().notify_immediate_tier_after_capture(
-            order=payment.order,
-            actor=actor,
-            source=f"{source}.payment_captured",
-        )
-        self._release_production_after_payment(order=payment.order, actor=actor, source=source)
-        return payment.order, payment, invoice
+                schedule_payment_captured_email(order_public_id=order.public_id)
+                schedule_order_created_email(order_public_id=order.public_id)
+                CustomerVolumeDiscountTierService().notify_immediate_tier_after_capture(
+                    order=order,
+                    actor=actor,
+                    source=f"{source}.payment_captured",
+                )
+            self._release_production_after_payment(order=order, actor=actor, source=source)
+            return order, payment, invoice
 
     def _release_production_after_payment(self, *, order, actor, source: str) -> None:
-        """Après capture CB atelier : s'assure qu'un OF existe et journalise le déblocage."""
+        """Après capture comptant : livre l'OF et la notification à l'Atelier."""
         if order.billing_mode != Order.BillingMode.IMMEDIATE:
             return
-        if not order.uses_atelier_pricing():
+        if order.status != Order.Status.SUBMITTED:
             return
+        from apps.notifications.services.workshop_push import WorkshopNotificationService
         from apps.production.services.workflow import ProductionWorkflowService
 
         job = ProductionWorkflowService().get_or_create_for_order(order=order)
+        WorkshopNotificationService().publish_order_submitted(
+            order=order,
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            source=source,
+        )
         record_event(
             action="production.unlocked_after_payment",
             actor=actor if getattr(actor, "is_authenticated", False) else None,
@@ -492,6 +768,221 @@ class PaymentService:
                 "source": source,
             },
         )
+
+    def recover_incomplete_captures(self, *, limit: int = 100) -> dict[str, int]:
+        """Rejoue uniquement les effets locaux manquants d'une capture durable."""
+        from apps.notifications.models import WorkshopNotificationEvent
+
+        complete_receipt = Invoice.objects.filter(
+            order_id=OuterRef("order_id"),
+            payment_id=OuterRef("pk"),
+            paid_at__isnull=False,
+        ).exclude(file="")
+        workshop_event = WorkshopNotificationEvent.objects.filter(
+            order_id=OuterRef("order_id"),
+            event_type=WorkshopNotificationEvent.EventType.ORDER_SUBMITTED,
+        )
+        cutoff = timezone.now() - timedelta(minutes=2)
+        candidates = list(
+            Payment.objects.filter(status=Payment.Status.CAPTURED)
+            .filter(Q(captured_at__lte=cutoff) | Q(captured_at__isnull=True))
+            .annotate(
+                _has_complete_receipt=Exists(complete_receipt),
+                _has_workshop_event=Exists(workshop_event),
+            )
+            .filter(
+                Q(_has_complete_receipt=False)
+                | Q(
+                    order__billing_mode=Order.BillingMode.IMMEDIATE,
+                    order__status=Order.Status.SUBMITTED,
+                    _has_workshop_event=False,
+                )
+            )
+            .select_related("order", "order__customer")
+            .order_by("updated_at", "pk")[: max(1, min(limit, 500))]
+        )
+        recovered = failed = 0
+        for payment in candidates:
+            try:
+                self._finalize_captured_payment(
+                    payment=payment,
+                    provider_capture_id=payment.provider_capture_id,
+                    provider_payload=payment.provider_payload,
+                    actor=None,
+                    source="payment_recovery",
+                )
+            except Exception as exc:
+                failed += 1
+                Payment.objects.filter(pk=payment.pk).update(updated_at=timezone.now())
+                record_event(
+                    action="billing.payment_recovery_failed",
+                    target=payment,
+                    status=AuditLogEntry.Status.FAILURE,
+                    message="Captured payment recovery failed.",
+                    metadata={
+                        "order_public_id": str(payment.order.public_id),
+                        "payment_public_id": str(payment.public_id),
+                        "error_type": type(exc).__name__,
+                        "source": "payment_recovery",
+                    },
+                )
+            else:
+                recovered += 1
+        return {"recovered": recovered, "failed": failed}
+
+    def reconcile_active_payments(self, *, limit: int = 100) -> dict[str, int]:
+        """Rapproche les sessions distantes sans dépendre du retour client ou webhook."""
+        cutoff = timezone.now() - timedelta(minutes=2)
+        candidates = list(
+            Payment.objects.filter(
+                status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+                updated_at__lte=cutoff,
+            )
+            .filter(Q(paypal_order_id__gt="") | Q(stripe_checkout_session_id__gt=""))
+            .select_related("order", "order__customer")
+            .order_by("updated_at", "pk")[: max(1, min(limit, 500))]
+        )
+        reconciled = failed = 0
+        for payment in candidates:
+            if not payment.provider_payment_id:
+                continue
+            try:
+                self._reconcile_active_checkout(
+                    customer=payment.order.customer,
+                    order_public_id=payment.order.public_id,
+                    requested_provider=payment.provider,
+                )
+            except Exception as exc:
+                failed += 1
+                Payment.objects.filter(pk=payment.pk).update(updated_at=timezone.now())
+                record_event(
+                    action="billing.payment_reconciliation_failed",
+                    target=payment,
+                    status=AuditLogEntry.Status.FAILURE,
+                    message="Provider payment reconciliation failed.",
+                    metadata={
+                        "order_public_id": str(payment.order.public_id),
+                        "payment_public_id": str(payment.public_id),
+                        "error_type": type(exc).__name__,
+                        "source": "payment_reconciliation",
+                    },
+                )
+            else:
+                reconciled += 1
+                Payment.objects.filter(
+                    pk=payment.pk,
+                    status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+                ).update(updated_at=timezone.now())
+        return {"reconciled": reconciled, "failed": failed}
+
+    def _verify_checkout_binding(
+        self, *, gateway, payment: Payment, provider_payment_id: str = ""
+    ) -> None:
+        verify = getattr(gateway, "verify_checkout_binding", None)
+        if verify is None:
+            return
+        remote_id = provider_payment_id or payment.provider_payment_id
+        try:
+            if payment.provider == Payment.Provider.PAYPAL:
+                verify(
+                    provider_payment_id=remote_id,
+                    payment_public_id=payment.public_id,
+                    order_public_id=payment.order.public_id,
+                    amount=payment.amount,
+                    currency=payment.currency,
+                    allow_legacy_custom_id=True,
+                )
+            else:
+                verify(
+                    provider_payment_id=remote_id,
+                    payment_public_id=payment.public_id,
+                    order_public_id=payment.order.public_id,
+                    customer_public_id=payment.order.customer.public_id,
+                    amount=payment.amount,
+                    currency=payment.currency,
+                    allow_legacy_missing_payment_id=(
+                        bool(payment.stripe_checkout_session_id)
+                        and payment.stripe_checkout_session_id == remote_id
+                    ),
+                )
+        except PaymentGatewayTransientError:
+            raise
+        except PaymentGatewayError as exc:
+            raise ValidationError(str(exc)) from exc
+
+    def close_unknown_checkout_after_reconciliation(
+        self,
+        *,
+        payment_public_id,
+        actor,
+        resolution: str,
+        evidence: str,
+        reason: str,
+        management_command: bool = False,
+    ) -> Payment:
+        """Fermeture manuelle auditée après preuve qu'aucun checkout ne reste payable."""
+        if not management_command and not (
+            getattr(actor, "is_active", False)
+            and getattr(actor, "is_staff", False)
+            and actor.has_perm("billing.confirm_payment")
+        ):
+            raise ValidationError("Permission de rapprochement de paiement requise.")
+        if resolution not in {"no_remote_checkout", "remote_closed"}:
+            raise ValidationError("Résultat du rapprochement prestataire invalide.")
+        clean_evidence = str(evidence or "").strip()
+        clean_reason = str(reason or "").strip()
+        if len(clean_evidence) < 12 or len(clean_reason) < 12:
+            raise ValidationError("Preuve externe et motif détaillés requis.")
+        payment = (
+            Payment.objects.select_related("order").filter(public_id=payment_public_id).first()
+        )
+        if payment is None:
+            raise ValidationError("Tentative de paiement introuvable.")
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=payment.order_id)
+            payment = Payment.objects.select_for_update().get(pk=payment.pk)
+            if payment.status not in (
+                Payment.Status.PENDING,
+                Payment.Status.APPROVED,
+                Payment.Status.FAILED,
+                Payment.Status.CANCELLED,
+            ):
+                raise ValidationError("Cette tentative ne peut pas être rapprochée.")
+            if AuditLogEntry.objects.filter(
+                action="billing.unknown_checkout_manually_closed",
+                target_model="Payment",
+                target_public_id=payment.public_id,
+                status=AuditLogEntry.Status.SUCCESS,
+            ).exists():
+                raise ValidationError("Cette tentative a déjà été rapprochée.")
+            if payment.provider_payment_id or payment.approval_url:
+                raise ValidationError(
+                    "La référence prestataire existe : vérifier son état distant."
+                )
+            if Payment.objects.filter(order=order, status=Payment.Status.CAPTURED).exists():
+                raise ValidationError("Cette commande possède déjà un paiement capturé.")
+            retry_window = UNKNOWN_CHECKOUT_RETRY_WINDOWS[payment.provider]
+            if timezone.now() - payment.created_at < retry_window:
+                raise ValidationError("La fenêtre de rapprochement automatique est encore ouverte.")
+            payment.status = Payment.Status.CANCELLED
+            payment.last_error_message = "Fermée après rapprochement du prestataire."
+            payment.save(update_fields=("status", "last_error_message", "updated_at"))
+            record_event(
+                action="billing.unknown_checkout_manually_closed",
+                actor=actor,
+                target=payment,
+                metadata={
+                    "order_public_id": str(order.public_id),
+                    "customer_public_id": str(order.customer.public_id),
+                    "payment_public_id": str(payment.public_id),
+                    "provider": payment.provider,
+                    "resolution": resolution,
+                    "evidence": clean_evidence[:255],
+                    "reason": clean_reason[:255],
+                    "source": "management_command" if management_command else "staff_action",
+                },
+            )
+        return payment
 
     def _get_customer_order(self, *, customer, order_public_id):
         return (
@@ -521,26 +1012,21 @@ class PaymentService:
     def _assert_amount_matches(self, *, payment: Payment, result) -> None:
         expected_cents = int((Decimal(payment.amount) * Decimal("100")).quantize(Decimal("1")))
         actual_cents = getattr(result, "amount_total_cents", None)
+        if (
+            payment.provider == Payment.Provider.STRIPE
+            and str(result.status).upper() == "COMPLETED"
+        ):
+            if actual_cents is None or not getattr(result, "currency", None):
+                raise ValidationError("Montant ou devise Stripe absents de la confirmation.")
         if actual_cents is not None and int(actual_cents) != expected_cents:
-            self._mark_failed(
-                payment=payment,
-                actor=None,
-                source="amount_guard",
-                message=(
-                    f"Montant {payment.provider} incohérent "
-                    f"({actual_cents} cents vs {expected_cents} attendus)."
-                ),
+            raise ValidationError(
+                f"Montant {payment.provider} incohérent "
+                f"({actual_cents} cents vs {expected_cents} attendus)."
             )
         actual_currency = str(getattr(result, "currency", None) or "").strip().upper()
         if actual_currency and actual_currency != str(payment.currency or "").upper():
-            self._mark_failed(
-                payment=payment,
-                actor=None,
-                source="amount_guard",
-                message=(
-                    f"Devise {payment.provider} incohérente "
-                    f"({actual_currency} vs {payment.currency})."
-                ),
+            raise ValidationError(
+                f"Devise {payment.provider} incohérente ({actual_currency} vs {payment.currency})."
             )
 
     def _get_gateway(self, *, provider: str | None = None) -> PaymentGateway:
@@ -571,6 +1057,37 @@ class PaymentService:
         if provider_capture_id:
             payment.paypal_capture_id = provider_capture_id
 
+    def _hold_stripe_failure_for_reconciliation(
+        self, *, payment: Payment, actor, source: str, event_id: str
+    ) -> Payment:
+        message = STRIPE_FAILURE_RECONCILIATION_MESSAGE
+        with transaction.atomic():
+            payment = (
+                Payment.objects.select_for_update()
+                .select_related("order", "order__customer")
+                .get(pk=payment.pk)
+            )
+            if payment.status not in (Payment.Status.PENDING, Payment.Status.APPROVED):
+                return payment
+            if payment.last_error_message == message:
+                return payment
+            payment.last_error_message = message
+            payment.save(update_fields=["last_error_message", "updated_at"])
+            record_event(
+                action="billing.stripe_failure_pending_reconciliation",
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=payment,
+                status=AuditLogEntry.Status.FAILURE,
+                message=message,
+                metadata={
+                    "order_public_id": str(payment.order.public_id),
+                    "payment_public_id": str(payment.public_id),
+                    "stripe_event_id": event_id,
+                    "source": source,
+                },
+            )
+            return payment
+
     def _mark_failed(self, *, payment: Payment, actor, source: str, message: str):
         with transaction.atomic():
             payment = (
@@ -578,6 +1095,8 @@ class PaymentService:
                 .select_related("order", "order__customer")
                 .get(pk=payment.pk)
             )
+            if payment.status == Payment.Status.CAPTURED:
+                raise ValidationError("Ce paiement a déjà été capturé.")
             payment.status = Payment.Status.FAILED
             payment.last_error_message = str(message).strip()[:255]
             payment.save(update_fields=["status", "last_error_message", "updated_at"])

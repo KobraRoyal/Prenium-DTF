@@ -148,6 +148,11 @@ class Payment(BaseModel):
         ]
         constraints = [
             models.UniqueConstraint(
+                fields=("order",),
+                condition=Q(status__in=("pending", "approved", "captured")),
+                name="uniq_payable_or_captured_payment_per_order",
+            ),
+            models.UniqueConstraint(
                 fields=("paypal_order_id",),
                 condition=~Q(paypal_order_id=""),
                 name="uniq_payment_paypal_order_id_non_empty",

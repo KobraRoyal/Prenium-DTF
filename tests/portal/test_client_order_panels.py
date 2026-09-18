@@ -538,6 +538,7 @@ def test_staff_can_update_handover_date_with_audited_change():
         subtotal_amount="10.00",
         total_amount="10.00",
         shipping_method_code="standard",
+        billing_mode=Order.BillingMode.DEFERRED,
     )
     ProductionJob.objects.create(
         order=order,
@@ -595,6 +596,7 @@ def test_staff_without_order_change_cannot_update_handover_date():
         currency="EUR",
         subtotal_amount="10.00",
         total_amount="10.00",
+        billing_mode=Order.BillingMode.DEFERRED,
     )
     ProductionJob.objects.create(
         order=order,

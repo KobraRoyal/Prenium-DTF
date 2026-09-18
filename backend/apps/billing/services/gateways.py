@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol
+from urllib import request as urllib_request
 from urllib.parse import urlsplit
 
 from django.core.exceptions import ValidationError
@@ -33,8 +34,23 @@ class PaymentGatewayError(Exception):
     """Erreur provider normalisée pour le PaymentService."""
 
 
+class PaymentGatewayTransientError(PaymentGatewayError):
+    """L'état distant est inconnu ; le prestataire doit être interrogé à nouveau."""
+
+
 class PaymentGatewayConfigurationError(PaymentGatewayError):
     pass
+
+
+class _RejectProviderRedirect(urllib_request.HTTPRedirectHandler):
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        raise PaymentGatewayError("Redirection d'une requête API de paiement refusée.")
+
+
+def open_provider_request(http_request, *, timeout: int):
+    """Empêche urllib de relayer un en-tête Authorization après une redirection."""
+    opener = urllib_request.build_opener(_RejectProviderRedirect())
+    return opener.open(http_request, timeout=timeout)
 
 
 def validate_provider_checkout_url(*, url: str, provider: str, allowed_hosts: set[str]) -> str:

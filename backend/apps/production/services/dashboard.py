@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from apps.billing.services.production_payment_gate import (
     order_awaits_client_payment,
+    order_has_captured_payment,
     production_start_blocked_reason,
 )
 from apps.orders.models import Order
@@ -18,7 +19,11 @@ from apps.orders.references import order_business_number, order_client_reference
 from apps.production.models import ProductionJob, ProductionPrintRecord
 from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
-from apps.production.services.workflow import ProductionWorkflowService
+from apps.production.services.workflow import (
+    ProductionWorkflowService,
+    production_ready_jobs_queryset,
+    production_ready_orders_queryset,
+)
 from apps.uploads.models import OrderUploadDriveSync, OrderUploadReview
 
 
@@ -60,14 +65,18 @@ class AtelierDashboardService:
         today = timezone.localdate()
         dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
         entries = {
-            day: Order.objects.filter(status=Order.Status.SUBMITTED, created_at__date=day).count()
+            day: production_ready_orders_queryset(Order.objects)
+            .filter(status=Order.Status.SUBMITTED, created_at__date=day)
+            .count()
             for day in dates
         }
         completed = {
-            day: ProductionJob.objects.filter(
+            day: production_ready_jobs_queryset(ProductionJob.objects)
+            .filter(
                 status=ProductionJob.Status.COMPLETED,
                 updated_at__date=day,
-            ).count()
+            )
+            .count()
             for day in dates
         }
         maximum = max([*entries.values(), *completed.values(), 1])
@@ -98,11 +107,15 @@ class AtelierDashboardService:
         dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
         revenue_by_day = {day: Decimal("0.00") for day in dates}
         orders_by_day = {day: 0 for day in dates}
-        priced_orders = Order.objects.filter(
-            status=Order.Status.SUBMITTED,
-            pricing_status=Order.PricingStatus.PRICED,
-            created_at__date__gte=dates[0],
-        ).values_list("created_at__date", "total_amount")
+        priced_orders = (
+            production_ready_orders_queryset(Order.objects)
+            .filter(
+                status=Order.Status.SUBMITTED,
+                pricing_status=Order.PricingStatus.PRICED,
+                created_at__date__gte=dates[0],
+            )
+            .values_list("created_at__date", "total_amount")
+        )
         for created_on, total_amount in priced_orders:
             if created_on not in revenue_by_day:
                 continue
@@ -186,7 +199,7 @@ class AtelierDashboardService:
         seven_day_start = today - timedelta(days=6)
         orders_url = reverse("portal:staff-order-list")
 
-        job_counts = ProductionJob.objects.aggregate(
+        job_counts = production_ready_jobs_queryset(ProductionJob.objects).aggregate(
             blocked=Count(
                 "pk",
                 filter=Q(status=ProductionJob.Status.BLOCKED),
@@ -318,7 +331,7 @@ class AtelierDashboardService:
         """KPI de production destinés au responsable Atelier."""
         orders_url = reverse("portal:staff-order-list")
         today = timezone.localdate()
-        jobs = ProductionJob.objects.all()
+        jobs = production_ready_jobs_queryset(ProductionJob.objects)
         completed_today = jobs.filter(
             status=ProductionJob.Status.COMPLETED,
             updated_at__date=today,
@@ -444,13 +457,17 @@ class AtelierDashboardService:
             and production_job is not None
             and production_status == ProductionJob.Status.QUEUED
             and not order_awaits_client_payment(order)
-            and production_start_blocked_reason(order) is None
+            and (
+                order.billing_mode == Order.BillingMode.DEFERRED
+                or order_has_captured_payment(order)
+            )
         )
         print_eligible = bool(
             production_job is not None
             and production_job.of_document_issued_at is None
             and production_status != ProductionJob.Status.COMPLETED
             and order.status == Order.Status.SUBMITTED
+            and production_start_blocked_reason(order) is None
         )
         files_to_process_count, files_to_process_label = self._files_to_process_summary(
             upload_count=len(uploads),

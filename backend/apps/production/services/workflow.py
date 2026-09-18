@@ -4,11 +4,14 @@ from datetime import date
 
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from django.utils.formats import date_format
 
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
+from apps.billing.models import Payment
+from apps.billing.services.production_payment_gate import order_has_captured_payment
 from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
 from apps.orders.services.business_days import add_business_days
@@ -16,6 +19,22 @@ from apps.production.models import ProductionJob, ProductionJobTransition
 from apps.uploads.services.production_specs import OrderUploadProductionSpecService
 
 production_spec_service = OrderUploadProductionSpecService()
+
+
+def production_ready_orders_queryset(queryset):
+    """Keep unpaid immediate orders out of every Atelier worklist."""
+    captured = Payment.objects.filter(order_id=OuterRef("pk"), status=Payment.Status.CAPTURED)
+    return queryset.annotate(_production_payment_captured=Exists(captured)).filter(
+        Q(billing_mode=Order.BillingMode.DEFERRED) | Q(_production_payment_captured=True)
+    )
+
+
+def production_ready_jobs_queryset(queryset):
+    """Apply the same order payment gate to ProductionJob worklists."""
+    captured = Payment.objects.filter(order_id=OuterRef("order_id"), status=Payment.Status.CAPTURED)
+    return queryset.annotate(_production_payment_captured=Exists(captured)).filter(
+        Q(order__billing_mode=Order.BillingMode.DEFERRED) | Q(_production_payment_captured=True)
+    )
 
 
 class ProductionWorkflowService:
@@ -60,7 +79,12 @@ class ProductionWorkflowService:
                 production_start_blocked_reason,
             )
 
-            if production_start_blocked_reason(order) is not None:
+            block_reason = production_start_blocked_reason(order)
+            if order.billing_mode == Order.BillingMode.IMMEDIATE and not order_has_captured_payment(
+                order
+            ):
+                return []
+            if block_reason is not None:
                 statuses = [
                     status for status in statuses if status != ProductionJob.Status.IN_PROGRESS
                 ]
@@ -419,7 +443,10 @@ class ProductionWorkflowService:
                     "aucune transition de production n’est possible."
                 )
             else:
-                if normalized_status == ProductionJob.Status.IN_PROGRESS:
+                if (
+                    locked_job.order.billing_mode == Order.BillingMode.IMMEDIATE
+                    and not order_has_captured_payment(locked_job.order)
+                ) or normalized_status == ProductionJob.Status.IN_PROGRESS:
                     from apps.billing.services.production_payment_gate import (
                         production_start_blocked_reason,
                     )
@@ -587,7 +614,8 @@ class ProductionWorkflowService:
 
     def _get_staff_order(self, *, order_public_id):
         return (
-            Order.objects.select_related("customer", "created_by")
+            production_ready_orders_queryset(Order.objects)
+            .select_related("customer", "created_by")
             .prefetch_related(
                 "items",
                 "uploads",

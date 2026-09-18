@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.views import View
 
 from apps.billing.models import Payment
+from apps.billing.services.gateways import PaymentGatewayTransientError
 from apps.customers.models import Customer
 from apps.orders.models import Order
 from apps.portal.htmx import with_toast
@@ -141,6 +142,9 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
                 success_url=success_url,
                 cancel_url=cancel_url,
             )
+        except PaymentGatewayTransientError:
+            messages.info(request, "Le prestataire de paiement est temporairement indisponible.")
+            return HttpResponseRedirect(billing_url)
         except DjangoValidationError as error:
             message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
             messages.error(request, message)
@@ -164,11 +168,9 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
         )
 
         if status == "cancel":
-            Payment.objects.filter(
-                order_id=order.pk,
-                status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
-            ).update(status=Payment.Status.CANCELLED)
-            messages.info(request, "Paiement non validé. Vous pouvez reprendre le règlement.")
+            # Le retour navigateur ne prouve pas que la session du prestataire est
+            # expirée. Elle reste payable, donc la tentative reste active.
+            messages.info(request, "Paiement non validé. Vous pouvez reprendre le même règlement.")
             return HttpResponseRedirect(
                 client_order_billing_landing_url(
                     customer_public_id=customer_public_id,
@@ -206,6 +208,12 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
                     "Si le débit a été effectué, contactez le support.",
                 )
                 return HttpResponseRedirect(billing_url)
+        except PaymentGatewayTransientError:
+            messages.info(
+                request,
+                "Le prestataire confirme encore le paiement. Réessayez plus tard.",
+            )
+            return HttpResponseRedirect(billing_url)
         except DjangoValidationError as error:
             message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
             messages.error(request, message)
