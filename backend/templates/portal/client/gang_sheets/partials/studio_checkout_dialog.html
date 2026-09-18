@@ -250,6 +250,10 @@
         <p class="gang-studio-pay-dialog__hint">Le règlement sera proposé après confirmation de la commande.</p>
         {% endif %}
       </section>
+      {% else %}
+      <p class="gang-studio-pay-dialog__hint" data-studio-encours-hint>
+        Commande en encours. Aucun paiement en ligne.
+      </p>
       {% endif %}
 
     </div>
@@ -266,7 +270,7 @@
           {% if customer.default_billing_mode == "immediate" %}
             {% if gang_sheet_quote %}Payer {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %} €{% else %}Payer maintenant{% endif %}
           {% else %}
-          Confirmer et transmettre
+            {% if gang_sheet_quote %}Valider {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %} € HT{% else %}Valider la commande{% endif %}
           {% endif %}
         </span>
       </button>

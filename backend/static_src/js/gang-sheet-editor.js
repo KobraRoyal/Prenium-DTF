@@ -1638,8 +1638,11 @@ if (root) {
       setText("[data-studio-pay-tax]", tax > 0 ? formatStudioEur(quote.tax_amount_eur) : "");
     });
     const billingMode = q("[data-studio-checkout-form] input[name='billing_mode']")?.value;
-    if (billingMode === "immediate" && quote) {
-      const label = `Payer ${formatStudioEur(quote.total_eur)}`;
+    if (quote) {
+      const label =
+        billingMode === "immediate"
+          ? `Payer ${formatStudioEur(quote.total_eur)}`
+          : `Valider ${formatStudioEur(quote.total_eur)} HT`;
       qa("[data-studio-checkout-submit-label], [data-studio-pay-confirm-label]").forEach(
         (node) => {
           node.textContent = label;

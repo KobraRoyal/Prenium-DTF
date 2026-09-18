@@ -52,6 +52,8 @@ La commande crée des commandes en **facturation différée** (`billing_mode = d
 
 Le **Seed Client Comptant** (`client.cash.owner@prenium.local`) est en `default_billing_mode = immediate`, avec les paliers Atelier 5 m −10 % / 10 m −20 %. Aucune commande n’est pré-créée : le parcours à tester est Gang Sheet → devis remisé → paiement CB.
 
+Le **Seed Client A** (`client.a.owner@prenium.local`) est en encours. Dans le Studio Gang Sheet, le parcours est le même jusqu’à la confirmation (livraison, identité commande) **sans moyen de paiement** : la commande est tarifée HT et transmise à l’atelier.
+
 - **Profils facturation** : `CustomerBillingProfile` pour Seed Client A (mensuel, 25 €/m², plafond encours 5000 €) et Seed Client B (bi-mensuel, 18,50 €/m², plafond 1500 €, blocage encours actif).
 - **Scénarios** (repère : `customer_note` sur `Order`) :
 

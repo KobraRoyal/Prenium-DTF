@@ -2,6 +2,7 @@
 
 | Date | Décision | Motif | Impact |
 |---|---|---|---|
+| 2026-09-18 | Studio encours : même checkout Gang Sheet que le comptant, sans paiement | La surface planche est connue ; attendre le métrage atelier cassait la validation directe | Commande HT tarifée, pas de redirection PayPal/Stripe |
 | 2026-09-18 | Studio checkout : `Payment.source` 64 car. + retry si commande déjà créée | `client_portal.studio_checkout_pay` (33) dépassait varchar(32) PostgreSQL après le lock FOR UPDATE | POST `/checkout/` 500 → 302 paiement ; 2e clic relance le règlement |
 | 2026-09-18 | Studio checkout : lock `select_for_update(of=("self",))` | PostgreSQL refuse FOR UPDATE sur OUTER JOIN des FK nullable `project`/`order` | Verrou de la seule ligne `gang_sheets` |
 | 2026-09-18 | Studio checkout : clic « Retrait atelier » ne ferme plus la modale | Le changement de mode masquait l’adresse pendant le mousedown ; le click atterrissait sur le `<dialog>` et le closer backdrop du configurateur fermait | Fermeture uniquement via Retour / croix |

@@ -498,14 +498,17 @@ class OrderPricingService:
     ) -> Order:
         """Fige le métrage depuis la géométrie Gang Sheet puis calcule le prix.
 
-        Réservé aux commandes comptant CB portail (paiement immédiat sans
-        attente du retour atelier).
+        S’applique aux planches Studio (comptant CB ou encours) : la surface est
+        connue, sans attente de métrage atelier.
         """
         from apps.gang_sheets.models import GangSheet
 
-        if order.billing_mode != Order.BillingMode.IMMEDIATE:
+        if order.billing_mode not in {
+            Order.BillingMode.IMMEDIATE,
+            Order.BillingMode.DEFERRED,
+        }:
             raise ValidationError(
-                "Le tarif automatique Gang Sheet s’applique aux commandes comptant CB."
+                "Le tarif automatique Gang Sheet s’applique aux commandes atelier."
             )
         if not order.uses_atelier_pricing():
             raise ValidationError(

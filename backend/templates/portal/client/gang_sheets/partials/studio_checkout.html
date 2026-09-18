@@ -144,7 +144,7 @@
       {% if customer.default_billing_mode == "immediate" %}
         {% if gang_sheet_quote %}Payer {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %} €{% else %}Confirmer et payer{% endif %}
       {% else %}
-      Confirmer et transmettre
+        {% if gang_sheet_quote %}Valider {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %} € HT{% else %}Valider la commande{% endif %}
       {% endif %}
       </span>
     </button>

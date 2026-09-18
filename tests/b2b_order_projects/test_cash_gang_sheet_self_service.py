@@ -579,6 +579,126 @@ def test_studio_checkout_does_not_require_file_confirmation():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_deferred_studio_editor_hides_payment_and_offers_validation():
+    _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(email="studio-encours@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Studio Encours Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.DEFERRED,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche encours")
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.surface_sqm = Decimal("1.1000")
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% encours editor\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "surface_sqm", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-encours@example.com", password="pass")
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert 'value="deferred"' in content
+    assert "data-studio-pay-methods" not in content
+    assert 'name="provider"' not in content
+    assert "Aucun paiement en ligne" in content
+    assert "Valider" in content
+    assert "Confirmer la commande" in content
+    assert "Payer " not in content
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_deferred_studio_checkout_creates_priced_order_without_payment():
+    _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(
+        email="studio-encours-pay@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Studio Encours Pay Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.DEFERRED,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(
+        customer=customer,
+        actor=user,
+        name="Planche encours pay",
+    )
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.surface_sqm = Decimal("1.1000")
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% encours pay\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "surface_sqm", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-encours-pay@example.com", password="pass")
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-checkout",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "billing_mode": "immediate",
+            "quantity": "1",
+            "support_color_hex": "#112233",
+            "name": "Commande encours studio",
+            "shipping_method_code": "pickup",
+            "provider": "paypal",
+        },
+    )
+    assert response.status_code == 302
+    sheet.refresh_from_db()
+    assert sheet.order_id is not None
+    order = sheet.order
+    assert order.billing_mode == Order.BillingMode.DEFERRED
+    assert order.pricing_status == Order.PricingStatus.PRICED
+    assert order.tax_amount == Decimal("0.00")
+    assert str(order.public_id) in response["Location"]
+    assert response["Location"] == (
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+        + "?checkout=success"
+    )
+    assert Payment.objects.filter(order=order).count() == 0
+    assert requires_captured_payment_before_production(order) is False
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
 def test_studio_checkout_rejects_other_customer_sheet():
     owner = get_user_model().objects.create_user(email="studio-owner@example.com", password="pass")
     customer = Customer.objects.create(
@@ -1080,13 +1200,15 @@ def test_immediate_account_create_view_redirects_to_gang_sheets():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
-def test_deferred_checkout_still_waits_for_atelier_pricing():
+def test_deferred_gang_sheet_checkout_auto_prices_without_vat():
     _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
     user = get_user_model().objects.create_user(email="deferred@example.com", password="pass")
     customer = Customer.objects.create(
         name="Deferred Co",
         b2b_order_projects_enabled=True,
         default_billing_mode=Customer.DefaultBillingMode.DEFERRED,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
     )
     membership = CustomerMembership.objects.create(customer=customer, user=user)
     project, _sheet = _prepare_gang_sheet_project(customer=customer, user=user)
@@ -1097,11 +1219,16 @@ def test_deferred_checkout_still_waits_for_atelier_pricing():
         customer_membership=membership,
         source="test",
         billing_mode="deferred",
+        shipping_method_code="pickup",
     )
 
     assert order.billing_mode == Order.BillingMode.DEFERRED
-    assert order.pricing_status == Order.PricingStatus.PENDING
-    assert order.total_amount == Decimal("0.00")
+    assert order.pricing_status == Order.PricingStatus.PRICED
+    assert order.subtotal_amount == Decimal("32.50")
+    assert order.tax_amount == Decimal("0.00")
+    assert order.total_amount == Decimal("32.50")
+    assert requires_captured_payment_before_production(order) is False
+    assert order_awaits_client_payment(order) is False
 
 
 @pytest.mark.django_db
