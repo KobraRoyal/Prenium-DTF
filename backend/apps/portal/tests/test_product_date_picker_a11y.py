@@ -22,7 +22,10 @@ class ProductDatePickerAccessibilityTests(SimpleTestCase):
         self.assertNotIn("product-date-picker__trigger-chevron", source)
         self.assertIn('class="product-date-picker__nav-icon"', source)
         self.assertIn("product-date-picker__popover--month", source)
-        self.assertIn('aria-colcount="{% if picker_mode == \'month\' %}4{% else %}7{% endif %}"', source)
+        self.assertIn(
+            "aria-colcount=\"{% if picker_mode == 'month' %}4{% else %}7{% endif %}\"",
+            source,
+        )
         self.assertNotIn(">‹<", source)
         self.assertNotIn(">›<", source)
 
