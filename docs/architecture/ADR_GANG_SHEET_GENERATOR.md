@@ -171,7 +171,9 @@ d’une image interne du PDF, tout en conservant les overlays de finesse et de s
 ainsi que l’obligation de couleur support. Le PDF HD reste servi uniquement au staff autorisé. Lors du
 checkout, la commande référence la même `AssetVersion`, donc le même fichier, puis la planche
 validée est rattachée à la commande et devient visible dans le panneau Production Atelier.
-Lorsque `GOOGLE_DRIVE_SYNC_ENABLED` est actif, le checkout refuse la création de la commande tant
+Une planche sauvegardée reste un catalogue : le Studio conserve le CTA « Je commande » après
+une commande existante. Un nouveau projet `READY_GANG_SHEET` réutilise `production_asset`
+(même fichier HD) ; les commandes précédentes ne sont pas écrasées. Lorsque `GOOGLE_DRIVE_SYNC_ENABLED` est actif, le checkout refuse la création de la commande tant
 que la révision HD courante n’est pas marquée synchronisée sur Drive. L’upload de commande conserve
 ensuite son workflow Drive historique dans l’arborescence `Commandes/`.
 

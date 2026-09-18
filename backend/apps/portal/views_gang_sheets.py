@@ -1317,28 +1317,6 @@ class ClientGangSheetCheckoutView(ClientGangSheetMixin, View):
                 "sheet_public_id": sheet.public_id,
             },
         )
-        if sheet.order_id:
-            from apps.billing.services.production_payment_gate import (
-                order_awaits_client_payment,
-            )
-
-            if order_awaits_client_payment(sheet.order):
-                return redirect_after_b2b_checkout(
-                    request=request,
-                    customer=self.customer,
-                    order=sheet.order,
-                    source="client_portal.studio_checkout_pay",
-                    requested_provider=(request.POST.get("provider") or "").strip(),
-                )
-            return HttpResponseRedirect(
-                reverse(
-                    "portal:client-order-detail",
-                    kwargs={
-                        "customer_public_id": self.customer.public_id,
-                        "order_public_id": sheet.order.public_id,
-                    },
-                )
-            )
         try:
             shipping_code = (request.POST.get("shipping_method_code") or "").strip() or None
             delivery_destination = (

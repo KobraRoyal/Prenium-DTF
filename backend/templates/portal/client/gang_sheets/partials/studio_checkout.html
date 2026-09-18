@@ -6,12 +6,6 @@
   {% if sheet.status != "validated" and not sheet.order_id %}hidden{% endif %}
   aria-label="Commander"
 >
-  {% if sheet.order_id %}
-  <a
-    class="ui-btn ui-btn-primary"
-    href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=sheet.order.public_id %}"
-  >Voir ma commande</a>
-  {% else %}
   <form
     method="post"
     action="{% url 'portal:client-gang-sheet-checkout' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
@@ -144,5 +138,4 @@
 
     {% include "portal/client/gang_sheets/partials/studio_checkout_dialog.html" %}
   </form>
-  {% endif %}
 </section>

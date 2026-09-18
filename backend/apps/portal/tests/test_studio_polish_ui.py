@@ -328,6 +328,8 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertNotIn('q("[data-metric-price]")', editor_js)
         self.assertIn("gang-sheet-editor.js?v=20260918-studio-inspector-v16", app_js)
         self.assertIn("Je commande", checkout)
+        self.assertNotIn("Voir ma commande", checkout)
+        self.assertNotIn("{% if sheet.order_id %}", checkout)
         self.assertIn("data-studio-order-recap-total", editor_js)
         self.assertIn("function paintStudioOrderRecap", editor_js)
         self.assertIn("function selectedStudioShippingChoice", editor_js)

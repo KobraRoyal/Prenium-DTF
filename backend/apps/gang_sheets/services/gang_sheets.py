@@ -1545,10 +1545,8 @@ class GangSheetService:
                 source=f"{source}.order_project",
             )
         )
-        if locked.project_id:
+        if locked.project_id and not locked.project.converted_order_id:
             project = locked.project
-            if project.converted_order_id:
-                return project
             identity = {
                 "name": project_name,
                 "requested_date": project_date,
@@ -1597,33 +1595,46 @@ class GangSheetService:
             },
             source=source,
         )
-        locked.final_file.open("rb")
-        final_upload = File(
-            locked.final_file.file,
-            name=f"{locked.public_id}-production.pdf",
-        )
-        final_upload.content_type = "application/pdf"
-        try:
-            version = self.assets.create_production_asset(
-                customer=locked.customer,
-                actor=actor,
-                name=f"{locked.name} — fichier production",
-                uploaded_file=final_upload,
-                source=source,
-                metadata={
-                    "gang_sheet_public_id": str(locked.public_id),
-                },
+        production_asset = locked.production_asset
+        if production_asset is None:
+            locked.final_file.open("rb")
+            final_upload = File(
+                locked.final_file.file,
+                name=f"{locked.public_id}-production.pdf",
             )
-        except AssetDomainError as error:
-            raise GangSheetDomainError(error.code, error.message, error.details) from error
-        finally:
-            locked.final_file.close()
-
-        item.asset = version.asset
-        item.save(update_fields=["asset", "updated_at"])
+            final_upload.content_type = "application/pdf"
+            try:
+                version = self.assets.create_production_asset(
+                    customer=locked.customer,
+                    actor=actor,
+                    name=f"{locked.name} — fichier production",
+                    uploaded_file=final_upload,
+                    source=source,
+                    metadata={
+                        "gang_sheet_public_id": str(locked.public_id),
+                    },
+                )
+            except AssetDomainError as error:
+                raise GangSheetDomainError(error.code, error.message, error.details) from error
+            finally:
+                locked.final_file.close()
+            production_asset = version.asset
+            item.asset = production_asset
+            item.save(update_fields=["asset", "updated_at"])
+        else:
+            try:
+                self.assets.link_existing_asset_to_item(
+                    project=project,
+                    item_public_id=item.public_id,
+                    asset=production_asset,
+                    actor=actor,
+                    source=source,
+                )
+            except AssetDomainError as error:
+                raise GangSheetDomainError(error.code, error.message, error.details) from error
         self.projects.refresh_completeness(project=project)
         locked.project = project
-        locked.production_asset = version.asset
+        locked.production_asset = production_asset
         locked.save(update_fields=["project", "production_asset", "updated_at"])
         self._audit(
             "order_project_created",
@@ -1632,10 +1643,11 @@ class GangSheetService:
             source=source,
             metadata={
                 "project_public_id": str(project.public_id),
-                "asset_public_id": str(version.asset.public_id),
+                "asset_public_id": str(production_asset.public_id),
                 "quantity": sheet_quantity,
                 "name": project_name,
                 "requested_date": project_date.isoformat() if project_date else None,
+                "repeat": bool(locked.order_id),
             },
         )
         return self.projects.get_customer_project(
@@ -1668,10 +1680,6 @@ class GangSheetService:
             .select_for_update(of=("self",))
             .get(pk=sheet.pk)
         )
-        if locked.order_id:
-            return locked.order
-        if locked.project_id and locked.project.converted_order_id:
-            return locked.project.converted_order
         if locked.status != GangSheet.Status.VALIDATED or not locked.final_file:
             raise GangSheetDomainError(
                 "VALIDATED_SHEET_REQUIRED",
@@ -1756,7 +1764,8 @@ class GangSheetService:
         sheets = list(
             GangSheet.objects.select_for_update()
             .for_project(project)
-            .filter(status=GangSheet.Status.VALIDATED, order__isnull=True)
+            .filter(status=GangSheet.Status.VALIDATED)
+            .exclude(order_id=order.pk)
         )
         for sheet in sheets:
             sheet.order = order

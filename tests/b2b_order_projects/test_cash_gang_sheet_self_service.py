@@ -709,6 +709,108 @@ def test_deferred_studio_checkout_creates_priced_order_without_payment():
 
 
 @pytest.mark.django_db
+@override_settings(
+    B2B_DTF_ORDER_PROJECT_ENABLED=True,
+    GOOGLE_DRIVE_SYNC_ENABLED=False,
+    PAYPAL_CLIENT_ID="",
+    PAYPAL_CLIENT_SECRET="",
+    PAYPAL_WEBHOOK_ID="",
+    STRIPE_PUBLISHABLE_KEY="",
+    STRIPE_SECRET_KEY="",
+    STRIPE_WEBHOOK_SECRET="",
+)
+def test_studio_keeps_checkout_form_after_order_and_creates_a_new_order():
+    PaymentGatewaySettings.objects.all().delete()
+    _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(
+        email="studio-repeat@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Studio Repeat Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.DEFERRED,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(
+        customer=customer,
+        actor=user,
+        name="Planche réassort",
+    )
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.surface_sqm = Decimal("1.1000")
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% repeat studio\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "surface_sqm", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-repeat@example.com", password="pass")
+    editor_kwargs = {
+        "customer_public_id": customer.public_id,
+        "sheet_public_id": sheet.public_id,
+    }
+    checkout_url = reverse("portal:client-gang-sheet-checkout", kwargs=editor_kwargs)
+    first = client.post(
+        checkout_url,
+        {
+            "billing_mode": "deferred",
+            "quantity": "2",
+            "support_color_hex": "#112233",
+            "name": "Première commande",
+            "shipping_method_code": "pickup",
+        },
+    )
+    assert first.status_code == 302
+    sheet.refresh_from_db()
+    first_order_id = sheet.order_id
+    first_asset_id = sheet.production_asset_id
+    assert first_order_id is not None
+    assert first_asset_id is not None
+
+    editor = client.get(reverse("portal:client-gang-sheet-editor", kwargs=editor_kwargs))
+    assert editor.status_code == 200
+    body = editor.content.decode()
+    assert "Je commande" in body
+    assert "Voir ma commande" not in body
+    assert "data-studio-checkout-form" in body
+    assert checkout_url in body
+
+    second = client.post(
+        checkout_url,
+        {
+            "billing_mode": "deferred",
+            "quantity": "7",
+            "support_color_hex": "#445566",
+            "name": "Réassort studio",
+            "shipping_method_code": "pickup",
+        },
+    )
+    assert second.status_code == 302
+    sheet.refresh_from_db()
+    first_order = Order.objects.get(pk=first_order_id)
+    assert sheet.order_id != first_order_id
+    assert sheet.production_asset_id == first_asset_id
+    repeat_order = sheet.order
+    assert str(repeat_order.public_id) in second["Location"]
+    assert str(first_order.public_id) not in second["Location"]
+    assert Order.objects.filter(customer=customer).count() == 2
+    upload = repeat_order.uploads.get()
+    assert upload.quantity == 7
+    assert upload.support_color_hex == "#445566"
+    assert upload.asset_version.asset_id == first_asset_id
+    assert sheet.project.name == "Réassort studio"
+    assert sheet.project.converted_order_id == repeat_order.id
+    assert first_order.uploads.get().quantity == 2
+
+
+@pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
 def test_studio_checkout_rejects_other_customer_sheet():
     owner = get_user_model().objects.create_user(email="studio-owner@example.com", password="pass")
