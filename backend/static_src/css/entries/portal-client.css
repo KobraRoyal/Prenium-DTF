@@ -1,6 +1,7 @@
 /* Surcouche client : dashboard, fiche commande, projets B2B, planches (liste). */
 @import "../components/client-dashboard.css";
 @import "../components/client-order-detail.css";
+@import "../components/client-billing-pay.css";
 @import "../components/b2b-order-project.css";
 @import "../components/kpi-metrics.css";
 @import "../components/gang-sheet.css";

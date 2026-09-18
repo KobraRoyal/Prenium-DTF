@@ -189,6 +189,81 @@ def build_gang_sheet_project_quote(
         return None
 
 
+def redirect_after_b2b_checkout(
+    *,
+    request,
+    customer,
+    order,
+    source: str,
+    requested_provider: str | None = None,
+):
+    if (
+        order.billing_mode == Order.BillingMode.IMMEDIATE
+        and order.pricing_status == Order.PricingStatus.PRICED
+    ):
+        from apps.portal.views_common import billing_service
+        from apps.portal.views_payments import available_payment_providers
+
+        providers = available_payment_providers()
+        available_ids = {item["id"] for item in providers}
+        requested = (requested_provider or "").strip().lower()
+        provider = ""
+        if requested and requested in available_ids:
+            provider = requested
+        elif len(providers) == 1:
+            provider = providers[0]["id"]
+        if provider:
+            success_path = reverse(
+                "portal:client-order-payment-return",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "order_public_id": order.public_id,
+                },
+            )
+            base = settings.PUBLIC_BASE_URL.rstrip("/")
+            if provider == "stripe":
+                success_url = (
+                    f"{base}{success_path}?status=success&session_id={{CHECKOUT_SESSION_ID}}"
+                )
+            else:
+                success_url = f"{base}{success_path}?status=success"
+            cancel_url = f"{base}{success_path}?status=cancel"
+            try:
+                _order, payment = billing_service.initiate_payment_for_customer_order(
+                    customer=customer,
+                    order_public_id=order.public_id,
+                    actor=request.user,
+                    provider=provider,
+                    success_url=success_url,
+                    cancel_url=cancel_url,
+                    source=source,
+                )
+                if payment is not None and payment.approval_url:
+                    return HttpResponseRedirect(payment.approval_url)
+            except ValidationError:
+                pass
+        return HttpResponseRedirect(
+            reverse(
+                "portal:client-order-detail",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "order_public_id": order.public_id,
+                },
+            )
+            + "?panel=billing&checkout=success&pay=1"
+        )
+    return HttpResponseRedirect(
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+        + "?checkout=success"
+    )
+
+
 class ClientProjectFeatureMixin(LoginRequiredMixin):
     customer = None
     customer_membership = None
@@ -954,66 +1029,11 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
             return HttpResponseRedirect(
                 f"{detail}?submit_error=validation&submit_message={quote(messages)}"
             )
-        if (
-            order.billing_mode == Order.BillingMode.IMMEDIATE
-            and order.pricing_status == Order.PricingStatus.PRICED
-        ):
-            from apps.portal.views_common import billing_service
-            from apps.portal.views_payments import available_payment_providers
-
-            providers = available_payment_providers()
-            if len(providers) == 1:
-                provider = providers[0]["id"]
-                success_path = reverse(
-                    "portal:client-order-payment-return",
-                    kwargs={
-                        "customer_public_id": self.customer.public_id,
-                        "order_public_id": order.public_id,
-                    },
-                )
-                from django.conf import settings as dj_settings
-
-                base = dj_settings.PUBLIC_BASE_URL.rstrip("/")
-                if provider == "stripe":
-                    success_url = (
-                        f"{base}{success_path}?status=success&session_id={{CHECKOUT_SESSION_ID}}"
-                    )
-                else:
-                    success_url = f"{base}{success_path}?status=success"
-                cancel_url = f"{base}{success_path}?status=cancel"
-                try:
-                    _order, payment = billing_service.initiate_payment_for_customer_order(
-                        customer=self.customer,
-                        order_public_id=order.public_id,
-                        actor=request.user,
-                        provider=provider,
-                        success_url=success_url,
-                        cancel_url=cancel_url,
-                        source="client_portal.b2b_checkout_pay",
-                    )
-                    if payment is not None and payment.approval_url:
-                        return HttpResponseRedirect(payment.approval_url)
-                except ValidationError:
-                    pass
-            return HttpResponseRedirect(
-                reverse(
-                    "portal:client-order-detail",
-                    kwargs={
-                        "customer_public_id": self.customer.public_id,
-                        "order_public_id": order.public_id,
-                    },
-                )
-                + "?panel=billing&checkout=success&pay=1"
-            )
-        return HttpResponseRedirect(
-            reverse(
-                "portal:client-order-detail",
-                kwargs={
-                    "customer_public_id": self.customer.public_id,
-                    "order_public_id": order.public_id,
-                },
-            )
-            + "?checkout=success"
+        return redirect_after_b2b_checkout(
+            request=request,
+            customer=self.customer,
+            order=order,
+            source="client_portal.b2b_checkout_pay",
         )
 
 

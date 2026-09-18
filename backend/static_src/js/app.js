@@ -3,9 +3,9 @@ import "./htmx/feedback.js?v=20260710b";
 import "./landing-motion.js?v=20260710b";
 import "./product-shell.js?v=20260828-inline-required";
 import "./product-date-picker.js?v=20260903-month-picker-v2";
-import "./b2b-configurator.js?v=20260917-external-link-v164";
+import "./b2b-configurator.js?v=20260918-studio-pay-pickup-v165";
 import "./email-template-editor.js?v=20260813-email-workbench";
-import "./gang-sheet-editor.js?v=20260916-source-quantity-v41";
+import "./gang-sheet-editor.js?v=20260918-studio-pay-modal-v11";
 import "./clipboard-copy.js?v=20260829-of-copy-v1";
 
 window.preniumToast = function (message, variant = "info") {

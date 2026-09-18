@@ -1,4 +1,7 @@
+import hashlib
 from decimal import Decimal
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from apps.b2b_order_projects.models import B2BOrderProject
@@ -8,20 +11,25 @@ from apps.b2b_order_projects.services import (
     B2BOrderProjectService,
     ProjectDomainError,
 )
+from apps.billing.models import Payment
 from apps.billing.services.production_payment_gate import (
     order_awaits_client_payment,
     requires_captured_payment_before_production,
 )
 from apps.catalog.models import CatalogService
 from apps.customers.models import Customer, CustomerBillingProfile, CustomerMembership
-from apps.gang_sheets.models import GangSheet
+from apps.gang_sheets.models import GangSheet, GangSheetItem, GangSheetSourceAsset
 from apps.gang_sheets.services import GangSheetService
+from apps.gang_sheets.services import gang_sheets as gang_sheets_module
 from apps.orders.models import Order
-from apps.uploads.models import AssetAnalysis, AssetVersion
+from apps.shipping.services.methods import ShippingMethodService
+from apps.uploads.models import Asset, AssetAnalysis, AssetVersion
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, override_settings
 from django.urls import reverse
+
+from .helpers import png_upload
 
 
 def _seed_catalog():
@@ -89,6 +97,57 @@ def _prepare_gang_sheet_project(*, customer, user, surface_sqm="1.1000"):
     project.refresh_from_db()
     sheet.refresh_from_db()
     return project, sheet
+
+
+def _add_placed_ready_visual(*, sheet, user, name="logo-planche.png"):
+    customer = sheet.customer
+    uploaded = png_upload(name)
+    content = uploaded.read()
+    asset = Asset.objects.create(customer=customer, created_by=user, name=name)
+    version = AssetVersion.objects.create(
+        customer=customer,
+        asset=asset,
+        uploaded_by=user,
+        version_number=1,
+        file=SimpleUploadedFile(name, content, content_type="image/png"),
+        original_filename=name,
+        mime_type="image/png",
+        size_bytes=len(content),
+        sha256=hashlib.sha256(content).hexdigest(),
+        analysis_status=AssetVersion.AnalysisStatus.READY,
+    )
+    asset.current_version = version
+    asset.save(update_fields=["current_version", "updated_at"])
+    AssetAnalysis.objects.create(
+        customer=customer,
+        version=version,
+        image_width=120,
+        image_height=80,
+        dpi_x="300.00",
+        dpi_y="300.00",
+        warnings=[],
+        metadata={"thin_zone": {"detected": False}, "semi_transparency": {"detected": False}},
+    )
+    GangSheetSourceAsset.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset=asset,
+        added_by=user,
+        width_mm="40.00",
+        height_mm="20.00",
+    )
+    GangSheetItem.objects.create(
+        customer=customer,
+        sheet=sheet,
+        asset_version=version,
+        x_mm="5.00",
+        y_mm="5.00",
+        width_mm="40.00",
+        height_mm="20.00",
+        rotation=0,
+        z_index=1,
+    )
+    return asset
 
 
 @pytest.mark.django_db
@@ -201,8 +260,7 @@ def test_gang_sheet_quote_is_available_before_transmit():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
-def test_validated_sheet_editor_enables_create_order_cta_for_cash_client():
-    """Planche validée + PDF final : le CTA ne doit pas rester aria-disabled / href=#."""
+def test_validated_sheet_editor_shows_inline_checkout_for_cash_client():
     user = get_user_model().objects.create_user(email="cash-cta@example.com", password="pass")
     customer = Customer.objects.create(
         name="Cash CTA Co",
@@ -212,6 +270,7 @@ def test_validated_sheet_editor_enables_create_order_cta_for_cash_client():
     CustomerMembership.objects.create(customer=customer, user=user)
     CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
     sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche CTA")
+    _add_placed_ready_visual(sheet=sheet, user=user, name="logo-planche.png")
     sheet.status = GangSheet.Status.VALIDATED
     sheet.final_file = SimpleUploadedFile(
         "production.pdf",
@@ -232,25 +291,107 @@ def test_validated_sheet_editor_enables_create_order_cta_for_cash_client():
         )
     )
     assert response.status_code == 200
-    assert response.context["can_create_order"] is True
     content = response.content.decode()
-    create_url = reverse(
-        "portal:client-gang-sheet-create-order-project",
+    checkout_url = reverse(
+        "portal:client-gang-sheet-checkout",
         kwargs={
             "customer_public_id": customer.public_id,
             "sheet_public_id": sheet.public_id,
         },
     )
-    cta_chunk = content.split("data-create-order-project", 1)[1].split("</a>", 1)[0]
-    assert create_url in cta_chunk
-    assert 'href="#"' not in cta_chunk
-    assert 'aria-disabled="true"' not in cta_chunk
-    assert f'data-create-order-form-url="{create_url}"' in content
+    assert "data-studio-checkout" in content
+    assert checkout_url in content
+    assert "data-studio-checkout-submit" in content
+    assert "Payer" in content or "Confirmer et payer" in content
+    assert "Couleur du support" in content
+    assert "is-checkout" in content
+    assert "Nom de la commande" in content
+    assert 'name="requested_date"' in content
+    assert 'name="customer_comment"' in content
+    assert "confirm_sheet_files" not in content
+    assert "Je confirme ce visuel" not in content
+    assert "Continuer vers la commande" not in content
+    assert "data-create-order-project" not in content
 
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
-def test_draft_sheet_editor_keeps_create_order_cta_disabled():
+def test_studio_editor_shows_detailed_pay_quote_and_json_endpoint():
+    _seed_catalog()
+    user = get_user_model().objects.create_user(email="studio-quote@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Studio Quote Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.CARRIER,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche devis")
+    _add_placed_ready_visual(sheet=sheet, user=user, name="visuel-devis.png")
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.surface_sqm = Decimal("1.1000")
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% quote\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "surface_sqm", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-quote@example.com", password="pass")
+    kwargs = {
+        "customer_public_id": customer.public_id,
+        "sheet_public_id": sheet.public_id,
+    }
+    editor = client.get(reverse("portal:client-gang-sheet-editor", kwargs=kwargs))
+    assert editor.status_code == 200
+    body = editor.content.decode()
+    quote_url = reverse("portal:client-gang-sheet-quote", kwargs=kwargs)
+    assert quote_url in body
+    assert "data-studio-pay-quote" in body
+    assert "Impression DTF" in body
+    assert "TVA" in body
+    assert "b2b-shipping-choice__input" in body
+    page_quote = editor.context["gang_sheet_quote"]
+    assert page_quote is not None
+    assert page_quote["total_eur"] > 0
+
+    pickup = client.get(quote_url, {"quantity": "1", "shipping_method_code": "pickup"})
+    standard = client.get(quote_url, {"quantity": "1", "shipping_method_code": "standard"})
+    assert pickup.status_code == 200
+    assert standard.status_code == 200
+    pickup_payload = pickup.json()
+    standard_payload = standard.json()
+    assert pickup_payload["ok"] is True
+    assert standard_payload["ok"] is True
+    assert pickup_payload["quote"]["shipping_method_code"] == "pickup"
+    assert Decimal(pickup_payload["quote"]["shipping_amount_eur"]) == Decimal("0.00")
+    assert Decimal(standard_payload["quote"]["shipping_amount_eur"]) > Decimal("0.00")
+    assert Decimal(standard_payload["quote"]["total_eur"]) > Decimal(
+        pickup_payload["quote"]["total_eur"]
+    )
+    assert "tax_amount_eur" in standard_payload["quote"]
+
+    other = get_user_model().objects.create_user(
+        email="studio-quote-other@example.com",
+        password="pass",
+    )
+    other_customer = Customer.objects.create(
+        name="Studio Quote Other",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    CustomerMembership.objects.create(customer=other_customer, user=other)
+    other_client = Client()
+    assert other_client.login(email="studio-quote-other@example.com", password="pass")
+    blocked = other_client.get(quote_url)
+    assert blocked.status_code == 403
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_draft_sheet_editor_hides_inline_checkout():
     user = get_user_model().objects.create_user(email="draft-cta@example.com", password="pass")
     customer = Customer.objects.create(
         name="Draft CTA Co",
@@ -273,11 +414,513 @@ def test_draft_sheet_editor_keeps_create_order_cta_disabled():
         )
     )
     assert response.status_code == 200
-    assert response.context["can_create_order"] is False
     content = response.content.decode()
-    cta_chunk = content.split("data-create-order-project", 1)[1].split("</a>", 1)[0]
-    assert 'href="#"' in cta_chunk
-    assert 'aria-disabled="true"' in cta_chunk
+    checkout_chunk = content.split("data-studio-checkout", 1)[1].split("</section>", 1)[0]
+    assert "hidden" in checkout_chunk
+    assert "data-studio-checkout-submit" in checkout_chunk
+    assert "Payer" in checkout_chunk or "Confirmer et payer" in checkout_chunk
+
+
+def test_studio_checkout_lock_avoids_postgres_nullable_outer_join():
+    source = Path(gang_sheets_module.__file__).read_text(encoding="utf-8")
+    checkout = source.split("def checkout_studio_sheet", 1)[1].split("    def ", 1)[0]
+    assert 'select_related("project", "order")' in checkout
+    assert 'select_for_update(of=("self",))' in checkout
+    assert "select_for_update().select_related" not in checkout
+
+
+def test_studio_checkout_payment_source_fits_payment_field():
+    source = "client_portal.studio_checkout_pay"
+    max_length = Payment._meta.get_field("source").max_length
+    assert len(source) <= max_length
+    assert max_length >= 64
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_studio_checkout_creates_priced_order_without_project_hop():
+    _seed_catalog()
+    user = get_user_model().objects.create_user(email="studio-pay@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Studio Pay Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche studio")
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.surface_sqm = Decimal("1.1000")
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% studio pay\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "surface_sqm", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-pay@example.com", password="pass")
+    url = reverse(
+        "portal:client-gang-sheet-checkout",
+        kwargs={
+            "customer_public_id": customer.public_id,
+            "sheet_public_id": sheet.public_id,
+        },
+    )
+    response = client.post(
+        url,
+        {
+            "billing_mode": "immediate",
+            "quantity": "2",
+            "support_color_hex": "#112233",
+            "name": "Commande studio été",
+            "requested_date": "2026-09-20",
+            "customer_comment": "Urgent atelier",
+            "shipping_method_code": "pickup",
+        },
+    )
+    assert response.status_code == 302
+    location = response["Location"]
+    assert "order-projects" not in location
+    assert "create-order" not in location
+    sheet.refresh_from_db()
+    assert sheet.order_id is not None
+    order = sheet.order
+    assert order.billing_mode == Order.BillingMode.IMMEDIATE
+    assert order.pricing_status == Order.PricingStatus.PRICED
+    assert (
+        str(order.public_id) in location
+        or "paypal.com" in location
+        or "stripe.com" in location
+        or "checkout.stripe.com" in location
+    )
+    upload = order.uploads.get()
+    assert upload.quantity == 2
+    assert upload.support_color_hex == "#112233"
+    assert sheet.project.name == "Commande studio été"
+    assert str(sheet.project.requested_date) == "2026-09-20"
+    assert sheet.project.customer_comment == "Urgent atelier"
+
+    retry = client.post(
+        url,
+        {
+            "billing_mode": "immediate",
+            "quantity": "2",
+            "support_color_hex": "#112233",
+            "shipping_method_code": "pickup",
+            "provider": "paypal",
+        },
+    )
+    assert retry.status_code == 302
+    assert "/checkout/" not in retry["Location"]
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_studio_checkout_does_not_require_file_confirmation():
+    _seed_catalog()
+    user = get_user_model().objects.create_user(email="studio-confirm@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Studio Confirm Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche confirm")
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% confirm\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-confirm@example.com", password="pass")
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-checkout",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "billing_mode": "immediate",
+            "support_color_hex": "#112233",
+            "shipping_method_code": "pickup",
+        },
+    )
+    assert response.status_code == 302
+    assert "checkout_error=" not in response["Location"]
+    sheet.refresh_from_db()
+    assert sheet.order_id is not None
+    assert sheet.project.name == "Planche confirm"
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_studio_checkout_rejects_other_customer_sheet():
+    owner = get_user_model().objects.create_user(email="studio-owner@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Studio Owner Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    CustomerMembership.objects.create(customer=customer, user=owner)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=owner, name="Planche isolée")
+    _add_placed_ready_visual(sheet=sheet, user=owner)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% iso\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "final_file", "updated_at"])
+
+    other = get_user_model().objects.create_user(email="studio-other@example.com", password="pass")
+    other_customer = Customer.objects.create(
+        name="Studio Other Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+    )
+    CustomerMembership.objects.create(customer=other_customer, user=other)
+
+    client = Client()
+    assert client.login(email="studio-other@example.com", password="pass")
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-checkout",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "billing_mode": "immediate",
+            "support_color_hex": "#112233",
+            "shipping_method_code": "pickup",
+        },
+    )
+    assert response.status_code == 403
+    sheet.refresh_from_db()
+    assert sheet.order_id is None
+
+
+@pytest.mark.django_db
+@override_settings(
+    B2B_DTF_ORDER_PROJECT_ENABLED=True,
+    GOOGLE_DRIVE_SYNC_ENABLED=False,
+    PAYPAL_CLIENT_ID="paypal-id",
+    PAYPAL_CLIENT_SECRET="paypal-secret",
+    STRIPE_SECRET_KEY="sk_test_x",
+)
+def test_studio_editor_exposes_checkout_dialog_and_payment_choice():
+    _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(email="studio-modal@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Studio Modal Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.CARRIER,
+        billing_address_line1="10 rue de la Presse",
+        billing_postal_code="75011",
+        billing_city="Paris",
+        billing_country="FR",
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche modal")
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.surface_sqm = Decimal("1.1000")
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% modal\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "surface_sqm", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-modal@example.com", password="pass")
+    response = client.get(
+        reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+    )
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "data-studio-pay-dialog" in body
+    assert 'name="delivery_destination"' in body
+    assert 'name="shipping_method_code"' in body
+    assert 'name="shipping_house_number"' in body
+    assert 'name="shipping_contact_name"' in body
+    assert "Mode de livraison" in body
+    assert 'name="provider"' in body
+    assert "PayPal" in body
+    assert "Carte bancaire" in body
+    assert "Autre point de livraison" in body
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_studio_checkout_persists_other_delivery_address():
+    _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(
+        email="studio-delivery@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Studio Delivery Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.CARRIER,
+        billing_address_line1="10 rue de la Presse",
+        billing_postal_code="75011",
+        billing_city="Paris",
+        billing_country="FR",
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche livraison")
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.surface_sqm = Decimal("1.1000")
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% delivery\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "surface_sqm", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-delivery@example.com", password="pass")
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-checkout",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "billing_mode": "immediate",
+            "quantity": "1",
+            "support_color_hex": "#112233",
+            "shipping_method_code": "standard",
+            "delivery_destination": "other",
+            "shipping_contact_name": "Marie Loire",
+            "shipping_email": "marie@example.com",
+            "shipping_phone": "0612345678",
+            "shipping_company_name": "Studio Delivery Co",
+            "shipping_house_number": "12",
+            "shipping_address_line1": "quai de Loire",
+            "shipping_postal_code": "45000",
+            "shipping_city": "Orléans",
+            "shipping_country": "FR",
+        },
+    )
+    assert response.status_code == 302
+    customer.refresh_from_db()
+    sheet.refresh_from_db()
+    assert customer.shipping_address_line1 == "quai de Loire"
+    assert customer.shipping_city == "Orléans"
+    assert customer.billing_address_line1 == "10 rue de la Presse"
+    assert sheet.project_id is not None
+    assert sheet.project.shipping_address.get("line1") == "quai de Loire"
+    assert sheet.project.shipping_address.get("house_number") == "12"
+    assert sheet.project.shipping_address.get("name") == "Marie Loire"
+    assert sheet.project.shipping_address.get("email") == "marie@example.com"
+    assert sheet.project.shipping_address.get("city") == "Orléans"
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_studio_checkout_rejects_empty_other_delivery_address():
+    _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(
+        email="studio-delivery-empty@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Studio Delivery Empty Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.CARRIER,
+        billing_address_line1="10 rue de la Presse",
+        billing_postal_code="75011",
+        billing_city="Paris",
+        billing_country="FR",
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche vide")
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% empty-delivery\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-delivery-empty@example.com", password="pass")
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-checkout",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "billing_mode": "immediate",
+            "support_color_hex": "#112233",
+            "shipping_method_code": "standard",
+            "delivery_destination": "other",
+        },
+    )
+    assert response.status_code == 302
+    assert "checkout_error=delivery_address_required" in response["Location"]
+    sheet.refresh_from_db()
+    assert sheet.order_id is None
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_studio_checkout_rejects_missing_sendcloud_recipient():
+    _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(
+        email="studio-recipient-empty@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Studio Recipient Empty Co",
+        billing_email="studio-recipient-empty@example.com",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.CARRIER,
+        billing_address_line1="10 rue de la Presse",
+        billing_postal_code="75011",
+        billing_city="Paris",
+        billing_country="FR",
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(
+        customer=customer, actor=user, name="Planche destinataire"
+    )
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% recipient\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-recipient-empty@example.com", password="pass")
+    response = client.post(
+        reverse(
+            "portal:client-gang-sheet-checkout",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        ),
+        {
+            "billing_mode": "immediate",
+            "support_color_hex": "#112233",
+            "shipping_method_code": "standard",
+            "delivery_destination": "billing",
+        },
+    )
+    assert response.status_code == 302
+    assert "checkout_error=delivery_recipient_required" in response["Location"]
+    sheet.refresh_from_db()
+    assert sheet.order_id is None
+
+
+@pytest.mark.django_db
+@override_settings(
+    B2B_DTF_ORDER_PROJECT_ENABLED=True,
+    GOOGLE_DRIVE_SYNC_ENABLED=False,
+    PAYPAL_CLIENT_ID="paypal-id",
+    PAYPAL_CLIENT_SECRET="paypal-secret",
+    STRIPE_SECRET_KEY="sk_test_x",
+)
+def test_studio_checkout_uses_requested_payment_provider():
+    _seed_catalog()
+    user = get_user_model().objects.create_user(
+        email="studio-provider@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Studio Provider Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerBillingProfile.objects.create(customer=customer, price_per_sqm_eur="25.00")
+    sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Planche provider")
+    _add_placed_ready_visual(sheet=sheet, user=user)
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.surface_sqm = Decimal("1.1000")
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n% provider\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["status", "surface_sqm", "final_file", "updated_at"])
+
+    client = Client()
+    assert client.login(email="studio-provider@example.com", password="pass")
+
+    payment = MagicMock()
+    payment.approval_url = "https://paypal.example/approve"
+
+    with patch(
+        "apps.portal.views_common.billing_service.initiate_payment_for_customer_order",
+        return_value=(MagicMock(), payment),
+    ) as initiate:
+        response = client.post(
+            reverse(
+                "portal:client-gang-sheet-checkout",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "sheet_public_id": sheet.public_id,
+                },
+            ),
+            {
+                "billing_mode": "immediate",
+                "quantity": "1",
+                "support_color_hex": "#112233",
+                "shipping_method_code": "pickup",
+                "provider": "paypal",
+            },
+        )
+
+    assert response.status_code == 302
+    assert response["Location"] == "https://paypal.example/approve"
+    initiate.assert_called_once()
+    assert initiate.call_args.kwargs["provider"] == "paypal"
 
 
 @pytest.mark.django_db

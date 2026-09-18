@@ -2595,3 +2595,82 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier
     min-width: 0;
   }
 }
+
+/* v64 — Réglages paiements en ligne Atelier : connexion PayPal / Stripe, activation 0/1/2. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-settings-surface {
+  display: grid;
+  gap: 1.35rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status {
+  display: grid;
+  gap: 0.85rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status h2 {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.85rem 1.15rem;
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status__facts dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status__facts dd {
+  margin: 0.3rem 0 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-form {
+  gap: 1.35rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 1.15rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider legend {
+  padding: 0;
+  float: none;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider .ui-checkbox-row {
+  align-items: flex-start;
+  padding: 0.15rem 0 0.35rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider .ui-checkbox-row small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider code {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 639px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

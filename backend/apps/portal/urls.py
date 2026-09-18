@@ -75,6 +75,7 @@ from .views_gang_sheets import (
     ClientGangSheetAssetUploadView,
     ClientGangSheetAutoPlaceReadySourcesView,
     ClientGangSheetBatchDeleteItemsView,
+    ClientGangSheetCheckoutView,
     ClientGangSheetCreateOrderProjectView,
     ClientGangSheetDeleteView,
     ClientGangSheetEditorView,
@@ -82,6 +83,7 @@ from .views_gang_sheets import (
     ClientGangSheetLayoutView,
     ClientGangSheetListCreateView,
     ClientGangSheetPreviewDownloadView,
+    ClientGangSheetQuoteView,
     ClientGangSheetSourceAssetCropView,
     ClientGangSheetSourceAssetRemoveView,
     ClientGangSheetSourceQuantityView,
@@ -147,6 +149,7 @@ from .views_staff_operations import (
     StaffAtelierOperationTransitionView,
     StaffAtelierOperationUploadReviewView,
 )
+from .views_staff_payments import StaffPaymentSettingsView
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_push_notifications import (
     StaffPushNotificationEventsView,
@@ -338,6 +341,16 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/",
         ClientGangSheetEditorView.as_view(),
         name="client-gang-sheet-editor",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/checkout/",
+        ClientGangSheetCheckoutView.as_view(),
+        name="client-gang-sheet-checkout",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/quote/",
+        ClientGangSheetQuoteView.as_view(),
+        name="client-gang-sheet-quote",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/create-order/",
@@ -651,6 +664,11 @@ urlpatterns = [
         "staff/settings/branding/",
         StaffBrandSettingsView.as_view(),
         name="staff-brand-settings",
+    ),
+    path(
+        "staff/settings/payments/",
+        StaffPaymentSettingsView.as_view(),
+        name="staff-payment-settings",
     ),
     path(
         "staff/settings/volume-discounts/",

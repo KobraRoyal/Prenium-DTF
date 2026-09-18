@@ -1,0 +1,156 @@
+{% load l10n %}
+<section
+  class="gang-studio-checkout"
+  data-studio-checkout
+  data-checkout-error="{{ studio_checkout_error_code }}"
+  {% if sheet.status != "validated" and not sheet.order_id %}hidden{% endif %}
+  aria-label="Valider et commander"
+>
+  {% if sheet.order_id %}
+  <a
+    class="ui-btn ui-btn-primary"
+    href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=sheet.order.public_id %}"
+  >Voir ma commande</a>
+  {% else %}
+  <form
+    method="post"
+    action="{% url 'portal:client-gang-sheet-checkout' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
+    class="gang-studio-checkout__form"
+    data-studio-checkout-form
+    data-submit-loading
+    novalidate
+  >
+    {% csrf_token %}
+    <input type="hidden" name="billing_mode" value="{{ customer.default_billing_mode|default:'deferred' }}">
+    <h3 class="gang-inspector-section__title">Commander</h3>
+
+    {% if studio_checkout_error %}
+    <div class="alert alert--danger" role="alert">
+      <p class="m-0">{{ studio_checkout_error }}</p>
+    </div>
+    {% endif %}
+
+    {% include "portal/client/partials/order_project_support_color_field.html" with item=studio_checkout_item exact_color_required=studio_checkout_exact_color swatch_prefix="studio-support-hex-" %}
+
+    <div class="gang-studio-order-meta">
+      <div class="ui-field-group">
+        <label class="ui-label" for="id-studio-order-name">Nom de la commande</label>
+        <input
+          class="ui-input w-full"
+          id="id-studio-order-name"
+          name="name"
+          maxlength="255"
+          autocomplete="off"
+          placeholder="Ex. Collection été — réassort"
+          value="{% firstof sheet.project.name sheet.name %}"
+          required
+        >
+      </div>
+      <div class="ui-field-group">
+        <label class="ui-label" for="id-studio-order-date">Date souhaitée <span class="muted">(facultatif)</span></label>
+        {% include "components/forms/product_date_field.html" with id="id-studio-order-date" name="requested_date" value=sheet.project.requested_date|date:'Y-m-d' label="Date souhaitée" %}
+      </div>
+      <div class="ui-field-group">
+        <label class="ui-label" for="id-studio-order-comment">Commentaire <span class="muted">(facultatif)</span></label>
+        <textarea
+          class="ui-input w-full"
+          id="id-studio-order-comment"
+          name="customer_comment"
+          rows="2"
+          placeholder="Délai, conditionnement, consignes utiles pour l’atelier…"
+        >{{ sheet.project.customer_comment|default:"" }}</textarea>
+      </div>
+      <div class="ui-field-group gang-sheet-quantity" data-sheet-quantity-field>
+        <label class="ui-label" for="id-sheet-quantity">Exemplaires de planche</label>
+        <input
+          class="ui-input"
+          id="id-sheet-quantity"
+          type="number"
+          name="quantity"
+          min="1"
+          max="200"
+          step="1"
+          value="1"
+          inputmode="numeric"
+          data-sheet-quantity
+          data-studio-checkout-quantity
+          aria-label="Nombre d’exemplaires de la planche"
+        >
+      </div>
+    </div>
+
+    <div class="gang-studio-checkout__dock">
+    <aside class="gang-studio-pay" data-studio-pay-quote{% if not gang_sheet_quote %} hidden{% endif %} aria-live="polite">
+      <p class="gang-studio-pay__total">
+        <strong data-studio-pay-total>
+          {% if gang_sheet_quote %}
+          {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %}&nbsp;€
+          {% if gang_sheet_quote.tax_amount_eur %}TTC{% else %}HT{% endif %}
+          {% else %}
+          —
+          {% endif %}
+        </strong>
+      </p>
+      <dl class="gang-studio-pay__rows">
+        <div>
+          <dt>Planche</dt>
+          <dd data-studio-pay-sheet>
+            {% if gang_sheet_quote %}
+            {% localize on %}{{ gang_sheet_quote.surface_sqm }}{% endlocalize %}&nbsp;m² × {{ gang_sheet_quote.quantity }}&nbsp;ex.
+            {% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt>Impression DTF</dt>
+          <dd data-studio-pay-dtf>
+            {% if gang_sheet_quote %}{% localize on %}{{ gang_sheet_quote.dtf_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}
+          </dd>
+        </div>
+        <div data-studio-pay-discount-row{% if not gang_sheet_quote.volume_discount_percent %} hidden{% endif %}>
+          <dt data-studio-pay-discount-label>{% if gang_sheet_quote.volume_discount_percent %}Remise volume −{{ gang_sheet_quote.volume_discount_percent }}&nbsp;%{% else %}Remise volume{% endif %}</dt>
+          <dd data-studio-pay-discount>
+            {% if gang_sheet_quote.volume_discount_amount_eur %}−{% localize on %}{{ gang_sheet_quote.volume_discount_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt>Préparation</dt>
+          <dd data-studio-pay-prep>
+            {% if gang_sheet_quote %}{% localize on %}{{ gang_sheet_quote.prep_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt data-studio-pay-shipping-label>{{ gang_sheet_quote.shipping_method_name|default:"Livraison" }}</dt>
+          <dd data-studio-pay-shipping>
+            {% if gang_sheet_quote %}{% localize on %}{{ gang_sheet_quote.shipping_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}
+          </dd>
+        </div>
+        <div data-studio-pay-tax-row{% if not gang_sheet_quote.tax_amount_eur %} hidden{% endif %}>
+          <dt>TVA (20&nbsp;%)</dt>
+          <dd data-studio-pay-tax>
+            {% if gang_sheet_quote.tax_amount_eur %}{% localize on %}{{ gang_sheet_quote.tax_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}
+          </dd>
+        </div>
+      </dl>
+    </aside>
+
+    <button
+      type="button"
+      class="ui-btn ui-btn-primary"
+      data-studio-checkout-open
+      data-studio-checkout-submit
+      {% if not can_edit %}disabled{% endif %}
+    >
+      <span data-studio-checkout-submit-label>
+      {% if customer.default_billing_mode == "immediate" %}
+        {% if gang_sheet_quote %}Payer {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %} €{% else %}Confirmer et payer{% endif %}
+      {% else %}
+      Confirmer et transmettre
+      {% endif %}
+      </span>
+    </button>
+    </div>
+
+    {% include "portal/client/gang_sheets/partials/studio_checkout_dialog.html" %}
+  </form>
+  {% endif %}
+</section>

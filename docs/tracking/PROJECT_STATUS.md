@@ -16,6 +16,11 @@
 - [x] Sprint 09 — Frontend produit (espace client + backoffice staff)
 - [x] Sprint 10 — Paiement PayPal + facturation automatique
 - [x] Extension paiements en ligne multi-provider (PayPal + Stripe Checkout) hors facturation différée
+- [x] Studio Gang Sheet : valider couleur support + visuels et payer sans vue projet intermédiaire
+- [x] Studio checkout : devis TTC détaillé + choix livraison sans saut de scroll
+- [x] Studio checkout : modale paiement (PayPal/CB) + adresse de livraison si différente de la facturation
+- [x] Studio checkout : mode de livraison dans la modale, champs Sendcloud, devis sticky, couleur support condensée
+- [x] Studio checkout : composition validée = visuels confirmés ; inspecteur commande (nom, date, message) + prix sticky
 - [x] Sprint 11 — Tunnel produit final + polish UX
 - [x] Micro-sprint 11.1 bis — Frontend e-commerce premium + tunnel de commande moderne
 - [x] Micro-sprint 11.2 — Landing page premium UI/UX
@@ -45,6 +50,8 @@
 - [x] Sprint 54 — Notifications Web Push Atelier sécurisées, avec notification macOS et polling HTMX de secours
 - [x] Sprint 55 — KPI et courbe Chart.js de CA TTC sur le dashboard Atelier,
   visibles uniquement par les rôles Administrateur et Propriétaire
+- [x] Réglages Atelier PayPal / Stripe (connexion chiffrée, activation 0/1/2) et
+  checkout client en tuiles inline
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement

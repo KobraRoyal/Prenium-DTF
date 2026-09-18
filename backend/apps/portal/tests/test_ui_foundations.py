@@ -268,6 +268,7 @@ class UiFoundationSourceTests(SimpleTestCase):
             "perms.notifications.view_emailtemplate",
             "perms.customers.manage_customer_pricing",
             "perms.gang_sheets.configure_gangsheet",
+            "perms.billing.view_paymentgatewaysettings",
         ]:
             with self.subTest(permission_contract=permission_contract):
                 self.assertIn(permission_contract, staff)
@@ -314,6 +315,7 @@ class UiFoundationSourceTests(SimpleTestCase):
             "components/portal/breadcrumbs/staff_operations.html",
             "components/portal/breadcrumbs/staff_machines.html",
             "components/portal/breadcrumbs/staff_branding.html",
+            "components/portal/breadcrumbs/staff_payments.html",
         ]
         for relative_path in staff_wrappers:
             with self.subTest(relative_path=relative_path):

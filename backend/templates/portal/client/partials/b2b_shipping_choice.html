@@ -13,7 +13,7 @@
       class="ui-input"
       id="id_shipping_method_code"
       name="shipping_method_code"
-      {% if gang_sheet_quote and project %}
+      {% if gang_sheet_quote and project and not studio_inline_checkout %}
       hx-get="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=project.public_id %}"
       hx-select="#order-project-summary"
       hx-target="#order-project-summary"
@@ -39,12 +39,12 @@
       {% for method in shipping_methods %}
       <label class="b2b-shipping-choice__option">
         <input
-          class="ui-sr-only"
+          class="b2b-shipping-choice__input"
           type="radio"
           name="shipping_method_code"
           value="{{ method.code }}"
           {% if selected_shipping_method_code == method.code %}checked{% endif %}
-          {% if gang_sheet_quote and project %}
+          {% if gang_sheet_quote and project and not studio_inline_checkout %}
           hx-get="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=project.public_id %}?shipping_method={{ method.code }}"
           hx-select="#order-project-summary"
           hx-target="#order-project-summary"

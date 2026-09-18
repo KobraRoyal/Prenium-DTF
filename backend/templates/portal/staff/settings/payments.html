@@ -1,0 +1,125 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Paiements en ligne — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff payment-gateway-settings-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_payments.html" title="Paiements en ligne" subtitle="Connectez PayPal et Stripe, puis activez un moyen, les deux, ou aucun." %}
+
+  <section class="portal-page-surface payment-gateway-settings-surface" aria-labelledby="payment-gateway-status-title">
+    <div class="payment-gateway-status" aria-labelledby="payment-gateway-status-title">
+      <h2 id="payment-gateway-status-title" class="font-display text-lg">État actuel</h2>
+      <dl class="payment-gateway-status__facts">
+        <div>
+          <dt>PayPal</dt>
+          <dd>
+            {% if snapshot.paypal_live %}
+            <span class="badge is-success">Proposé au checkout</span>
+            {% elif snapshot.paypal_enabled %}
+            <span class="badge is-warning">Activé, identifiants manquants</span>
+            {% else %}
+            <span class="badge is-neutral">Désactivé</span>
+            {% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt>Stripe</dt>
+          <dd>
+            {% if snapshot.stripe_live %}
+            <span class="badge is-success">Proposé au checkout</span>
+            {% elif snapshot.stripe_enabled %}
+            <span class="badge is-warning">Activé, identifiants manquants</span>
+            {% else %}
+            <span class="badge is-neutral">Désactivé</span>
+            {% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt>Source</dt>
+          <dd>{% if snapshot.has_atelier_row %}Réglages Atelier{% else %}Variables d’environnement{% endif %}</dd>
+        </div>
+      </dl>
+      {% if not snapshot.paypal_live and not snapshot.stripe_live %}
+      <p class="alert alert--info" role="status">Aucun moyen n’est proposé au checkout. Les commandes en paiement immédiat ne pourront pas être réglées en ligne tant qu’un compte n’est pas connecté et activé.</p>
+      {% endif %}
+    </div>
+
+    <form method="post" class="ui-form-stack payment-gateway-form" novalidate data-submit-loading>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="alert alert--danger" role="alert">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <fieldset class="payment-gateway-provider" {% if not can_change_payment_gateways %}disabled{% endif %}>
+        <legend class="font-display text-lg">PayPal</legend>
+        <p class="muted text-sm">Compte Business PayPal. Le client est redirigé vers PayPal, puis revient ici après capture.</p>
+        <label class="ui-checkbox-row" for="{{ form.paypal_enabled.id_for_label }}">
+          {{ form.paypal_enabled }}
+          <span>
+            <strong>{{ form.paypal_enabled.label }}</strong>
+            <small>Décochez pour masquer PayPal au checkout, même si les identifiants restent enregistrés.</small>
+          </span>
+        </label>
+        {% for error in form.paypal_enabled.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ form.paypal_client_id.id_for_label }}">{{ form.paypal_client_id.label }}</label>
+          {{ form.paypal_client_id }}
+          {% for error in form.paypal_client_id.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ form.paypal_client_secret.id_for_label }}">{{ form.paypal_client_secret.label }}</label>
+          {{ form.paypal_client_secret }}
+          {% if form.paypal_client_secret.help_text %}<p class="ui-field-help">{{ form.paypal_client_secret.help_text }}</p>{% endif %}
+          {% for error in form.paypal_client_secret.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ form.paypal_webhook_id.id_for_label }}">{{ form.paypal_webhook_id.label }}</label>
+          {{ form.paypal_webhook_id }}
+          <p class="ui-field-help">URL à coller dans PayPal : <code>{{ snapshot.paypal_webhook_url }}</code></p>
+          {% for error in form.paypal_webhook_id.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+        </div>
+      </fieldset>
+
+      <fieldset class="payment-gateway-provider" {% if not can_change_payment_gateways %}disabled{% endif %}>
+        <legend class="font-display text-lg">Stripe</legend>
+        <p class="muted text-sm">Checkout hébergé Stripe. Le client paie par carte, puis revient ici après confirmation.</p>
+        <label class="ui-checkbox-row" for="{{ form.stripe_enabled.id_for_label }}">
+          {{ form.stripe_enabled }}
+          <span>
+            <strong>{{ form.stripe_enabled.label }}</strong>
+            <small>Décochez pour masquer la carte bancaire au checkout, même si les clés restent enregistrées.</small>
+          </span>
+        </label>
+        {% for error in form.stripe_enabled.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ form.stripe_publishable_key.id_for_label }}">{{ form.stripe_publishable_key.label }}</label>
+          {{ form.stripe_publishable_key }}
+          {% for error in form.stripe_publishable_key.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ form.stripe_secret_key.id_for_label }}">{{ form.stripe_secret_key.label }}</label>
+          {{ form.stripe_secret_key }}
+          {% if form.stripe_secret_key.help_text %}<p class="ui-field-help">{{ form.stripe_secret_key.help_text }}</p>{% endif %}
+          {% for error in form.stripe_secret_key.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ form.stripe_webhook_secret.id_for_label }}">{{ form.stripe_webhook_secret.label }}</label>
+          {{ form.stripe_webhook_secret }}
+          {% if form.stripe_webhook_secret.help_text %}<p class="ui-field-help">{{ form.stripe_webhook_secret.help_text }}</p>{% endif %}
+          <p class="ui-field-help">URL à coller dans Stripe : <code>{{ snapshot.stripe_webhook_url }}</code></p>
+          {% for error in form.stripe_webhook_secret.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
+        </div>
+      </fieldset>
+
+      {% if can_change_payment_gateways %}
+      <div class="ui-form-actions">
+        <button class="ui-btn ui-btn-primary" type="submit">Enregistrer les moyens de paiement</button>
+      </div>
+      {% else %}
+      <p class="alert alert--info" role="status">Vous pouvez consulter la configuration, mais seul un administrateur Atelier peut connecter ou activer un moyen de paiement.</p>
+      {% endif %}
+    </form>
+  </section>
+</div>
+{% endblock %}

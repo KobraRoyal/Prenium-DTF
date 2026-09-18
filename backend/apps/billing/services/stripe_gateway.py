@@ -27,14 +27,17 @@ class StripeGateway:
     provider = "stripe"
 
     def __init__(self):
-        self.secret_key = settings.STRIPE_SECRET_KEY
+        from apps.billing.services.gateway_settings import payment_gateway_settings_service
+
+        config = payment_gateway_settings_service.effective()
+        self.secret_key = config.stripe_secret_key
         self.api_base_url = settings.STRIPE_API_BASE_URL.rstrip("/")
         self.api_version = getattr(settings, "STRIPE_API_VERSION", "2026-07-29.dahlia")
         self.timeout_seconds = settings.STRIPE_TIMEOUT_SECONDS
-        self.webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+        self.webhook_secret = config.stripe_webhook_secret
         if not self.secret_key:
             raise PaymentGatewayConfigurationError(
-                "Stripe credentials must be configured via STRIPE_SECRET_KEY."
+                "Stripe credentials must be configured in Atelier settings or STRIPE_SECRET_KEY."
             )
 
     def create_checkout(
@@ -119,7 +122,8 @@ class StripeGateway:
     ) -> dict[str, object]:
         if not self.webhook_secret:
             raise PaymentGatewayConfigurationError(
-                "Stripe webhook secret must be configured via STRIPE_WEBHOOK_SECRET."
+                "Stripe webhook secret must be configured in Atelier settings "
+                "or STRIPE_WEBHOOK_SECRET."
             )
         self._verify_signature(payload=payload, signature_header=signature_header)
         try:

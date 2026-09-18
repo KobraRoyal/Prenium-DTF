@@ -156,12 +156,13 @@ audités et aucun identifiant Drive n’est envoyé au portail client.
 Une planche autonome validée crée, sur action explicite et idempotente, un `B2BOrderProject` en
 mode `READY_GANG_SHEET`. Ce projet contient exactement une ligne et un nouvel `Asset` : le PDF
 final produit par le serveur. Les fichiers sources restent dans la galerie et ne sont pas recopiés
-dans la commande. Son empreinte et ses octets sont conservés. Le PDF HD repasse ensuite dans le
-contrôle qualité du tunnel classique afin de produire l’aperçu et de détecter les détails fins et
-les semi-transparences. Sa résolution globale n’est toutefois pas déduite du plus grand visuel
-embarqué et aucun DPI artificiel n’est annoncé pour la planche : le contrôle distingue les
-éléments vectoriels des images raster conservées à leur définition source. Le client choisit la
-couleur du support, valide le contrôle, puis transmet le projet avec le tunnel habituel.
+dans la commande. Son empreinte et ses octets sont conservés. Le PDF HD est rattaché au projet
+pour le workflow Atelier ; le client ne revalide plus ce livrable dans une fiche projet séparée.
+Dans le Studio, il choisit la **couleur du support**, confirme **les visuels présents sur la
+planche**, puis transmet / paie via `.../gang-sheets/<id>/checkout/`. Le devis TTC
+(impression, préparation, port, TVA) est affiché dans l’inspecteur et se recalcule
+au changement de livraison sans défiler. La page
+`create-order/` reste un repli technique, plus liée depuis l’éditeur.
 
 L’asset final est relié à `GangSheet.production_asset`. Le portail client peut en afficher l’aperçu
 basse définition mais refuse son téléchargement et masque les actions de remplacement/suppression.

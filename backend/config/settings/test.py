@@ -32,5 +32,6 @@ CELERY_TASK_EAGER_PROPAGATES = True
 GOOGLE_DRIVE_SYNC_ENABLED = False
 WEB_PUSH_ENABLED = False
 WEB_PUSH_ENCRYPTION_KEYS = ["v1:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="]
+PAYMENT_SECRET_ENCRYPTION_KEYS = WEB_PUSH_ENCRYPTION_KEYS
 STATIC_ROOT = Path(tempfile.gettempdir()) / "prenium-dtf-test-static"
 MEDIA_ROOT = Path(tempfile.gettempdir()) / "prenium-dtf-test-media"

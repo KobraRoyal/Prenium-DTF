@@ -44,13 +44,17 @@ class PayPalGateway:
     provider = "paypal"
 
     def __init__(self):
-        self.client_id = settings.PAYPAL_CLIENT_ID
-        self.client_secret = settings.PAYPAL_CLIENT_SECRET
+        from apps.billing.services.gateway_settings import payment_gateway_settings_service
+
+        config = payment_gateway_settings_service.effective()
+        self.client_id = config.paypal_client_id
+        self.client_secret = config.paypal_client_secret
+        self.webhook_id = config.paypal_webhook_id
         self.base_url = settings.PAYPAL_API_BASE_URL.rstrip("/")
         self.timeout_seconds = settings.PAYPAL_TIMEOUT_SECONDS
         if not self.client_id or not self.client_secret:
             raise PayPalConfigurationError(
-                "PayPal credentials must be configured via environment variables."
+                "PayPal credentials must be configured in Atelier settings or environment."
             )
 
     def create_checkout(
@@ -172,10 +176,10 @@ class PayPalGateway:
         payload: bytes,
         headers: dict[str, str],
     ) -> dict[str, object]:
-        webhook_id = getattr(settings, "PAYPAL_WEBHOOK_ID", "") or ""
+        webhook_id = self.webhook_id
         if not webhook_id:
             raise PayPalConfigurationError(
-                "PayPal webhook id must be configured via PAYPAL_WEBHOOK_ID."
+                "PayPal webhook id must be configured in Atelier settings or PAYPAL_WEBHOOK_ID."
             )
         try:
             event = json.loads(payload.decode("utf-8"))

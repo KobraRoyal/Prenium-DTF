@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import json
 import logging
+from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from uuid import UUID
 
 from django.conf import settings
 from django.core.cache import cache
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.http import FileResponse, Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
@@ -32,7 +33,10 @@ from apps.gang_sheets.services.cropping import (
     parse_crop_manifest,
 )
 from apps.portal.htmx import with_toast
-from apps.portal.views_b2b_order_projects import ClientProjectFeatureMixin
+from apps.portal.views_b2b_order_projects import (
+    ClientProjectFeatureMixin,
+    redirect_after_b2b_checkout,
+)
 from apps.portal.views_common import StaffDomainPermissionMixin
 from apps.uploads.services.asset_preview import AssetPreviewError, AssetPreviewRenderer
 
@@ -50,6 +54,43 @@ def _decimal_display(value) -> str:
     if value is None:
         return ""
     return f"{value:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _quote_quantity(raw) -> int:
+    try:
+        quantity = int(raw)
+    except (TypeError, ValueError):
+        quantity = 1
+    return max(1, min(quantity, 200))
+
+
+def _quote_json(quote: dict) -> dict:
+    payload = {}
+    for key, value in quote.items():
+        payload[key] = format(value, "f") if isinstance(value, Decimal) else value
+    return payload
+
+
+def _build_studio_sheet_quote(*, customer, sheet, quantity=1, shipping_method_code=None):
+    surface = getattr(sheet, "surface_sqm", None)
+    if surface is None or surface <= 0:
+        return None
+    from apps.orders.services.pricing import OrderPricingService
+    from apps.shipping.services.methods import ShippingMethodService
+
+    ShippingMethodService().ensure_default_methods()
+    billing_mode = getattr(customer, "default_billing_mode", "deferred")
+    try:
+        return OrderPricingService().estimate_gang_sheet_quote(
+            customer=customer,
+            surface_sqm=surface,
+            quantity=quantity,
+            file_count=1,
+            shipping_method_code=shipping_method_code,
+            billing_mode=billing_mode,
+        )
+    except ValidationError:
+        return None
 
 
 def _safe_analysis_error(version) -> str:
@@ -451,6 +492,118 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
             "has_pending_recent_imports": recent_pending,
         }
 
+    def studio_checkout_context(self, *, sheet, assets):
+        placed_files = [asset for asset in assets if asset.get("usage_count")]
+        exact_color_required = any(
+            (asset.get("thin_zone") or {}).get("detected") for asset in placed_files
+        )
+        checkout_item = None
+        if sheet.project_id:
+            checkout_item = sheet.project.items.order_by("sort_order", "created_at").first()
+        from apps.shipping.services.methods import ShippingMethodService
+
+        shipping_service = ShippingMethodService()
+        shipping_service.ensure_default_methods()
+        locks_pickup = shipping_service.customer_locks_shipping_to_pickup(self.customer)
+        if locks_pickup:
+            selected_shipping_code = "pickup"
+            show_shipping_choice = False
+            shipping_choice_widget = "hidden"
+        else:
+            selected_shipping_code = shipping_service.resolve_default_code_for_customer(
+                self.customer
+            )
+            show_shipping_choice = True
+            shipping_choice_widget = "radios"
+        quantity = _quote_quantity(self.request.GET.get("quantity") or 1)
+        gang_sheet_quote = _build_studio_sheet_quote(
+            customer=self.customer,
+            sheet=sheet,
+            quantity=quantity,
+            shipping_method_code=selected_shipping_code,
+        )
+        error_code = str(self.request.GET.get("checkout_error") or "").strip().lower()
+        error_messages = {
+            "validated_sheet_required": "Confirmez d’abord la composition de la planche.",
+            "sheet_items_required": "Ajoutez au moins un visuel avant de commander.",
+            "analyses_not_ready": (
+                "L’analyse d’un visuel n’est pas terminée. Réessayez dans un instant."
+            ),
+            "support_color_required": "Choisissez Multicouleur ou la couleur du support.",
+            "invalid_support_color": (
+                "Couleur du support invalide. Utilisez #RRGGBB ou Multicouleur."
+            ),
+            "analysis_not_ready": (
+                "Le fichier HD est encore en analyse. Patientez quelques secondes puis réessayez."
+            ),
+            "gang_sheet_drive_sync_required": (
+                self.request.GET.get("checkout_message")
+                or (
+                    "La sauvegarde sécurisée du PDF HD est encore en cours. "
+                    "Réessayez dans un instant."
+                )
+            ),
+            "validation": (
+                self.request.GET.get("checkout_message")
+                or "Impossible de finaliser la commande. Réessayez."
+            ),
+            "delivery_address_required": "Indiquez l’adresse de livraison avant de régler.",
+            "delivery_recipient_required": (
+                "Indiquez le destinataire, un email de suivi et le n° de voie."
+            ),
+            "invalid_requested_date": "La date souhaitée est invalide.",
+        }
+        from apps.customers.services.company_profile import (
+            COUNTRY_LABELS,
+            CompanyProfileService,
+            format_customer_address,
+            shipping_same_as_billing,
+        )
+        from apps.portal.views_payments import (
+            available_payment_providers,
+            default_online_provider,
+        )
+
+        payment_providers = available_payment_providers()
+        online_provider = default_online_provider(self.customer)
+        shipping_snapshot = {}
+        if sheet.project_id:
+            shipping_snapshot = sheet.project.shipping_address or {}
+        delivery_defaults = CompanyProfileService().checkout_delivery_defaults(
+            self.customer,
+            shipping_snapshot,
+        )
+        return {
+            "studio_checkout_files": placed_files,
+            "studio_checkout_item": checkout_item,
+            "studio_checkout_exact_color": exact_color_required,
+            "studio_inline_checkout": True,
+            "shipping_methods": shipping_service.list_active_methods(),
+            "selected_shipping_method_code": selected_shipping_code,
+            "show_shipping_choice": show_shipping_choice,
+            "shipping_choice_widget": shipping_choice_widget,
+            "shipping_locked_to_pickup": locks_pickup,
+            "gang_sheet_quote": gang_sheet_quote,
+            "studio_payment_providers": payment_providers,
+            "studio_online_provider": online_provider,
+            "studio_billing_address": format_customer_address(self.customer, kind="billing"),
+            "studio_shipping_address": format_customer_address(self.customer, kind="shipping"),
+            "studio_shipping_same_as_billing": shipping_same_as_billing(self.customer),
+            "studio_billing_complete": bool(
+                (self.customer.billing_address_line1 or "").strip()
+                and (self.customer.billing_postal_code or "").strip()
+                and (self.customer.billing_city or "").strip()
+            ),
+            "studio_country_choices": list(COUNTRY_LABELS.items()),
+            "studio_shipping_contact_name": delivery_defaults["name"],
+            "studio_shipping_email": delivery_defaults["email"],
+            "studio_shipping_phone": delivery_defaults["phone"],
+            "studio_shipping_company": delivery_defaults["company_name"],
+            "studio_shipping_house_number": delivery_defaults["house_number"],
+            "studio_checkout_error": error_messages.get(error_code, ""),
+            "studio_checkout_error_code": error_code,
+        }
+
 
 class ClientGangSheetListCreateView(ClientGangSheetMixin, View):
     template_name = "portal/client/gang_sheets/list.html"
@@ -572,6 +725,10 @@ class ClientGangSheetEditorView(ClientGangSheetMixin, View):
                     GANG_SHEET_MAX_TOTAL_UPLOAD_BYTES
                 ),
                 nav_key="client-gang-sheets",
+                **self.studio_checkout_context(
+                    sheet=sheet,
+                    assets=gallery_context["assets"],
+                ),
             ),
         )
 
@@ -1135,6 +1292,150 @@ class ClientGangSheetWorkflowActionView(ClientGangSheetMixin, View):
         except GangSheetDomainError as error:
             return _json_error(error)
         return JsonResponse({"ok": True, "message": message})
+
+
+class ClientGangSheetQuoteView(ClientGangSheetMixin, View):
+    def get(self, request, customer_public_id, sheet_public_id):
+        sheet = self.get_sheet_or_404(sheet_public_id)
+        quote = _build_studio_sheet_quote(
+            customer=self.customer,
+            sheet=sheet,
+            quantity=_quote_quantity(request.GET.get("quantity")),
+            shipping_method_code=(
+                (request.GET.get("shipping_method_code") or "").strip() or None
+            ),
+        )
+        return JsonResponse({"ok": True, "quote": _quote_json(quote) if quote else None})
+
+
+class ClientGangSheetCheckoutView(ClientGangSheetMixin, View):
+    def post(self, request, customer_public_id, sheet_public_id):
+        self.require_write_access()
+        sheet = self.get_sheet_or_404(sheet_public_id)
+        editor_url = reverse(
+            "portal:client-gang-sheet-editor",
+            kwargs={
+                "customer_public_id": self.customer.public_id,
+                "sheet_public_id": sheet.public_id,
+            },
+        )
+        if sheet.order_id:
+            from apps.billing.services.production_payment_gate import (
+                order_awaits_client_payment,
+            )
+
+            if order_awaits_client_payment(sheet.order):
+                return redirect_after_b2b_checkout(
+                    request=request,
+                    customer=self.customer,
+                    order=sheet.order,
+                    source="client_portal.studio_checkout_pay",
+                    requested_provider=(request.POST.get("provider") or "").strip(),
+                )
+            return HttpResponseRedirect(
+                reverse(
+                    "portal:client-order-detail",
+                    kwargs={
+                        "customer_public_id": self.customer.public_id,
+                        "order_public_id": sheet.order.public_id,
+                    },
+                )
+            )
+        try:
+            shipping_code = (request.POST.get("shipping_method_code") or "").strip() or None
+            delivery_destination = (
+                request.POST.get("delivery_destination") or "billing"
+            ).strip().lower()
+            same_as_billing = delivery_destination != "other"
+            delivery_payload = {
+                "shipping_address_line1": request.POST.get("shipping_address_line1", ""),
+                "shipping_address_line2": request.POST.get("shipping_address_line2", ""),
+                "shipping_postal_code": request.POST.get("shipping_postal_code", ""),
+                "shipping_city": request.POST.get("shipping_city", ""),
+                "shipping_country": request.POST.get("shipping_country", ""),
+            }
+            recipient_payload = {
+                "name": request.POST.get("shipping_contact_name", ""),
+                "email": request.POST.get("shipping_email", ""),
+                "phone": request.POST.get("shipping_phone", ""),
+                "company_name": request.POST.get("shipping_company_name", ""),
+                "house_number": request.POST.get("shipping_house_number", ""),
+            }
+            delivery_snapshot = None
+            if shipping_code != "pickup":
+                from apps.customers.services.company_profile import CompanyProfileService
+
+                profile = CompanyProfileService()
+                customer = profile.apply_checkout_delivery(
+                    customer=self.customer,
+                    actor=request.user,
+                    same_as_billing=same_as_billing,
+                    payload=delivery_payload,
+                    source="client_portal.studio_checkout",
+                )
+                self.customer = customer
+                delivery_snapshot = profile.build_checkout_delivery_snapshot(
+                    customer=customer,
+                    payload=recipient_payload,
+                )
+            order = gang_sheet_service.checkout_studio_sheet(
+                sheet=sheet,
+                actor=request.user,
+                customer_membership=self.customer_membership,
+                support_color_hex=request.POST.get("support_color_hex", ""),
+                support_color_multicolor=request.POST.get("support_color_multicolor"),
+                quantity=request.POST.get("quantity") or 1,
+                shipping_method_code=shipping_code,
+                billing_mode=str(
+                    request.POST.get("billing_mode")
+                    or getattr(self.customer, "default_billing_mode", "deferred")
+                ).strip(),
+                name=request.POST.get("name"),
+                requested_date=request.POST.get("requested_date"),
+                customer_comment=request.POST.get("customer_comment"),
+                delivery_address=delivery_snapshot if shipping_code != "pickup" else None,
+                source="client_portal.studio_checkout",
+            )
+        except GangSheetDomainError as error:
+            submit_error = error.code.lower()
+            if error.code == "GANG_SHEET_DRIVE_SYNC_REQUIRED":
+                from apps.gang_sheets.services.drive import GangSheetDriveSyncService
+
+                if sheet.final_file:
+                    GangSheetDriveSyncService().schedule_sync(
+                        sheet=sheet,
+                        actor=request.user,
+                        source="client_portal.studio_checkout_retry",
+                    )
+                message = quote(error.message or "")
+                return HttpResponseRedirect(
+                    f"{editor_url}?checkout_error={submit_error}&checkout_message={message}"
+                )
+            return HttpResponseRedirect(f"{editor_url}?checkout_error={submit_error}")
+        except ValidationError as error:
+            messages = "; ".join(getattr(error, "messages", []) or [str(error)])
+            error_codes = [
+                getattr(error, "code", None),
+                *[
+                    getattr(item, "code", None)
+                    for item in getattr(error, "error_list", [])
+                ],
+            ]
+            checkout_error = "validation"
+            if "delivery_recipient_required" in error_codes:
+                checkout_error = "delivery_recipient_required"
+            elif "delivery_address_required" in error_codes:
+                checkout_error = "delivery_address_required"
+            return HttpResponseRedirect(
+                f"{editor_url}?checkout_error={checkout_error}&checkout_message={quote(messages)}"
+            )
+        return redirect_after_b2b_checkout(
+            request=request,
+            customer=self.customer,
+            order=order,
+            source="client_portal.studio_checkout_pay",
+            requested_provider=(request.POST.get("provider") or "").strip(),
+        )
 
 
 class ClientGangSheetCreateOrderProjectView(ClientGangSheetMixin, View):

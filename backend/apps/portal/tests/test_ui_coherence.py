@@ -339,18 +339,22 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("sendcloud_status_message", panels)
         self.assertIn("Suivre mon colis", panels)
         self.assertIn("Merci, c’est confirmé", panels)
-        self.assertIn("pay-order-dialog-", panels)
+        self.assertNotIn("pay-order-dialog-", panels)
         self.assertIn("Télécharger le justificatif", panels)
         self.assertIn("b2b-settlement-choice__option", panels)
+        self.assertIn("client-billing-pay__mark", panels)
+        self.assertIn("client-billing-pay__networks", panels)
+        self.assertIn("payment_provider_marks.html", panels)
         self.assertIn("Payer maintenant", panels)
         self.assertIn("Paiement non finalisé", panels)
+        self.assertIn("Voir la production", panels)
         self.assertNotIn("Relancer le paiement", panels)
         self.assertNotIn("Reprendre le paiement en cours", panels)
-        self.assertIn("Continuer vers le paiement", panels)
+        self.assertNotIn("Continuer vers le paiement", panels)
         self.assertIn("order_status_banner", detail)
         self.assertIn("client-order-detail-banner", detail)
         self.assertIn(
-            'class="ui-btn ui-btn-primary ui-btn-sm" href="?panel=billing&amp;pay=1"',
+            'class="ui-btn ui-btn-secondary ui-btn-sm" href="?panel=billing&amp;pay=1#client-billing-pay"',
             detail,
         )
         self.assertNotIn('class="link font-medium"', detail)
@@ -440,10 +444,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_branding_settings_use_portal_alert_contract(self) -> None:
         branding = template_source("portal/staff/settings/branding.html")
+        payments = template_source("portal/staff/settings/payments.html")
 
         self.assertIn("alert alert--danger", branding)
         self.assertIn("alert alert--info", branding)
         self.assertNotIn("ui-alert", branding)
+        self.assertIn("alert alert--danger", payments)
+        self.assertIn("alert alert--info", payments)
+        self.assertNotIn("ui-alert", payments)
 
     def test_checkout_and_prospect_journey_layouts_are_compact(self) -> None:
         product_css = static_source("css/components/product-shell.css")
@@ -861,6 +869,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Demandes d’accès", staff_nav)
         self.assertIn("Modèles d’e-mails", staff_nav)
         self.assertIn("Réglages de laize", staff_nav)
+        self.assertIn("Paiements en ligne", staff_nav)
+        self.assertIn("portal:staff-payment-settings", staff_nav)
         self.assertIn("portal:staff-default-catalog-pricing-settings", staff_nav)
         self.assertIn("Grille tarifaire", staff_nav)
         self.assertNotIn("Machines DTF", staff_nav)
@@ -1177,8 +1187,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("data-grid-rows", editor)
         self.assertNotIn("Créer la grille", editor)
         self.assertIn("gang-validation-heading", editor)
-        self.assertIn("data-sheet-quantity", editor)
-        self.assertIn("Exemplaires de planche", editor)
+        checkout = template_source("portal/client/gang_sheets/partials/studio_checkout.html")
+        self.assertIn("data-sheet-quantity", checkout)
+        self.assertIn("Exemplaires de planche", checkout)
+        self.assertIn("Nom de la commande", checkout)
+        self.assertIn("studio_checkout.html", editor)
         self.assertIn("data-sheet-order-quote", editor)
         self.assertIn("data-sheet-quantity", runtime)
         self.assertIn("updateOrderQuoteUi", runtime)
@@ -1600,6 +1613,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertEqual(staff_nav.count("portal:staff-machine-fleet"), 1)
         self.assertIn("{% else %}Réglages{% endif %}", staff_nav)
         self.assertIn("nav_key == 'staff-machines'", staff_nav)
+        self.assertIn("staff-payment-settings", staff_nav)
+        self.assertIn("portal:staff-payment-settings", staff_nav)
         self.assertNotIn("staff-brand-settings", staff_nav)
         self.assertNotIn("portal:staff-brand-settings", staff_nav)
 
@@ -2272,6 +2287,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("dialog.showModal()", configurator_runtime)
         self.assertIn("openAutoOpenDialogs", configurator_runtime)
         self.assertIn("dismissAutoOpenDialog", configurator_runtime)
+        self.assertIn('target.hasAttribute("data-studio-pay-dialog")', configurator_runtime)
         self.assertIn("clearOrderProjectValidateQuery", configurator_runtime)
         self.assertIn("autoOpenedDialogs", configurator_runtime)
         self.assertIn("new DataTransfer()", configurator_runtime)
@@ -2403,6 +2419,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "portal/client/gang_sheets/list.html",
             "portal/client/gang_sheets/editor.html",
             "portal/staff/settings/branding.html",
+            "portal/staff/settings/payments.html",
             "portal/staff/gang_sheets/settings.html",
             "portal/client/team.html",
         ]

@@ -271,6 +271,8 @@ class Command(BaseCommand):
             "billing.mark_invoice_paid",
             "billing.view_billingstatement",
             "billing.add_billingstatement",
+            "billing.view_paymentgatewaysettings",
+            "billing.change_paymentgatewaysettings",
         ]
 
     def _seed_customers_and_memberships(self, users: SeedUsers):

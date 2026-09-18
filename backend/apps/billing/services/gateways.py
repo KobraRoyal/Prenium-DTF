@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from apps.billing.models import Payment
@@ -53,13 +52,10 @@ class PaymentGateway(Protocol):
 
 
 def configured_online_providers() -> list[str]:
-    """Providers réellement installés (credentials présents)."""
-    providers: list[str] = []
-    if settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET:
-        providers.append(Payment.Provider.PAYPAL)
-    if settings.STRIPE_SECRET_KEY:
-        providers.append(Payment.Provider.STRIPE)
-    return providers
+    """Providers réellement proposés au checkout (activés + credentials)."""
+    from apps.billing.services.gateway_settings import payment_gateway_settings_service
+
+    return payment_gateway_settings_service.configured_providers()
 
 
 def resolve_online_provider(*, customer, requested_provider: str | None = None) -> str:

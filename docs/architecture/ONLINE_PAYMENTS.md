@@ -12,7 +12,7 @@ mensuel / bi-mensuel (`deferred` + `BillingStatement`) sans paiement en ligne.
 |-----------|--------------|
 | `billing_mode = deferred` | Paiement en ligne **refusé** |
 | Commande `immediate` | Le **client choisit** parmi les providers **installés** (credentials présents) |
-| Providers affichés | PayPal si `PAYPAL_*` configuré ; carte / Stripe si `STRIPE_SECRET_KEY` configuré |
+| Providers affichés | PayPal / Stripe **activés** dans l’Atelier avec credentials (DB chiffrée ou env) |
 | `preferred_settlement_method` | Pré-sélection / indication atelier uniquement, **pas un verrou** |
 | Montant ≤ 0 | Refus |
 
@@ -50,7 +50,24 @@ PaymentService
 
 ## Configuration
 
-Voir `.env.example` :
+Les moyens PayPal et Stripe se connectent et s’activent depuis
+**Atelier → Réglages → Paiements en ligne** (`/portal/staff/settings/payments/`).
+Un administrateur peut activer les deux, un seul, ou aucun.
+
+Sans ligne de réglages Atelier, le comportement reste compatible avec les variables
+d’environnement (`.env.example`) : un provider apparaît au checkout dès que ses
+credentials env sont présents.
+
+Quand une ligne Atelier existe :
+
+- le toggle **Activer** commande l’affichage au checkout ;
+- un secret vide conserve la valeur déjà chiffrée ;
+- si le champ Atelier est vide, le backend retombe sur l’env.
+
+Le chiffrement des secrets saisis dans l’Atelier utilise
+`PAYMENT_SECRET_ENCRYPTION_KEYS` (sinon `WEB_PUSH_ENCRYPTION_KEYS`).
+
+Voir aussi `.env.example` :
 
 - PayPal : `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_INTERNAL_CONFIRM_TOKEN`,
   `PAYPAL_WEBHOOK_ID`, …
@@ -99,6 +116,10 @@ La **facture fiscale / comptable** est émise hors plateforme via l’outil **RC
 - [ ] Capture PayPal / Stripe idempotente (pas de double facture)
 - [ ] Retour Stripe non payé (async) ne passe **pas** le paiement en failed
 - [ ] Staff voit provider + refs PayPal/Stripe dans panneau facturation / admin
+- [ ] Atelier active PayPal seul, Stripe seul, les deux, ou aucun
+- [ ] Client ne voit au checkout que les moyens activés et connectés
+- [ ] Secrets saisis dans l’Atelier masqués (••••) et absents des audits
+- [ ] Staff lecture seule : GET OK, POST 403
 
 ## Notification post-tarification
 
@@ -112,20 +133,39 @@ La production atelier (`in_progress`) est **bloquée** jusqu’à capture du pai
 
 ### UX portail client (comptant CB)
 
-- Un seul CTA **Payer maintenant** (dialogue d’initiation) — pas de boutons
-  « Reprendre » / « Relancer » en parallèle.
-- Dashboard + liste commandes : pastille **Paiement non finalisé** + action **Payer**
-  vers `?panel=billing&pay=1` (`attach_awaits_client_payment`).
+- Un seul CTA primaire **Payer maintenant** dans l’onglet Règlement, avec les
+  moyens PayPal / carte visibles en tuiles (pas de dialogue). PayPal affiche le
+  logo officiel ; Stripe affiche les marques Visa, Mastercard et CB.
+- La bannière fiche commande pointe vers le règlement (`Ouvrir le règlement`)
+  sans dupliquer le bouton primaire.
+- Une reprise sur le même moyen réutilise le checkout ouvert (pas de nouvelle
+  session provider).
+- Après paiement : justificatif + suite **Voir la production**.
+- Dashboard + liste commandes : pastille **Paiement non finalisé** + action vers
+  `?panel=billing&pay=1#client-billing-pay`.
+- Studio Gang Sheet (planche validée) : le client confirme les visuels, choisit la
+  couleur du support et paie **sur la même vue**
+  (`POST /portal/client/.../gang-sheets/<id>/checkout/`). Le TTC détaillé
+  (impression, préparation, livraison, TVA) se met à jour au choix du transport
+  sans défiler l’inspecteur (`GET .../quote/`). Pas de hop vers la fiche
+  projet B2B.
 
 ## Fichiers clés
 
 - `backend/apps/billing/services/gateways.py`
+- `backend/apps/billing/services/gateway_settings.py`
+- `backend/apps/billing/services/secret_crypto.py`
 - `backend/apps/billing/services/paypal.py`
 - `backend/apps/billing/services/stripe_gateway.py`
 - `backend/apps/billing/services/payments.py`
 - `backend/apps/billing/services/production_payment_gate.py`
+- `backend/apps/billing/forms.py`
 - `backend/apps/billing/views.py`
 - `backend/apps/portal/views_payments.py`
+- `backend/apps/portal/views_staff_payments.py`
+- `backend/templates/portal/staff/settings/payments.html`
+- `backend/templates/portal/client/panels/billing.html`
 - `backend/apps/notifications/services/transactional.py`
 - `tests/billing/test_billing_api.py`
 - `tests/billing/test_stripe_payments.py`
+- `tests/billing/test_payment_gateway_settings.py`

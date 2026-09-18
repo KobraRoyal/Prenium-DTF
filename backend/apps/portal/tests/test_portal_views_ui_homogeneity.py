@@ -35,6 +35,7 @@ STAFF_PAGE_VIEWS = [
     "portal/staff/email_templates/list.html",
     "portal/staff/email_templates/edit.html",
     "portal/staff/settings/branding.html",
+    "portal/staff/settings/payments.html",
     "portal/staff/gang_sheets/settings.html",
     "portal/staff/customers/default_volume_discounts.html",
     "portal/staff/access_requests/detail.html",
@@ -653,6 +654,10 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
                 "font-display text-lg",
                 "brand-settings-surface",
             ),
+            "portal/staff/settings/payments.html": (
+                "font-display text-lg",
+                "payment-gateway-settings-surface",
+            ),
         }
         for path, (typography, surface_class) in checks.items():
             with self.subTest(path=path):
@@ -675,6 +680,8 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn(".email-template-editor-surface", css)
         self.assertIn("v63 — Fiche client", css)
         self.assertIn(".staff-customer-detail-page .volume-discount-dialog", css)
+        self.assertIn("v64 — Réglages paiements", css)
+        self.assertIn(".payment-gateway-settings-surface", css)
 
     def test_staff_production_panel_uses_flat_operator_typography(self) -> None:
         source = template_source("portal/staff/panels/production.html")

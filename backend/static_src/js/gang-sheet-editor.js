@@ -1041,7 +1041,8 @@ if (root) {
     const item = selected();
     const selectionCount = selectedIds.size;
     const multiInspector = q("[data-multi-inspector]");
-    q("[data-empty-inspector]").hidden = selectionCount > 0;
+    q("[data-empty-inspector]").hidden =
+      selectionCount > 0 || ["rendering", "validated"].includes(state.status);
     q("[data-item-inspector]").hidden = selectionCount !== 1 || !item;
     if (multiInspector) multiInspector.hidden = selectionCount < 2;
     q("[data-alignment-panel]").hidden = selectionCount === 0;
@@ -1514,7 +1515,7 @@ if (root) {
         validateBtn.disabled = true;
         if (validateLabel) validateLabel.textContent = "Composition confirmée";
         if (validationLead) {
-          validationLead.textContent = "Planche verrouillée. Téléchargez l’aperçu ou créez la commande.";
+          validationLead.textContent = "Planche verrouillée. Renseignez la commande, puis payez.";
         }
       } else if (state.status === "ready") {
         validateBtn.disabled = !canConfirmReady;
@@ -1539,6 +1540,7 @@ if (root) {
       }
     }
     syncCreateOrderProjectControl();
+    syncStudioCheckout();
     const quantityField = q("[data-sheet-quantity-field]");
     const quantityInput = q("[data-sheet-quantity]");
     if (quantityField) {
@@ -1563,6 +1565,324 @@ if (root) {
     return { qty, surface, billable, unit, prep, dtf, total };
   }
 
+  function studioCheckoutVisible() {
+    const panel = q("[data-studio-checkout]");
+    return Boolean(panel && !panel.hidden);
+  }
+
+  function formatStudioEur(value) {
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) return "—";
+    return `${amount.toLocaleString("fr-FR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}\u00a0€`;
+  }
+
+  function selectedStudioShippingCode() {
+    const form = q("[data-studio-checkout-form]");
+    if (!form) return "";
+    const checked = form.querySelector("input[name='shipping_method_code']:checked");
+    if (checked instanceof HTMLInputElement) return checked.value;
+    const hidden = form.querySelector("input[name='shipping_method_code'][type='hidden']");
+    return hidden instanceof HTMLInputElement ? hidden.value : "";
+  }
+
+  function renderStudioPayQuote(quote) {
+    const boxes = qa("[data-studio-pay-quote]");
+    if (!boxes.length) return;
+    const tax = Number(quote?.tax_amount_eur || 0);
+    const discount = Number(quote?.volume_discount_percent || 0);
+    boxes.forEach((box) => {
+      if (!quote) {
+        box.hidden = true;
+        return;
+      }
+      box.hidden = false;
+      const setText = (selector, text) => {
+        box.querySelectorAll(selector).forEach((node) => {
+          node.textContent = text;
+        });
+      };
+      setText(
+        "[data-studio-pay-total]",
+        `${formatStudioEur(quote.total_eur)} ${tax > 0 ? "TTC" : "HT"}`,
+      );
+      setText(
+        "[data-studio-pay-sheet]",
+        `${Number(quote.surface_sqm).toLocaleString("fr-FR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 4,
+        })}\u00a0m² × ${quote.quantity}\u00a0ex.`,
+      );
+      setText("[data-studio-pay-dtf]", formatStudioEur(quote.dtf_amount_eur));
+      box.querySelectorAll("[data-studio-pay-discount-row]").forEach((row) => {
+        row.hidden = !(discount > 0);
+      });
+      setText(
+        "[data-studio-pay-discount-label]",
+        discount > 0
+          ? `Remise volume −${Number(discount).toLocaleString("fr-FR")}\u00a0%`
+          : "Remise volume",
+      );
+      setText(
+        "[data-studio-pay-discount]",
+        discount > 0 ? `−${formatStudioEur(quote.volume_discount_amount_eur)}` : "",
+      );
+      setText("[data-studio-pay-prep]", formatStudioEur(quote.prep_amount_eur));
+      setText("[data-studio-pay-shipping-label]", quote.shipping_method_name || "Livraison");
+      setText("[data-studio-pay-shipping]", formatStudioEur(quote.shipping_amount_eur));
+      box.querySelectorAll("[data-studio-pay-tax-row]").forEach((row) => {
+        row.hidden = !(tax > 0);
+      });
+      setText("[data-studio-pay-tax]", tax > 0 ? formatStudioEur(quote.tax_amount_eur) : "");
+    });
+    const billingMode = q("[data-studio-checkout-form] input[name='billing_mode']")?.value;
+    if (billingMode === "immediate" && quote) {
+      const label = `Payer ${formatStudioEur(quote.total_eur)}`;
+      qa("[data-studio-checkout-submit-label], [data-studio-pay-confirm-label]").forEach(
+        (node) => {
+          node.textContent = label;
+        },
+      );
+    }
+  }
+
+  let studioQuoteSeq = 0;
+
+  async function refreshStudioPayQuote() {
+    const url = root.dataset.quoteUrl;
+    if (!url || !studioCheckoutVisible() || !q("[data-studio-pay-quote]")) return;
+    const quantity =
+      q("[data-sheet-quantity]")?.value || q("[data-studio-checkout-quantity]")?.value || "1";
+    const params = new URLSearchParams({ quantity: String(quantity) });
+    const shipping = selectedStudioShippingCode();
+    if (shipping) params.set("shipping_method_code", shipping);
+    const seq = ++studioQuoteSeq;
+    try {
+      const response = await fetch(`${url}?${params}`, {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (seq !== studioQuoteSeq) return;
+      if (payload.ok) renderStudioPayQuote(payload.quote);
+    } catch (_error) {
+      // Conserve le dernier devis affiché.
+    }
+  }
+
+  function commitStudioChoiceAfterClick(input) {
+    window.setTimeout(() => {
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }, 0);
+  }
+
+  function bindStudioShippingChoice() {
+    const form = q("[data-studio-checkout-form]");
+    if (!form || form.dataset.shippingBound === "true") return;
+    form.dataset.shippingBound = "true";
+    form.addEventListener("mousedown", (event) => {
+      const option = event.target.closest(".b2b-shipping-choice__option");
+      if (!option || !form.contains(option)) return;
+      const input = option.querySelector("input[name='shipping_method_code']");
+      if (!(input instanceof HTMLInputElement) || input.disabled) return;
+      event.preventDefault();
+      if (!input.checked) {
+        input.checked = true;
+        commitStudioChoiceAfterClick(input);
+      }
+    });
+    form.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || target.name !== "shipping_method_code") {
+        return;
+      }
+      refreshStudioPayQuote();
+      syncStudioDelivery();
+    });
+  }
+
+  function studioPayDialog() {
+    return q("[data-studio-pay-dialog]");
+  }
+
+  function studioCheckoutToast(message) {
+    if (typeof window.preniumToast === "function") {
+      window.preniumToast(message, "danger");
+      return;
+    }
+    window.alert(message);
+  }
+
+  function studioSupportColorReady(form) {
+    const multicolor = form.querySelector("[data-support-color-multicolor-input]");
+    if (multicolor instanceof HTMLInputElement && multicolor.value === "on") return true;
+    const hex = form.querySelector("[data-support-color-hex]");
+    if (!(hex instanceof HTMLInputElement)) return true;
+    return /^#[0-9A-Fa-f]{6}$/.test(hex.value.trim());
+  }
+
+  function studioOrderNameReady(form) {
+    const name = form.querySelector("[name='name']");
+    if (!(name instanceof HTMLInputElement)) return true;
+    return Boolean(name.value.trim());
+  }
+
+  function studioDeliveryOtherSelected(form) {
+    const selected =
+      form.querySelector("input[name='delivery_destination']:checked") ||
+      form.querySelector("input[name='delivery_destination'][type='hidden']");
+    return selected instanceof HTMLInputElement && selected.value === "other";
+  }
+
+  function syncStudioDeliveryRequired(form, { pickup, other }) {
+    const requiredNames = new Set(["shipping_contact_name", "shipping_email", "shipping_house_number"]);
+    if (other) {
+      requiredNames.add("shipping_address_line1");
+      requiredNames.add("shipping_postal_code");
+      requiredNames.add("shipping_city");
+    }
+    form.querySelectorAll("[data-studio-delivery] input, [data-studio-delivery] select").forEach((node) => {
+      if (!(node instanceof HTMLInputElement || node instanceof HTMLSelectElement)) return;
+      node.required = !pickup && requiredNames.has(node.name);
+    });
+  }
+
+  function syncStudioDeliveryOther() {
+    const form = q("[data-studio-checkout-form]");
+    const fields = q("[data-studio-delivery-other]");
+    if (!form || !fields) return;
+    const pickup = selectedStudioShippingCode() === "pickup";
+    const other = !pickup && studioDeliveryOtherSelected(form);
+    fields.hidden = !other;
+    syncStudioDeliveryRequired(form, { pickup, other });
+  }
+
+  function syncStudioDelivery() {
+    const block = q("[data-studio-delivery]");
+    if (!block) return;
+    const pickup = selectedStudioShippingCode() === "pickup";
+    block.hidden = pickup;
+    block.querySelectorAll("input, select").forEach((node) => {
+      if (!(node instanceof HTMLInputElement || node instanceof HTMLSelectElement)) return;
+      node.disabled = pickup || node.dataset.locked === "true";
+    });
+    if (!pickup) {
+      const checked = block.querySelector("input[name='delivery_destination']:checked");
+      if (!(checked instanceof HTMLInputElement)) {
+        const fallback =
+          block.querySelector("input[name='delivery_destination'][value='other']") ||
+          block.querySelector("input[name='delivery_destination']:not([disabled])");
+        if (fallback instanceof HTMLInputElement) fallback.checked = true;
+      }
+    }
+    syncStudioDeliveryOther();
+  }
+
+  function validateStudioPayForm(form, { opening = false } = {}) {
+    if (!studioOrderNameReady(form)) {
+      studioCheckoutToast("Indiquez le nom de la commande.");
+      return false;
+    }
+    if (!studioSupportColorReady(form)) {
+      studioCheckoutToast("Choisissez Multicouleur ou la couleur du support.");
+      return false;
+    }
+    if (opening) return true;
+    syncStudioDelivery();
+    if (selectedStudioShippingCode() === "pickup") return true;
+    const other = studioDeliveryOtherSelected(form);
+    const requiredNames = ["shipping_contact_name", "shipping_email", "shipping_house_number"];
+    if (other) {
+      requiredNames.push("shipping_address_line1", "shipping_postal_code", "shipping_city");
+    }
+    const missing = requiredNames.some((name) => {
+      const node = form.querySelector(`[name='${name}']`);
+      return !(node instanceof HTMLInputElement) || !node.value.trim();
+    });
+    const email = form.querySelector("[name='shipping_email']");
+    const emailInvalid =
+      email instanceof HTMLInputElement && email.value.trim() && !email.value.includes("@");
+    if (missing || emailInvalid) {
+      studioCheckoutToast(
+        other
+          ? "Complétez le destinataire et l’adresse Sendcloud."
+          : "Indiquez le destinataire, l’email de suivi et le n° de voie.",
+      );
+      return false;
+    }
+    return true;
+  }
+
+  function openStudioPayDialog() {
+    const dialog = studioPayDialog();
+    if (!(dialog instanceof HTMLDialogElement)) return;
+    syncStudioDelivery();
+    if (typeof dialog.showModal === "function" && !dialog.open) {
+      dialog.showModal();
+    }
+    const contact = dialog.querySelector("[name='shipping_contact_name']");
+    const delivery = dialog.querySelector("[data-studio-delivery]");
+    const focusTarget =
+      (delivery && !delivery.hidden && contact instanceof HTMLElement ? contact : null) ||
+      dialog.querySelector("input[name='provider']:not([type='hidden'])") ||
+      dialog.querySelector("[data-studio-pay-confirm]");
+    if (focusTarget instanceof HTMLElement) focusTarget.focus();
+  }
+
+  function closeStudioPayDialog() {
+    const dialog = studioPayDialog();
+    if (dialog instanceof HTMLDialogElement && dialog.open) dialog.close();
+  }
+
+  function bindStudioPayDialog() {
+    const form = q("[data-studio-checkout-form]");
+    if (!form || form.dataset.payDialogBound === "true") return;
+    form.dataset.payDialogBound = "true";
+    q("[data-studio-checkout-open]")?.addEventListener("click", () => {
+      if (!canEdit) return;
+      if (!validateStudioPayForm(form, { opening: true })) return;
+      openStudioPayDialog();
+    });
+    form.addEventListener("click", (event) => {
+      const closer = event.target.closest("[data-studio-pay-close]");
+      if (!closer || !form.contains(closer)) return;
+      event.preventDefault();
+      closeStudioPayDialog();
+    });
+    form.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || target.name !== "delivery_destination") {
+        return;
+      }
+      syncStudioDeliveryOther();
+    });
+    form.addEventListener("mousedown", (event) => {
+      const option = event.target.closest(".gang-studio-delivery__option");
+      if (!option || !form.contains(option)) return;
+      const input = option.querySelector("input[name='delivery_destination']");
+      if (!(input instanceof HTMLInputElement) || input.disabled) return;
+      event.preventDefault();
+      if (!input.checked) {
+        input.checked = true;
+        commitStudioChoiceAfterClick(input);
+      }
+    });
+    form.addEventListener("submit", (event) => {
+      if (!validateStudioPayForm(form)) {
+        event.preventDefault();
+        openStudioPayDialog();
+      }
+    });
+    const panel = q("[data-studio-checkout]");
+    const errorCode = panel?.dataset.checkoutError || "";
+    if (errorCode === "delivery_address_required" || errorCode === "validation") {
+      openStudioPayDialog();
+    }
+  }
+
   function updateOrderQuoteUi() {
     const quote = sheetOrderQuote();
     const quoteBox = q("[data-sheet-order-quote]");
@@ -1570,7 +1890,7 @@ if (root) {
     const label = q("[data-sheet-order-quote-label]");
     const totalEl = q("[data-sheet-order-quote-total]");
     const hasEstimate = state.items.length > 0 && quote.surface > 0;
-    if (quoteBox) quoteBox.hidden = false;
+    if (quoteBox) quoteBox.hidden = studioCheckoutVisible();
     if (label) label.textContent = "Total estimé HT";
     if (totalEl) totalEl.textContent = hasEstimate ? `${quote.total.toFixed(2)} €` : "—";
     if (detail) {
@@ -1604,6 +1924,25 @@ if (root) {
       link.setAttribute("tabindex", "-1");
       link.setAttribute("href", "#");
     }
+  }
+
+  function syncStudioCheckout() {
+    const hasOrder = root.dataset.hasOrder === "true";
+    const checkoutMode = state.status === "validated" || hasOrder;
+    root.classList.toggle("is-checkout", checkoutMode);
+    const title = q("[data-inspector-panel-title]");
+    if (title) title.textContent = checkoutMode ? "Commande" : "Réglages";
+    const panel = q("[data-studio-checkout]");
+    if (!panel) return;
+    panel.hidden = !checkoutMode;
+    const quantity = q("[data-sheet-quantity]");
+    const hiddenQty = q("[data-studio-checkout-quantity]");
+    if (quantity && hiddenQty && quantity !== hiddenQty) {
+      hiddenQty.value = quantity.value || "1";
+    }
+    bindStudioShippingChoice();
+    bindStudioPayDialog();
+    syncStudioDelivery();
   }
 
   function clearSelection() {
@@ -3185,8 +3524,19 @@ if (root) {
       // Fallback: navigate to the bare form URL.
     }
   });
-  q("[data-sheet-quantity]")?.addEventListener("input", () => updateOrderQuoteUi());
-  q("[data-sheet-quantity]")?.addEventListener("change", () => updateOrderQuoteUi());
+  q("[data-sheet-quantity]")?.addEventListener("input", () => {
+    updateOrderQuoteUi();
+    syncStudioCheckout();
+    refreshStudioPayQuote();
+  });
+  q("[data-sheet-quantity]")?.addEventListener("change", () => {
+    updateOrderQuoteUi();
+    syncStudioCheckout();
+    refreshStudioPayQuote();
+  });
+  bindStudioShippingChoice();
+  bindStudioPayDialog();
+  syncStudioDelivery();
   function rotateSelected() {
     const items = selectedItems();
     if (!items.length || !canEdit || busy || ["rendering", "validated"].includes(state.status)) return;

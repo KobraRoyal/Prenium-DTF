@@ -2612,6 +2612,7 @@ function bindConfiguratorEvents() {
       return;
     }
     if (target instanceof HTMLDialogElement) {
+      if (target.hasAttribute("data-studio-pay-dialog")) return;
       dismissAutoOpenDialog(target);
       target.close();
     }

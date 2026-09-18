@@ -57,12 +57,6 @@ class PaymentService:
             if order.total_amount <= 0:
                 raise ValidationError("Montant de commande invalide pour un paiement.")
 
-            # Abandonne les tentatives ouvertes pour permettre une reprise propre.
-            Payment.objects.filter(
-                order_id=order.pk,
-                status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
-            ).update(status=Payment.Status.CANCELLED)
-
             injected_provider = getattr(self.gateway, "provider", None) if self.gateway else None
             if injected_provider and (not provider or provider == injected_provider):
                 resolved_provider = injected_provider
@@ -71,6 +65,24 @@ class PaymentService:
                     customer=customer,
                     requested_provider=provider,
                 )
+            existing = (
+                Payment.objects.select_for_update()
+                .filter(
+                    order_id=order.pk,
+                    provider=resolved_provider,
+                    status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
+                )
+                .exclude(approval_url="")
+                .order_by("-created_at")
+                .first()
+            )
+            if existing is not None:
+                return order, existing
+
+            Payment.objects.filter(
+                order_id=order.pk,
+                status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
+            ).update(status=Payment.Status.CANCELLED)
             gateway = self._get_gateway(provider=resolved_provider)
             payment = Payment.objects.create(
                 order=order,
