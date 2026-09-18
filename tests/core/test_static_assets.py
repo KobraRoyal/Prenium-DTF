@@ -99,7 +99,7 @@ def test_javascript_module_children_keep_explicit_cache_versions() -> None:
     app = _source("backend/static_src/js/app.js")
     assert "?v=" in app
     assert "gang-sheet-editor.js?v=20260918-studio-inspector-v16" in app
-    assert "product-date-picker.js?v=20260918-studio-date-v1" in app
+    assert "product-date-picker.js?v=20260918-date-portal-v2" in app
     assert "?v=" in _source("backend/static_src/js/marketing.js")
 
 

@@ -2,6 +2,8 @@
 
 | Date | Décision | Motif | Impact |
 |---|---|---|---|
+| 2026-09-18 | Calendrier `product-date-picker` : popover porté hors overflow (body ou `<dialog>`) | `position:fixed` était recoupé par inspecteur / dialog / transform | Dropdown visible dans Studio, projets B2B, handover atelier et mois de facturation |
+| 2026-09-18 | Studio : une planche déjà commandée reste commandable ; pas de CTA « Voir ma commande » | La bibliothèque est un catalogue de compositions, pas un historique | Chaque « Je commande » crée une nouvelle commande et réutilise le PDF HD |
 | 2026-09-18 | Studio modale : totaux synchronisés au choix de port ; encours vs comptant dans le même shell | Le pied affichait encore le port précédent ; encours n’a pas de paiement | Recap depuis l’option cochée + `goods_total` immédiat ; lede Encours / règlement |
 | 2026-09-18 | Studio : CTA unique « Je commande » ; port hors inspecteur, choisi dans la modale | « Payer + prix » mélangeait encours/comptant et anticipait un transport non choisi | Devis production dans l’inspecteur ; total + port dans le pied de modale |
 | 2026-09-18 | Studio encours : même checkout Gang Sheet que le comptant, sans paiement | La surface planche est connue ; attendre le métrage atelier cassait la validation directe | Commande HT tarifée, pas de redirection PayPal/Stripe |

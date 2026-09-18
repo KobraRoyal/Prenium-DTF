@@ -2694,6 +2694,32 @@
     box-shadow: var(--shadow-raised);
   }
 
+  body.product-shell .product-date-picker__popover.is-ported {
+    z-index: 200;
+    margin: 0;
+  }
+
+  body.product-shell dialog:has(.product-date-picker.is-open),
+  body.product-shell dialog:has(.product-date-picker__popover.is-ported) {
+    overflow: visible;
+  }
+
+  body.product-shell .product-date-picker--month .product-date-picker__grid,
+  body.product-shell .product-date-picker__popover--month .product-date-picker__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  body.product-shell .product-date-picker__popover--month .product-date-picker__day {
+    min-height: 2.5rem;
+    padding: 0.35rem 0.2rem;
+    font-size: 0.78rem;
+    text-transform: lowercase;
+  }
+
+  body.product-shell .product-date-picker__popover--month .product-date-picker__day.is-latest {
+    border-color: var(--brand-strong, var(--product-accent));
+  }
+
   body.product-shell .product-date-picker__head {
     display: grid;
     grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;

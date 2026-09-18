@@ -70,8 +70,11 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   sauf pendant le rendu ; lorsque Drive est actif, le HD doit d’abord être synchronisé. Projet,
   commande éventuelle, asset HD et upload de production restent conservés.
 - Bibliothèque de compositions uniquement : cartes uniformes vers le studio, sans filtre ni
-  libellé « commandée ». La recommande d’une commande existante permet de modifier les quantités
-  même lorsque le livrable est un PDF HD de planche.
+  libellé « commandée ». Le Studio d’une planche déjà commandée conserve « Je commande » et
+  crée une nouvelle commande (PDF HD réutilisé). La recommande d’une commande existante
+  permet aussi de modifier les quantités même lorsque le livrable est un PDF HD de planche.
+- [x] Calendrier « Date souhaitée » : popover porté hors overflow (body / dialog) pour rester
+  entièrement visible dans l’inspecteur Studio et les autres vues `product-date-picker`.
 - Galerie actualisée automatiquement pendant l’analyse : un visuel devient ajoutable dès que son
   contrôle technique se termine, sans rechargement manuel du studio.
 - Outils de précision P1 : historique local Annuler/Rétablir borné à 40 opérations de composition,

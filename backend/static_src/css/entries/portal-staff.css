@@ -2067,12 +2067,7 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-c
 
 @media (max-width: 639px) {
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog {
-    overflow: auto;
-  }
-
-  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker__popover {
-    top: auto;
-    bottom: calc(100% + 0.45rem);
+    overflow: visible;
   }
 }
 

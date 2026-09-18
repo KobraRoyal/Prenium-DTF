@@ -22,7 +22,7 @@
     </svg>
   </button>
   <div
-    class="product-date-picker__popover"
+    class="product-date-picker__popover{% if picker_mode == 'month' %} product-date-picker__popover--month{% endif %}"
     id="{{ id }}-popover"
     data-date-popover
     hidden
@@ -62,7 +62,7 @@
       class="product-date-picker__grid"
       data-date-grid
       role="grid"
-      aria-colcount="7"
+      aria-colcount="{% if picker_mode == 'month' %}4{% else %}7{% endif %}"
       aria-labelledby="{{ id }}-month"
     ></div>
     <div class="product-date-picker__footer">

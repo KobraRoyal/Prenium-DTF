@@ -1737,6 +1737,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("product-date-picker__nav-icon", picker)
         self.assertIn("product-date-picker__trigger-icon", product_css)
         self.assertIn("margin-left: auto", product_css)
+        self.assertIn("product-date-picker__popover.is-ported", product_css)
+        self.assertIn("product-date-picker__popover--month", product_css)
         self.assertIn("--shadow-raised", product_css)
 
     def test_staff_billing_statement_uses_shared_month_picker(self) -> None:
