@@ -42,7 +42,7 @@ class GangSheetLibraryUITests(SimpleTestCase):
         self.assertIn("is-ready", listing)
         self.assertIn("is-pending", listing)
         self.assertIn("Composition en cours", listing)
-        self.assertIn('data-product-nav-details', listing)
+        self.assertIn("data-product-nav-details", listing)
         self.assertIn('name="more"', listing)
         self.assertIn('role="menu"', listing)
         self.assertIn("gang-sheet-card__stage", listing)
@@ -70,4 +70,4 @@ class GangSheetLibraryUITests(SimpleTestCase):
 
         self.assertIn(".gang-sheet-page .gang-sheet-card__preview", client_css)
         self.assertIn("gang-sheet-card__primary--order", client_css)
-        self.assertIn("PORTAL_CSS_ASSET_V = \"20260918-gang-library-v5\"", portal_tags)
+        self.assertIn('PORTAL_CSS_ASSET_V = "20260918-gang-library-v5"', portal_tags)

@@ -360,7 +360,7 @@ def test_studio_editor_shows_detailed_pay_quote_and_json_endpoint():
     assert "Je commande" in body
     assert "Livraison à choisir" in body
     assert "data-studio-order-recap" in body
-    inspector = body.split('data-studio-pay-quote', 1)[1].split("data-studio-pay-dialog", 1)[0]
+    inspector = body.split("data-studio-pay-quote", 1)[1].split("data-studio-pay-dialog", 1)[0]
     assert "Livraison standard" not in inspector
     assert "data-studio-pay-shipping" not in inspector
 

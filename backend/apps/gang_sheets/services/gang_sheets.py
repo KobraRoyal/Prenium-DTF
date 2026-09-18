@@ -118,8 +118,7 @@ class GangSheetService:
             return False
         drive_sync = getattr(sheet, "drive_sync", None)
         needs_drive_archive = bool(
-            settings.GOOGLE_DRIVE_SYNC_ENABLED
-            and (sheet.order_id or sheet.production_asset_id)
+            settings.GOOGLE_DRIVE_SYNC_ENABLED and (sheet.order_id or sheet.production_asset_id)
         )
         if not needs_drive_archive:
             return True
