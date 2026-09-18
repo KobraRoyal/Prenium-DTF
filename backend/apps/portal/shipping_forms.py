@@ -26,27 +26,19 @@ def build_shipment_form_data(*, order, submitted_data=None) -> dict[str, str]:
         return {key: submitted_data.get(key, "") for key in SHIPMENT_FORM_KEYS}
     customer = order.customer
     snapshot = _project_shipping_snapshot(order)
-    country = str(
-        snapshot.get("country") or customer.shipping_country or "FR"
-    ).strip().upper() or "FR"
+    country = (
+        str(snapshot.get("country") or customer.shipping_country or "FR").strip().upper() or "FR"
+    )
     return {
         "recipient_name": snapshot.get("name") or customer.name or "",
         "recipient_company_name": snapshot.get("company_name") or customer.name or "",
         "recipient_email": snapshot.get("email") or customer.billing_email or "",
-        "recipient_phone_number": snapshot.get("phone")
-        or snapshot.get("phone_number")
-        or "",
+        "recipient_phone_number": snapshot.get("phone") or snapshot.get("phone_number") or "",
         "recipient_country_code": country[:2],
         "recipient_city": snapshot.get("city") or customer.shipping_city or "",
-        "recipient_postal_code": snapshot.get("postal_code")
-        or customer.shipping_postal_code
-        or "",
-        "recipient_address_line_1": snapshot.get("line1")
-        or customer.shipping_address_line1
-        or "",
-        "recipient_address_line_2": snapshot.get("line2")
-        or customer.shipping_address_line2
-        or "",
+        "recipient_postal_code": snapshot.get("postal_code") or customer.shipping_postal_code or "",
+        "recipient_address_line_1": snapshot.get("line1") or customer.shipping_address_line1 or "",
+        "recipient_address_line_2": snapshot.get("line2") or customer.shipping_address_line2 or "",
         "recipient_house_number": snapshot.get("house_number") or "",
         "parcel_weight_value": "1.0",
     }

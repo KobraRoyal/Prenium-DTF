@@ -1688,11 +1688,9 @@ class GangSheetService:
         if locked.status != GangSheet.Status.VALIDATED or not locked.final_file:
             raise GangSheetDomainError(
                 "VALIDATED_SHEET_REQUIRED",
-                "Confirmez la composition avant de régler la planche.",
+                "Confirmez la composition avant de commander.",
             )
-        placed = list(
-            locked.items.exclude(asset_version_id=None).select_related("asset_version")
-        )
+        placed = list(locked.items.exclude(asset_version_id=None).select_related("asset_version"))
         if not placed:
             raise GangSheetDomainError(
                 "SHEET_ITEMS_REQUIRED",
@@ -1723,9 +1721,11 @@ class GangSheetService:
         if project.converted_order_id:
             return project.converted_order
 
-        item = project.items.select_related("asset__current_version").order_by(
-            "sort_order", "created_at"
-        ).first()
+        item = (
+            project.items.select_related("asset__current_version")
+            .order_by("sort_order", "created_at")
+            .first()
+        )
         if item is None:
             raise GangSheetDomainError(
                 "PROJECT_ITEMS_REQUIRED",

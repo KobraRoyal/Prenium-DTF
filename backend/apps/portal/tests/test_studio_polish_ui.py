@@ -240,9 +240,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("gang-inspector-section__title", editor)
         self.assertIn("gang-unit-field", editor)
         self.assertIn("Aligner et répartir", editor)
-        checkout = source(
-            TEMPLATES_DIR / "portal/client/gang_sheets/partials/studio_checkout.html"
-        )
+        checkout = source(TEMPLATES_DIR / "portal/client/gang_sheets/partials/studio_checkout.html")
         dialog = source(
             TEMPLATES_DIR / "portal/client/gang_sheets/partials/studio_checkout_dialog.html"
         )
@@ -284,6 +282,10 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("Confirmer et payer", checkout)
         self.assertIn("Payer maintenant", dialog)
         self.assertIn("Confirmer et régler", dialog)
+        self.assertIn("Valider la commande", checkout)
+        self.assertIn("Aucun paiement en ligne", dialog)
+        self.assertIn("data-studio-encours-hint", dialog)
+        self.assertIn('default_billing_mode == "immediate"', dialog)
         self.assertIn("data-studio-pay-quote", checkout_ui)
         self.assertIn("Impression DTF", checkout)
         self.assertIn("TVA (20", checkout)
@@ -307,8 +309,8 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("function syncStudioCheckout()", editor_js)
         self.assertIn("const hasEstimate = state.items.length > 0 && quote.surface > 0", editor_js)
         self.assertNotIn('q("[data-metric-price]")', editor_js)
-        self.assertIn("gang-sheet-editor.js?v=20260918-studio-pay-modal-v11", app_js)
-        self.assertIn("async function refreshStudioPayQuote()", editor_js)
+        self.assertIn("gang-sheet-editor.js?v=20260918-studio-encours-v12", app_js)
+        self.assertIn("Valider ${formatStudioEur(quote.total_eur)} HT", editor_js)
         self.assertIn('classList.toggle("is-checkout"', editor_js)
         self.assertIn("function studioOrderNameReady", editor_js)
         self.assertIn("[type='hidden']", editor_js)
@@ -319,7 +321,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("function bindStudioPayDialog()", editor_js)
         self.assertIn("function studioDeliveryOtherSelected", editor_js)
         self.assertIn("shipping_house_number", editor_js)
-        self.assertIn("qa(\"[data-studio-pay-quote]\")", editor_js)
+        self.assertIn('qa("[data-studio-pay-quote]")', editor_js)
         self.assertNotIn("gang-inspector-panel__context", editor)
         text_css = source(CSS_DIR / "components/gang-sheet-text.css")
         self.assertIn("font-size: 2.18cqw", text_css)

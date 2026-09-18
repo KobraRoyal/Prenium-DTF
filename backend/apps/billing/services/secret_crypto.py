@@ -78,9 +78,7 @@ class PaymentSecretCrypto:
                 version = f"v{index + 1}"
                 key = entry
             if not version or version in versions:
-                raise ImproperlyConfigured(
-                    "PAYMENT_SECRET_ENCRYPTION_KEYS versions must be unique"
-                )
+                raise ImproperlyConfigured("PAYMENT_SECRET_ENCRYPTION_KEYS versions must be unique")
             try:
                 fernet = Fernet(key.encode("ascii"))
             except (ValueError, TypeError) as exc:

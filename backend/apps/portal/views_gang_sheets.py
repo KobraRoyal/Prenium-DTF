@@ -547,7 +547,7 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
                 self.request.GET.get("checkout_message")
                 or "Impossible de finaliser la commande. Réessayez."
             ),
-            "delivery_address_required": "Indiquez l’adresse de livraison avant de régler.",
+            "delivery_address_required": "Indiquez l’adresse de livraison avant de confirmer.",
             "delivery_recipient_required": (
                 "Indiquez le destinataire, un email de suivi et le n° de voie."
             ),
@@ -1301,9 +1301,7 @@ class ClientGangSheetQuoteView(ClientGangSheetMixin, View):
             customer=self.customer,
             sheet=sheet,
             quantity=_quote_quantity(request.GET.get("quantity")),
-            shipping_method_code=(
-                (request.GET.get("shipping_method_code") or "").strip() or None
-            ),
+            shipping_method_code=((request.GET.get("shipping_method_code") or "").strip() or None),
         )
         return JsonResponse({"ok": True, "quote": _quote_json(quote) if quote else None})
 
@@ -1344,8 +1342,8 @@ class ClientGangSheetCheckoutView(ClientGangSheetMixin, View):
         try:
             shipping_code = (request.POST.get("shipping_method_code") or "").strip() or None
             delivery_destination = (
-                request.POST.get("delivery_destination") or "billing"
-            ).strip().lower()
+                (request.POST.get("delivery_destination") or "billing").strip().lower()
+            )
             same_as_billing = delivery_destination != "other"
             delivery_payload = {
                 "shipping_address_line1": request.POST.get("shipping_address_line1", ""),
@@ -1387,8 +1385,7 @@ class ClientGangSheetCheckoutView(ClientGangSheetMixin, View):
                 quantity=request.POST.get("quantity") or 1,
                 shipping_method_code=shipping_code,
                 billing_mode=str(
-                    request.POST.get("billing_mode")
-                    or getattr(self.customer, "default_billing_mode", "deferred")
+                    getattr(self.customer, "default_billing_mode", "deferred")
                 ).strip(),
                 name=request.POST.get("name"),
                 requested_date=request.POST.get("requested_date"),
@@ -1416,10 +1413,7 @@ class ClientGangSheetCheckoutView(ClientGangSheetMixin, View):
             messages = "; ".join(getattr(error, "messages", []) or [str(error)])
             error_codes = [
                 getattr(error, "code", None),
-                *[
-                    getattr(item, "code", None)
-                    for item in getattr(error, "error_list", [])
-                ],
+                *[getattr(item, "code", None) for item in getattr(error, "error_list", [])],
             ]
             checkout_error = "validation"
             if "delivery_recipient_required" in error_codes:
