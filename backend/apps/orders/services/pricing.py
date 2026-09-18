@@ -275,6 +275,11 @@ class OrderPricingService:
             shipping_ht=Decimal(str(shipping_snap["shipping_amount"])),
             billing_mode=resolved_billing,
         )
+        goods_totals = self.compose_order_totals(
+            subtotal_ht=subtotal,
+            shipping_ht=ZERO_AMOUNT,
+            billing_mode=resolved_billing,
+        )
         return {
             "surface_sqm": surface,
             "quantity": qty,
@@ -293,6 +298,8 @@ class OrderPricingService:
             "tax_rate": totals["tax_rate"],
             "tax_amount_eur": totals["tax_amount"],
             "total_eur": totals["total_amount"],
+            "goods_tax_amount_eur": goods_totals["tax_amount"],
+            "goods_total_eur": goods_totals["total_amount"],
             "billing_mode": resolved_billing,
             "currency": "EUR",
             "volume_discount_percent": volume_discount_percent,

@@ -4,11 +4,11 @@
 
 {% block portal_content %}
 <div class="portal-page portal-page--client gang-sheet-page">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_gang_sheets_list.html" title="Mes planches DTF" subtitle="Créez, reprenez et commandez vos compositions DTF depuis un seul espace." actions_template="components/portal/page_head_actions/client_gang_sheets_list.html" %}
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_gang_sheets_list.html" title="Mes planches DTF" subtitle="Enregistrez vos compositions et commandez-les quand vous en avez besoin." actions_template="components/portal/page_head_actions/client_gang_sheets_list.html" %}
 
   <section
     class="portal-page-surface ui-list-section gang-sheet-library"
-    aria-labelledby="gang-sheet-library-title"
+    aria-label="Bibliothèque de planches DTF"
     x-data="{
       filter: 'all',
       query: '',
@@ -17,28 +17,43 @@
         return matchesFilter && card.dataset.search.includes(this.query.trim().toLowerCase());
       },
       hasResults() {
-        return Array.from(this.$refs.grid.querySelectorAll('[data-gang-sheet-card]')).some((card) => this.matches(card));
+        const grid = this.$refs.grid;
+        if (!grid) return false;
+        return Array.from(grid.querySelectorAll('[data-gang-sheet-card]')).some((card) => this.matches(card));
+      },
+      count(group) {
+        const grid = this.$refs.grid;
+        if (!grid) return 0;
+        const cards = Array.from(grid.querySelectorAll('[data-gang-sheet-card]'));
+        if (group === 'all') return cards.length;
+        return cards.filter((card) => card.dataset.statusGroup === group).length;
       }
     }"
   >
-    <div class="gang-sheet-library__title-row">
-      <h2 id="gang-sheet-library-title">Bibliothèque</h2>
-      <span class="product-pill">{{ sheets|length }} planche{{ sheets|length|pluralize }}</span>
-    </div>
-
     {% if sheets %}
     <div class="gang-sheet-toolbar" aria-label="Filtrer les planches DTF">
       <nav class="ui-list-tabs ui-selection-rail ui-selection-rail--horizontal gang-sheet-library__filters" role="tablist" aria-label="Filtrer par statut">
-        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'all'" :aria-selected="filter === 'all'" :class="{ 'is-active': filter === 'all' }"><span class="ui-list-tabs__label">Toutes</span></button>
-        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'draft'" :aria-selected="filter === 'draft'" :class="{ 'is-active': filter === 'draft' }"><span class="ui-list-tabs__label">Brouillons</span></button>
-        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'processing'" :aria-selected="filter === 'processing'" :class="{ 'is-active': filter === 'processing' }"><span class="ui-list-tabs__label">En traitement</span></button>
-        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'validated'" :aria-selected="filter === 'validated'" :class="{ 'is-active': filter === 'validated' }"><span class="ui-list-tabs__label">Validées</span></button>
-        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'ordered'" :aria-selected="filter === 'ordered'" :class="{ 'is-active': filter === 'ordered' }"><span class="ui-list-tabs__label">Commandées</span></button>
+        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'all'" :aria-selected="filter === 'all'" :class="{ 'is-active': filter === 'all' }">
+          <span class="ui-list-tabs__label">Toutes</span>
+          <strong class="ui-list-tabs__count" x-text="count('all')">{{ sheets|length }}</strong>
+        </button>
+        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'draft'" :aria-selected="filter === 'draft'" :class="{ 'is-active': filter === 'draft', 'is-empty': count('draft') === 0 }">
+          <span class="ui-list-tabs__label">Brouillons</span>
+          <strong class="ui-list-tabs__count" x-text="count('draft')"></strong>
+        </button>
+        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'processing'" :aria-selected="filter === 'processing'" :class="{ 'is-active': filter === 'processing', 'is-empty': count('processing') === 0 }">
+          <span class="ui-list-tabs__label">En traitement</span>
+          <strong class="ui-list-tabs__count" x-text="count('processing')"></strong>
+        </button>
+        <button type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" x-on:click="filter = 'validated'" :aria-selected="filter === 'validated'" :class="{ 'is-active': filter === 'validated', 'is-empty': count('validated') === 0 }">
+          <span class="ui-list-tabs__label">Validées</span>
+          <strong class="ui-list-tabs__count" x-text="count('validated')"></strong>
+        </button>
       </nav>
       <label class="gang-sheet-search">
         <span class="ui-sr-only">Rechercher une planche DTF</span>
         <span class="gang-sheet-search__icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="search" size="16" %}</span>
-        <input type="search" placeholder="Rechercher une planche" x-model.debounce.150ms="query" autocomplete="off">
+        <input type="search" placeholder="Nom ou n° de planche" x-model.debounce.150ms="query" autocomplete="off">
       </label>
     </div>
     {% endif %}
@@ -48,63 +63,70 @@
       <article
         class="gang-sheet-card"
         data-gang-sheet-card
-        data-status-group="{% if sheet.order_id %}ordered{% elif sheet.status == 'validated' %}validated{% elif sheet.status == 'draft' %}draft{% else %}processing{% endif %}"
-        data-search="{{ sheet.name|lower }} {% if sheet.project %}{{ sheet.project.project_number|lower }}{% endif %} {{ sheet.get_status_display|lower }}"
+        data-status-group="{% if sheet.status == 'validated' %}validated{% elif sheet.status == 'draft' %}draft{% else %}processing{% endif %}"
+        data-search="{{ sheet.name|lower }} {{ sheet.get_status_display|lower }}"
         x-show="matches($el)"
       >
-        <a class="gang-sheet-card__link" href="{% if sheet.order_id %}{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=sheet.order.public_id %}{% else %}{% url 'portal:client-gang-sheet-editor' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}{% endif %}">
-          <div class="gang-sheet-card__preview">
+        <a class="gang-sheet-card__link" href="{% url 'portal:client-gang-sheet-editor' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}">
+          <div class="gang-sheet-card__preview{% if sheet.preview_file %} is-ready{% else %} is-pending{% endif %}">
             <span class="gang-sheet-card__format">{{ sheet.width_mm|floatformat:0 }} × {{ sheet.height_mm|floatformat:0 }} mm</span>
-            {% if sheet.preview_file %}
-            <img src="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}?display=inline" alt="Aperçu de la planche DTF {{ sheet.name }}" loading="lazy">
-            {% else %}
-            <div class="gang-sheet-card__mockup"><i></i><i></i><i></i><i></i><i></i></div>
-            {% endif %}
-            <span class="gang-sheet-card__preview-label">{% if sheet.preview_file %}Aperçu disponible{% else %}Composition en cours{% endif %}</span>
+            <div class="gang-sheet-card__stage">
+              {% if sheet.preview_file %}
+              <img src="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}?display=inline" alt="Aperçu de la planche DTF {{ sheet.name }}" loading="lazy">
+              {% else %}
+              <div class="gang-sheet-card__mockup" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+              <span class="gang-sheet-card__preview-label">Composition en cours</span>
+              {% endif %}
+            </div>
           </div>
           <div class="gang-sheet-card__body">
+            <h3>{{ sheet.name }}</h3>
             <div class="gang-sheet-card__status-row">
               <span class="gang-status-badge gang-status-badge--{{ sheet.status }}">{{ sheet.get_status_display }}</span>
-              <span>Modifiée le {{ sheet.updated_at|date:"d/m/Y" }}</span>
+              <time datetime="{{ sheet.updated_at|date:'c' }}">{{ sheet.updated_at|date:"d/m/Y" }}</time>
             </div>
-            <h3>{{ sheet.name }}</h3>
-            <small>{% if sheet.project %}Gang Sheet {{ sheet.project.project_number }}{% else %}Planche autonome{% endif %}</small>
             <dl class="gang-sheet-card__facts">
-              <div><dt>Surface</dt><dd>{{ sheet.surface_sqm }} m²</dd></div>
-              <div><dt>Estimation HT</dt><dd>{{ sheet.estimated_price_eur }} €</dd></div>
+              <div><dt>Surface</dt><dd>{{ sheet.surface_sqm|floatformat:2 }} m²</dd></div>
+              <div><dt>Impression HT</dt><dd>{{ sheet.estimated_price_eur }} €</dd></div>
             </dl>
-            <span class="gang-sheet-card__primary">
-              {% if sheet.order_id %}Voir la commande
-              {% elif sheet.status == 'validated' %}Commander
+            <span class="gang-sheet-card__primary{% if sheet.status == 'validated' %} gang-sheet-card__primary--order{% endif %}">
+              {% if sheet.status == 'validated' %}Commander
               {% elif sheet.status == 'ready' %}Finaliser la planche
               {% elif sheet.status == 'rendering' %}Suivre le rendu
               {% elif sheet.status == 'render_failed' %}Corriger le rendu
               {% else %}Reprendre la composition{% endif %}
-              <span aria-hidden="true">→</span>
+              {% include "portal/client/gang_sheets/partials/icon.html" with name="chevron-right" size="16" class="gang-sheet-card__primary-icon" %}
             </span>
           </div>
         </a>
         {% if sheet.can_delete and can_edit %}
-        <details class="gang-sheet-card__menu">
-          <summary aria-label="Actions pour la planche {{ sheet.name }}" title="Autres actions"><span aria-hidden="true">•••</span></summary>
-          <div class="gang-sheet-card__menu-panel">
-            {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="list" label="Supprimer" button_class="gang-sheet-card__delete-action" %}
+        <details class="gang-sheet-card__menu" data-product-nav-details>
+          <summary
+            aria-label="Actions pour la planche {{ sheet.name }}"
+            aria-haspopup="menu"
+            title="Autres actions"
+          >
+            {% include "portal/client/gang_sheets/partials/icon.html" with name="more" size="18" %}
+          </summary>
+          <div class="gang-sheet-card__menu-panel" role="menu" aria-label="Actions pour {{ sheet.name }}">
+            {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="list" label="Supprimer" button_class="gang-sheet-card__delete-action" action_only=1 show_icon=1 %}
           </div>
         </details>
+        {% include "portal/client/gang_sheets/partials/delete_button.html" with sheet=sheet can_edit=can_edit return_to="list" dialog_only=1 %}
         {% endif %}
       </article>
       {% empty %}
       {% if can_edit %}
-      {% include "components/ui/empty_state.html" with extra_class="gang-sheet-empty" empty_mark="GS" title="Créez votre première planche DTF" message="Importez vos fichiers, composez votre planche et préparez votre commande depuis le studio privé." cta_button_label="Nouvelle planche" cta_button_dialog_open="create-gang-sheet-dialog" %}
+      {% include "components/ui/empty_state.html" with extra_class="gang-sheet-empty" title="Créez votre première planche DTF" message="Importez vos fichiers, composez votre planche et préparez votre commande depuis le studio privé." cta_button_label="Nouvelle planche" cta_button_dialog_open="create-gang-sheet-dialog" %}
       {% else %}
-      {% include "components/ui/empty_state.html" with extra_class="gang-sheet-empty" empty_mark="GS" title="Créez votre première planche DTF" message="Importez vos fichiers, composez votre planche et préparez votre commande depuis le studio privé." %}
+      {% include "components/ui/empty_state.html" with extra_class="gang-sheet-empty" title="Créez votre première planche DTF" message="Importez vos fichiers, composez votre planche et préparez votre commande depuis le studio privé." %}
       {% endif %}
       {% endfor %}
       {% if sheets %}
-      <div class="empty-state text-center gang-sheet-empty gang-sheet-empty--filtered" x-show="!hasResults()" x-cloak x-bind:aria-hidden="hasResults()" role="status">
-        <h3 class="mt-0 font-display text-lg text-[color:var(--ink)]">Aucune planche trouvée</h3>
-        <p class="muted mt-2">Modifiez la recherche ou réinitialisez les filtres pour retrouver vos planches DTF.</p>
-        <p class="mt-4">
+      <div class="empty-state gang-sheet-empty gang-sheet-empty--filtered" x-show="!hasResults()" x-cloak x-bind:aria-hidden="hasResults()" role="status">
+        <h3>Aucune planche trouvée</h3>
+        <p>Modifiez la recherche ou réinitialisez les filtres pour retrouver vos planches DTF.</p>
+        <p>
           <button class="ui-btn ui-btn-secondary" type="button" x-on:click="filter = 'all'; query = ''">Réinitialiser les filtres</button>
         </p>
       </div>
@@ -124,12 +146,9 @@
     <form method="post" class="b2b-confirm-dialog__shell gang-sheet-create-dialog__shell">
       {% csrf_token %}
       <header class="gang-sheet-create-dialog__head">
-        <div>
-          <span class="gang-sheet-create-dialog__mark" aria-hidden="true">GS</span>
-          <div>
-            <h2 id="new-gang-sheet-title">Nouvelle planche DTF</h2>
-            <p id="new-gang-sheet-description">Donnez un nom à votre composition. Le studio s’ouvrira immédiatement.</p>
-          </div>
+        <div class="gang-sheet-create-dialog__copy">
+          <h2 id="new-gang-sheet-title">Nouvelle planche DTF</h2>
+          <p id="new-gang-sheet-description">Donnez un nom à votre composition. Le studio s’ouvrira immédiatement.</p>
         </div>
         <button class="b2b-dialog-close" type="button" data-dialog-close aria-label="Fermer la fenêtre">×</button>
       </header>

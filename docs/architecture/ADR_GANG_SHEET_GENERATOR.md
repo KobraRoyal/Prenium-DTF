@@ -175,15 +175,15 @@ Lorsque `GOOGLE_DRIVE_SYNC_ENABLED` est actif, le checkout refuse la création d
 que la révision HD courante n’est pas marquée synchronisée sur Drive. L’upload de commande conserve
 ensuite son workflow Drive historique dans l’arborescence `Commandes/`.
 
-Dès que le PDF HD est sécurisé dans un projet `READY_GANG_SHEET`, le client peut retirer la Gang
-Sheet de sa bibliothèque, y compris avant la création effective de la commande. La suppression
-n’est autorisée que si la planche validée référence l’asset de production réellement porté par une
-ligne de ce projet. Lorsque Google Drive est actif, la révision HD courante doit également être
-marquée synchronisée. Le projet, l’`AssetVersion` HD et, lorsqu’ils existent, la commande et son
-`OrderUpload` restent conservés. Le caractère non modifiable du livrable est alors dérivé du mode
-`READY_GANG_SHEET`, et non plus de la seule présence de la Gang Sheet supprimée. La copie locale
-propre au builder est nettoyée ; les artefacts déjà transmis au workflow de commande, à Drive et à
-la production ne sont pas supprimés.
+Dès que le PDF HD est sécurisé, le client peut retirer la Gang Sheet de sa bibliothèque, y
+compris après une commande. La bibliothèque n’est pas un historique de commandes : les cartes
+restent uniformes et mènent au studio. Lorsque Google Drive est actif, la révision HD courante
+doit d’abord être marquée synchronisée. Le projet, l’`AssetVersion` HD et, lorsqu’ils existent,
+la commande et son `OrderUpload` restent conservés. Le caractère non modifiable du livrable HD
+est dérivé du mode `READY_GANG_SHEET` / de l’asset de production, et non plus de la seule
+présence de la Gang Sheet. La copie locale propre au builder est nettoyée ; les artefacts déjà
+transmis au workflow de commande, à Drive et à la production ne sont pas supprimés. Sur une
+recommande, la quantité reste éditable même si la ligne porte le PDF HD.
 
 ## Alternatives refusées
 

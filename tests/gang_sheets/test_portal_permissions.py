@@ -88,7 +88,8 @@ def test_gang_sheet_library_exposes_filters_and_a_scoped_inline_preview(client):
     assert "Brouillons" in content
     assert "En traitement" in content
     assert "Validées" in content
-    assert "Commandées" in content
+    assert "Commandées" not in content
+    assert "Voir la commande" not in content
     assert 'data-status-group="draft"' in content
     assert f"{preview_url}?display=inline" in content
     assert "Reprendre la composition" in content
@@ -280,15 +281,15 @@ def test_delete_is_scoped_to_the_current_customer(client):
     assert GangSheet.objects.filter(pk=sheet.pk).exists()
 
 
-def test_validated_sheet_delete_is_refused_and_returns_to_the_editor(client):
+def test_validated_sheet_can_be_deleted_from_the_editor(client):
     user, customer, _project = create_customer_scope(email="delete-validated@example.com")
     sheet = GangSheetService().create_sheet(customer=customer, actor=user, name="Validée")
     sheet.status = GangSheet.Status.VALIDATED
     sheet.save(update_fields=["status", "updated_at"])
     client.force_login(user)
-    editor_url = reverse(
-        "portal:client-gang-sheet-editor",
-        kwargs={"customer_public_id": customer.public_id, "sheet_public_id": sheet.public_id},
+    list_url = reverse(
+        "portal:client-gang-sheet-list-create",
+        kwargs={"customer_public_id": customer.public_id},
     )
 
     response = client.post(
@@ -303,11 +304,10 @@ def test_validated_sheet_delete_is_refused_and_returns_to_the_editor(client):
     )
 
     assert response.status_code == 302
-    assert response.url == editor_url
+    assert response.url == list_url
     toast = json.loads(response.headers["X-Prenium-Toast"])
-    assert toast["variant"] == "error"
-    assert "traçabilité" in toast["message"]
-    assert GangSheet.objects.filter(pk=sheet.pk).exists()
+    assert toast["variant"] == "success"
+    assert not GangSheet.objects.filter(pk=sheet.pk).exists()
 
 
 def test_gang_sheet_delete_endpoint_rejects_get(client):
@@ -377,8 +377,11 @@ def test_owner_can_delete_a_gang_sheet_after_it_was_converted_to_an_order(
     assert library_response.status_code == 200
     library_content = library_response.content.decode()
     assert "Retirer cette planche DTF ?" in library_content
-    assert "La commande préparée et son fichier HD seront conservés" in library_content
-    assert "La commande déjà transmise restera également intacte" in library_content
+    assert "Les commandes déjà passées et le fichier HD resteront conservés." in library_content
+    assert "Voir la commande" not in library_content
+    assert "Commandées" not in library_content
+    assert 'data-status-group="validated"' in library_content
+    assert "Commander" in library_content
     assert delete_response.status_code == 302
     assert delete_response.url == library_url
     assert not GangSheet.objects.filter(pk=sheet.pk).exists()
@@ -429,7 +432,7 @@ def test_delete_button_is_available_as_soon_as_hd_is_secured_in_order_project(
     assert library_response.status_code == 200
     content = library_response.content.decode()
     assert "Retirer cette planche DTF ?" in content
-    assert "La commande préparée et son fichier HD seront conservés" in content
+    assert "Les commandes déjà passées et le fichier HD resteront conservés." in content
     assert "commande déjà créée" not in content
     assert delete_response.status_code == 302
     assert not GangSheet.objects.filter(pk=sheet.pk).exists()

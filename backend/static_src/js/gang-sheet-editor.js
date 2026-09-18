@@ -1580,19 +1580,103 @@ if (root) {
   }
 
   function selectedStudioShippingCode() {
+    return selectedStudioShippingChoice()?.code || "";
+  }
+
+  function selectedStudioShippingChoice() {
     const form = q("[data-studio-checkout-form]");
-    if (!form) return "";
-    const checked = form.querySelector("input[name='shipping_method_code']:checked");
-    if (checked instanceof HTMLInputElement) return checked.value;
-    const hidden = form.querySelector("input[name='shipping_method_code'][type='hidden']");
-    return hidden instanceof HTMLInputElement ? hidden.value : "";
+    if (!form) return null;
+    const input =
+      form.querySelector("input[name='shipping_method_code']:checked") ||
+      form.querySelector("input[name='shipping_method_code'][type='hidden']");
+    if (!(input instanceof HTMLInputElement)) return null;
+    return {
+      input,
+      option: input.closest(".b2b-shipping-choice__option"),
+      code: input.value,
+      pickup: input.value === "pickup",
+    };
+  }
+
+  function studioQuoteNumber(value) {
+    const amount = Number(value);
+    return Number.isFinite(amount) ? amount : 0;
+  }
+
+  function studioShippingHt(choice) {
+    if (!choice || choice.pickup) return 0;
+    const raw = choice.input?.getAttribute("data-shipping-amount") || "";
+    const amount = Number(String(raw).replace(",", "."));
+    return Number.isFinite(amount) ? amount : 0;
+  }
+
+  function studioMoney(value) {
+    return Math.round(studioQuoteNumber(value) * 100) / 100;
+  }
+
+  function studioRecapTotals(current, choice) {
+    const pickup = Boolean(choice?.pickup);
+    const aligned = Boolean(current && choice && current.shipping_method_code === choice.code);
+    const goods = studioQuoteNumber(current.goods_total_eur);
+    const goodsTax = studioQuoteNumber(current.goods_tax_amount_eur);
+    if (pickup) {
+      return { amount: studioMoney(goods), tax: studioMoney(goodsTax) };
+    }
+    if (aligned) {
+      return {
+        amount: studioMoney(current.total_eur),
+        tax: studioMoney(current.tax_amount_eur),
+      };
+    }
+    const shippingHt = studioShippingHt(choice);
+    const netGoods = Math.max(0, goods - goodsTax);
+    const rate = netGoods > 0 && goodsTax > 0 ? goodsTax / netGoods : 0;
+    const shippingTax = shippingHt * rate;
+    return {
+      amount: studioMoney(goods + shippingHt + shippingTax),
+      tax: studioMoney(goodsTax + shippingTax),
+    };
+  }
+
+  let lastStudioQuote = null;
+
+  function paintStudioOrderRecap(quote) {
+    if (quote) lastStudioQuote = quote;
+    const current = lastStudioQuote;
+    const recap = q("[data-studio-order-recap]");
+    const note = q("[data-studio-pickup-note]");
+    const choice = selectedStudioShippingChoice();
+    const pickup = Boolean(choice?.pickup);
+    if (note) note.hidden = !pickup;
+    if (!recap) return;
+    const name =
+      choice?.option?.querySelector(".b2b-shipping-choice__name")?.textContent.trim() ||
+      (pickup ? "Retrait atelier" : current?.shipping_method_name) ||
+      "Livraison";
+    recap.querySelectorAll("[data-studio-pay-shipping-label]").forEach((node) => {
+      node.textContent = name;
+    });
+    const aligned = Boolean(current && choice && current.shipping_method_code === choice.code);
+    const shippingHt = aligned
+      ? studioQuoteNumber(current.shipping_amount_eur)
+      : studioShippingHt(choice);
+    recap.querySelectorAll("[data-studio-pay-shipping]").forEach((node) => {
+      node.textContent = pickup || shippingHt <= 0 ? "Gratuit" : formatStudioEur(shippingHt);
+    });
+    if (!current) return;
+    const totals = studioRecapTotals(current, choice);
+    recap.querySelectorAll("[data-studio-order-recap-total]").forEach((node) => {
+      node.textContent = `${formatStudioEur(totals.amount)} ${totals.tax > 0 ? "TTC" : "HT"}`;
+    });
   }
 
   function renderStudioPayQuote(quote) {
     const boxes = qa("[data-studio-pay-quote]");
-    if (!boxes.length) return;
-    const tax = Number(quote?.tax_amount_eur || 0);
-    const discount = Number(quote?.volume_discount_percent || 0);
+    const recap = q("[data-studio-order-recap]");
+    if (!boxes.length && !recap) return;
+    const discount = studioQuoteNumber(quote?.volume_discount_percent);
+    const goodsTax = studioQuoteNumber(quote?.goods_tax_amount_eur);
+    const goodsTotal = quote?.goods_total_eur ?? quote?.total_eur;
     boxes.forEach((box) => {
       if (!quote) {
         box.hidden = true;
@@ -1606,7 +1690,7 @@ if (root) {
       };
       setText(
         "[data-studio-pay-total]",
-        `${formatStudioEur(quote.total_eur)} ${tax > 0 ? "TTC" : "HT"}`,
+        `${formatStudioEur(goodsTotal)} ${goodsTax > 0 ? "TTC" : "HT"}`,
       );
       setText(
         "[data-studio-pay-sheet]",
@@ -1630,25 +1714,15 @@ if (root) {
         discount > 0 ? `−${formatStudioEur(quote.volume_discount_amount_eur)}` : "",
       );
       setText("[data-studio-pay-prep]", formatStudioEur(quote.prep_amount_eur));
-      setText("[data-studio-pay-shipping-label]", quote.shipping_method_name || "Livraison");
-      setText("[data-studio-pay-shipping]", formatStudioEur(quote.shipping_amount_eur));
       box.querySelectorAll("[data-studio-pay-tax-row]").forEach((row) => {
-        row.hidden = !(tax > 0);
+        row.hidden = !(goodsTax > 0);
       });
-      setText("[data-studio-pay-tax]", tax > 0 ? formatStudioEur(quote.tax_amount_eur) : "");
-    });
-    const billingMode = q("[data-studio-checkout-form] input[name='billing_mode']")?.value;
-    if (quote) {
-      const label =
-        billingMode === "immediate"
-          ? `Payer ${formatStudioEur(quote.total_eur)}`
-          : `Valider ${formatStudioEur(quote.total_eur)} HT`;
-      qa("[data-studio-checkout-submit-label], [data-studio-pay-confirm-label]").forEach(
-        (node) => {
-          node.textContent = label;
-        },
+      setText(
+        "[data-studio-pay-tax]",
+        goodsTax > 0 ? formatStudioEur(quote.goods_tax_amount_eur) : "",
       );
-    }
+    });
+    paintStudioOrderRecap(quote);
   }
 
   let studioQuoteSeq = 0;
@@ -1694,6 +1768,8 @@ if (root) {
       event.preventDefault();
       if (!input.checked) {
         input.checked = true;
+        paintStudioOrderRecap();
+        syncStudioDelivery();
         commitStudioChoiceAfterClick(input);
       }
     });
@@ -1703,6 +1779,7 @@ if (root) {
         return;
       }
       refreshStudioPayQuote();
+      paintStudioOrderRecap();
       syncStudioDelivery();
     });
   }
@@ -1768,6 +1845,8 @@ if (root) {
     if (!block) return;
     const pickup = selectedStudioShippingCode() === "pickup";
     block.hidden = pickup;
+    const note = q("[data-studio-pickup-note]");
+    if (note) note.hidden = !pickup;
     block.querySelectorAll("input, select").forEach((node) => {
       if (!(node instanceof HTMLInputElement || node instanceof HTMLSelectElement)) return;
       node.disabled = pickup || node.dataset.locked === "true";
@@ -1823,9 +1902,11 @@ if (root) {
     const dialog = studioPayDialog();
     if (!(dialog instanceof HTMLDialogElement)) return;
     syncStudioDelivery();
+    paintStudioOrderRecap();
     if (typeof dialog.showModal === "function" && !dialog.open) {
       dialog.showModal();
     }
+    refreshStudioPayQuote();
     const contact = dialog.querySelector("[name='shipping_contact_name']");
     const delivery = dialog.querySelector("[data-studio-delivery]");
     const focusTarget =

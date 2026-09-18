@@ -2,6 +2,8 @@
 
 | Date | Décision | Motif | Impact |
 |---|---|---|---|
+| 2026-09-18 | Studio modale : totaux synchronisés au choix de port ; encours vs comptant dans le même shell | Le pied affichait encore le port précédent ; encours n’a pas de paiement | Recap depuis l’option cochée + `goods_total` immédiat ; lede Encours / règlement |
+| 2026-09-18 | Studio : CTA unique « Je commande » ; port hors inspecteur, choisi dans la modale | « Payer + prix » mélangeait encours/comptant et anticipait un transport non choisi | Devis production dans l’inspecteur ; total + port dans le pied de modale |
 | 2026-09-18 | Studio encours : même checkout Gang Sheet que le comptant, sans paiement | La surface planche est connue ; attendre le métrage atelier cassait la validation directe | Commande HT tarifée, pas de redirection PayPal/Stripe |
 | 2026-09-18 | Studio checkout : `Payment.source` 64 car. + retry si commande déjà créée | `client_portal.studio_checkout_pay` (33) dépassait varchar(32) PostgreSQL après le lock FOR UPDATE | POST `/checkout/` 500 → 302 paiement ; 2e clic relance le règlement |
 | 2026-09-18 | Studio checkout : lock `select_for_update(of=("self",))` | PostgreSQL refuse FOR UPDATE sur OUTER JOIN des FK nullable `project`/`order` | Verrou de la seule ligne `gang_sheets` |

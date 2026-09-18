@@ -66,9 +66,12 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
   confirmation explicite, conservation des sources et nettoyage des rendus générés.
 - Retrait dynamique d’un visuel libre de la galerie, avec blocage explicite tant que des occurrences
   l’utilisent et conservation du fichier source versionné.
-- Suppression d’une Gang Sheet dès que son HD est sécurisé dans un projet `READY_GANG_SHEET` et,
-  lorsque Drive est actif, synchronisé dans sa révision courante ; projet, commande éventuelle,
-  asset HD, upload de production et verrouillage métier restent conservés.
+- Suppression d’une planche depuis la bibliothèque, y compris après validation ou commande,
+  sauf pendant le rendu ; lorsque Drive est actif, le HD doit d’abord être synchronisé. Projet,
+  commande éventuelle, asset HD et upload de production restent conservés.
+- Bibliothèque de compositions uniquement : cartes uniformes vers le studio, sans filtre ni
+  libellé « commandée ». La recommande d’une commande existante permet de modifier les quantités
+  même lorsque le livrable est un PDF HD de planche.
 - Galerie actualisée automatiquement pendant l’analyse : un visuel devient ajoutable dès que son
   contrôle technique se termine, sans rechargement manuel du studio.
 - Outils de précision P1 : historique local Annuler/Rétablir borné à 40 opérations de composition,
@@ -111,7 +114,8 @@ instantané, rendu asynchrone et séparation stricte entre aperçu client et fic
 - [x] PDF HD limité au staff avec `gang_sheets.download_final_gangsheet`.
 - [x] Aucun chemin de stockage ni URL média brute exposé.
 - [x] Création, mutation, rendu, validation, rattachement et réglage audités.
-- [x] Suppression auditée, tenant-scopée et bloquée pendant le rendu ou après rattachement métier.
+- [x] Suppression auditée, tenant-scopée et bloquée uniquement pendant le rendu (Drive requis
+  si un HD/commande existe).
 - [x] PDF final du projet généré non téléchargeable et non remplaçable côté client.
 - [x] IDs, dossier et lien Google Drive jamais exposés au portail client.
 - [x] Asset de production identifié par la relation tenant-scopée `GangSheet.production_asset` :

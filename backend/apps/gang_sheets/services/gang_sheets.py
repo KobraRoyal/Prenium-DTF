@@ -114,32 +114,21 @@ class GangSheetService:
         return sheets
 
     def can_client_delete(self, sheet) -> bool:
-        editable_standalone = (
-            sheet.status in self.editable_statuses
-            and not sheet.project_id
-            and not sheet.order_id
-            and not sheet.production_asset_id
-        )
+        if sheet.status == GangSheet.Status.RENDERING:
+            return False
         drive_sync = getattr(sheet, "drive_sync", None)
-        drive_secured = not settings.GOOGLE_DRIVE_SYNC_ENABLED or bool(
+        needs_drive_archive = bool(
+            settings.GOOGLE_DRIVE_SYNC_ENABLED
+            and (sheet.order_id or sheet.production_asset_id)
+        )
+        if not needs_drive_archive:
+            return True
+        return bool(
             drive_sync
             and drive_sync.status == drive_sync.Status.SYNCED
             and drive_sync.drive_file_id
             and drive_sync.revision == sheet.revision
         )
-        secured_in_order_project = (
-            sheet.status == GangSheet.Status.VALIDATED
-            and sheet.project_id
-            and sheet.production_asset_id
-            and sheet.project.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET
-            and sheet.project.items.filter(
-                customer=sheet.customer,
-                asset_id=sheet.production_asset_id,
-            ).exists()
-            and drive_secured
-            and (not sheet.order_id or sheet.project.converted_order_id == sheet.order_id)
-        )
-        return bool(editable_standalone or secured_in_order_project)
 
     def get_customer_sheet(self, *, customer, sheet_public_id):
         return (
@@ -1205,9 +1194,8 @@ class GangSheetService:
                 message = "Attendez la fin du rendu avant de supprimer cette planche."
             else:
                 message = (
-                    "Pour garantir la traçabilité, cette planche ne peut être supprimée "
-                    "qu’avant son rattachement métier ou après sa transformation complète "
-                    "en commande."
+                    "La sauvegarde sécurisée du fichier HD n’est pas encore terminée. "
+                    "Réessayez dans un instant."
                 )
             raise GangSheetDomainError(
                 "SHEET_NOT_DELETABLE",

@@ -121,6 +121,85 @@ function addMonthsClamped(date, offset) {
   );
 }
 
+const POPOVER_GAP = 8;
+const POPOVER_MARGIN = 12;
+
+function placeDatePopover(root, trigger, popover) {
+  if (popover.hidden) {
+    return;
+  }
+  const triggerRect = trigger.getBoundingClientRect();
+  const width = Math.min(
+    Math.max(popover.offsetWidth, triggerRect.width, 280),
+    window.innerWidth - POPOVER_MARGIN * 2,
+  );
+  popover.style.position = "fixed";
+  popover.style.zIndex = "80";
+  popover.style.width = `${width}px`;
+  popover.style.maxWidth = `calc(100vw - ${POPOVER_MARGIN * 2}px)`;
+  popover.style.right = "auto";
+  popover.style.bottom = "auto";
+  popover.style.maxHeight = `${Math.max(12 * 16, window.innerHeight - POPOVER_MARGIN * 2)}px`;
+  popover.style.overflowY = "auto";
+
+  const popHeight = popover.offsetHeight;
+  const spaceBelow = window.innerHeight - triggerRect.bottom - POPOVER_MARGIN;
+  const spaceAbove = triggerRect.top - POPOVER_MARGIN;
+  const openUp = spaceBelow < popHeight + POPOVER_GAP && spaceAbove > spaceBelow;
+  root.classList.toggle("is-open-up", openUp);
+
+  let top = openUp
+    ? triggerRect.top - POPOVER_GAP - popHeight
+    : triggerRect.bottom + POPOVER_GAP;
+  top = Math.min(
+    Math.max(POPOVER_MARGIN, top),
+    Math.max(POPOVER_MARGIN, window.innerHeight - popHeight - POPOVER_MARGIN),
+  );
+
+  let left = triggerRect.left;
+  left = Math.min(
+    Math.max(POPOVER_MARGIN, left),
+    window.innerWidth - width - POPOVER_MARGIN,
+  );
+
+  popover.style.top = `${top}px`;
+  popover.style.left = `${left}px`;
+}
+
+function resetDatePopover(root, popover) {
+  root.classList.remove("is-open-up");
+  popover.style.position = "";
+  popover.style.top = "";
+  popover.style.left = "";
+  popover.style.right = "";
+  popover.style.bottom = "";
+  popover.style.width = "";
+  popover.style.maxWidth = "";
+  popover.style.maxHeight = "";
+  popover.style.overflowY = "";
+  popover.style.zIndex = "";
+}
+
+function bindFixedDatePopover(root, trigger, popover) {
+  const sync = () => {
+    if (!root.classList.contains("is-open") || popover.hidden) {
+      return;
+    }
+    placeDatePopover(root, trigger, popover);
+  };
+  window.addEventListener("resize", sync);
+  window.addEventListener("scroll", sync, true);
+  return {
+    afterOpen() {
+      placeDatePopover(root, trigger, popover);
+      window.requestAnimationFrame(sync);
+    },
+    afterClose() {
+      resetDatePopover(root, popover);
+    },
+  };
+}
+
 function initProductMonthPicker(root) {
   const hidden = root.querySelector('input[type="hidden"]');
   const trigger = root.querySelector("[data-date-trigger]");
@@ -136,6 +215,7 @@ function initProductMonthPicker(root) {
     return;
   }
 
+  const placement = bindFixedDatePopover(root, trigger, popover);
   const placeholder = root.dataset.placeholder || "Choisir un mois";
   const now = new Date();
   const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -261,6 +341,7 @@ function initProductMonthPicker(root) {
     popover.hidden = false;
     root.classList.add("is-open");
     trigger.setAttribute("aria-expanded", "true");
+    placement.afterOpen();
     focusMonth(focusTarget);
   }
 
@@ -268,6 +349,7 @@ function initProductMonthPicker(root) {
     popover.hidden = true;
     root.classList.remove("is-open");
     trigger.setAttribute("aria-expanded", "false");
+    placement.afterClose();
     if (restoreFocus) {
       trigger.focus();
     }
@@ -393,6 +475,7 @@ function initProductDatePicker(root) {
     return;
   }
 
+  const placement = bindFixedDatePopover(root, trigger, popover);
   const placeholder = root.dataset.placeholder || "Choisir une date";
   const minDate = startOfDay(new Date());
   let viewDate = parseISODate(hidden.value) || new Date();
@@ -529,6 +612,7 @@ function initProductDatePicker(root) {
     popover.hidden = false;
     root.classList.add("is-open");
     trigger.setAttribute("aria-expanded", "true");
+    placement.afterOpen();
     focusCalendar(focusTarget);
   }
 
@@ -536,6 +620,7 @@ function initProductDatePicker(root) {
     popover.hidden = true;
     root.classList.remove("is-open");
     trigger.setAttribute("aria-expanded", "false");
+    placement.afterClose();
     if (restoreFocus) {
       trigger.focus();
     }

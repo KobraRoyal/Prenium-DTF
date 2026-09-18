@@ -30,6 +30,10 @@ class ProductDatePickerAccessibilityTests(SimpleTestCase):
         )
 
         self.assertIn("function initProductMonthPicker(root)", source)
+        self.assertIn("function placeDatePopover", source)
+        self.assertIn("function bindFixedDatePopover", source)
+        self.assertIn('style.position = "fixed"', source)
+        self.assertIn("placement.afterOpen()", source)
         self.assertIn("parseISOMonth(hidden.value)", source)
         self.assertIn("MONTHS_SHORT_FR", source)
         self.assertIn('setAttribute("role", "row")', source)

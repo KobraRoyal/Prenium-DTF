@@ -545,10 +545,14 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio dialog.gang-studio-pay-dialog.b2b-configurator-dialog .gang-studio-pay-dialog__body {
   flex: 0 1 auto !important;
-  max-height: calc(min(44rem, 100dvh - 1.25rem) - 7.5rem) !important;
+  max-height: calc(min(44rem, 100dvh - 1.25rem) - 10.5rem) !important;
   min-height: 0 !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio dialog.gang-studio-pay-dialog.b2b-configurator-dialog .gang-studio-pay-dialog__footer {
+  flex: 0 0 auto !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio dialog.gang-studio-pay-dialog.b2b-configurator-dialog .gang-studio-pay-dialog__actions {

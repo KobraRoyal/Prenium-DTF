@@ -2,15 +2,21 @@
 <dialog
   class="b2b-configurator-dialog gang-studio-pay-dialog"
   data-studio-pay-dialog
+  data-studio-dialog-mode="{{ customer.default_billing_mode|default:'deferred' }}"
   closedby="none"
   aria-labelledby="studio-pay-title"
 >
   <div class="b2b-dialog-shell gang-studio-pay-dialog__shell">
     <header class="b2b-dialog-head">
-      <div>
-        <h2 id="studio-pay-title">
-          {% if customer.default_billing_mode == "immediate" %}Confirmer et régler{% else %}Confirmer la commande{% endif %}
-        </h2>
+      <div class="gang-studio-pay-dialog__title">
+        <h2 id="studio-pay-title">Confirmer la commande</h2>
+        {% if customer.default_billing_mode == "immediate" %}
+        <p class="gang-studio-pay-dialog__lede">Le règlement s’ouvre après confirmation.</p>
+        {% else %}
+        <p class="gang-studio-pay-dialog__lede" data-studio-encours-hint>
+          Encours · aucun paiement en ligne
+        </p>
+        {% endif %}
       </div>
       <button class="b2b-dialog-close" type="button" data-dialog-close data-studio-pay-close aria-label="Fermer la fenêtre">
         <svg class="b2b-dialog-close__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6.75 6.75 17.25 17.25M17.25 6.75 6.75 17.25"/></svg>
@@ -27,6 +33,9 @@
       <section class="gang-studio-shipping-method" data-studio-shipping-method>
         <h3 class="gang-studio-pay-dialog__section-title">Mode de livraison</h3>
         {% include "portal/client/partials/b2b_shipping_choice.html" %}
+        <p class="gang-studio-pay-dialog__pickup" data-studio-pickup-note hidden>
+          Retrait à l’atelier dès que la planche est prête. Aucun frais d’envoi.
+        </p>
       </section>
 
       <section class="gang-studio-delivery" data-studio-delivery>
@@ -250,30 +259,45 @@
         <p class="gang-studio-pay-dialog__hint">Le règlement sera proposé après confirmation de la commande.</p>
         {% endif %}
       </section>
-      {% else %}
-      <p class="gang-studio-pay-dialog__hint" data-studio-encours-hint>
-        Commande en encours. Aucun paiement en ligne.
-      </p>
       {% endif %}
 
     </div>
 
-    <div class="b2b-dialog-actions gang-studio-pay-dialog__actions">
-      <button class="ui-btn ui-btn-secondary" type="button" data-studio-pay-close>Retour</button>
-      <button
-        type="submit"
-        class="ui-btn ui-btn-primary"
-        data-studio-pay-confirm
-        {% if not can_edit %}disabled{% endif %}
-      >
-        <span data-studio-pay-confirm-label>
-          {% if customer.default_billing_mode == "immediate" %}
-            {% if gang_sheet_quote %}Payer {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %} €{% else %}Payer maintenant{% endif %}
-          {% else %}
-            {% if gang_sheet_quote %}Valider {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %} € HT{% else %}Valider la commande{% endif %}
-          {% endif %}
-        </span>
-      </button>
+    <div class="gang-studio-pay-dialog__footer">
+      <aside class="gang-studio-order-recap" data-studio-order-recap aria-live="polite">
+        <p class="gang-studio-order-recap__shipping">
+          <span data-studio-pay-shipping-label>{{ gang_sheet_quote.shipping_method_name|default:"Livraison" }}</span>
+          <span data-studio-pay-shipping>
+            {% if gang_sheet_quote.shipping_is_pickup or not gang_sheet_quote.shipping_amount_eur %}
+            Gratuit
+            {% else %}
+            {% localize on %}{{ gang_sheet_quote.shipping_amount_eur }}{% endlocalize %}&nbsp;€
+            {% endif %}
+          </span>
+        </p>
+        <p class="gang-studio-order-recap__total" id="studio-order-recap-total">
+          <strong data-studio-order-recap-total>
+            {% if gang_sheet_quote %}
+            {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %}&nbsp;€
+            {% if gang_sheet_quote.tax_amount_eur %}TTC{% else %}HT{% endif %}
+            {% else %}
+            —
+            {% endif %}
+          </strong>
+        </p>
+      </aside>
+      <div class="b2b-dialog-actions gang-studio-pay-dialog__actions">
+        <button class="ui-btn ui-btn-secondary" type="button" data-studio-pay-close>Retour</button>
+        <button
+          type="submit"
+          class="ui-btn ui-btn-primary"
+          data-studio-pay-confirm
+          aria-describedby="studio-order-recap-total"
+          {% if not can_edit %}disabled{% endif %}
+        >
+          <span data-studio-pay-confirm-label>Je commande</span>
+        </button>
+      </div>
     </div>
   </div>
 </dialog>

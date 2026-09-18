@@ -4,7 +4,7 @@
   data-studio-checkout
   data-checkout-error="{{ studio_checkout_error_code }}"
   {% if sheet.status != "validated" and not sheet.order_id %}hidden{% endif %}
-  aria-label="Valider et commander"
+  aria-label="Commander"
 >
   {% if sheet.order_id %}
   <a
@@ -82,10 +82,11 @@
     <div class="gang-studio-checkout__dock">
     <aside class="gang-studio-pay" data-studio-pay-quote{% if not gang_sheet_quote %} hidden{% endif %} aria-live="polite">
       <p class="gang-studio-pay__total">
+        <span class="gang-studio-pay__caption">Production</span>
         <strong data-studio-pay-total>
           {% if gang_sheet_quote %}
-          {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %}&nbsp;€
-          {% if gang_sheet_quote.tax_amount_eur %}TTC{% else %}HT{% endif %}
+          {% localize on %}{{ gang_sheet_quote.goods_total_eur }}{% endlocalize %}&nbsp;€
+          {% if gang_sheet_quote.goods_tax_amount_eur %}TTC{% else %}HT{% endif %}
           {% else %}
           —
           {% endif %}
@@ -118,19 +119,16 @@
             {% if gang_sheet_quote %}{% localize on %}{{ gang_sheet_quote.prep_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}
           </dd>
         </div>
-        <div>
-          <dt data-studio-pay-shipping-label>{{ gang_sheet_quote.shipping_method_name|default:"Livraison" }}</dt>
-          <dd data-studio-pay-shipping>
-            {% if gang_sheet_quote %}{% localize on %}{{ gang_sheet_quote.shipping_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}
-          </dd>
-        </div>
-        <div data-studio-pay-tax-row{% if not gang_sheet_quote.tax_amount_eur %} hidden{% endif %}>
+        <div data-studio-pay-tax-row{% if not gang_sheet_quote.goods_tax_amount_eur %} hidden{% endif %}>
           <dt>TVA (20&nbsp;%)</dt>
           <dd data-studio-pay-tax>
-            {% if gang_sheet_quote.tax_amount_eur %}{% localize on %}{{ gang_sheet_quote.tax_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}
+            {% if gang_sheet_quote.goods_tax_amount_eur %}{% localize on %}{{ gang_sheet_quote.goods_tax_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}
           </dd>
         </div>
       </dl>
+      <p class="gang-studio-pay__next">
+        {% if shipping_locked_to_pickup %}Retrait atelier{% else %}Livraison à choisir{% endif %}
+      </p>
     </aside>
 
     <button
@@ -140,13 +138,7 @@
       data-studio-checkout-submit
       {% if not can_edit %}disabled{% endif %}
     >
-      <span data-studio-checkout-submit-label>
-      {% if customer.default_billing_mode == "immediate" %}
-        {% if gang_sheet_quote %}Payer {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %} €{% else %}Confirmer et payer{% endif %}
-      {% else %}
-        {% if gang_sheet_quote %}Valider {% localize on %}{{ gang_sheet_quote.total_eur }}{% endlocalize %} € HT{% else %}Valider la commande{% endif %}
-      {% endif %}
-      </span>
+      <span data-studio-checkout-submit-label>Je commande</span>
     </button>
     </div>
 

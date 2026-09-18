@@ -302,7 +302,7 @@ def test_validated_sheet_editor_shows_inline_checkout_for_cash_client():
     assert "data-studio-checkout" in content
     assert checkout_url in content
     assert "data-studio-checkout-submit" in content
-    assert "Payer" in content or "Confirmer et payer" in content
+    assert "Je commande" in content
     assert "Couleur du support" in content
     assert "is-checkout" in content
     assert "Nom de la commande" in content
@@ -356,6 +356,13 @@ def test_studio_editor_shows_detailed_pay_quote_and_json_endpoint():
     page_quote = editor.context["gang_sheet_quote"]
     assert page_quote is not None
     assert page_quote["total_eur"] > 0
+    assert page_quote["goods_total_eur"] > 0
+    assert "Je commande" in body
+    assert "Livraison à choisir" in body
+    assert "data-studio-order-recap" in body
+    inspector = body.split('data-studio-pay-quote', 1)[1].split("data-studio-pay-dialog", 1)[0]
+    assert "Livraison standard" not in inspector
+    assert "data-studio-pay-shipping" not in inspector
 
     pickup = client.get(quote_url, {"quantity": "1", "shipping_method_code": "pickup"})
     standard = client.get(quote_url, {"quantity": "1", "shipping_method_code": "standard"})
@@ -371,7 +378,11 @@ def test_studio_editor_shows_detailed_pay_quote_and_json_endpoint():
     assert Decimal(standard_payload["quote"]["total_eur"]) > Decimal(
         pickup_payload["quote"]["total_eur"]
     )
+    assert Decimal(standard_payload["quote"]["goods_total_eur"]) == Decimal(
+        pickup_payload["quote"]["goods_total_eur"]
+    )
     assert "tax_amount_eur" in standard_payload["quote"]
+    assert "goods_total_eur" in standard_payload["quote"]
 
     other = get_user_model().objects.create_user(
         email="studio-quote-other@example.com",
@@ -418,7 +429,7 @@ def test_draft_sheet_editor_hides_inline_checkout():
     checkout_chunk = content.split("data-studio-checkout", 1)[1].split("</section>", 1)[0]
     assert "hidden" in checkout_chunk
     assert "data-studio-checkout-submit" in checkout_chunk
-    assert "Payer" in checkout_chunk or "Confirmer et payer" in checkout_chunk
+    assert "Je commande" in checkout_chunk
 
 
 def test_studio_checkout_lock_avoids_postgres_nullable_outer_join():
@@ -618,8 +629,8 @@ def test_deferred_studio_editor_hides_payment_and_offers_validation():
     assert 'value="deferred"' in content
     assert "data-studio-pay-methods" not in content
     assert 'name="provider"' not in content
-    assert "Aucun paiement en ligne" in content
-    assert "Valider" in content
+    assert "aucun paiement en ligne" in content
+    assert "Je commande" in content
     assert "Confirmer la commande" in content
     assert "Payer " not in content
 
@@ -1290,3 +1301,79 @@ def test_immediate_account_reorder_checkout_auto_prices_and_awaits_payment():
     assert upload.width_mm == reorder_item.width_mm
     assert upload.height_mm == reorder_item.height_mm
     assert upload.meterage_override_sqm is not None
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True, GOOGLE_DRIVE_SYNC_ENABLED=False)
+def test_gang_sheet_reorder_project_allows_quantity_change():
+    from apps.b2b_order_projects.services import B2BOrderReorderService
+    from apps.shipping.services.methods import ShippingMethodService
+
+    _seed_catalog()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(
+        email="cash-reorder-qty@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Cash Reorder Qty Co",
+        b2b_order_projects_enabled=True,
+        default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
+        default_shipping_mode=Customer.DefaultShippingMode.PICKUP,
+    )
+    membership = CustomerMembership.objects.create(customer=customer, user=user)
+    source_project, _sheet = _prepare_gang_sheet_project(customer=customer, user=user)
+    source_item = source_project.items.get()
+    source_item.quantity = 3
+    source_item.save(update_fields=["quantity", "updated_at"])
+    source_order = B2BOrderProjectCheckoutService().checkout_project(
+        project=source_project,
+        actor=user,
+        customer_membership=membership,
+        source="test",
+        billing_mode="immediate",
+        shipping_method_code="pickup",
+    )
+    reorder_project = B2BOrderReorderService().create_reorder_from_order(
+        customer=customer,
+        order=source_order,
+        actor=user,
+        source="test",
+    )
+    reorder_item = reorder_project.items.get()
+    assert reorder_item.quantity == 3
+
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+    detail = client.get(
+        reverse(
+            "portal:client-order-project-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": reorder_project.public_id,
+            },
+        )
+    )
+    assert detail.status_code == 200
+    html = detail.content.decode()
+    assert "b2b-inline-quantity-form" in html
+    assert 'name="quantity"' in html
+    assert 'value="3"' in html
+
+    updated = client.post(
+        reverse(
+            "portal:client-order-project-item-action",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": reorder_project.public_id,
+                "item_public_id": reorder_item.public_id,
+                "action": "update",
+            },
+        ),
+        {"quantity": "8"},
+        HTTP_HX_REQUEST="true",
+    )
+    assert updated.status_code == 200
+    reorder_item.refresh_from_db()
+    assert reorder_item.quantity == 8
+    assert 'value="8"' in updated.content.decode()

@@ -2068,6 +2068,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('id="order-project-item-dialogs"', items)
         self.assertIn("b2b-inline-quantity-form", items)
         self.assertIn("order_project_item_quantity_field.html", items)
+        self.assertIn("{% if project.can_edit_items %}", items)
+        self.assertNotIn("or item.is_production_gang_sheet_asset", items)
         self.assertIn('name="quantity"', quantity_field)
         self.assertIn("action='update'", items)
         self.assertIn('hx-target="#order-project-items"', items)

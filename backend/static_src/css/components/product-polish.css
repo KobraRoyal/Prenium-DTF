@@ -289,10 +289,10 @@ body.product-shell .gang-library-head h1 {
 }
 
 body.product-shell .gang-sheet-toolbar {
-  padding: 0.65rem;
-  border: 1px solid color-mix(in srgb, var(--product-line) 28%, transparent);
-  border-radius: var(--product-polish-radius);
-  background: var(--product-panel-strong);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 body.product-shell .gang-sheet-filters {
@@ -340,16 +340,32 @@ body.product-shell .gang-sheet-card__link {
 }
 
 body.product-shell .gang-sheet-card__preview {
+  height: 16rem;
   border-bottom-width: 1px;
+  border-bottom-color: color-mix(in srgb, var(--product-line) 42%, transparent);
 }
 
 body.product-shell .gang-sheet-card__mockup {
-  box-shadow: 0 12px 24px rgba(239, 112, 92, 0.28);
+  box-shadow: 0 10px 22px rgba(83, 67, 43, 0.14);
+}
+
+body.product-shell .gang-sheet-card__format {
+  color: var(--product-ink);
+  background: var(--product-panel);
+  border-color: color-mix(in srgb, var(--product-line) 48%, transparent);
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 body.product-shell :is(.gang-sheet-card__format, .gang-sheet-card__preview-label, .gang-status-badge) {
   border-radius: 999px;
   box-shadow: none;
+}
+
+body.product-shell .gang-sheet-card__facts,
+body.product-shell .gang-sheet-card__facts div + div,
+body.product-shell .gang-sheet-card__primary {
+  border-color: color-mix(in srgb, var(--product-line) 42%, transparent);
 }
 
 body.product-shell .gang-status-badge {
@@ -377,11 +393,11 @@ body.product-shell .gang-status-badge--render_failed {
 }
 
 body.product-shell .gang-sheet-card__menu > summary {
-  border-radius: var(--product-polish-radius-sm);
+  border-radius: 999px;
 }
 
 body.product-shell .gang-sheet-card__menu-panel {
-  border-radius: var(--product-polish-radius-sm);
+  border-radius: 16px;
   box-shadow: var(--product-polish-shadow-raised);
 }
 
