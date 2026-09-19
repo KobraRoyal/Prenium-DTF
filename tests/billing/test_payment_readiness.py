@@ -522,6 +522,30 @@ def test_periodic_reconciliation_captures_approved_paypal_without_return_or_webh
 
 
 @pytest.mark.django_db
+@override_settings(PAYPAL_API_BASE_URL="https://api-m.paypal.com")
+def test_initiate_discards_sandbox_approval_url_after_live_switch():
+    user, customer = create_customer_scope(email="paypal-env@example.com", customer_name="Env")
+    order = create_order(customer, user)
+    service = PaymentService(gateway=FakePayPalGateway())
+    _, stale = _initiate(
+        service, customer=customer, order=order, user=user, provider=Payment.Provider.PAYPAL
+    )
+    Payment.objects.filter(pk=stale.pk).update(
+        approval_url="https://www.sandbox.paypal.com/checkoutnow?token=SANDBOXTOKEN",
+        paypal_order_id="SANDBOXTOKEN",
+    )
+    _, fresh = _initiate(
+        service, customer=customer, order=order, user=user, provider=Payment.Provider.PAYPAL
+    )
+    stale.refresh_from_db()
+    assert stale.status == Payment.Status.CANCELLED
+    assert fresh.pk != stale.pk
+    assert fresh.status in {Payment.Status.PENDING, Payment.Status.APPROVED}
+    assert "sandbox.paypal.com" not in (fresh.approval_url or "")
+    assert fresh.approval_url
+
+
+@pytest.mark.django_db
 def test_reconciliation_failure_rotates_past_batch_limit():
     user_a, customer_a = create_customer_scope(email="rotate-a@example.com", customer_name="RA")
     user_b, customer_b = create_customer_scope(email="rotate-b@example.com", customer_name="RB")

@@ -140,3 +140,17 @@ class PaymentGatewaySettingsForm(forms.Form):
             if snapshot.stripe_webhook_hint
             else "Secret whsec_ du webhook Checkout. Il ne sera plus affiché ensuite."
         )
+
+    def clean(self):
+        cleaned = super().clean()
+        paypal_id = str(cleaned.get("paypal_client_id") or "").strip()
+        paypal_secret = str(cleaned.get("paypal_client_secret") or "").strip()
+        if paypal_id and paypal_secret and paypal_id == paypal_secret:
+            raise ValidationError(
+                {
+                    "paypal_client_secret": (
+                        "Le Secret PayPal doit être différent du Client ID."
+                    )
+                }
+            )
+        return cleaned

@@ -281,3 +281,26 @@ def test_mask_secret_keeps_only_last_four_characters():
     assert mask_secret("") == ""
     assert mask_secret("abcd") == "••••"
     assert mask_secret("sk_test_1234") == "•••• 1234"
+
+
+@pytest.mark.django_db
+def test_payment_gateway_form_rejects_identical_paypal_id_and_secret():
+    from apps.billing.forms import PaymentGatewaySettingsForm
+    from apps.billing.services.gateway_settings import payment_gateway_settings_service
+
+    snapshot = payment_gateway_settings_service.snapshot()
+    form = PaymentGatewaySettingsForm(
+        data={
+            "paypal_enabled": True,
+            "paypal_client_id": "same-value",
+            "paypal_client_secret": "same-value",
+            "paypal_webhook_id": "",
+            "stripe_enabled": False,
+            "stripe_publishable_key": "",
+            "stripe_secret_key": "",
+            "stripe_webhook_secret": "",
+        },
+        snapshot=snapshot,
+    )
+    assert not form.is_valid()
+    assert "paypal_client_secret" in form.errors

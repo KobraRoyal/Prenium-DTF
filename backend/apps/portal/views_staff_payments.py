@@ -1,4 +1,4 @@
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied, ValidationError
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
@@ -56,6 +56,19 @@ class StaffPaymentSettingsView(StaffDomainPermissionMixin, View):
                 actor=request.user,
                 source="staff_payment_settings",
                 ip_address=request.META.get("REMOTE_ADDR"),
+            )
+        except ImproperlyConfigured as error:
+            form.add_error(
+                None,
+                "Chiffrement des secrets indisponible. Configurez "
+                "PAYMENT_SECRET_ENCRYPTION_KEYS (ou WEB_PUSH_ENCRYPTION_KEYS) "
+                "dans l’environnement serveur, puis redémarrez web/worker/beat.",
+            )
+            return render(
+                request,
+                self.template_name,
+                self._context(form=form, snapshot=snapshot),
+                status=503,
             )
         except ValidationError as error:
             messages = getattr(error, "message_dict", {}) or {}

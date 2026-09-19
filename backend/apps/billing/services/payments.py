@@ -4,6 +4,7 @@ from datetime import timedelta
 from decimal import Decimal
 from uuid import UUID
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
@@ -235,6 +236,37 @@ class PaymentService:
         if self.gateway is not None and self.gateway.provider != payment.provider:
             return
         gateway = self._get_gateway(provider=payment.provider)
+        # Lien sandbox après bascule live (ou l'inverse) : abandonner sans appeler l'API.
+        approval_url = str(payment.approval_url or "")
+        paypal_base = str(getattr(settings, "PAYPAL_API_BASE_URL", "") or "")
+        if payment.provider == Payment.Provider.PAYPAL and approval_url:
+            approval_is_sandbox = "sandbox.paypal.com" in approval_url
+            api_is_sandbox = "sandbox" in paypal_base
+            if approval_is_sandbox != api_is_sandbox:
+                with transaction.atomic():
+                    Order.objects.select_for_update().get(pk=order.pk)
+                    locked = Payment.objects.select_for_update().get(pk=payment.pk)
+                    if locked.status in (Payment.Status.PENDING, Payment.Status.APPROVED):
+                        locked.status = Payment.Status.CANCELLED
+                        locked.last_error_message = (
+                            "Session PayPal abandonnée après changement d'environnement "
+                            "(sandbox/live)."
+                        )
+                        locked.save(
+                            update_fields=("status", "last_error_message", "updated_at")
+                        )
+                        record_event(
+                            action="billing.payment_checkout_expired",
+                            target=locked,
+                            metadata={
+                                "order_public_id": str(order.public_id),
+                                "payment_public_id": str(locked.public_id),
+                                "provider": locked.provider,
+                                "provider_payment_id": locked.provider_payment_id,
+                                "reason": "paypal_environment_mismatch",
+                            },
+                        )
+                return
         self._verify_checkout_binding(gateway=gateway, payment=payment)
         inspect = getattr(gateway, "checkout_state", None)
         if inspect is None:
@@ -251,7 +283,15 @@ class PaymentService:
                     gateway.expire_checkout(provider_payment_id=payment.provider_payment_id)
                 ).upper()
         except PaymentGatewayError as exc:
-            raise PaymentGatewayTransientError(str(exc)) from exc
+            detail = str(exc)
+            # Référence absente chez le prestataire (ex. commande sandbox après live).
+            if any(
+                marker in detail
+                for marker in ("RESOURCE_NOT_FOUND", "INVALID_RESOURCE_ID", "No such checkout")
+            ):
+                state = "VOIDED"
+            else:
+                raise PaymentGatewayTransientError(str(exc)) from exc
         if state == "COMPLETED":
             if payment.provider == Payment.Provider.STRIPE:
                 self.confirm_stripe_checkout_session(

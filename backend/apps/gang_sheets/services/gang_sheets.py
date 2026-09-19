@@ -17,6 +17,7 @@ from django.utils import timezone
 from apps.auditlog.services import record_event
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.b2b_order_projects.services.projects import B2BOrderProjectService, ProjectDomainError
+from apps.billing.services.production_payment_gate import order_awaits_client_payment
 from apps.gang_sheets.models import (
     GangSheet,
     GangSheetItem,
@@ -56,6 +57,7 @@ from apps.gang_sheets.services.text_items import (
     serialized_font_catalog,
     usable_text_max_width_mm,
 )
+from apps.orders.models import Order
 from apps.orders.services.pricing import OrderPricingService
 from apps.uploads.models import AssetAnalysis, AssetVersion
 from apps.uploads.services.assets import AssetDomainError, AssetService
@@ -1703,6 +1705,18 @@ class GangSheetService:
                 "Attendez la fin de l’analyse de tous les visuels avant de commander.",
                 {"items": not_ready},
             )
+
+        # Comptant déjà créé mais non payé (ex. échec prestataire) : reprendre
+        # le règlement au lieu d'ouvrir une 2ᵉ commande sur la même planche.
+        existing_order = locked.order
+        if existing_order is None and locked.project_id:
+            existing_order = getattr(locked.project, "converted_order", None)
+        if (
+            existing_order is not None
+            and existing_order.status != Order.Status.CANCELLED
+            and order_awaits_client_payment(existing_order)
+        ):
+            return existing_order
 
         project = self.create_order_project(
             sheet=locked,

@@ -2,6 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
@@ -23,6 +24,7 @@ from apps.b2b_order_projects.services import (
     B2BOrderProjectService,
     ProjectDomainError,
 )
+from apps.billing.services.gateways import PaymentGatewayTransientError
 from apps.gang_sheets.models import GangSheet
 from apps.orders.models import Order
 from apps.orders.references import project_client_reference
@@ -240,8 +242,18 @@ def redirect_after_b2b_checkout(
                 )
                 if payment is not None and payment.approval_url:
                     return HttpResponseRedirect(payment.approval_url)
-            except ValidationError:
-                pass
+            except PaymentGatewayTransientError:
+                messages.info(
+                    request,
+                    "Le prestataire de paiement est temporairement indisponible. "
+                    "La commande est créée : vous pouvez réessayer le règlement.",
+                )
+            except ValidationError as error:
+                message = (
+                    "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+                )
+                if message:
+                    messages.error(request, message)
         return HttpResponseRedirect(
             reverse(
                 "portal:client-order-detail",

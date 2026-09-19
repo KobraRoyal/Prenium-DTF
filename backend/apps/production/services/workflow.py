@@ -22,18 +22,24 @@ production_spec_service = OrderUploadProductionSpecService()
 
 
 def production_ready_orders_queryset(queryset):
-    """Keep unpaid immediate orders out of every Atelier worklist."""
+    """Keep unpaid immediate and cancelled orders out of every Atelier worklist."""
     captured = Payment.objects.filter(order_id=OuterRef("pk"), status=Payment.Status.CAPTURED)
-    return queryset.annotate(_production_payment_captured=Exists(captured)).filter(
-        Q(billing_mode=Order.BillingMode.DEFERRED) | Q(_production_payment_captured=True)
+    return (
+        queryset.annotate(_production_payment_captured=Exists(captured))
+        .exclude(status=Order.Status.CANCELLED)
+        .filter(Q(billing_mode=Order.BillingMode.DEFERRED) | Q(_production_payment_captured=True))
     )
 
 
 def production_ready_jobs_queryset(queryset):
-    """Apply the same order payment gate to ProductionJob worklists."""
+    """Apply the same order payment/cancellation gate to ProductionJob worklists."""
     captured = Payment.objects.filter(order_id=OuterRef("order_id"), status=Payment.Status.CAPTURED)
-    return queryset.annotate(_production_payment_captured=Exists(captured)).filter(
-        Q(order__billing_mode=Order.BillingMode.DEFERRED) | Q(_production_payment_captured=True)
+    return (
+        queryset.annotate(_production_payment_captured=Exists(captured))
+        .exclude(order__status=Order.Status.CANCELLED)
+        .filter(
+            Q(order__billing_mode=Order.BillingMode.DEFERRED) | Q(_production_payment_captured=True)
+        )
     )
 
 

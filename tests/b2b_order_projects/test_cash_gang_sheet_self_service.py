@@ -540,6 +540,10 @@ def test_studio_checkout_creates_priced_order_without_project_hop():
     )
     assert retry.status_code == 302
     assert "/checkout/" not in retry["Location"]
+    sheet.refresh_from_db()
+    assert sheet.order_id == order.id
+    assert Order.objects.filter(customer=customer).count() == 1
+    assert str(order.public_id) in retry["Location"]
 
 
 @pytest.mark.django_db

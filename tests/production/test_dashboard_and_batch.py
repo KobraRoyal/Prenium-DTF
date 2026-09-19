@@ -598,6 +598,88 @@ def test_atelier_printed_meterage_trend_uses_print_record_snapshots_and_reprints
 
 
 @pytest.mark.django_db
+def test_atelier_activity_kpi_excludes_queued_jobs_on_cancelled_orders():
+    actor = get_user_model().objects.create_user(
+        email="cancelled-queued@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="OF annulée")
+    live_order = create_order(customer=customer, actor=actor)
+    cancelled_order = create_order(customer=customer, actor=actor)
+    Order.objects.filter(pk=cancelled_order.pk).update(status=Order.Status.CANCELLED)
+
+    rows = {
+        row["label"]: row["value"]
+        for row in AtelierDashboardService()._build_activity_kpi_rows()
+    }
+    aging = {
+        alert["key"]: alert["value"]
+        for alert in AtelierDashboardService()._build_production_health()["alerts"]
+    }
+
+    assert live_order.production_job.status == ProductionJob.Status.QUEUED
+    assert cancelled_order.production_job.status == ProductionJob.Status.QUEUED
+    assert rows["En traitement"] == 1
+    assert aging["aging"] == 0
+
+
+@pytest.mark.django_db
+def test_backfill_printed_linear_m_fills_null_snapshots_from_order_meterage():
+    import importlib.util
+    from pathlib import Path
+
+    from django.apps import apps
+
+    migration_path = (
+        Path(__file__).resolve().parents[2]
+        / "backend"
+        / "apps"
+        / "production"
+        / "migrations"
+        / "0008_backfill_printed_linear_m.py"
+    )
+    spec = importlib.util.spec_from_file_location("backfill_printed_linear_m", migration_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+
+    actor = get_user_model().objects.create_user(
+        email="backfill-meterage@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Backfill métrage")
+    order = create_order(customer=customer, actor=actor)
+    Order.objects.filter(pk=order.pk).update(meterage_override_linear_m=Decimal("3.5000"))
+    machine = ProductionMachine.objects.create(code="BF-01", name="Backfill")
+    assignment = ProductionJobMachineAssignment.objects.create(
+        production_job=order.production_job,
+        machine=machine,
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+    )
+    record = ProductionPrintRecord.objects.create(
+        production_job=order.production_job,
+        machine=machine,
+        assignment=assignment,
+        printed_linear_m=None,
+        machine_public_id_snapshot=machine.public_id,
+        machine_code_snapshot=machine.code,
+        machine_name_snapshot=machine.name,
+        manufacturing_order_number_snapshot=order.production_job.manufacturing_order_number,
+        order_public_id_snapshot=order.public_id,
+        customer_public_id_snapshot=customer.public_id,
+    )
+
+    module.backfill_printed_linear_m(apps, schema_editor=None)
+    record.refresh_from_db()
+
+    assert record.printed_linear_m == Decimal("3.5000")
+    trend = AtelierDashboardService()._build_printed_meterage_trend()
+    assert trend["seven_day_total"] == Decimal("3.5000")
+
+
+@pytest.mark.django_db
 def test_atelier_production_health_reports_actionable_alerts_quality_and_flow():
     actor = get_user_model().objects.create_user(
         email="production-health@example.com",
