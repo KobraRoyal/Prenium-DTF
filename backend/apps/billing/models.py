@@ -252,7 +252,7 @@ class Invoice(BaseModel):
     file = models.FileField(upload_to=invoice_document_path, max_length=500, blank=True)
     file_name = models.CharField(max_length=255, blank=True)
     file_mime_type = models.CharField(max_length=128, blank=True)
-    source = models.CharField(max_length=32, default="backend_capture")
+    source = models.CharField(max_length=64, default="backend_capture")
     snapshot = models.JSONField(default=dict, blank=True)
     issued_at = models.DateTimeField(null=True, blank=True)
 

@@ -32,12 +32,15 @@ def test_order_service_creates_snapshotted_order_and_audit_entry():
         display_order=2,
     )
 
-    with patch(
-        "apps.notifications.services.transactional.schedule_order_created_email"
-    ) as schedule_order_created_email, patch(
-        "apps.notifications.services.workshop_push."
-        "WorkshopNotificationService.publish_order_submitted"
-    ) as publish_order_submitted:
+    with (
+        patch(
+            "apps.notifications.services.transactional.schedule_order_created_email"
+        ) as schedule_order_created_email,
+        patch(
+            "apps.notifications.services.workshop_push."
+            "WorkshopNotificationService.publish_order_submitted"
+        ) as publish_order_submitted,
+    ):
         order = OrderService().create_order(
             customer=customer,
             actor=user,

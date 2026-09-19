@@ -447,7 +447,8 @@ def test_late_stripe_failure_event_uses_current_paid_session(monkeypatch):
     assert response.json()["failed"] is False
     payment.refresh_from_db()
     assert payment.status == Payment.Status.CAPTURED
-    assert Invoice.objects.filter(order=order, payment=payment).exists()
+    invoice = Invoice.objects.get(order=order, payment=payment)
+    assert invoice.source == "stripe_webhook.failure_event_reconciliation"
     assert not AuditLogEntry.objects.filter(action="billing.payment_failed").exists()
 
 
