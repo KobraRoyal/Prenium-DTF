@@ -67,7 +67,9 @@ class FakePayPalGateway:
         self.fail_capture = fail_capture
         self.counter = 0
 
-    def create_checkout(self, *, order, success_url: str = "", cancel_url: str = ""):
+    def create_checkout(
+        self, *, order, success_url: str = "", cancel_url: str = "", idempotency_key: str = ""
+    ):
         result = self.create_order(order=order)
         return type(
             "CheckoutCreateResult",
@@ -96,7 +98,9 @@ class FakePayPalGateway:
             },
         )()
 
-    def create_order(self, *, order, return_url: str = "", cancel_url: str = ""):
+    def create_order(
+        self, *, order, return_url: str = "", cancel_url: str = "", request_id: str = ""
+    ):
         if self.fail_create:
             from apps.billing.services.paypal import PayPalAPIError
 
@@ -132,12 +136,25 @@ class FakePayPalGateway:
 class FakeStripeGateway:
     provider = "stripe"
 
-    def __init__(self, *, fail_create: bool = False, fail_confirm: bool = False):
+    def __init__(
+        self,
+        *,
+        fail_create: bool = False,
+        fail_confirm: bool = False,
+        pending_confirm: bool = False,
+        amount_total_cents: int | None = 2500,
+        currency: str | None = "EUR",
+    ):
         self.fail_create = fail_create
         self.fail_confirm = fail_confirm
+        self.pending_confirm = pending_confirm
+        self.amount_total_cents = amount_total_cents
+        self.currency = currency
         self.counter = 0
 
-    def create_checkout(self, *, order, success_url: str = "", cancel_url: str = ""):
+    def create_checkout(
+        self, *, order, success_url: str = "", cancel_url: str = "", idempotency_key: str = ""
+    ):
         if self.fail_create:
             from apps.billing.services.stripe_gateway import StripeAPIError
 
@@ -156,7 +173,7 @@ class FakeStripeGateway:
                     "status": "open",
                     "url": f"https://checkout.stripe.test/pay/{session_id}",
                 },
-                "provider_capture_id": f"pi_{order.public_id.hex[:8]}",
+                "provider_capture_id": f"pi_{session_id}",
             },
         )()
 
@@ -165,6 +182,23 @@ class FakeStripeGateway:
             from apps.billing.services.stripe_gateway import StripeAPIError
 
             raise StripeAPIError("Stripe confirm failed.")
+        if self.pending_confirm:
+            return type(
+                "CheckoutConfirmResult",
+                (),
+                {
+                    "provider_payment_id": provider_payment_id,
+                    "provider_capture_id": "",
+                    "status": "PENDING",
+                    "payload": {
+                        "id": provider_payment_id,
+                        "payment_status": "unpaid",
+                        "status": "complete",
+                    },
+                    "amount_total_cents": self.amount_total_cents,
+                    "currency": self.currency,
+                },
+            )()
         return type(
             "CheckoutConfirmResult",
             (),
@@ -178,8 +212,8 @@ class FakeStripeGateway:
                     "status": "complete",
                     "payment_intent": f"pi_from_{provider_payment_id}",
                 },
-                "amount_total_cents": 2500,
-                "currency": "EUR",
+                "amount_total_cents": self.amount_total_cents,
+                "currency": self.currency,
             },
         )()
 
@@ -396,7 +430,7 @@ def test_staff_without_billing_permissions_is_refused():
 
 
 @pytest.mark.django_db
-def test_paypal_error_is_mapped_to_failed_status(monkeypatch):
+def test_paypal_error_preserves_uncertain_attempt(monkeypatch):
     user, customer = create_customer_scope(email="client-a@example.com", customer_name="Acme A")
     order = create_order(customer, user)
     monkeypatch.setattr(
@@ -413,10 +447,9 @@ def test_paypal_error_is_mapped_to_failed_status(monkeypatch):
         format="json",
     )
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"] == ["PayPal unavailable."]
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     payment = Payment.objects.get(order=order)
-    assert payment.status == Payment.Status.FAILED
+    assert payment.status == Payment.Status.PENDING
 
 
 @pytest.mark.django_db

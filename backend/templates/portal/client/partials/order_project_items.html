@@ -87,11 +87,11 @@
       <div class="b2b-visual-list-item__content">
         <div><h3>{{ item.name }}</h3></div>
         <div class="b2b-visual-facts" aria-label="Caractéristiques de {{ item.name }}">
-          {% if not project.can_edit_items or item.is_production_gang_sheet_asset %}<span>{{ item.quantity }} ex.</span>{% endif %}
+          {% if not project.can_edit_items %}<span>{{ item.quantity }} ex.</span>{% endif %}
           <span>{{ item.width_mm }} × {{ item.height_mm }} mm</span>{% if item.support_color_label %}<span class="b2b-support-color-badge{% if item.support_color_is_multicolor %} is-rainbow{% endif %}"{% if not item.support_color_is_multicolor %} style="--swatch: {{ item.support_color_hex }}"{% endif %}>{{ item.support_color_label }}</span>{% endif %}
         </div>
         <div class="b2b-visual-list-item__controls">
-          {% if project.can_edit_items and not item.is_production_gang_sheet_asset %}
+          {% if project.can_edit_items %}
           <form
             class="b2b-inline-quantity-form"
             method="post"
@@ -107,7 +107,9 @@
             {% csrf_token %}
             <input type="hidden" name="_autosave" value="1">
             {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Quantité" field_id=item.public_id %}
+            {% if not item.is_production_gang_sheet_asset %}
             {% include "portal/client/partials/order_project_support_color_field.html" with item=item swatch_prefix="inline-support-hex-" exact_color_required=item.technical_review.thin_zone.detected %}
+            {% endif %}
             <span class="ui-sr-only htmx-indicator" role="status">Enregistrement…</span>
           </form>
           {% endif %}

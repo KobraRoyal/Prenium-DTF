@@ -574,6 +574,7 @@ body.product-shell .b2b-shipping-choice__options {
 }
 
 body.product-shell .b2b-shipping-choice__option {
+  position: relative;
   display: grid;
   align-content: start;
   gap: 0.2rem;
@@ -583,6 +584,28 @@ body.product-shell .b2b-shipping-choice__option {
   border-radius: var(--radius-sm);
   background: var(--product-panel);
   cursor: pointer;
+}
+
+body.product-shell .b2b-shipping-choice__input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+}
+
+body.product-shell .b2b-shipping-choice__name,
+body.product-shell .b2b-shipping-choice__price,
+body.product-shell .b2b-shipping-choice__eta {
+  position: relative;
+  z-index: 0;
+  pointer-events: none;
 }
 
 body.product-shell .b2b-shipping-choice__option:hover {

@@ -2599,6 +2599,10 @@ function bindConfiguratorEvents() {
     const opener = target.closest("[data-dialog-open]");
     if (opener instanceof HTMLElement) {
       const dialog = document.getElementById(opener.dataset.dialogOpen || "");
+      const menu = opener.closest("[data-product-nav-details]");
+      if (menu instanceof HTMLDetailsElement) {
+        menu.removeAttribute("open");
+      }
       openConfiguratorDialog(dialog);
       return;
     }
@@ -2612,6 +2616,7 @@ function bindConfiguratorEvents() {
       return;
     }
     if (target instanceof HTMLDialogElement) {
+      if (target.hasAttribute("data-studio-pay-dialog")) return;
       dismissAutoOpenDialog(target);
       target.close();
     }

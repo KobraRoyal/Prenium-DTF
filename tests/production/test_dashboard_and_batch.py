@@ -8,6 +8,7 @@ from decimal import Decimal
 import pytest
 from apps.accounts.models import StaffMembership
 from apps.auditlog.models import AuditLogEntry
+from apps.billing.models import Payment
 from apps.customers.models import Customer
 from apps.orders.models import Order
 from apps.production.models import (
@@ -20,10 +21,15 @@ from apps.production.services.dashboard import AtelierDashboardService
 from apps.production.services.manufacturing_order_batch import (
     ManufacturingOrderBatchService,
 )
+from apps.production.services.manufacturing_order_pdf import (
+    render_manufacturing_order_pdf_bytes,
+)
+from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUpload, OrderUploadDriveSync, OrderUploadReview
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.exceptions import ValidationError
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
@@ -100,6 +106,119 @@ def test_atelier_dashboard_shows_only_unissued_orders():
 
     assert [row["order"].public_id for row in dashboard["rows"]] == [unissued.public_id]
     assert dashboard["unprinted_of_total"] == 1
+
+
+@pytest.mark.django_db
+def test_immediate_order_enters_atelier_and_can_print_only_after_capture():
+    actor = get_user_model().objects.create_user(email="payment-gate@example.com", password="pass")
+    first_customer = Customer.objects.create(name="Awaiting payment")
+    other_customer = Customer.objects.create(name="Other tenant")
+    unpaid = create_order(customer=first_customer, actor=actor)
+    other = create_order(customer=other_customer, actor=actor)
+    unpaid.billing_mode = other.billing_mode = Order.BillingMode.IMMEDIATE
+    unpaid.save(update_fields=["billing_mode", "updated_at"])
+    other.save(update_fields=["billing_mode", "updated_at"])
+    batch = ManufacturingOrderBatchService()
+    workflow = ProductionWorkflowService()
+
+    assert batch.count_unissued_orders() == 0
+    assert StaffOrderListFilterService().count_by_queue(Order.objects.all())["unprinted"] == 0
+    assert (
+        StaffOrderListFilterService().count_by_status(Order.objects.all())[
+            ProductionJob.Status.QUEUED
+        ]
+        == 0
+    )
+    assert AtelierDashboardService().build_dashboard()["rows"] == []
+    assert workflow.get_staff_job_for_document(order_public_id=unpaid.public_id) == (None, None)
+    with pytest.raises(ValidationError):
+        batch.resolve_orders(order_public_ids=[str(unpaid.public_id)], mode="selected")
+    with pytest.raises(ValidationError):
+        batch.mark_of_documents_issued(orders=[unpaid], actor=actor, source="test")
+    with pytest.raises(ValidationError):
+        render_manufacturing_order_pdf_bytes(order=unpaid, production_job=unpaid.production_job)
+    unpaid.production_job.refresh_from_db()
+    assert unpaid.production_job.of_document_issued_at is None
+
+    Payment.objects.create(
+        order=unpaid,
+        amount="42.00",
+        currency="EUR",
+        status=Payment.Status.CAPTURED,
+        provider=Payment.Provider.STRIPE,
+    )
+    assert [order.public_id for order in batch.list_unissued_orders()] == [unpaid.public_id]
+    assert StaffOrderListFilterService().count_by_queue(Order.objects.all())["unprinted"] == 1
+    assert (
+        StaffOrderListFilterService().count_by_status(Order.objects.all())[
+            ProductionJob.Status.QUEUED
+        ]
+        == 1
+    )
+    assert [
+        row["order"].public_id for row in AtelierDashboardService().build_dashboard()["rows"]
+    ] == [unpaid.public_id]
+    assert workflow.get_staff_job_for_document(order_public_id=unpaid.public_id)[1] is not None
+    assert workflow.get_staff_job_for_document(order_public_id=other.public_id) == (None, None)
+
+
+@pytest.mark.django_db
+def test_unpaid_immediate_order_production_routes_do_not_render_or_mutate():
+    _actor, client = create_staff_client(
+        email="unpaid-routes@example.com",
+        permissions=[
+            "view_order",
+            "view_productionjob",
+            "assign_productionmachine",
+            "confirm_productionprint",
+            "scan_productionjob",
+            "transition_productionjob",
+        ],
+    )
+    customer = Customer.objects.create(name="Unpaid route customer")
+    order = create_order(customer=customer, actor=_actor)
+    order.billing_mode = Order.BillingMode.IMMEDIATE
+    order.save(update_fields=["billing_mode", "updated_at"])
+    kwargs = {"order_public_id": order.public_id}
+
+    assert (
+        client.get(reverse("portal:staff-order-panel-production", kwargs=kwargs)).status_code == 404
+    )
+    assert (
+        client.post(
+            reverse("portal:staff-order-panel-production", kwargs=kwargs),
+            {
+                "to_status": ProductionJob.Status.IN_PROGRESS,
+            },
+        ).status_code
+        == 404
+    )
+    assert client.get(reverse("portal:staff-order-panel-scan", kwargs=kwargs)).status_code == 404
+    assert (
+        client.post(
+            reverse("portal:staff-order-machine-assignment", kwargs=kwargs),
+            {
+                "machine_public_id": str(order.public_id),
+            },
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            reverse("portal:staff-order-print-confirmation", kwargs=kwargs),
+            {
+                "request_token": str(order.public_id),
+            },
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get(reverse("production:staff-manufacturing-order-pdf", kwargs=kwargs)).status_code
+        == 404
+    )
+    order.production_job.refresh_from_db()
+    assert order.production_job.status == ProductionJob.Status.QUEUED
+    assert order.production_job.of_document_issued_at is None
 
 
 @pytest.mark.django_db
@@ -335,6 +454,7 @@ def test_atelier_financial_trend_uses_priced_submitted_orders_over_seven_days():
         created_by=actor,
         status=Order.Status.SUBMITTED,
         pricing_status=Order.PricingStatus.PRICED,
+        billing_mode=Order.BillingMode.DEFERRED,
         total_amount="120.00",
     )
     earlier_order = Order.objects.create(
@@ -342,6 +462,7 @@ def test_atelier_financial_trend_uses_priced_submitted_orders_over_seven_days():
         created_by=actor,
         status=Order.Status.SUBMITTED,
         pricing_status=Order.PricingStatus.PRICED,
+        billing_mode=Order.BillingMode.DEFERRED,
         total_amount="80.00",
     )
     excluded_order = Order.objects.create(
@@ -349,6 +470,7 @@ def test_atelier_financial_trend_uses_priced_submitted_orders_over_seven_days():
         created_by=actor,
         status=Order.Status.DRAFT,
         pricing_status=Order.PricingStatus.PRICED,
+        billing_mode=Order.BillingMode.DEFERRED,
         total_amount="999.00",
     )
     earlier_day = timezone.now() - timedelta(days=2)
@@ -364,6 +486,42 @@ def test_atelier_financial_trend_uses_priced_submitted_orders_over_seven_days():
     assert trend["revenue_values"][-1] == 120.0
     assert trend["revenue_values"][-3] == 80.0
     assert today_order.pk != excluded_order.pk
+
+
+@pytest.mark.django_db
+def test_atelier_financial_trend_excludes_unpaid_immediate_across_customers():
+    actor = get_user_model().objects.create_user(email="cash-trend@example.com", password="pass")
+    first_customer = Customer.objects.create(name="Cash trend first")
+    second_customer = Customer.objects.create(name="Cash trend second")
+    unpaid = Order.objects.create(
+        customer=first_customer,
+        created_by=actor,
+        status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.IMMEDIATE,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="500.00",
+    )
+    paid = Order.objects.create(
+        customer=second_customer,
+        created_by=actor,
+        status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.IMMEDIATE,
+        pricing_status=Order.PricingStatus.PRICED,
+        total_amount="75.00",
+    )
+    Payment.objects.create(
+        order=paid,
+        amount="75.00",
+        currency="EUR",
+        provider=Payment.Provider.PAYPAL,
+        status=Payment.Status.CAPTURED,
+    )
+
+    trend = AtelierDashboardService().build_financial_trend()
+
+    assert trend["seven_day_total"] == Decimal("75.00")
+    assert trend["order_count"] == 1
+    assert unpaid.pk != paid.pk
 
 
 @pytest.mark.django_db
@@ -609,6 +767,7 @@ def test_atelier_financial_dashboard_is_only_rendered_for_owner_or_admin_roles()
         created_by=actor,
         status=Order.Status.SUBMITTED,
         pricing_status=Order.PricingStatus.PRICED,
+        billing_mode=Order.BillingMode.DEFERRED,
         total_amount="150.00",
     )
     admin, admin_client = create_staff_client(

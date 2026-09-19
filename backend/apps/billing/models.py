@@ -133,7 +133,7 @@ class Payment(BaseModel):
     stripe_checkout_session_id = models.CharField(max_length=255, blank=True)
     stripe_payment_intent_id = models.CharField(max_length=255, blank=True)
     approval_url = models.URLField(max_length=2048, blank=True)
-    source = models.CharField(max_length=32, default="client_api")
+    source = models.CharField(max_length=64, default="client_api")
     request_snapshot = models.JSONField(default=dict, blank=True)
     provider_payload = models.JSONField(default=dict, blank=True)
     captured_at = models.DateTimeField(null=True, blank=True)
@@ -147,6 +147,11 @@ class Payment(BaseModel):
             ("confirm_payment", "Can confirm payment"),
         ]
         constraints = [
+            models.UniqueConstraint(
+                fields=("order",),
+                condition=Q(status__in=("pending", "approved", "captured")),
+                name="uniq_payable_or_captured_payment_per_order",
+            ),
             models.UniqueConstraint(
                 fields=("paypal_order_id",),
                 condition=~Q(paypal_order_id=""),
@@ -247,7 +252,7 @@ class Invoice(BaseModel):
     file = models.FileField(upload_to=invoice_document_path, max_length=500, blank=True)
     file_name = models.CharField(max_length=255, blank=True)
     file_mime_type = models.CharField(max_length=128, blank=True)
-    source = models.CharField(max_length=32, default="backend_capture")
+    source = models.CharField(max_length=64, default="backend_capture")
     snapshot = models.JSONField(default=dict, blank=True)
     issued_at = models.DateTimeField(null=True, blank=True)
 
@@ -266,3 +271,37 @@ class Invoice(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.invoice_number} - {self.status}"
+
+
+class PaymentGatewaySettings(BaseModel):
+    """Singleton Atelier : connexion et activation PayPal / Stripe."""
+
+    singleton_key = models.PositiveSmallIntegerField(default=1, unique=True, editable=False)
+    paypal_enabled = models.BooleanField(default=False)
+    stripe_enabled = models.BooleanField(default=False)
+    paypal_client_id = models.CharField(max_length=255, blank=True)
+    paypal_client_secret_encrypted = models.TextField(blank=True)
+    paypal_webhook_id = models.CharField(max_length=255, blank=True)
+    stripe_publishable_key = models.CharField(max_length=255, blank=True)
+    stripe_secret_key_encrypted = models.TextField(blank=True)
+    stripe_webhook_secret_encrypted = models.TextField(blank=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="updated_payment_gateway_settings",
+    )
+
+    class Meta:
+        verbose_name = "Réglages paiements en ligne"
+        verbose_name_plural = "Réglages paiements en ligne"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(singleton_key=1),
+                name="payment_gateway_settings_singleton_key_one",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return "Réglages paiements en ligne"

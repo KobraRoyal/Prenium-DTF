@@ -479,6 +479,16 @@ class ShipmentService:
         if order is None:
             return None, None
 
+        from apps.billing.services.production_payment_gate import (
+            order_has_captured_payment,
+            requires_captured_payment_before_production,
+        )
+
+        if requires_captured_payment_before_production(order) and not order_has_captured_payment(
+            order
+        ):
+            raise ValidationError("Le paiement doit être confirmé avant l'expédition.")
+
         production_job = self.production_workflow_service.get_or_create_for_order(order=order)
         if production_job.status != ProductionJob.Status.READY_TO_SHIP:
             raise ValidationError("Shipment can only be created when production is ready to ship.")

@@ -897,26 +897,25 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card {
-  background: color-mix(in srgb, var(--bg) 32%, var(--surface)) !important;
+  background: var(--surface) !important;
   border-radius: var(--radius-sm) !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card:hover,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card:focus-within {
-  background: color-mix(in srgb, var(--brand-soft) 28%, var(--surface)) !important;
+  background: color-mix(in srgb, var(--brand-soft) 18%, var(--surface)) !important;
   transform: none !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card__facts,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card__facts div + div,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card__primary {
-  border: 0 !important;
-}
-
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-toolbar {
-  padding: 0.5rem 0.65rem !important;
-  background: color-mix(in srgb, var(--bg) 22%, var(--surface)) !important;
-  border-radius: var(--radius-sm) !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(12.5rem, 16.5rem) !important;
+  align-items: end !important;
+  gap: 0.75rem 1rem !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-search {

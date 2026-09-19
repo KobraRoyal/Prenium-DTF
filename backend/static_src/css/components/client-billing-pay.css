@@ -1,0 +1,121 @@
+/* v65 — Checkout paiement : marques PayPal / CB, même surface que la fiche. */
+html[data-theme="prenium"] body.product-shell .client-billing-pay {
+  background: transparent;
+  border: 0;
+  gap: 1.1rem;
+  margin: 0 0 1.15rem;
+  padding: 0;
+}
+
+body.product-shell .client-billing-pay__hint,
+body.product-shell .client-billing-pay__provider {
+  margin: 0.35rem 0 0;
+  color: var(--product-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+body.product-shell .client-billing-pay.is-focused {
+  scroll-margin-top: 5.5rem;
+}
+
+body.product-shell .client-billing-pay .b2b-settlement-choice__option:focus-within {
+  outline: 3px solid color-mix(in srgb, var(--focus-ring, var(--product-accent)) 40%, transparent);
+  outline-offset: 2px;
+}
+
+body.product-shell .client-billing-pay .client-billing-pay__method {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+body.product-shell .client-billing-pay .client-billing-pay__method:hover {
+  background: color-mix(in srgb, var(--brand) 7%, var(--product-panel));
+}
+
+body.product-shell .client-billing-pay .client-billing-pay__method:has(input:checked) {
+  border-color: color-mix(in srgb, var(--brand) 58%, var(--product-line));
+  background: color-mix(in srgb, var(--brand) 12%, var(--product-panel));
+}
+
+body.product-shell .client-billing-pay .client-billing-pay__method input[type="radio"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  accent-color: var(--brand);
+  flex: none;
+}
+
+body.product-shell .client-billing-pay__mark {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 1.5rem;
+  color: var(--product-ink);
+}
+
+body.product-shell .client-billing-pay__chip--paypal {
+  flex: none;
+}
+
+body.product-shell .client-billing-pay__brand {
+  display: grid;
+  place-items: center;
+}
+
+body.product-shell .client-billing-pay__copy {
+  min-width: 0;
+}
+
+body.product-shell .client-billing-pay__copy strong,
+body.product-shell .client-billing-pay__copy small {
+  display: block;
+}
+
+body.product-shell .client-billing-pay__networks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+body.product-shell .client-billing-pay__chip {
+  display: grid;
+  line-height: 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+body.product-shell .client-billing-pay__provider {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+}
+
+@media (max-width: 639px) {
+  body.product-shell .client-billing-pay .client-billing-pay__method {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  body.product-shell .client-billing-pay .client-billing-pay__method .client-billing-pay__mark {
+    display: none;
+  }
+
+  body.product-shell .client-billing-pay__networks {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+    padding-left: 0.15rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.product-shell .client-billing-pay .client-billing-pay__method {
+    transition: none;
+  }
+}

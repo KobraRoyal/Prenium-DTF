@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from django.core.exceptions import ValidationError
 from reportlab.graphics.barcode import code128, qr
 from reportlab.graphics.shapes import Circle, Drawing, String, Wedge
 from reportlab.lib import colors
@@ -21,6 +22,10 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from apps.billing.services.production_payment_gate import (
+    order_has_captured_payment,
+    production_start_blocked_reason,
+)
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
 from apps.production.services.manufacturing_order_previews import (
@@ -530,6 +535,10 @@ def _build_checklist(*, styles: dict[str, ParagraphStyle]) -> Table:
 
 
 def render_manufacturing_order_pdf_bytes(*, order: Order, production_job: ProductionJob) -> bytes:
+    if order.billing_mode == Order.BillingMode.IMMEDIATE and not order_has_captured_payment(order):
+        payment_block = production_start_blocked_reason(order)
+        if payment_block is not None:
+            raise ValidationError(payment_block)
     payload = ProductionWorkflowService().build_manufacturing_order(
         order=order,
         production_job=production_job,

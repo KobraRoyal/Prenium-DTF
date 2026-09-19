@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 import pytest
 from apps.accounts.models import StaffMembership
 from apps.auditlog.models import AuditLogEntry
+from apps.billing.models import Payment
 from apps.customers.models import Customer
 from apps.notifications.models import (
     PushDelivery,
@@ -96,7 +97,35 @@ def _order(*, actor=None, customer_name: str = "Client A") -> Order:
         customer=customer,
         created_by=actor,
         status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
     )
+
+
+@pytest.mark.django_db
+def test_immediate_order_is_published_only_after_capture_across_customers():
+    actor, _membership = _staff(email="paid-workshop@example.com")
+    first = _order(actor=actor, customer_name="First unpaid customer")
+    second = _order(actor=actor, customer_name="Second unpaid customer")
+    first.billing_mode = second.billing_mode = Order.BillingMode.IMMEDIATE
+    first.save(update_fields=["billing_mode", "updated_at"])
+    second.save(update_fields=["billing_mode", "updated_at"])
+    service = WorkshopNotificationService(client=FakePushClient())
+
+    assert service.publish_order_submitted(first, actor, "test") is None
+    assert service.publish_order_submitted(second, actor, "test") is None
+    assert WorkshopNotificationEvent.objects.count() == 0
+
+    Payment.objects.create(
+        order=first,
+        amount="42.00",
+        currency="EUR",
+        provider=Payment.Provider.STRIPE,
+        status=Payment.Status.CAPTURED,
+    )
+    event = service.publish_order_submitted(first, actor, "test")
+    assert service.publish_order_submitted(first, actor, "test") == event
+    assert event.customer_id == first.customer_id
+    assert WorkshopNotificationEvent.objects.count() == 1
 
 
 def _subscription(*, membership: StaffMembership, endpoint: str = ENDPOINT):

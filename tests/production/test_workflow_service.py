@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
+from apps.billing.models import Payment
 from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
@@ -30,6 +31,63 @@ def create_order(customer, actor, *, billing_mode=Order.BillingMode.DEFERRED):
         currency="EUR",
         subtotal_amount="0.00",
         total_amount="0.00",
+    )
+
+
+@pytest.mark.django_db
+def test_immediate_order_cannot_enter_workflow_until_its_own_payment_is_captured():
+    service = ProductionWorkflowService()
+    actor, customer, _ = create_customer_scope("unpaid-flow@example.com", "Unpaid")
+    other_actor, other_customer, _ = create_customer_scope("other-flow@example.com", "Other tenant")
+    order = create_order(customer, actor, billing_mode=Order.BillingMode.IMMEDIATE)
+    other_order = create_order(
+        other_customer, other_actor, billing_mode=Order.BillingMode.IMMEDIATE
+    )
+    job = service.get_or_create_for_order(order=order)
+    assert (
+        ProductionScanService().resolve_scan(
+            scan_identifier=job.scan_identifier, actor=actor, source="test"
+        )
+        is None
+    )
+    Payment.objects.create(
+        order=other_order,
+        amount="42.00",
+        currency="EUR",
+        status=Payment.Status.CAPTURED,
+        provider=Payment.Provider.STRIPE,
+    )
+
+    assert service.get_staff_job_for_document(order_public_id=order.public_id) == (None, None)
+    assert service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.BLOCKED,
+        actor=actor,
+        source="test",
+    ) == (None, None, None)
+    job.refresh_from_db()
+    assert job.status == ProductionJob.Status.QUEUED
+
+    Payment.objects.create(
+        order=order,
+        amount="42.00",
+        currency="EUR",
+        status=Payment.Status.CAPTURED,
+        provider=Payment.Provider.PAYPAL,
+    )
+    result_order, result_job, _ = service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.IN_PROGRESS,
+        actor=actor,
+        source="test",
+    )
+    assert result_order.pk == order.pk
+    assert result_job.status == ProductionJob.Status.IN_PROGRESS
+    assert (
+        ProductionScanService().resolve_scan(
+            scan_identifier=job.scan_identifier, actor=actor, source="test"
+        )
+        is not None
     )
 
 
@@ -397,18 +455,20 @@ def test_immediate_atelier_order_cannot_start_production_before_payment():
     order.save(update_fields=["pricing_status", "total_amount", "source", "updated_at"])
     service.get_or_create_for_order(order=order)
 
-    assert service.allowed_target_statuses(
-        current_status=ProductionJob.Status.QUEUED,
-        order=order,
-    ) == [ProductionJob.Status.BLOCKED]
-
-    with pytest.raises(ValidationError, match="paiement"):
-        service.transition_job(
-            order_public_id=order.public_id,
-            to_status=ProductionJob.Status.IN_PROGRESS,
-            actor=staff_user,
-            source="test",
+    assert (
+        service.allowed_target_statuses(
+            current_status=ProductionJob.Status.QUEUED,
+            order=order,
         )
+        == []
+    )
+
+    assert service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.IN_PROGRESS,
+        actor=staff_user,
+        source="test",
+    ) == (None, None, None)
 
 
 @pytest.mark.django_db

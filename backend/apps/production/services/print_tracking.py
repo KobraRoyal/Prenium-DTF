@@ -10,6 +10,10 @@ from django.utils import timezone
 from apps.accounts.services.access import AccessScopeService
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
+from apps.billing.services.production_payment_gate import (
+    order_has_captured_payment,
+    production_start_blocked_reason,
+)
 from apps.catalog.models import CatalogService
 from apps.customers.services.volume_discounts import linear_meters_from_sqm
 from apps.orders.models import Order
@@ -70,6 +74,13 @@ class ProductionPrintTrackingService:
             )
             raise ValidationError(message)
         job = ProductionWorkflowService().get_or_create_for_order(order=order)
+        if order.billing_mode == Order.BillingMode.IMMEDIATE and not order_has_captured_payment(
+            order
+        ):
+            payment_block = production_start_blocked_reason(order)
+            if payment_block is not None:
+                self._record_rejection(job=job, actor=actor, source=source, message=payment_block)
+                raise ValidationError(payment_block)
         try:
             token = self._normalize_token(request_token)
         except ValidationError as exc:
@@ -106,6 +117,13 @@ class ProductionPrintTrackingService:
                     return locked_job, existing, False
                 if locked_job.order.status == Order.Status.CANCELLED:
                     raise ValidationError("Une commande annulée ne peut pas être confirmée.")
+                if (
+                    locked_job.order.billing_mode == Order.BillingMode.IMMEDIATE
+                    and not order_has_captured_payment(locked_job.order)
+                ):
+                    payment_block = production_start_blocked_reason(locked_job.order)
+                    if payment_block is not None:
+                        raise ValidationError(payment_block)
                 if locked_job.status not in self.confirmable_statuses:
                     raise ValidationError(
                         "L’impression peut être confirmée uniquement pendant "

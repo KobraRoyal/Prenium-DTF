@@ -30,6 +30,10 @@ class InvoiceService:
                 defaults=self._build_defaults(order=order, payment=payment, source=source),
             )
             if not created:
+                if invoice.payment_id not in (None, payment.pk):
+                    raise ValidationError(
+                        "Justificatif lié à un autre paiement : rapprochement requis."
+                    )
                 to_update: list[str] = []
                 if invoice.payment_id is None:
                     invoice.payment = payment
@@ -37,6 +41,12 @@ class InvoiceService:
                 if invoice.paid_at is None and payment.status == Payment.Status.CAPTURED:
                     invoice.paid_at = invoice.issued_at or timezone.now()
                     to_update.append("paid_at")
+                if not invoice.file:
+                    content = render_invoice_pdf_bytes(
+                        invoice=invoice, order=order, payment=payment
+                    )
+                    invoice.file.save(invoice.file_name, ContentFile(content), save=False)
+                    to_update.append("file")
                 if to_update:
                     to_update.append("updated_at")
                     invoice.save(update_fields=to_update)

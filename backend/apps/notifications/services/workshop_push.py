@@ -317,11 +317,18 @@ class WorkshopNotificationService:
         return WorkshopEventPage(events=summaries, cursor=next_cursor)
 
     @transaction.atomic
-    def publish_order_submitted(self, order, actor, source: str) -> WorkshopNotificationEvent:
+    def publish_order_submitted(
+        self, order, actor, source: str
+    ) -> WorkshopNotificationEvent | None:
         if order.status != order.Status.SUBMITTED:
             raise ValidationError("Only submitted orders can produce a workshop event")
         if order.customer_id is None:
             raise ValidationError("Workshop events require an order customer")
+        from apps.billing.services.production_payment_gate import order_has_captured_payment
+
+        if order.billing_mode == order.BillingMode.IMMEDIATE:
+            if not order_has_captured_payment(order):
+                return None
         event, created = WorkshopNotificationEvent.objects.get_or_create(
             event_type=WorkshopNotificationEvent.EventType.ORDER_SUBMITTED,
             order=order,

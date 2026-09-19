@@ -546,6 +546,334 @@ body.product-shell--studio .gang-validation-actions > [data-validate-sheet] {
   justify-content: center;
 }
 
+body.product-shell--studio .gang-editor.is-checkout [data-composition-only] {
+  display: none !important;
+}
+
+body.product-shell--studio .gang-studio-checkout,
+body.product-shell--studio .gang-studio-checkout__form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+body.product-shell--studio .gang-editor.is-checkout .gang-inspector-panel--validation,
+body.product-shell--studio .gang-editor.is-checkout .gang-validation-actions,
+body.product-shell--studio .gang-editor.is-checkout .gang-studio-checkout,
+body.product-shell--studio .gang-editor.is-checkout .gang-studio-checkout__form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+body.product-shell--studio .gang-studio-order-meta {
+  display: grid;
+  gap: 0.65rem;
+}
+
+body.product-shell--studio .gang-studio-checkout textarea[name="customer_comment"] {
+  min-height: 4.25rem;
+  resize: vertical;
+}
+
+body.product-shell--studio .gang-studio-checkout__files ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.product-shell--studio .gang-studio-checkout__files li {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: center;
+}
+
+body.product-shell--studio .gang-studio-checkout__files img {
+  width: 2.25rem;
+  height: 2.25rem;
+  object-fit: contain;
+  border: 1px solid var(--product-line, var(--line));
+  border-radius: 6px;
+  background: var(--product-panel, var(--surface));
+}
+
+body.product-shell--studio .gang-studio-checkout__files strong,
+body.product-shell--studio .gang-studio-checkout__files small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.product-shell--studio .gang-studio-checkout__files small {
+  color: var(--product-muted, var(--muted));
+  font-size: 0.72rem;
+}
+
+body.product-shell--studio .gang-inspector-price-dock,
+body.product-shell--studio .gang-studio-checkout__dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: grid;
+  gap: 0.55rem;
+  margin-top: auto;
+  padding-top: 0.65rem;
+  background: var(--gang-panel, var(--surface));
+  box-shadow: 0 -0.7rem 0.85rem -0.5rem color-mix(in srgb, var(--gang-ink) 14%, transparent);
+}
+
+body.product-shell--studio .gang-editor__inspector:has(.gang-studio-checkout:not([hidden])) .gang-inspector-price-dock {
+  display: none;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color legend.product-form-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  float: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color__badge {
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color__intro {
+  display: none;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color__alert {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gang-muted);
+  font-size: 0.68rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color__choices {
+  display: grid;
+  grid-template-columns: 2.75rem 2.75rem minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color__choices > .b2b-swatch-btn,
+body.product-shell--studio .gang-studio-checkout .b2b-support-color__choices > .b2b-hex-color-control {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  flex: none;
+  margin: 0;
+  border-radius: var(--ui-radius-sm, 14px);
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-hex-color-control .b2b-swatch-btn {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border-radius: inherit;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-swatch-btn.is-active,
+body.product-shell--studio .gang-studio-checkout .b2b-hex-color-control.is-active .b2b-swatch-btn {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand);
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color-hex {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-support-color-hex .ui-input {
+  height: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+body.product-shell--studio .gang-studio-checkout .product-date-picker.is-open {
+  z-index: 80;
+}
+
+body.product-shell--studio .gang-studio-checkout .product-date-picker__popover {
+  width: min(17.75rem, calc(100vw - 1.5rem));
+  padding: 0.65rem 0.7rem 0.7rem;
+}
+
+body.product-shell--studio .gang-studio-checkout .product-date-picker__head {
+  grid-template-columns: 2rem minmax(0, 1fr) 2rem;
+  margin-bottom: 0.45rem;
+}
+
+body.product-shell--studio .gang-studio-checkout .product-date-picker__nav {
+  width: 2rem;
+  height: 2rem;
+  min-height: 2rem;
+}
+
+body.product-shell--studio .gang-studio-checkout .product-date-picker__month {
+  font-size: 0.84rem;
+}
+
+body.product-shell--studio .gang-studio-checkout .product-date-picker__weekdays {
+  margin-bottom: 0.2rem;
+}
+
+body.product-shell--studio .gang-studio-checkout .product-date-picker__day {
+  min-height: 1.95rem;
+  font-size: 0.8rem;
+}
+
+body.product-shell--studio .gang-studio-checkout .product-date-picker__footer {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+body.product-shell--studio .gang-studio-checkout [data-studio-checkout-submit],
+body.product-shell--studio .gang-studio-pay-dialog [data-studio-pay-confirm] {
+  width: 100%;
+  justify-content: center;
+}
+
+body.product-shell--studio .gang-studio-checkout .b2b-shipping-choice {
+  margin: 0;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .b2b-shipping-choice {
+  margin: 0;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .b2b-shipping-choice__options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .b2b-shipping-choice__option {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.6rem;
+  gap: 0.12rem;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .b2b-shipping-choice__legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+body.product-shell--studio .gang-editor__inspector,
+body.product-shell--studio .gang-inspector-panel--validation,
+body.product-shell--studio .gang-studio-checkout {
+  overflow-anchor: none;
+}
+
+body.product-shell--studio .gang-studio-pay {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.2rem 0 0.1rem;
+  border-top: 1px solid var(--gang-line, var(--line));
+}
+
+body.product-shell--studio .gang-studio-pay__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+body.product-shell--studio .gang-studio-pay__caption {
+  color: var(--gang-muted, var(--muted));
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.product-shell--studio .gang-studio-pay__total strong {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+body.product-shell--studio .gang-studio-pay__next {
+  margin: 0;
+  color: var(--gang-muted, var(--muted));
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+body.product-shell--studio .gang-studio-pay__rows {
+  display: grid;
+  gap: 0.28rem;
+  margin: 0;
+}
+
+body.product-shell--studio .gang-studio-pay__rows > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: baseline;
+}
+
+body.product-shell--studio .gang-studio-pay__rows dt {
+  margin: 0;
+  color: var(--gang-muted, var(--muted));
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+body.product-shell--studio .gang-studio-pay__rows dd {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 body.product-shell--studio :is(.gang-tool-btn, .gang-workflow button, .gang-editor__mobile-tabs button):focus-visible {
   outline: 3px solid color-mix(in srgb, var(--gang-focus) 72%, transparent);
   outline-offset: 2px;
@@ -2072,5 +2400,367 @@ html[data-theme="prenium"] body.product-shell--studio .gang-asset-card__usage-st
 
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__toolbar {
     flex-wrap: wrap;
+  }
+}
+
+body.product-shell--studio .gang-studio-pay-dialog {
+  width: min(36rem, calc(100vw - 1.25rem)) !important;
+  max-width: min(36rem, calc(100vw - 1.25rem)) !important;
+  max-height: min(44rem, calc(100dvh - 1.25rem)) !important;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 46%, transparent);
+  backdrop-filter: none;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: min(44rem, calc(100dvh - 1.25rem));
+  overflow: hidden;
+  background: var(--surface-raised, var(--surface));
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .b2b-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 0.9rem 1.1rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__title {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .b2b-dialog-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__lede {
+  margin: 0.22rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog[data-studio-dialog-mode="deferred"] .gang-studio-pay-dialog__lede {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.16rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success, #287451) 12%, var(--surface));
+  color: var(--success, #287451);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__pickup {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__body {
+  display: grid;
+  flex: 0 1 auto;
+  gap: 0.85rem;
+  min-height: 0;
+  max-height: calc(min(44rem, 100dvh - 1.25rem) - 10.5rem);
+  overflow: auto;
+  padding: 0.8rem 1.1rem;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .ui-field-group {
+  gap: 0.28rem;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .ui-label {
+  font-size: 0.74rem;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog :is(.ui-input, .ui-select, select.ui-input) {
+  min-height: 2.45rem;
+  padding: 0.45rem 0.7rem;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__section-title {
+  margin: 0 0 0.45rem;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__hint {
+  margin: 0 0 0.65rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+body.product-shell--studio .gang-studio-delivery__options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+body.product-shell--studio .gang-studio-delivery__option {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+body.product-shell--studio .gang-studio-delivery__input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+}
+
+body.product-shell--studio .gang-studio-delivery__copy {
+  position: relative;
+  z-index: 0;
+  display: grid;
+  gap: 0.2rem;
+  pointer-events: none;
+}
+
+body.product-shell--studio .gang-studio-delivery__copy strong {
+  font-size: 0.84rem;
+}
+
+body.product-shell--studio .gang-studio-delivery__copy small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+body.product-shell--studio .gang-studio-delivery__option:hover {
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface));
+}
+
+body.product-shell--studio .gang-studio-delivery__option:has(input:checked) {
+  border-color: color-mix(in srgb, var(--brand) 58%, var(--line));
+  background: color-mix(in srgb, var(--brand) 12%, var(--surface));
+}
+
+body.product-shell--studio .gang-studio-delivery__option:focus-within {
+  outline: 2px solid var(--focus, var(--accent));
+  outline-offset: 2px;
+}
+
+body.product-shell--studio .gang-studio-delivery {
+  display: grid;
+  gap: 0.7rem;
+}
+
+body.product-shell--studio .gang-studio-delivery__contact,
+body.product-shell--studio .gang-studio-delivery__address {
+  display: grid;
+  gap: 0.55rem;
+}
+
+body.product-shell--studio .gang-studio-delivery__street {
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+body.product-shell--studio .gang-studio-delivery__house {
+  min-width: 0;
+}
+
+body.product-shell--studio .gang-studio-delivery:has([data-studio-delivery-other][hidden]) .gang-studio-delivery__house {
+  grid-column: 1 / -1;
+  max-width: 8rem;
+}
+
+body.product-shell--studio .gang-studio-delivery__other:not([hidden]) {
+  display: contents;
+}
+
+body.product-shell--studio .gang-studio-delivery__wide,
+body.product-shell--studio .gang-studio-delivery__other .gang-studio-delivery__locality,
+body.product-shell--studio .gang-studio-delivery__other > .ui-field-group:last-child {
+  grid-column: 1 / -1;
+}
+
+body.product-shell--studio .gang-studio-delivery__locality {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+body.product-shell--studio .gang-studio-delivery__contact .gang-studio-delivery__locality {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .client-billing-pay {
+  margin: 0;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .client-billing-pay__method {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 14px;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__provider {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface));
+}
+
+body.product-shell--studio .gang-studio-pay-dialog .client-billing-pay__networks {
+  display: none;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__footer {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0.8rem 1.1rem 0.95rem;
+  border-top: 1px solid var(--line);
+  background: var(--surface-raised, var(--surface));
+}
+
+body.product-shell--studio .gang-studio-order-recap {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+body.product-shell--studio .gang-studio-order-recap__shipping {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.product-shell--studio .gang-studio-order-recap__shipping [data-studio-pay-shipping] {
+  flex: 0 0 auto;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+body.product-shell--studio .gang-studio-order-recap__total {
+  flex: 0 0 auto;
+  margin: 0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+body.product-shell--studio .gang-studio-order-recap__total strong {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body.product-shell--studio .gang-studio-pay-dialog__actions .ui-btn-secondary {
+  min-width: 6.5rem;
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+  box-shadow: none !important;
+}
+
+@media (max-width: 32rem) {
+  body.product-shell--studio .gang-studio-pay-dialog .b2b-shipping-choice__options,
+  body.product-shell--studio .gang-studio-delivery__street,
+  body.product-shell--studio .gang-studio-delivery__options,
+  body.product-shell--studio .gang-studio-delivery__locality,
+  body.product-shell--studio .gang-studio-delivery__contact .gang-studio-delivery__locality,
+  body.product-shell--studio .gang-studio-pay-dialog__actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.product-shell--studio .gang-studio-order-recap {
+    flex-wrap: wrap;
+  }
+
+  body.product-shell--studio .gang-studio-order-recap__total {
+    text-align: left;
+  }
+
+  body.product-shell--studio .gang-studio-pay-dialog__body {
+    max-height: calc(min(44rem, 100dvh - 1.25rem) - 12.5rem);
+  }
+
+  body.product-shell--studio .gang-studio-delivery:has([data-studio-delivery-other][hidden]) .gang-studio-delivery__house {
+    max-width: none;
   }
 }

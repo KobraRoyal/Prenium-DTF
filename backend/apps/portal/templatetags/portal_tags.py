@@ -17,7 +17,7 @@ from apps.orders.references import (
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260917-billing-detail-v63"
+PORTAL_CSS_ASSET_V = "20260918-date-portal-v1"
 
 STATUS_LABELS = {
     "draft": "Brouillon",
@@ -30,8 +30,8 @@ STATUS_LABELS = {
     "none": "N/A",
     "clear": "Encours OK",
     "cancelled": "Annulée",
-    "approved": "Approuvée",
-    "captured": "Capturée",
+    "approved": "En confirmation",
+    "captured": "Payé",
     "issued": "Émise",
     "void": "Annulée",
     "ok": "Valide",

@@ -206,30 +206,19 @@
     gap: 1rem;
   }
 
-  .gang-sheet-library__title-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .gang-sheet-library__title-row h2 {
-    margin: 0;
-    font-family: "Space Grotesk", system-ui, sans-serif;
-    font-size: 1.2rem;
-    font-weight: 850;
-    line-height: 1.2;
-  }
-
   .gang-sheet-toolbar {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(12.5rem, 16.5rem);
     min-width: 0;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.65rem;
-    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 22%, transparent);
-    background: color-mix(in srgb, var(--product-panel-strong, #f3ead6) 34%, var(--product-panel, #fffdf8));
+    align-items: end;
+    gap: 0.75rem 1rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .gang-sheet-library__filters {
+    min-width: 0;
   }
 
   .gang-sheet-filters {
@@ -268,9 +257,10 @@
 
   .gang-sheet-search {
     display: grid;
-    grid-template-columns: auto minmax(10rem, 15rem);
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: 0.4rem;
+    width: 100%;
     min-height: 2.75rem;
     padding: 0 0.6rem;
     border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
@@ -303,13 +293,15 @@
 
   .gang-sheet-card-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.75rem), 1fr));
     min-width: 0;
     gap: 1.1rem;
   }
 
   .gang-sheet-card {
     position: relative;
+    display: flex;
+    height: 100%;
     min-width: 0;
     overflow: visible;
     border: 2px solid var(--product-line, #0b0b0b);
@@ -325,7 +317,9 @@
   }
 
   .gang-sheet-card__link {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     overflow: hidden;
     color: inherit;
     text-decoration: none;
@@ -343,18 +337,44 @@
   .gang-sheet-card__preview {
     position: relative;
     display: grid;
-    height: 11rem;
-    place-items: center;
+    height: 16rem;
     overflow: hidden;
-    border-bottom: 2px solid var(--product-line, #0b0b0b);
-    background: #191919;
+    border-bottom: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
+    background-color: color-mix(in srgb, var(--product-ink, #1a1815) 84%, #6b5340);
+    background-image:
+      linear-gradient(45deg, color-mix(in srgb, #fff 8%, transparent) 25%, transparent 25%),
+      linear-gradient(-45deg, color-mix(in srgb, #fff 8%, transparent) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, color-mix(in srgb, #fff 8%, transparent) 75%),
+      linear-gradient(-45deg, transparent 75%, color-mix(in srgb, #fff 8%, transparent) 75%);
+    background-size: 14px 14px;
+    background-position: 0 0, 0 7px, 7px -7px, -7px 0;
   }
 
-  .gang-sheet-card__preview > img {
-    width: 100%;
+  .gang-sheet-card__stage {
+    display: flex;
+    min-height: 0;
     height: 100%;
+    align-items: flex-start;
+    justify-content: center;
     padding: 0.75rem;
+    overflow: hidden;
+  }
+
+  .gang-sheet-card__preview.is-pending .gang-sheet-card__stage {
+    align-items: center;
+  }
+
+  .gang-sheet-card__stage > img,
+  .gang-sheet-card__preview > img {
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    min-width: 0;
     object-fit: contain;
+    object-position: top center;
+    filter: drop-shadow(0 10px 22px rgba(83, 67, 43, 0.22));
   }
 
   .gang-sheet-card__mockup {
@@ -389,23 +409,26 @@
   .gang-sheet-card__format,
   .gang-sheet-card__preview-label {
     position: absolute;
-    padding: 0.25rem 0.45rem;
-    border: 1px solid rgba(255, 255, 255, 0.45);
-    color: #fff;
-    background: rgba(11, 11, 11, 0.85);
+    z-index: 1;
+    padding: 0.28rem 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 42%, transparent);
+    color: var(--product-ink, #1a1815);
+    background: var(--product-panel, #fffdf8);
     font-size: 0.62rem;
-    font-weight: 850;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-weight: 750;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
   }
 
   .gang-sheet-card__format { top: 0.65rem; left: 0.65rem; }
   .gang-sheet-card__preview-label { right: 0.65rem; bottom: 0.65rem; }
 
   .gang-sheet-card__body {
-    display: grid;
-    gap: 0.5rem;
-    padding: 0.9rem;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.95rem 1rem 1rem;
   }
 
   .gang-sheet-card__status-row {
@@ -413,18 +436,22 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.6rem;
-    padding-right: 3rem;
     color: var(--product-muted, #4c463b);
     font-size: 0.68rem;
-    font-weight: 800;
+    font-weight: 700;
+  }
+
+  .gang-sheet-card__status-row time {
+    font-variant-numeric: tabular-nums;
   }
 
   .gang-sheet-card__body h3 {
     overflow: hidden;
-    margin: 0.15rem 0 0;
+    margin: 0;
     font-family: "Space Grotesk", system-ui, sans-serif;
-    font-size: 1.05rem;
-    font-weight: 850;
+    font-size: 1.08rem;
+    font-weight: 750;
+    letter-spacing: -0.03em;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -436,8 +463,8 @@
   .gang-sheet-card__facts {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    margin: 0.35rem 0 0;
-    border-top: 1px solid var(--product-line, #0b0b0b);
+    margin: auto 0 0;
+    border-top: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
   }
 
   .gang-sheet-card__facts div {
@@ -448,7 +475,7 @@
 
   .gang-sheet-card__facts div + div {
     padding-left: 0.75rem;
-    border-left: 1px solid var(--product-line, #0b0b0b);
+    border-left: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
   }
 
   .gang-sheet-card__facts dt {
@@ -462,8 +489,9 @@
   .gang-sheet-card__facts dd {
     margin: 0;
     font-family: "Space Grotesk", system-ui, sans-serif;
-    font-size: 0.9rem;
-    font-weight: 900;
+    font-size: 0.92rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
   }
 
   .gang-sheet-card__primary {
@@ -472,17 +500,25 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    margin-top: 0.35rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--product-line, #0b0b0b);
+    margin-top: 0.2rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
     color: var(--product-ink, #0b0b0b);
-    font-size: 0.74rem;
-    font-weight: 850;
+    font-size: 0.78rem;
+    font-weight: 750;
+  }
+
+  .gang-sheet-card__primary-icon {
+    flex: 0 0 auto;
+  }
+
+  .gang-sheet-card:is(:hover, :focus-within) .gang-sheet-card__primary--order {
+    color: color-mix(in srgb, var(--product-accent, var(--brand)) 82%, var(--product-ink, #1a1815));
   }
 
   .gang-sheet-card__menu {
     position: absolute;
-    top: 11.65rem;
+    top: 0.65rem;
     right: 0.65rem;
     z-index: 2;
   }
@@ -493,11 +529,11 @@
     height: 2.75rem;
     place-items: center;
     border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 28%, transparent);
-    background: var(--product-panel, #fffdf8);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--product-panel, #fffdf8) 92%, transparent);
     color: var(--product-ink, #0b0b0b);
     cursor: pointer;
     list-style: none;
-    font-weight: 900;
   }
 
   .gang-sheet-card__menu > summary::-webkit-details-marker {
@@ -508,37 +544,54 @@
   .gang-sheet-card__menu > summary:focus-visible,
   .gang-sheet-card__menu[open] > summary {
     border-color: var(--product-line, #0b0b0b);
-    background: var(--product-panel-strong, #f3ead6);
+    background: var(--product-panel, #fffdf8);
+  }
+
+  .gang-sheet-card__menu > summary:focus-visible {
+    outline: 3px solid var(--focus-ring, rgba(119, 1, 118, 0.35));
+    outline-offset: 2px;
   }
 
   .gang-sheet-card__menu-panel {
     position: absolute;
-    top: calc(100% + 0.35rem);
+    top: calc(100% + 0.4rem);
     right: 0;
-    width: 10rem;
-    padding: 0.35rem;
-    border: 1px solid var(--product-line, #0b0b0b);
+    display: grid;
+    width: max-content;
+    min-width: 11.5rem;
+    padding: 0.3rem;
+    border: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 55%, transparent);
+    border-radius: 16px;
     background: var(--product-panel, #fffdf8);
-    box-shadow: 3px 3px 0 var(--product-line, #0b0b0b);
+    box-shadow: 0 8px 24px rgba(83, 67, 43, 0.12);
+    animation: gang-sheet-menu-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .gang-sheet-card__delete-action {
+    display: flex;
     width: 100%;
     min-height: 2.75rem;
-    padding: 0.55rem 0.65rem;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.7rem;
     border: 0;
+    border-radius: 12px;
     background: transparent;
-    color: var(--product-danger-text, #9f1239);
+    color: var(--product-danger-text, #a33b45);
     cursor: pointer;
     font: inherit;
-    font-size: 0.74rem;
-    font-weight: 800;
+    font-size: 0.82rem;
+    font-weight: 650;
     text-align: left;
+  }
+
+  .gang-sheet-card__delete-icon {
+    flex: 0 0 auto;
   }
 
   .gang-sheet-card__delete-action:hover,
   .gang-sheet-card__delete-action:focus-visible {
-    background: color-mix(in srgb, var(--product-danger-text, #9f1239) 10%, var(--product-panel, #fffdf8));
+    background: color-mix(in srgb, var(--product-danger-text, #a33b45) 10%, var(--product-panel, #fffdf8));
   }
 
   .gang-status-badge {
@@ -562,27 +615,21 @@
   .gang-status-badge--render_failed { background: var(--product-danger, #ff5470); }
 
   .gang-sheet-empty {
-    grid-column: 1 / -1;
-    min-height: 14rem;
-    border: 2px dashed var(--product-line, #0b0b0b);
-    background: color-mix(in srgb, var(--product-accent, #dcff1a) 8%, var(--product-panel, #fffdf8));
-  }
-
-  .gang-sheet-empty__mark {
     display: grid;
-    width: 3rem;
-    height: 3rem;
-    margin: 0 auto 0.7rem;
-    place-items: center;
-    border: 2px solid var(--product-line, #0b0b0b);
-    background: var(--product-accent, #dcff1a);
-    font-family: "Space Grotesk", system-ui, sans-serif;
-    font-weight: 900;
-    box-shadow: 4px 4px 0 #0b0b0b;
+    grid-column: 1 / -1;
+    min-height: 12rem;
+    align-content: center;
+    justify-items: center;
+    gap: 0.45rem;
+    padding: 1.5rem 1rem;
+    border: 0;
+    background: transparent;
+    text-align: center;
   }
 
   .gang-sheet-empty h3,
   .gang-sheet-empty p {
+    margin: 0;
     margin-inline: auto;
   }
 
@@ -612,10 +659,10 @@
     border-bottom: 1px solid color-mix(in srgb, var(--product-line, #0b0b0b) 24%, transparent);
   }
 
-  .gang-sheet-create-dialog__head > div {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
+  .gang-sheet-create-dialog__copy {
+    display: grid;
+    gap: 0.3rem;
+    min-width: 0;
   }
 
   .gang-sheet-create-dialog__head h2,
@@ -635,19 +682,6 @@
     color: var(--product-muted, #4c463b);
     font-size: 0.76rem;
     line-height: 1.45;
-  }
-
-  .gang-sheet-create-dialog__mark {
-    display: grid;
-    width: 2.6rem;
-    height: 2.6rem;
-    flex: 0 0 auto;
-    place-items: center;
-    border: 2px solid var(--product-line, #0b0b0b);
-    background: var(--product-accent, #dcff1a);
-    font-family: "Space Grotesk", system-ui, sans-serif;
-    font-size: 0.75rem;
-    font-weight: 900;
   }
 
   .gang-sheet-create-dialog__body {
@@ -1253,7 +1287,6 @@
   }
 
   @media (max-width: 900px) {
-    .gang-sheet-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gang-editor__header { grid-template-columns: minmax(0, 1fr); }
     .gang-editor__metrics { border-top: 2px solid var(--product-line, #0b0b0b); border-left: 0; }
     .gang-workflow small { display: none; }
@@ -1264,11 +1297,10 @@
     .gang-library-head { align-items: stretch; flex-direction: column; }
     .gang-library-head h1 { font-size: 2rem; }
     .gang-library-head__create { width: 100%; }
-    .gang-sheet-toolbar { align-items: stretch; flex-direction: column; }
+    .gang-sheet-toolbar { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
     .gang-sheet-filters { flex-wrap: wrap; overflow-x: visible; }
     .gang-sheet-filters button { flex: 1 1 auto; }
     .gang-sheet-search { grid-template-columns: auto minmax(0, 1fr); width: 100%; }
-    .gang-sheet-card-grid { grid-template-columns: minmax(0, 1fr); }
     .gang-sheet-create-dialog__actions,
     .gang-sheet-create-dialog__actions .ui-btn { width: 100%; }
     .gang-sheet-create-dialog__actions { flex-direction: column-reverse; }
@@ -1300,7 +1332,6 @@
   @media (max-width: 420px) {
     .gang-workflow li { padding-inline: 0.2rem; }
     .gang-workflow strong { font-size: 0.56rem; }
-    .gang-sheet-library__title-row { align-items: flex-start; flex-direction: column; }
     .gang-sheet-card__status-row { align-items: flex-start; flex-direction: column; }
     .gang-sheet-create-dialog { width: 100vw; max-height: 100dvh; border-width: 0; box-shadow: none; }
     .gang-sheet-create-dialog__shell { min-height: 100dvh; align-content: start; }
@@ -1309,8 +1340,20 @@
     .gang-asset-card__add { grid-template-columns: 4rem minmax(0, 1fr); }
   }
 
+@keyframes gang-sheet-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .gang-sheet-card,
     .gang-editor__status-dot,
-    .gang-asset-card__pending span { transition: none; animation: none; }
+    .gang-asset-card__pending span,
+    .gang-sheet-card__menu-panel { transition: none; animation: none; }
 }

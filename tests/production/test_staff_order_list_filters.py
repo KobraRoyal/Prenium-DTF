@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from apps.b2b_order_projects.models import B2BOrderProject
+from apps.billing.models import Payment
 from apps.customers.models import Customer
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
@@ -11,6 +12,7 @@ from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUpload, OrderUploadReview
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.exceptions import PermissionDenied
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
@@ -54,7 +56,7 @@ def mark_of_issued(order):
     order.production_job.save(update_fields=["of_document_issued_at", "updated_at"])
 
 
-def create_staff_client(*, email: str):
+def create_staff_client(*, email: str, can_price: bool = False):
     user = get_user_model().objects.create_user(
         email=email,
         password="pass",
@@ -62,9 +64,70 @@ def create_staff_client(*, email: str):
     )
     user.user_permissions.add(Permission.objects.get(codename="access_staff_portal"))
     user.user_permissions.add(Permission.objects.get(codename="view_order"))
+    if can_price:
+        user.user_permissions.add(Permission.objects.get(codename="change_order"))
     client = Client()
     assert client.login(email=user.email, password="pass")
     return client
+
+
+@pytest.mark.django_db
+def test_atelier_default_and_search_hide_unpaid_while_admin_queues_remain_separate():
+    actor = get_user_model().objects.create_user(email="admin-queues@example.com", password="pass")
+    first_customer = Customer.objects.create(name="First unpaid")
+    second_customer = Customer.objects.create(name="Second unpaid")
+    unpaid_to_price = create_order(customer=first_customer, actor=actor)
+    unpaid_priced = create_order(customer=second_customer, actor=actor)
+    paid = create_order(customer=first_customer, actor=actor)
+    for order in (unpaid_to_price, unpaid_priced, paid):
+        order.billing_mode = Order.BillingMode.IMMEDIATE
+        order.pricing_status = (
+            Order.PricingStatus.PENDING if order == unpaid_to_price else Order.PricingStatus.PRICED
+        )
+        order.save(update_fields=["billing_mode", "pricing_status", "updated_at"])
+    Payment.objects.create(
+        order=paid,
+        amount="42.00",
+        currency="EUR",
+        provider=Payment.Provider.STRIPE,
+        status=Payment.Status.CAPTURED,
+    )
+    service = StaffOrderListFilterService()
+    base = Order.objects.all()
+    assert service.count_by_queue(base)[""] == 1
+    assert service.count_by_status(base)[""] == 1
+    assert set(service.apply_filter(base, queue="").values_list("pk", flat=True)) == {paid.pk}
+    assert (
+        list(service.apply_search(base, query="Second unpaid").values_list("pk", flat=True)) == []
+    )
+    with pytest.raises(PermissionDenied):
+        service.apply_filter(base, queue="to_price")
+    assert service.count_by_queue(base, can_price=True)["to_price"] == 1
+    assert service.count_by_queue(base, can_price=True)["awaiting_payment"] == 1
+
+    staff = create_staff_client(email="ordinary-list@example.com")
+    admin = create_staff_client(email="pricing-list@example.com", can_price=True)
+    route = reverse("portal:staff-order-list")
+    assert staff.get(route, {"queue": "to_price"}).status_code == 403
+    assert "À tarifer" not in staff.get(route).content.decode()
+    default_response = admin.get(route, {"q": "Second unpaid"})
+    assert default_response.status_code == 200
+    assert default_response.context["page_obj"].paginator.count == 0
+    assert "À tarifer" in default_response.content.decode()
+    pricing_response = admin.get(route, {"queue": "to_price", "q": "First unpaid"})
+    assert [order.pk for order in pricing_response.context["orders"]] == [unpaid_to_price.pk]
+    assert (
+        admin.get(
+            reverse(
+                "portal:staff-order-detail",
+                kwargs={"order_public_id": unpaid_to_price.public_id},
+            )
+        ).status_code
+        == 200
+    )
+    payment_response = admin.get(route, {"queue": "awaiting_payment"})
+    assert [order.pk for order in payment_response.context["orders"]] == [unpaid_priced.pk]
+    assert "en attente de confirmation du paiement" in payment_response.content.decode()
 
 
 @pytest.mark.django_db

@@ -1,6 +1,7 @@
 /* Surcouche client : dashboard, fiche commande, projets B2B, planches (liste). */
 @import "../components/client-dashboard.css";
 @import "../components/client-order-detail.css";
+@import "../components/client-billing-pay.css";
 @import "../components/b2b-order-project.css";
 @import "../components/kpi-metrics.css";
 @import "../components/gang-sheet.css";
@@ -1414,5 +1415,86 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-con
 
   html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-dialog-actions__danger {
     grid-column: 1;
+  }
+}
+
+/* v141 — Bibliothèque planches DTF : aperçu lisible, filtres sans plateau, prochain geste. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-library {
+  gap: 1rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-toolbar .ui-list-tabs {
+  margin: 0 !important;
+  padding-bottom: 0.05rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__preview {
+  height: 16rem;
+  background-color: color-mix(in srgb, var(--ink) 84%, #6b5340);
+  background-image:
+    linear-gradient(45deg, color-mix(in srgb, #fff 8%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, #fff 8%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, #fff 8%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, #fff 8%, transparent) 75%);
+  background-size: 14px 14px;
+  background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__preview > img,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__stage > img {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  padding: 0;
+  object-fit: contain;
+  object-position: top center;
+  filter: drop-shadow(0 10px 22px rgba(83, 67, 43, 0.22));
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__format {
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__facts {
+  border-top: 1px solid var(--line) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__facts div + div {
+  border-left: 1px solid var(--line) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__primary {
+  border-top: 1px solid var(--line) !important;
+  color: var(--ink);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card:is(:hover, :focus-within) .gang-sheet-card__primary--order {
+  color: color-mix(in srgb, var(--brand) 78%, var(--ink));
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__menu > summary {
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 8px 18px rgba(83, 67, 43, 0.08);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__menu[open] > summary,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-card__menu > summary:is(:hover, :focus-visible) {
+  background: var(--surface);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-empty {
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 47.99rem) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-toolbar,
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .gang-sheet-page .gang-sheet-toolbar {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 }

@@ -658,8 +658,8 @@ def test_draft_sheet_deletion_removes_composition_and_renders_but_preserves_sour
     assert event.metadata["source_asset_count"] == 1
 
 
-@pytest.mark.parametrize("status", [GangSheet.Status.RENDERING, GangSheet.Status.VALIDATED])
-def test_rendering_or_validated_sheet_cannot_be_deleted(status):
+@pytest.mark.parametrize("status", [GangSheet.Status.RENDERING])
+def test_rendering_sheet_cannot_be_deleted(status):
     user, customer, _project = create_customer_scope(email=f"blocked-{status}@example.com")
     service = GangSheetService()
     sheet = service.create_sheet(customer=customer, actor=user, name="Traçable")
@@ -673,16 +673,31 @@ def test_rendering_or_validated_sheet_cannot_be_deleted(status):
     assert GangSheet.objects.filter(pk=sheet.pk).exists()
 
 
-def test_sheet_linked_to_an_order_project_cannot_be_deleted():
+def test_validated_standalone_sheet_can_be_deleted(django_capture_on_commit_callbacks):
+    user, customer, _project = create_customer_scope(email="delete-validated@example.com")
+    service = GangSheetService()
+    sheet = service.create_sheet(customer=customer, actor=user, name="Validée autonome")
+    sheet.status = GangSheet.Status.VALIDATED
+    sheet.save(update_fields=["status", "updated_at"])
+    sheet_pk = sheet.pk
+
+    with django_capture_on_commit_callbacks(execute=True):
+        service.delete_sheet(sheet=sheet, actor=user, source="test")
+
+    assert not GangSheet.objects.filter(pk=sheet_pk).exists()
+
+
+def test_sheet_linked_to_an_order_project_can_be_deleted(django_capture_on_commit_callbacks):
     user, _customer, project = create_customer_scope(email="linked-delete@example.com")
     service = GangSheetService()
     sheet = service.create_sheet(project=project, actor=user, name="Liée")
+    sheet_pk = sheet.pk
 
-    with pytest.raises(GangSheetDomainError) as exc:
+    with django_capture_on_commit_callbacks(execute=True):
         service.delete_sheet(sheet=sheet, actor=user, source="test")
 
-    assert exc.value.code == "SHEET_NOT_DELETABLE"
-    assert GangSheet.objects.filter(pk=sheet.pk).exists()
+    assert not GangSheet.objects.filter(pk=sheet_pk).exists()
+    assert B2BOrderProject.objects.filter(pk=project.pk).exists()
 
 
 def test_unused_visual_can_be_removed_from_gallery_without_deleting_source_file():

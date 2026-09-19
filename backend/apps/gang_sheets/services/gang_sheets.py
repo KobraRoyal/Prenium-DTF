@@ -114,32 +114,20 @@ class GangSheetService:
         return sheets
 
     def can_client_delete(self, sheet) -> bool:
-        editable_standalone = (
-            sheet.status in self.editable_statuses
-            and not sheet.project_id
-            and not sheet.order_id
-            and not sheet.production_asset_id
-        )
+        if sheet.status == GangSheet.Status.RENDERING:
+            return False
         drive_sync = getattr(sheet, "drive_sync", None)
-        drive_secured = not settings.GOOGLE_DRIVE_SYNC_ENABLED or bool(
+        needs_drive_archive = bool(
+            settings.GOOGLE_DRIVE_SYNC_ENABLED and (sheet.order_id or sheet.production_asset_id)
+        )
+        if not needs_drive_archive:
+            return True
+        return bool(
             drive_sync
             and drive_sync.status == drive_sync.Status.SYNCED
             and drive_sync.drive_file_id
             and drive_sync.revision == sheet.revision
         )
-        secured_in_order_project = (
-            sheet.status == GangSheet.Status.VALIDATED
-            and sheet.project_id
-            and sheet.production_asset_id
-            and sheet.project.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET
-            and sheet.project.items.filter(
-                customer=sheet.customer,
-                asset_id=sheet.production_asset_id,
-            ).exists()
-            and drive_secured
-            and (not sheet.order_id or sheet.project.converted_order_id == sheet.order_id)
-        )
-        return bool(editable_standalone or secured_in_order_project)
 
     def get_customer_sheet(self, *, customer, sheet_public_id):
         return (
@@ -1205,9 +1193,8 @@ class GangSheetService:
                 message = "Attendez la fin du rendu avant de supprimer cette planche."
             else:
                 message = (
-                    "Pour garantir la traçabilité, cette planche ne peut être supprimée "
-                    "qu’avant son rattachement métier ou après sa transformation complète "
-                    "en commande."
+                    "La sauvegarde sécurisée du fichier HD n’est pas encore terminée. "
+                    "Réessayez dans un instant."
                 )
             raise GangSheetDomainError(
                 "SHEET_NOT_DELETABLE",
@@ -1558,8 +1545,19 @@ class GangSheetService:
                 source=f"{source}.order_project",
             )
         )
-        if locked.project_id:
+        if locked.project_id and not locked.project.converted_order_id:
             project = locked.project
+            identity = {
+                "name": project_name,
+                "requested_date": project_date,
+                "customer_comment": project_comment,
+            }
+            project = self.projects.update_project(
+                project=project,
+                actor=actor,
+                data=identity,
+                source=source,
+            )
             item = project.items.order_by("sort_order", "created_at").first()
             if (
                 item is not None
@@ -1597,33 +1595,46 @@ class GangSheetService:
             },
             source=source,
         )
-        locked.final_file.open("rb")
-        final_upload = File(
-            locked.final_file.file,
-            name=f"{locked.public_id}-production.pdf",
-        )
-        final_upload.content_type = "application/pdf"
-        try:
-            version = self.assets.create_production_asset(
-                customer=locked.customer,
-                actor=actor,
-                name=f"{locked.name} — fichier production",
-                uploaded_file=final_upload,
-                source=source,
-                metadata={
-                    "gang_sheet_public_id": str(locked.public_id),
-                },
+        production_asset = locked.production_asset
+        if production_asset is None:
+            locked.final_file.open("rb")
+            final_upload = File(
+                locked.final_file.file,
+                name=f"{locked.public_id}-production.pdf",
             )
-        except AssetDomainError as error:
-            raise GangSheetDomainError(error.code, error.message, error.details) from error
-        finally:
-            locked.final_file.close()
-
-        item.asset = version.asset
-        item.save(update_fields=["asset", "updated_at"])
+            final_upload.content_type = "application/pdf"
+            try:
+                version = self.assets.create_production_asset(
+                    customer=locked.customer,
+                    actor=actor,
+                    name=f"{locked.name} — fichier production",
+                    uploaded_file=final_upload,
+                    source=source,
+                    metadata={
+                        "gang_sheet_public_id": str(locked.public_id),
+                    },
+                )
+            except AssetDomainError as error:
+                raise GangSheetDomainError(error.code, error.message, error.details) from error
+            finally:
+                locked.final_file.close()
+            production_asset = version.asset
+            item.asset = production_asset
+            item.save(update_fields=["asset", "updated_at"])
+        else:
+            try:
+                self.assets.link_existing_asset_to_item(
+                    project=project,
+                    item_public_id=item.public_id,
+                    asset=production_asset,
+                    actor=actor,
+                    source=source,
+                )
+            except AssetDomainError as error:
+                raise GangSheetDomainError(error.code, error.message, error.details) from error
         self.projects.refresh_completeness(project=project)
         locked.project = project
-        locked.production_asset = version.asset
+        locked.production_asset = production_asset
         locked.save(update_fields=["project", "production_asset", "updated_at"])
         self._audit(
             "order_project_created",
@@ -1632,10 +1643,11 @@ class GangSheetService:
             source=source,
             metadata={
                 "project_public_id": str(project.public_id),
-                "asset_public_id": str(version.asset.public_id),
+                "asset_public_id": str(production_asset.public_id),
                 "quantity": sheet_quantity,
                 "name": project_name,
                 "requested_date": project_date.isoformat() if project_date else None,
+                "repeat": bool(locked.order_id),
             },
         )
         return self.projects.get_customer_project(
@@ -1644,11 +1656,116 @@ class GangSheetService:
         )
 
     @transaction.atomic
+    def checkout_studio_sheet(
+        self,
+        *,
+        sheet,
+        actor,
+        customer_membership,
+        support_color_hex,
+        support_color_multicolor=False,
+        quantity=1,
+        shipping_method_code=None,
+        billing_mode=None,
+        name: str | None = None,
+        requested_date=None,
+        customer_comment: str | None = None,
+        delivery_address=None,
+        source="client_portal.studio_checkout",
+    ):
+        """Enregistre la couleur et convertit la planche déjà validée en commande."""
+        # project/order sont nullable : SELECT FOR UPDATE + OUTER JOIN casse PostgreSQL.
+        locked = (
+            GangSheet.objects.select_related("project", "order")
+            .select_for_update(of=("self",))
+            .get(pk=sheet.pk)
+        )
+        if locked.status != GangSheet.Status.VALIDATED or not locked.final_file:
+            raise GangSheetDomainError(
+                "VALIDATED_SHEET_REQUIRED",
+                "Confirmez la composition avant de commander.",
+            )
+        placed = list(locked.items.exclude(asset_version_id=None).select_related("asset_version"))
+        if not placed:
+            raise GangSheetDomainError(
+                "SHEET_ITEMS_REQUIRED",
+                "Ajoutez au moins un visuel sur la planche avant de commander.",
+            )
+        not_ready = [
+            item.asset_version.asset.name
+            for item in placed
+            if item.asset_version.analysis_status
+            not in {AssetVersion.AnalysisStatus.READY, AssetVersion.AnalysisStatus.WARNING}
+        ]
+        if not_ready:
+            raise GangSheetDomainError(
+                "ANALYSES_NOT_READY",
+                "Attendez la fin de l’analyse de tous les visuels avant de commander.",
+                {"items": not_ready},
+            )
+
+        project = self.create_order_project(
+            sheet=locked,
+            actor=actor,
+            quantity=quantity,
+            name=name,
+            requested_date=requested_date,
+            customer_comment=customer_comment,
+            source=source,
+        )
+        if project.converted_order_id:
+            return project.converted_order
+
+        item = (
+            project.items.select_related("asset__current_version")
+            .order_by("sort_order", "created_at")
+            .first()
+        )
+        if item is None:
+            raise GangSheetDomainError(
+                "PROJECT_ITEMS_REQUIRED",
+                "La commande n’a pas pu être préparée. Réessayez.",
+            )
+        try:
+            self._ensure_production_item_analysis_ready(item)
+            item.refresh_from_db()
+            if item.client_confirmed_asset_version_id is None:
+                self.projects.confirm_item_analysis(
+                    project=project,
+                    item_public_id=item.public_id,
+                    actor=actor,
+                    data={
+                        "support_color_hex": support_color_hex,
+                        "support_color_multicolor": support_color_multicolor,
+                        "quantity": quantity,
+                    },
+                    source=source,
+                )
+            if shipping_method_code != "pickup" and delivery_address:
+                project.shipping_address = self.projects._normalize_shipping_address(
+                    delivery_address
+                )
+                project.save(update_fields=["shipping_address", "updated_at"])
+            from apps.b2b_order_projects.services.checkout import B2BOrderProjectCheckoutService
+
+            return B2BOrderProjectCheckoutService().checkout_project(
+                project=project,
+                actor=actor,
+                customer_membership=customer_membership,
+                source=source,
+                billing_mode=billing_mode,
+                shipping_method_code=shipping_method_code,
+            )
+        except ProjectDomainError as error:
+            raise GangSheetDomainError(error.code, error.message, error.details) from error
+
+    @transaction.atomic
     def attach_validated_sheets_to_order(self, *, project, order, actor, source):
         sheets = list(
             GangSheet.objects.select_for_update()
             .for_project(project)
-            .filter(status=GangSheet.Status.VALIDATED, order__isnull=True)
+            .filter(status=GangSheet.Status.VALIDATED)
+            .exclude(order_id=order.pk)
         )
         for sheet in sheets:
             sheet.order = order
@@ -2013,6 +2130,31 @@ class GangSheetService:
                 "INVALID_REQUESTED_DATE",
                 "La date souhaitée est invalide.",
             ) from error
+
+    @staticmethod
+    def _ensure_production_item_analysis_ready(item):
+        """Le PDF HD est généré atelier : le QC source a déjà eu lieu sur la planche."""
+        version = getattr(getattr(item, "asset", None), "current_version", None)
+        if version is None:
+            return
+        ready = {AssetVersion.AnalysisStatus.READY, AssetVersion.AnalysisStatus.WARNING}
+        if version.analysis_status in ready:
+            return
+        AssetAnalysis.objects.get_or_create(
+            version=version,
+            defaults={
+                "customer_id": version.customer_id,
+                "warnings": [],
+                "metadata": {
+                    "production_output": True,
+                    "thin_zone": {"detected": False},
+                    "semi_transparency": {"detected": False},
+                },
+            },
+        )
+        version.analysis_status = AssetVersion.AnalysisStatus.READY
+        version.analysis_error = ""
+        version.save(update_fields=["analysis_status", "analysis_error", "updated_at"])
 
     @staticmethod
     def _bounded_positive_int(value, *, label):

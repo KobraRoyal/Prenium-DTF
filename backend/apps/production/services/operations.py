@@ -8,7 +8,10 @@ from apps.billing.models import Payment
 from apps.billing.services.production_payment_gate import production_start_blocked_reason
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
-from apps.production.services.workflow import ProductionWorkflowService
+from apps.production.services.workflow import (
+    ProductionWorkflowService,
+    production_ready_jobs_queryset,
+)
 
 
 class AtelierOperationsService:
@@ -105,7 +108,8 @@ class AtelierOperationsService:
         if include_shipping:
             select_related.append("order__shipment")
         return (
-            ProductionJob.objects.filter(order__status=Order.Status.SUBMITTED)
+            production_ready_jobs_queryset(ProductionJob.objects)
+            .filter(order__status=Order.Status.SUBMITTED)
             .select_related(*select_related)
             .prefetch_related(
                 "order__items",

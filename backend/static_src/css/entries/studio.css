@@ -2,6 +2,7 @@
 @import "../components/gang-sheet-studio.css";
 @import "../components/gang-sheet-text.css";
 @import "../components/studio-polish.css";
+@import "../components/client-billing-pay.css";
 
 @tailwind base;
 @tailwind components;
@@ -513,4 +514,47 @@ html[data-theme="prenium"] body.product-shell--studio .gang-editor :is(.ui-btn-p
   html[data-theme="prenium"] body.product-shell--studio .gang-editor__workspace:has(.gang-editor__stage.is-mobile-active) > .gang-editor__toolbar {
     display: flex !important;
   }
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio dialog.gang-studio-pay-dialog.b2b-configurator-dialog {
+  width: min(36rem, calc(100vw - 1.25rem)) !important;
+  max-width: min(36rem, calc(100vw - 1.25rem)) !important;
+  max-height: min(44rem, calc(100dvh - 1.25rem)) !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio dialog.gang-studio-pay-dialog.b2b-configurator-dialog .b2b-dialog-shell {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-height: min(44rem, calc(100dvh - 1.25rem)) !important;
+  overflow: hidden !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-hard, 0 24px 48px color-mix(in srgb, var(--ink) 18%, transparent)) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio dialog.gang-studio-pay-dialog.b2b-configurator-dialog .b2b-dialog-head {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio dialog.gang-studio-pay-dialog.b2b-configurator-dialog .gang-studio-pay-dialog__body {
+  flex: 0 1 auto !important;
+  max-height: calc(min(44rem, 100dvh - 1.25rem) - 10.5rem) !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio dialog.gang-studio-pay-dialog.b2b-configurator-dialog .gang-studio-pay-dialog__footer {
+  flex: 0 0 auto !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-shell--studio dialog.gang-studio-pay-dialog.b2b-configurator-dialog .gang-studio-pay-dialog__actions {
+  flex: 0 0 auto !important;
 }

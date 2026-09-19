@@ -201,6 +201,9 @@ WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "")
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "")
 WEB_PUSH_VAPID_CONTACT = os.environ.get("WEB_PUSH_VAPID_CONTACT", "")
 WEB_PUSH_ENCRYPTION_KEYS = tuple(env_list("WEB_PUSH_ENCRYPTION_KEYS"))
+PAYMENT_SECRET_ENCRYPTION_KEYS = tuple(env_list("PAYMENT_SECRET_ENCRYPTION_KEYS")) or (
+    WEB_PUSH_ENCRYPTION_KEYS
+)
 WEB_PUSH_ALLOWED_DOMAINS = tuple(
     env_list(
         "WEB_PUSH_ALLOWED_DOMAINS",
@@ -235,11 +238,13 @@ PAYPAL_INTERNAL_CONFIRM_TRUST_X_FORWARDED_FOR = env_bool(
     "PAYPAL_INTERNAL_CONFIRM_TRUST_X_FORWARDED_FOR",
     False,
 )
+PAYPAL_WEBHOOK_ID = os.environ.get("PAYPAL_WEBHOOK_ID", "")
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_API_BASE_URL = os.environ.get("STRIPE_API_BASE_URL", "https://api.stripe.com")
+STRIPE_API_VERSION = os.environ.get("STRIPE_API_VERSION", "2026-07-29.dahlia")
 STRIPE_TIMEOUT_SECONDS = env_int("STRIPE_TIMEOUT_SECONDS", 30)
 STRIPE_WEBHOOK_TOLERANCE_SECONDS = env_int("STRIPE_WEBHOOK_TOLERANCE_SECONDS", 300)
 
@@ -308,6 +313,14 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = env_int("CELERY_TASK_TIME_LIMIT", 300)
 CELERY_TASK_SOFT_TIME_LIMIT = env_int("CELERY_TASK_SOFT_TIME_LIMIT", 240)
 CELERY_BEAT_SCHEDULE = {
+    "billing-reconcile-active-payments": {
+        "task": "billing.reconcile_active_payments",
+        "schedule": max(60, env_int("PAYMENT_RECOVERY_INTERVAL_SECONDS", 300)),
+    },
+    "billing-recover-incomplete-captures": {
+        "task": "billing.recover_incomplete_captures",
+        "schedule": max(60, env_int("PAYMENT_RECOVERY_INTERVAL_SECONDS", 300)),
+    },
     "shipping-sync-stale-tracking": {
         "task": "shipping.sync_stale_shipments_tracking",
         "schedule": max(60, env_int("SENDCLOUD_TRACKING_POLL_SECONDS", 1800)),

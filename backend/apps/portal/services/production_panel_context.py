@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import uuid
 
+from apps.billing.services.production_payment_gate import (
+    order_has_captured_payment,
+    production_start_blocked_reason,
+)
 from apps.gang_sheets.models import GangSheet
 from apps.portal.order_status_presentation import handover_date_label
 from apps.portal.views_common import (
@@ -11,6 +15,7 @@ from apps.portal.views_common import (
     status_label,
 )
 from apps.production.models import ProductionJob, ProductionMachine
+from django.core.exceptions import ValidationError
 
 
 def build_production_panel_context(
@@ -25,9 +30,12 @@ def build_production_panel_context(
 ):
     from apps.billing.services.production_payment_gate import (
         order_awaits_client_payment,
-        production_start_blocked_reason,
     )
 
+    if order.billing_mode == order.BillingMode.IMMEDIATE and not order_has_captured_payment(order):
+        payment_block = production_start_blocked_reason(order)
+        if payment_block is not None:
+            raise ValidationError(payment_block)
     meterage = meterage_context_for_order(request, order, "")
     payment_block = production_start_blocked_reason(order)
     active_machines = list(ProductionMachine.objects.active().order_by("code", "name"))

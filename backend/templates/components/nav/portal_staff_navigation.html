@@ -10,9 +10,9 @@
   {% endif %}
 </div>
 
-{% if perms.production.view_productionmachine or perms.prospects.view_prospectprofile or perms.b2b_order_projects.view_b2borderproject or perms.notifications.view_emailtemplate or perms.customers.manage_customer_pricing or perms.gang_sheets.configure_gangsheet %}
+{% if perms.production.view_productionmachine or perms.prospects.view_prospectprofile or perms.b2b_order_projects.view_b2borderproject or perms.notifications.view_emailtemplate or perms.customers.manage_customer_pricing or perms.gang_sheets.configure_gangsheet or perms.billing.view_paymentgatewaysettings %}
 <details class="product-nav__more" data-product-nav-details>
-  <summary class="product-nav__more-trigger {% if nav_key == 'staff-machines' or nav_key == 'staff-access-requests' or nav_key == 'staff-order-projects' or nav_key == 'staff-email-templates' or nav_key == 'staff-default-volume-discounts' or nav_key == 'staff-default-catalog-pricing' or nav_key == 'staff-gang-sheet-settings' %}is-active{% endif %}">
+  <summary class="product-nav__more-trigger {% if nav_key == 'staff-machines' or nav_key == 'staff-access-requests' or nav_key == 'staff-order-projects' or nav_key == 'staff-email-templates' or nav_key == 'staff-default-volume-discounts' or nav_key == 'staff-default-catalog-pricing' or nav_key == 'staff-gang-sheet-settings' or nav_key == 'staff-payment-settings' %}is-active{% endif %}">
     <span>
       {% if nav_key == 'staff-machines' %}Parc machine
       {% elif nav_key == 'staff-access-requests' %}Demandes d’accès
@@ -21,6 +21,7 @@
       {% elif nav_key == 'staff-default-volume-discounts' %}Remises par défaut
       {% elif nav_key == 'staff-default-catalog-pricing' %}Grille tarifaire
       {% elif nav_key == 'staff-gang-sheet-settings' %}Réglages de laize
+      {% elif nav_key == 'staff-payment-settings' %}Paiements en ligne
       {% else %}Réglages{% endif %}
     </span>
     <span class="product-nav__chevron" aria-hidden="true"></span>
@@ -34,6 +35,7 @@
     {% if perms.customers.manage_customer_pricing %}<a class="product-nav__more-link {% if nav_key == 'staff-default-catalog-pricing' %}is-active{% endif %}" {% if nav_key == 'staff-default-catalog-pricing' %}aria-current="page"{% endif %} href="{% url 'portal:staff-default-catalog-pricing-settings' %}"><strong>Grille tarifaire</strong><small>Prix DTF au m² et forfait fichier</small></a>{% endif %}
     {% if perms.customers.manage_customer_pricing %}<a class="product-nav__more-link {% if nav_key == 'staff-default-volume-discounts' %}is-active{% endif %}" {% if nav_key == 'staff-default-volume-discounts' %}aria-current="page"{% endif %} href="{% url 'portal:staff-default-volume-discount-settings' %}"><strong>Remises par défaut</strong><small>Grille de référence et messages dashboard</small></a>{% endif %}
     {% if perms.gang_sheets.configure_gangsheet %}<a class="product-nav__more-link {% if nav_key == 'staff-gang-sheet-settings' %}is-active{% endif %}" {% if nav_key == 'staff-gang-sheet-settings' %}aria-current="page"{% endif %} href="{% url 'portal:staff-gang-sheet-settings' %}"><strong>Réglages de laize</strong><small>Configurer les planches Atelier</small></a>{% endif %}
+    {% if perms.billing.view_paymentgatewaysettings %}<a class="product-nav__more-link {% if nav_key == 'staff-payment-settings' %}is-active{% endif %}" {% if nav_key == 'staff-payment-settings' %}aria-current="page"{% endif %} href="{% url 'portal:staff-payment-settings' %}"><strong>Paiements en ligne</strong><small>Connecter et activer PayPal ou Stripe</small></a>{% endif %}
   </div>
 </details>
 {% endif %}

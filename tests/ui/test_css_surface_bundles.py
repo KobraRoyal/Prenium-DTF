@@ -48,6 +48,7 @@ def test_css_entrypoints_keep_shared_and_surface_rules_separate() -> None:
     assert "prospect-tunnel.css" not in portal_core_entry
     assert "prospect-journey.css" in portal_entry
     assert "gang-sheet.css" in read(CSS_DIR / "entries" / "portal-client.css")
+    assert "client-billing-pay.css" in read(CSS_DIR / "entries" / "portal-client.css")
     assert "gang-sheet-studio.css" in studio_entry
 
 

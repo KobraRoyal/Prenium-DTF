@@ -121,6 +121,154 @@ function addMonthsClamped(date, offset) {
   );
 }
 
+const POPOVER_GAP = 8;
+const POPOVER_MARGIN = 12;
+const POPOVER_HOMES = new WeakMap();
+
+function viewportTopMin() {
+  const header = document.querySelector(".product-header, .ui-foundation-nav");
+  const bottom = header instanceof HTMLElement ? header.getBoundingClientRect().bottom : 0;
+  return Math.max(POPOVER_MARGIN, bottom + 8);
+}
+
+function datePopoverHost(node) {
+  const dialog = node.closest("dialog");
+  return dialog instanceof HTMLDialogElement ? dialog : document.body;
+}
+
+function portDatePopover(popover) {
+  if (popover.dataset.ported === "true") {
+    return;
+  }
+  const host = datePopoverHost(popover);
+  const marker = document.createComment("product-date-popover-home");
+  popover.after(marker);
+  POPOVER_HOMES.set(popover, marker);
+  host.append(popover);
+  popover.dataset.ported = "true";
+  popover.classList.add("is-ported");
+}
+
+function unportDatePopover(popover) {
+  const marker = POPOVER_HOMES.get(popover);
+  if (marker?.parentNode) {
+    marker.parentNode.insertBefore(popover, marker);
+    marker.remove();
+  }
+  POPOVER_HOMES.delete(popover);
+  popover.dataset.ported = "false";
+  popover.classList.remove("is-ported");
+}
+
+function placeDatePopover(root, trigger, popover) {
+  if (popover.hidden) {
+    return;
+  }
+  const triggerRect = trigger.getBoundingClientRect();
+  const topMin = viewportTopMin();
+  const maxWidth = Math.max(16, window.innerWidth - POPOVER_MARGIN * 2);
+  const width = Math.min(
+    Math.max(popover.offsetWidth, triggerRect.width, 280),
+    maxWidth,
+  );
+  popover.style.position = "fixed";
+  popover.style.zIndex = "200";
+  popover.style.width = `${width}px`;
+  popover.style.maxWidth = `calc(100vw - ${POPOVER_MARGIN * 2}px)`;
+  popover.style.right = "auto";
+  popover.style.bottom = "auto";
+  popover.style.margin = "0";
+  popover.style.top = "0px";
+  popover.style.left = "0px";
+  const origin = popover.getBoundingClientRect();
+
+  const spaceBelow = window.innerHeight - triggerRect.bottom - POPOVER_MARGIN;
+  const spaceAbove = triggerRect.top - topMin;
+  const estimatedHeight = Math.min(popover.scrollHeight || 320, 360);
+  const openUp = spaceBelow < estimatedHeight + POPOVER_GAP && spaceAbove > spaceBelow;
+  root.classList.toggle("is-open-up", openUp);
+
+  const available = Math.max(12 * 16, (openUp ? spaceAbove : spaceBelow) - POPOVER_GAP);
+  popover.style.maxHeight = `${available}px`;
+  popover.style.overflowY = "auto";
+  popover.style.overscrollBehavior = "contain";
+
+  const popHeight = popover.offsetHeight;
+  let top = openUp
+    ? triggerRect.top - POPOVER_GAP - popHeight
+    : triggerRect.bottom + POPOVER_GAP;
+  top = Math.min(
+    Math.max(topMin, top),
+    Math.max(topMin, window.innerHeight - popHeight - POPOVER_MARGIN),
+  );
+
+  let left = triggerRect.left;
+  if (triggerRect.left + width > window.innerWidth - POPOVER_MARGIN) {
+    left = triggerRect.right - width;
+  }
+  left = Math.min(
+    Math.max(POPOVER_MARGIN, left),
+    window.innerWidth - width - POPOVER_MARGIN,
+  );
+
+  popover.style.top = `${top - origin.top}px`;
+  popover.style.left = `${left - origin.left}px`;
+}
+
+function resetDatePopover(root, popover) {
+  root.classList.remove("is-open-up");
+  popover.style.position = "";
+  popover.style.top = "";
+  popover.style.left = "";
+  popover.style.right = "";
+  popover.style.bottom = "";
+  popover.style.width = "";
+  popover.style.maxWidth = "";
+  popover.style.maxHeight = "";
+  popover.style.overflowY = "";
+  popover.style.overscrollBehavior = "";
+  popover.style.margin = "";
+  popover.style.zIndex = "";
+}
+
+function isOutsideDatePicker(event, root, popover) {
+  const target = event.target;
+  if (!(target instanceof Node)) {
+    return true;
+  }
+  return !root.contains(target) && !popover.contains(target);
+}
+
+function bindFixedDatePopover(root, trigger, popover) {
+  const sync = () => {
+    if (!root.isConnected) {
+      if (popover.dataset.ported === "true") {
+        resetDatePopover(root, popover);
+        unportDatePopover(popover);
+        popover.hidden = true;
+      }
+      return;
+    }
+    if (!root.classList.contains("is-open") || popover.hidden) {
+      return;
+    }
+    placeDatePopover(root, trigger, popover);
+  };
+  window.addEventListener("resize", sync);
+  window.addEventListener("scroll", sync, true);
+  return {
+    afterOpen() {
+      portDatePopover(popover);
+      placeDatePopover(root, trigger, popover);
+      window.requestAnimationFrame(sync);
+    },
+    afterClose() {
+      resetDatePopover(root, popover);
+      unportDatePopover(popover);
+    },
+  };
+}
+
 function initProductMonthPicker(root) {
   const hidden = root.querySelector('input[type="hidden"]');
   const trigger = root.querySelector("[data-date-trigger]");
@@ -136,6 +284,8 @@ function initProductMonthPicker(root) {
     return;
   }
 
+  const placement = bindFixedDatePopover(root, trigger, popover);
+  root.addEventListener("product-date-picker:force-close", () => close());
   const placeholder = root.dataset.placeholder || "Choisir un mois";
   const now = new Date();
   const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -261,6 +411,7 @@ function initProductMonthPicker(root) {
     popover.hidden = false;
     root.classList.add("is-open");
     trigger.setAttribute("aria-expanded", "true");
+    placement.afterOpen();
     focusMonth(focusTarget);
   }
 
@@ -268,6 +419,7 @@ function initProductMonthPicker(root) {
     popover.hidden = true;
     root.classList.remove("is-open");
     trigger.setAttribute("aria-expanded", "false");
+    placement.afterClose();
     if (restoreFocus) {
       trigger.focus();
     }
@@ -358,7 +510,7 @@ function initProductMonthPicker(root) {
     if (!(event.target instanceof Element) || !root.classList.contains("is-open")) {
       return;
     }
-    if (!root.contains(event.target)) {
+    if (isOutsideDatePicker(event, root, popover)) {
       close();
     }
   });
@@ -393,6 +545,8 @@ function initProductDatePicker(root) {
     return;
   }
 
+  const placement = bindFixedDatePopover(root, trigger, popover);
+  root.addEventListener("product-date-picker:force-close", () => close());
   const placeholder = root.dataset.placeholder || "Choisir une date";
   const minDate = startOfDay(new Date());
   let viewDate = parseISODate(hidden.value) || new Date();
@@ -529,6 +683,7 @@ function initProductDatePicker(root) {
     popover.hidden = false;
     root.classList.add("is-open");
     trigger.setAttribute("aria-expanded", "true");
+    placement.afterOpen();
     focusCalendar(focusTarget);
   }
 
@@ -536,6 +691,7 @@ function initProductDatePicker(root) {
     popover.hidden = true;
     root.classList.remove("is-open");
     trigger.setAttribute("aria-expanded", "false");
+    placement.afterClose();
     if (restoreFocus) {
       trigger.focus();
     }
@@ -646,7 +802,7 @@ function initProductDatePicker(root) {
     if (!(event.target instanceof Element) || !root.classList.contains("is-open")) {
       return;
     }
-    if (!root.contains(event.target)) {
+    if (isOutsideDatePicker(event, root, popover)) {
       close();
     }
   });
@@ -676,6 +832,12 @@ if (document.readyState === "loading") {
 } else {
   mountProductDatePickers();
 }
+
+document.body.addEventListener("htmx:beforeSwap", () => {
+  document.querySelectorAll("[data-product-date-picker].is-open").forEach((root) => {
+    root.dispatchEvent(new Event("product-date-picker:force-close"));
+  });
+});
 
 document.body.addEventListener("htmx:afterSwap", (event) => {
   const target = event.detail?.target;

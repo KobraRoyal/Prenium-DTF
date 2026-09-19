@@ -156,12 +156,13 @@ audités et aucun identifiant Drive n’est envoyé au portail client.
 Une planche autonome validée crée, sur action explicite et idempotente, un `B2BOrderProject` en
 mode `READY_GANG_SHEET`. Ce projet contient exactement une ligne et un nouvel `Asset` : le PDF
 final produit par le serveur. Les fichiers sources restent dans la galerie et ne sont pas recopiés
-dans la commande. Son empreinte et ses octets sont conservés. Le PDF HD repasse ensuite dans le
-contrôle qualité du tunnel classique afin de produire l’aperçu et de détecter les détails fins et
-les semi-transparences. Sa résolution globale n’est toutefois pas déduite du plus grand visuel
-embarqué et aucun DPI artificiel n’est annoncé pour la planche : le contrôle distingue les
-éléments vectoriels des images raster conservées à leur définition source. Le client choisit la
-couleur du support, valide le contrôle, puis transmet le projet avec le tunnel habituel.
+dans la commande. Son empreinte et ses octets sont conservés. Le PDF HD est rattaché au projet
+pour le workflow Atelier ; le client ne revalide plus ce livrable dans une fiche projet séparée.
+Dans le Studio, il choisit la **couleur du support**, confirme **les visuels présents sur la
+planche**, puis transmet / paie via `.../gang-sheets/<id>/checkout/`. Le devis TTC
+(impression, préparation, port, TVA) est affiché dans l’inspecteur et se recalcule
+au changement de livraison sans défiler. La page
+`create-order/` reste un repli technique, plus liée depuis l’éditeur.
 
 L’asset final est relié à `GangSheet.production_asset`. Le portail client peut en afficher l’aperçu
 basse définition mais refuse son téléchargement et masque les actions de remplacement/suppression.
@@ -170,19 +171,21 @@ d’une image interne du PDF, tout en conservant les overlays de finesse et de s
 ainsi que l’obligation de couleur support. Le PDF HD reste servi uniquement au staff autorisé. Lors du
 checkout, la commande référence la même `AssetVersion`, donc le même fichier, puis la planche
 validée est rattachée à la commande et devient visible dans le panneau Production Atelier.
-Lorsque `GOOGLE_DRIVE_SYNC_ENABLED` est actif, le checkout refuse la création de la commande tant
+Une planche sauvegardée reste un catalogue : le Studio conserve le CTA « Je commande » après
+une commande existante. Un nouveau projet `READY_GANG_SHEET` réutilise `production_asset`
+(même fichier HD) ; les commandes précédentes ne sont pas écrasées. Lorsque `GOOGLE_DRIVE_SYNC_ENABLED` est actif, le checkout refuse la création de la commande tant
 que la révision HD courante n’est pas marquée synchronisée sur Drive. L’upload de commande conserve
 ensuite son workflow Drive historique dans l’arborescence `Commandes/`.
 
-Dès que le PDF HD est sécurisé dans un projet `READY_GANG_SHEET`, le client peut retirer la Gang
-Sheet de sa bibliothèque, y compris avant la création effective de la commande. La suppression
-n’est autorisée que si la planche validée référence l’asset de production réellement porté par une
-ligne de ce projet. Lorsque Google Drive est actif, la révision HD courante doit également être
-marquée synchronisée. Le projet, l’`AssetVersion` HD et, lorsqu’ils existent, la commande et son
-`OrderUpload` restent conservés. Le caractère non modifiable du livrable est alors dérivé du mode
-`READY_GANG_SHEET`, et non plus de la seule présence de la Gang Sheet supprimée. La copie locale
-propre au builder est nettoyée ; les artefacts déjà transmis au workflow de commande, à Drive et à
-la production ne sont pas supprimés.
+Dès que le PDF HD est sécurisé, le client peut retirer la Gang Sheet de sa bibliothèque, y
+compris après une commande. La bibliothèque n’est pas un historique de commandes : les cartes
+restent uniformes et mènent au studio. Lorsque Google Drive est actif, la révision HD courante
+doit d’abord être marquée synchronisée. Le projet, l’`AssetVersion` HD et, lorsqu’ils existent,
+la commande et son `OrderUpload` restent conservés. Le caractère non modifiable du livrable HD
+est dérivé du mode `READY_GANG_SHEET` / de l’asset de production, et non plus de la seule
+présence de la Gang Sheet. La copie locale propre au builder est nettoyée ; les artefacts déjà
+transmis au workflow de commande, à Drive et à la production ne sont pas supprimés. Sur une
+recommande, la quantité reste éditable même si la ligne porte le PDF HD.
 
 ## Alternatives refusées
 

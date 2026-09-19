@@ -7,7 +7,7 @@
 {% block portal_content %}
 {{ gang_sheet_state|json_script:"gang-sheet-initial-state" }}
 <div
-  class="gang-editor"
+  class="gang-editor{% if sheet.status == 'validated' or sheet.order_id %} is-checkout{% endif %}"
   data-gang-sheet-editor
   data-state-url="{% url 'portal:client-gang-sheet-state' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-layout-url="{% url 'portal:client-gang-sheet-layout' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
@@ -22,6 +22,8 @@
   data-create-order-form-url="{{ create_order_project_url }}"
   data-can-edit="{{ can_edit|yesno:'true,false' }}"
   data-has-project="{{ sheet.project_id|yesno:'true,false' }}"
+  data-has-order="{{ sheet.order_id|yesno:'true,false' }}"
+  data-quote-url="{% url 'portal:client-gang-sheet-quote' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}"
   data-prep-fee-eur="{{ gang_sheet_prep_fee_eur }}"
 >
   <input type="hidden" data-csrf value="{{ csrf_token }}">
@@ -231,15 +233,15 @@
     <aside class="gang-editor__inspector" id="gang-editor-settings" role="tabpanel" data-editor-panel="settings" aria-label="Propriétés et validation" aria-labelledby="gang-editor-tab-settings">
       <div class="gang-editor__panel-label">
         <span class="gang-editor__panel-label-icon" aria-hidden="true">{% include "portal/client/gang_sheets/partials/icon.html" with name="settings" size="16" %}</span>
-        <div><strong>Réglages</strong></div>
+        <div><strong data-inspector-panel-title>{% if sheet.status == "validated" or sheet.order_id %}Commande{% else %}Réglages{% endif %}</strong></div>
       </div>
 
-      <section class="gang-inspector-panel gang-inspector-panel--empty" data-empty-inspector>
+      <section class="gang-inspector-panel gang-inspector-panel--empty" data-empty-inspector data-composition-only>
         <h2>Sélectionnez un élément</h2>
         <p>Cliquez un visuel ou un texte, ou glissez sur la planche. <kbd>Maj</kbd> ou <kbd>⌘</kbd> ajoute à la sélection.</p>
       </section>
 
-      <section class="gang-inspector-panel gang-inspector-panel--item" data-item-inspector hidden>
+      <section class="gang-inspector-panel gang-inspector-panel--item" data-item-inspector data-composition-only hidden>
         <header class="gang-inspector-panel__head">
           <h2 data-selected-name>Visuel</h2>
         </header>
@@ -381,7 +383,7 @@
         </div>
       </section>
 
-      <section class="gang-inspector-panel gang-inspector-panel--multi" data-multi-inspector hidden>
+      <section class="gang-inspector-panel gang-inspector-panel--multi" data-multi-inspector data-composition-only hidden>
         <header class="gang-inspector-panel__head">
           <h2 data-multi-summary>2 visuels</h2>
           <p class="gang-inspector-panel__meta">Ensemble <strong data-multi-bounds>—</strong></p>
@@ -415,7 +417,7 @@
         </div>
       </section>
 
-      <section class="gang-inspector-panel gang-alignment-panel" data-alignment-panel hidden aria-label="Outils avancés de sélection">
+      <section class="gang-inspector-panel gang-alignment-panel" data-alignment-panel data-composition-only hidden aria-label="Outils avancés de sélection">
         <details class="gang-advanced-tools" data-advanced-selection-tools>
           <summary>
             <span class="gang-inspector-section__title">Aligner et répartir</span>
@@ -488,7 +490,7 @@
         </details>
       </section>
 
-      <section class="gang-inspector-panel gang-spacing-panel" aria-label="Réglages avancés d’auto-imposition">
+      <section class="gang-inspector-panel gang-spacing-panel" data-composition-only aria-label="Réglages avancés d’auto-imposition">
         <details class="gang-advanced-tools" data-advanced-spacing-tools>
           <summary>
             <span class="gang-inspector-section__title">Espacement auto-imposition</span>
@@ -520,12 +522,12 @@
       </section>
 
       <section class="gang-inspector-panel gang-inspector-panel--validation" data-validation-panel>
-        <div class="gang-validation-heading">
+        <div class="gang-validation-heading" data-composition-only>
           <h2 class="gang-inspector-section__title">Finaliser</h2>
           <p class="ui-field-help" data-validation-lead>Prépare le rendu HD atelier, puis confirme la composition.</p>
         </div>
-        <ul data-issues-list><li class="is-ok">Aucune anomalie de placement.</li></ul>
-        <div data-preflight-panel>
+        <ul data-issues-list data-composition-only><li class="is-ok">Aucune anomalie de placement.</li></ul>
+        <div data-preflight-panel data-composition-only>
           <h3 class="gang-inspector-section__title">Qualité des fichiers</h3>
           <p class="ui-field-help" data-preflight-summary>Contrôle à la taille d’impression.</p>
           <ul data-preflight-issues></ul>
@@ -537,22 +539,8 @@
           <p class="ui-field-help">Les espacements d’auto-imposition sont des préférences de placement. Le contrôle qualité du PDF et du support reste requis à la commande.</p>
         </div>
         <div class="gang-validation-actions">
-          <div class="ui-field-group gang-sheet-quantity" data-sheet-quantity-field hidden>
-            <label class="ui-label" for="id-sheet-quantity">Exemplaires de planche</label>
-            <input
-              class="ui-input"
-              id="id-sheet-quantity"
-              type="number"
-              min="1"
-              max="200"
-              step="1"
-              value="1"
-              inputmode="numeric"
-              data-sheet-quantity
-              aria-label="Nombre d’exemplaires de la planche"
-            >
-          </div>
-          <div class="gang-sheet-order-quote" data-sheet-order-quote role="status" aria-live="polite" aria-atomic="true">
+          <div class="gang-inspector-price-dock" data-composition-only>
+          <div class="gang-sheet-order-quote" data-sheet-order-quote role="status" aria-live="polite" aria-atomic="true"{% if sheet.status == "validated" or sheet.order_id %} hidden{% endif %}>
             <div class="gang-sheet-order-quote__summary">
               <span class="gang-sheet-order-quote__label" data-sheet-order-quote-label>Total estimé HT</span>
               <strong class="gang-sheet-order-quote__total" data-sheet-order-quote-total>—</strong>
@@ -563,17 +551,9 @@
             {% include "portal/client/gang_sheets/partials/icon.html" with name="check" size="16" %}
             <span data-validate-label>Confirmer la composition</span>
           </button>
-          {% if sheet.project %}
-          <a class="ui-btn ui-btn-primary" data-open-order-project href="{% url 'portal:client-order-project-detail' customer_public_id=customer.public_id project_public_id=sheet.project.public_id %}">Continuer vers la commande →</a>
-          {% else %}
-          <a
-            class="ui-btn {% if can_create_order and can_edit %}ui-btn-primary{% else %}ui-btn-secondary is-disabled{% endif %}"
-            data-create-order-project
-            href="{% if can_create_order and can_edit %}{{ create_order_project_url }}{% else %}#{% endif %}"
-            {% if not can_create_order or not can_edit %}aria-disabled="true" tabindex="-1" hidden{% endif %}
-          >Créer la commande →</a>
-          {% endif %}
-          <a class="ui-btn ui-btn-ghost" data-download-preview href="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}" hidden>
+          </div>
+          {% include "portal/client/gang_sheets/partials/studio_checkout.html" %}
+          <a class="ui-btn ui-btn-ghost" data-download-preview data-composition-only href="{% url 'portal:client-gang-sheet-preview-download' customer_public_id=customer.public_id sheet_public_id=sheet.public_id %}" hidden>
             {% include "portal/client/gang_sheets/partials/icon.html" with name="download" size="16" %}
             Télécharger l’aperçu
           </a>

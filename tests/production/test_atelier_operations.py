@@ -8,6 +8,7 @@ from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
+from apps.production.services.operations import AtelierOperationsService
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.shipping.models import Shipment
 from apps.shipping.services.sendcloud import SendcloudOrderResult, ShipmentService
@@ -161,7 +162,7 @@ def test_console_lists_jobs_and_searches_by_of_without_detail_navigation():
 
 
 @pytest.mark.django_db
-def test_console_explains_payment_prerequisite_instead_of_offering_start():
+def test_console_hides_unpaid_immediate_order():
     actor, client = staff_client(
         email="payment-gate-operations@example.com",
         permissions=TRANSITION_PERMISSIONS,
@@ -175,9 +176,9 @@ def test_console_explains_payment_prerequisite_instead_of_offering_start():
 
     assert response.status_code == 200
     html = response.content.decode()
-    assert "Démarrage en attente" in html
-    assert "Résoudre le prérequis" in html
+    assert "Commande identifiée" not in html
     assert "Démarrer la production" not in html
+    assert AtelierOperationsService()._base_queryset(include_shipping=False).count() == 0
 
 
 @pytest.mark.django_db
