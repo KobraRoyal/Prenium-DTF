@@ -7,12 +7,6 @@
 <div class="portal-page portal-page--client account-profile-page client-profile-page account-team-page">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_team.html" head_labelledby="client-team-heading" title="Équipe" subtitle="Membres actifs et invitations pour votre organisation." %}
 
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert {% if message.tags == 'success' %}alert--success{% else %}alert--danger{% endif %}" role="status">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
-
   <section class="portal-page-surface staff-customer-detail-surface" aria-labelledby="client-team-heading">
     {% include "portal/partials/profile_client_focus.html" %}
   </section>

@@ -335,7 +335,10 @@ class ProductPolishUITests(SimpleTestCase):
         ]
         alert_paths = [
             TEMPLATES_DIR / "portal" / "client" / "order_detail.html",
+        ]
+        toast_paths = [
             TEMPLATES_DIR / "portal" / "client" / "team.html",
+            TEMPLATES_DIR / "portal" / "layout.html",
         ]
         forbidden = [
             "dui-alert",
@@ -361,6 +364,16 @@ class ProductPolishUITests(SimpleTestCase):
             markup = source(path)
             with self.subTest(path=path.name):
                 self.assertIn("alert--", markup)
+                for marker in forbidden:
+                    self.assertNotIn(marker, markup)
+
+        for path in toast_paths:
+            markup = source(path)
+            with self.subTest(path=path.name):
+                if path.name == "layout.html":
+                    self.assertIn("django_messages_toasts", markup)
+                else:
+                    self.assertNotIn("for message in messages", markup)
                 for marker in forbidden:
                     self.assertNotIn(marker, markup)
 

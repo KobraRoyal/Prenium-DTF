@@ -7,14 +7,6 @@
 <div class="portal-page portal-page--staff staff-access-detail-page">
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_access_request_detail.html" head_labelledby="staff-access-title" title=profile.company subtitle="Demande d'accès professionnelle — examen et décision." %}
 
-{% if messages %}
-{% for message in messages %}
-<div class="alert {% if message.tags == 'success' %}alert--success{% else %}alert--danger{% endif %} workflow-panel__feedback mb-4" role="status">
-  <p class="m-0">{{ message }}</p>
-</div>
-{% endfor %}
-{% endif %}
-
 <section class="portal-page-surface staff-access-detail-identity" aria-labelledby="staff-access-title">
   <header class="staff-access-focus" aria-labelledby="staff-access-title">
     <div class="staff-access-focus__identity">

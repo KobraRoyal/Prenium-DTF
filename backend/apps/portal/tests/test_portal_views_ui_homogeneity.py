@@ -441,15 +441,20 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertNotIn("gang-sheet-filters", source)
 
     def test_staff_focus_alerts_live_outside_page_surface(self) -> None:
+        # Les flash Django passent par le layout (toasts) ; seuls les templates
+        # qui gardent des alertes inline doivent les placer avant la surface.
         for path in (
             "portal/staff/order_detail.html",
-            "portal/staff/access_requests/detail.html",
         ):
             with self.subTest(path=path):
                 source = template_source(path)
                 surface_index = source.index("portal-page-surface")
                 alert_index = source.index("alert")
                 self.assertLess(alert_index, surface_index, f"{path} : alerte dans la surface")
+
+        access_detail = template_source("portal/staff/access_requests/detail.html")
+        self.assertNotIn("for message in messages", access_detail)
+        self.assertNotIn("workflow-panel__feedback", access_detail)
 
     def test_default_volume_discounts_exposes_two_surfaces(self) -> None:
         source = template_source("portal/staff/customers/default_volume_discounts.html")

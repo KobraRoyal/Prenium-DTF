@@ -244,6 +244,50 @@ def client_order_panel_label(panel_slug):
     return CLIENT_ORDER_PANEL_LABELS.get(str(panel_slug or "").strip(), "Détail")
 
 
+@register.inclusion_tag("components/ui/django_messages_toasts.html", takes_context=True)
+def django_messages_toasts(context):
+    """Consomme les flash Django (dédupliqués) pour affichage toast unique.
+
+    Sur les pages Équipe (``flash_message_scope="team"``), seuls les flash tagués
+    ``team`` sont affichables ; le reste (paiement, compte client, etc.) est
+    consommé silencieusement pour ne pas polluer « Gérer l’équipe ».
+    """
+    request = context.get("request")
+    if request is None:
+        return {"flash_toasts": []}
+
+    from django.contrib import messages
+
+    from apps.portal.views_payments import user_facing_payment_error
+
+    scope = str(context.get("flash_message_scope") or "").strip()
+    items: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for message in messages.get_messages(request):
+        text = str(message.message).strip()
+        if not text:
+            continue
+        tags = str(message.tags or "")
+        if scope == "team" and "team" not in tags.split():
+            continue
+        # Nettoie d’anciens flash paiement encore en session (codes prestataire bruts).
+        text = user_facing_payment_error(text)
+        if "error" in tags:
+            variant = "error"
+        elif "success" in tags:
+            variant = "success"
+        elif "warning" in tags:
+            variant = "warning"
+        else:
+            variant = "info"
+        key = (variant, text)
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append({"message": text, "variant": variant})
+    return {"flash_toasts": items}
+
+
 @register.inclusion_tag("components/portal/client_refs.html")
 def client_order_refs(order, variant="row"):
     return {

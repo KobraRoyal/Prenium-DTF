@@ -7,12 +7,6 @@
 <div class="portal-page portal-page--staff account-profile-page staff-profile-page account-team-page">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_team.html" head_labelledby="staff-team-heading" title="Équipe" subtitle="Membres actifs et invitations pour l'espace Atelier." %}
 
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert {% if message.tags == 'success' %}alert--success{% else %}alert--danger{% endif %}" role="status">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
-
   <section class="portal-page-surface staff-customer-detail-surface" aria-labelledby="staff-team-heading">
     {% include "portal/partials/profile_staff_focus.html" %}
   </section>

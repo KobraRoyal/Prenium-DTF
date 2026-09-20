@@ -341,6 +341,7 @@ class ClientTeamView(ClientTeamManagerRequiredMixin, View):
                 "nav_mode": "client",
                 "nav_key": "client-team",
                 "account_section": "team",
+                "flash_message_scope": "team",
             },
         )
 
@@ -384,9 +385,9 @@ class ClientTeamInviteView(ClientTeamManagerRequiredMixin, View):
             return with_toast(response, message, variant)
 
         if variant == "success":
-            messages.success(request, message)
+            messages.success(request, message, extra_tags="team")
         else:
-            messages.error(request, message)
+            messages.error(request, message, extra_tags="team")
         return redirect("portal:client-team", customer_public_id=self.customer.public_id)
 
 
@@ -399,9 +400,13 @@ class ClientTeamInvitationRevokeView(ClientTeamManagerRequiredMixin, View):
                 actor=request.user,
                 ip_address=_client_ip(request),
             )
-            messages.success(request, "Invitation révoquée.")
+            messages.success(request, "Invitation révoquée.", extra_tags="team")
         except (CustomerInvitationError, PermissionDenied):
-            messages.error(request, "Cette invitation ne peut pas être révoquée.")
+            messages.error(
+                request,
+                "Cette invitation ne peut pas être révoquée.",
+                extra_tags="team",
+            )
         return redirect("portal:client-team", customer_public_id=self.customer.public_id)
 
 
@@ -417,9 +422,13 @@ class ClientTeamMemberRoleView(ClientTeamManagerRequiredMixin, View):
                     role=form.cleaned_data["role"],
                     ip_address=_client_ip(request),
                 )
-                messages.success(request, "Rôle mis à jour.")
+                messages.success(request, "Rôle mis à jour.", extra_tags="team")
             except (CustomerInvitationError, PermissionDenied):
-                messages.error(request, "Ce rôle ne peut pas être modifié.")
+                messages.error(
+                    request,
+                    "Ce rôle ne peut pas être modifié.",
+                    extra_tags="team",
+                )
         return redirect("portal:client-team", customer_public_id=self.customer.public_id)
 
 
@@ -432,7 +441,15 @@ class ClientTeamMemberDeactivateView(ClientTeamManagerRequiredMixin, View):
                 actor=request.user,
                 ip_address=_client_ip(request),
             )
-            messages.success(request, "Accès du collaborateur désactivé.")
+            messages.success(
+                request,
+                "Accès du collaborateur désactivé.",
+                extra_tags="team",
+            )
         except (CustomerInvitationError, PermissionDenied):
-            messages.error(request, "Cet accès ne peut pas être désactivé.")
+            messages.error(
+                request,
+                "Cet accès ne peut pas être désactivé.",
+                extra_tags="team",
+            )
         return redirect("portal:client-team", customer_public_id=self.customer.public_id)

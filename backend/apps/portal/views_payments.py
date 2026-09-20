@@ -24,6 +24,26 @@ def _absolute_portal_url(path: str) -> str:
     return f"{settings.PUBLIC_BASE_URL.rstrip('/')}{path}"
 
 
+_PAYMENT_PROVIDER_GONE_MARKERS = (
+    "RESOURCE_NOT_FOUND",
+    "INVALID_RESOURCE_ID",
+    "NO SUCH CHECKOUT",
+)
+
+
+def user_facing_payment_error(error: DjangoValidationError | Exception | str) -> str:
+    """Message client lisible ; jamais de code brut prestataire (RESOURCE_NOT_FOUND, etc.)."""
+    if isinstance(error, DjangoValidationError) and hasattr(error, "messages"):
+        message = "; ".join(str(item) for item in error.messages)
+    else:
+        message = str(error)
+    message = message.strip()
+    upper = message.upper()
+    if any(marker in upper for marker in _PAYMENT_PROVIDER_GONE_MARKERS):
+        return "Paiement non validé. Vous pouvez relancer un nouveau règlement."
+    return message or "Le paiement n'a pas pu être confirmé. Réessayez."
+
+
 def client_order_billing_landing_url(
     *,
     customer_public_id,
@@ -146,7 +166,7 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
             messages.info(request, "Le prestataire de paiement est temporairement indisponible.")
             return HttpResponseRedirect(billing_url)
         except DjangoValidationError as error:
-            message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+            message = user_facing_payment_error(error)
             messages.error(request, message)
             response = HttpResponseRedirect(billing_url)
             return with_toast(response, message=message, variant="error")
@@ -274,7 +294,7 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
             )
             return HttpResponseRedirect(billing_url)
         except DjangoValidationError as error:
-            message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+            message = user_facing_payment_error(error)
             messages.error(request, message)
             response = HttpResponseRedirect(billing_url)
             return with_toast(response, message=message, variant="error")
