@@ -317,3 +317,34 @@ def test_visual_count_update_requires_order_change_permission():
     assert order.meterage_override_linear_m is None
     assert order.uploads.get().external_visual_count == 1
     assert not AuditLogEntry.objects.filter(action="order.external_visual_count_updated").exists()
+
+
+@pytest.mark.django_db
+def test_frozen_meterage_empty_confirm_is_noop_when_already_resolved():
+    """Paiement lancé : confirmation vide OK si métrage déjà connu (workflow Atelier)."""
+    from apps.billing.models import Payment
+    from apps.uploads.services.uploads import OrderUploadService
+
+    _, customer = client_scope("frozen-confirm")
+    customer.default_billing_mode = Order.BillingMode.IMMEDIATE
+    customer.save(update_fields=["default_billing_mode"])
+    actor = staff_user()
+    order = ExternalOrderService().create_staff_order(
+        customer=customer,
+        actor=actor,
+        name="Lot figé",
+        external_url="https://example.com/lot-fige",
+        meterage_linear_m="2.5",
+        external_visual_count=2,
+    )
+    Payment.objects.create(
+        order=order, status=Payment.Status.CAPTURED, amount=order.total_amount, currency=order.currency
+    )
+    out = OrderUploadService().set_staff_order_meterage_linear_override(
+        order=order, actor=actor, raw_value="", external_visual_count=None
+    )
+    assert out.meterage_override_linear_m == Decimal("2.5")
+    with pytest.raises(ValidationError, match="paiement"):
+        OrderUploadService().set_staff_order_meterage_linear_override(
+            order=order, actor=actor, raw_value="4", external_visual_count=None
+        )

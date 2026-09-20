@@ -502,11 +502,23 @@ class OrderUploadService:
 
         Customer.objects.select_for_update().get(pk=order.customer_id)
         order = Order.objects.select_for_update().get(pk=order.pk)
-        if order.billing_mode == Order.BillingMode.IMMEDIATE and order.payments.exists():
+        from apps.orders.services.meterage import (
+            order_meterage_is_resolved,
+            order_pricing_is_payment_frozen,
+        )
+
+        raw = (raw_value or "").strip()
+        if order_pricing_is_payment_frozen(order):
+            # Tarif figé : confirmation vide OK si métrage déjà résolu (ex. Gang Sheet).
+            if (
+                order_meterage_is_resolved(order)
+                and raw == ""
+                and external_visual_count is None
+            ):
+                return order
             raise ValidationError("Le tarif est figé dès qu’un paiement a été lancé.")
         if external_visual_count is not None:
             self._set_external_visual_count(order=order, actor=actor, value=external_visual_count)
-        raw = (raw_value or "").strip()
         if raw:
             try:
                 dec = Decimal(raw.replace(",", "."))
@@ -533,7 +545,6 @@ class OrderUploadService:
         )
         order.refresh_from_db()
 
-        raw = (raw_value or "").strip()
         if raw == "":
             with transaction.atomic():
                 locked = Order.objects.select_for_update().get(pk=order.pk)

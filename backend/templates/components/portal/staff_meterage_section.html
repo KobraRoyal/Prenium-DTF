@@ -54,11 +54,15 @@
     </div>
   </form>
   {% else %}
-  {% if order.meterage_override_linear_m %}
+  {% if resolved_meterage_linear_m %}
   <p class="staff-meterage-section__readonly">
-    Métrage saisi : <strong>{{ order.meterage_override_linear_m }}</strong> m
+    {% if meterage_automatic %}Métrage automatique (Gang Sheet){% else %}Métrage saisi{% endif %}
+    : <strong>{{ resolved_meterage_linear_m }}</strong> m
     {% if order_billable_sqm_preview is not None %}→ <strong>{{ order_billable_sqm_preview }}</strong> m²{% endif %}
   </p>
+  {% if meterage_payment_frozen %}
+  <p class="muted text-sm">Tarif figé (paiement lancé) — le workflow Atelier peut continuer.</p>
+  {% endif %}
   {% endif %}
   {% if not perms.orders.change_order %}
   <div class="alert alert--warning staff-meterage-section__alert text-sm" role="status">

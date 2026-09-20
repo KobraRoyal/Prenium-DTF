@@ -525,6 +525,34 @@ def test_atelier_financial_trend_excludes_unpaid_immediate_across_customers():
 
 
 @pytest.mark.django_db
+def test_atelier_dashboard_excludes_configured_test_customer_from_stats():
+    from apps.customers.models import CustomerMembership
+
+    actor = get_user_model().objects.create_user(email="dash-noise@example.com", password="pass")
+    real_customer = Customer.objects.create(name="Client réel dashboard")
+    test_customer = Customer.objects.create(name="Compte Test Client")
+    test_user = get_user_model().objects.create_user(
+        email="client.test@prenium.local", password="pass"
+    )
+    CustomerMembership.objects.create(customer=test_customer, user=test_user)
+    real_order = create_order(customer=real_customer, actor=actor)
+    test_order = create_order(customer=test_customer, actor=actor)
+    real_order.pricing_status = Order.PricingStatus.PRICED
+    real_order.total_amount = Decimal("40.00")
+    real_order.save(update_fields=["pricing_status", "total_amount", "updated_at"])
+    test_order.pricing_status = Order.PricingStatus.PRICED
+    test_order.total_amount = Decimal("999.00")
+    test_order.save(update_fields=["pricing_status", "total_amount", "updated_at"])
+
+    dashboard = AtelierDashboardService().build_dashboard()
+    trend = AtelierDashboardService().build_financial_trend()
+
+    assert [row["order"].public_id for row in dashboard["rows"]] == [real_order.public_id]
+    assert trend["seven_day_total"] == Decimal("40.00")
+    assert trend["order_count"] == 1
+
+
+@pytest.mark.django_db
 def test_atelier_printed_meterage_trend_uses_print_record_snapshots_and_reprints():
     actor = get_user_model().objects.create_user(
         email="meterage-owner@example.com",

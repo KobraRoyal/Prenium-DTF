@@ -256,8 +256,11 @@ class ProductionPrintTrackingService:
 
     def _printed_linear_m_for_order(self, *, order: Order):
         """Fige le métrage réellement exploité par l'Atelier au moment du print."""
-        if order.meterage_override_linear_m is not None:
-            return order.meterage_override_linear_m
+        from apps.orders.services.meterage import resolved_linear_meters
+
+        resolved = resolved_linear_meters(order)
+        if resolved is not None:
+            return resolved
         printed_sqm = (
             order.items.filter(service_type=CatalogService.ServiceType.DTF_TRANSFER).aggregate(
                 total=Sum("quantity")

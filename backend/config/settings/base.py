@@ -251,6 +251,13 @@ STRIPE_WEBHOOK_TOLERANCE_SECONDS = env_int("STRIPE_WEBHOOK_TOLERANCE_SECONDS", 3
 DEFAULT_FROM_EMAIL = os.environ.get("DJANGO_DEFAULT_FROM_EMAIL", "Prenium DTF <noreply@localhost>")
 TRANSACTIONAL_EMAILS_ENABLED = env_bool("TRANSACTIONAL_EMAILS_ENABLED", True)
 INTERNAL_NOTIFICATION_EMAILS = env_list("INTERNAL_NOTIFICATION_EMAILS")
+# Comptes de recette exclus des KPI / tendances du dashboard Atelier (listes OF intactes).
+DASHBOARD_EXCLUDED_CUSTOMER_EMAILS = tuple(
+    env_list("DASHBOARD_EXCLUDED_CUSTOMER_EMAILS", "client.test@prenium.local")
+)
+DASHBOARD_EXCLUDED_CUSTOMER_NAMES = tuple(
+    env_list("DASHBOARD_EXCLUDED_CUSTOMER_NAMES", "Compte Test Client")
+)
 EMAIL_BACKEND = os.environ.get(
     "DJANGO_EMAIL_BACKEND",
     "django.core.mail.backends.smtp.EmailBackend",

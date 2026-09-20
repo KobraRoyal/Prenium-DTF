@@ -17,6 +17,11 @@ from apps.billing.services.production_payment_gate import (
 from apps.orders.models import Order
 from apps.orders.references import order_business_number, order_client_reference, order_uuid_short
 from apps.production.models import ProductionJob, ProductionPrintRecord
+from apps.production.services.dashboard_noise import (
+    exclude_dashboard_noise_jobs,
+    exclude_dashboard_noise_orders,
+    exclude_dashboard_noise_print_records,
+)
 from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
 from apps.production.services.workflow import (
@@ -39,7 +44,9 @@ class AtelierDashboardService:
     def build_dashboard(self) -> dict[str, object]:
         all_orders = list(self._unissued_orders_queryset())
         rows = [self._serialize_order(order=order) for order in all_orders]
-        queue_counts = StaffOrderListFilterService().count_by_queue(Order.objects.all())
+        queue_counts = StaffOrderListFilterService().count_by_queue(
+            exclude_dashboard_noise_orders(Order.objects.all())
+        )
         metrics = self._build_metrics(queue_counts)
         batch_service = ManufacturingOrderBatchService()
         unprinted_total = metrics["unprinted"]
@@ -65,13 +72,13 @@ class AtelierDashboardService:
         today = timezone.localdate()
         dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
         entries = {
-            day: production_ready_orders_queryset(Order.objects)
+            day: exclude_dashboard_noise_orders(production_ready_orders_queryset(Order.objects))
             .filter(status=Order.Status.SUBMITTED, created_at__date=day)
             .count()
             for day in dates
         }
         completed = {
-            day: production_ready_jobs_queryset(ProductionJob.objects)
+            day: exclude_dashboard_noise_jobs(production_ready_jobs_queryset(ProductionJob.objects))
             .filter(
                 status=ProductionJob.Status.COMPLETED,
                 updated_at__date=day,
@@ -108,7 +115,7 @@ class AtelierDashboardService:
         revenue_by_day = {day: Decimal("0.00") for day in dates}
         orders_by_day = {day: 0 for day in dates}
         priced_orders = (
-            production_ready_orders_queryset(Order.objects)
+            exclude_dashboard_noise_orders(production_ready_orders_queryset(Order.objects))
             .filter(
                 status=Order.Status.SUBMITTED,
                 pricing_status=Order.PricingStatus.PRICED,
@@ -140,9 +147,11 @@ class AtelierDashboardService:
         meterage_by_day = {day: Decimal("0.0000") for day in dates}
         prints_by_day = {day: 0 for day in dates}
         printed_meterages: list[Decimal] = []
-        print_records = ProductionPrintRecord.objects.filter(
-            printed_at__date__gte=dates[0],
-            printed_linear_m__isnull=False,
+        print_records = exclude_dashboard_noise_print_records(
+            ProductionPrintRecord.objects.filter(
+                printed_at__date__gte=dates[0],
+                printed_linear_m__isnull=False,
+            )
         ).values_list("printed_at__date", "printed_linear_m")
         for printed_on, printed_linear_m in print_records:
             if printed_on not in meterage_by_day:
@@ -199,7 +208,9 @@ class AtelierDashboardService:
         seven_day_start = today - timedelta(days=6)
         orders_url = reverse("portal:staff-order-list")
 
-        job_counts = production_ready_jobs_queryset(ProductionJob.objects).aggregate(
+        job_counts = exclude_dashboard_noise_jobs(
+            production_ready_jobs_queryset(ProductionJob.objects)
+        ).aggregate(
             blocked=Count(
                 "pk",
                 filter=Q(status=ProductionJob.Status.BLOCKED),
@@ -231,8 +242,10 @@ class AtelierDashboardService:
             ),
         )
 
-        recent_prints = ProductionPrintRecord.objects.filter(
-            printed_at__date__gte=seven_day_start,
+        recent_prints = exclude_dashboard_noise_print_records(
+            ProductionPrintRecord.objects.filter(
+                printed_at__date__gte=seven_day_start,
+            )
         )
         has_previous_print = Exists(
             ProductionPrintRecord.objects.filter(
@@ -256,12 +269,14 @@ class AtelierDashboardService:
             else Decimal("0.0")
         )
 
-        completed_durations = ProductionJob.objects.filter(
-            status=ProductionJob.Status.COMPLETED,
-            completed_at__date__gte=seven_day_start,
-            started_at__isnull=False,
-            completed_at__isnull=False,
-            completed_at__gte=F("started_at"),
+        completed_durations = exclude_dashboard_noise_jobs(
+            ProductionJob.objects.filter(
+                status=ProductionJob.Status.COMPLETED,
+                completed_at__date__gte=seven_day_start,
+                started_at__isnull=False,
+                completed_at__isnull=False,
+                completed_at__gte=F("started_at"),
+            )
         ).values_list("started_at", "completed_at")
         duration_seconds = [
             Decimal(str((completed_at - started_at).total_seconds()))
@@ -331,7 +346,7 @@ class AtelierDashboardService:
         """KPI de production destinés au responsable Atelier."""
         orders_url = reverse("portal:staff-order-list")
         today = timezone.localdate()
-        jobs = production_ready_jobs_queryset(ProductionJob.objects)
+        jobs = exclude_dashboard_noise_jobs(production_ready_jobs_queryset(ProductionJob.objects))
         completed_today = jobs.filter(
             status=ProductionJob.Status.COMPLETED,
             updated_at__date=today,
@@ -427,7 +442,7 @@ class AtelierDashboardService:
         return focus
 
     def _unissued_orders_queryset(self):
-        return (
+        return exclude_dashboard_noise_orders(
             ManufacturingOrderBatchService()
             ._unissued_queryset()
             .select_related("production_job__assigned_machine")

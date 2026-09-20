@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 
+from apps.orders.services.meterage import order_meterage_is_resolved
 from apps.portal.services.production_panel_context import build_production_panel_context
 from apps.production.models import ProductionJob
 
@@ -49,7 +50,7 @@ def build_operator_steps(
     )
 
     uses_meterage = bool(order.uses_atelier_pricing())
-    meterage_done = (not uses_meterage) or order.meterage_override_linear_m is not None
+    meterage_done = (not uses_meterage) or order_meterage_is_resolved(order)
     meterage_active = prerequisites_done and machine_ready and uses_meterage and not meterage_done
 
     print_done = production.get("print_count", 0) > 0
@@ -186,6 +187,9 @@ def build_operator_context(
             "can_set_meterage_override",
             "order_billable_sqm_preview",
             "dtf_laize_cm",
+            "resolved_meterage_linear_m",
+            "meterage_automatic",
+            "meterage_payment_frozen",
         )
         if key in production
     }

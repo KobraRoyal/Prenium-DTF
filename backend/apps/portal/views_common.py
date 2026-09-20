@@ -112,16 +112,25 @@ def staff_order_upload_rows(order):
 
 
 def can_set_meterage_override(request, order: Order) -> bool:
+    from apps.orders.services.meterage import order_pricing_is_payment_frozen
+
     return (
         order.uses_atelier_pricing()
         and order.status in (Order.Status.DRAFT, Order.Status.SUBMITTED)
         and request.user.has_perm("orders.change_order")
+        and not order_pricing_is_payment_frozen(order)
     )
 
 
 def meterage_context_for_order(request, order: Order, form_error: str = "") -> dict:
     """Champs métrage B2B (panneau Production — saisie atelier)."""
-    order_linear = getattr(order, "meterage_override_linear_m", None)
+    from apps.orders.services.meterage import (
+        order_meterage_is_resolved,
+        order_pricing_is_payment_frozen,
+        resolved_linear_meters,
+    )
+
+    order_linear = resolved_linear_meters(order)
     order_billable_sqm_preview = None
     if order_linear is not None:
         laize_cm = Decimal(int(getattr(settings, "DTF_LAIZE_CM", 55)))
@@ -130,9 +139,15 @@ def meterage_context_for_order(request, order: Order, form_error: str = "") -> d
             Decimal("0.0001"),
             rounding=ROUND_HALF_UP,
         )
+    meterage_automatic = (
+        order.meterage_override_linear_m is None and order_meterage_is_resolved(order)
+    )
     return {
         "form_error": form_error,
         "order_billable_sqm_preview": order_billable_sqm_preview,
+        "resolved_meterage_linear_m": order_linear,
+        "meterage_automatic": meterage_automatic,
+        "meterage_payment_frozen": order_pricing_is_payment_frozen(order),
         "external_order_upload": next((u for u in order.uploads.all() if u.is_external), None),
         "can_set_meterage_override": can_set_meterage_override(request, order),
         "dtf_laize_cm": int(getattr(settings, "DTF_LAIZE_CM", 55)),

@@ -594,6 +594,12 @@ class OrderPricingService:
                 ]
             )
 
+        from apps.customers.services.volume_discounts import linear_meters_from_sqm
+
+        billable_sqm = sum(shares, Decimal("0.00")).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        order.meterage_override_linear_m = linear_meters_from_sqm(billable_sqm)
+        order.save(update_fields=["meterage_override_linear_m", "updated_at"])
+
         record_event(
             action="order.gang_sheet_meterage_applied",
             actor=actor if getattr(actor, "is_authenticated", False) else None,
@@ -602,7 +608,8 @@ class OrderPricingService:
                 "order_public_id": str(order.public_id),
                 "customer_public_id": str(order.customer.public_id),
                 "surface_sqm": f"{total_sqm:.4f}",
-                "billable_sqm": f"{sum(shares, Decimal('0.00')):.4f}",
+                "billable_sqm": f"{billable_sqm:.4f}",
+                "meterage_override_linear_m": str(order.meterage_override_linear_m),
                 "sheet_count": len(sheets),
                 "upload_quantities": [int(u.quantity or 1) for u in uploads],
                 "source": source,

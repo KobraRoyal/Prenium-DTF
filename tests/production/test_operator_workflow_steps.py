@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from decimal import Decimal
 
 from apps.portal.services.atelier_operator_context import (
     active_operator_step,
@@ -90,3 +91,20 @@ def test_control_is_blocked_until_of_document_is_issued():
     assert active_operator_step(steps) == "control"
     assert steps[0]["state"] == "blocked"
     assert all(step["state"] == "pending" for step in steps[1:])
+
+
+def test_meterage_step_done_when_upload_surface_overrides_present():
+    """Gang Sheet : surfaces déjà posées sur les uploads → étape métrage faite."""
+    upload = SimpleNamespace(meterage_override_sqm=Decimal("1.1000"))
+    order = _order(meterage=None)
+    order.uploads = SimpleNamespace(all=lambda: [upload])
+
+    steps = build_operator_steps(
+        order=order,
+        job=_job(assigned=1),
+        inspection=_inspection(),
+        production=_production(require_machine=False),
+    )
+    meterage = next(step for step in steps if step["key"] == "meterage")
+    assert meterage["state"] == "done"
+    assert active_operator_step(steps) == "production"
