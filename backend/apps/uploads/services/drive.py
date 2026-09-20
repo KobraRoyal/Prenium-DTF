@@ -160,7 +160,12 @@ class GoogleDriveGateway:
             raise GoogleDriveSyncError(f"Unable to read Drive item '{file_id}'.") from error
 
     def is_active_folder(self, file_id: str) -> bool:
-        meta = self.get_file_metadata(file_id)
+        try:
+            meta = self.get_file_metadata(file_id)
+        except GoogleDriveSyncError:
+            # Erreur API non-404 (quota, 5xx, item illisible) : traiter comme inactif
+            # pour forcer une recréation plutôt qu'un échec sync permanent.
+            return False
         if meta is None:
             return False
         if meta.get("trashed"):
@@ -429,7 +434,10 @@ class OrderUploadDriveSyncService:
             return None
         sync = self.ensure_sync_record(order_upload=order_upload)
         if sync.status == OrderUploadDriveSync.Status.SYNCED and sync.drive_file_id:
-            meta = self._get_gateway().get_file_metadata(sync.drive_file_id)
+            try:
+                meta = self._get_gateway().get_file_metadata(sync.drive_file_id)
+            except GoogleDriveSyncError:
+                meta = None
             if meta is not None and not meta.get("trashed"):
                 return sync
             sync.status = OrderUploadDriveSync.Status.PENDING

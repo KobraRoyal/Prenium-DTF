@@ -32,6 +32,9 @@ Tour de contrôle Atelier : émettre les PDF OF des commandes soumises, puis con
 - contrôle Atelier : impossible tant que `of_document_issued_at` est vide ;
 - le lien HD Drive est affiché uniquement aux utilisateurs autorisés à consulter les uploads et
   uniquement lorsque la synchronisation du fichier est terminée ;
+- en atelier, un lien **Télécharger la source** (fichier local médié) reste disponible pour les
+  uploads non externes dès que l’opérateur a `view_orderupload`, y compris si Drive est en
+  attente ou en échec — même contrat d’accès que l’aperçu staff ;
 - la demande de correction réutilise `OrderUploadReviewService`, reste bornée à la commande et
   déclenche la notification client via la file transactionnelle existante ;
 - `À contrôler`, `Corrections client` et `Fichiers validés` portent uniquement sur les OF émis ;
@@ -45,12 +48,13 @@ Tour de contrôle Atelier : émettre les PDF OF des commandes soumises, puis con
 - `backend/apps/production/models.py` — `of_document_issued_at`
 - `backend/apps/production/services/manufacturing_order_batch.py`
 - `backend/apps/production/services/dashboard.py`
-- `backend/apps/portal/views_staff_reviews.py` — contexte contrôle, permission et lien HD Drive
+- `backend/apps/portal/views_staff_reviews.py` — contexte contrôle, permission, lien HD Drive et téléchargement source
 - `backend/templates/portal/staff/dashboard.html`
 - `backend/templates/portal/staff/operations/_operator_workflow.html`
 - `backend/templates/portal/staff/components/upload_correction_form.html`
 - `tests/production/test_dashboard_and_batch.py`
 - `tests/production/test_atelier_operations.py`
+- `tests/uploads/test_order_upload_reviews.py` — téléchargement source atelier + isolation croisée
 
 ## Hors périmètre
 

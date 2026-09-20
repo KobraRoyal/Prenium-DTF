@@ -77,7 +77,8 @@
           <span class="muted">{{ upload.production_specs.dimensions_label }}</span>
           {% if upload.is_external %}
 {% if has_upload_view_permission %}{% include "portal/partials/external_upload_link.html" %}{% endif %}
-{% elif upload.drive_hd_url %}
+{% else %}
+          {% if upload.drive_hd_url %}
           <a
             class="ui-inline-action"
             href="{{ upload.drive_hd_url }}"
@@ -89,6 +90,14 @@
           <span class="badge is-danger">HD Drive indisponible</span>
           {% elif has_upload_view_permission %}
           <span class="badge is-neutral">HD Drive en attente</span>
+          {% endif %}
+          {% if has_upload_view_permission %}
+          <a
+            class="ui-inline-action ui-inline-action--control"
+            href="{% url 'portal:staff-order-upload-download' order_public_id=order.public_id upload_public_id=upload.public_id %}"
+            aria-label="Télécharger le fichier source {{ upload.original_filename }}"
+          >Télécharger la source</a>
+          {% endif %}
           {% endif %}
           {% if upload.is_external %}
           {% include "portal/staff/operations/_external_file_count.html" %}

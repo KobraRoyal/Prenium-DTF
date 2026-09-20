@@ -397,30 +397,44 @@ class CustomerVolumeDiscountTierService:
         )
 
     def get_current_month_summary(self, *, customer: Customer) -> dict[str, object]:
-        """Synthèse du volume DTF du mois civil courant (encours ou comptant payé)."""
+        """Synthèse du volume DTF du mois civil courant (encours ou comptant payé).
+
+        Compte encours : volume des commandes différées éligibles. Si aucune n’est
+        encore tarifée mais que des commandes comptant du mois sont déjà payées
+        (mix fréquent en recette / bascule), le dashboard bascule sur le volume
+        payé prospectif pour ne pas afficher un compteur à zéro trompeur.
+        """
         from apps.catalog.models import CatalogService
         from apps.orders.models import Order, OrderLine
 
         month_start, _next_month, starts_at, ends_at = month_bounds(timezone.localdate())
-        is_immediate = is_cash_volume_customer(customer)
-        if is_immediate:
-            eligible_orders = paid_immediate_orders_qs(
-                customer=customer,
-                starts_at=starts_at,
-                ends_at=ends_at,
-            )
+        paid_immediate = paid_immediate_orders_qs(
+            customer=customer,
+            starts_at=starts_at,
+            ends_at=ends_at,
+        )
+        deferred_eligible = Order.objects.filter(
+            customer=customer,
+            billing_mode=Order.BillingMode.DEFERRED,
+            pricing_status=Order.PricingStatus.PRICED,
+            billing_statement__isnull=True,
+            status=Order.Status.SUBMITTED,
+            created_at__gte=starts_at,
+            created_at__lt=ends_at,
+        )
+        use_prospective = is_cash_volume_customer(customer)
+        if not use_prospective and not deferred_eligible.exists() and paid_immediate.exists():
+            use_prospective = True
+
+        if use_prospective:
+            eligible_orders = paid_immediate
             policy = "prospective"
+            application_scope = IMMEDIATE_APPLICATION_SCOPE
         else:
-            eligible_orders = Order.objects.filter(
-                customer=customer,
-                billing_mode=Order.BillingMode.DEFERRED,
-                pricing_status=Order.PricingStatus.PRICED,
-                billing_statement__isnull=True,
-                status=Order.Status.SUBMITTED,
-                created_at__gte=starts_at,
-                created_at__lt=ends_at,
-            )
+            eligible_orders = deferred_eligible
             policy = "retroactive"
+            application_scope = DEFERRED_APPLICATION_SCOPE
+
         total_sqm = OrderLine.objects.filter(
             order__in=eligible_orders,
             service_type=CatalogService.ServiceType.DTF_TRANSFER,
@@ -448,7 +462,7 @@ class CustomerVolumeDiscountTierService:
             "remaining_to_next_tier_linear_m": remaining_to_next_tier,
             "policy": policy,
             "uses_default_ladder": not customer_has_personalized_ladder(customer),
-            "application_scope": application_scope_for_customer(customer),
+            "application_scope": application_scope,
         }
 
     def notify_immediate_tier_after_capture(self, *, order, actor, source: str) -> None:

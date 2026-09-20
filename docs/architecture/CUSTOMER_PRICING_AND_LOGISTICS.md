@@ -39,6 +39,10 @@ Grille de référence (ajustable dans le **catalogue** `CatalogService`, pas par
      `{current_percent}`, `{volume_m}`, `{threshold_m}`. Champ vide = texte Prenium.
      Il reçoit un e-mail une fois par nouveau seuil atteint dans le mois
      (encours : au retarif ; comptant : après capture). Voir sprint 41.
+   - **Mix encours + comptant** : le retarif rétroactif reste strictement encours.
+     En revanche, si un compte encours n’a aucune commande différée éligible du mois
+     mais a des commandes comptant **payées**, le dashboard client affiche le volume
+     payé (politique prospective) pour éviter un compteur à zéro trompeur.
 
 ### Catalogue — résolution anti-régression
 

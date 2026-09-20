@@ -167,3 +167,29 @@ class StaffOrderUploadPreviewView(StaffOrderContextMixin, View):
         response["Content-Disposition"] = "inline"
         response["Cache-Control"] = "private, max-age=300"
         return response
+
+
+class StaffOrderUploadDownloadView(StaffOrderContextMixin, View):
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm("uploads.view_orderupload"):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, order_public_id, upload_public_id):
+        order_upload = upload_service.download_staff_order_upload(
+            actor=request.user,
+            order_public_id=order_public_id,
+            upload_public_id=upload_public_id,
+            source="staff_portal.order_upload_download",
+        )
+        if order_upload is None:
+            raise Http404
+        if order_upload.order_id != self.order.id:
+            raise Http404
+        order_upload.file.open("rb")
+        return FileResponse(
+            order_upload.file,
+            as_attachment=True,
+            filename=order_upload.original_filename,
+            content_type=order_upload.mime_type,
+        )

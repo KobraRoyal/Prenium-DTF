@@ -121,7 +121,10 @@ class FakeDriveGateway:
         return self.file_meta.get(file_id)
 
     def is_active_folder(self, file_id: str) -> bool:
-        meta = self.get_file_metadata(file_id)
+        try:
+            meta = self.get_file_metadata(file_id)
+        except GoogleDriveSyncError:
+            return False
         if meta is None or meta.get("trashed"):
             return False
         return meta.get("mimeType") == "application/vnd.google-apps.folder"
@@ -300,6 +303,46 @@ def test_sync_upload_reuploads_when_drive_file_is_trashed():
     assert sync.status == OrderUploadDriveSync.Status.SYNCED
     gateway.trashed_ids.add(sync.drive_file_id)
 
+    again = service.sync_upload(order_upload=upload, actor=user, source="test.repair")
+    assert again.status == OrderUploadDriveSync.Status.SYNCED
+    assert len(gateway.uploads) == 2
+
+
+def test_gateway_is_active_folder_treats_unreadable_item_as_inactive():
+    from apps.uploads.services.drive import GoogleDriveGateway, GoogleDriveSyncError
+
+    gateway = object.__new__(GoogleDriveGateway)
+    gateway.folder_mime_type = GoogleDriveGateway.folder_mime_type
+
+    def boom(_file_id: str):
+        raise GoogleDriveSyncError("Unable to read Drive item 'dead-id'.")
+
+    gateway.get_file_metadata = boom  # type: ignore[method-assign]
+    assert gateway.is_active_folder("dead-id") is False
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
+def test_sync_upload_reuploads_when_drive_file_metadata_raises():
+    user, customer, _membership = create_customer_scope("drive-meta-err@example.com", "Acme")
+    order = create_order(customer, user)
+    upload = create_stored_order_upload(order=order, actor=user)
+    gateway = FakeDriveGateway()
+    service = OrderUploadDriveSyncService(gateway=gateway)
+    sync = service.sync_upload(order_upload=upload, actor=user, source="test")
+    assert sync.status == OrderUploadDriveSync.Status.SYNCED
+    original_id = sync.drive_file_id
+    real_get = gateway.get_file_metadata
+
+    def selective(file_id: str):
+        if file_id == original_id:
+            raise GoogleDriveSyncError(f"Unable to read Drive item '{file_id}'.")
+        return real_get(file_id)
+
+    gateway.get_file_metadata = selective  # type: ignore[method-assign]
     again = service.sync_upload(order_upload=upload, actor=user, source="test.repair")
     assert again.status == OrderUploadDriveSync.Status.SYNCED
     assert len(gateway.uploads) == 2

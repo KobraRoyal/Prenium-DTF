@@ -281,7 +281,35 @@ def test_staff_review_and_preview_routes_hide_upload_from_another_order(client):
         "portal:staff-order-upload-preview",
         kwargs={"order_public_id": order_a.public_id, "upload_public_id": upload_b.public_id},
     )
+    download_url = reverse(
+        "portal:staff-order-upload-download",
+        kwargs={"order_public_id": order_a.public_id, "upload_public_id": upload_b.public_id},
+    )
 
     assert client.post(review_url, {"status": "approved"}).status_code == 404
     assert client.get(preview_url).status_code == 404
+    assert client.get(download_url).status_code == 404
     assert not OrderUploadReview.objects.exists()
+
+
+@pytest.mark.django_db
+def test_staff_portal_download_returns_source_file(client):
+    actor = _staff("view_order", "view_orderupload")
+    order, upload = _order_with_upload(customer_name="Client Download")
+    client.force_login(actor)
+
+    response = client.get(
+        reverse(
+            "portal:staff-order-upload-download",
+            kwargs={
+                "order_public_id": order.public_id,
+                "upload_public_id": upload.public_id,
+            },
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.has_header("Content-Disposition")
+    assert "attachment" in response["Content-Disposition"]
+    assert upload.original_filename in response["Content-Disposition"]
+    assert b"".join(response.streaming_content) == b"fake-png"

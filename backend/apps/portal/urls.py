@@ -163,6 +163,7 @@ from .views_staff_push_notifications import (
 )
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
+    StaffOrderUploadDownloadView,
     StaffOrderUploadPreviewView,
     StaffOrderUploadReviewView,
 )
@@ -829,6 +830,11 @@ urlpatterns = [
         "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/preview/",
         StaffOrderUploadPreviewView.as_view(),
         name="staff-order-upload-preview",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/download/",
+        StaffOrderUploadDownloadView.as_view(),
+        name="staff-order-upload-download",
     ),
     path(
         "staff/orders/<uuid:order_public_id>/panels/drive-sync/",

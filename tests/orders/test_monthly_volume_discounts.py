@@ -508,3 +508,52 @@ def test_captured_immediate_order_cannot_be_repriced():
     _capture_payment(order, user)
     with pytest.raises(ValidationError, match="figé après paiement"):
         _price(order, user)
+
+
+@pytest.mark.django_db
+@override_settings(DTF_LAIZE_CM=100)
+def test_deferred_account_dashboard_counts_paid_immediate_when_no_deferred_priced():
+    """Compte encours + commandes CB payées : le dashboard ne doit pas rester à 0 m."""
+    user = get_user_model().objects.create_user(email="mix-volume@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Mix Volume",
+        default_billing_mode=Customer.DefaultBillingMode.DEFERRED,
+    )
+    _seed_catalog()
+    DefaultCustomerVolumeDiscountTier.objects.create(
+        minimum_monthly_linear_m=Decimal("25.0000"),
+        discount_percent=Decimal("5.00"),
+    )
+    unpaid_deferred = _create_order(
+        customer=customer,
+        user=user,
+        linear_m="3.0000",
+        billing_mode=Order.BillingMode.DEFERRED,
+    )
+    assert unpaid_deferred.pricing_status == Order.PricingStatus.PENDING
+
+    first = _create_order(
+        customer=customer,
+        user=user,
+        linear_m="1.5000",
+        billing_mode=Order.BillingMode.IMMEDIATE,
+    )
+    _price(first, user)
+    _capture_payment(first, user)
+    second = _create_order(
+        customer=customer,
+        user=user,
+        linear_m="0.1500",
+        billing_mode=Order.BillingMode.IMMEDIATE,
+    )
+    _price(second, user)
+    _capture_payment(second, user)
+
+    summary = CustomerVolumeDiscountTierService().get_current_month_summary(customer=customer)
+    assert summary["policy"] == "prospective"
+    assert summary["eligible_order_count"] == 2
+    assert summary["monthly_volume_linear_m"] == Decimal("1.6500")
+    assert summary["remaining_to_next_tier_linear_m"] == Decimal("23.3500")
+    assert summary["current_tier"] is None
+    assert summary["next_tier"].discount_percent == Decimal("5.00")
+    assert "sans effet rétroactif" in summary["application_scope"]
