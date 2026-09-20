@@ -275,6 +275,28 @@ class PaymentService:
                 for marker in ("RESOURCE_NOT_FOUND", "INVALID_RESOURCE_ID", "No such checkout")
             ):
                 state = "VOIDED"
+            elif any(
+                marker in detail
+                for marker in (
+                    "Invalid API Key",
+                    "Invalid API key",
+                    "401",
+                    "Unauthorized",
+                    "invalid_api_key",
+                )
+            ):
+                # Clés Stripe mal collées (pk_/sk_ inversées, etc.) : libérer le
+                # checkout local pour permettre un nouvel essai / un autre moyen.
+                self._cancel_stale_checkout_payment(
+                    order=order,
+                    payment=payment,
+                    reason="provider_auth_failed",
+                    error_message=(
+                        "Session de paiement abandonnée (identifiants prestataire invalides). "
+                        "Vérifiez les clés dans Atelier → Paiements, puis réessayez."
+                    ),
+                )
+                return
             else:
                 raise PaymentGatewayTransientError(str(exc)) from exc
         if state == "COMPLETED":

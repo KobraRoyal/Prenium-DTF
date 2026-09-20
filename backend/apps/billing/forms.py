@@ -153,4 +153,35 @@ class PaymentGatewaySettingsForm(forms.Form):
                     )
                 }
             )
+
+        stripe_pk = str(cleaned.get("stripe_publishable_key") or "").strip()
+        stripe_sk = str(cleaned.get("stripe_secret_key") or "").strip()
+        stored_pk = str(self.snapshot.stripe_publishable_key or "").strip()
+        effective_pk = stripe_pk or stored_pk
+        errors: dict[str, str] = {}
+
+        if stripe_pk and not stripe_pk.startswith(("pk_test_", "pk_live_")):
+            errors["stripe_publishable_key"] = (
+                "La clé publiable doit commencer par pk_test_ ou pk_live_."
+            )
+        if stripe_sk and not stripe_sk.startswith(
+            ("sk_test_", "sk_live_", "rk_test_", "rk_live_")
+        ):
+            errors["stripe_secret_key"] = (
+                "La clé secrète doit commencer par sk_test_/sk_live_ "
+                "(ou rk_test_/rk_live_ pour une clé restreinte)."
+            )
+        # Détecte l'inversion classique pk_ ↔ sk_ même si un seul champ est resaisi.
+        if stripe_sk.startswith(("pk_test_", "pk_live_")) or effective_pk.startswith(
+            ("sk_test_", "sk_live_", "rk_test_", "rk_live_")
+        ):
+            errors["stripe_secret_key"] = (
+                "Clés Stripe inversées : la publiable est pk_… et la secrète sk_/rk_…."
+            )
+            if stripe_pk or effective_pk.startswith(("sk_", "rk_")):
+                errors["stripe_publishable_key"] = (
+                    "Cette valeur ressemble à une clé secrète. Utilisez la clé pk_…."
+                )
+        if errors:
+            raise ValidationError(errors)
         return cleaned

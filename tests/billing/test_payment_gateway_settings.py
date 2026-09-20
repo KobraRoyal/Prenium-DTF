@@ -304,3 +304,50 @@ def test_payment_gateway_form_rejects_identical_paypal_id_and_secret():
     )
     assert not form.is_valid()
     assert "paypal_client_secret" in form.errors
+
+
+@pytest.mark.django_db
+def test_payment_gateway_form_rejects_swapped_stripe_keys():
+    from apps.billing.forms import PaymentGatewaySettingsForm
+    from apps.billing.services.gateway_settings import payment_gateway_settings_service
+
+    snapshot = payment_gateway_settings_service.snapshot()
+    form = PaymentGatewaySettingsForm(
+        data={
+            "paypal_enabled": False,
+            "paypal_client_id": "",
+            "paypal_client_secret": "",
+            "paypal_webhook_id": "",
+            "stripe_enabled": True,
+            "stripe_publishable_key": "sk_test_secret_in_publishable_field",
+            "stripe_secret_key": "pk_test_publishable_in_secret_field",
+            "stripe_webhook_secret": "whsec_test",
+        },
+        snapshot=snapshot,
+    )
+    assert not form.is_valid()
+    assert "stripe_publishable_key" in form.errors
+    assert "stripe_secret_key" in form.errors
+
+
+@pytest.mark.django_db
+def test_payment_gateway_form_rejects_publishable_key_in_secret_field():
+    from apps.billing.forms import PaymentGatewaySettingsForm
+    from apps.billing.services.gateway_settings import payment_gateway_settings_service
+
+    snapshot = payment_gateway_settings_service.snapshot()
+    form = PaymentGatewaySettingsForm(
+        data={
+            "paypal_enabled": False,
+            "paypal_client_id": "",
+            "paypal_client_secret": "",
+            "paypal_webhook_id": "",
+            "stripe_enabled": True,
+            "stripe_publishable_key": "pk_test_ok",
+            "stripe_secret_key": "pk_test_wrong_field",
+            "stripe_webhook_secret": "whsec_test",
+        },
+        snapshot=snapshot,
+    )
+    assert not form.is_valid()
+    assert "stripe_secret_key" in form.errors
