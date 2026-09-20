@@ -168,9 +168,17 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
         )
 
         if status == "cancel":
-            # Le retour navigateur ne prouve pas que la session du prestataire est
-            # expirée. Elle reste payable, donc la tentative reste active.
-            messages.info(request, "Paiement non validé. Vous pouvez reprendre le même règlement.")
+            # Annulation utilisateur : fermer la tentative locale pour permettre un
+            # nouveau checkout PayPal/Stripe au prochain clic « Payer ».
+            billing_service.cancel_open_checkouts_for_order(
+                order=order,
+                actor=request.user,
+                source="client_portal_cancel",
+            )
+            messages.info(
+                request,
+                "Paiement non validé. Vous pouvez relancer un nouveau règlement.",
+            )
             return HttpResponseRedirect(
                 client_order_billing_landing_url(
                     customer_public_id=customer_public_id,

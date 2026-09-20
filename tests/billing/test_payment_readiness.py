@@ -546,6 +546,55 @@ def test_initiate_discards_sandbox_approval_url_after_live_switch():
 
 
 @pytest.mark.django_db
+def test_initiate_creates_new_paypal_checkout_when_remote_order_is_gone():
+    user, customer = create_customer_scope(email="paypal-gone@example.com", customer_name="Gone")
+    order = create_order(customer, user)
+
+    class MissingRemotePayPal(FakePayPalGateway):
+        def checkout_state(self, *, provider_payment_id):
+            raise PayPalAPIError("RESOURCE_NOT_FOUND INVALID_RESOURCE_ID")
+
+    service = PaymentService(gateway=MissingRemotePayPal())
+    _, stale = _initiate(
+        service, customer=customer, order=order, user=user, provider=Payment.Provider.PAYPAL
+    )
+    Payment.objects.filter(pk=stale.pk).update(
+        paypal_order_id="PP-GONE",
+        approval_url="https://www.paypal.com/checkoutnow?token=PP-GONE",
+    )
+    _, fresh = _initiate(
+        service, customer=customer, order=order, user=user, provider=Payment.Provider.PAYPAL
+    )
+    stale.refresh_from_db()
+    assert stale.status == Payment.Status.CANCELLED
+    assert fresh.pk != stale.pk
+    assert fresh.approval_url
+    assert fresh.provider_payment_id != "PP-GONE"
+
+
+@pytest.mark.django_db
+def test_cancel_open_checkouts_for_order_closes_pending_paypal():
+    user, customer = create_customer_scope(email="paypal-cancel@example.com", customer_name="CX")
+    order = create_order(customer, user)
+    service = PaymentService(gateway=FakePayPalGateway())
+    _, payment = _initiate(
+        service, customer=customer, order=order, user=user, provider=Payment.Provider.PAYPAL
+    )
+    assert payment.status in {Payment.Status.PENDING, Payment.Status.APPROVED}
+    closed = service.cancel_open_checkouts_for_order(
+        order=order, actor=user, source="test_cancel"
+    )
+    payment.refresh_from_db()
+    assert closed == 1
+    assert payment.status == Payment.Status.CANCELLED
+    _, fresh = _initiate(
+        service, customer=customer, order=order, user=user, provider=Payment.Provider.PAYPAL
+    )
+    assert fresh.pk != payment.pk
+    assert fresh.approval_url
+
+
+@pytest.mark.django_db
 def test_reconciliation_failure_rotates_past_batch_limit():
     user_a, customer_a = create_customer_scope(email="rotate-a@example.com", customer_name="RA")
     user_b, customer_b = create_customer_scope(email="rotate-b@example.com", customer_name="RB")

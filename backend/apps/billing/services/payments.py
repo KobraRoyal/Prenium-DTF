@@ -243,31 +243,16 @@ class PaymentService:
             approval_is_sandbox = "sandbox.paypal.com" in approval_url
             api_is_sandbox = "sandbox" in paypal_base
             if approval_is_sandbox != api_is_sandbox:
-                with transaction.atomic():
-                    Order.objects.select_for_update().get(pk=order.pk)
-                    locked = Payment.objects.select_for_update().get(pk=payment.pk)
-                    if locked.status in (Payment.Status.PENDING, Payment.Status.APPROVED):
-                        locked.status = Payment.Status.CANCELLED
-                        locked.last_error_message = (
-                            "Session PayPal abandonnée après changement d'environnement "
-                            "(sandbox/live)."
-                        )
-                        locked.save(
-                            update_fields=("status", "last_error_message", "updated_at")
-                        )
-                        record_event(
-                            action="billing.payment_checkout_expired",
-                            target=locked,
-                            metadata={
-                                "order_public_id": str(order.public_id),
-                                "payment_public_id": str(locked.public_id),
-                                "provider": locked.provider,
-                                "provider_payment_id": locked.provider_payment_id,
-                                "reason": "paypal_environment_mismatch",
-                            },
-                        )
+                self._cancel_stale_checkout_payment(
+                    order=order,
+                    payment=payment,
+                    reason="paypal_environment_mismatch",
+                    error_message=(
+                        "Session PayPal abandonnée après changement d'environnement "
+                        "(sandbox/live)."
+                    ),
+                )
                 return
-        self._verify_checkout_binding(gateway=gateway, payment=payment)
         inspect = getattr(gateway, "checkout_state", None)
         if inspect is None:
             return
@@ -284,7 +269,7 @@ class PaymentService:
                 ).upper()
         except PaymentGatewayError as exc:
             detail = str(exc)
-            # Référence absente chez le prestataire (ex. commande sandbox après live).
+            # Référence absente chez le prestataire (annulation client, sandbox, etc.).
             if any(
                 marker in detail
                 for marker in ("RESOURCE_NOT_FOUND", "INVALID_RESOURCE_ID", "No such checkout")
@@ -293,6 +278,10 @@ class PaymentService:
             else:
                 raise PaymentGatewayTransientError(str(exc)) from exc
         if state == "COMPLETED":
+            try:
+                self._verify_checkout_binding(gateway=gateway, payment=payment)
+            except ValidationError:
+                return
             if payment.provider == Payment.Provider.STRIPE:
                 self.confirm_stripe_checkout_session(
                     checkout_session_id=payment.provider_payment_id,
@@ -306,6 +295,10 @@ class PaymentService:
                 )
             return
         if state == "APPROVED" and payment.provider == Payment.Provider.PAYPAL:
+            try:
+                self._verify_checkout_binding(gateway=gateway, payment=payment)
+            except ValidationError:
+                return
             self.confirm_capture(
                 order_public_id=order.public_id,
                 provider_payment_id=payment.provider_payment_id,
@@ -314,13 +307,32 @@ class PaymentService:
             return
         if state not in {"EXPIRED", "VOIDED"}:
             return
+        self._cancel_stale_checkout_payment(
+            order=order,
+            payment=payment,
+            reason="provider_checkout_voided",
+            error_message="",
+        )
+
+    def _cancel_stale_checkout_payment(
+        self,
+        *,
+        order,
+        payment: Payment,
+        reason: str,
+        error_message: str = "",
+    ) -> None:
         with transaction.atomic():
             Order.objects.select_for_update().get(pk=order.pk)
             locked = Payment.objects.select_for_update().get(pk=payment.pk)
             if locked.status not in (Payment.Status.PENDING, Payment.Status.APPROVED):
                 return
             locked.status = Payment.Status.CANCELLED
-            locked.save(update_fields=("status", "updated_at"))
+            update_fields = ["status", "updated_at"]
+            if error_message:
+                locked.last_error_message = error_message
+                update_fields.append("last_error_message")
+            locked.save(update_fields=update_fields)
             record_event(
                 action="billing.payment_checkout_expired",
                 target=locked,
@@ -329,8 +341,54 @@ class PaymentService:
                     "payment_public_id": str(locked.public_id),
                     "provider": locked.provider,
                     "provider_payment_id": locked.provider_payment_id,
+                    "reason": reason,
                 },
             )
+
+    def cancel_open_checkouts_for_order(
+        self,
+        *,
+        order,
+        actor=None,
+        source: str = "client_portal_cancel",
+    ) -> int:
+        """Ferme les tentatives locales encore ouvertes après annulation utilisateur."""
+        open_payments = list(
+            Payment.objects.filter(
+                order_id=order.pk,
+                status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+            ).order_by("created_at")
+        )
+        cancelled = 0
+        for payment in open_payments:
+            with transaction.atomic():
+                locked = (
+                    Payment.objects.select_for_update()
+                    .filter(
+                        pk=payment.pk,
+                        status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+                    )
+                    .first()
+                )
+                if locked is None:
+                    continue
+                locked.status = Payment.Status.CANCELLED
+                locked.last_error_message = "Paiement annulé par le client."
+                locked.save(update_fields=("status", "last_error_message", "updated_at"))
+                record_event(
+                    action="billing.payment_cancelled_by_client",
+                    actor=actor if getattr(actor, "is_authenticated", False) else None,
+                    target=locked,
+                    metadata={
+                        "order_public_id": str(order.public_id),
+                        "payment_public_id": str(locked.public_id),
+                        "provider": locked.provider,
+                        "provider_payment_id": locked.provider_payment_id,
+                        "source": source,
+                    },
+                )
+                cancelled += 1
+        return cancelled
 
     def confirm_capture(
         self,
