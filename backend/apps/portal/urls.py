@@ -92,7 +92,11 @@ from .views_gang_sheets import (
     StaffGangSheetFinalDownloadView,
     StaffGangSheetSettingsView,
 )
-from .views_payments import ClientOrderPaymentInitiateView, ClientOrderPaymentReturnView
+from .views_payments import (
+    ClientOrderPaymentInitiateView,
+    ClientOrderPaymentReturnView,
+    ProviderCheckoutFallbackReturnView,
+)
 from .views_profile import (
     ClientCompanyProfileView,
     PortalProfileIdentityView,
@@ -185,6 +189,26 @@ app_name = "portal"
 urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
     path("logout/", PortalLogoutView.as_view(), name="logout"),
+    path(
+        "cancel",
+        ProviderCheckoutFallbackReturnView.as_view(status_value="cancel"),
+        name="provider-checkout-cancel-fallback",
+    ),
+    path(
+        "cancel/",
+        ProviderCheckoutFallbackReturnView.as_view(status_value="cancel"),
+        name="provider-checkout-cancel-fallback-slash",
+    ),
+    path(
+        "ok",
+        ProviderCheckoutFallbackReturnView.as_view(status_value="success"),
+        name="provider-checkout-success-fallback",
+    ),
+    path(
+        "ok/",
+        ProviderCheckoutFallbackReturnView.as_view(status_value="success"),
+        name="provider-checkout-success-fallback-slash",
+    ),
     path(
         "mot-de-passe-oublie/",
         PortalPasswordResetRequestView.as_view(),

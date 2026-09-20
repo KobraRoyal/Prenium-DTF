@@ -156,6 +156,57 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
         return HttpResponseRedirect(payment.approval_url)
 
 
+class ProviderCheckoutFallbackReturnView(View):
+    """Filet de sécurité pour d'anciennes URLs PayPal `/ok` et `/cancel`.
+
+    Les checkouts normaux utilisent déjà
+    ``/client/.../payments/return/?status=...``. Ce handler récupère les
+    retours legacy (token PayPal) et renvoie vers le retour portail canonique.
+    """
+
+    status_value: str = "cancel"
+
+    def get(self, request):
+        token = str(request.GET.get("token", "")).strip()
+        session_id = str(request.GET.get("session_id", "")).strip()
+        payment = None
+        if token:
+            payment = (
+                Payment.objects.select_related("order__customer")
+                .filter(paypal_order_id=token)
+                .order_by("-created_at")
+                .first()
+            )
+        elif session_id and session_id != "{CHECKOUT_SESSION_ID}":
+            payment = (
+                Payment.objects.select_related("order__customer")
+                .filter(stripe_checkout_session_id=session_id)
+                .order_by("-created_at")
+                .first()
+            )
+        if payment is None:
+            messages.warning(
+                request,
+                "Retour de paiement introuvable. Ouvrez la commande depuis votre espace.",
+            )
+            return HttpResponseRedirect(reverse("portal:client-dashboard"))
+
+        return_path = reverse(
+            "portal:client-order-payment-return",
+            kwargs={
+                "customer_public_id": payment.order.customer.public_id,
+                "order_public_id": payment.order.public_id,
+            },
+        )
+        query = f"status={self.status_value}"
+        if token:
+            query += f"&token={token}"
+        if session_id and session_id != "{CHECKOUT_SESSION_ID}":
+            query += f"&session_id={session_id}"
+        query += f"&payment={payment.public_id}"
+        return HttpResponseRedirect(f"{return_path}?{query}")
+
+
 class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupMixin, View):
     """Retour provider : capture/confirm + redirection fiche commande (onglet règlement)."""
 
