@@ -107,6 +107,11 @@
           <label class="ui-label" for="{{ form.stripe_webhook_secret.id_for_label }}">{{ form.stripe_webhook_secret.label }}</label>
           {{ form.stripe_webhook_secret }}
           {% if form.stripe_webhook_secret.help_text %}<p class="ui-field-help">{{ form.stripe_webhook_secret.help_text }}</p>{% endif %}
+          {% if snapshot.has_stripe_webhook_secret and not snapshot.stripe_webhook_secret_valid %}
+          <div class="alert alert--danger" role="alert">
+            <p class="m-0">Le secret webhook enregistré est invalide (ID <code>we_…</code> au lieu de <code>whsec_…</code>). Les paiements Stripe ne peuvent pas être confirmés. Collez le Signing secret puis enregistrez.</p>
+          </div>
+          {% endif %}
           <p class="ui-field-help">URL à coller dans Stripe : <code>{{ snapshot.stripe_webhook_url }}</code></p>
           {% for error in form.stripe_webhook_secret.errors %}<p class="ui-field-error">{{ error }}</p>{% endfor %}
         </div>

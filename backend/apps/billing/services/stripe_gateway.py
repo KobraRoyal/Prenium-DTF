@@ -230,6 +230,11 @@ class StripeGateway:
                 "Stripe webhook secret must be configured in Atelier settings "
                 "or STRIPE_WEBHOOK_SECRET."
             )
+        if not str(self.webhook_secret).startswith("whsec_"):
+            raise PaymentGatewayConfigurationError(
+                "Stripe webhook secret must start with whsec_ "
+                "(not the endpoint id we_…)."
+            )
         self._verify_signature(payload=payload, signature_header=signature_header)
         try:
             return json.loads(payload.decode("utf-8"))

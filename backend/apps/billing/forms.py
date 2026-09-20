@@ -136,9 +136,21 @@ class PaymentGatewaySettingsForm(forms.Form):
             else "Clé secrète sk_ ou restricted rk_. Elle ne sera plus affichée ensuite."
         )
         self.fields["stripe_webhook_secret"].help_text = (
-            f"Enregistré : {snapshot.stripe_webhook_hint}. Laissez vide pour conserver."
-            if snapshot.stripe_webhook_hint
-            else "Secret whsec_ du webhook Checkout. Il ne sera plus affiché ensuite."
+            (
+                "Valeur enregistrée invalide : ce n’est pas un secret whsec_… "
+                "(souvent l’ID d’endpoint we_…). "
+                "Dans Stripe → Développeurs → Webhooks → votre endpoint → "
+                "« Révéler » le Signing secret, puis collez-le ici."
+            )
+            if snapshot.stripe_webhook_hint and not snapshot.stripe_webhook_secret_valid
+            else (
+                f"Enregistré : {snapshot.stripe_webhook_hint}. Laissez vide pour conserver."
+                if snapshot.stripe_webhook_hint
+                else (
+                    "Signing secret whsec_… (pas l’ID we_…). "
+                    "Stripe → Développeurs → Webhooks → Révéler le secret."
+                )
+            )
         )
 
     def clean(self):
@@ -171,6 +183,17 @@ class PaymentGatewaySettingsForm(forms.Form):
                 "La clé secrète doit commencer par sk_test_/sk_live_ "
                 "(ou rk_test_/rk_live_ pour une clé restreinte)."
             )
+        stripe_whsec = str(cleaned.get("stripe_webhook_secret") or "").strip()
+        if stripe_whsec:
+            if stripe_whsec.startswith("we_"):
+                errors["stripe_webhook_secret"] = (
+                    "Vous avez collé l’ID d’endpoint (we_…), pas le Signing secret. "
+                    "Ouvrez le webhook dans Stripe et cliquez « Révéler » sur whsec_…."
+                )
+            elif not stripe_whsec.startswith("whsec_"):
+                errors["stripe_webhook_secret"] = (
+                    "Le secret webhook doit commencer par whsec_."
+                )
         # Détecte l'inversion classique pk_ ↔ sk_ même si un seul champ est resaisi.
         if stripe_sk.startswith(("pk_test_", "pk_live_")) or effective_pk.startswith(
             ("sk_test_", "sk_live_", "rk_test_", "rk_live_")

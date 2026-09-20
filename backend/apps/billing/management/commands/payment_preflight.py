@@ -62,6 +62,11 @@ class Command(BaseCommand):
         if config.stripe_live:
             if not config.stripe_webhook_secret:
                 errors.append("STRIPE_WEBHOOK_SECRET manque pour Stripe actif.")
+            elif not str(config.stripe_webhook_secret).startswith("whsec_"):
+                errors.append(
+                    "Le secret webhook Stripe doit commencer par whsec_ "
+                    "(pas l'ID d'endpoint we_…)."
+                )
             if live and not config.stripe_secret_key.startswith(("sk_live_", "rk_live_")):
                 errors.append("La clé Stripe active n'est pas une clé live.")
             if live and str(settings.STRIPE_API_BASE_URL).rstrip("/") != "https://api.stripe.com":

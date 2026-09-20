@@ -331,6 +331,65 @@ def test_payment_gateway_form_rejects_swapped_stripe_keys():
 
 
 @pytest.mark.django_db
+def test_payment_gateway_form_rejects_stripe_webhook_endpoint_id():
+    from apps.billing.forms import PaymentGatewaySettingsForm
+    from apps.billing.services.gateway_settings import payment_gateway_settings_service
+
+    snapshot = payment_gateway_settings_service.snapshot()
+    form = PaymentGatewaySettingsForm(
+        data={
+            "paypal_enabled": False,
+            "paypal_client_id": "",
+            "paypal_client_secret": "",
+            "paypal_webhook_id": "",
+            "stripe_enabled": True,
+            "stripe_publishable_key": "pk_test_publishable",
+            "stripe_secret_key": "sk_test_secret",
+            "stripe_webhook_secret": "we_1UHRYXBWVcYRq17hxBbkiD4wG2WjPzGR",
+        },
+        snapshot=snapshot,
+    )
+    assert not form.is_valid()
+    assert "stripe_webhook_secret" in form.errors
+    assert "Signing secret" in form.errors["stripe_webhook_secret"][0]
+
+
+@pytest.mark.django_db
+@override_settings(PAYMENT_SECRET_ENCRYPTION_KEYS=[FERNET_TEST_KEY])
+def test_snapshot_marks_invalid_stripe_webhook_endpoint_id():
+    from apps.billing.services.gateway_settings import payment_gateway_settings_service
+    from apps.billing.services.secret_crypto import PaymentSecretCrypto
+
+    actor = _staff_user(
+        email="stripe-whsec-check@example.com",
+        view_gateways=True,
+        change_gateways=True,
+    )
+    crypto = PaymentSecretCrypto()
+    payment_gateway_settings_service.update(
+        paypal_enabled=False,
+        stripe_enabled=True,
+        paypal_client_id="",
+        paypal_client_secret="",
+        paypal_webhook_id="",
+        stripe_publishable_key="pk_test_publishable",
+        stripe_secret_key="sk_test_secret",
+        stripe_webhook_secret="whsec_valid_for_setup",
+        actor=actor,
+        source="test",
+    )
+    row = payment_gateway_settings_service.current_settings()
+    assert row is not None
+    # Simulate a past mistake: endpoint id stored as webhook secret.
+    row.stripe_webhook_secret_encrypted = crypto.encrypt("we_1FakeEndpointIdXXXX")
+    row.save(update_fields=["stripe_webhook_secret_encrypted", "updated_at"])
+
+    snapshot = payment_gateway_settings_service.snapshot()
+    assert snapshot.has_stripe_webhook_secret is True
+    assert snapshot.stripe_webhook_secret_valid is False
+
+
+@pytest.mark.django_db
 def test_payment_gateway_form_rejects_publishable_key_in_secret_field():
     from apps.billing.forms import PaymentGatewaySettingsForm
     from apps.billing.services.gateway_settings import payment_gateway_settings_service

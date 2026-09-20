@@ -74,6 +74,7 @@ class PaymentGatewaySnapshot:
     stripe_publishable_key: str
     stripe_secret_hint: str
     stripe_webhook_hint: str
+    stripe_webhook_secret_valid: bool
     has_paypal_secret: bool
     has_stripe_secret: bool
     has_stripe_webhook_secret: bool
@@ -179,6 +180,7 @@ class PaymentGatewaySettingsService:
         has_stripe_webhook = bool(
             config.stripe_webhook_secret or (row and row.stripe_webhook_secret_encrypted)
         )
+        webhook_secret = str(config.stripe_webhook_secret or "").strip()
         return PaymentGatewaySnapshot(
             paypal_enabled=config.paypal_enabled,
             stripe_enabled=config.stripe_enabled,
@@ -190,6 +192,7 @@ class PaymentGatewaySettingsService:
             stripe_publishable_key=config.stripe_publishable_key,
             stripe_secret_hint=mask_secret(config.stripe_secret_key),
             stripe_webhook_hint=mask_secret(config.stripe_webhook_secret),
+            stripe_webhook_secret_valid=webhook_secret.startswith("whsec_"),
             has_paypal_secret=has_paypal_secret,
             has_stripe_secret=has_stripe_secret,
             has_stripe_webhook_secret=has_stripe_webhook,
