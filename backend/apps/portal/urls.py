@@ -127,7 +127,7 @@ from .views_staff_customers import (
     StaffDefaultVolumeDiscountTierUpdateView,
     StaffVolumeDiscountDashboardCopyUpdateView,
 )
-from .views_staff_dashboard import StaffDashboardView
+from .views_staff_dashboard import StaffDashboardInboxBadgeView, StaffDashboardView
 from .views_staff_documents import StaffManufacturingOrderBatchPdfView
 from .views_staff_external_counts import StaffAtelierExternalCountView
 from .views_staff_machine_jobs import (
@@ -543,6 +543,11 @@ urlpatterns = [
         name="client-checkout-submit",
     ),
     path("staff/", StaffDashboardView.as_view(), name="staff-dashboard"),
+    path(
+        "staff/dashboard/inbox-badge/",
+        StaffDashboardInboxBadgeView.as_view(),
+        name="staff-dashboard-inbox-badge",
+    ),
     path(
         "staff/atelier/pilotage/",
         StaffAtelierOperationsView.as_view(),

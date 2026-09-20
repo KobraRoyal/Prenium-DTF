@@ -67,6 +67,13 @@ class AtelierDashboardService:
             "batch_print_limit": batch_service.max_batch_size,
         }
 
+    def fresh_inbox_count(self) -> int:
+        """Commandes soumises encore non traitées (OF PDF non émis), hors bruit recette."""
+        queue_counts = StaffOrderListFilterService().count_by_queue(
+            exclude_dashboard_noise_orders(Order.objects.all())
+        )
+        return int(queue_counts.get("unprinted", 0))
+
     def _build_production_trend(self) -> dict[str, object]:
         """Historique réel à sept jours : entrées Atelier et commandes terminées."""
         today = timezone.localdate()

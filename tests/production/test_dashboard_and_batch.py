@@ -246,6 +246,59 @@ def test_atelier_dashboard_separates_unprinted_worklist_from_post_issue_kpis():
 
 
 @pytest.mark.django_db
+def test_fresh_inbox_count_matches_unprinted_queue_excluding_noise(settings):
+    settings.DASHBOARD_EXCLUDED_CUSTOMER_NAMES = ("Compte Test Client",)
+    actor = get_user_model().objects.create_user(email="inbox@example.com", password="pass")
+    customer = Customer.objects.create(name="Inbox Client")
+    noise = Customer.objects.create(name="Compte Test Client")
+    live = create_order(customer=customer, actor=actor)
+    create_order(customer=noise, actor=actor)
+    issued = create_order(customer=customer, actor=actor)
+    issued.production_job.of_document_issued_at = timezone.now()
+    issued.production_job.save(update_fields=["of_document_issued_at", "updated_at"])
+    add_upload(order=live, actor=actor, filename="live.pdf", approved=False)
+
+    assert AtelierDashboardService().fresh_inbox_count() == 1
+
+
+@pytest.mark.django_db
+def test_staff_dashboard_inbox_badge_endpoint_requires_permissions_and_returns_count():
+    actor = get_user_model().objects.create_user(
+        email="badge@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    actor.user_permissions.add(Permission.objects.get(codename="access_staff_portal"))
+    customer = Customer.objects.create(name="Badge Client")
+    create_order(customer=customer, actor=actor)
+    client = Client()
+    assert client.login(email=actor.email, password="pass") is True
+
+    denied = client.get(reverse("portal:staff-dashboard-inbox-badge"))
+    assert denied.status_code == 403
+
+    actor.user_permissions.add(
+        Permission.objects.get(codename="view_order"),
+        Permission.objects.get(codename="view_productionjob"),
+    )
+    actor = get_user_model().objects.get(pk=actor.pk)
+    client.force_login(actor)
+
+    response = client.get(reverse("portal:staff-dashboard-inbox-badge"))
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert 'id="atelier-dashboard-inbox-badge"' in html
+    assert "is-active" in html
+    assert 'role="status"' in html
+    assert 'aria-live="polite"' in html
+    assert 'data-inbox-count="1"' in html
+    assert ">1<" in html
+    assert "hx-get" not in html
+    assert "hx-trigger" not in html
+    assert "every 20s" not in html
+
+
+@pytest.mark.django_db
 def test_atelier_dashboard_kpis_follow_exclusive_workflow_stages():
     actor = get_user_model().objects.create_user(email="workflow-kpis@example.com", password="pass")
     customer = Customer.objects.create(name="Workflow KPI Client")

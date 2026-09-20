@@ -53,20 +53,23 @@ function markEventSeen(publicId) {
 }
 
 function refreshDashboard(root) {
-  if (!window.htmx?.ajax) return;
-  window.htmx.ajax("GET", root.dataset.dashboardRefreshUrl, {
-    target: "#atelier-dashboard-live-region",
-    select: "#atelier-dashboard-live-region",
-    swap: "outerHTML",
-  });
-  // La notification est l'événement temps réel de l'Atelier : synchroniser
-  // aussi les priorités et compteurs sans redessiner les graphiques Chart.js.
-  if (document.getElementById("atelier-production-health")) {
+  // KPI / worklist + pastille nav : un seul événement (évite double fetch).
+  if (window.htmx?.trigger) {
+    window.htmx.trigger(document.body, "atelier-inbox-refresh");
+  }
+  // Priorités production hors live-region, sans redessiner Chart.js.
+  if (document.getElementById("atelier-production-health") && window.htmx?.ajax) {
     window.htmx.ajax("GET", root.dataset.dashboardRefreshUrl, {
       target: "#atelier-production-health",
       select: "#atelier-production-health",
       swap: "outerHTML",
     });
+  }
+}
+
+function refreshInboxBadge() {
+  if (window.htmx?.trigger) {
+    window.htmx.trigger(document.body, "atelier-inbox-refresh");
   }
 }
 

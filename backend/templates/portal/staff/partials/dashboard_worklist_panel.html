@@ -112,7 +112,14 @@
 </section>
 {% endif %}
 </div>
-<div id="atelier-dashboard-live-region">
+<div
+  id="atelier-dashboard-live-region"
+  hx-get="{% url 'portal:staff-dashboard' %}"
+  hx-trigger="every 20s, atelier-inbox-refresh from:body"
+  hx-select="#atelier-dashboard-live-region"
+  hx-swap="outerHTML"
+  hx-indicator="#portal-htmx-indicator"
+>
 {% if dashboard_kpi_rows %}
 <section class="atelier-dashboard-metrics" aria-label="Indicateurs de la file Atelier">
   {% ui_kpi_grid dashboard_kpi_rows %}

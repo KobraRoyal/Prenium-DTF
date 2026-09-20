@@ -285,8 +285,7 @@ def test_atelier_notification_runtime_keeps_permission_user_initiated_and_fallba
     assert "POLL_INTERVAL_MS = 20000" in runtime
     assert 'document.addEventListener("visibilitychange", schedule)' in runtime
     assert 'if (document.hidden || root.dataset.pushState === "enabled") return' in runtime
-    assert 'target: "#atelier-dashboard-live-region"' in runtime
-    assert 'select: "#atelier-dashboard-live-region"' in runtime
+    assert 'window.htmx.trigger(document.body, "atelier-inbox-refresh")' in runtime
     assert 'target: "#atelier-production-health"' in runtime
     assert 'select: "#atelier-production-health"' in runtime
     assert "atelier-production-chart-canvas" not in runtime

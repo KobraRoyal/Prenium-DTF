@@ -1,0 +1,9 @@
+<span
+  class="product-nav__inbox-slot"
+  hx-get="{% url 'portal:staff-dashboard-inbox-badge' %}"
+  hx-trigger="load, every 20s, atelier-inbox-refresh from:body"
+  hx-target="find .product-nav__inbox-badge"
+  hx-select="#atelier-dashboard-inbox-badge"
+  hx-swap="outerHTML"
+  hx-indicator="#portal-htmx-indicator"
+>{% include "portal/staff/partials/dashboard_inbox_badge.html" %}</span>

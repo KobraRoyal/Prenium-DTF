@@ -1,6 +1,9 @@
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
+from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.cache import never_cache
 
 from apps.portal.views_common import StaffPortalMixin, access_scope_service
 from apps.production.services.dashboard import AtelierDashboardService
@@ -79,3 +82,32 @@ class StaffDashboardView(StaffPortalMixin, View):
         if request.headers.get("HX-Request") == "true":
             return render(request, self.worklist_partial_template_name, context)
         return render(request, self.template_name, context)
+
+
+@method_decorator(never_cache, name="dispatch")
+class StaffDashboardInboxBadgeView(StaffPortalMixin, View):
+    """Pastille nav : commandes fraîchement reçues encore non traitées (OF non émis)."""
+
+    template_name = "portal/staff/partials/dashboard_inbox_badge.html"
+    required_permissions = (
+        "orders.view_order",
+        "production.view_productionjob",
+    )
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and any(
+            not request.user.has_perm(permission) for permission in self.required_permissions
+        ):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        count = atelier_dashboard_service.fresh_inbox_count()
+        return render(
+            request,
+            self.template_name,
+            {
+                "inbox_count": count,
+                "inbox_display": "99+" if count > 99 else str(count),
+            },
+        )

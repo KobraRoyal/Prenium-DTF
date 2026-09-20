@@ -1,6 +1,6 @@
 <span class="product-nav__section-label">Pilotage quotidien</span>
 <div class="product-nav__primary ui-nav-cluster" aria-label="Atelier">
-  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-dashboard' %}is-active{% endif %}" {% if nav_key == 'staff-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:staff-dashboard' %}">Tableau de bord</a>
+  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link product-nav__link--inbox {% if nav_key == 'staff-dashboard' %}is-active{% endif %}" {% if nav_key == 'staff-dashboard' %}aria-current="page"{% endif %} href="{% url 'portal:staff-dashboard' %}">Tableau de bord{% if perms.orders.view_order and perms.production.view_productionjob %}{% include "portal/staff/partials/dashboard_inbox_slot.html" with inbox_count=0 inbox_display="" %}{% endif %}</a>
   {% if perms.orders.view_order and perms.production.view_productionjob and perms.production.scan_productionjob %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-operations' %}is-active{% endif %}" {% if nav_key == 'staff-operations' %}aria-current="page"{% endif %} href="{% url 'portal:staff-atelier-operations' %}">Pilotage</a>
   {% endif %}

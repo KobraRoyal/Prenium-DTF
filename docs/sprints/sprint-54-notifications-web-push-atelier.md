@@ -35,8 +35,20 @@ application native et sans migration de la stack WSGI vers ASGI/WebSocket.
       bouton sur la ligne du fil d'Ariane (sans carte dédiée).
 - [x] Notification système macOS et navigation vers `/staff/` au clic.
 - [x] Rafraîchissement HTMX ciblé sans recréer le graphique Chart.js.
+- [x] Pastille dynamique sur le bouton **Tableau de bord** (nav Atelier) :
+  compteur des commandes soumises à OF non émis, hors comptes de recette ;
+  polling HTMX `every 20s` + événement `atelier-inbox-refresh` déclenché
+  lors d’une notification Push / fallback.
+  Traitement UI : token `--danger` (statut métier, pas `--brand`), pill
+  `999px`, anneau `--surface-raised` pour contraste sur nav ghost et active,
+  Space Grotesk tabular, `role="status"` / `aria-live="polite"`.
+  Hôte HTMX stable (`.product-nav__inbox-slot`) : le partial pastille n’est
+  plus swapé avec `hx-trigger=load` (évite la boucle de clignotement).
+  Cards KPI + worklist (`#atelier-dashboard-live-region`) : même événement
+  `atelier-inbox-refresh` + poll `every 20s` (sans `load`) pour maj sans F5
+  quand on est déjà sur le tableau de bord.
 - [x] Feature flag désactivé par défaut et secrets VAPID uniquement via
-      variables d'environnement.
+  variables d'environnement.
 - [x] Migration additive `notifications/0011_workshop_web_push.py`.
 
 ## Configuration de production

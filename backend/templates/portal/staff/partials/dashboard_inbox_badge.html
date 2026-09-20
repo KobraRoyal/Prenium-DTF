@@ -1,0 +1,14 @@
+<span
+  id="atelier-dashboard-inbox-badge"
+  class="product-nav__inbox-badge{% if inbox_count %} is-active{% endif %}"
+  role="status"
+  aria-live="polite"
+  data-inbox-count="{{ inbox_count|default:0 }}"
+  {% if inbox_count %}
+  aria-label="{{ inbox_count }} commande{{ inbox_count|pluralize }} non traitée{{ inbox_count|pluralize }} à ouvrir depuis le tableau de bord"
+  title="{{ inbox_count }} commande{{ inbox_count|pluralize }} non traitée{{ inbox_count|pluralize }}"
+  {% else %}
+  hidden
+  aria-hidden="true"
+  {% endif %}
+>{% if inbox_count %}{{ inbox_display }}{% endif %}</span>
