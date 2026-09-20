@@ -573,6 +573,87 @@ def test_initiate_creates_new_paypal_checkout_when_remote_order_is_gone():
 
 
 @pytest.mark.django_db
+@override_settings(PAYPAL_CLIENT_ID="paypal-id", PAYPAL_CLIENT_SECRET="paypal-secret")
+def test_stale_paypal_created_checkout_is_refreshed_after_reuse_window():
+    from apps.billing.services.payments import PAYPAL_APPROVAL_REUSE_WINDOW
+
+    user, customer = create_customer_scope(email="paypal-stale@example.com", customer_name="Stale")
+    order = create_order(customer, user)
+
+    class CreatedPayPal(FakePayPalGateway):
+        def checkout_state(self, *, provider_payment_id):
+            return "CREATED"
+
+    service = PaymentService(gateway=CreatedPayPal())
+    _, stale = _initiate(
+        service, customer=customer, order=order, user=user, provider=Payment.Provider.PAYPAL
+    )
+    Payment.objects.filter(pk=stale.pk).update(
+        created_at=timezone.now() - PAYPAL_APPROVAL_REUSE_WINDOW - timedelta(minutes=5)
+    )
+    _, fresh = _initiate(
+        service, customer=customer, order=order, user=user, provider=Payment.Provider.PAYPAL
+    )
+    stale.refresh_from_db()
+    assert stale.status == Payment.Status.CANCELLED
+    assert fresh.pk != stale.pk
+    assert fresh.approval_url
+    assert AuditLogEntry.objects.filter(
+        action="billing.payment_checkout_expired",
+        metadata__reason="paypal_approval_stale",
+    ).exists()
+
+
+@pytest.mark.django_db
+@override_settings(
+    PAYPAL_CLIENT_ID="paypal-id",
+    PAYPAL_CLIENT_SECRET="paypal-secret",
+    STRIPE_SECRET_KEY="sk_test_dummy",
+    STRIPE_PUBLISHABLE_KEY="pk_test_dummy",
+)
+def test_open_paypal_cancels_when_client_switches_to_stripe(monkeypatch):
+    user, customer = create_customer_scope(email="paypal-switch@example.com", customer_name="SwitchPP")
+    order = create_order(customer, user)
+
+    class CreatedPayPal(FakePayPalGateway):
+        def checkout_state(self, *, provider_payment_id):
+            return "CREATED"
+
+    paypal_gw = CreatedPayPal()
+    stripe_gw = FakeStripeGateway()
+
+    def _gateway(provider):
+        if provider == Payment.Provider.PAYPAL:
+            return paypal_gw
+        return stripe_gw
+
+    monkeypatch.setattr("apps.billing.services.payments.get_payment_gateway", _gateway)
+    _, stale = _initiate(
+        PaymentService(gateway=paypal_gw),
+        customer=customer,
+        order=order,
+        user=user,
+        provider=Payment.Provider.PAYPAL,
+    )
+    _, fresh = _initiate(
+        PaymentService(),
+        customer=customer,
+        order=order,
+        user=user,
+        provider=Payment.Provider.STRIPE,
+    )
+    stale.refresh_from_db()
+    assert stale.status == Payment.Status.CANCELLED
+    assert fresh.pk != stale.pk
+    assert fresh.provider == Payment.Provider.STRIPE
+    assert fresh.approval_url
+    assert AuditLogEntry.objects.filter(
+        action="billing.payment_checkout_expired",
+        metadata__reason="provider_switch",
+    ).exists()
+
+
+@pytest.mark.django_db
 def test_cancel_open_checkouts_for_order_closes_pending_paypal():
     user, customer = create_customer_scope(email="paypal-cancel@example.com", customer_name="CX")
     order = create_order(customer, user)

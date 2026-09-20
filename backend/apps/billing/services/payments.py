@@ -30,6 +30,11 @@ UNKNOWN_CHECKOUT_RETRY_WINDOWS = {
     Payment.Provider.STRIPE: timedelta(hours=23),
     Payment.Provider.PAYPAL: timedelta(hours=5),
 }
+# Au-delà, le lien approve PayPal est souvent mort alors que l'API dit encore CREATED.
+PAYPAL_APPROVAL_REUSE_WINDOW = timedelta(hours=2)
+PAYPAL_RESUMABLE_REMOTE_STATES = frozenset(
+    {"CREATED", "SAVED", "PAYER_ACTION_REQUIRED"}
+)
 STRIPE_FAILURE_RECONCILIATION_MESSAGE = (
     "Échec Stripe signalé ; vérification du règlement en cours avant nouvel essai."
 )
@@ -259,15 +264,36 @@ class PaymentService:
             return
         try:
             state = str(inspect(provider_payment_id=payment.provider_payment_id)).upper()
+            switching = bool(
+                requested_provider and requested_provider != payment.provider
+            )
             if (
                 state == "OPEN"
                 and payment.provider == Payment.Provider.STRIPE
-                and requested_provider
-                and requested_provider != payment.provider
+                and switching
             ):
                 state = str(
                     gateway.expire_checkout(provider_payment_id=payment.provider_payment_id)
                 ).upper()
+            elif (
+                payment.provider == Payment.Provider.PAYPAL
+                and state in PAYPAL_RESUMABLE_REMOTE_STATES
+                and (
+                    switching
+                    or timezone.now() - payment.created_at >= PAYPAL_APPROVAL_REUSE_WINDOW
+                )
+            ):
+                self._cancel_stale_checkout_payment(
+                    order=order,
+                    payment=payment,
+                    reason=(
+                        "provider_switch"
+                        if switching
+                        else "paypal_approval_stale"
+                    ),
+                    error_message="",
+                )
+                return
         except PaymentGatewayError as exc:
             detail = str(exc)
             # Référence absente chez le prestataire (annulation client, sandbox, etc.).
