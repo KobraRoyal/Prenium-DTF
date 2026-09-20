@@ -231,30 +231,46 @@
                   {% if provider.id == "stripe" %}
                   Visa, Mastercard, CB.
                   {% elif provider.id == "paypal" %}
-                  Compte PayPal sécurisé.
+                  Compte sécurisé.
                   {% else %}
                   Paiement en ligne sécurisé.
                   {% endif %}
                 </small>
               </span>
+              {% if provider.id == "stripe" %}
               <span class="client-billing-pay__networks" aria-hidden="true">
                 {% include "components/portal/payment_provider_marks.html" with provider_id=provider.id slot="networks" only %}
               </span>
+              {% endif %}
             </label>
             {% endfor %}
           </div>
         </fieldset>
         {% elif studio_payment_providers %}
         <input type="hidden" name="provider" value="{{ studio_payment_providers.0.id }}">
-        <p class="gang-studio-pay-dialog__provider">
+        {% if studio_payment_providers.0.id == "paypal" %}
+        <p class="gang-studio-pay-dialog__hint">Règlement via PayPal après confirmation.</p>
+        {% elif studio_payment_providers.0.id == "stripe" %}
+        <p class="gang-studio-pay-dialog__provider client-billing-pay__provider client-billing-pay__provider--solo">
           <span class="client-billing-pay__mark" aria-hidden="true">
             {% include "components/portal/payment_provider_marks.html" with provider_id=studio_payment_providers.0.id only %}
           </span>
+          <span class="client-billing-pay__copy">
+            <strong>Carte bancaire</strong>
+            <small>Visa, Mastercard, CB.</small>
+          </span>
+          <span class="client-billing-pay__networks" aria-hidden="true">
+            {% include "components/portal/payment_provider_marks.html" with provider_id=studio_payment_providers.0.id slot="networks" only %}
+          </span>
+        </p>
+        {% else %}
+        <p class="gang-studio-pay-dialog__provider client-billing-pay__provider client-billing-pay__provider--solo">
           <span class="client-billing-pay__copy">
             <strong>{{ studio_payment_providers.0.label }}</strong>
             <small>Redirection sécurisée pour le règlement.</small>
           </span>
         </p>
+        {% endif %}
         {% else %}
         <p class="gang-studio-pay-dialog__hint">Le règlement sera proposé après confirmation de la commande.</p>
         {% endif %}

@@ -70,7 +70,11 @@
     <div class="client-billing-pay__head">
       <div>
         <h4 id="client-billing-pay-title">Régler cette commande</h4>
+        {% if payment_providers|length > 1 %}
         <p class="client-billing-pay__hint">Choisissez un moyen, puis continuez. Vous serez redirigé vers le prestataire.</p>
+        {% else %}
+        <p class="client-billing-pay__hint">Continuez pour être redirigé vers le prestataire de paiement.</p>
+        {% endif %}
       </div>
       <p class="client-billing-pay__amount" aria-label="Montant à régler">
         <span>À régler</span>
@@ -84,9 +88,13 @@
       data-submit-loading
     >
       {% csrf_token %}
-      {% if payment and payment.last_error_message %}
+      {% if payment and payment.last_error_message and payment.status != "cancelled" %}
       <div class="alert alert--danger" role="alert">
-        <p class="m-0">{{ payment.last_error_message }} Choisissez un moyen et réessayez.</p>
+        <p class="m-0">{{ payment.last_error_message }} Vous pouvez réessayer.</p>
+      </div>
+      {% elif payment and payment.status == "cancelled" %}
+      <div class="alert alert--info" role="status">
+        <p class="m-0">Paiement non finalisé. Relancez le règlement ci-dessous.</p>
       </div>
       {% endif %}
       {% if payment_providers|length > 1 %}
@@ -112,35 +120,53 @@
                 {% if provider.id == "stripe" %}
                 Visa, Mastercard, CB.
                 {% elif provider.id == "paypal" %}
-                Compte PayPal sécurisé.
+                Compte sécurisé.
                 {% else %}
                 Paiement en ligne sécurisé.
                 {% endif %}
               </small>
             </span>
+            {% if provider.id == "stripe" %}
             <span class="client-billing-pay__networks" aria-hidden="true">
               {% include "components/portal/payment_provider_marks.html" with provider_id=provider.id slot="networks" only %}
             </span>
+            {% endif %}
           </label>
           {% endfor %}
         </div>
       </fieldset>
       {% else %}
       <input type="hidden" name="provider" value="{{ payment_providers.0.id }}">
-      <p class="client-billing-pay__provider">
+      {% if payment_providers.0.id == "stripe" %}
+      <p class="client-billing-pay__provider client-billing-pay__provider--solo">
         <span class="client-billing-pay__mark" aria-hidden="true">
           {% include "components/portal/payment_provider_marks.html" with provider_id=payment_providers.0.id only %}
         </span>
-        <span>
-          Via {{ payment_providers.0.label }}
-          <span class="client-billing-pay__networks" aria-hidden="true">
-            {% include "components/portal/payment_provider_marks.html" with provider_id=payment_providers.0.id slot="networks" only %}
-          </span>
+        <span class="client-billing-pay__copy">
+          <strong>Carte bancaire</strong>
+          <small>Visa, Mastercard, CB.</small>
+        </span>
+        <span class="client-billing-pay__networks" aria-hidden="true">
+          {% include "components/portal/payment_provider_marks.html" with provider_id=payment_providers.0.id slot="networks" only %}
+        </span>
+      </p>
+      {% elif payment_providers.0.id != "paypal" %}
+      <p class="client-billing-pay__provider client-billing-pay__provider--solo">
+        <span class="client-billing-pay__copy">
+          <strong>{{ payment_providers.0.label }}</strong>
+          <small>Redirection sécurisée pour le règlement.</small>
         </span>
       </p>
       {% endif %}
+      {% endif %}
       <div class="client-billing-pay__actions">
-        <button type="submit" class="ui-btn ui-btn-primary">Payer maintenant</button>
+        <button type="submit" class="ui-btn ui-btn-primary">
+          {% if payment_providers|length == 1 and payment_providers.0.id == "paypal" %}
+          Payer avec PayPal
+          {% else %}
+          Payer maintenant
+          {% endif %}
+        </button>
       </div>
     </form>
   </section>
