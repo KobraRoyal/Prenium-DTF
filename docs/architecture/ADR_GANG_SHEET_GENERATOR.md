@@ -132,10 +132,11 @@ pas les annotations, liens ou actions interactives des PDF sources. La taille, l
 position sont appliquées dans l’espace physique de la planche en millimètres.
 
 Le stockage Django privé sur le volume média reste la source transactionnelle et le secours local.
-Dès qu’un rendu HD est prêt, une seconde tâche Celery synchronise le PDF sur le Shared Drive dans
-`Gang Sheets/AAAA/MM/C-<client>/GS-<planche>/`. Chaque révision possède un nom distinct et une
-empreinte SHA-256 enregistrée dans `GangSheetDriveSync`. La tâche est idempotente, ses échecs sont
-audités et aucun identifiant Drive n’est envoyé au portail client.
+Dès qu’une planche validée est rattachée à une commande, une tâche Celery synchronise le PDF HD et
+les assets source dans `Commandes/…/<commande>/00_source_Client/`. Le dossier `01_Production` est
+créé vide et réservé à l’atelier. Il n’y a plus de staging `Gang Sheets/`. Chaque révision possède
+un nom distinct et une empreinte SHA-256 enregistrée dans `GangSheetDriveSync`. La tâche est
+idempotente, ses échecs sont audités et aucun identifiant Drive n’est envoyé au portail client.
 
 ## Sécurité
 

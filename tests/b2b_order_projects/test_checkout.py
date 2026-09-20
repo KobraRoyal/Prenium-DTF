@@ -152,22 +152,14 @@ def test_checkout_of_validated_gang_sheet_keeps_the_generated_hd_pdf(settings):
     assert item.height_mm == sheet.height_mm
 
     settings.GOOGLE_DRIVE_SYNC_ENABLED = True
-    with pytest.raises(ProjectDomainError, match="Google Drive"):
-        B2BOrderProjectCheckoutService().checkout_project(
-            project=project,
-            actor=user,
-            customer_membership=membership,
-            source="test",
-        )
-    assert Order.objects.filter(customer=customer).exists() is False
-    settings.GOOGLE_DRIVE_SYNC_ENABLED = False
-
+    # Drive sync différé jusqu'à la commande : le PDF HD local suffit avant checkout.
     order = B2BOrderProjectCheckoutService().checkout_project(
         project=project,
         actor=user,
         customer_membership=membership,
         source="test",
     )
+    settings.GOOGLE_DRIVE_SYNC_ENABLED = False
 
     upload = order.uploads.get()
     sheet.refresh_from_db()

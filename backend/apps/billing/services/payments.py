@@ -237,11 +237,12 @@ class PaymentService:
             return
         gateway = self._get_gateway(provider=payment.provider)
         # Lien sandbox après bascule live (ou l'inverse) : abandonner sans appeler l'API.
+        # Ne s'applique qu'aux vraies URLs PayPal (évite les fakes de tests / hosts internes).
         approval_url = str(payment.approval_url or "")
         paypal_base = str(getattr(settings, "PAYPAL_API_BASE_URL", "") or "")
-        if payment.provider == Payment.Provider.PAYPAL and approval_url:
-            approval_is_sandbox = "sandbox.paypal.com" in approval_url
-            api_is_sandbox = "sandbox" in paypal_base
+        if payment.provider == Payment.Provider.PAYPAL and "paypal.com" in approval_url.lower():
+            approval_is_sandbox = "sandbox.paypal.com" in approval_url.lower()
+            api_is_sandbox = "sandbox" in paypal_base.lower()
             if approval_is_sandbox != api_is_sandbox:
                 self._cancel_stale_checkout_payment(
                     order=order,

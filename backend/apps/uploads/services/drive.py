@@ -616,7 +616,7 @@ class OrderUploadDriveSyncService:
 
 
 class OrderProductionDriveSyncService:
-    """Pousse un livrable ready-to-print (PDF opérateur / Gang Sheet) vers ``01_Production``."""
+    """Réservé à un push atelier manuel vers ``01_Production`` (aucun appel auto Gang Sheet)."""
 
     def __init__(
         self,

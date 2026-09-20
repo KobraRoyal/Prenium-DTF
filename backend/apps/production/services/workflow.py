@@ -145,8 +145,20 @@ class ProductionWorkflowService:
         source: str,
         reason: str = "",
     ):
-        order = self._get_staff_order(order_public_id=order_public_id)
+        order = (
+            Order.objects.select_related("customer", "created_by")
+            .filter(public_id=order_public_id)
+            .first()
+        )
         if order is None:
+            return None, None, None
+        if order.status == Order.Status.CANCELLED:
+            raise ValidationError(
+                "Cette commande a été retirée de la file Atelier : "
+                "aucune transition de production n’est possible."
+            )
+        # Hors file Atelier (ex. comptant non capturé) : no-op comme avant.
+        if not production_ready_orders_queryset(Order.objects.filter(pk=order.pk)).exists():
             return None, None, None
 
         production_job = self.get_or_create_for_order(order=order)

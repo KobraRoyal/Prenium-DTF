@@ -98,8 +98,8 @@ def create_hd_sheet(*, email="gang-drive@example.com", project=None):
     return user, customer, default_project, sheet, content
 
 
-def test_drive_sync_uploads_exact_hd_bytes_and_is_idempotent():
-    user, customer, _project, sheet, content = create_hd_sheet()
+def test_drive_sync_without_order_defers_and_skips_gang_sheets_staging():
+    user, customer, _project, sheet, _content = create_hd_sheet()
     gateway = FakeDriveGateway()
     service = GangSheetDriveSyncService(gateway=gateway)
 
@@ -108,23 +108,17 @@ def test_drive_sync_uploads_exact_hd_bytes_and_is_idempotent():
 
     assert sync == same_sync
     assert sync.customer == customer
-    assert sync.status == GangSheetDriveSync.Status.SYNCED
-    assert sync.revision == sheet.revision
-    assert sync.sha256 == hashlib.sha256(content).hexdigest()
-    assert sync.drive_file_id.startswith("drive-file-GS-")
-    assert len(gateway.uploads) == 1
-    assert gateway.uploads[0]["content"] == content
-    assert gateway.uploads[0]["mime_type"] == "application/pdf"
-    assert "/01_Production" in gateway.uploads[0]["parent_id"]
-    assert "Gang Sheets" in gateway.uploads[0]["parent_id"]
-    assert GangSheetDriveSync.objects.for_customer(customer).get() == sync
+    assert sync.status == GangSheetDriveSync.Status.PENDING
+    assert sync.drive_file_id == ""
+    assert gateway.uploads == []
+    assert gateway.folders == {}
     assert AuditLogEntry.objects.filter(
-        action="gang_sheet.drive_synced",
+        action="gang_sheet.drive_sync_deferred",
         target_public_id=sheet.public_id,
     ).exists()
 
 
-def test_drive_sync_uploads_source_assets_and_pdf_into_order_folders():
+def test_drive_sync_uploads_sources_and_pdf_into_order_source_client_only():
     from apps.orders.models import Order
     from apps.uploads.models import OrderDriveFolder
 
@@ -160,21 +154,38 @@ def test_drive_sync_uploads_source_assets_and_pdf_into_order_folders():
     assert set(folder_ids) >= {"00_source_Client", "01_Production"}
     assert len(gateway.uploads) == 2
     parents = {item["parent_id"] for item in gateway.uploads}
-    assert folder_ids["00_source_Client"] in parents
-    assert folder_ids["01_Production"] in parents
+    assert parents == {folder_ids["00_source_Client"]}
+    assert folder_ids["01_Production"] not in parents
     pdf_upload = next(item for item in gateway.uploads if item["mime_type"] == "application/pdf")
     assert pdf_upload["content"] == content
-    assert pdf_upload["parent_id"] == folder_ids["01_Production"]
+    assert pdf_upload["parent_id"] == folder_ids["00_source_Client"]
     source_upload = next(item for item in gateway.uploads if item["mime_type"] != "application/pdf")
     assert source_upload["parent_id"] == folder_ids["00_source_Client"]
     assert "src-" in source_upload["name"]
     assert version.original_filename in source_upload["name"] or "logo" in source_upload["name"]
+    assert sync.sha256 == hashlib.sha256(content).hexdigest()
+    assert AuditLogEntry.objects.filter(
+        action="gang_sheet.drive_synced",
+        target_public_id=sheet.public_id,
+    ).exists()
 
 
 def test_drive_sync_failure_is_tracked_and_audited():
+    from apps.orders.models import Order
+
     user, _customer, _project, sheet, _content = create_hd_sheet(
         email="gang-drive-failure@example.com"
     )
+    order = Order.objects.create(
+        customer=sheet.customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="0.00",
+        total_amount="0.00",
+    )
+    sheet.order = order
+    sheet.save(update_fields=["order", "updated_at"])
 
     sync = GangSheetDriveSyncService(gateway=FakeDriveGateway(fail_upload=True)).sync_sheet(
         sheet=sheet, actor=user, source="test"
@@ -279,13 +290,39 @@ def test_validation_schedules_drive_storage_before_order(
 
 
 @override_settings(GOOGLE_DRIVE_SYNC_ENABLED=True)
-def test_checkout_guard_requires_current_drive_revision():
+def test_checkout_guard_requires_local_hd_before_order_and_drive_after_attach():
     _user, _customer, project, sheet, _content = create_hd_sheet(
         email="gang-drive-guard@example.com"
     )
     sheet.project = project
-    sheet.save(update_fields=["project", "updated_at"])
+    sheet.final_file = None
+    sheet.save(update_fields=["project", "final_file", "updated_at"])
     service = GangSheetDriveSyncService()
+
+    with pytest.raises(GangSheetDriveSyncRequired):
+        service.assert_project_outputs_synced(project=project)
+
+    sheet.final_file = SimpleUploadedFile(
+        "production.pdf",
+        b"%PDF-1.4\n%%EOF\n",
+        content_type="application/pdf",
+    )
+    sheet.save(update_fields=["final_file", "updated_at"])
+    # Sans commande : le PDF local suffit (pas de staging Drive).
+    service.assert_project_outputs_synced(project=project)
+
+    from apps.orders.models import Order
+
+    order = Order.objects.create(
+        customer=sheet.customer,
+        created_by=_user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="0.00",
+        total_amount="0.00",
+    )
+    sheet.order = order
+    sheet.save(update_fields=["order", "updated_at"])
     sync = service.ensure_sync_record(sheet=sheet)
 
     with pytest.raises(GangSheetDriveSyncRequired):
@@ -336,7 +373,7 @@ def test_sync_gang_sheet_to_drive_locks_sheet_without_nullable_order_join(monkey
     """Régression : SELECT FOR UPDATE + select_related(order) casse sous PostgreSQL."""
     from apps.gang_sheets.services import drive as drive_module
 
-    user, _customer, _project, sheet, content = create_hd_sheet(email="gang-drive-lock@example.com")
+    user, _customer, _project, sheet, _content = create_hd_sheet(email="gang-drive-lock@example.com")
     assert sheet.order_id is None
     gateway = FakeDriveGateway()
 
@@ -352,9 +389,9 @@ def test_sync_gang_sheet_to_drive_locks_sheet_without_nullable_order_join(monkey
         source="test.lock",
     )
 
-    assert sync.status == GangSheetDriveSync.Status.SYNCED
-    assert sync.sha256 == hashlib.sha256(content).hexdigest()
-    assert len(gateway.uploads) == 1
+    # Sans commande : différé (pas de staging) ; le lock FOR UPDATE reste valide.
+    assert sync.status == GangSheetDriveSync.Status.PENDING
+    assert gateway.uploads == []
 
 
 def test_order_project_detail_shows_drive_sync_message_not_visuals_fallback():
