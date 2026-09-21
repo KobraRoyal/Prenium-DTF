@@ -2517,7 +2517,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         navigation_link_rule = portal_entry.split(
             "Header partagé : les liens de navigation restent des liens, jamais des pastilles.",
             1,
-        )[1].split("}", 1)[0]
+        )[1].split("Exception : pastille inbox", 1)[0]
         for declaration in [
             "border-color: transparent !important;",
             "background: transparent !important;",
@@ -2526,3 +2526,6 @@ class PortalUiCoherenceTests(SimpleTestCase):
         ]:
             with self.subTest(declaration=declaration):
                 self.assertIn(declaration, navigation_link_rule)
+        self.assertIn("Exception : pastille inbox", portal_entry)
+        self.assertIn(".product-nav__inbox-badge.is-active", portal_entry)
+        self.assertIn("overflow: visible !important", portal_entry)

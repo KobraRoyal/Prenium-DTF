@@ -17,7 +17,7 @@ from apps.orders.references import (
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260918-date-portal-v1"
+PORTAL_CSS_ASSET_V = "20260921-inbox-badge-v1"
 
 STATUS_LABELS = {
     "draft": "Brouillon",

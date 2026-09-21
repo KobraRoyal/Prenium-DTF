@@ -1736,6 +1736,35 @@ html[data-theme="prenium"] body.product-shell .product-header .ui-foundation-nav
   transform: none !important;
 }
 
+/* Exception : pastille inbox « Tableau de bord » (compteur commandes non traitées). */
+html[data-theme="prenium"] body.product-shell .product-header .product-nav__link--inbox.ui-btn-ghost {
+  overflow: visible !important;
+}
+
+html[data-theme="prenium"] body.product-shell .product-header .product-nav__inbox-badge.is-active {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 1.25rem !important;
+  height: 1.25rem !important;
+  padding: 0 0.34rem !important;
+  border: 2px solid var(--surface-raised, #fffdf8) !important;
+  border-radius: 999px !important;
+  background: var(--product-danger, var(--danger, #ff5470)) !important;
+  color: #fff !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink, #0b0b0b) 16%, transparent) !important;
+  font-family: "Space Grotesk", system-ui, sans-serif !important;
+  font-size: 0.6875rem !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1 !important;
+}
+
+html[data-theme="prenium"] body.product-shell .product-header .product-nav__inbox-badge[hidden] {
+  display: none !important;
+}
+
 /*
  * v52 — Autorité finale des filtres, onglets et navigations de section.
  * `ui-selection-control` porte le mouvement dans buttons.css ; ce pont de
