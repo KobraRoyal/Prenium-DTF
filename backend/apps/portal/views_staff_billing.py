@@ -6,6 +6,9 @@ from django.shortcuts import render
 from django.views import View
 
 from apps.billing.models import Invoice
+from apps.orders.models import Order
+from apps.orders.services.pricing import OrderPricingService
+from apps.portal.forms_staff_billing_adjustment import StaffBillingAdjustmentForm
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
     badge_tone_for_status,
@@ -20,6 +23,16 @@ from apps.portal.views_common import (
 from apps.portal.views_staff import StaffOrderContextMixin
 
 
+def can_staff_adjust_deferred_billing(*, order: Order, actor) -> bool:
+    return (
+        order.billing_mode == Order.BillingMode.DEFERRED
+        and order.pricing_status == Order.PricingStatus.PRICED
+        and order.billing_statement_id is None
+        and order.status == Order.Status.SUBMITTED
+        and actor.has_perm("orders.change_order")
+    )
+
+
 class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
     template_name = "portal/staff/panels/billing.html"
 
@@ -30,7 +43,7 @@ class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
-    def _billing_context(self, request):
+    def _billing_context(self, request, *, adjustment_form=None, form_error: str = ""):
         _order, payment, invoice = billing_service.get_staff_billing(
             order_public_id=self.order.public_id,
             actor=request.user,
@@ -44,12 +57,18 @@ class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
             and invoice.paid_at is None
             and customer.preferred_settlement_method == "wire_transfer"
         )
+        can_adjust = can_staff_adjust_deferred_billing(order=self.order, actor=request.user)
+        if can_adjust and adjustment_form is None:
+            adjustment_form = StaffBillingAdjustmentForm(order=self.order)
         return {
             "order": self.order,
             "payment": payment,
             "invoice": invoice,
             "upload_rows": upload_rows,
             "can_mark_invoice_paid": can_mark_invoice_paid,
+            "can_adjust_deferred_billing": can_adjust,
+            "billing_adjustment_form": adjustment_form,
+            "billing_adjustment_error": form_error,
             "badge_tone_for_status": badge_tone_for_status,
             "status_label": status_label,
         }
@@ -64,6 +83,8 @@ class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
     def post(self, request, order_public_id):
         if not request.user.has_perm("orders.change_order"):
             raise PermissionDenied
+        if request.POST.get("action") == "adjust_billing":
+            return self._post_adjust_billing(request)
         raw = request.POST.get("order_meterage_override_linear_m", "")
         tid = htmx_target_id(request)
         slot_partial = tid.startswith("staff-order-meterage-slot")
@@ -94,6 +115,44 @@ class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
         if self.order.pricing_status == "priced":
             toast_msg = "Métrage enregistré — tarif recalculé et visible côté client."
         return with_toast(response, toast_msg, "success")
+
+    def _post_adjust_billing(self, request):
+        if not can_staff_adjust_deferred_billing(order=self.order, actor=request.user):
+            raise PermissionDenied
+        form = StaffBillingAdjustmentForm(request.POST, order=self.order)
+        if not form.is_valid():
+            msg = "Corrigez les montants saisis."
+            response = render(
+                request,
+                self.template_name,
+                self._billing_context(request, adjustment_form=form, form_error=msg),
+            )
+            return with_toast(response, msg, "error")
+        try:
+            OrderPricingService().apply_staff_billing_adjustments(
+                order=self.order,
+                actor=request.user,
+                source="staff_portal.billing_adjustment",
+                shipping_method_code=form.cleaned_data["shipping_method_code"],
+                shipping_amount=form.cleaned_data["shipping_amount"],
+                line_adjustments=form.line_adjustments(),
+                meterage_override_linear_m=form.cleaned_data.get("dtf_group_linear_m"),
+            )
+        except ValidationError as exc:
+            msg = exc.messages[0] if getattr(exc, "messages", None) else str(exc)
+            response = render(
+                request,
+                self.template_name,
+                self._billing_context(request, adjustment_form=form, form_error=msg),
+            )
+            return with_toast(response, msg, "error")
+        self.order.refresh_from_db()
+        response = render(request, self.template_name, self._billing_context(request))
+        return with_toast(
+            response,
+            "Facturation mise à jour — totaux recalculés et visibles côté client.",
+            "success",
+        )
 
     def _meterage_partial_context(self, request, *, form_error: str, hx_target_id: str):
         """Contexte pour le fragment métrage (HTMX) : cible du formulaire

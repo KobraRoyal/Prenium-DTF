@@ -5,7 +5,7 @@
   <a href="{% url 'portal:staff-order-list' %}" class="ui-inline-action">Retour aux commandes</a>
   <h1 class="font-display">Créer une commande manuelle</h1>
   <section class="portal-page-surface">
-    <p class="ui-field-help">Sélectionnez le client, renseignez son lien et le métrage total sur la laize de {{ dtf_laize_cm }} cm. Le tarif habituel du client et son mode de règlement seront appliqués.</p>
+    <p class="ui-field-help">Sélectionnez le client, le mode de livraison et le lien. Le métrage peut être saisi ici ou plus tard (Pilotage / fiche commande). Le tarif et le mode de règlement du client s’appliquent ensuite.</p>
     <form method="post" class="ui-form-stack" data-submit-loading>
       {% csrf_token %}
       {% include "portal/partials/external_order_fields.html" %}

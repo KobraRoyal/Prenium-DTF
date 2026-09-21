@@ -8,7 +8,7 @@
   <dl class="order-billing-breakdown__list">
     {% for row in rows %}
     <div>
-      <dt>{{ row.label }}<small>{% if row.linear_m is not None %}{{ row.linear_m|billing_quantity }} m linéaires · {% endif %}{{ row.quantity|billing_quantity }} {{ row.unit }}{% if row.unit_price is not None %} × {{ row.unit_price|floatformat:2 }} {{ order.currency }}{% endif %}</small></dt>
+      <dt>{{ row.label }}<small>{% if row.visual_count and row.visual_count > 1 %}{{ row.visual_count }} visuels · {% endif %}{% if row.linear_m is not None %}{{ row.linear_m|billing_quantity }} m linéaires · {% endif %}{{ row.quantity|billing_quantity }} {{ row.unit }}{% if row.unit_price is not None %} × {{ row.unit_price|floatformat:2 }} {{ order.currency }}{% endif %}</small></dt>
       <dd>{{ row.amount|floatformat:2 }} {{ order.currency }}</dd>
     </div>
     {% endfor %}

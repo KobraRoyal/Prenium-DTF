@@ -214,10 +214,14 @@ def test_staff_creates_priced_order_for_customer_without_impersonation(scope):
     assert form.status_code == 200
     assert f'value="{customer.public_id}"' in form.content.decode()
     assert 'name="external_visual_count"' in form.content.decode()
+    assert 'name="shipping_method_code"' in form.content.decode()
     response = admin.post(
         url,
         payload(
-            customer=str(customer.public_id), meterage_linear_m="2.5", external_visual_count="3"
+            customer=str(customer.public_id),
+            meterage_linear_m="2.5",
+            external_visual_count="3",
+            shipping_method_code="standard",
         ),
     )
     assert response.status_code == 302
@@ -225,8 +229,12 @@ def test_staff_creates_priced_order_for_customer_without_impersonation(scope):
     assert order.created_by == staff
     assert order.pricing_status == Order.PricingStatus.PRICED
     assert order.meterage_override_linear_m == Decimal("2.5")
+    assert order.shipping_method_code == "standard"
     assert order.uploads.get().external_visual_count == 3
     assert order.items.get(service_type="file_preparation").quantity == 3
+    from apps.orders.references import order_business_number
+
+    assert order_business_number(order).startswith("CMD-")
     assert not CustomerMembership.objects.filter(user=staff).exists()
     assert admin.get(response.url).status_code == 200
     for panel_name in ("uploads", "inspection", "drive-sync", "production", "billing"):
@@ -362,15 +370,40 @@ def test_external_link_remains_customer_scoped(scope):
     assert order.created_by != user
 
 
-@pytest.mark.parametrize("meterage", ["0", "-1", "NaN", "Infinity", "100000000", ""])
+@pytest.mark.parametrize("meterage", ["0", "-1", "NaN", "Infinity", "100000000"])
 def test_staff_rejects_invalid_meterage_before_mutation(scope, meterage):
     customer, _user, _client, _staff, admin = scope
     response = admin.post(
         reverse("portal:staff-external-order-create"),
-        payload(customer=str(customer.public_id), meterage_linear_m=meterage),
+        payload(
+            customer=str(customer.public_id),
+            meterage_linear_m=meterage,
+            shipping_method_code="standard",
+        ),
     )
     assert response.status_code == 400
     assert not Order.objects.exists()
+
+
+def test_staff_creates_order_without_meterage_for_later_pricing(scope):
+    customer, _user, _client, staff, admin = scope
+    response = admin.post(
+        reverse("portal:staff-external-order-create"),
+        payload(
+            customer=str(customer.public_id),
+            meterage_linear_m="",
+            shipping_method_code="pickup",
+        ),
+    )
+    assert response.status_code == 302
+    order = Order.objects.get(customer=customer)
+    assert order.created_by == staff
+    assert order.meterage_override_linear_m is None
+    assert order.pricing_status == Order.PricingStatus.PENDING
+    assert order.shipping_method_code == "pickup"
+    from apps.orders.references import order_business_number
+
+    assert order_business_number(order).startswith("CMD-")
 
 
 def test_staff_cannot_select_inactive_customer(scope):
@@ -379,7 +412,11 @@ def test_staff_cannot_select_inactive_customer(scope):
     customer.save(update_fields=["is_active"])
     response = admin.post(
         reverse("portal:staff-external-order-create"),
-        payload(customer=str(customer.public_id), meterage_linear_m="3"),
+        payload(
+            customer=str(customer.public_id),
+            meterage_linear_m="3",
+            shipping_method_code="standard",
+        ),
     )
     assert response.status_code == 400
     assert not Order.objects.exists()

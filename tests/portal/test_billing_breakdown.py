@@ -136,6 +136,16 @@ def test_both_panels_show_one_read_only_breakdown(scope, priced_order, staff):
     assert response.status_code == 200
     html = response.content.decode()
     assert html.count('aria-label="Détail du montant"') == 1
+    if staff:
+        # Encours atelier : feuille éditable (métrage DTF regroupé), pas le breakdown lecture seule.
+        assert "data-billing-adjustment" in html
+        assert 'x-text="displayTotal()"' in html
+        assert "Préparation des fichiers" in html
+        assert "Impression DTF" in html
+        assert "laize" in html.lower()
+        assert "Port HT" in html
+        assert 'name="dtf_group_linear_m"' in html
+        return
     for label in (
         "Préparation des fichiers",
         "3 fichier(s) × 10,00 EUR",

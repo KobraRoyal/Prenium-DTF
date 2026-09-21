@@ -256,6 +256,25 @@ def test_staff_can_download_manufacturing_order_pdf():
     assert "Sync Drive" not in text
     assert "Aperçu\nindisponible" in text
 
+    # Re-téléchargement : déjà émis ne doit plus provoquer d'erreur 500.
+    issued_at = job.of_document_issued_at
+    audit_count = AuditLogEntry.objects.filter(
+        action="production.manufacturing_orders_marked_issued",
+        actor=_staff_user,
+    ).count()
+    second = client.get(production_manufacturing_order_pdf_route(order.public_id))
+    assert second.status_code == status.HTTP_200_OK
+    assert second.content[:4] == b"%PDF"
+    job.refresh_from_db()
+    assert job.of_document_issued_at == issued_at
+    assert (
+        AuditLogEntry.objects.filter(
+            action="production.manufacturing_orders_marked_issued",
+            actor=_staff_user,
+        ).count()
+        == audit_count
+    )
+
 
 def test_manufacturing_order_file_qr_code_uses_filename_without_extension():
     qr_code = _build_file_qr_code(filename="design.final.pdf")

@@ -45,11 +45,19 @@ def month_bounds(month):
     return month_start, next_month, starts_at, ends_at
 
 
-def linear_meters_from_sqm(total_sqm: Decimal) -> Decimal:
+def dtf_laize_m() -> Decimal:
     laize_m = Decimal(int(getattr(settings, "DTF_LAIZE_CM", 55))) / Decimal("100")
     if laize_m <= 0:
         raise ValidationError("DTF_LAIZE_CM doit être strictement positif.")
-    return (Decimal(str(total_sqm)) / laize_m).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+    return laize_m
+
+
+def linear_meters_from_sqm(total_sqm: Decimal) -> Decimal:
+    return (Decimal(str(total_sqm)) / dtf_laize_m()).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+
+
+def sqm_from_linear_meters(linear_m: Decimal) -> Decimal:
+    return (Decimal(str(linear_m)) * dtf_laize_m()).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
 
 
 def customer_has_personalized_ladder(customer: Customer) -> bool:

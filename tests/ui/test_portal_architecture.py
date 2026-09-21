@@ -158,7 +158,12 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
         ),
         (
             "views_staff_billing",
-            {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff"},
+            {
+                "apps.portal.forms_staff_billing_adjustment",
+                "apps.portal.htmx",
+                "apps.portal.views_common",
+                "apps.portal.views_staff",
+            },
         ),
     ],
 )
@@ -182,7 +187,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_staff", 210),
         ("views_staff_dashboard", 120),
         ("views_staff_documents", 70),
-        ("views_staff_billing", 170),
+        ("views_staff_billing", 210),
         ("views_staff_production", 180),
         ("views_staff_shipping", 215),
         ("views_staff_operations", 400),

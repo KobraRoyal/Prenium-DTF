@@ -122,12 +122,38 @@ def test_staff_creation_prices_meterage_and_preserves_staff_actor():
         name="Grand visuel",
         external_url="https://files.example.com/a",
         meterage_linear_m="2.5000",
+        shipping_method_code="express",
     )
     assert order.created_by == actor
     assert order.meterage_override_linear_m == Decimal("2.5000")
     assert order.pricing_status == Order.PricingStatus.PRICED
     assert order.items.count() == 2
     assert order.uploads.get().meterage_sqm > 0
+    assert order.shipping_method_code == "express"
+    from apps.orders.references import order_business_number
+
+    assert order_business_number(order).startswith("CMD-")
+    assert order.source_b2b_order_project.project_number == order_business_number(order)
+
+
+@pytest.mark.django_db
+def test_staff_creation_allows_deferred_meterage_with_cmd_number():
+    _, customer = client_scope()
+    actor = staff_user()
+    order = ExternalOrderService().create_staff_order(
+        customer=customer,
+        actor=actor,
+        name="Sans métrage",
+        external_url="https://files.example.com/a",
+        meterage_linear_m=None,
+        shipping_method_code="standard",
+    )
+    assert order.meterage_override_linear_m is None
+    assert order.pricing_status == Order.PricingStatus.PENDING
+    assert order.shipping_method_code == "standard"
+    from apps.orders.references import order_business_number
+
+    assert order_business_number(order).startswith("CMD-")
 
 
 @pytest.mark.django_db

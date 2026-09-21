@@ -39,6 +39,7 @@ def order_billing_breakdown(order):
                 "linear_m": order.meterage_override_linear_m
                 if order.meterage_override_linear_m is not None
                 else linear_meters_from_sqm(quantity),
+                "visual_count": len(dtf_lines),
             }
         )
     for line in lines:

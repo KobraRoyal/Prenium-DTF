@@ -168,8 +168,18 @@ class ManufacturingOrderBatchService:
         return order.status == Order.Status.SUBMITTED
 
     def mark_of_documents_issued(self, *, orders: list[Order], actor, source: str) -> None:
-        if any(not self._is_batch_eligible(order=order) for order in orders):
-            raise ValidationError("Impression OF impossible avant confirmation du paiement.")
+        """Marque l’émission OF ; idempotent si déjà émis (re-téléchargement PDF)."""
+        for order in orders:
+            if order.billing_mode == Order.BillingMode.IMMEDIATE and not order_has_captured_payment(
+                order
+            ):
+                raise ValidationError("Impression OF impossible avant confirmation du paiement.")
+            try:
+                order.production_job
+            except ProductionJob.DoesNotExist as exc:
+                raise ValidationError("Aucun job de production pour cette commande.") from exc
+            if order.status == Order.Status.CANCELLED:
+                raise ValidationError("Commande annulée : impression OF impossible.")
         now = timezone.now()
         job_ids = []
         for order in orders:

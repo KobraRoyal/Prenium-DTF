@@ -1,0 +1,152 @@
+/* Ajustement facturation Atelier (staff) — panneau édition live. */
+@layer components {
+  .billing-edit {
+    margin-top: 0.85rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm, 14px);
+    background: var(--surface);
+  }
+
+  .billing-edit__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .billing-edit__head h4 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .billing-edit__head span {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .billing-edit__form {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .billing-edit__shipping {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
+    gap: 0.65rem;
+  }
+
+  .billing-edit__table {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .billing-edit__row {
+    display: grid;
+    grid-template-columns: minmax(7rem, 1.3fr) minmax(5rem, 0.7fr) minmax(5rem, 0.7fr) minmax(5rem, 0.7fr);
+    gap: 0.45rem 0.55rem;
+    align-items: center;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .billing-edit__row--head {
+    border-bottom: 0;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .billing-edit__row .ui-field-group {
+    margin: 0;
+  }
+
+  .billing-edit__label {
+    display: grid;
+    gap: 0.15rem;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+
+  .billing-edit__subtitle {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+
+  .billing-edit__qty-hint {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .billing-edit__line-total {
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  .billing-edit__row-error {
+    grid-column: 1 / -1;
+    color: var(--danger, #a33b45);
+    font-size: 0.8rem;
+  }
+
+  .billing-edit__totals {
+    margin: 0;
+  }
+
+  .billing-edit__totals > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9rem;
+  }
+
+  .billing-edit__totals dt { font-weight: 600; }
+  .billing-edit__totals dd {
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .billing-edit__total {
+    border-bottom: 0;
+    font-size: 1.05rem;
+    font-weight: 750;
+  }
+
+  .billing-edit__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+  }
+
+  @media (max-width: 720px) {
+    .billing-edit__shipping,
+    .billing-edit__row,
+    .billing-edit__row--head {
+      grid-template-columns: 1fr;
+    }
+
+    .billing-edit__row--head { display: none; }
+
+    .billing-edit__line-total { text-align: left; }
+
+    .billing-edit__actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+}

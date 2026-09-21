@@ -298,6 +298,10 @@ class ProductionWorkflowService:
         requested_date_label = (
             date_format(requested_date, "d/m/Y") if requested_date is not None else ""
         )
+        from apps.orders.references import order_business_number
+
+        business_number = order_business_number(order)
+        reference = business_number or short_public_ref(order.public_id).upper()
 
         return {
             "document_type": "manufacturing_order_v1",
@@ -310,7 +314,7 @@ class ProductionWorkflowService:
                 "name": order.customer.name,
             },
             "order_summary": {
-                "reference": short_public_ref(order.public_id).upper(),
+                "reference": reference,
                 "status": order.status,
                 "status_label": self.document_status_labels.get(order.status, order.status),
                 "currency": order.currency,

@@ -2,11 +2,14 @@
 
 from decimal import Decimal, InvalidOperation
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.accounts.services.access import AccessScopeService
 from apps.auditlog.services import record_event
+from apps.b2b_order_projects.models import B2BOrderProject
+from apps.b2b_order_projects.services.numbering import B2BOrderProjectNumberService
 from apps.orders.models import Order
 from apps.orders.services.orders import OrderService
 from apps.orders.services.pricing import OrderPricingService
@@ -33,6 +36,12 @@ class ExternalOrderService:
         if meterage >= Decimal("100000000"):
             raise ValidationError("Le métrage est trop élevé.")
         return meterage
+
+    @staticmethod
+    def _optional_meterage(value) -> Decimal | None:
+        if value in (None, ""):
+            return None
+        return ExternalOrderService._meterage(value)
 
     @staticmethod
     def _name(value: str) -> str:
@@ -85,7 +94,7 @@ class ExternalOrderService:
         actor,
         name,
         external_url,
-        meterage_linear_m,
+        meterage_linear_m=None,
         external_visual_count=1,
         customer_note: str = "",
         shipping_method_code: str | None = None,
@@ -99,7 +108,7 @@ class ExternalOrderService:
             raise ValidationError("Vous n'êtes pas autorisé à créer cette commande.")
         if customer is None or not customer.is_active:
             raise ValidationError("Le compte client est inactif.")
-        meterage = self._meterage(meterage_linear_m)
+        meterage = self._optional_meterage(meterage_linear_m)
         return self._create(
             customer=customer,
             actor=actor,
@@ -111,6 +120,31 @@ class ExternalOrderService:
             external_visual_count=normalize_external_visual_count(external_visual_count),
             membership=None,
             source=source,
+            assign_business_number=True,
+        )
+
+    def _attach_cmd_number(
+        self, *, order: Order, actor, name: str, shipping_method_code: str
+    ) -> None:
+        """Attribue un N° CMD- via un projet B2B coquille déjà converti."""
+        try:
+            if order.source_b2b_order_project is not None:
+                return
+        except ObjectDoesNotExist:
+            pass
+        now = timezone.now()
+        B2BOrderProject.objects.create(
+            customer=order.customer,
+            created_by=actor,
+            project_number=B2BOrderProjectNumberService().next_number(),
+            name=name,
+            order_mode=B2BOrderProject.OrderMode.INDIVIDUAL_DESIGNS,
+            status=B2BOrderProject.Status.CONVERTED,
+            delivery_method=str(shipping_method_code or "").strip(),
+            converted_order=order,
+            converted_at=now,
+            submitted_at=now,
+            confirmed_at=now,
         )
 
     def _create(
@@ -126,6 +160,7 @@ class ExternalOrderService:
         membership,
         source,
         external_visual_count=1,
+        assign_business_number: bool = False,
     ) -> Order:
         cleaned_name = self._name(name)
         cleaned_url = self.validate_external_url(external_url)
@@ -170,6 +205,14 @@ class ExternalOrderService:
             order.status = Order.Status.SUBMITTED
             order.save(update_fields=["status", "updated_at"])
 
+            if assign_business_number:
+                self._attach_cmd_number(
+                    order=order,
+                    actor=actor,
+                    name=cleaned_name,
+                    shipping_method_code=str(shipping["shipping_method_code"]),
+                )
+
             if meterage is not None:
                 OrderPricingService().compute_and_persist_order_pricing(
                     order=order,
@@ -189,6 +232,7 @@ class ExternalOrderService:
                 "source": source,
                 "meterage_linear_m": str(meterage) if meterage is not None else None,
                 "external_visual_count": external_visual_count,
+                "shipping_method_code": str(shipping["shipping_method_code"]),
             }
             if membership is not None:
                 metadata["customer_membership_public_id"] = str(membership.public_id)

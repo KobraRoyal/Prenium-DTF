@@ -119,6 +119,34 @@ Effets :
   meilleur palier atteint sur le volume général.
 - Audit `order.pricing_computed`.
 
+## Ajustement Atelier (encours uniquement)
+
+Sur le panneau **Facturation** (`portal:staff-order-panel-billing`), l’opérateur peut :
+
+- changer le **mode de livraison** (snapshot code / libellé) ;
+- saisir un **montant de port HT libre** (le catalogue préremplit au changement de mode) ;
+- modifier **quantité** et **prix unitaire HT** ;
+  - les lignes DTF atelier (plusieurs visuels) sont **regroupées en une seule ligne** ;
+  - la saisie DTF se fait en **mètres linéaires** ; la quantité m² est dérivée automatiquement
+    via la laize (`DTF_LAIZE_CM`, ex. 55 cm → m² = m lin. × 0,55) côté UI et serveur ;
+  - à l’enregistrement, le métrage linéaire est conservé dans `meterage_override_linear_m`
+    et la quantité m² est **redistribuée proportionnellement** sur les `OrderLine` DTF existantes
+    (aucune fusion/suppression de lignes en base) ;
+  - les autres services (préparation fichiers, etc.) restent éditables ligne par ligne ;
+- voir les **totaux recalculés dynamiquement** (UI Alpine, y compris le total hero) puis persistés au submit.
+
+Garde-fous :
+
+- réservé à `billing_mode = deferred`, `pricing_status = priced`, commande `submitted`,
+  **sans** `billing_statement` ;
+- **interdit** pour le comptant CB (`immediate`) ;
+- service `OrderPricingService.apply_staff_billing_adjustments` ;
+- pose `manual_billing_adjusted_at` : la commande **compte** encore dans le volume mensuel
+  mais ses prix ne sont **pas** écrasés par `reprice_deferred_month` ;
+- un nouveau calcul depuis le métrage (`compute_and_persist_order_pricing`) **efface** le gel
+  et reconstruit le tarif catalogue ;
+- audit `order.manual_billing_adjusted` ; e-mail « commande tarifée » renvoyé.
+
 ## Remise générale sur volume mensuel
 
 Le périmètre d’agrégation contient uniquement les commandes du même client qui sont `submitted`,

@@ -189,6 +189,15 @@ class Order(BaseModel):
         ),
         validators=[MinValueValidator(MIN_METERAGE_LINEAR_M)],
     )
+    manual_billing_adjusted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Ajustement Atelier (encours) : qté / PU / port figés. "
+            "Exclut la commande du recalcul de remise volume mensuel ; "
+            "un nouveau calcul depuis le métrage efface ce gel."
+        ),
+    )
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancelled_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
