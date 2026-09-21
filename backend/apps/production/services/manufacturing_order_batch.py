@@ -175,7 +175,7 @@ class ManufacturingOrderBatchService:
             ):
                 raise ValidationError("Impression OF impossible avant confirmation du paiement.")
             try:
-                order.production_job
+                _ = order.production_job
             except ProductionJob.DoesNotExist as exc:
                 raise ValidationError("Aucun job de production pour cette commande.") from exc
             if order.status == Order.Status.CANCELLED:

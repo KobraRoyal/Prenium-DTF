@@ -443,9 +443,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
     def test_staff_focus_alerts_live_outside_page_surface(self) -> None:
         # Les flash Django passent par le layout (toasts) ; seuls les templates
         # qui gardent des alertes inline doivent les placer avant la surface.
-        for path in (
-            "portal/staff/order_detail.html",
-        ):
+        for path in ("portal/staff/order_detail.html",):
             with self.subTest(path=path):
                 source = template_source(path)
                 surface_index = source.index("portal-page-surface")

@@ -17,7 +17,6 @@ from django.utils import timezone
 
 from tests.orders.test_order_pricing_service import _seed_catalog_dtf_and_file_prep
 
-
 pytestmark = pytest.mark.django_db
 
 

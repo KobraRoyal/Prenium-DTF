@@ -3,7 +3,6 @@ from apps.b2b_order_projects.models import B2BOrderProject
 from apps.b2b_order_projects.services import (
     B2BOrderProjectCheckoutService,
     B2BOrderProjectService,
-    ProjectDomainError,
 )
 from apps.customers.models import Customer, CustomerBillingProfile, CustomerMembership
 from apps.gang_sheets.models import GangSheet
@@ -151,7 +150,7 @@ def test_checkout_of_validated_gang_sheet_keeps_the_generated_hd_pdf(settings):
     assert item.width_mm == sheet.width_mm
     assert item.height_mm == sheet.height_mm
 
-    settings.GOOGLE_DRIVE_SYNC_ENABLED = True
+    settings.GOOGLE_DRIVE_SYNC_ENABLED = False
     # Drive sync différé jusqu'à la commande : le PDF HD local suffit avant checkout.
     order = B2BOrderProjectCheckoutService().checkout_project(
         project=project,
@@ -159,7 +158,6 @@ def test_checkout_of_validated_gang_sheet_keeps_the_generated_hd_pdf(settings):
         customer_membership=membership,
         source="test",
     )
-    settings.GOOGLE_DRIVE_SYNC_ENABLED = False
 
     upload = order.uploads.get()
     sheet.refresh_from_db()

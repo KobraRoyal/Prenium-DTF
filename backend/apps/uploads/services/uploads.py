@@ -510,11 +510,7 @@ class OrderUploadService:
         raw = (raw_value or "").strip()
         if order_pricing_is_payment_frozen(order):
             # Tarif figé : confirmation vide OK si métrage déjà résolu (ex. Gang Sheet).
-            if (
-                order_meterage_is_resolved(order)
-                and raw == ""
-                and external_visual_count is None
-            ):
+            if order_meterage_is_resolved(order) and raw == "" and external_visual_count is None:
                 return order
             raise ValidationError("Le tarif est figé dès qu’un paiement a été lancé.")
         if external_visual_count is not None:

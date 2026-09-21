@@ -373,7 +373,9 @@ def test_sync_gang_sheet_to_drive_locks_sheet_without_nullable_order_join(monkey
     """Régression : SELECT FOR UPDATE + select_related(order) casse sous PostgreSQL."""
     from apps.gang_sheets.services import drive as drive_module
 
-    user, _customer, _project, sheet, _content = create_hd_sheet(email="gang-drive-lock@example.com")
+    user, _customer, _project, sheet, _content = create_hd_sheet(
+        email="gang-drive-lock@example.com"
+    )
     assert sheet.order_id is None
     gateway = FakeDriveGateway()
 

@@ -57,7 +57,7 @@ class StaffPaymentSettingsView(StaffDomainPermissionMixin, View):
                 source="staff_payment_settings",
                 ip_address=request.META.get("REMOTE_ADDR"),
             )
-        except ImproperlyConfigured as error:
+        except ImproperlyConfigured:
             form.add_error(
                 None,
                 "Chiffrement des secrets indisponible. Configurez "

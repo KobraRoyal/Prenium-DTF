@@ -1348,17 +1348,11 @@ class OrderPricingService:
     ) -> Order:
         """Ajustement Atelier des lignes et du port — commandes encours non relevées uniquement."""
         Customer.objects.select_for_update().get(pk=order.customer_id)
-        order_locked = (
-            Order.objects.select_for_update().select_related("customer").get(pk=order.pk)
-        )
+        order_locked = Order.objects.select_for_update().select_related("customer").get(pk=order.pk)
         if order_locked.billing_mode != Order.BillingMode.DEFERRED:
-            raise ValidationError(
-                "L’ajustement facturation est réservé aux commandes en encours."
-            )
+            raise ValidationError("L’ajustement facturation est réservé aux commandes en encours.")
         if order_locked.billing_statement_id is not None:
-            raise ValidationError(
-                "La facturation est figée : commande déjà sur un récapitulatif."
-            )
+            raise ValidationError("La facturation est figée : commande déjà sur un récapitulatif.")
         if order_locked.status != Order.Status.SUBMITTED:
             raise ValidationError("Seule une commande soumise peut être ajustée.")
         if order_locked.pricing_status != Order.PricingStatus.PRICED:
@@ -1435,7 +1429,7 @@ class OrderPricingService:
         ]
         uploads = list(order_locked.uploads.all().order_by("sort_order", "created_at"))
         if dtf_updates and len(dtf_updates) == len(uploads):
-            for (line, quantity, unit_price, line_total), upload in zip(
+            for (_line, quantity, unit_price, line_total), upload in zip(
                 dtf_updates, uploads, strict=True
             ):
                 upload.meterage_sqm = quantity
@@ -1470,7 +1464,11 @@ class OrderPricingService:
         order_locked.volume_discount_base_unit_price_eur = None
         order_locked.manual_billing_adjusted_at = now
         dtf_total_sqm = sum(
-            (quantity for line, quantity, _price, _total in updated_lines if line.service_type == dtf_type),
+            (
+                quantity
+                for line, quantity, _price, _total in updated_lines
+                if line.service_type == dtf_type
+            ),
             ZERO_AMOUNT,
         )
         update_fields = [

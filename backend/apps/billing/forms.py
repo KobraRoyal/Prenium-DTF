@@ -159,11 +159,7 @@ class PaymentGatewaySettingsForm(forms.Form):
         paypal_secret = str(cleaned.get("paypal_client_secret") or "").strip()
         if paypal_id and paypal_secret and paypal_id == paypal_secret:
             raise ValidationError(
-                {
-                    "paypal_client_secret": (
-                        "Le Secret PayPal doit être différent du Client ID."
-                    )
-                }
+                {"paypal_client_secret": ("Le Secret PayPal doit être différent du Client ID.")}
             )
 
         stripe_pk = str(cleaned.get("stripe_publishable_key") or "").strip()
@@ -176,9 +172,7 @@ class PaymentGatewaySettingsForm(forms.Form):
             errors["stripe_publishable_key"] = (
                 "La clé publiable doit commencer par pk_test_ ou pk_live_."
             )
-        if stripe_sk and not stripe_sk.startswith(
-            ("sk_test_", "sk_live_", "rk_test_", "rk_live_")
-        ):
+        if stripe_sk and not stripe_sk.startswith(("sk_test_", "sk_live_", "rk_test_", "rk_live_")):
             errors["stripe_secret_key"] = (
                 "La clé secrète doit commencer par sk_test_/sk_live_ "
                 "(ou rk_test_/rk_live_ pour une clé restreinte)."
@@ -191,9 +185,7 @@ class PaymentGatewaySettingsForm(forms.Form):
                     "Ouvrez le webhook dans Stripe et cliquez « Révéler » sur whsec_…."
                 )
             elif not stripe_whsec.startswith("whsec_"):
-                errors["stripe_webhook_secret"] = (
-                    "Le secret webhook doit commencer par whsec_."
-                )
+                errors["stripe_webhook_secret"] = "Le secret webhook doit commencer par whsec_."
         # Détecte l'inversion classique pk_ ↔ sk_ même si un seul champ est resaisi.
         if stripe_sk.startswith(("pk_test_", "pk_live_")) or effective_pk.startswith(
             ("sk_test_", "sk_live_", "rk_test_", "rk_live_")

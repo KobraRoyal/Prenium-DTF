@@ -232,8 +232,7 @@ class StripeGateway:
             )
         if not str(self.webhook_secret).startswith("whsec_"):
             raise PaymentGatewayConfigurationError(
-                "Stripe webhook secret must start with whsec_ "
-                "(not the endpoint id we_…)."
+                "Stripe webhook secret must start with whsec_ (not the endpoint id we_…)."
             )
         self._verify_signature(payload=payload, signature_header=signature_header)
         try:

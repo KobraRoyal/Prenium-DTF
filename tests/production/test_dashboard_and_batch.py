@@ -690,8 +690,7 @@ def test_atelier_activity_kpi_excludes_queued_jobs_on_cancelled_orders():
     Order.objects.filter(pk=cancelled_order.pk).update(status=Order.Status.CANCELLED)
 
     rows = {
-        row["label"]: row["value"]
-        for row in AtelierDashboardService()._build_activity_kpi_rows()
+        row["label"]: row["value"] for row in AtelierDashboardService()._build_activity_kpi_rows()
     }
     aging = {
         alert["key"]: alert["value"]

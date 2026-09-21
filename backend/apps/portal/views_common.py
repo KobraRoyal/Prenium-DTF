@@ -139,8 +139,8 @@ def meterage_context_for_order(request, order: Order, form_error: str = "") -> d
             Decimal("0.0001"),
             rounding=ROUND_HALF_UP,
         )
-    meterage_automatic = (
-        order.meterage_override_linear_m is None and order_meterage_is_resolved(order)
+    meterage_automatic = order.meterage_override_linear_m is None and order_meterage_is_resolved(
+        order
     )
     return {
         "form_error": form_error,

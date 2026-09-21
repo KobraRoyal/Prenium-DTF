@@ -249,9 +249,7 @@ def redirect_after_b2b_checkout(
                     "La commande est créée : vous pouvez réessayer le règlement.",
                 )
             except ValidationError as error:
-                message = (
-                    "; ".join(error.messages) if hasattr(error, "messages") else str(error)
-                )
+                message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
                 if message:
                     messages.error(request, message)
         return HttpResponseRedirect(

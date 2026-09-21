@@ -612,7 +612,10 @@ def test_stale_paypal_created_checkout_is_refreshed_after_reuse_window():
     STRIPE_PUBLISHABLE_KEY="pk_test_dummy",
 )
 def test_open_paypal_cancels_when_client_switches_to_stripe(monkeypatch):
-    user, customer = create_customer_scope(email="paypal-switch@example.com", customer_name="SwitchPP")
+    user, customer = create_customer_scope(
+        email="paypal-switch@example.com",
+        customer_name="SwitchPP",
+    )
     order = create_order(customer, user)
 
     class CreatedPayPal(FakePayPalGateway):
@@ -662,9 +665,7 @@ def test_cancel_open_checkouts_for_order_closes_pending_paypal():
         service, customer=customer, order=order, user=user, provider=Payment.Provider.PAYPAL
     )
     assert payment.status in {Payment.Status.PENDING, Payment.Status.APPROVED}
-    closed = service.cancel_open_checkouts_for_order(
-        order=order, actor=user, source="test_cancel"
-    )
+    closed = service.cancel_open_checkouts_for_order(order=order, actor=user, source="test_cancel")
     payment.refresh_from_db()
     assert closed == 1
     assert payment.status == Payment.Status.CANCELLED

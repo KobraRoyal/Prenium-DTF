@@ -58,7 +58,7 @@ class ClientTeamFlashMessagesTests(TestCase):
         request = factory.get(self.team_url)
         request.user = self.owner
         request.session = self.client.session
-        setattr(request, "_messages", FallbackStorage(request))
+        request._messages = FallbackStorage(request)
         for text in (
             "RESOURCE_NOT_FOUND INVALID_RESOURCE_ID",
             "Paiement non validé. Vous pouvez relancer un nouveau règlement.",
@@ -83,7 +83,7 @@ class ClientTeamFlashMessagesTests(TestCase):
         request = factory.get(self.team_url)
         request.user = self.owner
         request.session = self.client.session
-        setattr(request, "_messages", FallbackStorage(request))
+        request._messages = FallbackStorage(request)
         messages.success(request, "Rôle mis à jour.", extra_tags="team")
         messages.error(request, "RESOURCE_NOT_FOUND INVALID_RESOURCE_ID")
 
@@ -136,7 +136,7 @@ class StaffTeamFlashMessagesTests(TestCase):
         request = factory.get(self.team_url)
         request.user = self.owner
         request.session = self.client.session
-        setattr(request, "_messages", FallbackStorage(request))
+        request._messages = FallbackStorage(request)
         for text in (
             "Compte client mis à jour.",
             "RESOURCE_NOT_FOUND INVALID_RESOURCE_ID",

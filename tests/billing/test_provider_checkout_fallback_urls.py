@@ -1,6 +1,5 @@
 import pytest
 from apps.billing.models import Payment
-from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
 

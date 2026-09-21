@@ -52,8 +52,8 @@ class StaffBillingAdjustmentForm(forms.Form):
             (method.code, method.name) for method in methods
         ]
         if not self.is_bound:
-            self.fields["shipping_method_code"].initial = (
-                order.shipping_method_code or (methods[0].code if methods else "")
+            self.fields["shipping_method_code"].initial = order.shipping_method_code or (
+                methods[0].code if methods else ""
             )
             self.fields["shipping_amount"].initial = order.shipping_amount
         self.catalog_shipping_amounts = {

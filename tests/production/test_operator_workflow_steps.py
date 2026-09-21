@@ -1,5 +1,5 @@
-from types import SimpleNamespace
 from decimal import Decimal
+from types import SimpleNamespace
 
 from apps.portal.services.atelier_operator_context import (
     active_operator_step,

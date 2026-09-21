@@ -28,9 +28,7 @@ def excluded_dashboard_customer_ids() -> frozenset[int]:
     for email in emails:
         query |= Q(billing_email__iexact=email)
         query |= Q(memberships__user__email__iexact=email)
-    return frozenset(
-        Customer.objects.filter(query).values_list("pk", flat=True).distinct()
-    )
+    return frozenset(Customer.objects.filter(query).values_list("pk", flat=True).distinct())
 
 
 def exclude_dashboard_noise_orders(queryset: QuerySet) -> QuerySet:

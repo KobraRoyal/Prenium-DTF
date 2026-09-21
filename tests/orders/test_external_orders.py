@@ -364,7 +364,10 @@ def test_frozen_meterage_empty_confirm_is_noop_when_already_resolved():
         external_visual_count=2,
     )
     Payment.objects.create(
-        order=order, status=Payment.Status.CAPTURED, amount=order.total_amount, currency=order.currency
+        order=order,
+        status=Payment.Status.CAPTURED,
+        amount=order.total_amount,
+        currency=order.currency,
     )
     out = OrderUploadService().set_staff_order_meterage_linear_override(
         order=order, actor=actor, raw_value="", external_visual_count=None

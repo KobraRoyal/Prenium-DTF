@@ -32,9 +32,7 @@ UNKNOWN_CHECKOUT_RETRY_WINDOWS = {
 }
 # Au-delà, le lien approve PayPal est souvent mort alors que l'API dit encore CREATED.
 PAYPAL_APPROVAL_REUSE_WINDOW = timedelta(hours=2)
-PAYPAL_RESUMABLE_REMOTE_STATES = frozenset(
-    {"CREATED", "SAVED", "PAYER_ACTION_REQUIRED"}
-)
+PAYPAL_RESUMABLE_REMOTE_STATES = frozenset({"CREATED", "SAVED", "PAYER_ACTION_REQUIRED"})
 STRIPE_FAILURE_RECONCILIATION_MESSAGE = (
     "Échec Stripe signalé ; vérification du règlement en cours avant nouvel essai."
 )
@@ -254,8 +252,7 @@ class PaymentService:
                     payment=payment,
                     reason="paypal_environment_mismatch",
                     error_message=(
-                        "Session PayPal abandonnée après changement d'environnement "
-                        "(sandbox/live)."
+                        "Session PayPal abandonnée après changement d'environnement (sandbox/live)."
                     ),
                 )
                 return
@@ -264,14 +261,8 @@ class PaymentService:
             return
         try:
             state = str(inspect(provider_payment_id=payment.provider_payment_id)).upper()
-            switching = bool(
-                requested_provider and requested_provider != payment.provider
-            )
-            if (
-                state == "OPEN"
-                and payment.provider == Payment.Provider.STRIPE
-                and switching
-            ):
+            switching = bool(requested_provider and requested_provider != payment.provider)
+            if state == "OPEN" and payment.provider == Payment.Provider.STRIPE and switching:
                 state = str(
                     gateway.expire_checkout(provider_payment_id=payment.provider_payment_id)
                 ).upper()
@@ -279,18 +270,13 @@ class PaymentService:
                 payment.provider == Payment.Provider.PAYPAL
                 and state in PAYPAL_RESUMABLE_REMOTE_STATES
                 and (
-                    switching
-                    or timezone.now() - payment.created_at >= PAYPAL_APPROVAL_REUSE_WINDOW
+                    switching or timezone.now() - payment.created_at >= PAYPAL_APPROVAL_REUSE_WINDOW
                 )
             ):
                 self._cancel_stale_checkout_payment(
                     order=order,
                     payment=payment,
-                    reason=(
-                        "provider_switch"
-                        if switching
-                        else "paypal_approval_stale"
-                    ),
+                    reason=("provider_switch" if switching else "paypal_approval_stale"),
                     error_message="",
                 )
                 return
