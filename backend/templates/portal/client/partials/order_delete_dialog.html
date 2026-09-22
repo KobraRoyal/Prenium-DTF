@@ -1,0 +1,43 @@
+{% load portal_tags %}
+{% if order.can_client_delete %}
+<dialog
+  class="b2b-confirm-dialog"
+  id="delete-client-order-dialog-{{ order.public_id }}"
+  aria-labelledby="delete-client-order-title-{{ order.public_id }}"
+  aria-describedby="delete-client-order-desc-{{ order.public_id }}"
+>
+  <div class="b2b-confirm-dialog__shell">
+    <div class="b2b-confirm-dialog__content">
+      <h2 id="delete-client-order-title-{{ order.public_id }}">Supprimer cette commande&nbsp;?</h2>
+      <p id="delete-client-order-desc-{{ order.public_id }}" class="b2b-confirm-dialog__lead">
+        {% if order|order_business_ref %}
+        La commande <strong>{{ order|order_business_ref }}</strong>
+        {% elif order|order_client_ref %}
+        La commande <strong>{{ order|order_client_ref }}</strong>
+        {% else %}
+        Cette commande
+        {% endif %}
+        {% if order.pricing_status == "priced" %}
+        ({{ order.total_amount }}&nbsp;{{ order.currency }})
+        {% endif %}
+        ne sera ni débitée ni produite.
+      </p>
+      <p class="b2b-confirm-dialog__hint">
+        Elle reste dans Mes commandes avec le statut Annulée. Un paiement carte encore ouvert sera fermé.
+      </p>
+    </div>
+    <div class="b2b-confirm-dialog__actions">
+      <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+      <form
+        method="post"
+        action="{% url 'portal:client-order-delete' customer_public_id=customer.public_id order_public_id=order.public_id %}"
+        data-submit-loading
+      >
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next_target|default:'detail' }}">
+        <button class="ui-btn ui-btn-danger" type="submit">Confirmer la suppression</button>
+      </form>
+    </div>
+  </div>
+</dialog>
+{% endif %}

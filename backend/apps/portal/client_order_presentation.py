@@ -226,6 +226,35 @@ def client_order_shipping_panel(*, order, shipment) -> ClientOrderShippingPanel:
     return _delivery_shipping_panel(order, shipment)
 
 
+def client_may_delete_unpaid_order(membership) -> bool:
+    from apps.customers.models import CustomerMembership
+
+    return membership is not None and membership.role != CustomerMembership.Role.READONLY
+
+
+def assign_client_order_delete(order, membership) -> bool:
+    from apps.portal.views_common import order_service
+
+    allowed = client_may_delete_unpaid_order(membership) and (
+        order_service.client_delete_block_reason(order) is None
+    )
+    order.can_client_delete = allowed
+    return allowed
+
+
+def prepare_client_order_rows(orders, membership):
+    from apps.billing.services.production_payment_gate import attach_awaits_client_payment
+    from apps.portal.views_common import order_service
+
+    rows = order_service.attach_client_can_delete(
+        attach_awaits_client_payment(list(orders))
+    )
+    if not client_may_delete_unpaid_order(membership):
+        for order in rows:
+            order.can_client_delete = False
+    return rows
+
+
 def build_client_order_context(
     *,
     customer,
@@ -235,10 +264,12 @@ def build_client_order_context(
 ) -> dict[str, object]:
     """Build the shared client order context used by the page and its panels."""
     identity = client_order_identity(order)
+    can_client_delete_order = assign_client_order_delete(order, customer_membership)
     context: dict[str, object] = {
         "customer": customer,
         "customer_membership": customer_membership,
         "order": order,
+        "can_client_delete_order": can_client_delete_order,
         "order_short_ref": short_public_ref(order.public_id),
         "order_client_label": identity.label,
         "order_display_ref": identity.reference,

@@ -448,13 +448,11 @@ def assemble_client_dashboard(
         b2b_order_projects_enabled_for_customer,
         client_new_order_url,
     )
-    from apps.billing.services.production_payment_gate import (
-        attach_awaits_client_payment,
-        count_orders_awaiting_client_payment,
-    )
+    from apps.billing.services.production_payment_gate import count_orders_awaiting_client_payment
+    from apps.portal.client_order_presentation import prepare_client_order_rows
 
     orders_qs = order_service.list_customer_orders(customer)
-    recent_orders = attach_awaits_client_payment(list(orders_qs[:5]))
+    recent_orders = prepare_client_order_rows(orders_qs[:5], selected_membership)
     project_feature_enabled = b2b_order_projects_enabled_for_customer(customer)
     recent_projects = []
     projects_in_progress_count = 0

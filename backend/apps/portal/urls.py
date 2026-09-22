@@ -62,6 +62,7 @@ from .views_client import (
     ClientOrderUploadPreviewView,
 )
 from .views_client_dashboard import ClientDashboardResultsView
+from .views_client_order_delete import ClientOrderDeleteView
 from .views_external_orders import (
     ClientExternalOrderCreateView,
     ClientExternalUploadLinkView,
@@ -522,6 +523,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/reorder/",
         ClientOrderReorderView.as_view(),
         name="client-order-reorder",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/delete/",
+        ClientOrderDeleteView.as_view(),
+        name="client-order-delete",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/checkout/",

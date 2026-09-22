@@ -287,6 +287,204 @@ class OrderService:
 
         return self.get_staff_order(order_public_id)
 
+    def client_delete_block_reason(
+        self,
+        order: Order,
+        *,
+        captured_order_ids: set[int] | None = None,
+        invoiced_order_ids: set[int] | None = None,
+        shipped_order_ids: set[int] | None = None,
+    ) -> str | None:
+        """Motif empêchant la suppression client, ou None si elle est autorisée."""
+        if order.status == Order.Status.CANCELLED:
+            return "Cette commande est déjà annulée."
+        if order.billing_mode != Order.BillingMode.IMMEDIATE:
+            return "Seule une commande réglée par carte, encore non payée, peut être supprimée."
+        if order.billing_statement_id is not None:
+            return "Cette commande appartient déjà à un récapitulatif de facturation."
+
+        from apps.billing.models import Invoice, Payment
+        from apps.production.models import ProductionJob
+        from apps.shipping.models import Shipment
+
+        if captured_order_ids is None:
+            captured = Payment.objects.filter(
+                order_id=order.pk,
+                status=Payment.Status.CAPTURED,
+            ).exists()
+        else:
+            captured = order.pk in captured_order_ids
+        if captured:
+            return "Le paiement a été confirmé. Cette commande ne peut plus être supprimée."
+
+        if invoiced_order_ids is None:
+            invoiced = Invoice.objects.filter(order_id=order.pk).exists()
+        else:
+            invoiced = order.pk in invoiced_order_ids
+        if invoiced:
+            return "Un justificatif existe déjà. Cette commande ne peut plus être supprimée."
+
+        try:
+            production_job = order.production_job
+        except ProductionJob.DoesNotExist:
+            production_job = None
+        if production_job is not None and (
+            production_job.status != ProductionJob.Status.QUEUED
+            or production_job.started_at is not None
+        ):
+            return "La production a déjà démarré. Cette commande ne peut plus être supprimée."
+
+        if shipped_order_ids is None:
+            shipped = Shipment.objects.filter(order_id=order.pk).exists()
+        else:
+            shipped = order.pk in shipped_order_ids
+        if shipped:
+            return "Une expédition est déjà associée. Cette commande ne peut plus être supprimée."
+        return None
+
+    def attach_client_can_delete(self, orders: list[Order]) -> list[Order]:
+        """Pose ``can_client_delete`` sans une requête par commande."""
+        order_list = list(orders)
+        if not order_list:
+            return order_list
+        from apps.billing.models import Invoice, Payment
+        from apps.shipping.models import Shipment
+
+        order_ids = [order.pk for order in order_list]
+        captured_order_ids = set(
+            Payment.objects.filter(
+                order_id__in=order_ids,
+                status=Payment.Status.CAPTURED,
+            ).values_list("order_id", flat=True)
+        )
+        invoiced_order_ids = set(
+            Invoice.objects.filter(order_id__in=order_ids).values_list("order_id", flat=True)
+        )
+        shipped_order_ids = set(
+            Shipment.objects.filter(order_id__in=order_ids).values_list("order_id", flat=True)
+        )
+        for order in order_list:
+            order.can_client_delete = (
+                self.client_delete_block_reason(
+                    order,
+                    captured_order_ids=captured_order_ids,
+                    invoiced_order_ids=invoiced_order_ids,
+                    shipped_order_ids=shipped_order_ids,
+                )
+                is None
+            )
+        return order_list
+
+    def delete_client_order(
+        self,
+        *,
+        customer,
+        order_public_id,
+        actor,
+        source: str,
+    ) -> Order:
+        """Annule une commande comptant CB non encaissée, sans effacer l'historique."""
+        order = self.get_customer_order(customer, order_public_id)
+        if order is None:
+            raise ValidationError("Commande introuvable.")
+
+        block_reason = self.client_delete_block_reason(order)
+        if block_reason is not None:
+            self._record_client_delete_rejected(
+                order=order,
+                actor=actor,
+                source=source,
+                reason=block_reason,
+            )
+            raise ValidationError(block_reason)
+
+        from apps.billing.services.payments import PaymentService
+
+        try:
+            PaymentService().close_open_checkouts_before_client_cancel(
+                order=order,
+                actor=actor,
+                source=source,
+            )
+        except ValidationError as exc:
+            reason = " ".join(getattr(exc, "messages", None) or [str(exc)])
+            self._record_client_delete_rejected(
+                order=order,
+                actor=actor,
+                source=source,
+                reason=reason,
+            )
+            raise
+
+        with transaction.atomic():
+            # Pas de select_related sur production_job / shipment : ce sont des
+            # jointures externes, et PostgreSQL refuse FOR UPDATE dessus.
+            order = (
+                Order.objects.select_for_update()
+                .select_related("customer")
+                .filter(public_id=order_public_id, customer=customer)
+                .first()
+            )
+            if order is None:
+                raise ValidationError("Commande introuvable.")
+
+            block_reason = self.client_delete_block_reason(order)
+            if block_reason is not None:
+                self._record_client_delete_rejected(
+                    order=order,
+                    actor=actor,
+                    source=source,
+                    reason=block_reason,
+                )
+                raise ValidationError(block_reason)
+
+            from django.utils import timezone
+
+            now = timezone.now()
+            previous_status = order.status
+            order.status = Order.Status.CANCELLED
+            order.cancelled_at = now
+            order.cancelled_by = actor if getattr(actor, "is_authenticated", False) else None
+            order.cancellation_reason = "Supprimée par le client avant paiement."
+            order.save(
+                update_fields=[
+                    "status",
+                    "cancelled_at",
+                    "cancelled_by",
+                    "cancellation_reason",
+                    "updated_at",
+                ]
+            )
+            record_event(
+                action="order.deleted_client",
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=order,
+                metadata={
+                    "order_public_id": str(order.public_id),
+                    "customer_public_id": str(order.customer.public_id),
+                    "source": source,
+                    "previous_status": previous_status,
+                },
+            )
+
+        refreshed = self.get_customer_order(customer, order_public_id)
+        if refreshed is None:
+            raise ValidationError("Commande introuvable.")
+        return refreshed
+
+    def _record_client_delete_rejected(self, *, order, actor, source: str, reason: str) -> None:
+        record_event(
+            action="order.delete_client_rejected",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=order,
+            metadata={
+                "order_public_id": str(order.public_id),
+                "customer_public_id": str(order.customer.public_id),
+                "reason": reason,
+                "source": source,
+            },
+        )
+
     def paginate_orders(self, queryset, *, page_number, page_size):
         paginator = Paginator(queryset, page_size)
         return paginator.get_page(page_number)

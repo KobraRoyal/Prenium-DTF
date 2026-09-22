@@ -12,6 +12,7 @@ from apps.billing.models import Payment
 from apps.billing.services.production_payment_gate import attach_awaits_client_payment
 from apps.orders.models import Order
 from apps.portal import dashboard_focus
+from apps.portal.client_order_presentation import prepare_client_order_rows
 from apps.portal.views_common import ScopedCustomerMixin, order_service
 from apps.production.models import ProductionJob
 
@@ -126,7 +127,7 @@ class ClientDashboardResultsView(ScopedCustomerMixin, View):
         else:
             raise Http404
 
-        orders = attach_awaits_client_payment(list(orders))
+        orders = prepare_client_order_rows(orders, self.customer_membership)
         return render(
             request,
             self.template_name,

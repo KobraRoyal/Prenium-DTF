@@ -21,6 +21,7 @@ from apps.portal import dashboard_focus
 from apps.portal.client_order_presentation import (
     build_client_order_context,
     client_order_shipping_panel,
+    prepare_client_order_rows,
 )
 from apps.portal.views_common import (
     ClientOwnerRequiredMixin,
@@ -110,8 +111,6 @@ class ClientOrderListView(ScopedCustomerMixin, View):
         return render(request, self.template_name, context)
 
     def _build_context(self, request):
-        from apps.billing.services.production_payment_gate import attach_awaits_client_payment
-
         search_query = request.GET.get("q", "").strip()
         orders_qs = order_service.list_customer_orders(self.customer)
         if search_query:
@@ -121,7 +120,7 @@ class ClientOrderListView(ScopedCustomerMixin, View):
             page_number=request.GET.get("page"),
             page_size=settings.ORDER_LIST_PAGE_SIZE,
         )
-        orders = attach_awaits_client_payment(list(page_obj.object_list))
+        orders = prepare_client_order_rows(page_obj.object_list, self.customer_membership)
         return {
             "customer": self.customer,
             "orders": orders,

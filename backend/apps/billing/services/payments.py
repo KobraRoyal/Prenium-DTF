@@ -33,6 +33,23 @@ UNKNOWN_CHECKOUT_RETRY_WINDOWS = {
 # Au-delà, le lien approve PayPal est souvent mort alors que l'API dit encore CREATED.
 PAYPAL_APPROVAL_REUSE_WINDOW = timedelta(hours=2)
 PAYPAL_RESUMABLE_REMOTE_STATES = frozenset({"CREATED", "SAVED", "PAYER_ACTION_REQUIRED"})
+_PAID_REMOTE_CHECKOUT_STATES = frozenset({"COMPLETED", "COMPLETE", "PAID"})
+_CLIENT_CANCEL_PAYMENT_UNAVAILABLE = (
+    "Le paiement en cours n'a pas pu être fermé. Réessayez dans un instant."
+)
+_CLIENT_CANCEL_PAYMENT_CAPTURED = (
+    "Le paiement a été confirmé. Cette commande ne peut plus être supprimée."
+)
+_REMOTE_CHECKOUT_MISSING_MARKERS = (
+    "RESOURCE_NOT_FOUND",
+    "INVALID_RESOURCE_ID",
+    "No such checkout",
+)
+
+
+def _remote_checkout_missing(exc: PaymentGatewayError) -> bool:
+    detail = str(exc)
+    return any(marker in detail for marker in _REMOTE_CHECKOUT_MISSING_MARKERS)
 STRIPE_FAILURE_RECONCILIATION_MESSAGE = (
     "Échec Stripe signalé ; vérification du règlement en cours avant nouvel essai."
 )
@@ -424,6 +441,90 @@ class PaymentService:
                 )
                 cancelled += 1
         return cancelled
+
+    def close_open_checkouts_before_client_cancel(
+        self,
+        *,
+        order,
+        actor=None,
+        source: str,
+    ) -> None:
+        """Ferme les sessions encore payables avant l'annulation client.
+
+        Une session Stripe ouverte est expirée chez le prestataire. Un règlement
+        déjà payé est rapproché localement, puis l'annulation doit être refusée.
+        """
+        open_payments = list(
+            Payment.objects.filter(
+                order_id=order.pk,
+                status__in=(Payment.Status.PENDING, Payment.Status.APPROVED),
+            ).order_by("created_at")
+        )
+        for payment in open_payments:
+            remote_id = str(payment.provider_payment_id or "").strip()
+            if not remote_id:
+                continue
+            gateway = self._get_gateway(provider=payment.provider)
+            inspect = getattr(gateway, "checkout_state", None)
+            if inspect is None:
+                continue
+            try:
+                state = str(inspect(provider_payment_id=remote_id)).upper()
+            except PaymentGatewayError as exc:
+                if _remote_checkout_missing(exc):
+                    continue
+                raise ValidationError(_CLIENT_CANCEL_PAYMENT_UNAVAILABLE) from exc
+            if state in _PAID_REMOTE_CHECKOUT_STATES:
+                self._sync_paid_checkout_for_client_cancel(
+                    payment=payment,
+                    order=order,
+                    actor=actor,
+                    source=source,
+                )
+                raise ValidationError(_CLIENT_CANCEL_PAYMENT_CAPTURED)
+            if payment.provider == Payment.Provider.STRIPE and state == "OPEN":
+                expire = getattr(gateway, "expire_checkout", None)
+                if expire is None:
+                    continue
+                try:
+                    expire(provider_payment_id=remote_id)
+                except PaymentGatewayError as exc:
+                    if _remote_checkout_missing(exc):
+                        continue
+                    latest = ""
+                    try:
+                        latest = str(inspect(provider_payment_id=remote_id)).upper()
+                    except PaymentGatewayError:
+                        latest = ""
+                    if latest in _PAID_REMOTE_CHECKOUT_STATES:
+                        self._sync_paid_checkout_for_client_cancel(
+                            payment=payment,
+                            order=order,
+                            actor=actor,
+                            source=source,
+                        )
+                        raise ValidationError(_CLIENT_CANCEL_PAYMENT_CAPTURED) from exc
+                    raise ValidationError(_CLIENT_CANCEL_PAYMENT_UNAVAILABLE) from exc
+        self.cancel_open_checkouts_for_order(order=order, actor=actor, source=source)
+
+    def _sync_paid_checkout_for_client_cancel(self, *, payment, order, actor, source: str) -> None:
+        try:
+            if payment.provider == Payment.Provider.STRIPE:
+                self.confirm_stripe_checkout_session(
+                    checkout_session_id=payment.provider_payment_id,
+                    actor=actor,
+                    source=source,
+                )
+                return
+            self.confirm_capture(
+                order_public_id=order.public_id,
+                provider_payment_id=payment.provider_payment_id,
+                payment_public_id=payment.public_id,
+                actor=actor,
+                source=source,
+            )
+        except (ValidationError, PaymentGatewayError):
+            return
 
     def confirm_capture(
         self,

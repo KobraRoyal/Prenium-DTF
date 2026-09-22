@@ -25,6 +25,8 @@ def order_has_captured_payment(order: Order) -> bool:
 
 def order_awaits_client_payment(order: Order) -> bool:
     """Commande tarifée comptant CB, en attente du règlement client."""
+    if order.status == Order.Status.CANCELLED:
+        return False
     if not requires_captured_payment_before_production(order):
         return False
     if order.pricing_status != Order.PricingStatus.PRICED:
@@ -46,7 +48,7 @@ def attach_awaits_client_payment(orders: list[Order]) -> list[Order]:
         ).values_list("order_id", flat=True)
     )
     for order in order_list:
-        if order.pk in captured_ids:
+        if order.pk in captured_ids or order.status == Order.Status.CANCELLED:
             order.awaits_client_payment = False
             continue
         if not requires_captured_payment_before_production(order):
@@ -77,6 +79,7 @@ def count_orders_awaiting_client_payment(customer) -> int:
             pricing_status=Order.PricingStatus.PRICED,
             total_amount__gt=Decimal("0.00"),
         )
+        .exclude(status=Order.Status.CANCELLED)
         .annotate(_has_captured_payment=Exists(captured))
         .filter(_has_captured_payment=False)
         .count()

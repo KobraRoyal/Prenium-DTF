@@ -1,0 +1,12 @@
+{% load portal_tags %}
+{% if order.can_client_delete %}
+<button
+  type="button"
+  class="ui-destructive-action"
+  data-dialog-open="delete-client-order-dialog-{{ order.public_id }}"
+  aria-haspopup="dialog"
+  aria-label="Supprimer{% if order|order_business_ref %} la commande {{ order|order_business_ref }}{% elif order|order_client_ref %} {{ order|order_client_ref }}{% endif %}"
+>
+  Supprimer
+</button>
+{% endif %}

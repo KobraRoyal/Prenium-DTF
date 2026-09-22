@@ -111,8 +111,10 @@
             <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
             {% elif order.awaits_client_payment %}
             <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}?panel=billing&amp;pay=1">Payer</a>
+            {% include "portal/client/partials/order_delete_button.html" %}
             {% else %}
             <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
+            {% include "portal/client/partials/order_delete_button.html" %}
             {% endif %}
           </div>
         </td>
@@ -158,15 +160,24 @@
     {% if variant == "client" %}
     <p class="muted mt-1 text-xs">{{ order.client_handover.label }} : {% if order.client_handover.occurred_at %}{{ order.client_handover.value }}{% if order.client_handover.value %} · {% endif %}<time datetime="{{ order.client_handover.occurred_at|date:'c' }}">{{ order.client_handover.occurred_at|date:"d/m/Y" }}</time>{% else %}{{ order.client_handover.value }}{% endif %}</p>
     {% endif %}
-    <div class="mt-4 flex flex-wrap gap-2">
+    <div class="mt-4 flex flex-wrap items-center gap-2">
       {% if variant == "staff" %}
       <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
       {% elif order.awaits_client_payment %}
       <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}?panel=billing&amp;pay=1">Payer</a>
+      {% include "portal/client/partials/order_delete_button.html" %}
       {% else %}
       <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
+      {% include "portal/client/partials/order_delete_button.html" %}
       {% endif %}
     </div>
   </article>
   {% endfor %}
 </div>
+{% if variant == "client" %}
+<div class="client-order-delete-dialogs">
+  {% for order in orders %}
+  {% include "portal/client/partials/order_delete_dialog.html" with next_target="list" %}
+  {% endfor %}
+</div>
+{% endif %}
