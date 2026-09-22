@@ -1636,6 +1636,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("portal:staff-payment-settings", staff_nav)
         self.assertNotIn("staff-brand-settings", staff_nav)
         self.assertNotIn("portal:staff-brand-settings", staff_nav)
+        self.assertNotIn("portal:staff-order-project-list", staff_nav)
+        self.assertNotIn("staff-order-projects", staff_nav)
+        self.assertNotIn("Contrôler les commandes à finaliser", staff_nav)
 
     def test_staff_views_distill_secondary_actions_and_repeated_information(self) -> None:
         order = template_source("portal/staff/order_detail.html")
@@ -2381,7 +2384,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("HTMLIFrameElement", configurator_runtime)
         self.assertNotIn("innerHTML", configurator_runtime)
         self.assertNotIn("Configurateur DTF", header)
-        self.assertIn("Gang Sheets", staff_navigation)
+        # File « Gang Sheets transmis » retirée du menu : le checkout client convertit
+        # directement en commande ; le contrôle atelier se fait sur Commandes.
+        self.assertNotIn("staff-order-project-list", staff_navigation)
+        self.assertNotIn("Contrôler les commandes à finaliser", staff_navigation)
         dashboard = template_source("portal/client/dashboard.html")
         self.assertNotIn("client-dashboard-toolbar", dashboard)
         self.assertNotIn(">Nouvelle commande</a>", dashboard)

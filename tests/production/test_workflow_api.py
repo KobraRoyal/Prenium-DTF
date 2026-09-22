@@ -4,14 +4,18 @@ import pymupdf
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.core.public_refs import short_public_ref
+from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.production.models import ProductionJob, ProductionJobScanLog, ProductionJobTransition
 from apps.production.services.manufacturing_order_pdf import (
+    UUID_BARCODE_HEIGHT,
     _build_file_qr_code,
     _build_styles,
     _build_support_color_cell,
     _build_uploads_table,
+    _build_uuid_code128,
+    _build_uuid_identity_cell,
 )
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import (
@@ -237,6 +241,10 @@ def test_staff_can_download_manufacturing_order_pdf():
 
     assert job.manufacturing_order_number in text
     assert f"#{short_public_ref(order.public_id).upper()}" in text
+    assert "UUID" in text
+    uuid_short = short_public_ref(order.public_id)
+    assert uuid_short in text
+    assert str(order.public_id) not in text
     assert "Livraison standard" in text
     assert "15/08/2026" in text
     assert "Urgent sample" in text
@@ -283,6 +291,32 @@ def test_manufacturing_order_file_qr_code_uses_filename_without_extension():
     assert qr_code.value == "design.final"
     assert qr_code.width > 0
     assert qr_code.height > 0
+
+
+def test_manufacturing_order_uuid_code128_is_compact_and_human_readable():
+    from reportlab.graphics.barcode.code128 import Code128
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Table
+
+    # Même forme que la fiche staff / dossier Drive : dernier segment du public_id.
+    full_uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    uuid_short = "ef1234567890"
+    usable_width = 5.6 * cm - 12
+    barcode = _build_uuid_code128(order_uuid=uuid_short, usable_width=usable_width)
+    cell = _build_uuid_identity_cell(order_uuid=full_uuid, styles=_build_styles())
+
+    assert isinstance(barcode, Code128)
+    assert barcode.value == uuid_short
+    assert barcode.hAlign == "LEFT"
+    assert barcode.lquiet == 0
+    assert barcode.barHeight == UUID_BARCODE_HEIGHT
+    assert barcode.width <= usable_width + 0.01
+    assert isinstance(cell, Table)
+    flat = [part for row in cell._cellvalues for part in row]
+    assert any(isinstance(part, Code128) and part.value == uuid_short and part.hAlign == "LEFT" for part in flat)
+    captions = [getattr(part, "text", "") for part in flat if hasattr(part, "text")]
+    assert any(uuid_short in caption for caption in captions)
+    assert not any(full_uuid in caption for caption in captions)
 
 
 def test_manufacturing_order_support_color_cell_renders_hex_and_multicolor_swatches():

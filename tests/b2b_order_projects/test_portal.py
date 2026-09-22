@@ -1263,6 +1263,10 @@ def test_staff_portal_project_queue_requires_permission():
     response = client.get(url)
     assert response.status_code == 200
     assert b"Gang Sheets transmis" in response.content
+    # Menu Atelier : plus de lien vers cette file (parcours client → commande directe).
+    body = response.content.decode()
+    assert url not in body
+    assert "Contrôler les commandes à finaliser" not in body
 
 
 @pytest.mark.django_db

@@ -26,6 +26,7 @@ from apps.billing.services.production_payment_gate import (
     order_has_captured_payment,
     production_start_blocked_reason,
 )
+from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
 from apps.production.models import ProductionJob
 from apps.production.services.manufacturing_order_previews import (
@@ -47,6 +48,10 @@ MULTICOLOR_SWATCH = (
 CONTENT_WIDTH = 16.6 * cm
 PAD_H = 6
 PAD_V = 5
+IDENTITY_COL_WIDTHS = (5.5 * cm, 5.5 * cm, 5.6 * cm)
+UUID_BARCODE_HEIGHT = 0.55 * cm
+UUID_BARCODE_MIN_BAR_WIDTH = 0.22
+UUID_BARCODE_MAX_BAR_WIDTH = 0.42
 
 
 def _text(value) -> str:
@@ -103,6 +108,15 @@ def _build_styles() -> dict[str, ParagraphStyle]:
             fontName="Helvetica-Bold",
             fontSize=9,
             leading=11,
+            textColor=INK,
+            alignment=TA_LEFT,
+        ),
+        "meta_uuid": ParagraphStyle(
+            "OFMetaUuid",
+            parent=base["Normal"],
+            fontName="Helvetica",
+            fontSize=6,
+            leading=7.2,
             textColor=INK,
             alignment=TA_LEFT,
         ),
@@ -181,12 +195,91 @@ def _build_styles() -> dict[str, ParagraphStyle]:
     }
 
 
-def _meta_cell(*, label: str, value: str, styles: dict[str, ParagraphStyle]):
+def _meta_cell(
+    *,
+    label: str,
+    value: str,
+    styles: dict[str, ParagraphStyle],
+    value_style: str = "meta",
+):
     return [
         Paragraph(_text(label).upper(), styles["meta_label"]),
         Spacer(1, 0.03 * cm),
-        _paragraph(value or "—", styles["meta"]),
+        _paragraph(value or "—", styles[value_style]),
     ]
+
+
+def _uuid_code128_bar_width(*, value: str, usable_width: float) -> float:
+    """Calcule une largeur de barre pour tenir le Code 128 dans la case UUID."""
+    # Approximation modules Code128 (start + data + check + stop).
+    estimated_modules = 11 * (len(value) + 3) + 2
+    if estimated_modules <= 0:
+        return UUID_BARCODE_MAX_BAR_WIDTH
+    return max(
+        UUID_BARCODE_MIN_BAR_WIDTH,
+        min(UUID_BARCODE_MAX_BAR_WIDTH, usable_width / estimated_modules),
+    )
+
+
+def _build_uuid_code128(*, order_uuid: str, usable_width: float):
+    """Code 128 condensé : UUID court (= fiche staff / dossier Drive), calé à gauche."""
+    target_width = max(usable_width * 0.98, 1.0)
+    bar_width = _uuid_code128_bar_width(value=order_uuid, usable_width=target_width)
+    barcode = code128.Code128(
+        order_uuid,
+        barHeight=UUID_BARCODE_HEIGHT,
+        barWidth=bar_width,
+        humanReadable=False,
+        lquiet=0,
+        rquiet=0,
+    )
+    # Recalage si les zones silencieuses dépassent l’estimation.
+    for _ in range(3):
+        if barcode.width <= usable_width or barcode.width <= 0:
+            break
+        bar_width = bar_width * (target_width / barcode.width)
+        barcode = code128.Code128(
+            order_uuid,
+            barHeight=UUID_BARCODE_HEIGHT,
+            barWidth=max(bar_width, UUID_BARCODE_MIN_BAR_WIDTH * 0.85),
+            humanReadable=False,
+            lquiet=0,
+            rquiet=0,
+        )
+    barcode.hAlign = "LEFT"
+    return barcode
+
+
+def _build_uuid_identity_cell(*, order_uuid: str, styles: dict[str, ParagraphStyle]):
+    """Case UUID : libellé + Code 128 + UUID court, tous calés à gauche."""
+    label = Paragraph(_text("UUID").upper(), styles["meta_label"])
+    uuid_short = short_public_ref(order_uuid)
+    usable_width = IDENTITY_COL_WIDTHS[2] - (2 * PAD_H)
+    if not uuid_short:
+        rows = [[label], [Spacer(1, 0.03 * cm)], [_paragraph("—", styles["meta_uuid"])]]
+    else:
+        barcode = _build_uuid_code128(order_uuid=uuid_short, usable_width=usable_width)
+        rows = [
+            [label],
+            [Spacer(1, 0.05 * cm)],
+            [barcode],
+            [Spacer(1, 0.04 * cm)],
+            [Paragraph(_text(uuid_short), styles["meta_uuid"])],
+        ]
+    table = Table(rows, colWidths=[usable_width])
+    table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    return table
 
 
 def _content_padding_style(*, bottom: int = 0) -> TableStyle:
@@ -268,6 +361,7 @@ def _build_scan_banner(
 def _build_identity_row(*, payload: dict, styles: dict[str, ParagraphStyle]) -> Table:
     order_summary = payload.get("order_summary") or {}
     customer = payload.get("customer") or {}
+    order_uuid = str(payload.get("order_public_id") or "").strip()
     rows = [
         [
             _meta_cell(label="Client", value=str(customer.get("name") or "—"), styles=styles),
@@ -293,16 +387,15 @@ def _build_identity_row(*, payload: dict, styles: dict[str, ParagraphStyle]) -> 
                 value=str(order_summary.get("requested_date_label") or "—"),
                 styles=styles,
             ),
-            "",
+            _build_uuid_identity_cell(order_uuid=order_uuid, styles=styles),
         ],
     ]
-    table = Table(rows, colWidths=[5.5 * cm, 5.5 * cm, 5.6 * cm])
+    table = Table(rows, colWidths=list(IDENTITY_COL_WIDTHS))
     table.setStyle(
         TableStyle(
             [
                 ("BOX", (0, 0), (-1, -1), 0.7, LINE),
                 ("INNERGRID", (0, 0), (-1, -1), 0.45, LINE),
-                ("SPAN", (1, 1), (2, 1)),
                 ("ALIGN", (0, 0), (-1, -1), "LEFT"),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("BACKGROUND", (0, 0), (-1, -1), colors.white),

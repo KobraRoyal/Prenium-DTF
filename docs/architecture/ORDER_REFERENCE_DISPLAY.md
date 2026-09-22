@@ -70,6 +70,7 @@ Les balises historiques `{{ order.reference }}` et `{{ order.public_id }}` reste
 | **Staff OPS — dashboard `/staff/`** | Non — remplacé par le N° OF | Oui | Oui |
 | **Staff OPS — fiche commande** | Oui | Oui | Oui |
 | **Atelier / production** | Oui | Oui | Oui (+ client, OF, etc.) |
+| **OF PDF** | Oui (UUID court `short_public_ref` + Code 128 = dossier Drive / fiche staff) | Oui (`#réf` / `CMD-…`) | Non (note client séparée) |
 | **Sendcloud (`order_number`)** | Non | Oui | Non |
 
 L’UUID (`public_id`) reste l’identifiant technique d’URL et d’API ; il n’est **pas** exposé dans

@@ -94,7 +94,8 @@ n'est introduit.
 ## API et sécurité
 
 - `/api/client/customers/<customer_public_id>/order-projects/` et routes imbriquées ;
-- `/api/staff/order-projects/` et détail read-only ;
+- `/api/staff/order-projects/` et HTML `/staff/order-projects/` read-only (hors menu Atelier :
+  le checkout client convertit directement en `Order` ; le contrôle OPS se fait sur Commandes) ;
 - erreurs métier structurées avec `code`, `message` et `details` ;
 - identifiants publics UUID uniquement ;
 - annulation réservée au rôle `owner` ;
