@@ -1,45 +1,45 @@
 {% load portal_tags %}
-<div class="workflow-panel workflow-panel--operator">
-  <header class="workflow-panel__hero operator-panel-hero">
+<div class="workflow-panel workflow-panel--operator atelier-production">
+  <header class="workflow-panel__hero operator-panel-hero atelier-production__hero">
     <div>
       <h3 class="workflow-panel__title">Production</h3>
-      <p class="workflow-panel__meta">{% if job.last_transition_at %}Dernière activité le {{ job.last_transition_at|date:"d/m/Y · H:i" }}{% else %}OF prêt à être pris en charge{% endif %}</p>
+      <p class="workflow-panel__meta">{% if job.last_transition_at %}Dernière activité · {{ job.last_transition_at|date:"d/m/Y H:i" }}{% else %}OF prêt à prendre en charge{% endif %}</p>
     </div>
     <div class="operator-panel-hero__actions">
       <span class="badge {{ job.status|badge_tone }}">{{ job.status|human_status }}</span>
-      <a class="ui-inline-action ui-inline-action--control" href="{% url 'production:staff-manufacturing-order-pdf' order_public_id=order.public_id %}" target="_blank" rel="noopener noreferrer">Ouvrir l’OF PDF</a>
+      <a class="ui-inline-action ui-inline-action--control" href="{% url 'production:staff-manufacturing-order-pdf' order_public_id=order.public_id %}" target="_blank" rel="noopener noreferrer">OF PDF</a>
     </div>
   </header>
 
-  <section class="operator-subpanel" aria-labelledby="staff-order-handover-date-title">
+  <section class="operator-subpanel atelier-production__block" aria-labelledby="staff-order-handover-date-title">
     <div class="operator-section-head">
       <div>
         <h4 id="staff-order-handover-date-title" class="font-display text-lg">Date annoncée au client</h4>
-        <p class="muted text-sm">Cette date est affichée dans le suivi client comme {{ handover_date_label|lower }}.</p>
+        <p class="muted text-sm">Visible côté client comme {{ handover_date_label|lower }}.</p>
       </div>
       {% if estimated_handover_date %}<span class="badge is-success">{{ estimated_handover_date_display }}</span>{% else %}<span class="badge is-warning">À confirmer</span>{% endif %}
     </div>
     {% if handover_date_error %}<div class="alert alert--danger workflow-panel__feedback" role="alert"><p>{{ handover_date_error }}</p></div>{% endif %}
     {% if can_update_handover_date %}
-    <form class="ui-form-stack" hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+    <form class="ui-form-stack atelier-production__form" hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
       {% csrf_token %}
       <input type="hidden" name="action" value="update_handover_date">
       <div class="ui-field-group">
         <label class="ui-label" for="estimated-handover-date">{{ handover_date_label }}</label>
         {% include "components/forms/product_date_field.html" with id="estimated-handover-date" name="estimated_handover_date" value=estimated_handover_date placeholder="Choisir une date" label=handover_date_label describedby="estimated-handover-date-help" input_class="ui-input w-full" %}
-        <p class="muted text-sm" id="estimated-handover-date-help">Laissez vide si la date n’est pas encore confirmée.</p>
+        <p class="muted text-xs" id="estimated-handover-date-help">Laisser vide si non confirmée.</p>
       </div>
-      {% include "components/forms/form_actions.html" with primary_label="Enregistrer la date" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
+      {% include "components/forms/form_actions.html" with primary_label="Enregistrer" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
     </form>
     {% endif %}
   </section>
 
   {% if require_machine_selection and show_machine_workspace %}
-  <section class="operator-machine" aria-labelledby="operator-machine-title">
+  <section class="operator-machine atelier-production__block" aria-labelledby="operator-machine-title">
     <header class="operator-section-head">
       <div>
         <h4 id="operator-machine-title" class="font-display text-lg">Sélection machine</h4>
-        <p class="muted text-sm">Choisissez l’imprimante du parc avant le métrage et l’impression.</p>
+        <p class="muted text-sm">Avant métrage et impression.</p>
       </div>
       {% if job.assigned_machine %}<span class="badge {% if job.assigned_machine.status == 'active' %}is-success{% else %}is-warning{% endif %}">{{ job.assigned_machine.get_status_display }}</span>{% else %}<span class="badge is-warning">À attribuer</span>{% endif %}
     </header>
@@ -52,11 +52,11 @@
         {% if job.assigned_machine %}
         <div class="operator-machine__identity"><code>{{ job.assigned_machine.code }}</code><div><strong>{{ job.assigned_machine.name }}</strong><small>{% if job.assigned_machine.location %}{{ job.assigned_machine.location }}{% else %}Emplacement non renseigné{% endif %}{% if job.assigned_machine.max_print_width_cm %} · laize {{ job.assigned_machine.max_print_width_cm|floatformat:"-1" }} cm{% endif %}</small></div></div>
         <dl class="operator-machine__facts">
-          <div><dt>Attribuée le</dt><dd>{{ job.machine_assigned_at|date:"d/m/Y · H:i" }}</dd></div>
+          <div><dt>Attribuée le</dt><dd>{{ job.machine_assigned_at|date:"d/m/Y H:i" }}</dd></div>
         </dl>
         {% else %}
-        <strong>Aucune machine sélectionnée</strong>
-        <p>Plusieurs imprimantes sont disponibles : attribuez-en une avant le métrage.</p>
+        <strong>Aucune machine</strong>
+        <p>Attribuez une imprimante avant le métrage.</p>
         {% endif %}
       </div>
 
@@ -64,18 +64,18 @@
       <form class="operator-machine__assign ui-form-stack" hx-post="{% url 'portal:staff-order-machine-assignment' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
         {% csrf_token %}
         <div class="ui-field-group">
-          <label class="ui-label" for="machine_public_id">{% if job.assigned_machine %}Réattribuer l’OF{% else %}Choisir une imprimante{% endif %}</label>
+          <label class="ui-label" for="machine_public_id">{% if job.assigned_machine %}Réattribuer{% else %}Choisir une imprimante{% endif %}</label>
           <select class="ui-input" id="machine_public_id" name="machine_public_id" required>
-            <option value="" disabled selected hidden>Sélectionner une machine disponible</option>
+            <option value="" disabled selected hidden>Sélectionner une machine</option>
             {% for machine in active_machines %}<option value="{{ machine.public_id }}" {% if job.assigned_machine_id == machine.id %}disabled{% endif %}>{{ machine.code }} — {{ machine.name }}{% if machine.location %} · {{ machine.location }}{% endif %}</option>{% endfor %}
           </select>
         </div>
-        <div class="ui-field-group"><label class="ui-label" for="machine_reason">Motif de réattribution</label><input class="ui-input" id="machine_reason" name="machine_reason" maxlength="255" placeholder="Obligatoire uniquement si la machine change"></div>
-        <button class="ui-btn ui-btn-secondary" type="submit" {% if not active_machines %}disabled{% endif %}>{% if job.assigned_machine %}Réattribuer la machine{% else %}Attribuer la machine{% endif %}</button>
-        {% if not active_machines %}<p class="operator-machine__hint">Aucune machine disponible. Consultez le parc pour remettre un poste en service.</p>{% endif %}
+        <div class="ui-field-group"><label class="ui-label" for="machine_reason">Motif de réattribution</label><input class="ui-input" id="machine_reason" name="machine_reason" maxlength="255" placeholder="Si la machine change"></div>
+        <button class="ui-btn ui-btn-secondary" type="submit" {% if not active_machines %}disabled{% endif %}>{% if job.assigned_machine %}Réattribuer{% else %}Attribuer{% endif %}</button>
+        {% if not active_machines %}<p class="operator-machine__hint">Aucune machine disponible — consultez le parc.</p>{% endif %}
       </form>
       {% elif can_assign_machine_now %}
-      <div class="operator-empty-inline"><strong>Attribution en consultation</strong><p>Votre rôle permet de voir la machine et son historique, sans réattribuer l’OF.</p></div>
+      <div class="operator-empty-inline"><strong>Consultation seule</strong><p>Votre rôle ne permet pas de réattribuer.</p></div>
       {% endif %}
     </div>
   </section>
@@ -91,7 +91,7 @@
   {% endif %}
 
   {% if gang_sheets %}
-  <section class="operator-subpanel" aria-labelledby="gang-sheets-production-title">
+  <section class="operator-subpanel atelier-production__block" aria-labelledby="gang-sheets-production-title">
     <div class="operator-section-head">
       <div>
         <h4 id="gang-sheets-production-title" class="font-display text-lg">Fichiers de production</h4>
@@ -101,7 +101,7 @@
       {% for sheet in gang_sheets %}
       <article>
         <div><strong>{{ sheet.name }}</strong><small>{{ sheet.width_mm }} × {{ sheet.height_mm }} mm · {{ sheet.surface_sqm }} m²</small></div>
-        {% if can_download_gang_sheet_final %}<a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:staff-gang-sheet-final-download' sheet_public_id=sheet.public_id %}">Télécharger le PDF HD</a>{% else %}<span class="badge badge--muted">Accès HD restreint</span>{% endif %}
+        {% if can_download_gang_sheet_final %}<a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:staff-gang-sheet-final-download' sheet_public_id=sheet.public_id %}">PDF HD</a>{% else %}<span class="badge badge--muted">Accès HD restreint</span>{% endif %}
       </article>
       {% endfor %}
     </div>
@@ -109,11 +109,11 @@
   {% endif %}
 
   {% if show_machine_workspace %}
-  <section class="operator-machine operator-machine--print" aria-labelledby="operator-print-title">
+  <section class="operator-machine operator-machine--print atelier-production__block" aria-labelledby="operator-print-title">
     <header class="operator-section-head">
       <div>
         <h4 id="operator-print-title" class="font-display text-lg">Impression</h4>
-        <p class="muted text-sm">{% if job.assigned_machine %}La confirmation créera une preuve immuable sur <strong>{{ job.assigned_machine.code }}</strong>.{% elif sole_active_machine %}L’unique machine du parc (<strong>{{ sole_active_machine.code }}</strong>) sera utilisée à la confirmation.{% else %}Attribuez d’abord une machine pour activer la confirmation.{% endif %}</p>
+        <p class="muted text-sm">{% if job.assigned_machine %}Preuve immuable sur <strong>{{ job.assigned_machine.code }}</strong>.{% elif sole_active_machine %}Machine du parc : <strong>{{ sole_active_machine.code }}</strong>.{% else %}Attribuez une machine pour confirmer.{% endif %}</p>
       </div>
       {% if print_count %}<span class="badge is-success">{{ print_count }} confirmée{{ print_count|pluralize }}</span>{% endif %}
     </header>
@@ -124,7 +124,7 @@
       <div>
         <strong>{% if is_reprint %}Confirmer une réimpression{% else %}Confirmer l’impression{% endif %}</strong>
         {% if not require_machine_selection and sole_active_machine and not job.assigned_machine %}
-        <p>Machine du parc : <code>{{ sole_active_machine.code }}</code> — {{ sole_active_machine.name }}</p>
+        <p><code>{{ sole_active_machine.code }}</code> — {{ sole_active_machine.name }}</p>
         {% endif %}
       </div>
       {% if can_confirm_print and can_confirm_print_now %}{% if job.assigned_machine or sole_active_machine %}
@@ -132,13 +132,13 @@
         {% csrf_token %}
         <input type="hidden" name="request_token" value="{{ print_request_token }}">
         <label class="sr-only" for="print_note">Note d’impression</label>
-        <input class="ui-input" id="print_note" name="print_note" maxlength="255" placeholder="{% if is_reprint %}Motif obligatoire de la réimpression{% else %}Note optionnelle de contrôle{% endif %}" {% if is_reprint %}required{% endif %}>
+        <input class="ui-input" id="print_note" name="print_note" maxlength="255" placeholder="{% if is_reprint %}Motif obligatoire{% else %}Note optionnelle{% endif %}" {% if is_reprint %}required{% endif %}>
         <button class="ui-btn ui-btn-primary" type="submit">{% if is_reprint %}Confirmer la réimpression{% else %}Confirmer l’impression{% endif %}</button>
       </form>
       {% endif %}{% elif not can_confirm_print %}
       <span class="badge badge--muted">Confirmation restreinte</span>
       {% elif not can_confirm_print_now %}
-      <span class="operator-state-note">Disponible quand l’OF est en production</span>
+      <span class="operator-state-note">Quand l’OF est en production</span>
       {% else %}
       <span class="operator-state-note">Machine requise</span>
       {% endif %}
@@ -172,7 +172,7 @@
 
   {% if production_payment_blocked %}
   <div class="alert alert--warning workflow-panel__feedback" role="status">
-    <p class="m-0"><strong>Production en attente de paiement.</strong> {{ production_payment_block_reason }}{% if awaits_client_payment %} Le client a reçu (ou recevra) l’e-mail « paiement carte à effectuer ».{% endif %}</p>
+    <p class="m-0"><strong>En attente de paiement.</strong> {{ production_payment_block_reason }}{% if awaits_client_payment %} E-mail « paiement carte » envoyé ou en file.{% endif %}</p>
   </div>
   {% endif %}
 
@@ -180,14 +180,14 @@
   <div class="alert alert--danger workflow-panel__feedback" role="alert"><p class="m-0">{{ transition_error }}</p></div>
   {% endif %}
 
-  <section class="workflow-form-card operator-action-card" aria-labelledby="staff-production-transition-heading">
+  <section class="workflow-form-card operator-action-card atelier-production__block" aria-labelledby="staff-production-transition-heading">
     <div class="workflow-form-card__head">
       <h4 id="staff-production-transition-heading" class="workflow-panel__subtitle mt-0 font-display text-lg">Changer le statut</h4>
-      {% if job.status == "blocked" %}<p class="muted text-sm m-0">L’OF est bloqué : choisissez l’issue adaptée.</p>{% endif %}
+      {% if job.status == "blocked" %}<p class="muted text-sm m-0">OF bloqué — choisissez l’issue.</p>{% endif %}
     </div>
 
     {% if can_transition and allowed_statuses %}
-    <form class="ui-form-stack" hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
+    <form class="ui-form-stack atelier-production__form" hx-post="{% url 'portal:staff-order-panel-production' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
       {% csrf_token %}
       <div class="ui-field-group">
         <label class="ui-label" for="to_status">Nouveau statut</label>
@@ -196,15 +196,15 @@
           {% for status in allowed_statuses %}<option value="{{ status }}">{{ status|human_status }}</option>{% endfor %}
         </select>
       </div>
-      {% include "components/forms/field_group.html" with id="reason" name="reason" label="Commentaire (optionnel)" type="text" placeholder="Ex. contrôle qualité validé, matière indisponible…" show_label=1 %}
+      {% include "components/forms/field_group.html" with id="reason" name="reason" label="Commentaire (optionnel)" type="text" placeholder="Ex. contrôle validé…" show_label=1 %}
       {% include "components/forms/form_actions.html" with primary_label="Mettre à jour" htmx_disable=1 form_actions_class="workflow-form-card__actions" %}
     </form>
     {% elif can_transition and production_payment_blocked %}
-    <div class="operator-empty-inline"><strong>Lancement bloqué</strong><p>Contrôlez les fichiers et le métrage avant de poursuivre.</p></div>
+    <div class="operator-empty-inline"><strong>Lancement bloqué</strong><p>Contrôlez fichiers et métrage avant de poursuivre.</p></div>
     {% elif not can_transition %}
     <div class="operator-empty-inline"><strong>Consultation seule</strong><p>Votre rôle ne permet pas de modifier le statut.</p></div>
     {% else %}
-    <div class="operator-empty-inline"><strong>Workflow terminé</strong><p>Aucune transition supplémentaire n’est disponible.</p></div>
+    <div class="operator-empty-inline"><strong>Workflow terminé</strong><p>Aucune transition disponible.</p></div>
     {% endif %}
   </section>
 
@@ -212,14 +212,12 @@
   <details class="workflow-disclosure production-history">
     <summary><span>Historique de production</span><strong>{{ transition_count }} transition{{ transition_count|pluralize }}</strong></summary>
     <section class="operator-history" aria-labelledby="production-history-title">
-      <div class="operator-section-head">
-        <div><h4 id="production-history-title" class="font-display text-lg">Dernières transitions</h4></div>
-      </div>
+      <h4 id="production-history-title" class="ui-sr-only">Dernières transitions</h4>
       <ol class="operator-history__list">
         {% for transition in job.transitions.all|slice:":5" %}
         <li>
           <span class="operator-history__marker" aria-hidden="true"></span>
-          <div><strong>{{ transition.from_status|human_status }} → {{ transition.to_status|human_status }}</strong><time datetime="{{ transition.created_at|date:'c' }}">{{ transition.created_at|date:"d/m/Y · H:i" }}</time>{% if transition.reason %}<p>{{ transition.reason }}</p>{% endif %}</div>
+          <div><strong>{{ transition.from_status|human_status }} → {{ transition.to_status|human_status }}</strong><time datetime="{{ transition.created_at|date:'c' }}">{{ transition.created_at|date:"d/m/Y H:i" }}</time>{% if transition.reason %}<p>{{ transition.reason }}</p>{% endif %}</div>
         </li>
         {% endfor %}
       </ol>

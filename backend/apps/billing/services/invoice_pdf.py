@@ -17,7 +17,7 @@ from apps.orders.models import Order
 def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment) -> bytes:
     """PDF de justificatif de paiement (preuve d’encaissement).
 
-    La facture fiscale / comptable est émise hors plateforme (outil RCA).
+    La facture fiscale / comptable est émise hors plateforme.
     """
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -122,7 +122,7 @@ def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment
     story.append(
         Paragraph(
             "Ce document atteste du règlement en ligne. "
-            "La facture fiscale est émise séparément via l’outil comptable RCA.",
+            "La facture fiscale est émise séparément.",
             normal,
         )
     )

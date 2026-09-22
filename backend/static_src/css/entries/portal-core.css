@@ -1750,7 +1750,7 @@ html[data-theme="prenium"] body.product-shell .product-header .product-nav__inbo
   padding: 0 0.34rem !important;
   border: 2px solid var(--surface-raised, #fffdf8) !important;
   border-radius: 999px !important;
-  background: var(--product-danger, var(--danger, #ff5470)) !important;
+  background: var(--product-danger, var(--danger)) !important;
   color: #fff !important;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--ink, #0b0b0b) 16%, transparent) !important;
   font-family: "Space Grotesk", system-ui, sans-serif !important;

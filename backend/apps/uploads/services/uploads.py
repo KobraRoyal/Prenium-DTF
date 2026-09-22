@@ -10,10 +10,28 @@ from apps.accounts.services.access import AccessScopeService
 from apps.auditlog.services import record_event
 from apps.orders.models import Order
 from apps.orders.services.pricing import OrderPricingService
+from apps.production.models import ProductionJob
 from apps.uploads.models import OrderUpload
 from apps.uploads.services.drive import OrderUploadDriveSyncService
 from apps.uploads.services.inspections import OrderUploadInspectionService
 from apps.uploads.services.validation import UploadValidationService
+
+STAFF_UPLOAD_QUANTITY_MAX = 1000
+
+
+def order_production_has_started(order: Order) -> bool:
+    """True dès qu’un job Atelier a démarré (ou dépassé) l’étape « En production »."""
+    try:
+        job = order.production_job
+    except ProductionJob.DoesNotExist:
+        return False
+    if job.started_at is not None:
+        return True
+    return job.status in {
+        ProductionJob.Status.IN_PROGRESS,
+        ProductionJob.Status.READY_TO_SHIP,
+        ProductionJob.Status.COMPLETED,
+    }
 
 
 class OrderUploadService:
@@ -242,6 +260,86 @@ class OrderUploadService:
         if value < 1:
             raise ValidationError("La quantité doit être au moins 1.")
         return value
+
+    def can_staff_edit_upload_quantity(self, *, order: Order) -> bool:
+        """Encours uniquement, commande non terminée, production non démarrée."""
+        return (
+            order.billing_mode == Order.BillingMode.DEFERRED
+            and order.status in (Order.Status.DRAFT, Order.Status.SUBMITTED)
+            and not order_production_has_started(order)
+        )
+
+    @transaction.atomic
+    def set_staff_upload_quantity(
+        self,
+        *,
+        order: Order,
+        upload_public_id,
+        actor,
+        quantity,
+        source: str = "staff_portal.upload_quantity",
+    ) -> OrderUpload:
+        """Corrige le nombre d’exemplaires d’un visuel (encours, avant production).
+
+        Ne recalcule pas le prix : le tarif encours reste piloté par la saisie
+        métrage atelier, comme aujourd’hui.
+        """
+        if not self.can_staff_edit_upload_quantity(order=order):
+            if order.billing_mode != Order.BillingMode.DEFERRED:
+                raise ValidationError(
+                    "La modification de quantité est réservée aux commandes encours."
+                )
+            if order_production_has_started(order):
+                raise ValidationError(
+                    "Impossible de modifier les quantités : la production a déjà démarré."
+                )
+            raise ValidationError("Statut de commande incompatible avec cette modification.")
+
+        from apps.customers.models import Customer
+
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().get(pk=order.pk)
+        if not self.can_staff_edit_upload_quantity(order=order):
+            if order_production_has_started(order):
+                raise ValidationError(
+                    "Impossible de modifier les quantités : la production a déjà démarré."
+                )
+            raise ValidationError("Statut de commande incompatible avec cette modification.")
+
+        order_upload = (
+            OrderUpload.objects.select_for_update()
+            .filter(order=order, public_id=upload_public_id)
+            .first()
+        )
+        if order_upload is None:
+            raise ValidationError("Fichier introuvable pour cette commande.")
+
+        resolved_qty = self._normalize_quantity(quantity)
+        if resolved_qty > STAFF_UPLOAD_QUANTITY_MAX:
+            raise ValidationError(
+                f"La quantité ne peut pas dépasser {STAFF_UPLOAD_QUANTITY_MAX}."
+            )
+
+        previous = order_upload.quantity
+        if previous == resolved_qty:
+            return order_upload
+
+        order_upload.quantity = resolved_qty
+        order_upload.save(update_fields=["quantity", "updated_at"])
+        record_event(
+            action="order_upload.quantity_updated",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=order_upload,
+            metadata={
+                "order_public_id": str(order.public_id),
+                "customer_public_id": str(order.customer.public_id),
+                "order_upload_public_id": str(order_upload.public_id),
+                "previous_quantity": previous,
+                "quantity": resolved_qty,
+                "source": source,
+            },
+        )
+        return order_upload
 
     def _normalize_support_color(self, raw: str) -> str:
         cleaned = str(raw or "").strip()

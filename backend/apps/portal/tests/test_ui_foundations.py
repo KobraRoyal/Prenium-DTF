@@ -264,7 +264,6 @@ class UiFoundationSourceTests(SimpleTestCase):
             "perms.customers.view_customer",
             "perms.production.view_productionmachine",
             "perms.prospects.view_prospectprofile",
-            "perms.b2b_order_projects.view_b2borderproject",
             "perms.notifications.view_emailtemplate",
             "perms.customers.manage_customer_pricing",
             "perms.gang_sheets.configure_gangsheet",

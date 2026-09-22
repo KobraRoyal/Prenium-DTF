@@ -119,6 +119,21 @@ Effets :
   meilleur palier atteint sur le volume général.
 - Audit `order.pricing_computed`.
 
+## Correction quantité exemplaires (encours, avant production)
+
+Sur le panneau **Contrôle fichiers** (`portal:staff-order-panel-inspection`), l’opérateur peut
+corriger le nombre d’exemplaires d’un visuel (`OrderUpload.quantity`) **avant** le démarrage
+production.
+
+- Action : `POST` `portal:staff-order-upload-quantity` (permission `uploads.review_orderupload`).
+- Service : `OrderUploadService.set_staff_upload_quantity`.
+- Garde-fous : `billing_mode = deferred`, commande `draft` ou `submitted`, **production non
+  démarrée** (`ProductionJob.started_at` absent et statut hors `in_progress` /
+  `ready_to_ship` / `completed`), quantité entre 1 et 1000.
+- **Pas de recalcul de prix** à cette étape : le tarif encours reste piloté par la saisie
+  métrage atelier (comme aujourd’hui).
+- Audit `order_upload.quantity_updated`.
+
 ## Ajustement Atelier (encours uniquement)
 
 Sur le panneau **Facturation** (`portal:staff-order-panel-billing`), l’opérateur peut :

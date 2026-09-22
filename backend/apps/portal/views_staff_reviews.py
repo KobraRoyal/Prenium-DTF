@@ -74,6 +74,10 @@ def _inspection_context(request, *, order, form_error: str = "", error_upload_id
         "has_upload_view_permission": has_upload_view_permission,
         "can_review_uploads": has_review_permission and of_document_issued,
         "review_blocked_before_of": has_review_permission and not of_document_issued,
+        "can_edit_upload_quantities": (
+            request.user.has_perm("uploads.review_orderupload")
+            and upload_service.can_staff_edit_upload_quantity(order=order)
+        ),
         "form_error": form_error,
         "error_upload_id": str(error_upload_id or ""),
         "badge_tone_for_status": badge_tone_for_status,
@@ -143,6 +147,46 @@ class StaffOrderUploadReviewView(StaffOrderContextMixin, View):
             _inspection_context(request, order=self.order),
         )
         return with_toast(response, message, "success")
+
+
+class StaffOrderUploadQuantityView(StaffOrderContextMixin, View):
+    template_name = "portal/staff/panels/inspection.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.has_perm("uploads.review_orderupload"):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, order_public_id, upload_public_id):
+        try:
+            upload_service.set_staff_upload_quantity(
+                order=self.order,
+                upload_public_id=upload_public_id,
+                actor=request.user,
+                quantity=request.POST.get("quantity"),
+                source="staff_portal.order_inspection",
+            )
+        except ValidationError as exc:
+            message = " ".join(getattr(exc, "messages", None) or [str(exc)])
+            response = render(
+                request,
+                self.template_name,
+                _inspection_context(
+                    request,
+                    order=self.order,
+                    form_error=message,
+                    error_upload_id=upload_public_id,
+                ),
+            )
+            return with_toast(response, message, "error")
+
+        self.order.refresh_from_db()
+        response = render(
+            request,
+            self.template_name,
+            _inspection_context(request, order=self.order),
+        )
+        return with_toast(response, "Quantité mise à jour.", "success")
 
 
 class StaffOrderUploadPreviewView(StaffOrderContextMixin, View):

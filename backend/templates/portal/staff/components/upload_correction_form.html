@@ -30,10 +30,9 @@
     <div class="ui-field-group">
       <label class="ui-label" for="review-comment-{{ upload.public_id }}">Précision pour le client</label>
       <p class="ui-help">Facultatif, sauf si le motif est « Autre ».</p>
-      <textarea class="ui-input" id="review-comment-{{ upload.public_id }}" name="comment" maxlength="2000" rows="3" placeholder="Expliquez clairement ce qui doit être corrigé."></textarea>
+      <textarea class="ui-input" id="review-comment-{{ upload.public_id }}" name="comment" maxlength="2000" rows="2" placeholder="Ce qui doit être corrigé."></textarea>
     </div>
     <div class="atelier-inspection__correction-footer">
-      <p>Le message utilisera le modèle d’e-mail client personnalisable.</p>
       <button class="ui-btn ui-btn-danger" type="submit" data-htmx-disable>Enregistrer et notifier</button>
     </div>
   </form>

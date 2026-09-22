@@ -13,16 +13,20 @@
 
   {% if uploads %}
   {% if review_blocked_before_of %}
-  <div class="alert alert--warning mt-4" role="status"><p>Imprimez d’abord l’OF. Le contrôle Atelier sera disponible dès que son émission sera enregistrée.</p></div>
+  <div class="alert alert--warning mt-3" role="status"><p>Imprimez d’abord l’OF. Le contrôle Atelier sera disponible dès que son émission sera enregistrée.</p></div>
   {% elif not has_review_permission %}
-  <div class="alert alert--info mt-4" role="status"><p>Vous pouvez consulter les contrôles, mais votre rôle ne permet pas de prendre une décision Atelier.</p></div>
+  <div class="alert alert--info mt-3" role="status"><p>Consultation seule : votre rôle ne permet pas de décider pour la production.</p></div>
   {% endif %}
 
   <div class="atelier-inspection__list">
     {% for upload in uploads %}
     {% with review=upload.atelier_review inspection=upload.inspection upload_id=upload.public_id|stringformat:"s" %}
     <article class="atelier-inspection__file">
-      {% if upload.is_external %}<span class="badge is-neutral">Lien externe</span>{% else %}
+      {% if upload.is_external %}
+      <div class="atelier-inspection__preview atelier-inspection__preview--external">
+        <span class="badge is-neutral">Lien externe</span>
+      </div>
+      {% else %}
       <a
         class="atelier-inspection__preview"
         href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}"
@@ -31,14 +35,13 @@
         aria-label="Ouvrir l’aperçu de {{ upload.original_filename }}"
       >
         <img src="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
-        <span class="atelier-inspection__preview-label" aria-hidden="true">Ouvrir en grand</span>
       </a>
       {% endif %}
 
       <div class="atelier-inspection__body">
         <div class="atelier-inspection__head">
           <div class="min-w-0">
-            <h4 class="m-0 break-words font-display text-lg font-bold">{{ upload.original_filename }}</h4>
+            <h4 class="m-0 break-words font-display text-base font-bold">{{ upload.original_filename }}</h4>
             <p class="muted m-0 mt-1 text-xs">{{ upload.mime_type }} · {{ upload.size_bytes|filesizeformat }}</p>
           </div>
           <div class="atelier-inspection__file-tools">
@@ -71,6 +74,43 @@
               {% endif %}
             </dd>
           </div>
+          <div>
+            <dt>Exemplaires</dt>
+            <dd>
+              {% if can_edit_upload_quantities %}
+              <form
+                class="atelier-inspection__qty-form"
+                method="post"
+                action="{% url 'portal:staff-order-upload-quantity' order_public_id=order.public_id upload_public_id=upload.public_id %}"
+                hx-post="{% url 'portal:staff-order-upload-quantity' order_public_id=order.public_id upload_public_id=upload.public_id %}"
+                hx-target="#staff-order-inspection-panel"
+                hx-swap="outerHTML"
+                hx-indicator="#portal-htmx-indicator"
+              >
+                {% csrf_token %}
+                <label class="ui-sr-only" for="id-upload-qty-{{ upload_id }}">Exemplaires {{ upload.original_filename }}</label>
+                <input
+                  class="ui-input atelier-inspection__qty-input"
+                  id="id-upload-qty-{{ upload_id }}"
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  max="1000"
+                  step="1"
+                  value="{{ upload.quantity }}"
+                  required
+                  inputmode="numeric"
+                >
+                <button class="ui-btn ui-btn-secondary" type="submit" data-htmx-disable>Enregistrer</button>
+              </form>
+              {% if form_error and error_upload_id == upload_id %}
+              <div class="alert alert--danger mt-2" role="alert"><p class="m-0">{{ form_error }}</p></div>
+              {% endif %}
+              {% else %}
+              {{ upload.quantity }}
+              {% endif %}
+            </dd>
+          </div>
         </dl>
 
         <div class="atelier-inspection__review-grid">
@@ -78,8 +118,8 @@
             <div class="atelier-inspection__review-head">
               <h5 class="atelier-inspection__section-title">Analyse automatique</h5>
               {% if upload.is_external %}
-<span>Non applicable — contrôle manuel</span>
-{% elif inspection and inspection.status == 'ok' %}
+              <span class="badge is-neutral">Non applicable</span>
+              {% elif inspection and inspection.status == 'ok' %}
               <span class="badge is-neutral">Analyse réussie</span>
               {% elif inspection and inspection.status == 'warning' %}
               <span class="badge is-warning">Attention technique</span>
@@ -90,21 +130,27 @@
               {% endif %}
             </div>
             {% if upload.is_external %}
-<span>Non applicable — contrôle manuel</span>
-{% elif inspection and inspection.status == 'ok' %}
-            <p class="atelier-inspection__review-copy">Contrôle technique terminé. Les métadonnées disponibles ont été extraites.</p>
+            <p class="atelier-inspection__review-copy">Non applicable — contrôle manuel.</p>
+            {% elif inspection and inspection.status == 'ok' %}
+            <p class="atelier-inspection__review-copy">Métadonnées extraites.</p>
             {% elif inspection.summary_message %}
             <p class="atelier-inspection__review-copy">{{ inspection.summary_message }}</p>
             {% else %}
-            <p class="atelier-inspection__review-copy">Aucun diagnostic technique n’est disponible pour ce fichier.</p>
+            <p class="atelier-inspection__review-copy">Aucun diagnostic technique.</p>
             {% endif %}
-            {% if inspection.image_width and inspection.image_height %}<p class="atelier-inspection__pixel-size">Dimensions analysées : <strong>{{ inspection.image_width }} × {{ inspection.image_height }} px</strong></p>{% endif %}
+            {% if inspection.image_width and inspection.image_height %}
+            <p class="atelier-inspection__pixel-size">{{ inspection.image_width }} × {{ inspection.image_height }} px</p>
+            {% endif %}
           </section>
 
           <section class="atelier-inspection__review-block atelier-inspection__review-block--decision" aria-label="Décision Atelier">
             <div class="atelier-inspection__review-head">
               <h5 class="atelier-inspection__section-title">Décision Atelier</h5>
-              {% if review and review.reviewed_at %}<span class="atelier-inspection__decision-state">Décision enregistrée</span>{% else %}<span class="atelier-inspection__decision-state is-pending">Action requise</span>{% endif %}
+              {% if review and review.reviewed_at %}
+              <span class="atelier-inspection__decision-state">Enregistrée</span>
+              {% else %}
+              <span class="atelier-inspection__decision-state is-pending">Action requise</span>
+              {% endif %}
             </div>
             {% if review and review.reviewed_at %}
             <p class="atelier-inspection__decision-result"><strong>{{ review.get_status_display }}</strong></p>
@@ -117,8 +163,7 @@
             </p>
             {% endif %}
             {% else %}
-            <p class="atelier-inspection__decision-result"><strong>Aucune décision humaine enregistrée.</strong></p>
-            <p class="atelier-inspection__decision-meta">L’analyse automatique vous informe, mais seule votre décision autorise la production.</p>
+            <p class="atelier-inspection__decision-meta">Votre décision autorise la production.</p>
             {% endif %}
 
             {% if can_review_uploads and not review or can_review_uploads and review.status != 'approved' %}
@@ -130,7 +175,6 @@
               </form>
             </div>
             {% endif %}
-
           </section>
         </div>
 

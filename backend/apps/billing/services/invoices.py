@@ -136,5 +136,5 @@ class InvoiceService:
         }
 
     def _build_invoice_number(self, *, order: Order) -> str:
-        # Préfixe JP = justificatif de paiement (facture fiscale = RCA).
+        # Préfixe JP = justificatif de paiement (facture fiscale hors plateforme).
         return f"JP-{order.public_id.hex.upper()}"

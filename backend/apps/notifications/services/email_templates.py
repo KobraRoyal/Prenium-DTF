@@ -330,7 +330,7 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "Votre paiement pour la commande {{ order.reference }} "
             "({{ customer.name }}) a bien été enregistré.\n\n"
             "Votre justificatif de paiement est disponible dans votre espace client. "
-            "La facture fiscale sera émise séparément (outil RCA).\n\n"
+            "La facture fiscale sera émise séparément.\n\n"
             "Cordialement,\nL’équipe {{ site.name }}"
         ),
     ),

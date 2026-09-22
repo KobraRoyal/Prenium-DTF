@@ -165,6 +165,7 @@ from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
     StaffOrderUploadDownloadView,
     StaffOrderUploadPreviewView,
+    StaffOrderUploadQuantityView,
     StaffOrderUploadReviewView,
 )
 from .views_staff_scan import StaffOrderPanelScanView
@@ -830,6 +831,11 @@ urlpatterns = [
         "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/review/",
         StaffOrderUploadReviewView.as_view(),
         name="staff-order-upload-review",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/quantity/",
+        StaffOrderUploadQuantityView.as_view(),
+        name="staff-order-upload-quantity",
     ),
     path(
         "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/preview/",

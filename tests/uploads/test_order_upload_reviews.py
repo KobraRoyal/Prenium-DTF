@@ -285,11 +285,19 @@ def test_staff_review_and_preview_routes_hide_upload_from_another_order(client):
         "portal:staff-order-upload-download",
         kwargs={"order_public_id": order_a.public_id, "upload_public_id": upload_b.public_id},
     )
+    quantity_url = reverse(
+        "portal:staff-order-upload-quantity",
+        kwargs={"order_public_id": order_a.public_id, "upload_public_id": upload_b.public_id},
+    )
 
     assert client.post(review_url, {"status": "approved"}).status_code == 404
     assert client.get(preview_url).status_code == 404
     assert client.get(download_url).status_code == 404
+    quantity_response = client.post(quantity_url, {"quantity": "2"}, HTTP_HX_REQUEST="true")
+    assert quantity_response.status_code == 200
+    assert json.loads(quantity_response["X-Prenium-Toast"])["variant"] == "error"
     assert not OrderUploadReview.objects.exists()
+    assert OrderUpload.objects.get(pk=upload_b.pk).quantity == 1
 
 
 @pytest.mark.django_db

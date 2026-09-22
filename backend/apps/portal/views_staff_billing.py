@@ -6,6 +6,7 @@ from django.shortcuts import render
 from django.views import View
 
 from apps.billing.models import Invoice
+from apps.customers.services.volume_discounts import CustomerVolumeDiscountTierService
 from apps.orders.models import Order
 from apps.orders.services.pricing import OrderPricingService
 from apps.portal.forms_staff_billing_adjustment import StaffBillingAdjustmentForm
@@ -60,6 +61,9 @@ class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
         can_adjust = can_staff_adjust_deferred_billing(order=self.order, actor=request.user)
         if can_adjust and adjustment_form is None:
             adjustment_form = StaffBillingAdjustmentForm(order=self.order)
+        volume_discount_summary = CustomerVolumeDiscountTierService().get_current_month_summary(
+            customer=customer
+        )
         return {
             "order": self.order,
             "payment": payment,
@@ -69,6 +73,7 @@ class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
             "can_adjust_deferred_billing": can_adjust,
             "billing_adjustment_form": adjustment_form,
             "billing_adjustment_error": form_error,
+            "volume_discount_summary": volume_discount_summary,
             "badge_tone_for_status": badge_tone_for_status,
             "status_label": status_label,
         }

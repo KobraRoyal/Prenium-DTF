@@ -35,6 +35,6 @@ def test_payment_receipt_pdf_is_not_labeled_as_fiscal_invoice():
 
     text = "\n".join(page.get_text() for page in pymupdf.open(stream=pdf, filetype="pdf"))
     assert "Justificatif de paiement" in text
-    assert "RCA" in text
+    assert "RCA" not in text
     assert "facture fiscale" in text.lower()
     assert "Facture JP-TEST" not in text

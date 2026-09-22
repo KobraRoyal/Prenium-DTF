@@ -183,7 +183,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_auth", 120),
         ("views_profile", 220),
         ("views_staff_uploads", 130),
-        ("views_staff_reviews", 200),
+        ("views_staff_reviews", 250),
         ("views_staff", 210),
         ("views_staff_dashboard", 120),
         ("views_staff_documents", 70),
