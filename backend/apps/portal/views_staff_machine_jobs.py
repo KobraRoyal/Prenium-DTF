@@ -123,6 +123,7 @@ class StaffOrderPrintConfirmView(StaffOrderMachinePermissionMixin, StaffOrderCon
                 source="staff_portal",
                 note=request.POST.get("print_note", ""),
                 request_token=request.POST.get("request_token", ""),
+                printed_linear_m=request.POST.get("printed_linear_m", ""),
             )
         except ValidationError as exc:
             job = production_workflow_service.get_or_create_for_order(order=self.order)

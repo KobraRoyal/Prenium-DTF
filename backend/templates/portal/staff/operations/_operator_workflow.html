@@ -220,6 +220,7 @@
       <input type="hidden" name="q" value="{{ query }}">
       <input type="hidden" name="queue" value="{{ queue }}">
       <input type="hidden" name="request_token" value="{{ print_request_token }}">
+      {% include "portal/staff/partials/reprint_meterage_field.html" %}
       <div class="ui-field-group">
         <label class="ui-label" for="operator-print-note-{{ order.public_id }}">{% if is_reprint %}Motif de réimpression{% else %}Note d’impression{% endif %}</label>
         <input class="ui-input" id="operator-print-note-{{ order.public_id }}" name="print_note" maxlength="255" placeholder="{% if is_reprint %}Obligatoire{% else %}Optionnel{% endif %}" {% if is_reprint %}required{% endif %}>

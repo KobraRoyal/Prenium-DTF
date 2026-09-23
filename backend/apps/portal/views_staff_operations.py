@@ -289,6 +289,7 @@ class StaffAtelierOperationPrintConfirmView(StaffAtelierOperationsContextMixin, 
                 source="staff_operations",
                 note=request.POST.get("print_note", ""),
                 request_token=request.POST.get("request_token", ""),
+                printed_linear_m=request.POST.get("printed_linear_m", ""),
             )
         except ValidationError as exc:
             print_error = "; ".join(exc.messages)

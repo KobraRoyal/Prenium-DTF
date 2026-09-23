@@ -538,6 +538,7 @@ def test_print_confirmation_is_idempotent_and_reprint_requires_note():
         actor=operator,
         source="test",
         request_token=token,
+        printed_linear_m="0.1000",
     )
     _job, same_print, duplicate_created = service.confirm_print(
         order_public_id=order.public_id,
@@ -559,15 +560,32 @@ def test_print_confirmation_is_idempotent_and_reprint_requires_note():
             source="test",
         )
 
+    with pytest.raises(ValidationError, match="métrage linéaire réellement réimprimé"):
+        service.confirm_print(
+            order_public_id=order.public_id,
+            actor=operator,
+            source="test",
+            note="Relance après contrôle qualité",
+        )
+    with pytest.raises(ValidationError, match="ne peut pas dépasser"):
+        service.confirm_print(
+            order_public_id=order.public_id,
+            actor=operator,
+            source="test",
+            note="Relance trop longue",
+            printed_linear_m="9",
+        )
+
     _job, reprint, created = service.confirm_print(
         order_public_id=order.public_id,
         actor=operator,
         source="test",
         note="Relance après contrôle qualité",
+        printed_linear_m="0,40",
     )
     assert created is True
     assert reprint.machine_code_snapshot == machine.code
-    assert reprint.printed_linear_m == Decimal("1.7500")
+    assert reprint.printed_linear_m == Decimal("0.4000")
     assert ProductionPrintRecord.objects.count() == 2
     assert AuditLogEntry.objects.filter(action="production.print.reconfirmed").exists()
 

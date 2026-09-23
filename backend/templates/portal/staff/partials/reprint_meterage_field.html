@@ -1,0 +1,16 @@
+{% if is_reprint %}
+<div class="ui-field-group">
+  <label class="ui-label" for="reprint-meterage-{{ order.public_id }}">Métrage réimprimé (m)</label>
+  <input
+    class="ui-input"
+    id="reprint-meterage-{{ order.public_id }}"
+    name="printed_linear_m"
+    type="text"
+    inputmode="decimal"
+    autocomplete="off"
+    required
+    placeholder="Ex. 0,40"
+  >
+  <p class="muted text-sm">Uniquement la longueur en erreur{% if resolved_meterage_linear_m %} · maximum {{ resolved_meterage_linear_m }} m{% endif %}.</p>
+</div>
+{% endif %}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
@@ -48,6 +49,7 @@ class ProductionPrintTrackingService:
         source: str,
         note: str = "",
         request_token=None,
+        printed_linear_m=None,
     ) -> tuple[ProductionJob, ProductionPrintRecord, bool]:
         try:
             self._require_permissions(actor)
@@ -155,6 +157,13 @@ class ProductionPrintTrackingService:
                 is_reprint = locked_job.print_records.exists()
                 if is_reprint and not normalized_note:
                     raise ValidationError("Précisez le motif de cette réimpression.")
+                if is_reprint:
+                    recorded_linear_m = self._reprint_linear_m(
+                        order=locked_job.order,
+                        raw=printed_linear_m,
+                    )
+                else:
+                    recorded_linear_m = self._printed_linear_m_for_order(order=locked_job.order)
 
                 now = timezone.now()
                 if assignment.printing_started_at is None:
@@ -168,9 +177,7 @@ class ProductionPrintTrackingService:
                             assignment=assignment,
                             recorded_by=self._authenticated_actor(actor),
                             printed_at=now,
-                            printed_linear_m=self._printed_linear_m_for_order(
-                                order=locked_job.order
-                            ),
+                            printed_linear_m=recorded_linear_m,
                             source=source,
                             note=normalized_note,
                             request_token=token,
@@ -253,6 +260,29 @@ class ProductionPrintTrackingService:
             return uuid.UUID(str(request_token))
         except (TypeError, ValueError, AttributeError) as exc:
             raise ValidationError("Jeton de confirmation invalide.") from exc
+
+    def _reprint_linear_m(self, *, order: Order, raw) -> Decimal:
+        """Métrage saisi pour une réimpression partielle, jamais le total implicite."""
+        if isinstance(raw, Decimal):
+            dec = raw
+        else:
+            text = str(raw or "").strip().replace(" ", "").replace(",", ".")
+            if not text:
+                raise ValidationError("Indiquez le métrage linéaire réellement réimprimé.")
+            try:
+                dec = Decimal(text)
+            except InvalidOperation:
+                raise ValidationError("Indiquez un métrage linéaire valide.") from None
+        if dec <= 0:
+            raise ValidationError("Le métrage de réimpression doit être strictement positif.")
+        dec = dec.quantize(Decimal("0.0001"))
+        order_total = self._printed_linear_m_for_order(order=order)
+        if order_total is not None and dec > order_total:
+            raise ValidationError(
+                "Le métrage de réimpression ne peut pas dépasser "
+                f"le métrage de la commande ({order_total} m)."
+            )
+        return dec
 
     def _printed_linear_m_for_order(self, *, order: Order):
         """Fige le métrage réellement exploité par l'Atelier au moment du print."""

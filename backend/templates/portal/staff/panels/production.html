@@ -131,6 +131,7 @@
       <form class="operator-machine__confirm-form" hx-post="{% url 'portal:staff-order-print-confirmation' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
         {% csrf_token %}
         <input type="hidden" name="request_token" value="{{ print_request_token }}">
+        {% include "portal/staff/partials/reprint_meterage_field.html" %}
         <label class="sr-only" for="print_note">Note d’impression</label>
         <input class="ui-input" id="print_note" name="print_note" maxlength="255" placeholder="{% if is_reprint %}Motif obligatoire{% else %}Note optionnelle{% endif %}" {% if is_reprint %}required{% endif %}>
         <button class="ui-btn ui-btn-primary" type="submit">{% if is_reprint %}Confirmer la réimpression{% else %}Confirmer l’impression{% endif %}</button>

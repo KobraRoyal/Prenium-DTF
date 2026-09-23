@@ -1,6 +1,16 @@
 {% load ui_tags %}
 <div id="atelier-dashboard-panel" class="atelier-dashboard-stack">
-<div class="atelier-dashboard-charts">
+<div class="atelier-kpi-toggle-bar">
+  <button
+    class="ui-btn ui-btn-ghost ui-btn-sm atelier-kpi-toggle"
+    type="button"
+    data-atelier-kpi-toggle
+    aria-expanded="true"
+    aria-controls="atelier-dashboard-charts"
+    aria-label="Masquer KPI"
+  >Masquer KPI</button>
+</div>
+<div class="atelier-dashboard-charts atelier-dashboard-graph" id="atelier-dashboard-charts">
 {% if production_trend %}
 <section class="atelier-production-chart" aria-labelledby="atelier-production-chart-title">
   <header><div><h2 class="font-display" id="atelier-production-chart-title">Flux Atelier</h2><p>Nouvelles commandes et commandes terminées · 7 derniers jours.</p></div><a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-order-list' %}">Voir les commandes</a></header>
@@ -11,12 +21,12 @@
 </div>
 <div class="atelier-dashboard-secondary-rail{% if financial_trend %} atelier-dashboard-secondary-rail--with-financials{% endif %}">
 {% if printed_meterage_trend %}
-<section class="atelier-production-chart atelier-production-rail" aria-labelledby="atelier-production-rail-title">
-  <header>
+<section class="atelier-production-chart atelier-production-rail atelier-dashboard-graph" aria-labelledby="atelier-production-rail-title">
+  <header class="atelier-dashboard-graph">
     <h2 class="font-display" id="atelier-production-rail-title">Production imprimée</h2>
     <p>Mètres linéaires confirmés · réimpressions incluses.</p>
   </header>
-  <dl class="atelier-production-rail__gauges" aria-label="Indicateurs de métrage imprimé">
+  <dl class="atelier-production-rail__gauges atelier-dashboard-graph" aria-label="Indicateurs de métrage imprimé">
     {% for gauge in printed_meterage_trend.metric_gauges %}
     <div class="atelier-production-gauge">
       <dt>{{ gauge.label }}</dt>
@@ -95,7 +105,7 @@
 </section>
 {% endif %}
 {% if financial_trend %}
-<section class="atelier-production-chart atelier-revenue-chart" aria-labelledby="atelier-revenue-chart-title">
+<section class="atelier-production-chart atelier-revenue-chart atelier-dashboard-graph" aria-labelledby="atelier-revenue-chart-title">
   <header>
     <div>
       <h2 class="font-display" id="atelier-revenue-chart-title">Chiffre d’affaires</h2>
@@ -122,7 +132,9 @@
 >
 {% if dashboard_kpi_rows %}
 <section class="atelier-dashboard-metrics" aria-label="Indicateurs de la file Atelier">
-  {% ui_kpi_grid dashboard_kpi_rows %}
+  <div id="atelier-dashboard-kpi-grid">
+    {% ui_kpi_grid dashboard_kpi_rows %}
+  </div>
 </section>
 {% endif %}
 

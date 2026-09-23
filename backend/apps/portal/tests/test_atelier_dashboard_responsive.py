@@ -38,9 +38,23 @@ body.product-shell .atelier-worklist {
         self.assertNotIn("Tour de contrôle Atelier", dashboard)
         self.assertIn('label: "Nouvelles commandes"', chart_script)
         self.assertNotIn('label: "Entrées Atelier"', chart_script)
-        self.assertIn('class="atelier-production-chart atelier-production-rail"', dashboard_panel)
+        self.assertIn(
+            'class="atelier-production-chart atelier-production-rail atelier-dashboard-graph"',
+            dashboard_panel,
+        )
         self.assertIn("atelier-production-activity", dashboard_panel)
         self.assertIn("activity_kpi_rows", dashboard_panel)
+        self.assertIn("data-atelier-kpi-toggle", dashboard_panel)
+        self.assertIn(">Masquer KPI</button>", dashboard_panel)
+        batch_script = (
+            Path(settings.BASE_DIR) / "static_src/js/atelier-dashboard-batch.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("atelier-dashboard-kpi-reduced", batch_script)
+        self.assertIn(
+            "#atelier-dashboard-panel.is-reduced .atelier-dashboard-graph",
+            staff_css,
+        )
+        self.assertIn("atelier-kpi-toggle-bar", dashboard_panel)
         self.assertIn('class="atelier-dashboard-secondary-rail', dashboard_panel)
         self.assertIn("atelier-production-gauge__canvas", dashboard_panel)
         self.assertIn('type: "doughnut"', chart_script)

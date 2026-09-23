@@ -236,8 +236,60 @@ function initBatchSubmitCapture() {
   );
 }
 
+const KPI_STORAGE_KEY = "atelier-dashboard-kpi-reduced";
+
+function readKpiReduced() {
+  try {
+    return window.localStorage.getItem(KPI_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function applyKpiReduced(reduced) {
+  const panel = document.getElementById("atelier-dashboard-panel");
+  const button = document.querySelector("[data-atelier-kpi-toggle]");
+  if (!panel || !button) {
+    return;
+  }
+  panel.classList.toggle("is-reduced", reduced);
+  button.textContent = reduced ? "Afficher KPI" : "Masquer KPI";
+  button.setAttribute("aria-expanded", reduced ? "false" : "true");
+  button.setAttribute("aria-label", reduced ? "Afficher KPI" : "Masquer KPI");
+}
+
+function initKpiToggle() {
+  if (document.body.dataset.atelierKpiToggleReady === "true") {
+    return;
+  }
+  document.body.dataset.atelierKpiToggleReady = "true";
+  document.addEventListener("click", (event) => {
+    const source = event.target instanceof Element ? event.target : event.target?.parentElement;
+    const button = source?.closest?.("[data-atelier-kpi-toggle]");
+    if (!button) {
+      return;
+    }
+    const reduced = !readKpiReduced();
+    try {
+      window.localStorage.setItem(KPI_STORAGE_KEY, reduced ? "1" : "0");
+    } catch {
+      /* Le bouton reste utilisable pour cette page. */
+    }
+    applyKpiReduced(reduced);
+  });
+  document.body.addEventListener("htmx:afterSwap", (event) => {
+    const target = event.detail?.target;
+    if (target?.id !== "atelier-dashboard-live-region") {
+      return;
+    }
+    applyKpiReduced(readKpiReduced());
+  });
+}
+
 function bootAtelierDashboardBatch() {
   initBatchSubmitCapture();
+  initKpiToggle();
+  applyKpiReduced(readKpiReduced());
 }
 
 if (document.readyState === "loading") {

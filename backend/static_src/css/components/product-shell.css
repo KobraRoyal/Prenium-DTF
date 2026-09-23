@@ -7728,8 +7728,8 @@ body.product-shell .scan-result__label {
   }
 
   body.product-shell .atelier-dashboard-metrics .ui-kpi-card {
-    min-height: 8.5rem;
-    padding: 0.85rem;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.7rem;
   }
 
   body.product-shell .atelier-dashboard-metrics .ui-kpi-card__hint {
