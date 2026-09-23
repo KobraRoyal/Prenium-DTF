@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     BackendPayPalCaptureView,
+    BackendPayPalWebhookView,
     BackendStripeWebhookView,
     ClientInvoiceDetailView,
     ClientInvoiceDownloadView,
@@ -42,6 +43,11 @@ urlpatterns = [
         "api/backend/paypal/capture/",
         BackendPayPalCaptureView.as_view(),
         name="backend-paypal-capture",
+    ),
+    path(
+        "api/backend/paypal/webhook/",
+        BackendPayPalWebhookView.as_view(),
+        name="backend-paypal-webhook",
     ),
     path(
         "api/backend/stripe/webhook/",

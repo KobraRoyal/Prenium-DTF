@@ -19,9 +19,10 @@
       <p id="delete-project-desc-{{ project.public_id }}" class="b2b-confirm-dialog__lead">
         {% if project.name %}
           <strong>{{ project.name }}</strong>
-          <span class="b2b-confirm-dialog__ref">{{ project.project_number }}</span>
+          <span class="b2b-confirm-dialog__ref">N° UUID {{ project.public_id }}</span>
         {% else %}
-          <strong>{{ project.project_number }}</strong>
+          <strong>Projet de commande</strong>
+          <span class="b2b-confirm-dialog__ref">N° UUID {{ project.public_id }}</span>
         {% endif %}
         sera supprimée de vos commandes à finaliser.
       </p>
@@ -30,13 +31,13 @@
       </p>
     </div>
     <div class="b2b-confirm-dialog__actions">
-      <button type="button" class="ui-btn ui-btn-secondary" data-dialog-close>Annuler</button>
+      <button type="button" class="b2b-confirm-dialog__button b2b-confirm-dialog__button--cancel" data-dialog-close>Annuler</button>
       <form
         method="post"
         action="{% url 'portal:client-order-project-cancel' customer_public_id=customer.public_id project_public_id=project.public_id %}"
       >
         {% csrf_token %}
-        <button class="ui-btn ui-btn-danger" type="submit">Supprimer définitivement</button>
+        <button class="b2b-confirm-dialog__button b2b-confirm-dialog__button--danger" type="submit">Supprimer définitivement</button>
       </form>
     </div>
   </div>

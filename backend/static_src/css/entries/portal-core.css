@@ -1,6 +1,7 @@
 /* Socle portail partagé (header, workflow, shell, profil). */
-@import "../components/prospect-tunnel.css";
+@import "../components/access-management.css";
 @import "../components/workflow.css";
+@import "../components/order-billing-breakdown.css";
 @import "../components/product-shell.css";
 @import "../components/product-polish.css";
 @import "../components/auth-login.css";
@@ -750,6 +751,47 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   box-shadow: none !important;
 }
 
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+
+@media (min-width: 480px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] {
+    flex-wrap: nowrap;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .ui-breadcrumb {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .atelier-push-action {
+  display: flex;
+  flex: 0 0 auto;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .atelier-push-action .ui-btn {
+  min-height: 2.25rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 479px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] {
+    align-items: flex-start;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail[data-breadcrumb-action="true"] .atelier-push-action {
+    margin-left: auto;
+  }
+}
+
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-rail .ui-breadcrumb,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-breadcrumb .ui-breadcrumb {
   margin: 0 !important;
@@ -855,26 +897,25 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card {
-  background: color-mix(in srgb, var(--bg) 32%, var(--surface)) !important;
+  background: var(--surface) !important;
   border-radius: var(--radius-sm) !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card:hover,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card:focus-within {
-  background: color-mix(in srgb, var(--brand-soft) 28%, var(--surface)) !important;
+  background: color-mix(in srgb, var(--brand-soft) 18%, var(--surface)) !important;
   transform: none !important;
 }
 
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card__facts,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card__facts div + div,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-card__primary {
-  border: 0 !important;
-}
-
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-toolbar {
-  padding: 0.5rem 0.65rem !important;
-  background: color-mix(in srgb, var(--bg) 22%, var(--surface)) !important;
-  border-radius: var(--radius-sm) !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(12.5rem, 16.5rem) !important;
+  align-items: end !important;
+  gap: 0.75rem 1rem !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .gang-sheet-search {
@@ -1679,6 +1720,49 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .product
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .product-header .ui-foundation-nav .product-nav__links .product-nav__link.is-active,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .product-header .ui-foundation-nav .product-nav__links .product-nav__link[aria-current="page"] {
   box-shadow: none !important;
+}
+
+/* Header partagé : les liens de navigation restent des liens, jamais des pastilles. */
+html[data-theme="prenium"] body.product-shell .product-header .ui-foundation-nav .product-nav__link.ui-btn-ghost:is(
+  :hover,
+  :focus-visible,
+  .is-active,
+  [aria-current="page"]
+) {
+  border-color: transparent !important;
+  color: var(--ink) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Exception : pastille inbox « Tableau de bord » (compteur commandes non traitées). */
+html[data-theme="prenium"] body.product-shell .product-header .product-nav__link--inbox.ui-btn-ghost {
+  overflow: visible !important;
+}
+
+html[data-theme="prenium"] body.product-shell .product-header .product-nav__inbox-badge.is-active {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 1.25rem !important;
+  height: 1.25rem !important;
+  padding: 0 0.34rem !important;
+  border: 2px solid var(--surface-raised, #fffdf8) !important;
+  border-radius: 999px !important;
+  background: var(--product-danger, var(--danger)) !important;
+  color: #fff !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink, #0b0b0b) 16%, transparent) !important;
+  font-family: "Space Grotesk", system-ui, sans-serif !important;
+  font-size: 0.6875rem !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1 !important;
+}
+
+html[data-theme="prenium"] body.product-shell .product-header .product-nav__inbox-badge[hidden] {
+  display: none !important;
 }
 
 /*

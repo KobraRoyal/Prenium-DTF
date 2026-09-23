@@ -15,12 +15,13 @@ from apps.catalog.services.default_catalog import DefaultCatalogService
 from apps.customers.models import (
     Customer,
     CustomerBillingProfile,
-    CustomerVolumeDiscountTier,
 )
 from apps.customers.services.volume_discounts import (
     is_cash_volume_customer,
     linear_meters_from_sqm,
+    pick_tier_for_volume,
     quote_volume_and_tier,
+    resolve_active_ladder,
 )
 from apps.orders.models import ZERO_AMOUNT, Order, OrderLine
 from apps.shipping.services.methods import ShippingMethodService
@@ -274,6 +275,11 @@ class OrderPricingService:
             shipping_ht=Decimal(str(shipping_snap["shipping_amount"])),
             billing_mode=resolved_billing,
         )
+        goods_totals = self.compose_order_totals(
+            subtotal_ht=subtotal,
+            shipping_ht=ZERO_AMOUNT,
+            billing_mode=resolved_billing,
+        )
         return {
             "surface_sqm": surface,
             "quantity": qty,
@@ -292,6 +298,8 @@ class OrderPricingService:
             "tax_rate": totals["tax_rate"],
             "tax_amount_eur": totals["tax_amount"],
             "total_eur": totals["total_amount"],
+            "goods_tax_amount_eur": goods_totals["tax_amount"],
+            "goods_total_eur": goods_totals["total_amount"],
             "billing_mode": resolved_billing,
             "currency": "EUR",
             "volume_discount_percent": volume_discount_percent,
@@ -431,6 +439,7 @@ class OrderPricingService:
             return declared
         return self.estimate_meterage_from_inspection(upload=upload)
 
+    @transaction.atomic
     def apply_declared_size_self_service_pricing(
         self,
         *,
@@ -439,6 +448,15 @@ class OrderPricingService:
         source: str,
     ) -> Order:
         """Fige le métrage depuis les dimensions déclarées (réassort comptant) puis prix."""
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().get(pk=order.pk)
+        from apps.billing.models import Payment
+
+        if Payment.objects.filter(
+            order=order,
+            status__in=(Payment.Status.PENDING, Payment.Status.APPROVED, Payment.Status.CAPTURED),
+        ).exists():
+            raise ValidationError("Le tarif est figé dès l'ouverture du paiement.")
         if order.billing_mode != Order.BillingMode.IMMEDIATE:
             raise ValidationError(
                 "Le tarif automatique dimensions s’applique aux commandes comptant CB."
@@ -488,6 +506,7 @@ class OrderPricingService:
             source=source,
         )
 
+    @transaction.atomic
     def apply_gang_sheet_self_service_pricing(
         self,
         *,
@@ -497,14 +516,32 @@ class OrderPricingService:
     ) -> Order:
         """Fige le métrage depuis la géométrie Gang Sheet puis calcule le prix.
 
-        Réservé aux commandes comptant CB portail (paiement immédiat sans
-        attente du retour atelier).
+        S’applique aux planches Studio (comptant CB ou encours) : la surface est
+        connue, sans attente de métrage atelier.
         """
         from apps.gang_sheets.models import GangSheet
 
-        if order.billing_mode != Order.BillingMode.IMMEDIATE:
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().get(pk=order.pk)
+        if order.billing_mode == Order.BillingMode.IMMEDIATE:
+            from apps.billing.models import Payment
+
+            if Payment.objects.filter(
+                order=order,
+                status__in=(
+                    Payment.Status.PENDING,
+                    Payment.Status.APPROVED,
+                    Payment.Status.CAPTURED,
+                ),
+            ).exists():
+                raise ValidationError("Le tarif est figé dès l'ouverture du paiement.")
+
+        if order.billing_mode not in {
+            Order.BillingMode.IMMEDIATE,
+            Order.BillingMode.DEFERRED,
+        }:
             raise ValidationError(
-                "Le tarif automatique Gang Sheet s’applique aux commandes comptant CB."
+                "Le tarif automatique Gang Sheet s’applique aux commandes atelier."
             )
         if not order.uses_atelier_pricing():
             raise ValidationError(
@@ -557,6 +594,12 @@ class OrderPricingService:
                 ]
             )
 
+        from apps.customers.services.volume_discounts import linear_meters_from_sqm
+
+        billable_sqm = sum(shares, Decimal("0.00")).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        order.meterage_override_linear_m = linear_meters_from_sqm(billable_sqm)
+        order.save(update_fields=["meterage_override_linear_m", "updated_at"])
+
         record_event(
             action="order.gang_sheet_meterage_applied",
             actor=actor if getattr(actor, "is_authenticated", False) else None,
@@ -565,7 +608,8 @@ class OrderPricingService:
                 "order_public_id": str(order.public_id),
                 "customer_public_id": str(order.customer.public_id),
                 "surface_sqm": f"{total_sqm:.4f}",
-                "billable_sqm": f"{sum(shares, Decimal('0.00')):.4f}",
+                "billable_sqm": f"{billable_sqm:.4f}",
+                "meterage_override_linear_m": str(order.meterage_override_linear_m),
                 "sheet_count": len(sheets),
                 "upload_quantities": [int(u.quantity or 1) for u in uploads],
                 "source": source,
@@ -715,14 +759,9 @@ class OrderPricingService:
         if laize_m <= 0:
             raise ValidationError("DTF_LAIZE_CM doit être strictement positif.")
         monthly_volume = (total_sqm / laize_m).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
-        tier = (
-            CustomerVolumeDiscountTier.objects.active()
-            .filter(
-                customer=customer,
-                minimum_monthly_linear_m__lte=monthly_volume,
-            )
-            .order_by("-minimum_monthly_linear_m", "-created_at")
-            .first()
+        tier = pick_tier_for_volume(
+            ladder=resolve_active_ladder(customer),
+            monthly_volume=monthly_volume,
         )
         discount_percent = tier.discount_percent if tier is not None else ZERO_AMOUNT
         discount_percent = discount_percent.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
@@ -731,6 +770,9 @@ class OrderPricingService:
         repriced_count = 0
 
         for monthly_order in monthly_orders:
+            if monthly_order.manual_billing_adjusted_at is not None:
+                # Ajustement Atelier figé : compte dans le volume, prix inchangé.
+                continue
             all_lines = list(monthly_order.items.all())
             dtf_lines = [line for line in all_lines if line.service_type == dtf_type]
             uploads = list(monthly_order.uploads.all())
@@ -912,6 +954,23 @@ class OrderPricingService:
             return
         with transaction.atomic():
             locked = Order.objects.select_for_update().get(pk=order.pk)
+            if locked.billing_mode == Order.BillingMode.IMMEDIATE:
+                from apps.billing.models import Payment
+
+                payment_statuses = set(
+                    Payment.objects.filter(
+                        order=locked,
+                        status__in=(
+                            Payment.Status.PENDING,
+                            Payment.Status.APPROVED,
+                            Payment.Status.CAPTURED,
+                        ),
+                    ).values_list("status", flat=True)
+                )
+                if Payment.Status.CAPTURED in payment_statuses:
+                    raise ValidationError("Le tarif est figé après paiement.")
+                if payment_statuses:
+                    raise ValidationError("Le tarif est figé dès l'ouverture du paiement.")
             if locked.billing_statement_id is not None:
                 raise ValidationError(
                     "La tarification est figée car la commande appartient à un "
@@ -994,10 +1053,23 @@ class OrderPricingService:
                 "La tarification est figée car la commande appartient à un "
                 "récapitulatif de facturation."
             )
-        from apps.billing.services.production_payment_gate import order_has_captured_payment
+        if order.billing_mode == Order.BillingMode.IMMEDIATE:
+            from apps.billing.models import Payment
 
-        if order.billing_mode == Order.BillingMode.IMMEDIATE and order_has_captured_payment(order):
-            raise ValidationError("Le tarif est figé après paiement.")
+            payment_statuses = set(
+                Payment.objects.filter(
+                    order=order,
+                    status__in=(
+                        Payment.Status.PENDING,
+                        Payment.Status.APPROVED,
+                        Payment.Status.CAPTURED,
+                    ),
+                ).values_list("status", flat=True)
+            )
+            if Payment.Status.CAPTURED in payment_statuses:
+                raise ValidationError("Le tarif est figé après paiement.")
+            if payment_statuses:
+                raise ValidationError("Le tarif est figé dès l'ouverture du paiement.")
         if not order.uses_atelier_pricing():
             raise ValidationError(
                 "Le calcul automatique s'applique aux commandes atelier (encours ou comptant CB)."
@@ -1025,8 +1097,10 @@ class OrderPricingService:
             line_total = (meterage * unit_price).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
             priced_lines.append((upload, meterage, line_total))
 
-        n_uploads = len(priced_lines)
-        prep_line_total = (Decimal(n_uploads) * prep_fee_per_file).quantize(
+        preparation_count = sum(
+            upload.external_visual_count if upload.is_external else 1 for upload in uploads
+        )
+        prep_line_total = (Decimal(preparation_count) * prep_fee_per_file).quantize(
             TWOPLACES,
             rounding=ROUND_HALF_UP,
         )
@@ -1136,7 +1210,7 @@ class OrderPricingService:
                 service_name=prep_service.name,
                 service_type=prep_service.service_type,
                 unit=prep_service.unit,
-                quantity=Decimal(str(n_uploads)),
+                quantity=Decimal(preparation_count),
                 unit_price=prep_fee_per_file,
                 line_total=prep_line_total,
             )
@@ -1155,6 +1229,7 @@ class OrderPricingService:
             order_locked.volume_discount_percent = volume_discount_percent
             order_locked.volume_discount_amount = volume_discount_amount
             order_locked.volume_discount_base_unit_price_eur = unit_price
+            order_locked.manual_billing_adjusted_at = None
             order_locked.save(
                 update_fields=[
                     "subtotal_amount",
@@ -1171,6 +1246,7 @@ class OrderPricingService:
                     "volume_discount_percent",
                     "volume_discount_amount",
                     "volume_discount_base_unit_price_eur",
+                    "manual_billing_adjusted_at",
                     "updated_at",
                 ]
             )
@@ -1226,4 +1302,229 @@ class OrderPricingService:
             )
 
             schedule_order_awaiting_payment_email(order_public_id=refreshed.public_id)
+        return refreshed
+
+    @staticmethod
+    def _parse_positive_money(value, *, label: str) -> Decimal:
+        from decimal import InvalidOperation
+
+        try:
+            amount = Decimal(str(value).strip())
+        except (InvalidOperation, TypeError, ValueError, AttributeError) as exc:
+            raise ValidationError(f"{label} invalide.") from exc
+        if not amount.is_finite() or amount < ZERO_AMOUNT or amount.as_tuple().exponent < -2:
+            raise ValidationError(f"{label} doit être ≥ 0 avec 2 décimales maximum.")
+        if amount >= Decimal("100000000"):
+            raise ValidationError(f"{label} est trop élevé.")
+        return amount.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+
+    @staticmethod
+    def _parse_positive_quantity(value, *, label: str) -> Decimal:
+        from decimal import InvalidOperation
+
+        from apps.orders.models import MIN_QUANTITY
+
+        try:
+            quantity = Decimal(str(value).strip())
+        except (InvalidOperation, TypeError, ValueError, AttributeError) as exc:
+            raise ValidationError(f"{label} invalide.") from exc
+        if not quantity.is_finite() or quantity < MIN_QUANTITY or quantity.as_tuple().exponent < -4:
+            raise ValidationError(f"{label} doit être ≥ {MIN_QUANTITY} (4 décimales max).")
+        if quantity >= Decimal("100000000"):
+            raise ValidationError(f"{label} est trop élevée.")
+        return quantity.quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+
+    @transaction.atomic
+    def apply_staff_billing_adjustments(
+        self,
+        *,
+        order: Order,
+        actor,
+        source: str,
+        shipping_method_code: str | None,
+        shipping_amount,
+        line_adjustments: list[dict],
+        meterage_override_linear_m=None,
+    ) -> Order:
+        """Ajustement Atelier des lignes et du port — commandes encours non relevées uniquement."""
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order_locked = Order.objects.select_for_update().select_related("customer").get(pk=order.pk)
+        if order_locked.billing_mode != Order.BillingMode.DEFERRED:
+            raise ValidationError("L’ajustement facturation est réservé aux commandes en encours.")
+        if order_locked.billing_statement_id is not None:
+            raise ValidationError("La facturation est figée : commande déjà sur un récapitulatif.")
+        if order_locked.status != Order.Status.SUBMITTED:
+            raise ValidationError("Seule une commande soumise peut être ajustée.")
+        if order_locked.pricing_status != Order.PricingStatus.PRICED:
+            raise ValidationError("Calculez d’abord le tarif avant d’ajuster les montants.")
+
+        lines = list(order_locked.items.all().order_by("position", "created_at"))
+        if not lines:
+            raise ValidationError("Aucune ligne de facturation à ajuster.")
+        by_public_id = {str(line.public_id): line for line in lines}
+        if not line_adjustments:
+            raise ValidationError("Indiquez au moins une ligne à mettre à jour.")
+        seen = set()
+        for adjustment in line_adjustments:
+            line_id = str(adjustment.get("line_public_id") or "").strip()
+            if not line_id or line_id not in by_public_id:
+                raise ValidationError("Ligne de facturation introuvable sur cette commande.")
+            if line_id in seen:
+                raise ValidationError("Ligne de facturation dupliquée dans la saisie.")
+            seen.add(line_id)
+        if seen != set(by_public_id):
+            raise ValidationError("Toutes les lignes de la commande doivent être renseignées.")
+
+        shipping_service = self.shipping_methods
+        method = shipping_service.resolve_method_for_customer(
+            customer=order_locked.customer,
+            shipping_method_code=shipping_method_code or order_locked.shipping_method_code or None,
+        )
+        snap = shipping_service.snapshot_dict(method)
+        if shipping_amount in (None, ""):
+            shipping_ht = Decimal(snap["shipping_amount"])
+        else:
+            shipping_ht = self._parse_positive_money(shipping_amount, label="Frais de port")
+
+        updated_lines: list[tuple[OrderLine, Decimal, Decimal, Decimal]] = []
+        for adjustment in line_adjustments:
+            line = by_public_id[str(adjustment["line_public_id"])]
+            quantity = self._parse_positive_quantity(
+                adjustment.get("quantity"),
+                label=f"Quantité « {line.service_name} »",
+            )
+            unit_price = self._parse_positive_money(
+                adjustment.get("unit_price"),
+                label=f"Prix unitaire « {line.service_name} »",
+            )
+            line_total = (quantity * unit_price).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+            updated_lines.append((line, quantity, unit_price, line_total))
+
+        subtotal = sum((total for _line, _q, _p, total in updated_lines), ZERO_AMOUNT).quantize(
+            TWOPLACES,
+            rounding=ROUND_HALF_UP,
+        )
+        totals = self.compose_order_totals(
+            subtotal_ht=subtotal,
+            shipping_ht=shipping_ht,
+            billing_mode=order_locked.billing_mode,
+        )
+        credit_hold = self.evaluate_credit_hold(
+            order=order_locked,
+            priced_total=totals["total_amount"],
+        )
+        now = timezone.now()
+        before = {
+            "subtotal": order_locked.subtotal_amount,
+            "shipping": order_locked.shipping_amount,
+            "shipping_code": order_locked.shipping_method_code,
+            "total": order_locked.total_amount,
+        }
+
+        dtf_type = CatalogService.ServiceType.DTF_TRANSFER
+        dtf_updates = [
+            (line, quantity, unit_price, line_total)
+            for line, quantity, unit_price, line_total in updated_lines
+            if line.service_type == dtf_type
+        ]
+        uploads = list(order_locked.uploads.all().order_by("sort_order", "created_at"))
+        if dtf_updates and len(dtf_updates) == len(uploads):
+            for (_line, quantity, unit_price, line_total), upload in zip(
+                dtf_updates, uploads, strict=True
+            ):
+                upload.meterage_sqm = quantity
+                upload.unit_price_eur = unit_price
+                upload.line_total_eur = line_total
+                upload.save(
+                    update_fields=[
+                        "meterage_sqm",
+                        "unit_price_eur",
+                        "line_total_eur",
+                        "updated_at",
+                    ]
+                )
+
+        for line, quantity, unit_price, line_total in updated_lines:
+            line.quantity = quantity
+            line.unit_price = unit_price
+            line.line_total = line_total
+            line.save(update_fields=["quantity", "unit_price", "line_total", "updated_at"])
+
+        order_locked.shipping_method_code = str(snap["shipping_method_code"])
+        order_locked.shipping_method_name = str(snap["shipping_method_name"])
+        order_locked.shipping_amount = totals["shipping_amount"]
+        order_locked.subtotal_amount = totals["subtotal_amount"]
+        order_locked.tax_rate = totals["tax_rate"]
+        order_locked.tax_amount = totals["tax_amount"]
+        order_locked.total_amount = totals["total_amount"]
+        order_locked.credit_hold_status = credit_hold
+        order_locked.volume_discount_percent = ZERO_AMOUNT
+        order_locked.volume_discount_amount = ZERO_AMOUNT
+        order_locked.volume_discount_threshold_linear_m = None
+        order_locked.volume_discount_base_unit_price_eur = None
+        order_locked.manual_billing_adjusted_at = now
+        dtf_total_sqm = sum(
+            (
+                quantity
+                for line, quantity, _price, _total in updated_lines
+                if line.service_type == dtf_type
+            ),
+            ZERO_AMOUNT,
+        )
+        update_fields = [
+            "shipping_method_code",
+            "shipping_method_name",
+            "shipping_amount",
+            "subtotal_amount",
+            "tax_rate",
+            "tax_amount",
+            "total_amount",
+            "credit_hold_status",
+            "volume_discount_percent",
+            "volume_discount_amount",
+            "volume_discount_threshold_linear_m",
+            "volume_discount_base_unit_price_eur",
+            "manual_billing_adjusted_at",
+            "updated_at",
+        ]
+        if dtf_total_sqm > 0 and order_locked.uses_atelier_pricing():
+            if meterage_override_linear_m is not None:
+                order_locked.meterage_override_linear_m = self._parse_positive_quantity(
+                    meterage_override_linear_m,
+                    label="Métrage linéaire",
+                )
+            else:
+                order_locked.meterage_override_linear_m = linear_meters_from_sqm(dtf_total_sqm)
+            update_fields.insert(-1, "meterage_override_linear_m")
+        order_locked.save(update_fields=update_fields)
+
+        self.reprice_deferred_month(
+            customer=order_locked.customer,
+            month=timezone.localtime(order_locked.created_at).date(),
+            actor=actor,
+            source=f"{source}.manual_billing_adjusted",
+        )
+        refreshed = Order.objects.get(pk=order_locked.pk)
+        record_event(
+            action="order.manual_billing_adjusted",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=refreshed,
+            metadata={
+                "order_public_id": str(refreshed.public_id),
+                "customer_public_id": str(refreshed.customer.public_id),
+                "source": source,
+                "shipping_method_code": refreshed.shipping_method_code,
+                "shipping_amount_before": f"{before['shipping']:.2f}",
+                "shipping_amount_after": f"{refreshed.shipping_amount:.2f}",
+                "shipping_code_before": before["shipping_code"],
+                "subtotal_before": f"{before['subtotal']:.2f}",
+                "subtotal_after": f"{refreshed.subtotal_amount:.2f}",
+                "total_before": f"{before['total']:.2f}",
+                "total_after": f"{refreshed.total_amount:.2f}",
+                "line_count": len(updated_lines),
+            },
+        )
+        from apps.notifications.services.transactional import schedule_order_priced_email
+
+        schedule_order_priced_email(order_public_id=refreshed.public_id)
         return refreshed

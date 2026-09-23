@@ -1,7 +1,10 @@
+from unittest.mock import patch
+
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.catalog.models import CatalogService
 from apps.customers.models import Customer, CustomerMembership
+from apps.notifications.models import WorkshopNotificationEvent
 from apps.orders.services.orders import OrderService
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -29,15 +32,24 @@ def test_order_service_creates_snapshotted_order_and_audit_entry():
         display_order=2,
     )
 
-    order = OrderService().create_order(
-        customer=customer,
-        actor=user,
-        items=[
-            {"service_public_id": str(dtf_service.public_id), "quantity": "2.50"},
-            {"service_public_id": str(prep_service.public_id), "quantity": 1},
-        ],
-        customer_note="Premiere commande",
-    )
+    with (
+        patch(
+            "apps.notifications.services.transactional.schedule_order_created_email"
+        ) as schedule_order_created_email,
+        patch(
+            "apps.notifications.services.workshop_push."
+            "WorkshopNotificationService.publish_order_submitted"
+        ) as publish_order_submitted,
+    ):
+        order = OrderService().create_order(
+            customer=customer,
+            actor=user,
+            items=[
+                {"service_public_id": str(dtf_service.public_id), "quantity": "2.50"},
+                {"service_public_id": str(prep_service.public_id), "quantity": 1},
+            ],
+            customer_note="Premiere commande",
+        )
 
     assert order.customer == customer
     assert order.status == "submitted"
@@ -50,6 +62,36 @@ def test_order_service_creates_snapshotted_order_and_audit_entry():
         action="order.created",
         target_public_id=order.public_id,
     ).exists()
+    publish_order_submitted.assert_called_once()
+    assert publish_order_submitted.call_args.kwargs == {
+        "order": order,
+        "actor": user,
+        "source": "client_api",
+    }
+    schedule_order_created_email.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_catalog_checkout_does_not_notify_atelier_before_capture():
+    user = get_user_model().objects.create_user(email="catalog-unpaid@example.com", password="pass")
+    customer = Customer.objects.create(name="Catalog unpaid")
+    CustomerMembership.objects.create(customer=customer, user=user)
+    service = CatalogService.objects.create(
+        code="dtf-unpaid",
+        name="DTF",
+        service_type=CatalogService.ServiceType.DTF_TRANSFER,
+        unit=CatalogService.Unit.LINEAR_METER,
+        base_price="12.50",
+    )
+
+    order = OrderService().create_order(
+        customer=customer,
+        actor=user,
+        items=[{"service_public_id": str(service.public_id), "quantity": "1.00"}],
+    )
+
+    assert order.payments.count() == 0
+    assert WorkshopNotificationEvent.objects.filter(order=order).count() == 0
 
 
 @pytest.mark.django_db

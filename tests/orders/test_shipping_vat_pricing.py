@@ -200,6 +200,8 @@ def test_quote_aligns_with_compose_totals_for_standard_cash():
     assert quote["shipping_amount_eur"] == Decimal("8.00")
     assert quote["tax_amount_eur"] == Decimal("7.60")
     assert quote["total_eur"] == Decimal("45.60")
+    assert quote["goods_tax_amount_eur"] == Decimal("6.00")
+    assert quote["goods_total_eur"] == Decimal("36.00")
 
 
 @pytest.mark.django_db

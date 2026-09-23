@@ -1,0 +1,17 @@
+{% extends "portal/layout.html" %}
+{% block title %}Commande manuelle — Prenium DTF{% endblock %}
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  <a href="{% url 'portal:staff-order-list' %}" class="ui-inline-action">Retour aux commandes</a>
+  <h1 class="font-display">Créer une commande manuelle</h1>
+  <section class="portal-page-surface">
+    <p class="ui-field-help">Sélectionnez le client, le mode de livraison et le lien. Le métrage peut être saisi ici ou plus tard (Pilotage / fiche commande). Le tarif et le mode de règlement du client s’appliquent ensuite.</p>
+    <form method="post" class="ui-form-stack" data-submit-loading>
+      {% csrf_token %}
+      {% include "portal/partials/external_order_fields.html" %}
+      <p class="ui-field-help">Le contrôle manuel des fichiers reste à valider dans le parcours Atelier.</p>
+      <button type="submit" class="ui-btn ui-btn-primary">Créer la commande</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

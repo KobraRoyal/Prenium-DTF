@@ -53,6 +53,12 @@ Module : `backend/apps/orders/references.py`
 
 Tags template portail : `order_business_ref`, `order_uuid_ref` (`portal_tags.py`).
 
+Tags e-mails transactionnels : `{{ order.business_number }}` pour le N° de commande métier
+(`CMD-…`) et `{{ order.client_reference }}` pour la référence client affichée dans le portail.
+`{{ order.files }}` produit une liste à puces des `OrderUpload` de la commande et, pour une
+commande Gang Sheet, des fichiers sources rattachés à ses planches.
+Les balises historiques `{{ order.reference }}` et `{{ order.public_id }}` restent disponibles.
+
 ## Règles d’affichage par surface
 
 ### Principe
@@ -64,6 +70,7 @@ Tags template portail : `order_business_ref`, `order_uuid_ref` (`portal_tags.py`
 | **Staff OPS — dashboard `/staff/`** | Non — remplacé par le N° OF | Oui | Oui |
 | **Staff OPS — fiche commande** | Oui | Oui | Oui |
 | **Atelier / production** | Oui | Oui | Oui (+ client, OF, etc.) |
+| **OF PDF** | Oui (UUID court `short_public_ref` + Code 128 = dossier Drive / fiche staff) | Oui (`#réf` / `CMD-…`) | Non (note client séparée) |
 | **Sendcloud (`order_number`)** | Non | Oui | Non |
 
 L’UUID (`public_id`) reste l’identifiant technique d’URL et d’API ; il n’est **pas** exposé dans
@@ -81,8 +88,10 @@ Le dashboard staff applique la même règle et propose une icône accessible pou
 
 ### Projets B2B (avant conversion)
 
-Le `project_number` (`CMD-…`) s’affiche tel quel dans les listes et fiches projet. Le libellé
-« Gang Sheet » dans le studio planches DTF qualifie le **type de planche**, pas le numéro.
+Le `project_number` (`CMD-…`) reste le repère métier interne. Sur la fiche client d’un projet à
+finaliser, le portail affiche « Projet de commande » et son `public_id` sous le libellé « N° UUID »
+afin de ne pas présenter un numéro atelier ou de commande avant la transmission. Le libellé « Gang
+Sheet » dans le studio planches DTF qualifie le **type de planche**, pas le numéro.
 
 ## Sécurité
 

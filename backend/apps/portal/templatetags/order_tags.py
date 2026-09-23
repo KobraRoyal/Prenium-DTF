@@ -1,6 +1,8 @@
 from django import template
 from django.urls import reverse
 
+from apps.portal.order_status_presentation import is_pickup_order
+
 register = template.Library()
 
 
@@ -121,6 +123,7 @@ def order_htmx_tabs(context, variant):
         oid = order.public_id
         membership = context.get("customer_membership")
         is_owner = membership is not None and membership.is_owner
+        shipping_label = "Retrait" if is_pickup_order(order) else "Livraison"
         tabs = [
             {
                 "slug": "uploads",
@@ -148,7 +151,7 @@ def order_htmx_tabs(context, variant):
             },
             {
                 "slug": "shipping",
-                "label": "Expédition",
+                "label": shipping_label,
                 "url": reverse(
                     "portal:client-order-panel-shipping",
                     kwargs={

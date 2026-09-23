@@ -160,7 +160,12 @@ class GoogleDriveGateway:
             raise GoogleDriveSyncError(f"Unable to read Drive item '{file_id}'.") from error
 
     def is_active_folder(self, file_id: str) -> bool:
-        meta = self.get_file_metadata(file_id)
+        try:
+            meta = self.get_file_metadata(file_id)
+        except GoogleDriveSyncError:
+            # Erreur API non-404 (quota, 5xx, item illisible) : traiter comme inactif
+            # pour forcer une recréation plutôt qu'un échec sync permanent.
+            return False
         if meta is None:
             return False
         if meta.get("trashed"):
@@ -351,6 +356,8 @@ class OrderUploadDriveSyncService:
         self.folder_service = folder_service
 
     def ensure_sync_record(self, *, order_upload: OrderUpload) -> OrderUploadDriveSync:
+        if order_upload.is_external:
+            return None
         sync, _created = OrderUploadDriveSync.objects.get_or_create(
             order_upload=order_upload,
             defaults={
@@ -365,6 +372,8 @@ class OrderUploadDriveSyncService:
         return sync
 
     def schedule_upload_sync(self, *, order_upload: OrderUpload, actor, source: str) -> None:
+        if order_upload.is_external:
+            return None
         sync = self.ensure_sync_record(order_upload=order_upload)
         if sync.status != OrderUploadDriveSync.Status.SYNCED:
             sync.status = OrderUploadDriveSync.Status.PENDING
@@ -398,6 +407,8 @@ class OrderUploadDriveSyncService:
         queue: bool = True,
     ) -> OrderUploadDriveSync:
         """Réinitialise le sync (ex. dossier Drive trashé) puis refile / resync."""
+        if order_upload.is_external:
+            return None
         sync = self.ensure_sync_record(order_upload=order_upload)
         sync.status = OrderUploadDriveSync.Status.PENDING
         sync.drive_file_id = ""
@@ -419,9 +430,14 @@ class OrderUploadDriveSyncService:
         return sync
 
     def sync_upload(self, *, order_upload: OrderUpload, actor=None, source: str = "system"):
+        if order_upload.is_external:
+            return None
         sync = self.ensure_sync_record(order_upload=order_upload)
         if sync.status == OrderUploadDriveSync.Status.SYNCED and sync.drive_file_id:
-            meta = self._get_gateway().get_file_metadata(sync.drive_file_id)
+            try:
+                meta = self._get_gateway().get_file_metadata(sync.drive_file_id)
+            except GoogleDriveSyncError:
+                meta = None
             if meta is not None and not meta.get("trashed"):
                 return sync
             sync.status = OrderUploadDriveSync.Status.PENDING
@@ -508,6 +524,8 @@ class OrderUploadDriveSyncService:
         return self.ensure_sync_record(order_upload=order_upload)
 
     def get_upload_sync(self, *, order_upload: OrderUpload) -> OrderUploadDriveSync:
+        if order_upload.is_external:
+            return None
         return self.ensure_sync_record(order_upload=order_upload)
 
     def record_view_event(
@@ -606,7 +624,7 @@ class OrderUploadDriveSyncService:
 
 
 class OrderProductionDriveSyncService:
-    """Pousse un livrable ready-to-print (PDF opérateur / Gang Sheet) vers ``01_Production``."""
+    """Réservé à un push atelier manuel vers ``01_Production`` (aucun appel auto Gang Sheet)."""
 
     def __init__(
         self,
@@ -700,6 +718,8 @@ def repair_order_drive_sync(*, order, actor=None, source: str = "drive.repair") 
 
     upload_results = []
     for order_upload in OrderUpload.objects.filter(order=order).select_related("drive_sync"):
+        if order_upload.is_external:
+            continue
         upload_sync_service.force_resync(
             order_upload=order_upload,
             actor=actor,

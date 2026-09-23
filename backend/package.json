@@ -26,6 +26,7 @@
     "@fontsource-variable/space-grotesk": "^5.2.10",
     "alpinejs": "3.14.3",
     "autoprefixer": "^10.4.20",
+    "chart.js": "^4.5.1",
     "daisyui": "^4.12.14",
     "htmx.org": "1.9.12",
     "pdfjs-dist": "^6.2.108",

@@ -5,7 +5,10 @@ from django.core.exceptions import ValidationError
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
 from apps.production.models import ProductionJobScanLog
-from apps.production.services.workflow import ProductionWorkflowService
+from apps.production.services.workflow import (
+    ProductionWorkflowService,
+    production_ready_jobs_queryset,
+)
 
 
 class ProductionScanService:
@@ -176,7 +179,9 @@ class ProductionScanService:
         )
 
     def _get_job_queryset(self):
-        return self.workflow_service._get_job_queryset().prefetch_related(
+        return production_ready_jobs_queryset(
+            self.workflow_service._get_job_queryset()
+        ).prefetch_related(
             "scan_logs",
             "scan_logs__actor",
         )

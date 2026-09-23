@@ -2,12 +2,17 @@ from datetime import timedelta
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
+from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer, CustomerInvitation, CustomerMembership
+from apps.gang_sheets.models import GangSheet, GangSheetSourceAsset
 from apps.notifications.models import EmailTemplate
 from apps.notifications.services.email_templates import (
+    EMAIL_TAGS,
     EMAIL_TEMPLATE_DEFINITIONS,
     EmailTemplateService,
+    context_for_order,
     render_template_text,
+    sample_context,
     validate_template_pair,
 )
 from apps.notifications.services.transactional import (
@@ -25,7 +30,7 @@ from apps.notifications.services.transactional import (
 from apps.orders.models import Order
 from apps.prospects.models import ProspectProfile
 from apps.shipping.models import Shipment
-from apps.uploads.models import OrderUpload, OrderUploadReview
+from apps.uploads.models import Asset, AssetVersion, OrderUpload, OrderUploadReview
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core import mail
@@ -84,6 +89,116 @@ def test_renderer_replaces_only_allowlisted_tags():
     )
 
     assert rendered == "Bonjour Atelier Démo, commande abc123."
+
+
+def test_order_identity_tags_are_exposed_with_business_examples():
+    tags = {tag.key: tag for tag in EMAIL_TAGS}
+
+    assert tags["order.business_number"].label == "N° commande"
+    assert tags["order.business_number"].example == "CMD-2026-000104"
+    assert tags["order.client_reference"].label == "Réf. client"
+    assert tags["order.client_reference"].example == "Collection été"
+    assert sample_context()["order.business_number"] == "CMD-2026-000104"
+    assert sample_context()["order.client_reference"] == "Collection été"
+    assert "- logo.png" in sample_context()["order.files"]
+
+
+@pytest.mark.django_db
+def test_order_identity_tags_render_business_number_and_client_reference():
+    user, order = create_order()
+    B2BOrderProject.objects.create(
+        customer=order.customer,
+        created_by=user,
+        project_number="CMD-2026-000104",
+        name="Collection été",
+        customer_reference="REF-CLIENT-42",
+        converted_order=order,
+        status=B2BOrderProject.Status.CONVERTED,
+    )
+
+    context = context_for_order(order)
+    rendered = render_template_text(
+        "Commande {{ order.business_number }} — {{ order.client_reference }}",
+        context,
+    )
+
+    assert rendered == "Commande CMD-2026-000104 — Collection été"
+
+
+@pytest.mark.django_db
+def test_order_files_tag_lists_all_order_uploads_in_display_order():
+    _, order = create_order()
+    for sort_order, filename in ((2, "second.pdf"), (1, "first.png")):
+        OrderUpload.objects.create(
+            order=order,
+            file=SimpleUploadedFile(filename, b"fake", content_type="application/octet-stream"),
+            original_filename=filename,
+            mime_type="application/octet-stream",
+            size_bytes=4,
+            sort_order=sort_order,
+        )
+
+    context = context_for_order(order)
+
+    assert context["order.files"] == "- first.png\n- second.pdf"
+    assert (
+        render_template_text("Fichiers :\n{{ order.files }}", context)
+        == "Fichiers :\n- first.png\n- second.pdf"
+    )
+
+
+@pytest.mark.django_db
+def test_order_files_tag_includes_gang_sheet_sources():
+    user, order = create_order(email="gang-files@example.com")
+    sheet = GangSheet.objects.create(
+        customer=order.customer,
+        order=order,
+        name="Planche validée",
+        status=GangSheet.Status.VALIDATED,
+        width_mm="560.00",
+        height_mm="100.00",
+        minimum_height_mm="100.00",
+        maximum_height_mm="1000.00",
+        height_step_mm="10.00",
+        margin_mm="0.00",
+        item_spacing_mm="0.00",
+        item_spacing_x_mm="0.00",
+        item_spacing_y_mm="0.00",
+    )
+    source_asset = Asset.objects.create(
+        customer=order.customer, created_by=user, name="Logo client"
+    )
+    source_version = AssetVersion.objects.create(
+        customer=order.customer,
+        asset=source_asset,
+        uploaded_by=user,
+        version_number=1,
+        file=SimpleUploadedFile("logo-source.png", b"source", content_type="image/png"),
+        original_filename="logo-source.png",
+        mime_type="image/png",
+        size_bytes=6,
+        sha256="a" * 64,
+        analysis_status=AssetVersion.AnalysisStatus.READY,
+    )
+    source_asset.current_version = source_version
+    source_asset.save(update_fields=["current_version", "updated_at"])
+    GangSheetSourceAsset.objects.create(
+        customer=order.customer,
+        sheet=sheet,
+        asset=source_asset,
+        added_by=user,
+        sort_order=1,
+    )
+    OrderUpload.objects.create(
+        order=order,
+        file=SimpleUploadedFile("production.pdf", b"pdf", content_type="application/pdf"),
+        original_filename="production.pdf",
+        mime_type="application/pdf",
+        size_bytes=3,
+        sort_order=1,
+    )
+
+    assert context_for_order(order)["order.files"] == "- production.pdf\n- logo-source.png"
 
 
 @pytest.mark.django_db
@@ -218,6 +333,7 @@ def test_template_catalog_uses_order_lifecycle_without_redundant_b2b_event():
         EmailTemplate.Event.ORDER_CREATED,
         EmailTemplate.Event.ORDER_PROCESSING,
         EmailTemplate.Event.ORDER_READY_TO_SHIP,
+        EmailTemplate.Event.ORDER_READY_FOR_PICKUP,
         EmailTemplate.Event.ORDER_SHIPPED,
         EmailTemplate.Event.ORDER_PRICED,
         EmailTemplate.Event.ORDER_AWAITING_PAYMENT,
@@ -344,6 +460,36 @@ def test_order_lifecycle_templates_render_processing_ready_and_shipping_details(
 
 @pytest.mark.django_db
 @override_settings(INTERNAL_NOTIFICATION_EMAILS=["atelier@example.com"])
+def test_pickup_ready_notification_uses_dedicated_client_and_internal_templates():
+    actor, order = create_order()
+    B2BOrderProject.objects.create(
+        customer=order.customer,
+        created_by=actor,
+        project_number="CMD-2026-000104",
+        name="Collection été",
+        converted_order=order,
+        status=B2BOrderProject.Status.CONVERTED,
+    )
+    order.shipping_method_code = "pickup"
+    order.shipping_method_name = "Retrait atelier"
+    order.save(update_fields=["shipping_method_code", "shipping_method_name", "updated_at"])
+
+    mail.outbox.clear()
+    send_order_ready_to_ship_email(order=order)
+
+    assert len(mail.outbox) == 2
+    client_message = next(message for message in mail.outbox if actor.email in message.to)
+    internal_message = next(
+        message for message in mail.outbox if message.to == ["atelier@example.com"]
+    )
+    assert client_message.subject == "Votre commande est prête au retrait — CMD-2026-000104"
+    assert "N° commande : CMD-2026-000104" in client_message.body
+    assert "Réf. client : Collection été" in client_message.body
+    assert internal_message.subject == "[Atelier] Commande prête au retrait — CMD-2026-000104"
+
+
+@pytest.mark.django_db
+@override_settings(INTERNAL_NOTIFICATION_EMAILS=["atelier@example.com"])
 def test_file_correction_email_uses_upload_and_review_tags_for_both_audiences():
     actor, order = create_order()
     upload = OrderUpload.objects.create(
@@ -430,6 +576,7 @@ def test_authorised_staff_can_preview_and_save_from_frontend(client):
     assert "Messages clients" in list_html
     assert "Messages équipe" in list_html
     assert "Palier de remise atteint" in list_html
+    assert "Commande prête au retrait atelier" in list_html
     assert 'data-testid="email-template-overview"' in list_html
     assert list_html.count('data-testid="email-template-row"') >= 2
     assert "Contenu sécurisé" in list_html
@@ -451,6 +598,10 @@ def test_authorised_staff_can_preview_and_save_from_frontend(client):
     assert "data-email-token-search" in preview_html
     assert "data-email-subject-counter" in preview_html
     assert 'data-testid="email-template-preview"' in preview_html
+    assert 'data-email-template-token="{{ order.business_number }}"' in preview_html
+    assert 'data-email-template-token="{{ order.client_reference }}"' in preview_html
+    assert "N° commande" in preview_html
+    assert "Réf. client" in preview_html
     assert EmailTemplate.objects.count() == 0
 
     save_response = client.post(

@@ -2,11 +2,12 @@ import "./htmx/swap-state.js?v=20260829-order-tabs-v2";
 import "./htmx/feedback.js?v=20260710b";
 import "./landing-motion.js?v=20260710b";
 import "./product-shell.js?v=20260828-inline-required";
-import "./product-date-picker.js?v=20260712a";
-import "./b2b-configurator.js?v=20260826-modal-impeccable-v159";
+import "./product-date-picker.js?v=20260918-date-portal-v2";
+import "./b2b-configurator.js?v=20260918-studio-pay-pickup-v166";
 import "./email-template-editor.js?v=20260813-email-workbench";
-import "./gang-sheet-editor.js?v=20260828-studio-groups-v23";
+import "./gang-sheet-editor.js?v=20260918-studio-inspector-v16";
 import "./clipboard-copy.js?v=20260829-of-copy-v1";
+import "./staff-billing-adjustment.js?v=20260921-billing-edit-v5";
 
 window.preniumToast = function (message, variant = "info") {
   window.dispatchEvent(

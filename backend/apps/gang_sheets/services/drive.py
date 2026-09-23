@@ -12,9 +12,6 @@ from apps.auditlog.services import record_event
 from apps.core.public_refs import short_public_ref
 from apps.gang_sheets.models import GangSheet, GangSheetDriveSync, GangSheetSourceAsset
 from apps.uploads.services.drive import (
-    ORDER_DRIVE_PRODUCTION_FOLDER,
-    ORDER_DRIVE_PRODUCTION_FOLDER_ALIASES,
-    ORDER_DRIVE_SOURCE_FOLDER,
     ORDER_DRIVE_SOURCE_FOLDER_ALIASES,
     GoogleDriveConfigurationError,
     GoogleDriveGateway,
@@ -22,8 +19,6 @@ from apps.uploads.services.drive import (
     OrderDriveFolderService,
     resolve_order_drive_subfolder_id,
 )
-
-GANG_SHEET_DRIVE_ROOT_FOLDER_NAME = "Gang Sheets"
 
 
 class GangSheetDriveSyncRequired(Exception):
@@ -136,19 +131,42 @@ class GangSheetDriveSyncService:
         ):
             return sync
 
+        # Sans commande : pas de staging Drive (plus de dossier « Gang Sheets/ »).
+        # Le push se fait uniquement dans Commandes/…/00_source_Client après rattachement.
+        if not sheet.order_id:
+            sync.status = GangSheetDriveSync.Status.PENDING
+            sync.last_error = ""
+            sync.last_attempt_at = timezone.now()
+            sync.save(update_fields=["status", "last_error", "last_attempt_at", "updated_at"])
+            record_event(
+                action="gang_sheet.drive_sync_deferred",
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=sheet,
+                metadata={
+                    "customer_public_id": str(sheet.customer.public_id),
+                    "gang_sheet_public_id": str(sheet.public_id),
+                    "drive_sync_public_id": str(sync.public_id),
+                    "revision": sheet.revision,
+                    "source": source,
+                    "reason": "awaiting_order",
+                },
+            )
+            return sync
+
         try:
             gateway = self._get_gateway()
             folders = self._resolve_destination_folders(sheet=sheet, gateway=gateway, actor=actor)
+            source_folder_id = folders["source_folder_id"]
             source_count = self._sync_source_assets(
                 sheet=sheet,
                 gateway=gateway,
-                source_folder_id=folders["source_folder_id"],
+                source_folder_id=source_folder_id,
             )
             with sheet.final_file.open("rb") as handle:
                 content = handle.read()
             sha256 = hashlib.sha256(content).hexdigest()
             drive_file_id = gateway.upload_file(
-                parent_id=folders["production_folder_id"],
+                parent_id=source_folder_id,
                 name=sync.drive_filename or self.build_drive_filename(sheet),
                 mime_type="application/pdf",
                 content=content,
@@ -170,7 +188,7 @@ class GangSheetDriveSyncService:
 
         now = timezone.now()
         sync.status = GangSheetDriveSync.Status.SYNCED
-        sync.remote_folder_id = folders["production_folder_id"]
+        sync.remote_folder_id = source_folder_id
         sync.drive_file_id = drive_file_id
         sync.sha256 = sha256
         sync.last_error = ""
@@ -203,14 +221,16 @@ class GangSheetDriveSyncService:
                 "source": source,
                 "destination": folders["destination"],
                 "source_asset_count": source_count,
-                "order_public_id": (
-                    str(sheet.order.public_id) if getattr(sheet, "order_id", None) else None
-                ),
+                "order_public_id": str(sheet.order.public_id),
             },
         )
         return sync
 
     def assert_project_outputs_synced(self, *, project) -> None:
+        """Avant checkout : PDF HD local requis.
+
+        Le push Drive n’a lieu qu’après rattachement commande (``00_source_Client``).
+        """
         if not settings.GOOGLE_DRIVE_SYNC_ENABLED:
             return
         sheets = list(
@@ -220,6 +240,10 @@ class GangSheetDriveSyncService:
         )
         for sheet in sheets:
             if not sheet.final_file:
+                raise GangSheetDriveSyncRequired(
+                    "Le PDF HD de production doit être généré avant transmission."
+                )
+            if not sheet.order_id:
                 continue
             sync = getattr(sheet, "drive_sync", None)
             if (
@@ -245,35 +269,24 @@ class GangSheetDriveSyncService:
         return f"GS-{sheet_ref}-src-{asset_ref}-{cleaned}"
 
     def _resolve_destination_folders(self, *, sheet: GangSheet, gateway: GoogleDriveGateway, actor):
-        """Commande liée → ``Commandes/…`` ; sinon staging ``Gang Sheets/…``."""
-        if sheet.order_id:
-            drive_folder = OrderDriveFolderService(gateway=gateway).ensure_order_folder(
-                order=sheet.order,
-                actor=actor,
-                source="gang_sheet.drive_sync",
-            )
-            return {
-                "destination": "order",
-                "source_folder_id": resolve_order_drive_subfolder_id(
-                    drive_folder.folder_ids,
-                    *ORDER_DRIVE_SOURCE_FOLDER_ALIASES,
-                ),
-                "production_folder_id": resolve_order_drive_subfolder_id(
-                    drive_folder.folder_ids,
-                    *ORDER_DRIVE_PRODUCTION_FOLDER_ALIASES,
-                ),
-            }
+        """Commande liée → uniquement ``Commandes/…/00_source_Client``.
 
-        sheet_folder_id = self._ensure_sheet_folder(sheet=sheet, gateway=gateway)
+        ``01_Production`` reste créé (vide) pour l’atelier ; aucun fichier n’y est poussé.
+        """
+        if not sheet.order_id:
+            raise GoogleDriveSyncError(
+                "La synchronisation Drive attend le rattachement de la commande."
+            )
+        drive_folder = OrderDriveFolderService(gateway=gateway).ensure_order_folder(
+            order=sheet.order,
+            actor=actor,
+            source="gang_sheet.drive_sync",
+        )
         return {
-            "destination": "gang_sheet_staging",
-            "source_folder_id": gateway.ensure_folder(
-                parent_id=sheet_folder_id,
-                name=ORDER_DRIVE_SOURCE_FOLDER,
-            ),
-            "production_folder_id": gateway.ensure_folder(
-                parent_id=sheet_folder_id,
-                name=ORDER_DRIVE_PRODUCTION_FOLDER,
+            "destination": "order_source_client",
+            "source_folder_id": resolve_order_drive_subfolder_id(
+                drive_folder.folder_ids,
+                *ORDER_DRIVE_SOURCE_FOLDER_ALIASES,
             ),
         }
 
@@ -309,22 +322,6 @@ class GangSheetDriveSyncService:
             )
             uploaded += 1
         return uploaded
-
-    def _ensure_sheet_folder(self, *, sheet: GangSheet, gateway: GoogleDriveGateway) -> str:
-        root_id = gateway.ensure_folder(
-            parent_id=gateway.root_folder_id,
-            name=GANG_SHEET_DRIVE_ROOT_FOLDER_NAME,
-        )
-        year_id = gateway.ensure_folder(parent_id=root_id, name=sheet.created_at.strftime("%Y"))
-        month_id = gateway.ensure_folder(parent_id=year_id, name=sheet.created_at.strftime("%m"))
-        customer_id = gateway.ensure_folder(
-            parent_id=month_id,
-            name=f"C-{short_public_ref(sheet.customer.public_id)}",
-        )
-        return gateway.ensure_folder(
-            parent_id=customer_id,
-            name=f"GS-{short_public_ref(sheet.public_id)}",
-        )
 
     def _mark_failed(self, *, sync, sheet, actor, source: str, error: Exception):
         sync.status = GangSheetDriveSync.Status.FAILED

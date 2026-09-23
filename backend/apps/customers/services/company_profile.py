@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.auditlog.services import record_event
@@ -145,6 +146,106 @@ class CompanyProfileService:
             },
         )
         return locked
+
+    @transaction.atomic
+    def apply_checkout_delivery(
+        self,
+        *,
+        customer: Customer,
+        actor,
+        same_as_billing: bool,
+        payload: dict | None = None,
+        source: str = "client_portal.studio_checkout",
+    ) -> Customer:
+        locked = Customer.objects.select_for_update().get(pk=customer.pk)
+        data = payload or {}
+        if same_as_billing:
+            values = {
+                "shipping_address_line1": (locked.billing_address_line1 or "").strip(),
+                "shipping_address_line2": (locked.billing_address_line2 or "").strip(),
+                "shipping_postal_code": (locked.billing_postal_code or "").strip(),
+                "shipping_city": (locked.billing_city or "").strip(),
+                "shipping_country": (locked.billing_country or "FR").strip().upper() or "FR",
+            }
+        else:
+            country = str(data.get("shipping_country") or locked.shipping_country or "FR")
+            values = {
+                "shipping_address_line1": str(data.get("shipping_address_line1") or "").strip(),
+                "shipping_address_line2": str(data.get("shipping_address_line2") or "").strip(),
+                "shipping_postal_code": str(data.get("shipping_postal_code") or "").strip(),
+                "shipping_city": str(data.get("shipping_city") or "").strip(),
+                "shipping_country": country.strip().upper() or "FR",
+            }
+        if not (
+            values["shipping_address_line1"]
+            and values["shipping_postal_code"]
+            and values["shipping_city"]
+        ):
+            raise ValidationError(
+                "Indiquez l’adresse de livraison.",
+                code="delivery_address_required",
+            )
+        changed_fields = [
+            field_name
+            for field_name, value in values.items()
+            if getattr(locked, field_name) != value
+        ]
+        if not changed_fields:
+            return locked
+        for field_name in changed_fields:
+            setattr(locked, field_name, values[field_name])
+        locked.save(update_fields=[*changed_fields, "updated_at"])
+        record_event(
+            action="customer.checkout_delivery.updated",
+            actor=actor,
+            target=locked,
+            metadata={
+                "customer_public_id": str(locked.public_id),
+                "same_as_billing": same_as_billing,
+                "fields": changed_fields,
+                "source": source,
+            },
+        )
+        return locked
+
+    def checkout_delivery_defaults(self, customer: Customer, snapshot: dict | None = None) -> dict:
+        data = snapshot if isinstance(snapshot, dict) else {}
+        return {
+            "name": str(data.get("name") or customer.name or "").strip(),
+            "email": str(data.get("email") or customer.billing_email or "").strip(),
+            "phone": str(data.get("phone") or data.get("phone_number") or "").strip(),
+            "company_name": str(data.get("company_name") or customer.name or "").strip(),
+            "house_number": str(data.get("house_number") or "").strip(),
+        }
+
+    def build_checkout_delivery_snapshot(
+        self,
+        *,
+        customer: Customer,
+        payload: dict | None = None,
+    ) -> dict:
+        data = payload or {}
+        defaults = self.checkout_delivery_defaults(customer, data)
+        name = str(data.get("name") or defaults["name"]).strip()
+        email = str(data.get("email") or defaults["email"]).strip()
+        house_number = str(data.get("house_number") or defaults["house_number"]).strip()
+        if not (name and email and house_number and "@" in email):
+            raise ValidationError(
+                "Indiquez le destinataire, un email de suivi et le n° de voie.",
+                code="delivery_recipient_required",
+            )
+        return {
+            "line1": (customer.shipping_address_line1 or "").strip(),
+            "line2": (customer.shipping_address_line2 or "").strip(),
+            "postal_code": (customer.shipping_postal_code or "").strip(),
+            "city": (customer.shipping_city or "").strip(),
+            "country": (customer.shipping_country or "FR").strip().upper() or "FR",
+            "name": name,
+            "email": email,
+            "phone": str(data.get("phone") or "").strip(),
+            "company_name": str(data.get("company_name") or customer.name or "").strip(),
+            "house_number": house_number,
+        }
 
 
 def digits_only(value: str) -> str:

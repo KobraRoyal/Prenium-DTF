@@ -16,6 +16,29 @@
 - [x] Sprint 09 — Frontend produit (espace client + backoffice staff)
 - [x] Sprint 10 — Paiement PayPal + facturation automatique
 - [x] Extension paiements en ligne multi-provider (PayPal + Stripe Checkout) hors facturation différée
+- [x] Durcissement paiement préproduction : tentative unique, rapprochement des checkouts,
+  capture durable, webhooks réessayables, rapprochement périodique des captures distantes,
+  fermeture manuelle auditée des tentatives sans référence, sonde API des clés live et
+  verrou Atelier jusqu'à encaissement
+- [x] Compatibilité des sessions Stripe historiques déjà liées, carte seule pour les nouveaux
+  checkouts, contrôle live des tentatives Stripe et PayPal ouvertes/fermées et des routes
+  webhook publiques ; suite complète 1 501 réussis / 4 ignorés, relecture sécurité faite
+- [x] Image backend prod locale construite depuis cette branche ; routes webhook PayPal et
+  Stripe présentes dans l'image et `check --deploy --fail-level WARNING` sans anomalie
+- [x] Recette Docker locale : migration `billing.0011` et index PostgreSQL vérifiés,
+  tâches Celery exécutées par Beat/worker, webhook Stripe signé accepté et signature
+  invalide refusée ; PayPal sandbox crée et relit une commande
+- [ ] Mise en production paiement : migration `billing.0011` sur copie, préflight live,
+  credentials/webhooks réels et achats de contrôle PayPal + Stripe
+- [ ] Route publique PayPal webhook : le 19/09/2026, `https://dtf.ids.supply/api/backend/paypal/webhook/`
+  répond `404` alors que la route Stripe répond `405` avec `POST` autorisé. Déployer cette
+  branche et relancer le préflight live avant toute activation ; le préflight vérifie
+  désormais les deux routes publiques en lecture seule.
+- [x] Studio Gang Sheet : valider couleur support + visuels et payer sans vue projet intermédiaire
+- [x] Studio checkout : devis TTC détaillé + choix livraison sans saut de scroll
+- [x] Studio checkout : modale paiement (PayPal/CB) + adresse de livraison si différente de la facturation
+- [x] Studio checkout : mode de livraison dans la modale, champs Sendcloud, devis sticky, couleur support condensée
+- [x] Studio checkout : composition validée = visuels confirmés ; inspecteur commande (nom, date, message) + prix sticky
 - [x] Sprint 11 — Tunnel produit final + polish UX
 - [x] Micro-sprint 11.1 bis — Frontend e-commerce premium + tunnel de commande moderne
 - [x] Micro-sprint 11.2 — Landing page premium UI/UX
@@ -42,6 +65,11 @@
 - [x] Sprint 42 — Parc de machines DTF, affectation des OF et preuves d'impression immuables
 - [x] Sprint 43 — Distillation UI/UX de toutes les vues Atelier
 - [x] Sprint 44 — Pilotage Atelier rapide, transitions et Sendcloud sans ouvrir chaque fiche
+- [x] Sprint 54 — Notifications Web Push Atelier sécurisées, avec notification macOS et polling HTMX de secours
+- [x] Sprint 55 — KPI et courbe Chart.js de CA TTC sur le dashboard Atelier,
+  visibles uniquement par les rôles Administrateur et Propriétaire
+- [x] Réglages Atelier PayPal / Stripe (connexion chiffrée, activation 0/1/2) et
+  checkout client en tuiles inline
 
 ## Dernier lot terminé
 - [x] Lot 0 — Fondations implémenté et validé techniquement
@@ -98,7 +126,7 @@
 - [ ] Aucun blocage restant sur le slice uploads avant le prochain domaine sensible
 - [ ] Le contrôle fichier basique reste volontairement minimal avant le futur contrôle DTF avancé
 - [ ] Aucun blocage immédiat sur le socle workflow production livré
-- [ ] Aucun blocage immédiat sur le socle scan atelier ; génération visuelle réelle barcode/QR et UI riche restent hors périmètre
+- [x] Complément OF livré : QR code vectoriel par fichier, encodant le nom sans extension, pour recherche au scan atelier
 - [ ] Durcissement sécurité Sprint 11 reste à compléter séparément (rate limiting, audit renforcé)
 
 ## Décisions récentes
@@ -478,3 +506,25 @@
 - [x] Recette authentifiée à 1440/768/375 px, sans overflow horizontal
 - [x] Revue Impeccable indépendante : aucun P0/P1 ; badges, cartes mobiles et dette de tokens signalés puis corrigés
 - [x] Validation finale : 791 tests réussis, 1 ignoré ; Django, Ruff, format, migrations et santé conformes
+
+## Sprint 53 — Statuts client et remise prévisionnelle (2026-09-03)
+
+- [x] Statut client centralisé entre liste, fiche et timeline pour retrait atelier et expédition
+- [x] Distinction « Prête au retrait », « Prête à expédier », « Expédiée » et « Livrée »
+- [x] Date prévisionnelle de retrait/livraison affichée côté client, avec valeur « À confirmer »
+- [x] Modification Atelier protégée par permission `orders.change_order` et auditée
+- [x] 192 tests complets réussis ; Django, migrations, Ruff et format conformes
+
+## Sprint 56 — Pilotage du métrage imprimé Atelier (2026-09-08)
+
+- [x] Mètres linéaires figés à chaque confirmation d’impression
+- [x] Réimpressions comptabilisées dans la consommation réelle
+- [x] Rail de jauges demi-lune : 7 jours, jour courant et moyenne par impression
+- [x] Accès opérationnel pour les rôles Atelier sans exposer le CA
+
+## Sprint 57 — Pilotage de production Atelier (2026-09-09)
+
+- [x] Activité par statut et alertes OF bloquées, retards et encours > 24 h
+- [x] Taux de réimpression et délai moyen de production sur sept jours
+- [x] Rafraîchissement des KPI lors des notifications live, sans redessiner Chart.js
+- [x] CA toujours réservé aux rôles owner/admin ; KPI opérationnels accessibles aux collaborateurs autorisés

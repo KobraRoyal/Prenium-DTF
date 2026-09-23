@@ -17,15 +17,16 @@ from .views_access_management import (
 )
 from .views_auth import (
     PortalLoginView,
-    PortalLogoutView,
     PortalPasswordResetCompleteView,
     PortalPasswordResetConfirmView,
     PortalPasswordResetDoneView,
     PortalPasswordResetRequestView,
 )
+from .views_auth_logout import PortalLogoutView
 from .views_b2b_order_projects import (
     ClientOrderProjectAutosaveView,
     ClientOrderProjectCancelView,
+    ClientOrderProjectConfirmAllAnalysesView,
     ClientOrderProjectCreateView,
     ClientOrderProjectDetailView,
     ClientOrderProjectItemActionView,
@@ -60,12 +61,22 @@ from .views_client import (
     ClientOrderUploadDownloadView,
     ClientOrderUploadPreviewView,
 )
+from .views_client_dashboard import ClientDashboardResultsView
+from .views_client_order_delete import ClientOrderDeleteView
+from .views_external_orders import (
+    ClientExternalOrderCreateView,
+    ClientExternalUploadLinkView,
+    StaffExternalOrderCreateView,
+    StaffExternalUploadLinkView,
+)
 from .views_gang_sheets import (
     ClientGangSheetAddItemView,
     ClientGangSheetAssetGalleryView,
     ClientGangSheetAssetPreviewView,
     ClientGangSheetAssetUploadView,
+    ClientGangSheetAutoPlaceReadySourcesView,
     ClientGangSheetBatchDeleteItemsView,
+    ClientGangSheetCheckoutView,
     ClientGangSheetCreateOrderProjectView,
     ClientGangSheetDeleteView,
     ClientGangSheetEditorView,
@@ -73,13 +84,20 @@ from .views_gang_sheets import (
     ClientGangSheetLayoutView,
     ClientGangSheetListCreateView,
     ClientGangSheetPreviewDownloadView,
+    ClientGangSheetQuoteView,
+    ClientGangSheetSourceAssetCropView,
     ClientGangSheetSourceAssetRemoveView,
+    ClientGangSheetSourceQuantityView,
     ClientGangSheetStateView,
     ClientGangSheetWorkflowActionView,
     StaffGangSheetFinalDownloadView,
     StaffGangSheetSettingsView,
 )
-from .views_payments import ClientOrderPaymentInitiateView, ClientOrderPaymentReturnView
+from .views_payments import (
+    ClientOrderPaymentInitiateView,
+    ClientOrderPaymentReturnView,
+    ProviderCheckoutFallbackReturnView,
+)
 from .views_profile import (
     ClientCompanyProfileView,
     PortalProfileIdentityView,
@@ -110,8 +128,9 @@ from .views_staff_customers import (
     StaffDefaultVolumeDiscountTierUpdateView,
     StaffVolumeDiscountDashboardCopyUpdateView,
 )
-from .views_staff_dashboard import StaffDashboardView
+from .views_staff_dashboard import StaffDashboardInboxBadgeView, StaffDashboardView
 from .views_staff_documents import StaffManufacturingOrderBatchPdfView
+from .views_staff_external_counts import StaffAtelierExternalCountView
 from .views_staff_machine_jobs import (
     StaffOrderMachineAssignmentView,
     StaffOrderPrintConfirmView,
@@ -135,6 +154,7 @@ from .views_staff_operations import (
     StaffAtelierOperationTransitionView,
     StaffAtelierOperationUploadReviewView,
 )
+from .views_staff_payments import StaffPaymentSettingsView
 from .views_staff_pod import (
     StaffPodBlankDetailView,
     StaffPodBlankListView,
@@ -156,23 +176,31 @@ from .views_staff_pod_ops import (
 from .views_staff_pod_rip import StaffPodRipLotDetailView, StaffPodRipLotListView
 from .views_staff_pod_shopify import StaffPodShopifyStoresView
 from .views_staff_production import StaffOrderPanelProductionView
+from .views_staff_push_notifications import (
+    StaffPushNotificationEventsView,
+    StaffPushNotificationStateView,
+    StaffPushNotificationSubscribeView,
+    StaffPushNotificationUnsubscribeView,
+)
 from .views_staff_reviews import (
     StaffOrderPanelInspectionView,
+    StaffOrderUploadDownloadView,
     StaffOrderUploadPreviewView,
+    StaffOrderUploadQuantityView,
     StaffOrderUploadReviewView,
 )
 from .views_staff_scan import StaffOrderPanelScanView
+from .views_staff_shipping import (
+    StaffOrderPanelShippingSyncView,
+    StaffOrderPanelShippingView,
+    StaffOrderShipmentLabelDownloadView,
+)
 from .views_staff_team import (
     StaffTeamInvitationRevokeView,
     StaffTeamInviteView,
     StaffTeamMemberDeactivateView,
     StaffTeamMemberRoleView,
     StaffTeamView,
-)
-from .views_staff_shipping import (
-    StaffOrderPanelShippingSyncView,
-    StaffOrderPanelShippingView,
-    StaffOrderShipmentLabelDownloadView,
 )
 from .views_staff_uploads import (
     StaffOrderPanelDriveSyncView,
@@ -184,6 +212,26 @@ app_name = "portal"
 urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
     path("logout/", PortalLogoutView.as_view(), name="logout"),
+    path(
+        "cancel",
+        ProviderCheckoutFallbackReturnView.as_view(status_value="cancel"),
+        name="provider-checkout-cancel-fallback",
+    ),
+    path(
+        "cancel/",
+        ProviderCheckoutFallbackReturnView.as_view(status_value="cancel"),
+        name="provider-checkout-cancel-fallback-slash",
+    ),
+    path(
+        "ok",
+        ProviderCheckoutFallbackReturnView.as_view(status_value="success"),
+        name="provider-checkout-success-fallback",
+    ),
+    path(
+        "ok/",
+        ProviderCheckoutFallbackReturnView.as_view(status_value="success"),
+        name="provider-checkout-success-fallback-slash",
+    ),
     path(
         "mot-de-passe-oublie/",
         PortalPasswordResetRequestView.as_view(),
@@ -287,6 +335,11 @@ urlpatterns = [
         name="client-order-project-item-create",
     ),
     path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/confirm-all-analyses/",
+        ClientOrderProjectConfirmAllAnalysesView.as_view(),
+        name="client-order-project-confirm-all-analyses",
+    ),
+    path(
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/<str:action>/",
         ClientOrderProjectItemActionView.as_view(),
         name="client-order-project-item-action",
@@ -337,6 +390,16 @@ urlpatterns = [
         name="client-gang-sheet-editor",
     ),
     path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/checkout/",
+        ClientGangSheetCheckoutView.as_view(),
+        name="client-gang-sheet-checkout",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/quote/",
+        ClientGangSheetQuoteView.as_view(),
+        name="client-gang-sheet-quote",
+    ),
+    path(
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/create-order/",
         ClientGangSheetCreateOrderProjectView.as_view(),
         name="client-gang-sheet-create-order-project",
@@ -360,6 +423,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/add/",
         ClientGangSheetAddItemView.as_view(),
         name="client-gang-sheet-item-add",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/auto-place-ready/",
+        ClientGangSheetAutoPlaceReadySourcesView.as_view(),
+        name="client-gang-sheet-auto-place-ready-sources",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/items/delete-batch/",
@@ -397,6 +465,16 @@ urlpatterns = [
         name="client-gang-sheet-source-asset-remove",
     ),
     path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/crop/",
+        ClientGangSheetSourceAssetCropView.as_view(),
+        name="client-gang-sheet-source-asset-crop",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/assets/<uuid:source_asset_public_id>/quantity/",
+        ClientGangSheetSourceQuantityView.as_view(),
+        name="client-gang-sheet-source-quantity",
+    ),
+    path(
         "client/customers/<uuid:customer_public_id>/gang-sheets/<uuid:sheet_public_id>/preview/download/",
         ClientGangSheetPreviewDownloadView.as_view(),
         name="client-gang-sheet-preview-download",
@@ -405,6 +483,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/orders/",
         ClientOrderListView.as_view(),
         name="client-order-list",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/dashboard-results/",
+        ClientDashboardResultsView.as_view(),
+        name="client-dashboard-results",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/",
@@ -462,6 +545,11 @@ urlpatterns = [
         name="client-order-reorder",
     ),
     path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/delete/",
+        ClientOrderDeleteView.as_view(),
+        name="client-order-delete",
+    ),
+    path(
         "client/customers/<uuid:customer_public_id>/checkout/",
         ClientCheckoutView.as_view(),
         name="client-checkout",
@@ -482,6 +570,11 @@ urlpatterns = [
         name="client-checkout-submit",
     ),
     path("staff/", StaffDashboardView.as_view(), name="staff-dashboard"),
+    path(
+        "staff/dashboard/inbox-badge/",
+        StaffDashboardInboxBadgeView.as_view(),
+        name="staff-dashboard-inbox-badge",
+    ),
     path(
         "staff/atelier/pilotage/",
         StaffAtelierOperationsView.as_view(),
@@ -506,6 +599,11 @@ urlpatterns = [
         "staff/atelier/pilotage/<uuid:order_public_id>/print/",
         StaffAtelierOperationPrintConfirmView.as_view(),
         name="staff-atelier-operation-print-confirm",
+    ),
+    path(
+        "staff/atelier/pilotage/<uuid:order_public_id>/external-count/",
+        StaffAtelierExternalCountView.as_view(),
+        name="staff-atelier-operation-external-count",
     ),
     path(
         "staff/atelier/pilotage/<uuid:order_public_id>/meterage/",
@@ -696,6 +794,11 @@ urlpatterns = [
         name="staff-brand-settings",
     ),
     path(
+        "staff/settings/payments/",
+        StaffPaymentSettingsView.as_view(),
+        name="staff-payment-settings",
+    ),
+    path(
         "staff/settings/volume-discounts/",
         StaffDefaultVolumeDiscountSettingsView.as_view(),
         name="staff-default-volume-discount-settings",
@@ -750,7 +853,47 @@ urlpatterns = [
         StaffOrderProjectItemAssetDownloadView.as_view(),
         name="staff-order-project-item-asset-download",
     ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/by-link/",
+        ClientExternalOrderCreateView.as_view(),
+        name="client-external-order-create",
+    ),
+    path(
+        "staff/orders/manual/",
+        StaffExternalOrderCreateView.as_view(),
+        name="staff-external-order-create",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/external/",
+        ClientExternalUploadLinkView.as_view(),
+        name="client-external-upload-link",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/external/",
+        StaffExternalUploadLinkView.as_view(),
+        name="staff-external-upload-link",
+    ),
     path("staff/orders/", StaffOrderListView.as_view(), name="staff-order-list"),
+    path(
+        "staff/notifications/push/",
+        StaffPushNotificationStateView.as_view(),
+        name="staff-push-notification-state",
+    ),
+    path(
+        "staff/notifications/push/subscribe/",
+        StaffPushNotificationSubscribeView.as_view(),
+        name="staff-push-notification-subscribe",
+    ),
+    path(
+        "staff/notifications/push/subscriptions/<uuid:subscription_public_id>/unsubscribe/",
+        StaffPushNotificationUnsubscribeView.as_view(),
+        name="staff-push-notification-unsubscribe",
+    ),
+    path(
+        "staff/notifications/push/events/",
+        StaffPushNotificationEventsView.as_view(),
+        name="staff-push-notification-events",
+    ),
     path(
         "staff/orders/manufacturing-orders/batch.pdf",
         StaffManufacturingOrderBatchPdfView.as_view(),
@@ -787,9 +930,19 @@ urlpatterns = [
         name="staff-order-upload-review",
     ),
     path(
+        "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/quantity/",
+        StaffOrderUploadQuantityView.as_view(),
+        name="staff-order-upload-quantity",
+    ),
+    path(
         "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/preview/",
         StaffOrderUploadPreviewView.as_view(),
         name="staff-order-upload-preview",
+    ),
+    path(
+        "staff/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/download/",
+        StaffOrderUploadDownloadView.as_view(),
+        name="staff-order-upload-download",
     ),
     path(
         "staff/orders/<uuid:order_public_id>/panels/drive-sync/",

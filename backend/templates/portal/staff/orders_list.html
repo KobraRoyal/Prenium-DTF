@@ -7,6 +7,10 @@
 <div class="portal-page portal-page--staff staff-orders-page">
 {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_orders_list.html" title="Commandes" subtitle="Vue opérationnelle centralisée avec lecture rapide des statuts et prochaines actions." %}
 
+{% if perms.orders.add_order and perms.orders.change_order %}
+<p><a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-external-order-create' %}">Créer une commande manuelle</a></p>
+{% endif %}
+
 {% if request.GET.deleted == "1" %}
 <div class="alert alert--success workflow-panel__feedback workflow-panel__feedback--ephemeral mb-4" role="status">
   <p>Commande retirée de la file Atelier.</p>
@@ -15,7 +19,7 @@
 
 <section class="portal-page-surface ui-list-section">
   {% url 'portal:staff-order-list' as staff_orders_search_url %}
-  {% include "components/forms/order_list_search.html" with search_id="staff-orders-search-input" search_url=staff_orders_search_url search_query=search_query search_placeholder="N° OF, N° commande, client ou référence…" results_id="staff-orders-list-results" preserved_name="queue" preserved_value=active_queue %}
+  {% include "components/forms/order_list_search.html" with search_id="staff-orders-search-input" search_url=staff_orders_search_url search_query=search_query search_placeholder="N° OF, N° commande, client ou référence…" results_id="staff-orders-list-results" preserved_params=staff_orders_preserved_params status_options=status_tabs active_status=active_production_status %}
   <div id="staff-orders-list-results" aria-live="polite">
     {% include "portal/staff/partials/orders_list_results.html" %}
   </div>

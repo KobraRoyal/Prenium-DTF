@@ -14,6 +14,8 @@ let configuratorEventsBound = false;
 let projectDialogToRestore = "";
 /** Dialog à ne pas rouvrir après un confirm support / validation réussi. */
 let projectDialogCloseOnSuccess = "";
+const projectInlineDrafts = new Map();
+const projectInlineRequests = new WeakMap();
 
 function loadPdfJs() {
   if (pdfJsPromise === null) {
@@ -698,7 +700,7 @@ function validateConfiguratorFiles(root, input) {
   }
   const submit = root.closest("form")?.querySelector("[data-configurator-submit]");
   if (submit instanceof HTMLButtonElement) {
-    submit.disabled = Boolean(message);
+    submit.disabled = Boolean(message) || (input.required && files.length === 0);
   }
   return message;
 }
@@ -1572,6 +1574,27 @@ function applySupportColorPickerValue(fieldset, rawValue) {
   updateSupportColorStatus(fieldset);
 }
 
+function syncVisualConfirmSupportColor(form) {
+  if (!(form instanceof HTMLFormElement)) {
+    return;
+  }
+  const dialog = form.closest("dialog");
+  const fieldset = dialog?.querySelector("[data-support-color-field]");
+  if (!(fieldset instanceof HTMLElement)) {
+    return;
+  }
+  const hex = fieldset.querySelector("[data-support-color-hex]");
+  const multicolor = fieldset.querySelector("[data-support-color-multicolor-input]");
+  const confirmHex = form.querySelector("[data-visual-confirm-support-hex]");
+  const confirmMulticolor = form.querySelector("[data-visual-confirm-support-multicolor]");
+  if (confirmHex instanceof HTMLInputElement && hex instanceof HTMLInputElement) {
+    confirmHex.value = hex.value;
+  }
+  if (confirmMulticolor instanceof HTMLInputElement && multicolor instanceof HTMLInputElement) {
+    confirmMulticolor.value = multicolor.value;
+  }
+}
+
 function syncSupportColorFromHex(fieldset) {
   const hexInput = fieldset.querySelector("[data-support-color-hex]");
   if (!(hexInput instanceof HTMLInputElement)) {
@@ -1770,6 +1793,11 @@ function initHexColorControl(control) {
     }
     if (fieldset instanceof HTMLElement) {
       applySupportColorPickerValue(fieldset, normalized);
+      const form = fieldset.closest("form[data-order-project-autosave]");
+      if (form instanceof HTMLFormElement && !fieldset.closest("dialog[open]")) {
+        rememberInlineProjectDraft(form);
+        queueOrderProjectAutosave(form);
+      }
     }
   }
 
@@ -1881,6 +1909,11 @@ function bindSupportColorEvents() {
         setMulticolorMode(fieldset, false);
       } else {
         setMulticolorMode(fieldset, true);
+      }
+      const form = fieldset.closest("form[data-order-project-autosave]");
+      if (form instanceof HTMLFormElement && !fieldset.closest("dialog[open]")) {
+        rememberInlineProjectDraft(form);
+        queueOrderProjectAutosave(form);
       }
     }
   });
@@ -2002,13 +2035,234 @@ function updateSelectedFilesSummary(root, input) {
     return;
   }
   const files = Array.from(input.files || []);
+  const list = root.querySelector("[data-selected-files-list]");
+  if (list instanceof HTMLUListElement) {
+    list.replaceChildren();
+    files.forEach((file) => {
+      const entry = document.createElement("li");
+      entry.textContent = file.name;
+      list.append(entry);
+    });
+    list.hidden = files.length === 0;
+  }
   if (files.length === 0) {
     summary.textContent = "Aucun fichier sélectionné.";
     return;
   }
   summary.textContent = files.length === 1
     ? files[0].name
-    : `${files.length} fichiers sélectionnés · aperçu du premier fichier`;
+    : root.matches("[data-batch-upload]")
+      ? `${files.length} fichiers sélectionnés`
+      : `${files.length} fichiers sélectionnés · aperçu du premier fichier`;
+}
+
+function rememberInlineProjectDraft(form) {
+  const itemId = form.dataset.orderProjectInlineItem || "";
+  if (!itemId) return;
+  const values = {};
+  form.querySelectorAll("input[name]:not([name='csrfmiddlewaretoken'])").forEach((input) => {
+    if (input instanceof HTMLInputElement) {
+      values[input.name] = input.type === "checkbox" ? input.checked : input.value;
+    }
+  });
+  projectInlineDrafts.set(itemId, values);
+}
+
+const projectAutosaveTimers = new WeakMap();
+
+function queueOrderProjectAutosave(form) {
+  if (!(form instanceof HTMLFormElement) || !form.matches("[data-order-project-autosave]")) {
+    return;
+  }
+  const existingTimer = projectAutosaveTimers.get(form);
+  if (existingTimer) window.clearTimeout(existingTimer);
+  const timer = window.setTimeout(() => {
+    projectAutosaveTimers.delete(form);
+    if (!form.isConnected || !form.checkValidity()) return;
+    rememberInlineProjectDraft(form);
+    form.requestSubmit();
+  }, 450);
+  projectAutosaveTimers.set(form, timer);
+}
+
+function restoreInlineProjectDrafts(scope) {
+  if (!(scope instanceof Element)) return;
+  const forms = scope.matches("[data-order-project-inline-item]")
+    ? [scope]
+    : Array.from(scope.querySelectorAll("[data-order-project-inline-item]"));
+  forms.forEach((form) => {
+    const values = projectInlineDrafts.get(form.dataset.orderProjectInlineItem || "");
+    if (!values) return;
+    form.querySelectorAll("input[name]:not([name='csrfmiddlewaretoken'])").forEach((input) => {
+      if (!(input instanceof HTMLInputElement) || !(input.name in values)) return;
+      if (input.type === "checkbox") {
+        input.checked = Boolean(values[input.name]);
+      } else {
+        input.value = String(values[input.name]);
+      }
+    });
+  });
+}
+
+function projectAnalysisPollIsEditing(elt) {
+  if (!(elt instanceof HTMLElement) || elt.id !== "order-project-visuals-state") return false;
+  const active = document.activeElement;
+  return active instanceof Element
+    && Boolean(active.closest("#order-project-items"))
+    && active.matches("input, textarea, select, [contenteditable='true']");
+}
+
+function completeInlineProjectRequest(xhr) {
+  const submitted = projectInlineRequests.get(xhr);
+  if (!submitted) return;
+  if (xhr.status >= 200 && xhr.status < 300
+      && projectInlineDrafts.get(submitted.itemId) === submitted.values) {
+    projectInlineDrafts.delete(submitted.itemId);
+  }
+  projectInlineRequests.delete(xhr);
+}
+
+function setBatchUploadFiles(root, input, files) {
+  if (input.disabled) return;
+  const transfer = new DataTransfer();
+  Array.from(files || []).forEach((file) => transfer.items.add(file));
+  input.files = transfer.files;
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function submitBatchUploadWhenReady(input) {
+  if (!(input instanceof HTMLInputElement) || input.disabled || !input.files?.length) return;
+  const form = input.closest("form[data-batch-auto-submit]");
+  if (!(form instanceof HTMLFormElement) || form.classList.contains("is-uploading")) return;
+  const externalLink = form.querySelector("[data-order-external-link]");
+  if (externalLink instanceof HTMLInputElement && externalLink.value.trim()) return;
+  if (form.dataset.orderStartForm !== undefined) {
+    const nameInput = form.querySelector('input[name="name"]');
+    if (nameInput instanceof HTMLInputElement && !nameInput.value.trim()) {
+      const firstFilename = input.files[0]?.name || "";
+      const inferredName = firstFilename.replace(/\.[^.]+$/, "").trim();
+      nameInput.value = inferredName || "Nouvelle commande";
+      nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+  if (!form.checkValidity()) return;
+  form.classList.add("is-uploading");
+  if (typeof form.requestSubmit === "function") {
+    form.requestSubmit();
+  } else {
+    form.submit();
+  }
+}
+
+function syncOrderExternalLink(input) {
+  const form = input.closest("form[data-order-start-form]");
+  if (!form) return;
+  const useLink = Boolean(input.value.trim());
+  form.querySelectorAll("[data-batch-file-input], [data-batch-picker]").forEach((control) => {
+    control.disabled = useLink;
+  });
+  const dropzone = form.querySelector("[data-batch-dropzone]");
+  dropzone?.setAttribute("aria-disabled", String(useLink));
+}
+
+function bindBatchUploadEvents() {
+  if (typeof document.querySelectorAll === "function") {
+    document.querySelectorAll("[data-order-external-link]").forEach(syncOrderExternalLink);
+  }
+  document.body.addEventListener("input", (event) => {
+    if (event.target instanceof HTMLInputElement && event.target.matches("[data-order-external-link]")) {
+      syncOrderExternalLink(event.target);
+    }
+  });
+  document.body.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const picker = target.closest("[data-batch-picker]");
+    if (picker instanceof HTMLButtonElement) {
+      event.preventDefault();
+      picker.closest("[data-batch-upload]")?.querySelector("[data-batch-file-input]")?.click();
+      return;
+    }
+    const dropzone = target.closest("[data-batch-dropzone]");
+    if (
+      dropzone instanceof HTMLElement
+      && !target.closest("button, input, a")
+    ) {
+      dropzone.querySelector("[data-batch-file-input]")?.click();
+    }
+  });
+
+  document.body.addEventListener("keydown", (event) => {
+    const dropzone = event.target;
+    if (
+      !(dropzone instanceof HTMLElement)
+      || !dropzone.matches("[data-batch-dropzone]")
+      || !["Enter", " "].includes(event.key)
+    ) {
+      return;
+    }
+    event.preventDefault();
+    dropzone.querySelector("[data-batch-file-input]")?.click();
+  });
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    document.body.addEventListener(eventName, (event) => {
+      const dropzone = event.target instanceof Element
+        ? event.target.closest("[data-batch-dropzone]")
+        : null;
+      if (!(dropzone instanceof HTMLElement) || !event.dataTransfer?.types.includes("Files")) {
+        return;
+      }
+      event.preventDefault();
+      if (eventName === "dragover") {
+        event.dataTransfer.dropEffect = "copy";
+      }
+      dropzone.classList.add("is-dragging");
+    });
+  });
+
+  document.body.addEventListener("dragleave", (event) => {
+    const dropzone = event.target instanceof Element
+      ? event.target.closest("[data-batch-dropzone]")
+      : null;
+    if (
+      dropzone instanceof HTMLElement
+      && !(event.relatedTarget instanceof Node && dropzone.contains(event.relatedTarget))
+    ) {
+      dropzone.classList.remove("is-dragging");
+    }
+  });
+
+  document.body.addEventListener("drop", (event) => {
+    const dropzone = event.target instanceof Element
+      ? event.target.closest("[data-batch-dropzone]")
+      : null;
+    if (!(dropzone instanceof HTMLElement)) {
+      return;
+    }
+    event.preventDefault();
+    dropzone.classList.remove("is-dragging");
+    const input = dropzone.querySelector("[data-batch-file-input]");
+    if (input instanceof HTMLInputElement && event.dataTransfer?.files.length) {
+      setBatchUploadFiles(dropzone.closest("[data-batch-upload]") || dropzone, input, event.dataTransfer.files);
+    }
+  });
+
+  document.body.addEventListener("submit", (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.querySelector("[data-batch-upload]")) {
+      return;
+    }
+    const externalLink = form.querySelector("[data-order-external-link]");
+    if (externalLink instanceof HTMLInputElement && externalLink.value.trim()) return;
+    const progress = form.querySelector("[data-batch-upload-progress]");
+    if (progress instanceof HTMLElement && form.checkValidity()) {
+      progress.hidden = false;
+      form.classList.add("is-uploading");
+    }
+  });
 }
 
 function openFilePickerBeforeDialog(opener) {
@@ -2183,13 +2437,45 @@ function bindConfiguratorEvents() {
   configuratorEventsBound = true;
   bindOrderStartPickVisual();
   bindPreviewPanDrag();
+  bindBatchUploadEvents();
+
+  ["input", "change", "click"].forEach((eventName) => {
+    document.body.addEventListener(eventName, (event) => {
+      if (eventName === "click" && !event.target.closest?.("[data-support-color-field]")) return;
+      const form = event.target instanceof Element
+        ? event.target.closest("form[data-order-project-autosave]")
+        : null;
+      if (form instanceof HTMLFormElement) {
+        const supportColorInOpenDialog =
+          event.target instanceof Element
+          && event.target.closest("[data-support-color-field]")
+          && form.closest("dialog[open]");
+        if (supportColorInOpenDialog) return;
+        // Color controls update hidden values in their delegated handlers first.
+        queueMicrotask(() => {
+          if (!form.isConnected) return;
+          if (form.hasAttribute("data-order-project-inline-item")) {
+            rememberInlineProjectDraft(form);
+          }
+          if (eventName !== "click" || event.target.closest?.("[data-support-color-field]")) {
+            queueOrderProjectAutosave(form);
+          }
+        });
+      }
+    });
+  });
 
   document.body.addEventListener("change", (event) => {
     const input = event.target;
-    if (!(input instanceof HTMLInputElement) || !input.matches("[data-configurator-file]")) {
+    if (
+      !(input instanceof HTMLInputElement)
+      || !input.matches("[data-configurator-file], [data-batch-file-input]")
+    ) {
       return;
     }
-    const root = findConfiguratorRoot(input);
+    const root = input.matches("[data-batch-file-input]")
+      ? input.closest("[data-batch-upload]")
+      : findConfiguratorRoot(input);
     if (!root) {
       return;
     }
@@ -2201,8 +2487,11 @@ function bindConfiguratorEvents() {
       return;
     }
     const file = input.files?.[0];
-    if (file) {
+    if (file && input.matches("[data-configurator-file]")) {
       previewSelectedFile(root, file);
+    }
+    if (input.matches("[data-batch-file-input]")) {
+      submitBatchUploadWhenReady(input);
     }
   });
 
@@ -2310,6 +2599,10 @@ function bindConfiguratorEvents() {
     const opener = target.closest("[data-dialog-open]");
     if (opener instanceof HTMLElement) {
       const dialog = document.getElementById(opener.dataset.dialogOpen || "");
+      const menu = opener.closest("[data-product-nav-details]");
+      if (menu instanceof HTMLDetailsElement) {
+        menu.removeAttribute("open");
+      }
       openConfiguratorDialog(dialog);
       return;
     }
@@ -2323,6 +2616,7 @@ function bindConfiguratorEvents() {
       return;
     }
     if (target instanceof HTMLDialogElement) {
+      if (target.hasAttribute("data-studio-pay-dialog")) return;
       dismissAutoOpenDialog(target);
       target.close();
     }
@@ -2391,10 +2685,20 @@ function findOpenVisualDialog(root) {
 }
 
 onBodyReady(() => {
+  document.body.addEventListener("htmx:beforeSwap", (event) => {
+    const detail = event.detail;
+    if (projectAnalysisPollIsEditing(detail?.requestConfig?.elt)) {
+      detail.shouldSwap = false;
+      return;
+    }
+    if (detail?.xhr) completeInlineProjectRequest(detail.xhr);
+  });
+
   document.body.addEventListener("htmx:afterSwap", (event) => {
-    const target = event.detail?.target;
+    const target = document.getElementById("order-project-items") || event.detail?.elt;
     closeAllHexColorPopovers();
     if (target instanceof HTMLElement) {
+      restoreInlineProjectDrafts(target);
       initB2BConfigurators(target, { force: true });
       return;
     }
@@ -2406,6 +2710,15 @@ onBodyReady(() => {
     if (!(elt instanceof HTMLElement)) {
       return;
     }
+    if (projectAnalysisPollIsEditing(elt)) {
+      event.preventDefault();
+      return;
+    }
+    if (elt.matches("form[data-order-project-inline-item]") && event.detail?.xhr) {
+      rememberInlineProjectDraft(elt);
+      const itemId = elt.dataset.orderProjectInlineItem;
+      projectInlineRequests.set(event.detail.xhr, {itemId, values: projectInlineDrafts.get(itemId)});
+    }
     const dialog = elt.closest("dialog[id^='visual-dialog-']");
     if (!(dialog instanceof HTMLDialogElement) || !dialog.open) {
       return;
@@ -2415,6 +2728,7 @@ onBodyReady(() => {
         ? elt
         : elt.closest("form[data-visual-confirm], form[data-add-visual-confirm]");
     if (confirmForm instanceof HTMLFormElement) {
+      syncVisualConfirmSupportColor(confirmForm);
       // Validation / enregistrement support : fermer la modal après succès.
       projectDialogCloseOnSuccess = dialog.id;
       projectDialogToRestore = "";

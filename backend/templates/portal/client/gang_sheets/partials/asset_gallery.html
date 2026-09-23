@@ -2,6 +2,7 @@
   class="gang-asset-list"
   data-asset-list
   data-has-pending="{{ has_pending_assets|yesno:'true,false' }}"
+  data-has-ready-auto-placement="{{ has_ready_auto_placement|yesno:'true,false' }}"
   aria-live="polite"
   aria-busy="{{ has_pending_assets|yesno:'true,false' }}"
   {% if has_pending_assets %}
@@ -13,18 +14,39 @@
   {% endif %}
 >
   {% for asset in assets %}
-  <article class="gang-asset-card" data-asset-card data-asset-name="{{ asset.name|lower }}">
+  <article class="gang-asset-card" data-asset-card data-asset-name="{{ asset.name|lower }}" data-source-asset-id="{{ asset.source_public_id }}" data-asset-public-id="{{ asset.asset_public_id }}" data-asset-version-id="{{ asset.public_id }}" data-asset-ready="{{ asset.is_ready|yesno:'true,false' }}">
     <div class="gang-asset-card__preview">
       {% if asset.preview_url %}<img src="{{ asset.preview_url }}" alt="Aperçu de {{ asset.name }}" loading="lazy">{% else %}<div class="gang-asset-card__pending" aria-hidden="true"><span></span></div>{% endif %}
       {% if asset.has_crop %}<span class="gang-asset-card__crop-badge">Recadré</span>{% endif %}
     </div>
     <div class="gang-asset-card__body">
       <strong title="{{ asset.name }}">{{ asset.name }}</strong>
-      <small class="gang-asset-status gang-asset-status--{{ asset.analysis_status }}">{{ asset.analysis_label }}{% if asset.width_mm and asset.height_mm %} · {{ asset.width_mm }} × {{ asset.height_mm }} mm{% endif %}</small>
+      {% if asset.width_mm and asset.height_mm %}<small class="gang-asset-card__dimensions" data-source-asset-dimensions="{{ asset.source_public_id }}">{{ asset.width_mm|floatformat:2 }} × {{ asset.height_mm|floatformat:2 }} mm</small>{% endif %}
+      {% include "portal/client/gang_sheets/partials/asset_quality_badges.html" with review=asset.quality_review %}
+      <button type="button" class="gang-asset-card__details" data-dialog-open="gang-asset-detail-{{ asset.source_public_id }}" aria-haspopup="dialog">Contrôler le visuel</button>
+      {% if asset.is_ready %}
+      <label class="gang-asset-card__quantity">
+        <span>Quantité</span>
+        <input type="number" inputmode="numeric" min="0" max="200" step="1" value="{{ asset.usage_count }}" data-asset-quantity data-quantity-url="{% url 'portal:client-gang-sheet-source-quantity' customer_public_id=customer.public_id sheet_public_id=sheet.public_id source_asset_public_id=asset.source_public_id %}" aria-label="Quantité de {{ asset.name }} sur la planche" aria-describedby="asset-quantity-help-{{ asset.source_public_id }}" {% if not can_manage_gallery %}disabled{% endif %}>
+      </label>
+      <small id="asset-quantity-help-{{ asset.source_public_id }}" class="gang-asset-card__quantity-help" data-asset-quantity-help>0 = retirer · max 200</small>
+      {% endif %}
+      <div class="gang-asset-card__placement" aria-live="polite">
+        {% if asset.auto_placement_status == "no_space" %}
+          <span class="gang-placement-state is-error">Espace insuffisant</span>
+          {% if can_manage_gallery and not asset.is_ready %}<button type="button" class="gang-asset-card__retry" data-retry-auto-place="{{ asset.source_public_id }}">Réessayer</button>{% endif %}
+        {% elif asset.auto_placement_status == "awaiting_analysis" %}
+          <span class="gang-placement-state is-pending">{% if asset.is_ready %}Placement en cours…{% else %}Placement après analyse{% endif %}</span>
+        {% elif asset.usage_count %}
+          <span class="gang-placement-state is-placed" data-asset-placement-count>{{ asset.usage_count }} sur la planche</span>
+        {% elif asset.auto_placement_status == "placed" %}
+          <span class="gang-placement-state" data-asset-placement-count>0 sur la planche</span>
+        {% elif asset.is_ready %}
+          <span class="gang-placement-state" data-asset-placement-count>0 sur la planche</span>
+        {% endif %}
+      </div>
+      {% if can_manage_gallery and asset.can_remove %}
       <div class="gang-asset-card__meta-row">
-        <small data-asset-usage="{{ asset.public_id }}">{{ asset.usage_count }} sur la planche</small>
-        {% if can_manage_gallery %}
-          {% if asset.can_remove %}
           <button
             type="button"
             class="gang-asset-card__remove"
@@ -33,24 +55,8 @@
             title="Retirer ce visuel de la galerie"
             aria-label="Retirer {{ asset.name }} de la galerie"
           >Retirer</button>
-          {% else %}
-          <span
-            class="gang-asset-card__usage-state"
-            title="Supprimez d’abord toutes les occurrences de ce visuel"
-          >Utilisé</span>
-          {% endif %}
-        {% endif %}
       </div>
-      <div class="gang-asset-card__add">
-        <div class="ui-field-group gang-asset-card__qty">
-          <label class="ui-label" for="gang-asset-qty-{{ asset.public_id }}">Qté</label>
-          <input class="ui-input" id="gang-asset-qty-{{ asset.public_id }}" type="number" min="1" max="200" step="1" value="1" inputmode="numeric" data-asset-quantity aria-label="Quantité à placer">
-        </div>
-        <button type="button" class="ui-btn ui-btn-primary gang-asset-card__place" data-add-asset="{{ asset.public_id }}" data-asset-ready="{{ asset.is_ready|yesno:'true,false' }}" {% if not can_edit or not asset.is_ready %}disabled{% endif %} aria-label="{% if asset.is_ready %}Placer sur la planche{% else %}Analyse en cours{% endif %}" title="{% if asset.is_ready %}Placer sur la planche{% else %}Analyse en cours{% endif %}">
-          {% include "portal/client/gang_sheets/partials/icon.html" with name="plus" size="16" %}
-          <span>{% if asset.is_ready %}Placer{% else %}Analyse{% endif %}</span>
-        </button>
-      </div>
+      {% endif %}
     </div>
     {% if asset.can_remove %}
     <dialog
@@ -85,8 +91,9 @@
       </div>
     </dialog>
     {% endif %}
+    {% include "portal/client/gang_sheets/partials/asset_detail_dialog.html" with asset=asset %}
   </article>
   {% empty %}
-  {% include "components/ui/empty_state.html" with extra_class="gang-asset-empty" title="Galerie vide" message="Utilisez « Ajouter des fichiers » ci-dessus pour importer votre premier visuel." %}
+  {% include "components/ui/empty_state.html" with extra_class="gang-asset-empty" title="Galerie vide" message="Importez votre premier fichier avec la zone ci-dessus." %}
   {% endfor %}
 </div>

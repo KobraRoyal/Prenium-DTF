@@ -4,17 +4,43 @@ from datetime import date
 
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from django.utils.formats import date_format
 
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
+from apps.billing.models import Payment
+from apps.billing.services.production_payment_gate import order_has_captured_payment
 from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
+from apps.orders.services.business_days import add_business_days
 from apps.production.models import ProductionJob, ProductionJobTransition
 from apps.uploads.services.production_specs import OrderUploadProductionSpecService
 
 production_spec_service = OrderUploadProductionSpecService()
+
+
+def production_ready_orders_queryset(queryset):
+    """Keep unpaid immediate and cancelled orders out of every Atelier worklist."""
+    captured = Payment.objects.filter(order_id=OuterRef("pk"), status=Payment.Status.CAPTURED)
+    return (
+        queryset.annotate(_production_payment_captured=Exists(captured))
+        .exclude(status=Order.Status.CANCELLED)
+        .filter(Q(billing_mode=Order.BillingMode.DEFERRED) | Q(_production_payment_captured=True))
+    )
+
+
+def production_ready_jobs_queryset(queryset):
+    """Apply the same order payment/cancellation gate to ProductionJob worklists."""
+    captured = Payment.objects.filter(order_id=OuterRef("order_id"), status=Payment.Status.CAPTURED)
+    return (
+        queryset.annotate(_production_payment_captured=Exists(captured))
+        .exclude(order__status=Order.Status.CANCELLED)
+        .filter(
+            Q(order__billing_mode=Order.BillingMode.DEFERRED) | Q(_production_payment_captured=True)
+        )
+    )
 
 
 class ProductionWorkflowService:
@@ -59,7 +85,12 @@ class ProductionWorkflowService:
                 production_start_blocked_reason,
             )
 
-            if production_start_blocked_reason(order) is not None:
+            block_reason = production_start_blocked_reason(order)
+            if order.billing_mode == Order.BillingMode.IMMEDIATE and not order_has_captured_payment(
+                order
+            ):
+                return []
+            if block_reason is not None:
                 statuses = [
                     status for status in statuses if status != ProductionJob.Status.IN_PROGRESS
                 ]
@@ -114,8 +145,20 @@ class ProductionWorkflowService:
         source: str,
         reason: str = "",
     ):
-        order = self._get_staff_order(order_public_id=order_public_id)
+        order = (
+            Order.objects.select_related("customer", "created_by")
+            .filter(public_id=order_public_id)
+            .first()
+        )
         if order is None:
+            return None, None, None
+        if order.status == Order.Status.CANCELLED:
+            raise ValidationError(
+                "Cette commande a été retirée de la file Atelier : "
+                "aucune transition de production n’est possible."
+            )
+        # Hors file Atelier (ex. comptant non capturé) : no-op comme avant.
+        if not production_ready_orders_queryset(Order.objects.filter(pk=order.pk)).exists():
             return None, None, None
 
         production_job = self.get_or_create_for_order(order=order)
@@ -190,10 +233,13 @@ class ProductionWorkflowService:
         review = self._safe_related_object(order_upload, relation_name="atelier_review")
         drive_sync = self._safe_related_object(order_upload, relation_name="drive_sync")
         production_specs = production_spec_service.serialize(order_upload=order_upload)
+        drive_filename = str(drive_sync.drive_filename or "").strip() if drive_sync else ""
 
         return {
             "public_id": str(order_upload.public_id),
             "original_filename": order_upload.original_filename,
+            "drive_filename": drive_filename,
+            "is_external": order_upload.is_external,
             "quantity": order_upload.quantity,
             "mime_type": order_upload.mime_type,
             "size_bytes": order_upload.size_bytes,
@@ -252,6 +298,10 @@ class ProductionWorkflowService:
         requested_date_label = (
             date_format(requested_date, "d/m/Y") if requested_date is not None else ""
         )
+        from apps.orders.references import order_business_number
+
+        business_number = order_business_number(order)
+        reference = business_number or short_public_ref(order.public_id).upper()
 
         return {
             "document_type": "manufacturing_order_v1",
@@ -264,7 +314,7 @@ class ProductionWorkflowService:
                 "name": order.customer.name,
             },
             "order_summary": {
-                "reference": short_public_ref(order.public_id).upper(),
+                "reference": reference,
                 "status": order.status,
                 "status_label": self.document_status_labels.get(order.status, order.status),
                 "currency": order.currency,
@@ -415,7 +465,10 @@ class ProductionWorkflowService:
                     "aucune transition de production n’est possible."
                 )
             else:
-                if normalized_status == ProductionJob.Status.IN_PROGRESS:
+                if (
+                    locked_job.order.billing_mode == Order.BillingMode.IMMEDIATE
+                    and not order_has_captured_payment(locked_job.order)
+                ) or normalized_status == ProductionJob.Status.IN_PROGRESS:
                     from apps.billing.services.production_payment_gate import (
                         production_start_blocked_reason,
                     )
@@ -442,6 +495,28 @@ class ProductionWorkflowService:
                     locked_job.started_at = now
                 if normalized_status == ProductionJob.Status.COMPLETED:
                     locked_job.completed_at = now
+
+                if (
+                    normalized_status == ProductionJob.Status.IN_PROGRESS
+                    and locked_job.order.shipping_method_code == "pickup"
+                    and locked_job.order.estimated_handover_date is None
+                ):
+                    announced_date = add_business_days(timezone.localdate(now), 1)
+                    locked_job.order.estimated_handover_date = announced_date
+                    locked_job.order.save(update_fields=["estimated_handover_date", "updated_at"])
+                    record_event(
+                        action="order.estimated_handover_date_updated",
+                        actor=actor if getattr(actor, "is_authenticated", False) else None,
+                        target=locked_job.order,
+                        metadata={
+                            "customer_public_id": str(locked_job.order.customer.public_id),
+                            "order_public_id": str(locked_job.order.public_id),
+                            "previous_date": None,
+                            "estimated_handover_date": announced_date.isoformat(),
+                            "shipping_method_code": locked_job.order.shipping_method_code,
+                            "source": "production_start_pickup_eta",
+                        },
+                    )
 
                 locked_job.save(
                     update_fields=[
@@ -561,7 +636,8 @@ class ProductionWorkflowService:
 
     def _get_staff_order(self, *, order_public_id):
         return (
-            Order.objects.select_related("customer", "created_by")
+            production_ready_orders_queryset(Order.objects)
+            .select_related("customer", "created_by")
             .prefetch_related(
                 "items",
                 "uploads",

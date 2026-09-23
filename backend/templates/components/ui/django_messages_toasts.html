@@ -1,0 +1,37 @@
+{# Consomme les flash Django une fois, en toasts — évite les dumps d’alertes hors contexte. #}
+{% if flash_toasts %}
+{{ flash_toasts|json_script:"prenium-django-flash" }}
+<script>
+(function () {
+  const node = document.getElementById("prenium-django-flash");
+  if (!node) {
+    return;
+  }
+  let rows = [];
+  try {
+    rows = JSON.parse(node.textContent || "[]");
+  } catch (_) {
+    return;
+  }
+  if (!Array.isArray(rows) || !rows.length) {
+    return;
+  }
+  const show = () => {
+    if (typeof window.preniumToast !== "function") {
+      window.setTimeout(show, 40);
+      return;
+    }
+    rows.forEach((row) => {
+      if (row && row.message) {
+        window.preniumToast(row.message, row.variant || "info");
+      }
+    });
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", show, { once: true });
+  } else {
+    show();
+  }
+})();
+</script>
+{% endif %}

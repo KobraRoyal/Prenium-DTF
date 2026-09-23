@@ -9,6 +9,11 @@ async function copyPdfJsWithoutSourceMap(source, destination) {
   await writeFile(destination, content.replace(/\n\/\/# sourceMappingURL=.*\s*$/, ""), "utf8");
 }
 
+async function copyJsWithoutSourceMap(source, destination) {
+  const content = await readFile(source, "utf8");
+  await writeFile(destination, content.replace(/\n\/\/# sourceMappingURL=.*\s*$/, ""), "utf8");
+}
+
 await mkdir(vendorDirectory, { recursive: true });
 await mkdir(fontDirectory, { recursive: true });
 await mkdir(pdfJsDirectory, { recursive: true });
@@ -20,6 +25,10 @@ await Promise.all([
   copyFile(
     new URL("../node_modules/alpinejs/dist/cdn.min.js", import.meta.url),
     new URL("alpinejs-3.14.3.min.js", vendorDirectory),
+  ),
+  copyJsWithoutSourceMap(
+    new URL("../node_modules/chart.js/dist/chart.umd.js", import.meta.url),
+    new URL("chart-4.5.1.umd.js", vendorDirectory),
   ),
   copyFile(
     new URL(

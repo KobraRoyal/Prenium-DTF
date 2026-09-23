@@ -35,6 +35,7 @@ STAFF_PAGE_VIEWS = [
     "portal/staff/email_templates/list.html",
     "portal/staff/email_templates/edit.html",
     "portal/staff/settings/branding.html",
+    "portal/staff/settings/payments.html",
     "portal/staff/gang_sheets/settings.html",
     "portal/staff/customers/default_volume_discounts.html",
     "portal/staff/access_requests/detail.html",
@@ -389,18 +390,14 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         )
         self.assertEqual(source.count("client-dashboard-surface"), 2)
         self.assertIn("{% if not memberships %}", source)
-        self.assertIn("client-dashboard-section", source)
+        self.assertIn("client-dashboard-analytics", source)
         self.assertLess(
             source.index("client-dashboard-surface"),
             source.index("client-dashboard-palier"),
         )
         self.assertLess(
             source.index("client-dashboard-palier"),
-            source.index("client-dashboard-focus"),
-        )
-        self.assertLess(
-            source.index("client-dashboard-focus"),
-            source.index("client-dashboard-section"),
+            source.index("client-dashboard-analytics"),
         )
         self.assertIn("v123 — Dashboard client", css)
         self.assertIn(
@@ -444,15 +441,18 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertNotIn("gang-sheet-filters", source)
 
     def test_staff_focus_alerts_live_outside_page_surface(self) -> None:
-        for path in (
-            "portal/staff/order_detail.html",
-            "portal/staff/access_requests/detail.html",
-        ):
+        # Les flash Django passent par le layout (toasts) ; seuls les templates
+        # qui gardent des alertes inline doivent les placer avant la surface.
+        for path in ("portal/staff/order_detail.html",):
             with self.subTest(path=path):
                 source = template_source(path)
                 surface_index = source.index("portal-page-surface")
                 alert_index = source.index("alert")
                 self.assertLess(alert_index, surface_index, f"{path} : alerte dans la surface")
+
+        access_detail = template_source("portal/staff/access_requests/detail.html")
+        self.assertNotIn("for message in messages", access_detail)
+        self.assertNotIn("workflow-panel__feedback", access_detail)
 
     def test_default_volume_discounts_exposes_two_surfaces(self) -> None:
         source = template_source("portal/staff/customers/default_volume_discounts.html")
@@ -553,7 +553,7 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertEqual(1, len(re.findall(r"<section[^>]*portal-page-surface", source)))
         self.assertIn("client-order-project-identity", facts)
         self.assertIn(">Date<", facts)
-        self.assertIn(">Référence<", facts)
+        self.assertIn(">N° UUID<", facts)
         self.assertIn(">Règlement<", facts)
         self.assertIn("client-order-project-stack", source)
         self.assertNotIn("stack-lg", source)
@@ -657,6 +657,10 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
                 "font-display text-lg",
                 "brand-settings-surface",
             ),
+            "portal/staff/settings/payments.html": (
+                "font-display text-lg",
+                "payment-gateway-settings-surface",
+            ),
         }
         for path, (typography, surface_class) in checks.items():
             with self.subTest(path=path):
@@ -679,6 +683,8 @@ class PortalViewsUiHomogeneityTests(SimpleTestCase):
         self.assertIn(".email-template-editor-surface", css)
         self.assertIn("v63 — Fiche client", css)
         self.assertIn(".staff-customer-detail-page .volume-discount-dialog", css)
+        self.assertIn("v64 — Réglages paiements", css)
+        self.assertIn(".payment-gateway-settings-surface", css)
 
     def test_staff_production_panel_uses_flat_operator_typography(self) -> None:
         source = template_source("portal/staff/panels/production.html")

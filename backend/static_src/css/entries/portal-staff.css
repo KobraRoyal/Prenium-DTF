@@ -3,6 +3,7 @@
 @import "../components/email-template-workbench.css";
 @import "../components/access-request-queue.css";
 @import "../components/billing-statement-panel.css";
+@import "../components/billing-edit.css";
 @import "../components/customer-account-workspace.css";
 @import "../components/volume-nudge-copy.css";
 @import "../components/atelier-operations.css";
@@ -55,11 +56,27 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   flex-shrink: 0 !important;
 }
 
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-kpi-toggle-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 0.4rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-kpi-toggle {
+  min-height: 2.75rem;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.78rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell #atelier-dashboard-panel.is-reduced .atelier-dashboard-graph {
+  display: none !important;
+}
+
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-grid,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface .atelier-dashboard-metrics .ui-kpi-grid,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.atelier-dashboard-metrics .ui-kpi-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-  gap: 0.65rem !important;
+  gap: 0.4rem !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-stack,
@@ -75,8 +92,14 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-card {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.45rem !important;
   margin: 0 !important;
-  padding: 0.9rem 1rem !important;
+  min-height: 2.75rem !important;
+  padding: 0.35rem 0.7rem !important;
   border: 1px solid var(--line) !important;
   border-radius: var(--radius-sm, 14px) !important;
   background: var(--surface) !important;
@@ -115,9 +138,11 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-card__top,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.atelier-dashboard-metrics .ui-kpi-card__top {
   display: flex !important;
+  flex: 1 1 auto !important;
   align-items: center !important;
-  justify-content: space-between !important;
-  gap: 0.75rem !important;
+  justify-content: flex-start !important;
+  min-width: 0 !important;
+  gap: 0.35rem !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-card__value,
@@ -125,27 +150,30 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
   margin: 0 !important;
   color: var(--ink) !important;
   font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif) !important;
-  font-size: clamp(1.35rem, 2vw, 1.75rem) !important;
+  flex: 0 0 auto !important;
+  font-size: 1.15rem !important;
   font-weight: 700 !important;
   line-height: 1.05 !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-card__hint,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.atelier-dashboard-metrics .ui-kpi-card__hint {
-  margin: 0 !important;
-  color: var(--muted) !important;
-  font-size: 0.82rem !important;
-  line-height: 1.4 !important;
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.atelier-dashboard-metrics .ui-kpi-card__hint,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-card__action,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.atelier-dashboard-metrics .ui-kpi-card__action {
+  display: none !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-card__top .muted,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page-surface.atelier-dashboard-metrics .ui-kpi-card__top .muted {
   margin: 0;
+  overflow: hidden;
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 650;
   letter-spacing: 0.04em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics .ui-kpi-card__action,
@@ -166,18 +194,17 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics a.ui-kpi-card--filter {
-  display: block;
+  display: flex !important;
   color: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics a.ui-kpi-card--filter:hover,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics a.ui-kpi-card--filter:focus-visible {
   border-color: color-mix(in srgb, var(--brand) 40%, var(--line)) !important;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent);
-  transform: translateY(-1px);
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-metrics a.ui-kpi-card--filter.is-active {
@@ -800,14 +827,19 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .workflo
 
 /* v34 — Panneau Production fiche commande : machine, confirmation, fichiers plats. */
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .workflow-panel--operator {
-  gap: 1.15rem;
+  gap: 0.75rem;
   padding: 0 !important;
   background: transparent !important;
 }
 
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .atelier-production__hero,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .operator-panel-hero {
-  padding: 0 0 0.85rem;
+  padding: 0 0 0.65rem;
   border-bottom: 1px solid var(--line) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .operator-panel-hero__actions {
+  gap: 0.45rem 0.65rem;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .operator-machine {
@@ -819,18 +851,21 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-o
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .operator-machine > .operator-section-head {
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.85rem;
   border-bottom: 1px solid var(--line);
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .operator-section-head h4 {
   margin: 0;
+  font-size: 0.98rem;
   text-transform: none;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .operator-section-head p {
-  margin: 0.35rem 0 0;
+  margin: 0.25rem 0 0;
   color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .operator-machine__current {
@@ -869,19 +904,37 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-o
   border-radius: var(--radius-sm, 14px) !important;
   box-shadow: none !important;
   background: var(--surface) !important;
-  padding: 1rem !important;
+  padding: 0.75rem 0.85rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .atelier-production__form {
+  gap: 0.7rem;
+  margin-top: 0.65rem;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .gang-sheet-production-list {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .gang-sheet-production-list article {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem 0.75rem;
   border: 1px solid var(--line) !important;
   border-radius: var(--radius-sm, 14px);
   background: var(--surface) !important;
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.85rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .gang-sheet-production-list article small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .workflow-disclosure {
@@ -892,7 +945,7 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-o
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .workflow-disclosure > summary {
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.85rem;
   background: color-mix(in srgb, var(--ink) 2%, var(--surface));
   border-color: var(--line);
 }
@@ -1173,12 +1226,17 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-o
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-page .staff-order-detail-stack .billing-total {
   display: grid;
-  gap: 0.85rem;
-  padding: 0.85rem 1rem;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-page .staff-order-detail-stack .billing-discount {
+  border-color: var(--line) !important;
+  background: color-mix(in srgb, var(--success) 7%, var(--surface)) !important;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-page .staff-order-detail-stack .workflow-disclosure.billing-breakdown {
-  margin-top: 0.85rem;
+  margin-top: 0.75rem;
   border: 1px solid var(--line) !important;
   border-radius: var(--radius-sm, 14px) !important;
   box-shadow: none !important;
@@ -1188,12 +1246,16 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-o
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-page .staff-order-detail-stack .billing-grid {
   display: grid;
-  gap: 0.85rem;
-  margin-top: 0.85rem;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-page .staff-order-detail-stack .billing-card {
-  padding: 0.85rem 1rem;
+  padding: 0.7rem 0.85rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack .atelier-billing.workflow-panel--operator {
+  gap: 0.75rem;
 }
 
 @media (max-width: 49.99rem) {
@@ -1861,13 +1923,20 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-inspection__correction-footer {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.75rem;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-inspection__correction-footer .ui-btn {
-  width: 100%;
+  width: auto;
+  min-width: 11.5rem;
+}
+
+@media (max-width: 719px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-inspection__correction-footer .ui-btn {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 /* Pilotage : stepper rail — hors legacy workflow-progress. */
@@ -2037,6 +2106,38 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-c
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .volume-discount-dialog .b2b-confirm-dialog__actions {
   margin-top: 0.25rem;
+}
+
+/* v65 — Sélecteur de mois facturation : même calendrier que les autres dates du portail. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog {
+  overflow: visible;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker--month .product-date-picker__grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker--month .product-date-picker__day {
+  min-height: 2.5rem;
+  padding: 0.35rem 0.2rem;
+  font-size: 0.78rem;
+  text-transform: lowercase;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker--month .product-date-picker__day.is-latest {
+  border-color: var(--brand-strong);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog .product-date-picker__nav:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (max-width: 639px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-customer-detail-page .billing-statement-dialog {
+    overflow: visible;
+  }
 }
 
 /* v64 — Profil staff : même contrat focus + workspace que la fiche client. */
@@ -2434,4 +2535,206 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-p
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-profile-page.account-team-page .account-team-invite .account-profile-panel__head {
   display: none;
+}
+/* Liste Commandes : recherche et filtre gardent une lecture compacte. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-page .ui-order-list-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 0.65rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-page .ui-order-list-search {
+  flex: 1 1 18rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-page .ui-order-list-status-filter {
+  flex: 0 1 15rem;
+  min-width: 12.5rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-page .ui-order-list-status-filter .ui-input {
+  width: 100%;
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-page :is(.ui-data-table, .ui-mobile-order-card) .badge {
+  white-space: nowrap !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse { margin: 0 0 1rem; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-rail { display:grid; align-content:start; gap:.65rem; min-width:0; margin:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart.atelier-production-rail header { display:grid; gap:.2rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-rail header { display:grid; gap:.2rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-rail h2,.atelier-production-rail p { margin:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-rail h2 { font-size:1rem; line-height:1.1; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-rail header p,.atelier-production-gauge p { color:var(--muted); font-size:.72rem; line-height:1.3; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-rail__gauges { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge { display:grid; min-width:0; justify-items:center; padding:0 .7rem; text-align:center; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge + .atelier-production-gauge { border-left:1px solid color-mix(in srgb,var(--line) 75%,transparent); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge dt { color:var(--muted); font-size:.67rem; font-weight:750; letter-spacing:.04em; text-transform:uppercase; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge dd { margin:.15rem 0 0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge__arc { position:relative; display:block; width:clamp(5.5rem,8vw,7.25rem); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge__canvas { display:block; width:100%!important; height:3.75rem!important; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge strong { position:absolute; inset:auto 0 4%; color:var(--ink); font-family:var(--ui-font-display); font-size:clamp(.92rem,1.35vw,1.15rem); font-variant-numeric:tabular-nums; font-weight:750; letter-spacing:-.035em; line-height:1; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge strong small { margin-left:.12rem; color:var(--muted); font-family:var(--ui-font-body); font-size:.65em; font-weight:700; letter-spacing:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge p { min-height:1.9em; margin:.1rem 0 0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin:0; padding-top:.7rem; border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item { display:grid; min-width:0; gap:.12rem; padding:0 .55rem; color:var(--ink); text-decoration:none; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item + .atelier-production-activity__item { border-left:1px solid color-mix(in srgb,var(--line) 72%,transparent); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item span { overflow:hidden; color:var(--muted); font-size:.66rem; font-weight:700; line-height:1.25; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item strong { color:var(--ink); font-family:var(--ui-font-display); font-size:1.2rem; font-variant-numeric:tabular-nums; line-height:1.05; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item.is-attention strong { color:var(--warning); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item.is-ready strong { color:var(--success); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item:is(:hover,:focus-visible) { color:var(--ink); text-decoration:underline; text-decoration-color:var(--accent); text-decoration-thickness:2px; text-underline-offset:.24rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health { display:grid; gap:.6rem; padding-top:.75rem; border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__head { display:flex; align-items:baseline; justify-content:space-between; gap:.75rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__head h3 { margin:0; color:var(--ink); font-size:.82rem; line-height:1.2; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__head p { margin:0; font-size:.7rem; line-height:1.3; text-align:right; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__body { display:grid; grid-template-columns:1fr; gap:.75rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__group { min-width:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__group h4 { margin:0 0 .25rem; color:var(--muted); font-size:.65rem; font-weight:750; letter-spacing:.045em; line-height:1.2; text-transform:uppercase; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__group + .atelier-production-health__group { padding-top:.65rem; border-top:1px solid color-mix(in srgb,var(--line) 64%,transparent); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alerts { display:grid; gap:0; margin:0; padding:0; list-style:none; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert { min-width:0; border-top:1px solid color-mix(in srgb,var(--line) 64%,transparent); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert:first-child { border-top:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert > :is(a,span) { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:.55rem; min-height:2.35rem; padding:.3rem .15rem; color:var(--ink); text-decoration:none; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert > a { border-radius:8px; transition:background-color 160ms ease-out; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert > a:hover { background:color-mix(in srgb,var(--raised) 82%,transparent); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert > a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert__copy { display:grid; min-width:0; gap:.03rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert__copy strong { overflow:hidden; font-size:.72rem; font-weight:700; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert__copy small { overflow:hidden; color:var(--muted); font-size:.63rem; line-height:1.25; text-overflow:ellipsis; white-space:nowrap; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert b { min-width:1.75rem; color:var(--muted); font-family:var(--ui-font-display); font-size:.92rem; font-variant-numeric:tabular-nums; font-weight:750; line-height:1; text-align:right; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert.is-danger b { color:var(--danger); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert.is-warning b { color:var(--warning); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; margin:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"label value" "detail detail"; align-content:start; gap:.18rem .65rem; min-width:0; padding:.1rem .7rem .15rem 0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item + .atelier-production-efficiency__item { border-left:1px solid color-mix(in srgb,var(--line) 72%,transparent); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item dt { grid-area:label; color:var(--muted); font-size:.7rem; font-weight:700; line-height:1.25; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item dd { margin:0; color:var(--ink); font-family:var(--ui-font-display); font-size:1.25rem; font-variant-numeric:tabular-nums; font-weight:750; letter-spacing:-.025em; line-height:1; text-align:right; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item dd small { margin-left:.1rem; color:var(--muted); font-family:var(--ui-font-body); font-size:.62em; font-weight:700; letter-spacing:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__detail { display:block; grid-area:detail; margin:0; overflow:hidden; color:var(--muted); font-family:var(--ui-font-body); font-size:.68rem; font-weight:400; letter-spacing:0; line-height:1.3; text-overflow:ellipsis; white-space:nowrap; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item.is-danger dd { color:var(--danger); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item.is-warning dd { color:var(--warning); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item.is-success dd { color:var(--success); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-charts { display:grid; gap:1rem; margin:0 0 1rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-secondary-rail { display:grid; gap:1rem; margin:0 0 1rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart { min-width:0; margin:0; padding:1rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart h2,.atelier-production-chart p { margin:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart p { color:var(--muted); font-size:.85rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__legend { display:flex; gap:1rem; margin:.9rem 0 .5rem; font-size:.8rem; font-weight:650; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__legend span::before { content:""; display:inline-block; width:.55rem; height:.55rem; margin-right:.35rem; border-radius:50%; background:var(--brand); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__legend .is-completed::before { background:var(--success); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__svg { width:100%; height:12rem; overflow:visible; background:linear-gradient(to bottom, transparent 24%, color-mix(in srgb,var(--line) 45%,transparent) 25%, transparent 26%, transparent 49%, color-mix(in srgb,var(--line) 45%,transparent) 50%, transparent 51%, transparent 74%, color-mix(in srgb,var(--line) 45%,transparent) 75%, transparent 76%); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__line { fill:none; stroke-width:1.4; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-linejoin:round; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__line.is-entries,.atelier-production-chart__dot.is-entries { stroke:var(--brand); fill:var(--brand); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__line.is-completed,.atelier-production-chart__dot.is-completed { stroke:var(--success); fill:var(--success); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__dates { display:grid; grid-template-columns:repeat(7,1fr); color:var(--muted); font-size:.72rem; text-align:center; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-chart__canvas { position:relative; height:clamp(12rem,18vw,15rem); margin-top:.85rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-chart-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; margin:.9rem 0 0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-chart-kpis div { min-width:0; padding:.55rem .6rem; border:1px solid color-mix(in srgb,var(--line) 85%,transparent); border-radius:12px; background:var(--raised); }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-chart-kpis dt { color:var(--muted); font-size:.68rem; font-weight:700; line-height:1.25; text-transform:uppercase; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-chart-kpis dd { margin:.2rem 0 0; overflow:hidden; color:var(--ink); font-family:var(--ui-font-display); font-size:clamp(.88rem,1.2vw,1.1rem); font-weight:750; letter-spacing:-.025em; text-overflow:ellipsis; white-space:nowrap; }
+@media (min-width: 1100px) { html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-dashboard-secondary-rail--with-financials { grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); align-items:stretch; } }
+@media (max-width: 639px) { html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-gauge { padding:0 .35rem; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem 0; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item { padding:.1rem .55rem; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item:nth-child(odd) { border-left:0; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-activity__item:nth-child(n+3) { border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent); padding-top:.7rem; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__body { grid-template-columns:1fr; gap:.7rem; } }
+@media (max-width: 479px) { html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__head { align-items:flex-start; flex-direction:column; gap:.12rem; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-health__head p { text-align:left; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-alert__copy :is(strong,small) { overflow:visible; text-overflow:clip; white-space:normal; } }
+@media (max-width: 479px) { html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency { grid-template-columns:1fr; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item { padding:.15rem 0; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-efficiency__item + .atelier-production-efficiency__item { border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent); border-left:0; } }
+@media (max-width: 479px) { html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-chart-kpis { grid-template-columns:1fr; } }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__head { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__head h2,.atelier-production-pulse__head p { margin:0; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__head p { color:var(--muted); font-size:.85rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__chart { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; margin-top:.8rem; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__item { display:grid; grid-template-columns:1fr auto; gap:.35rem .5rem; color:var(--ink); font-size:.82rem; text-decoration:none; }
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__item progress { grid-column:1/-1; width:100%; height:.4rem; accent-color:var(--brand); }
+@media (max-width: 39.99rem) { html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__head { align-items:flex-start; flex-direction:column; gap:.25rem; } html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .atelier-production-pulse__chart { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+@media (max-width: 39.99rem) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-page .ui-order-list-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-orders-page .ui-order-list-status-filter {
+    min-width: 0;
+  }
+}
+
+/* v64 — Réglages paiements en ligne Atelier : connexion PayPal / Stripe, activation 0/1/2. */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-settings-surface {
+  display: grid;
+  gap: 1.35rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status {
+  display: grid;
+  gap: 0.85rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status h2 {
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.85rem 1.15rem;
+  margin: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status__facts dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status__facts dd {
+  margin: 0.3rem 0 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-form {
+  gap: 1.35rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 1.15rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider legend {
+  padding: 0;
+  float: none;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider .ui-checkbox-row {
+  align-items: flex-start;
+  padding: 0.15rem 0 0.35rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider .ui-checkbox-row small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-provider code {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 639px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment-gateway-settings-page .payment-gateway-status__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

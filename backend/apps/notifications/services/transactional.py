@@ -12,6 +12,7 @@ from apps.auditlog.services import record_event
 from apps.notifications.models import EmailTemplate, VolumeDiscountTierNotification
 from apps.notifications.services.email_templates import EmailTemplateService
 from apps.orders.models import Order
+from apps.shipping.services.methods import order_uses_pickup
 
 logger = logging.getLogger(__name__)
 email_template_service = EmailTemplateService()
@@ -430,9 +431,7 @@ def schedule_staff_invitation_email(*, invitation_public_id) -> None:
 
     from apps.notifications.tasks import send_staff_invitation_email_task
 
-    transaction.on_commit(
-        lambda: send_staff_invitation_email_task.delay(str(invitation_public_id))
-    )
+    transaction.on_commit(lambda: send_staff_invitation_email_task.delay(str(invitation_public_id)))
 
 
 def schedule_staff_account_activated_email(*, invitation_public_id) -> None:
@@ -476,7 +475,18 @@ def send_order_processing_email(*, order: Order) -> None:
 def send_order_ready_to_ship_email(*, order: Order) -> None:
     if not getattr(settings, "TRANSACTIONAL_EMAILS_ENABLED", True):
         return
+    if order_uses_pickup(order):
+        send_order_ready_for_pickup_email(order=order)
+        return
     _send_event_email(event=EmailTemplate.Event.ORDER_READY_TO_SHIP, order=order)
+
+
+def send_order_ready_for_pickup_email(*, order: Order) -> None:
+    if not getattr(settings, "TRANSACTIONAL_EMAILS_ENABLED", True):
+        return
+    if not order_uses_pickup(order):
+        return
+    _send_event_email(event=EmailTemplate.Event.ORDER_READY_FOR_PICKUP, order=order)
 
 
 def send_order_shipped_email(*, order: Order) -> None:

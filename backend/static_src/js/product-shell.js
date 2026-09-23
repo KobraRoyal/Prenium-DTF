@@ -133,6 +133,23 @@ function initProductMenuFallback() {
 const INLINE_REQUIRED_MISSING = "Renseignez ce champ.";
 const INLINE_REQUIRED_INVALID = "Indiquez une valeur valide.";
 
+function inlineRequiredRadioGroupLeader(field) {
+  if (!(field instanceof HTMLInputElement) || field.type !== "radio" || !field.form) {
+    return null;
+  }
+
+  return (
+    [...field.form.elements].find(
+      (candidate) =>
+        candidate instanceof HTMLInputElement &&
+        candidate.type === "radio" &&
+        candidate.name === field.name &&
+        candidate.required &&
+        !candidate.disabled
+    ) || null
+  );
+}
+
 function isInlineRequiredField(field) {
   if (
     !(
@@ -146,6 +163,11 @@ function isInlineRequiredField(field) {
   if (!field.required || field.disabled || field.type === "hidden") {
     return false;
   }
+
+  if (field instanceof HTMLInputElement && field.type === "radio") {
+    return inlineRequiredRadioGroupLeader(field) === field;
+  }
+
   return true;
 }
 
@@ -206,6 +228,10 @@ function syncInlineRequiredField(field) {
   return message;
 }
 
+function inlineRequiredFieldFromEvent(field) {
+  return inlineRequiredRadioGroupLeader(field) || field;
+}
+
 function validateInlineRequiredForm(form) {
   const fields = [...form.elements].filter(isInlineRequiredField);
   let firstInvalid = null;
@@ -237,13 +263,13 @@ function bindInlineRequiredForm(form) {
 
   form.dataset.inlineRequiredReady = "true";
   form.addEventListener("input", (event) => {
-    const field = event.target;
+    const field = inlineRequiredFieldFromEvent(event.target);
     if (isInlineRequiredField(field) && field.getAttribute("aria-invalid") === "true") {
       syncInlineRequiredField(field);
     }
   });
   form.addEventListener("change", (event) => {
-    const field = event.target;
+    const field = inlineRequiredFieldFromEvent(event.target);
     if (isInlineRequiredField(field) && field.getAttribute("aria-invalid") === "true") {
       syncInlineRequiredField(field);
     }
@@ -286,10 +312,27 @@ function initSubmitLoadingState() {
   });
 }
 
+function initProspectErrorRecovery() {
+  document.querySelectorAll("form[data-prospect-error-recovery]").forEach((form) => {
+    const firstInvalid = form.querySelector("[aria-invalid='true']");
+    if (!(firstInvalid instanceof HTMLElement)) {
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    firstInvalid.focus({ preventScroll: true });
+    firstInvalid.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "center",
+    });
+  });
+}
+
 function initProductShell() {
   initProductMenuFallback();
   initInlineRequiredValidation();
   initSubmitLoadingState();
+  initProspectErrorRecovery();
 }
 
 if (document.readyState === "loading") {

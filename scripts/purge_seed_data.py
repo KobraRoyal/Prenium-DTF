@@ -1,14 +1,13 @@
 """Purge seed recette data without re-seeding. Run via manage.py shell on NAS."""
 
-from django.contrib.auth import get_user_model
-from django.db import transaction
-
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.catalog.models import CatalogService
 from apps.customers.models import Customer
 from apps.gang_sheets.models import GangSheet
 from apps.orders.models import Order
 from apps.uploads.models import Asset
+from django.contrib.auth import get_user_model
+from django.db import transaction
 
 SEED_EMAILS = [
     "admin@prenium.local",

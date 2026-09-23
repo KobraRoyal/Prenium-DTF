@@ -1,0 +1,45 @@
+<div class="b2b-batch-upload" data-batch-upload>
+  <div
+    class="b2b-batch-dropzone"
+    data-batch-dropzone
+    role="group"
+    aria-label="Dépôt de visuels"
+    aria-controls="{{ input_id }}"
+    aria-describedby="{{ input_id }}-rules {{ input_id }}-summary {{ input_id }}-error"
+  >
+    <input
+      class="ui-sr-only"
+      id="{{ input_id }}"
+      type="file"
+      name="file"
+      aria-label="Fichiers à analyser"
+      tabindex="-1"
+      accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf"
+      multiple
+      data-batch-file-input
+      data-max-files="{{ b2b_visual_batch_max_files }}"
+      data-max-file-bytes="{{ b2b_visual_batch_max_file_bytes }}"
+      data-max-total-bytes="{{ b2b_visual_batch_max_total_bytes }}"
+      {% if file_required %}required{% endif %}
+    >
+    <svg class="b2b-batch-dropzone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <path d="M12 15V4m0 0L8 8m4-4 4 4M5 13v5.25A1.75 1.75 0 0 0 6.75 20h10.5A1.75 1.75 0 0 0 19 18.25V13"/>
+    </svg>
+    <div class="b2b-batch-dropzone__copy">
+      <strong>Déposez vos fichiers ici</strong>
+      <span>ou sélectionnez-les depuis votre appareil</span>
+    </div>
+    <button class="ui-btn ui-btn-secondary ui-btn-sm" type="button" data-batch-picker>Choisir les fichiers</button>
+  </div>
+  <p class="ui-field-help b2b-batch-upload__rules" id="{{ input_id }}-rules">
+    PNG, JPG, PDF, PSD, TIFF, EPS ou AI · {{ b2b_visual_batch_max_files }} fichiers maximum · {{ b2b_visual_batch_max_file_label }} par fichier.
+  </p>
+  <div class="b2b-batch-selection" aria-live="polite" aria-atomic="true">
+    <p id="{{ input_id }}-summary" data-selected-files-summary>Aucun fichier sélectionné.</p>
+    <ul data-selected-files-list hidden></ul>
+  </div>
+  <p class="error-text" id="{{ input_id }}-error" data-configurator-file-error role="alert" hidden></p>
+  <p class="b2b-batch-upload__progress" data-batch-upload-progress role="status" aria-live="polite" hidden>
+    <i aria-hidden="true"></i> Envoi et lancement des analyses…
+  </p>
+</div>

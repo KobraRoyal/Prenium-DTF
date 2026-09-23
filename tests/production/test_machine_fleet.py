@@ -1,7 +1,9 @@
 import uuid
+from decimal import Decimal
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
+from apps.billing.models import Payment
 from apps.customers.models import Customer
 from apps.orders.models import Order
 from apps.production.models import (
@@ -63,6 +65,72 @@ def create_machine(*, actor, code="DTF-01", name="Atlas"):
             "max_print_width_cm": "60",
         },
     )
+
+
+@pytest.mark.django_db
+def test_immediate_order_cannot_be_assigned_before_capture():
+    manager = create_user(
+        "unpaid-fleet-manager@example.com", permissions=("manage_productionmachine",)
+    )
+    operator = create_user(
+        "unpaid-fleet-operator@example.com",
+        permissions=("view_order", "view_productionjob", "assign_productionmachine"),
+    )
+    order = create_submitted_order(actor=operator)
+    order.billing_mode = Order.BillingMode.IMMEDIATE
+    order.save(update_fields=("billing_mode", "updated_at"))
+    machine = create_machine(actor=manager)
+    service = ProductionMachineAssignmentService()
+
+    with pytest.raises(ValidationError, match="paiement|tarif"):
+        service.assign(
+            order_public_id=order.public_id,
+            machine_public_id=machine.public_id,
+            actor=operator,
+            source="test",
+        )
+    assert not ProductionJobMachineAssignment.objects.filter(production_job__order=order).exists()
+    assert AuditLogEntry.objects.filter(action="production.machine_assignment.rejected").exists()
+
+    Payment.objects.create(
+        order=order,
+        amount="42.00",
+        currency="EUR",
+        provider=Payment.Provider.PAYPAL,
+        status=Payment.Status.CAPTURED,
+    )
+    job, assignment, changed = service.assign(
+        order_public_id=order.public_id,
+        machine_public_id=machine.public_id,
+        actor=operator,
+        source="test",
+    )
+    assert changed is True
+    assert assignment.production_job_id == job.pk
+
+
+@pytest.mark.django_db
+def test_immediate_order_cannot_confirm_print_without_capture_even_with_active_job():
+    operator = create_user(
+        "unpaid-print-operator@example.com",
+        permissions=("view_order", "view_productionjob", "confirm_productionprint"),
+    )
+    order = create_submitted_order(actor=operator)
+    order.billing_mode = Order.BillingMode.IMMEDIATE
+    order.save(update_fields=("billing_mode", "updated_at"))
+    job = ProductionWorkflowService().get_or_create_for_order(order=order)
+    job.status = ProductionJob.Status.IN_PROGRESS
+    job.save(update_fields=("status", "updated_at"))
+
+    with pytest.raises(ValidationError, match="paiement|tarif"):
+        ProductionPrintTrackingService().confirm_print(
+            order_public_id=order.public_id,
+            actor=operator,
+            source="test",
+            request_token=uuid.uuid4(),
+        )
+    assert not ProductionPrintRecord.objects.filter(production_job=job).exists()
+    assert AuditLogEntry.objects.filter(action="production.print.confirmation_rejected").exists()
 
 
 @pytest.mark.django_db
@@ -447,6 +515,8 @@ def test_print_confirmation_is_idempotent_and_reprint_requires_note():
         ),
     )
     order = create_submitted_order(actor=operator)
+    order.meterage_override_linear_m = "1.7500"
+    order.save(update_fields=("meterage_override_linear_m", "updated_at"))
     machine = create_machine(actor=manager)
     job, _assignment, _changed = ProductionMachineAssignmentService().assign(
         order_public_id=order.public_id,
@@ -468,6 +538,7 @@ def test_print_confirmation_is_idempotent_and_reprint_requires_note():
         actor=operator,
         source="test",
         request_token=token,
+        printed_linear_m="0.1000",
     )
     _job, same_print, duplicate_created = service.confirm_print(
         order_public_id=order.public_id,
@@ -479,6 +550,7 @@ def test_print_confirmation_is_idempotent_and_reprint_requires_note():
     assert created is True
     assert duplicate_created is False
     assert same_print == first_print
+    assert first_print.printed_linear_m == Decimal("1.7500")
     assert ProductionPrintRecord.objects.count() == 1
 
     with pytest.raises(ValidationError, match="réimpression"):
@@ -488,14 +560,32 @@ def test_print_confirmation_is_idempotent_and_reprint_requires_note():
             source="test",
         )
 
+    with pytest.raises(ValidationError, match="métrage linéaire réellement réimprimé"):
+        service.confirm_print(
+            order_public_id=order.public_id,
+            actor=operator,
+            source="test",
+            note="Relance après contrôle qualité",
+        )
+    with pytest.raises(ValidationError, match="ne peut pas dépasser"):
+        service.confirm_print(
+            order_public_id=order.public_id,
+            actor=operator,
+            source="test",
+            note="Relance trop longue",
+            printed_linear_m="9",
+        )
+
     _job, reprint, created = service.confirm_print(
         order_public_id=order.public_id,
         actor=operator,
         source="test",
         note="Relance après contrôle qualité",
+        printed_linear_m="0,40",
     )
     assert created is True
     assert reprint.machine_code_snapshot == machine.code
+    assert reprint.printed_linear_m == Decimal("0.4000")
     assert ProductionPrintRecord.objects.count() == 2
     assert AuditLogEntry.objects.filter(action="production.print.reconfirmed").exists()
 

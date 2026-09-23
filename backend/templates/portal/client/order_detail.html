@@ -15,8 +15,8 @@
 <div class="alert alert--{{ order_status_banner.tone }} client-order-detail-banner" role="status">
   <div class="client-order-detail-banner__content">
     <p>{{ order_status_banner.message }}</p>
-    {% if order_status_banner.show_pay_cta %}
-    <a class="ui-btn ui-btn-primary ui-btn-sm" href="?panel=billing&amp;pay=1">Payer maintenant</a>
+    {% if order_status_banner.show_pay_cta and request.GET.panel != "billing" %}
+    <a class="ui-btn ui-btn-secondary ui-btn-sm" href="?panel=billing&amp;pay=1#client-billing-pay">Ouvrir le règlement</a>
     {% endif %}
   </div>
 </div>
@@ -28,6 +28,16 @@
       <div class="client-order-summary__fact">
         <dt>Date</dt>
         <dd><time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y" }}</time></dd>
+      </div>
+      <div class="client-order-summary__fact">
+        <dt>{{ handover_date_label }}</dt>
+        <dd>
+          {% if order.estimated_handover_date %}
+          <time datetime="{{ order.estimated_handover_date|date:'Y-m-d' }}">{{ order.estimated_handover_date|date:"d/m/Y" }}</time>
+          {% else %}
+          <span class="muted">À confirmer</span>
+          {% endif %}
+        </dd>
       </div>
       <div class="client-order-summary__fact">
         <dt>Référence</dt>
@@ -47,7 +57,7 @@
       {% else %}
       <div class="client-order-summary__fact client-order-summary__fact--pricing">
         <dt>Tarification</dt>
-        <dd>{% if order.billing_mode == "deferred" or order.uses_atelier_pricing %}Après contrôle technique{% else %}{{ order.pricing_status|human_status }}{% endif %}</dd>
+        <dd>{% if order.billing_mode == "deferred" or order.uses_atelier_pricing %}Après contrôle atelier{% else %}{{ order.pricing_status|human_status }}{% endif %}</dd>
       </div>
       {% endif %}
       <div class="client-order-summary__fact">

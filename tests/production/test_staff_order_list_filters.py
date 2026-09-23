@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import pytest
 from apps.b2b_order_projects.models import B2BOrderProject
+from apps.billing.models import Payment
 from apps.customers.models import Customer
 from apps.orders.models import Order
+from apps.production.models import ProductionJob
 from apps.production.services.dashboard import AtelierDashboardService
 from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUpload, OrderUploadReview
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.exceptions import PermissionDenied
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
@@ -53,7 +56,7 @@ def mark_of_issued(order):
     order.production_job.save(update_fields=["of_document_issued_at", "updated_at"])
 
 
-def create_staff_client(*, email: str):
+def create_staff_client(*, email: str, can_price: bool = False):
     user = get_user_model().objects.create_user(
         email=email,
         password="pass",
@@ -61,9 +64,70 @@ def create_staff_client(*, email: str):
     )
     user.user_permissions.add(Permission.objects.get(codename="access_staff_portal"))
     user.user_permissions.add(Permission.objects.get(codename="view_order"))
+    if can_price:
+        user.user_permissions.add(Permission.objects.get(codename="change_order"))
     client = Client()
     assert client.login(email=user.email, password="pass")
     return client
+
+
+@pytest.mark.django_db
+def test_atelier_default_and_search_hide_unpaid_while_admin_queues_remain_separate():
+    actor = get_user_model().objects.create_user(email="admin-queues@example.com", password="pass")
+    first_customer = Customer.objects.create(name="First unpaid")
+    second_customer = Customer.objects.create(name="Second unpaid")
+    unpaid_to_price = create_order(customer=first_customer, actor=actor)
+    unpaid_priced = create_order(customer=second_customer, actor=actor)
+    paid = create_order(customer=first_customer, actor=actor)
+    for order in (unpaid_to_price, unpaid_priced, paid):
+        order.billing_mode = Order.BillingMode.IMMEDIATE
+        order.pricing_status = (
+            Order.PricingStatus.PENDING if order == unpaid_to_price else Order.PricingStatus.PRICED
+        )
+        order.save(update_fields=["billing_mode", "pricing_status", "updated_at"])
+    Payment.objects.create(
+        order=paid,
+        amount="42.00",
+        currency="EUR",
+        provider=Payment.Provider.STRIPE,
+        status=Payment.Status.CAPTURED,
+    )
+    service = StaffOrderListFilterService()
+    base = Order.objects.all()
+    assert service.count_by_queue(base)[""] == 1
+    assert service.count_by_status(base)[""] == 1
+    assert set(service.apply_filter(base, queue="").values_list("pk", flat=True)) == {paid.pk}
+    assert (
+        list(service.apply_search(base, query="Second unpaid").values_list("pk", flat=True)) == []
+    )
+    with pytest.raises(PermissionDenied):
+        service.apply_filter(base, queue="to_price")
+    assert service.count_by_queue(base, can_price=True)["to_price"] == 1
+    assert service.count_by_queue(base, can_price=True)["awaiting_payment"] == 1
+
+    staff = create_staff_client(email="ordinary-list@example.com")
+    admin = create_staff_client(email="pricing-list@example.com", can_price=True)
+    route = reverse("portal:staff-order-list")
+    assert staff.get(route, {"queue": "to_price"}).status_code == 403
+    assert "À tarifer" not in staff.get(route).content.decode()
+    default_response = admin.get(route, {"q": "Second unpaid"})
+    assert default_response.status_code == 200
+    assert default_response.context["page_obj"].paginator.count == 0
+    assert "À tarifer" in default_response.content.decode()
+    pricing_response = admin.get(route, {"queue": "to_price", "q": "First unpaid"})
+    assert [order.pk for order in pricing_response.context["orders"]] == [unpaid_to_price.pk]
+    assert (
+        admin.get(
+            reverse(
+                "portal:staff-order-detail",
+                kwargs={"order_public_id": unpaid_to_price.public_id},
+            )
+        ).status_code
+        == 200
+    )
+    payment_response = admin.get(route, {"queue": "awaiting_payment"})
+    assert [order.pk for order in payment_response.context["orders"]] == [unpaid_priced.pk]
+    assert "en attente de confirmation du paiement" in payment_response.content.decode()
 
 
 @pytest.mark.django_db
@@ -112,6 +176,37 @@ def test_staff_order_list_filter_service_matches_dashboard_segments():
     assert set(
         service.apply_filter(base, queue="approved").values_list("public_id", flat=True)
     ) == {approved_order.public_id}
+
+
+@pytest.mark.django_db
+def test_staff_order_list_filter_service_filters_by_production_status():
+    actor = get_user_model().objects.create_user(
+        email="status-filters@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(name="Status filter client")
+    create_order(customer=customer, actor=actor)
+    in_progress_order = create_order(customer=customer, actor=actor)
+    ready_order = create_order(customer=customer, actor=actor)
+    in_progress_order.production_job.status = ProductionJob.Status.IN_PROGRESS
+    in_progress_order.production_job.save(update_fields=["status", "updated_at"])
+    ready_order.production_job.status = ProductionJob.Status.READY_TO_SHIP
+    ready_order.production_job.save(update_fields=["status", "updated_at"])
+
+    from apps.orders.services.orders import OrderService
+
+    base = OrderService().list_staff_orders()
+    service = StaffOrderListFilterService()
+
+    assert service.count_by_status(base)[ProductionJob.Status.QUEUED] == 1
+    assert service.count_by_status(base)[ProductionJob.Status.IN_PROGRESS] == 1
+    assert service.count_by_status(base)[ProductionJob.Status.READY_TO_SHIP] == 1
+    assert set(
+        service.apply_status_filter(base, status=ProductionJob.Status.READY_TO_SHIP).values_list(
+            "public_id", flat=True
+        )
+    ) == {ready_order.public_id}
+    assert service.normalize_status("unknown") == ""
 
 
 @pytest.mark.django_db
@@ -218,12 +313,14 @@ def test_staff_order_list_search_preserves_queue_and_displays_of_instead_of_uuid
     assert response.status_code == 200
     assert response.context["search_query"] == matching_of
     assert response.context["active_queue"] == "unprinted"
+    assert response.context["active_production_status"] == ""
     html = response.content.decode()
     assert 'id="staff-orders-search-input"' in html
     assert f'value="{matching_of}"' in html
     assert 'hx-trigger="input changed delay:300ms, search"' in html
     assert 'hx-target="#staff-orders-list-results"' in html
     assert 'hx-include="closest form"' in html
+    assert 'id="staff-orders-search-input-status"' in html
     assert f"q={matching_of}" in html
     assert matching_of in html
     assert other_of not in html
@@ -243,3 +340,29 @@ def test_staff_order_list_search_preserves_queue_and_displays_of_instead_of_uuid
     assert "portal-page--staff" not in partial_html
     assert matching_of in partial_html
     assert other_of not in partial_html
+
+
+@pytest.mark.django_db
+def test_staff_order_list_status_filter_preserves_the_queue_and_search():
+    actor = get_user_model().objects.create_user(email="list-status@example.com", password="pass")
+    customer = Customer.objects.create(name="List status client")
+    ready_order = create_order(customer=customer, actor=actor)
+    queued_order = create_order(customer=customer, actor=actor)
+    ready_order.production_job.status = ProductionJob.Status.READY_TO_SHIP
+    ready_order.production_job.save(update_fields=["status", "updated_at"])
+
+    client = create_staff_client(email="staff-list-status@example.com")
+    response = client.get(
+        reverse("portal:staff-order-list"),
+        {"queue": "", "status": ProductionJob.Status.READY_TO_SHIP, "q": "List status"},
+    )
+
+    assert response.status_code == 200
+    assert response.context["active_production_status"] == ProductionJob.Status.READY_TO_SHIP
+    html = response.content.decode()
+    assert 'id="staff-orders-search-input-status"' in html
+    assert "Prêtes à expédier" in html
+    assert ready_order.production_job.manufacturing_order_number in html
+    assert queued_order.production_job.manufacturing_order_number not in html
+    assert 'name="queue" type="hidden" value=""' in html
+    assert '<option value="ready_to_ship" selected>' in html

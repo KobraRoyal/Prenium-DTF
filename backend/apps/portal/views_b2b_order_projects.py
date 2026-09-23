@@ -1,6 +1,8 @@
 from datetime import timedelta
+from pathlib import Path
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
@@ -22,16 +24,19 @@ from apps.b2b_order_projects.services import (
     B2BOrderProjectService,
     ProjectDomainError,
 )
+from apps.billing.services.gateways import PaymentGatewayTransientError
 from apps.gang_sheets.models import GangSheet
 from apps.orders.models import Order
 from apps.orders.references import project_client_reference
 from apps.orders.services.pricing import OrderPricingService
+from apps.portal.forms_external_orders import ExternalOrderForm
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
     StaffDomainPermissionMixin,
     access_scope_service,
     status_label,
 )
+from apps.portal.views_external_orders import create_external_order_from_project_form
 from apps.uploads.models import AssetVersion
 from apps.uploads.services.assets import AssetDomainError, AssetService
 
@@ -42,6 +47,86 @@ configurator_service = B2BOrderProjectConfiguratorService()
 order_pricing_service = OrderPricingService()
 
 ANALYSIS_POLL_TIMEOUT = timedelta(minutes=2)
+B2B_VISUAL_BATCH_MAX_FILES = 5
+B2B_VISUAL_BATCH_PROXY_SAFE_BYTES = 60 * 1024 * 1024
+
+
+def _format_upload_size(size_bytes: int) -> str:
+    size_mb = max(0, int(size_bytes or 0)) / (1024 * 1024)
+    return f"{size_mb:g} Mio"
+
+
+def _safe_upload_name(uploaded_file) -> str:
+    name = Path(str(getattr(uploaded_file, "name", "Visuel") or "Visuel")).name
+    return name.replace("\r", " ").replace("\n", " ")[:120] or "Visuel"
+
+
+def _client_upload_error_message(error) -> str:
+    message = str(getattr(error, "message", "") or "")
+    translations = {
+        "File content does not match the declared file type.": (
+            "Le contenu ne correspond pas au format annoncé. Réexportez le fichier puis réessayez."
+        ),
+        "File type is not allowed.": (
+            "Ce format n’est pas accepté. Utilisez PNG, JPG, PDF, PSD, TIFF, EPS ou AI."
+        ),
+        "SVG files are not allowed.": (
+            "Le format SVG n’est pas accepté. Exportez le visuel en PNG ou PDF."
+        ),
+        "File exceeds the maximum allowed size.": (
+            "Ce fichier dépasse la taille autorisée. Réduisez-le ou compressez-le puis réessayez."
+        ),
+        "Empty files are not allowed.": "Ce fichier est vide. Réexportez-le puis réessayez.",
+        "A valid MIME type is required.": (
+            "Le format du fichier n’a pas pu être identifié. Réexportez-le puis réessayez."
+        ),
+        "File content could not be validated.": (
+            "Le contenu du fichier n’a pas pu être contrôlé. Réexportez-le puis réessayez."
+        ),
+    }
+    return translations.get(message, message or "Ce fichier n’a pas pu être ajouté.")
+
+
+def _visual_batch_request_error(uploaded_files) -> str:
+    if len(uploaded_files) > B2B_VISUAL_BATCH_MAX_FILES:
+        return f"Sélectionnez au maximum {B2B_VISUAL_BATCH_MAX_FILES} fichiers à la fois."
+    total_bytes = sum(
+        int(getattr(uploaded_file, "size", 0) or 0) for uploaded_file in uploaded_files
+    )
+    # Garde une marge pour l'enveloppe multipart sous client_max_body_size 64m.
+    max_total_bytes = min(
+        B2B_VISUAL_BATCH_MAX_FILES * settings.ORDER_UPLOAD_MAX_BYTES,
+        B2B_VISUAL_BATCH_PROXY_SAFE_BYTES,
+    )
+    if total_bytes > max_total_bytes:
+        return (
+            "La sélection dépasse la limite de "
+            f"{_format_upload_size(max_total_bytes)} par envoi. "
+            "Réduisez le nombre de fichiers puis réessayez."
+        )
+    return ""
+
+
+def _add_visual_batch(*, project, actor, uploaded_files, quantity, source):
+    """Orchestre un lot; chaque fichier garde la transaction isolée du service existant."""
+    created_items = []
+    upload_errors = []
+    for uploaded_file in uploaded_files:
+        display_name = _safe_upload_name(uploaded_file)
+        try:
+            item, _version = configurator_service.add_visual(
+                project=project,
+                actor=actor,
+                data={"name": "", "quantity": quantity or "1"},
+                uploaded_file=uploaded_file,
+                source=source,
+            )
+            created_items.append(item)
+        except (ProjectDomainError, AssetDomainError) as error:
+            upload_errors.append(
+                {"filename": display_name, "message": _client_upload_error_message(error)}
+            )
+    return created_items, upload_errors
 
 
 def build_gang_sheet_project_quote(
@@ -106,6 +191,89 @@ def build_gang_sheet_project_quote(
         return None
 
 
+def redirect_after_b2b_checkout(
+    *,
+    request,
+    customer,
+    order,
+    source: str,
+    requested_provider: str | None = None,
+):
+    if (
+        order.billing_mode == Order.BillingMode.IMMEDIATE
+        and order.pricing_status == Order.PricingStatus.PRICED
+    ):
+        from apps.portal.views_common import billing_service
+        from apps.portal.views_payments import available_payment_providers
+
+        providers = available_payment_providers()
+        available_ids = {item["id"] for item in providers}
+        requested = (requested_provider or "").strip().lower()
+        provider = ""
+        if requested and requested in available_ids:
+            provider = requested
+        elif len(providers) == 1:
+            provider = providers[0]["id"]
+        if provider:
+            success_path = reverse(
+                "portal:client-order-payment-return",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "order_public_id": order.public_id,
+                },
+            )
+            base = settings.PUBLIC_BASE_URL.rstrip("/")
+            if provider == "stripe":
+                success_url = (
+                    f"{base}{success_path}?status=success&session_id={{CHECKOUT_SESSION_ID}}"
+                )
+            else:
+                success_url = f"{base}{success_path}?status=success"
+            cancel_url = f"{base}{success_path}?status=cancel"
+            try:
+                _order, payment = billing_service.initiate_payment_for_customer_order(
+                    customer=customer,
+                    order_public_id=order.public_id,
+                    actor=request.user,
+                    provider=provider,
+                    success_url=success_url,
+                    cancel_url=cancel_url,
+                    source=source,
+                )
+                if payment is not None and payment.approval_url:
+                    return HttpResponseRedirect(payment.approval_url)
+            except PaymentGatewayTransientError:
+                messages.info(
+                    request,
+                    "Le prestataire de paiement est temporairement indisponible. "
+                    "La commande est créée : vous pouvez réessayer le règlement.",
+                )
+            except ValidationError as error:
+                message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+                if message:
+                    messages.error(request, message)
+        return HttpResponseRedirect(
+            reverse(
+                "portal:client-order-detail",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "order_public_id": order.public_id,
+                },
+            )
+            + "?panel=billing&checkout=success&pay=1"
+        )
+    return HttpResponseRedirect(
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+        + "?checkout=success"
+    )
+
+
 class ClientProjectFeatureMixin(LoginRequiredMixin):
     customer = None
     customer_membership = None
@@ -158,7 +326,15 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                 not item.is_production_gang_sheet_asset
                 and asset_service.can_replace_project_item_file(item=item)
             )
+        project.can_edit_items = project_service.transitions.is_editable(project.status)
         project.can_delete = project_service.can_client_delete(project)
+        project.has_unconfirmed_analysis = any(
+            item.technical_review.get("can_confirm") and not item.technical_review.get("confirmed")
+            for item in items
+        )
+        project.can_confirm_all_analyses = bool(items) and all(
+            item.technical_review.get("can_confirm") and item.support_color_hex for item in items
+        )
         return project
 
     @staticmethod
@@ -188,6 +364,22 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
             "nav_key": "client-checkout",
             "status_label": status_label,
             "analysis_pending": analysis_pending,
+            "external_order_form": ExternalOrderForm(),
+            "b2b_visual_batch_max_files": B2B_VISUAL_BATCH_MAX_FILES,
+            "b2b_visual_batch_max_file_bytes": settings.ORDER_UPLOAD_MAX_BYTES,
+            "b2b_visual_batch_max_total_bytes": (
+                min(
+                    B2B_VISUAL_BATCH_MAX_FILES * settings.ORDER_UPLOAD_MAX_BYTES,
+                    B2B_VISUAL_BATCH_PROXY_SAFE_BYTES,
+                )
+            ),
+            "b2b_visual_batch_max_file_label": _format_upload_size(settings.ORDER_UPLOAD_MAX_BYTES),
+            "b2b_visual_batch_max_total_label": _format_upload_size(
+                min(
+                    B2B_VISUAL_BATCH_MAX_FILES * settings.ORDER_UPLOAD_MAX_BYTES,
+                    B2B_VISUAL_BATCH_PROXY_SAFE_BYTES,
+                )
+            ),
             **extra,
         }
         if project is not None:
@@ -278,6 +470,26 @@ class ClientOrderProjectCreateView(ClientProjectFeatureMixin, View):
     def post(self, request, customer_public_id):
         if customer_requires_gang_sheet_orders(self.customer):
             return HttpResponseRedirect(client_new_order_url(customer=self.customer))
+        if (
+            request.POST.get("external_url", "").strip()
+            or request.POST.get("source") == "external_link"
+        ):
+            return create_external_order_from_project_form(
+                request, customer=self.customer, context=self.context()
+            )
+        uploaded_files = request.FILES.getlist("file")
+        batch_error = _visual_batch_request_error(uploaded_files)
+        if batch_error:
+            return render(
+                request,
+                self.template_name,
+                self.context(
+                    order_modes=B2BOrderProject.OrderMode.choices,
+                    form_error=batch_error,
+                    submitted=request.POST,
+                ),
+                status=400,
+            )
         try:
             project = project_service.create_project(
                 customer=self.customer,
@@ -302,31 +514,18 @@ class ClientOrderProjectCreateView(ClientProjectFeatureMixin, View):
             "project_public_id": project.public_id,
         }
         detail_url = reverse("portal:client-order-project-detail", kwargs=detail_kwargs)
-        uploaded_file = request.FILES.get("file")
-        if uploaded_file is not None:
-            try:
-                item, _version = configurator_service.add_visual(
-                    project=project,
-                    actor=request.user,
-                    data={
-                        "name": request.POST.get("visual_name") or "",
-                        "quantity": request.POST.get("quantity") or "1",
-                    },
-                    uploaded_file=uploaded_file,
-                    source="client_portal.create_first_visual",
-                )
-            except (ProjectDomainError, AssetDomainError) as error:
-                return render(
-                    request,
-                    self.template_name,
-                    self.context(
-                        order_modes=B2BOrderProject.OrderMode.choices,
-                        form_error=error.message,
-                        submitted=request.POST,
-                    ),
-                    status=400,
-                )
-            detail_url = f"{detail_url}?validate={item.public_id}"
+        if uploaded_files:
+            created_items, upload_errors = _add_visual_batch(
+                project=project,
+                actor=request.user,
+                uploaded_files=uploaded_files,
+                quantity=request.POST.get("quantity") or "1",
+                source="client_portal.create_visual_batch",
+            )
+            request.session[f"b2b_upload_batch:{project.public_id}"] = {
+                "added": len(created_items),
+                "errors": upload_errors,
+            }
         return HttpResponseRedirect(detail_url)
 
 
@@ -335,6 +534,10 @@ class ClientOrderProjectDetailView(ClientProjectFeatureMixin, View):
 
     def get(self, request, customer_public_id, project_public_id):
         project = self.get_project_or_404(project_public_id)
+        upload_batch_result = request.session.pop(
+            f"b2b_upload_batch:{project.public_id}",
+            {},
+        )
         active_validation_item = None
         validate_missing = False
         validate_id = (request.GET.get("validate") or "").strip()
@@ -354,6 +557,9 @@ class ClientOrderProjectDetailView(ClientProjectFeatureMixin, View):
                 form_error="",
                 active_validation_item=active_validation_item,
                 validate_missing=validate_missing,
+                upload_batch_added=upload_batch_result.get("added", 0),
+                upload_batch_failed=len(upload_batch_result.get("errors", [])),
+                upload_errors=upload_batch_result.get("errors", []),
                 shipping_method_code=(
                     request.GET.get("shipping_method")
                     or request.GET.get("shipping_method_code")
@@ -484,44 +690,48 @@ class ClientOrderProjectItemCreateView(ClientProjectFeatureMixin, View):
 
     def post(self, request, customer_public_id, project_public_id):
         project = self.get_project_or_404(project_public_id)
-        form_error = ""
-        active_validation_item = None
-        uploaded_file = request.FILES.get("file")
-        if uploaded_file is None:
-            form_error = "Sélectionnez le fichier du visuel."
-        else:
-            try:
-                item, _version = configurator_service.add_visual(
-                    project=project,
-                    actor=request.user,
-                    data=request.POST,
-                    uploaded_file=uploaded_file,
-                    source="client_portal.configurator",
-                )
-                active_validation_item = item
-            except (ProjectDomainError, AssetDomainError) as error:
-                form_error = error.message
-        project = self.get_project_or_404(project_public_id)
-        if active_validation_item is not None:
-            active_validation_item = next(
-                entry
-                for entry in project.items.all()
-                if entry.public_id == active_validation_item.public_id
+        uploaded_files = request.FILES.getlist("file")
+        form_error = _visual_batch_request_error(uploaded_files)
+        upload_errors = []
+        created_items = []
+        if not uploaded_files:
+            form_error = "Sélectionnez au moins un fichier."
+        elif not form_error:
+            created_items, upload_errors = _add_visual_batch(
+                project=project,
+                actor=request.user,
+                uploaded_files=uploaded_files,
+                quantity=request.POST.get("quantity") or "1",
+                source="client_portal.configurator_batch",
             )
+        project = self.get_project_or_404(project_public_id)
         response = render(
             request,
             self.template_name,
             self.context(
                 project=project,
                 form_error=form_error,
-                active_validation_item=active_validation_item,
+                upload_errors=upload_errors,
+                upload_batch_added=len(created_items),
             ),
             status=400 if form_error else 200,
         )
+        if form_error:
+            message = form_error
+            variant = "error"
+        elif upload_errors:
+            message = (
+                f"{len(created_items)} visuel(s) ajouté(s), "
+                f"{len(upload_errors)} fichier(s) refusé(s)."
+            )
+            variant = "warning"
+        else:
+            message = f"{len(created_items)} visuel(s) ajouté(s) — analyses en cours."
+            variant = "success"
         return with_toast(
             response,
-            form_error or "Visuel ajouté — contrôle technique en cours dans la fenêtre.",
-            "error" if form_error else "success",
+            message,
+            variant,
         )
 
 
@@ -530,6 +740,7 @@ class ClientOrderProjectItemActionView(ClientProjectFeatureMixin, View):
 
     def post(self, request, customer_public_id, project_public_id, item_public_id, action):
         project = self.get_project_or_404(project_public_id)
+        is_autosave = request.POST.get("_autosave") == "1"
         try:
             if action == "confirm-analysis":
                 if request.POST.get("confirm_analysis") != "on":
@@ -567,9 +778,9 @@ class ClientOrderProjectItemActionView(ClientProjectFeatureMixin, View):
                     item_public_id=item_public_id,
                     actor=request.user,
                     data=request.POST,
-                    source="client_portal",
+                    source="client_portal.autosave" if is_autosave else "client_portal",
                 )
-                message = "Ligne mise à jour."
+                message = "" if is_autosave else "Ligne mise à jour."
             else:
                 raise Http404
             form_error = ""
@@ -586,6 +797,34 @@ class ClientOrderProjectItemActionView(ClientProjectFeatureMixin, View):
                 form_error=form_error,
                 reset_add_visual_dialog=reset_add_visual_dialog,
             ),
+            status=400 if form_error else 200,
+        )
+        if is_autosave and not form_error:
+            return response
+        return with_toast(response, message, "error" if form_error else "success")
+
+
+class ClientOrderProjectConfirmAllAnalysesView(ClientProjectFeatureMixin, View):
+    template_name = "portal/client/partials/order_project_items_response.html"
+
+    def post(self, request, customer_public_id, project_public_id):
+        project = self.get_project_or_404(project_public_id)
+        try:
+            confirmed_items = project_service.confirm_all_item_analyses(
+                project=project,
+                actor=request.user,
+                source="client_portal.analysis_confirmation_all",
+            )
+            form_error = ""
+            message = f"{len(confirmed_items)} visuel(s) validé(s) pour la commande."
+        except ProjectDomainError as error:
+            form_error = error.message
+            message = form_error
+        project = self.get_project_or_404(project_public_id)
+        response = render(
+            request,
+            self.template_name,
+            self.context(project=project, form_error=form_error),
             status=400 if form_error else 200,
         )
         return with_toast(response, message, "error" if form_error else "success")
@@ -800,66 +1039,11 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
             return HttpResponseRedirect(
                 f"{detail}?submit_error=validation&submit_message={quote(messages)}"
             )
-        if (
-            order.billing_mode == Order.BillingMode.IMMEDIATE
-            and order.pricing_status == Order.PricingStatus.PRICED
-        ):
-            from apps.portal.views_common import billing_service
-            from apps.portal.views_payments import available_payment_providers
-
-            providers = available_payment_providers()
-            if len(providers) == 1:
-                provider = providers[0]["id"]
-                success_path = reverse(
-                    "portal:client-order-payment-return",
-                    kwargs={
-                        "customer_public_id": self.customer.public_id,
-                        "order_public_id": order.public_id,
-                    },
-                )
-                from django.conf import settings as dj_settings
-
-                base = dj_settings.PUBLIC_BASE_URL.rstrip("/")
-                if provider == "stripe":
-                    success_url = (
-                        f"{base}{success_path}?status=success&session_id={{CHECKOUT_SESSION_ID}}"
-                    )
-                else:
-                    success_url = f"{base}{success_path}?status=success"
-                cancel_url = f"{base}{success_path}?status=cancel"
-                try:
-                    _order, payment = billing_service.initiate_payment_for_customer_order(
-                        customer=self.customer,
-                        order_public_id=order.public_id,
-                        actor=request.user,
-                        provider=provider,
-                        success_url=success_url,
-                        cancel_url=cancel_url,
-                        source="client_portal.b2b_checkout_pay",
-                    )
-                    if payment is not None and payment.approval_url:
-                        return HttpResponseRedirect(payment.approval_url)
-                except ValidationError:
-                    pass
-            return HttpResponseRedirect(
-                reverse(
-                    "portal:client-order-detail",
-                    kwargs={
-                        "customer_public_id": self.customer.public_id,
-                        "order_public_id": order.public_id,
-                    },
-                )
-                + "?panel=billing&checkout=success&pay=1"
-            )
-        return HttpResponseRedirect(
-            reverse(
-                "portal:client-order-detail",
-                kwargs={
-                    "customer_public_id": self.customer.public_id,
-                    "order_public_id": order.public_id,
-                },
-            )
-            + "?checkout=success"
+        return redirect_after_b2b_checkout(
+            request=request,
+            customer=self.customer,
+            order=order,
+            source="client_portal.b2b_checkout_pay",
         )
 
 

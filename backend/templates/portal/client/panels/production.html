@@ -8,7 +8,7 @@
       <div class="client-status-timeline__marker" aria-hidden="true"></div>
       <div class="client-status-timeline__content">
         <div class="client-status-timeline__head">
-          <span class="badge {{ event.status_key|badge_tone }}">{{ event.label }}</span>
+          <span class="badge {{ event.tone }}">{{ event.label }}</span>
           <time datetime="{{ event.occurred_at|date:'c' }}">{{ event.occurred_at|date:"d/m/Y H:i" }}</time>
         </div>
         {% if event.detail %}

@@ -1,31 +1,49 @@
-{% load portal_tags %}
-<div class="workflow-panel workflow-panel--operator billing-station">
-  <header class="workflow-panel__hero operator-panel-hero">
+{% load portal_tags billing_tags l10n %}
+<div class="workflow-panel workflow-panel--operator billing-station atelier-billing">
+  <header class="workflow-panel__hero operator-panel-hero atelier-billing__hero">
     <div>
       <h3 class="workflow-panel__title">Facturation</h3>
       <p class="workflow-panel__meta">
-        {% if order.billing_mode == "deferred" and not payment and not invoice %}Facture groupée via RCA
-        {% elif invoice and invoice.paid_at %}Règlement confirmé le {{ invoice.paid_at|date:"d/m/Y · H:i" }}
-        {% elif payment and payment.status == "captured" %}Paiement capturé · justificatif à contrôler
-        {% elif order.pricing_status != "priced" %}Le montant doit être calculé avant l’encaissement
-        {% else %}Règlement et justificatif à contrôler{% endif %}
+        {% if order.billing_mode == "deferred" and not payment and not invoice %}Facture groupée périodique
+        {% elif invoice and invoice.paid_at %}Payé le {{ invoice.paid_at|date:"d/m/Y H:i" }}
+        {% elif payment and payment.status == "captured" %}Paiement capturé
+        {% elif order.pricing_status != "priced" %}Montant à calculer avant encaissement
+        {% else %}Règlement à contrôler{% endif %}
       </p>
     </div>
     {% if order.billing_mode == "deferred" and not payment and not invoice %}<span class="badge {{ order.billing_mode|badge_tone }}">{{ order.billing_mode|settlement_badge }}</span>{% elif invoice and invoice.paid_at %}<span class="badge is-success">Payé</span>{% elif payment and payment.status == "captured" %}<span class="badge is-success">Paiement capturé</span>{% elif invoice %}<span class="badge is-warning">Règlement attendu</span>{% else %}<span class="badge is-warning">À encaisser</span>{% endif %}
   </header>
 
+  {% include "portal/staff/components/billing_volume_discount.html" %}
+
+  {% if can_adjust_deferred_billing and billing_adjustment_form %}
+  {% with form=billing_adjustment_form %}
+  {{ form.catalog_shipping_amounts|json_script:"staff-billing-shipping-catalog" }}
+  {{ form.alpine_lines_payload|json_script:"staff-billing-lines-seed" }}
+  <div
+    data-billing-adjustment
+    x-data="staffBillingAdjustment({
+      catalogElId: 'staff-billing-shipping-catalog',
+      linesElId: 'staff-billing-lines-seed',
+      taxRate: {% localize off %}{{ order.tax_rate|default:'0' }}{% endlocalize %},
+      currency: '{{ order.currency|escapejs }}',
+      shippingCode: '{{ form.shipping_method_code.value|default:order.shipping_method_code|escapejs }}',
+      shippingAmount: {% localize off %}{{ form.shipping_amount.value|default_if_none:order.shipping_amount }}{% endlocalize %},
+      initialTotal: {% localize off %}{{ order.total_amount|default:'0' }}{% endlocalize %}
+    })"
+  >
   <section class="billing-total" aria-label="Montant et mode de facturation">
     <div class="billing-total__amount">
       <span>Total</span>
-      <strong>{{ order.total_amount }} {{ order.currency }}</strong>
-      <small>{{ order.pricing_status|human_status }}</small>
+      <strong x-text="displayTotal()">{{ order.total_amount }} {{ order.currency }}</strong>
+      <small>{{ order.pricing_status|human_status }}{% if order.manual_billing_adjusted_at %} · ajusté manuellement{% endif %}</small>
     </div>
     <div class="billing-total__state">
       {% if order.billing_mode == "deferred" and not payment and not invoice %}
-      <p>Aucun paiement ni justificatif individuel n’est attendu sur cette commande.</p>
+      <p>Pas de paiement unitaire — facturation groupée périodique.</p>
       {% elif order.billing_mode == "immediate" %}
       <strong>Paiement immédiat</strong>
-      <p>{% if order.customer.preferred_settlement_method == "paypal" %}Préférence client PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Préférence client Stripe{% else %}Préférence client virement{% endif %}</p>
+      <p>{% if order.customer.preferred_settlement_method == "paypal" %}Préférence PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Préférence Stripe{% else %}Préférence virement{% endif %}</p>
       {% else %}
       <strong>{{ order.billing_mode|settlement_badge }}</strong>
       <p>Suivi du règlement ci-dessous.</p>
@@ -33,17 +51,201 @@
     </div>
   </section>
 
-  <details class="workflow-disclosure billing-breakdown">
-    <summary><span>Détail du montant</span><strong>HT, livraison et TVA</strong></summary>
-    <dl class="billing-breakdown__list">
-      <div><dt>Sous-total HT</dt><dd>{{ order.subtotal_amount }} {{ order.currency }}</dd></div>
-      <div><dt>Livraison</dt><dd>{{ order.shipping_amount }} {{ order.currency }}{% if order.shipping_method_name %} · {{ order.shipping_method_name }}{% endif %}</dd></div>
-      <div><dt>TVA</dt><dd>{{ order.tax_amount }} {{ order.currency }}{% if order.tax_rate %} · {{ order.tax_rate }}{% endif %}</dd></div>
-      {% if order.monthly_volume_linear_m is not None %}
-      <div><dt>Remise volume</dt><dd>{% if order.volume_discount_percent %}-{{ order.volume_discount_percent }} %{% else %}Aucun palier{% endif %} · {{ order.monthly_volume_linear_m }} m ce mois{% if order.volume_discount_amount %} · -{{ order.volume_discount_amount }} {{ order.currency }} HT{% endif %}</dd></div>
+  <section
+    class="billing-edit"
+    aria-label="Détail du montant"
+    aria-labelledby="billing-edit-title"
+  >
+    <header class="billing-edit__head">
+      <h4 id="billing-edit-title">Détail du montant</h4>
+      <span>Valeurs actuelles — modifiez uniquement si besoin</span>
+    </header>
+
+    {% if billing_adjustment_error %}<div class="alert alert--danger" role="alert">{{ billing_adjustment_error }}</div>{% endif %}
+    {% if form.non_field_errors %}<div class="alert alert--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+
+    <form
+      class="billing-edit__form"
+      method="post"
+      action="{% url 'portal:staff-order-panel-billing' order_public_id=order.public_id %}"
+      hx-post="{% url 'portal:staff-order-panel-billing' order_public_id=order.public_id %}"
+      hx-target="#staff-order-panel"
+      hx-swap="innerHTML"
+      hx-indicator="#portal-htmx-indicator"
+      data-submit-loading
+      @submit="onSubmit($event)"
+      novalidate
+    >
+      {% csrf_token %}
+      <input type="hidden" name="action" value="adjust_billing">
+
+      <div class="billing-edit__shipping">
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ form.shipping_method_code.id_for_label }}">Livraison</label>
+          <select
+            class="ui-input"
+            name="{{ form.shipping_method_code.name }}"
+            id="{{ form.shipping_method_code.id_for_label }}"
+            x-model="shippingCode"
+            @change="onShippingModeChange()"
+          >
+            {% for value, label in form.fields.shipping_method_code.choices %}
+            <option value="{{ value }}" {% if form.shipping_method_code.value == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% if form.shipping_method_code.errors %}<div class="error-text" role="alert">{{ form.shipping_method_code.errors }}</div>{% endif %}
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="{{ form.shipping_amount.id_for_label }}">Port HT</label>
+          <input
+            class="ui-input"
+            type="number"
+            step="0.01"
+            min="0"
+            inputmode="decimal"
+            name="{{ form.shipping_amount.name }}"
+            id="{{ form.shipping_amount.id_for_label }}"
+            placeholder="{{ form.shipping_amount_placeholder }}"
+            x-model.number="shippingAmount"
+            @input="recompute()"
+            @blur="if (isBlank(shippingAmount)) { shippingAmount = baselineShippingAmount; recompute(); }"
+            :aria-invalid="errors.shipping ? 'true' : 'false'"
+            :class="{ 'ui-input--error': errors.shipping }"
+          >
+          <div class="error-text" role="alert" x-show="errors.shipping" x-text="errors.shipping" x-cloak></div>
+          {% if form.shipping_amount.errors %}<div class="error-text" role="alert">{{ form.shipping_amount.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="billing-edit__table" role="table" aria-label="Lignes de facturation">
+        <div class="billing-edit__row billing-edit__row--head" role="row">
+          <span role="columnheader">Ligne</span>
+          <span role="columnheader">Qté / m lin.</span>
+          <span role="columnheader">PU HT</span>
+          <span role="columnheader">Total</span>
+        </div>
+        {% for row in form.line_rows %}
+        <div class="billing-edit__row" role="row" data-line-index="{{ forloop.counter0 }}">
+          <span class="billing-edit__label" role="cell">
+            <strong>{{ row.label }}</strong>
+            {% if row.subtitle %}<small class="billing-edit__subtitle">{{ row.subtitle }}</small>{% endif %}
+          </span>
+          <div class="ui-field-group billing-edit__cell" role="cell">
+            {% if row.is_dtf_group %}
+            <label class="ui-sr-only" for="{{ row.linear.id_for_label }}">Métrage linéaire {{ row.label }}</label>
+            <input
+              class="ui-input"
+              type="number"
+              step="0.0001"
+              min="0.01"
+              inputmode="decimal"
+              name="{{ row.linear.name }}"
+              id="{{ row.linear.id_for_label }}"
+              placeholder="{{ row.linear_placeholder }}"
+              x-model.number="lines[{{ forloop.counter0 }}].linearM"
+              @input="onLinearInput({{ forloop.counter0 }})"
+              @blur="if (isBlank(lines[{{ forloop.counter0 }}].linearM)) { lines[{{ forloop.counter0 }}].linearM = lines[{{ forloop.counter0 }}].baselineLinearM; onLinearInput({{ forloop.counter0 }}); }"
+              :aria-invalid="errors.lines[{{ forloop.counter0 }}] ? 'true' : 'false'"
+              :class="{ 'ui-input--error': errors.lines[{{ forloop.counter0 }}] }"
+              aria-describedby="billing-dtf-qty-hint-{{ forloop.counter0 }}"
+            >
+            <small
+              class="billing-edit__qty-hint"
+              id="billing-dtf-qty-hint-{{ forloop.counter0 }}"
+              x-text="dtfQtyHint({{ forloop.counter0 }})"
+            ></small>
+            {% if row.linear.errors %}<div class="error-text" role="alert">{{ row.linear.errors }}</div>{% endif %}
+            {% else %}
+            <label class="ui-sr-only" for="{{ row.quantity.id_for_label }}">Quantité {{ row.label }}</label>
+            <input
+              class="ui-input"
+              type="number"
+              step="0.0001"
+              min="0.01"
+              inputmode="decimal"
+              name="{{ row.quantity.name }}"
+              id="{{ row.quantity.id_for_label }}"
+              placeholder="{{ row.qty_placeholder }}"
+              x-model.number="lines[{{ forloop.counter0 }}].qty"
+              @input="recompute()"
+              @blur="if (isBlank(lines[{{ forloop.counter0 }}].qty)) { lines[{{ forloop.counter0 }}].qty = lines[{{ forloop.counter0 }}].baselineQty; recompute(); }"
+              :aria-invalid="errors.lines[{{ forloop.counter0 }}] ? 'true' : 'false'"
+              :class="{ 'ui-input--error': errors.lines[{{ forloop.counter0 }}] }"
+            >
+            <span class="billing-edit__qty-hint" aria-hidden="true">&nbsp;</span>
+            {% if row.quantity.errors %}<div class="error-text" role="alert">{{ row.quantity.errors }}</div>{% endif %}
+            {% endif %}
+          </div>
+          <div class="ui-field-group billing-edit__cell" role="cell">
+            <label class="ui-sr-only" for="{{ row.unit_price.id_for_label }}">Prix unitaire {{ row.label }}</label>
+            <input
+              class="ui-input"
+              type="number"
+              step="0.01"
+              min="0"
+              inputmode="decimal"
+              name="{{ row.unit_price.name }}"
+              id="{{ row.unit_price.id_for_label }}"
+              placeholder="{{ row.price_placeholder }}"
+              x-model.number="lines[{{ forloop.counter0 }}].unitPrice"
+              @input="recompute()"
+              @blur="if (isBlank(lines[{{ forloop.counter0 }}].unitPrice)) { lines[{{ forloop.counter0 }}].unitPrice = lines[{{ forloop.counter0 }}].baselineUnitPrice; recompute(); }"
+              :aria-invalid="errors.lines[{{ forloop.counter0 }}] ? 'true' : 'false'"
+              :class="{ 'ui-input--error': errors.lines[{{ forloop.counter0 }}] }"
+            >
+            <span class="billing-edit__qty-hint" aria-hidden="true">&nbsp;</span>
+            {% if row.unit_price.errors %}<div class="error-text" role="alert">{{ row.unit_price.errors }}</div>{% endif %}
+          </div>
+          <span class="billing-edit__line-total" role="cell" x-text="formatMoney(lineTotal({{ forloop.counter0 }}))"></span>
+          <div class="billing-edit__row-error" role="alert" x-show="errors.lines[{{ forloop.counter0 }}]" x-text="errors.lines[{{ forloop.counter0 }}]" x-cloak></div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <dl class="billing-edit__totals" aria-live="polite">
+        <div><dt>Sous-total HT</dt><dd x-text="displaySubtotal()"></dd></div>
+        {% if order.volume_discount_amount and order.volume_discount_amount > 0 %}
+        <div class="billing-edit__discount">
+          <dt>Remise volume{% if order.volume_discount_percent %} · {{ order.volume_discount_percent|floatformat:"-2" }}&nbsp;%{% endif %}</dt>
+          <dd>−{{ order.volume_discount_amount|floatformat:2 }}&nbsp;{{ order.currency }}</dd>
+        </div>
+        {% endif %}
+        <div><dt>Port HT</dt><dd x-text="displayShipping()"></dd></div>
+        <div><dt>TVA</dt><dd x-text="displayTax()"></dd></div>
+        <div class="billing-edit__total"><dt>Total</dt><dd x-text="displayTotal()"></dd></div>
+      </dl>
+
+      <div class="billing-edit__actions">
+        <p class="error-text" role="alert" x-show="!valid" x-cloak>Corrigez les champs en rouge avant d’enregistrer.</p>
+        <button class="ui-btn ui-btn-primary" type="submit" hx-disabled-elt="this" :disabled="!valid">
+          Enregistrer
+        </button>
+      </div>
+    </form>
+  </section>
+  </div>
+  {% endwith %}
+  {% else %}
+  <section class="billing-total" aria-label="Montant et mode de facturation">
+    <div class="billing-total__amount">
+      <span>Total</span>
+      <strong>{{ order.total_amount }} {{ order.currency }}</strong>
+      <small>{{ order.pricing_status|human_status }}{% if order.manual_billing_adjusted_at %} · ajusté manuellement{% endif %}</small>
+    </div>
+    <div class="billing-total__state">
+      {% if order.billing_mode == "deferred" and not payment and not invoice %}
+      <p>Pas de paiement unitaire — facturation groupée périodique.</p>
+      {% elif order.billing_mode == "immediate" %}
+      <strong>Paiement immédiat</strong>
+      <p>{% if order.customer.preferred_settlement_method == "paypal" %}Préférence PayPal{% elif order.customer.preferred_settlement_method == "stripe" %}Préférence Stripe{% else %}Préférence virement{% endif %}</p>
+      {% else %}
+      <strong>{{ order.billing_mode|settlement_badge }}</strong>
+      <p>Suivi du règlement ci-dessous.</p>
       {% endif %}
-    </dl>
-  </details>
+    </div>
+  </section>
+  {% billing_breakdown order %}
+  {% endif %}
 
   {% if payment or invoice or order.billing_mode == "immediate" %}
   <div class="billing-grid">
@@ -56,11 +258,11 @@
         {% if payment.paypal_order_id %}<div><dt>Référence PayPal</dt><dd><code>{{ payment.paypal_order_id }}</code></dd></div>{% endif %}
         {% if payment.stripe_checkout_session_id %}<div><dt>Session Stripe</dt><dd><code>{{ payment.stripe_checkout_session_id }}</code></dd></div>{% endif %}
         {% if payment.stripe_payment_intent_id %}<div><dt>PaymentIntent Stripe</dt><dd><code>{{ payment.stripe_payment_intent_id }}</code></dd></div>{% endif %}
-        {% if payment.captured_at %}<div><dt>Capturé le</dt><dd>{{ payment.captured_at|date:"d/m/Y · H:i" }}</dd></div>{% endif %}
+        {% if payment.captured_at %}<div><dt>Capturé le</dt><dd>{{ payment.captured_at|date:"d/m/Y H:i" }}</dd></div>{% endif %}
       </dl>
       {% if payment.last_error_message %}<div class="alert alert--danger" role="alert"><p>{{ payment.last_error_message }}</p></div>{% endif %}
       {% else %}
-      <div class="operator-empty-inline"><strong>Aucun paiement enregistré</strong><p>{% if order.pricing_status != "priced" %}Calculez d’abord le montant.{% else %}La transaction apparaîtra après création du paiement.{% endif %}</p></div>
+      <div class="operator-empty-inline"><strong>Aucun paiement</strong><p>{% if order.pricing_status != "priced" %}Calculez d’abord le montant.{% else %}Apparaitra après création du paiement.{% endif %}</p></div>
       {% endif %}
     </section>
 
@@ -71,9 +273,9 @@
         <div><dt>Numéro</dt><dd><code>{{ invoice.invoice_number }}</code></dd></div>
         <div><dt>Total</dt><dd>{{ invoice.total_amount }} {{ invoice.currency }}</dd></div>
         <div><dt>Email</dt><dd>{{ invoice.billing_email|default:"Non renseigné" }}</dd></div>
-        <div><dt>Règlement</dt><dd>{% if invoice.paid_at %}<span class="billing-paid-signal">Confirmé · {{ invoice.paid_at|date:"d/m/Y · H:i" }}</span>{% else %}En attente{% endif %}</dd></div>
+        <div><dt>Règlement</dt><dd>{% if invoice.paid_at %}<span class="billing-paid-signal">Confirmé · {{ invoice.paid_at|date:"d/m/Y H:i" }}</span>{% else %}En attente{% endif %}</dd></div>
       </dl>
-      <p class="muted text-sm">Facture fiscale émise dans RCA.</p>
+      <p class="muted text-sm">Facture fiscale émise hors plateforme.</p>
       {% if can_mark_invoice_paid %}
       <form class="billing-confirm-payment" method="post" action="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}" hx-post="{% url 'portal:staff-order-invoice-mark-paid' order_public_id=order.public_id %}" hx-target="#staff-order-panel" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator" data-submit-loading>
         {% csrf_token %}
@@ -82,7 +284,7 @@
       </form>
       {% endif %}
       {% else %}
-      <div class="operator-empty-inline"><strong>Aucun justificatif</strong><p>{% if order.pricing_status != "priced" %}Le prix doit être calculé avant sa création.{% else %}Il sera créé après le paiement.{% endif %}</p></div>
+      <div class="operator-empty-inline"><strong>Aucun justificatif</strong><p>{% if order.pricing_status != "priced" %}Prix à calculer d’abord.{% else %}Créé après le paiement.{% endif %}</p></div>
       {% if order.pricing_status != "priced" %}<a class="ui-inline-action ui-inline-action--control billing-card__action" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}?panel=production">Vérifier le métrage</a>{% endif %}
       {% endif %}
     </section>

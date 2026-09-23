@@ -1,0 +1,300 @@
+/* Gestion des accès et des équipes — partagé par les espaces Client et Atelier. */
+
+.access-review-grid,
+.access-review-actions,
+.team-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.detail-grid dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.detail-grid dd {
+  margin: 0.15rem 0 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.detail-grid > .detail-grid__span {
+  grid-column: 1 / -1;
+}
+
+.prospect-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+body.product-shell .staff-access-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--product-line, var(--line));
+}
+
+body.product-shell .staff-access-panel__head p {
+  max-width: 42ch;
+}
+
+body.product-shell .staff-access-panel .detail-grid {
+  margin: 0;
+}
+
+body.product-shell .access-review-actions .ui-form-actions {
+  margin-top: 0.25rem;
+}
+
+body.product-shell .access-review-actions {
+  grid-template-columns: minmax(0, 1.25fr) minmax(16rem, 0.75fr);
+}
+
+body.product-shell .access-review-reject {
+  padding: 0;
+}
+
+body.product-shell .access-review-reject > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+body.product-shell .access-review-reject > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.product-shell .access-review-reject > summary > span:first-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+body.product-shell .access-review-reject > summary strong {
+  font-family: var(--ui-font-display);
+  font-size: 0.95rem;
+}
+
+body.product-shell .access-review-reject > summary small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+body.product-shell .access-review-reject > summary > span:last-child {
+  color: var(--danger);
+  font-size: 1.2rem;
+  font-weight: 800;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.product-shell .access-review-reject[open] > summary {
+  border-bottom: 1px solid var(--product-line, var(--line));
+}
+
+body.product-shell .access-review-reject[open] > summary > span:last-child {
+  transform: rotate(45deg);
+}
+
+body.product-shell .access-review-reject > form {
+  padding: 1rem;
+}
+
+.team-layout {
+  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+  gap: 1.25rem;
+}
+
+.team-list,
+.team-invite-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.team-members-card,
+.team-invite-card {
+  min-width: 0;
+}
+
+.team-members-card__head,
+.team-invite-card__head,
+.team-pending__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.team-members-card__head,
+.team-invite-card__head {
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.team-members-card__head h2,
+.team-invite-card__head h2,
+.team-pending__head h3 {
+  margin: 0;
+}
+
+.team-invite-card__eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--brand-strong);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.team-invite-card__intro {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.team-invite-form {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--ui-radius-md, 0.75rem);
+  background: var(--surface, #fff);
+}
+
+.team-invite-form .ui-form-actions,
+.team-invite-form .ui-btn-primary {
+  width: 100%;
+}
+
+.team-invite-success {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border: 2px solid color-mix(in srgb, var(--success) 45%, var(--line));
+  border-radius: var(--ui-radius-md, 0.75rem);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface, #fff));
+}
+
+.team-invite-success span {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.team-invite-success small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.team-pending {
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 0.4rem;
+}
+
+.team-pending__head {
+  align-items: center;
+}
+
+.team-pending__head h3 {
+  font-size: 0.95rem;
+}
+
+.team-pending__list {
+  display: grid;
+}
+
+.team-pending__empty {
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--ui-radius-md, 0.75rem);
+  text-align: center;
+}
+
+.team-row,
+.pending-invite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.team-row__identity {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.team-row__identity strong,
+.team-row__identity p,
+.pending-invite strong {
+  overflow-wrap: anywhere;
+}
+
+.team-row__identity .badge {
+  justify-self: start;
+}
+
+.team-row__controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.team-row p,
+.pending-invite small {
+  display: block;
+  margin: 0.2rem 0 0;
+}
+
+.team-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+@media (max-width: 767px) {
+  .access-review-grid,
+  .access-review-actions,
+  .team-layout,
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .team-row,
+  .pending-invite,
+  .team-row__actions,
+  .team-row__controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .team-members-card__head,
+  .team-invite-card__head {
+    align-items: flex-start;
+  }
+
+  .team-row__controls .ui-btn,
+  .pending-invite .ui-btn {
+    width: 100%;
+  }
+}

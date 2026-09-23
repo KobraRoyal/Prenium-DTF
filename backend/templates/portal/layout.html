@@ -12,6 +12,7 @@
 {% endblock %}
 
 {% block content %}
+{% django_messages_toasts %}
 {% include "components/nav/portal_header.html" %}
 <main class="app-main app-content landing-saas-main ui-shell-main product-layout" id="main-content">
   {% block portal_content %}{% endblock %}

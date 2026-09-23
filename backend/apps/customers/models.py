@@ -314,7 +314,7 @@ class DefaultCustomerVolumeDiscountTierQuerySet(models.QuerySet):
 
 
 class DefaultCustomerVolumeDiscountTier(BaseModel):
-    """Palier global copié sur chaque nouveau client encours ou comptant."""
+    """Palier global copié ou utilisé en fallback pour les clients sans grille."""
 
     minimum_monthly_linear_m = models.DecimalField(
         "Seuil mensuel (m linéaires)",

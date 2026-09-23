@@ -20,6 +20,8 @@ class ManufacturingOrderPreviewService:
         return previews
 
     def _build_upload_preview(self, *, order_upload) -> bytes | None:
+        if order_upload.is_external:
+            return None
         from apps.uploads.services.asset_preview import AssetPreviewRenderer
 
         source = getattr(order_upload, "asset_version", None) or order_upload

@@ -479,6 +479,16 @@ class ShipmentService:
         if order is None:
             return None, None
 
+        from apps.billing.services.production_payment_gate import (
+            order_has_captured_payment,
+            requires_captured_payment_before_production,
+        )
+
+        if requires_captured_payment_before_production(order) and not order_has_captured_payment(
+            order
+        ):
+            raise ValidationError("Le paiement doit être confirmé avant l'expédition.")
+
         production_job = self.production_workflow_service.get_or_create_for_order(order=order)
         if production_job.status != ProductionJob.Status.READY_TO_SHIP:
             raise ValidationError("Shipment can only be created when production is ready to ship.")
@@ -592,6 +602,29 @@ class ShipmentService:
                 "source": source,
             },
         )
+        if order.estimated_handover_date is None:
+            from apps.shipping.services.methods import ShippingMethodService
+
+            estimated_date = ShippingMethodService().estimated_delivery_date(
+                order=order,
+                declared_on=timezone.localdate(),
+            )
+            if estimated_date is not None:
+                order.estimated_handover_date = estimated_date
+                order.save(update_fields=["estimated_handover_date", "updated_at"])
+                record_event(
+                    action="order.estimated_handover_date_updated",
+                    actor=actor if getattr(actor, "is_authenticated", False) else None,
+                    target=order,
+                    metadata={
+                        "customer_public_id": str(order.customer.public_id),
+                        "order_public_id": str(order.public_id),
+                        "previous_date": None,
+                        "estimated_handover_date": estimated_date.isoformat(),
+                        "shipping_method_code": order.shipping_method_code,
+                        "source": "shipping_declaration_delivery_eta",
+                    },
+                )
         return order, shipment
 
     def record_view_event(self, *, shipment: Shipment, actor, source: str) -> None:

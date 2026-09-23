@@ -16,8 +16,9 @@
     hx-swap="outerHTML"
     hx-push-url="true"
     hx-indicator="#portal-htmx-indicator"
-    x-data="{ focused: false }"
+    x-data="{ focused: false, scanned: {{ query|yesno:'true,false' }} }"
     x-init="$nextTick(() => $refs.operationScan.focus({ preventScroll: true }))"
+    @submit="scanned = Boolean($refs.operationScan.value.trim())"
     aria-labelledby="atelier-operations-scan-title"
   >
     <div class="atelier-operations-scan-bar__head">
@@ -48,7 +49,12 @@
     </div>
     <div class="atelier-operations-scan-bar__actions">
       <button class="ui-btn ui-btn-primary" type="submit">Afficher la commande</button>
-      {% if query %}<a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-atelier-operations' %}">Nouveau scan</a>{% endif %}
+      <a
+        class="ui-btn ui-btn-secondary"
+        href="{% url 'portal:staff-atelier-operations' %}"
+        x-cloak
+        x-show="scanned"
+      >Scanner un autre OF</a>
     </div>
   </form>
 

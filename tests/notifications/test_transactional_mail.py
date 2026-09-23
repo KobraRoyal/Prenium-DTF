@@ -25,7 +25,7 @@ from tests.billing.test_billing_api import FakePayPalGateway, create_customer_sc
 
 
 @pytest.mark.django_db
-def test_order_created_sends_transactional_email():
+def test_immediate_order_created_email_waits_for_payment():
     user = get_user_model().objects.create_user(email="owner@example.com", password="pass")
     customer = Customer.objects.create(name="Acme", billing_email="billing@example.com")
     CustomerMembership.objects.create(customer=customer, user=user)
@@ -47,12 +47,9 @@ def test_order_created_sends_transactional_email():
                 items=[{"service_public_id": str(dtf_service.public_id), "quantity": "1.00"}],
             )
 
-    task_delay.assert_called_once_with(str(order.public_id))
-    send_order_created_email_task.run(str(order.public_id))
-    assert len(mail.outbox) == 1
-    msg = mail.outbox[0]
-    assert user.email in msg.to or "billing@example.com" in msg.to
-    assert "Commande reçue" in msg.subject
+    task_delay.assert_not_called()
+    assert not mail.outbox
+    assert order.billing_mode == order.BillingMode.IMMEDIATE
 
 
 @pytest.mark.django_db
@@ -141,19 +138,23 @@ def test_payment_captured_sends_transactional_email():
 
     mail.outbox.clear()
     with patch("apps.notifications.tasks.send_payment_captured_email_task.delay") as task_delay:
-        with TestCase.captureOnCommitCallbacks(execute=True):
-            svc.confirm_capture(
-                order_public_id=order.public_id,
-                paypal_order_id=payment.paypal_order_id,
-                payment_public_id=payment.public_id,
-                actor=user,
-                source="test",
-            )
+        with patch("apps.notifications.tasks.send_order_created_email_task.delay") as created_delay:
+            with TestCase.captureOnCommitCallbacks(execute=True):
+                svc.confirm_capture(
+                    order_public_id=order.public_id,
+                    paypal_order_id=payment.paypal_order_id,
+                    payment_public_id=payment.public_id,
+                    actor=user,
+                    source="test",
+                )
 
     task_delay.assert_called_once_with(str(order.public_id))
+    created_delay.assert_called_once_with(str(order.public_id))
+    send_order_created_email_task.run(str(order.public_id))
     send_payment_captured_email_task.run(str(order.public_id))
-    assert len(mail.outbox) == 1
-    assert "Paiement confirmé" in mail.outbox[0].subject
+    assert len(mail.outbox) == 2
+    assert any("Commande reçue" in message.subject for message in mail.outbox)
+    assert any("Paiement confirmé" in message.subject for message in mail.outbox)
 
 
 @pytest.mark.django_db

@@ -6,95 +6,98 @@
 {% block prospect_section_head %}
 <div class="landing-section-head prospect-tunnel__intro prospect-journey__intro">
   <h2 class="prospect-tunnel__title">Votre projet</h2>
-  <p class="landing-auth-lead prospect-tunnel__lead">Besoin, volumes et rythme. Des estimations suffisent.</p>
+  <p class="landing-auth-lead prospect-tunnel__lead">Dites-nous ce que vous préparez. Une estimation suffit, vous pourrez préciser vos besoins ensuite.</p>
 </div>
 {% endblock %}
 
 {% block prospect_inner %}
-<form method="post" class="ui-form-stack prospect-form prospect-project-form text-left" novalidate data-submit-loading>
+<form method="post" class="ui-form-stack prospect-form prospect-project-form text-left" novalidate data-inline-required data-submit-loading data-prospect-error-recovery>
   {% csrf_token %}
+  {% if form.errors %}
+  <div class="alert alert--danger prospect-form__error-summary" data-prospect-error-summary role="alert" tabindex="-1" aria-labelledby="form-errors-title">
+    <p id="form-errors-title"><strong>Vérifiez les informations indiquées ci-dessous.</strong></p>
+    <ul>
+      {% for field in form %}{% if field.errors %}<li><a href="#id_{{ field.name }}">{{ field.label }} : {{ field.errors.0 }}</a></li>{% endif %}{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if messages %}{% for message in messages %}<div class="alert alert--danger" role="alert">{{ message }}</div>{% endfor %}{% endif %}
   {% if form.non_field_errors %}<div class="alert alert--danger" role="alert">{{ form.non_field_errors.0 }}</div>{% endif %}
 
   <section class="prospect-project-section" aria-labelledby="project-scope-title">
-    <h3 id="project-scope-title" class="prospect-form__section-title">Le besoin</h3>
-
-    <fieldset class="prospect-project-fieldset">
-      <legend>{{ form.service_interest.label }}</legend>
-      <div class="prospect-project-options prospect-project-options--services">
-        {% for value, label in form.service_interest.field.choices %}{% if value %}
-        <label class="prospect-project-option">
-          <input type="radio" name="service_interest" value="{{ value }}" {% if form.service_interest.value == value %}checked{% endif %} required>
-          <span class="prospect-project-option__marker" aria-hidden="true"></span>
-          <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
-          <span class="prospect-project-option__check" aria-hidden="true">✓</span>
-        </label>
-        {% endif %}{% endfor %}
+    <div class="prospect-form__section-head">
+      <div>
+        <h3 id="project-scope-title" class="prospect-form__section-title">Le besoin</h3>
+        <p class="prospect-form__section-note">Situez simplement votre projet pour que nous préparions le bon échange.</p>
       </div>
-      {% if form.service_interest.errors %}<p class="ui-field-error" role="alert">{{ form.service_interest.errors.0 }}</p>{% endif %}
-    </fieldset>
+      <span class="prospect-form__required-note">1 choix</span>
+    </div>
 
-    <fieldset class="prospect-project-fieldset">
+    <fieldset id="id_project_timing" class="prospect-project-fieldset">
       <legend>{{ form.project_timing.label }}</legend>
       <div class="prospect-project-options prospect-project-options--compact">
         {% for value, label in form.project_timing.field.choices %}{% if value %}
         <label class="prospect-project-option prospect-project-option--compact">
-          <input type="radio" name="project_timing" value="{{ value }}" {% if form.project_timing.value == value %}checked{% endif %} required>
+          <input id="id_project_timing_{{ forloop.counter }}" type="radio" name="project_timing" value="{{ value }}" {% if form.project_timing.value == value %}checked{% endif %} required{% if forloop.first %} aria-describedby="project-timing-error"{% if form.project_timing.errors %} aria-invalid="true"{% endif %}{% endif %}>
           <span class="prospect-project-option__marker" aria-hidden="true"></span>
           <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
-          <span class="prospect-project-option__check" aria-hidden="true">✓</span>
         </label>
         {% endif %}{% endfor %}
       </div>
-      {% if form.project_timing.errors %}<p class="ui-field-error" role="alert">{{ form.project_timing.errors.0 }}</p>{% endif %}
+      <p id="project-timing-error" class="ui-field-error ui-error-text" role="alert"{% if not form.project_timing.errors %} hidden{% endif %}>{% if form.project_timing.errors %}{{ form.project_timing.errors.0 }}{% endif %}</p>
     </fieldset>
   </section>
 
   <section class="prospect-project-section" aria-labelledby="project-rhythm-title">
-    <h3 id="project-rhythm-title" class="prospect-form__section-title">Le rythme</h3>
+    <div class="prospect-form__section-head">
+      <div>
+        <h3 id="project-rhythm-title" class="prospect-form__section-title">Le rythme</h3>
+        <p class="prospect-form__section-note">Même une fourchette large nous suffit pour vous répondre.</p>
+      </div>
+    </div>
 
     <div class="prospect-project-metrics">
-      <fieldset class="prospect-project-fieldset">
+      <fieldset id="id_monthly_volume" class="prospect-project-fieldset">
         <legend>{{ form.monthly_volume.label }}</legend>
         <div class="prospect-project-options prospect-project-options--metric">
           {% for value, label in form.monthly_volume.field.choices %}{% if value %}
           <label class="prospect-project-option prospect-project-option--metric">
-            <input type="radio" name="monthly_volume" value="{{ value }}" {% if form.monthly_volume.value == value %}checked{% endif %} required>
+          <input id="id_monthly_volume_{{ forloop.counter }}" type="radio" name="monthly_volume" value="{{ value }}" {% if form.monthly_volume.value == value %}checked{% endif %} required{% if forloop.first %} aria-describedby="monthly-volume-error"{% if form.monthly_volume.errors %} aria-invalid="true"{% endif %}{% endif %}>
+            <span class="prospect-project-option__marker" aria-hidden="true"></span>
             <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
-            <span class="prospect-project-option__check" aria-hidden="true">✓</span>
           </label>
           {% endif %}{% endfor %}
         </div>
-        {% if form.monthly_volume.errors %}<p class="ui-field-error" role="alert">{{ form.monthly_volume.errors.0 }}</p>{% endif %}
+        <p id="monthly-volume-error" class="ui-field-error ui-error-text" role="alert"{% if not form.monthly_volume.errors %} hidden{% endif %}>{% if form.monthly_volume.errors %}{{ form.monthly_volume.errors.0 }}{% endif %}</p>
       </fieldset>
 
-      <fieldset class="prospect-project-fieldset">
+      <fieldset id="id_order_frequency" class="prospect-project-fieldset">
         <legend>{{ form.order_frequency.label }}</legend>
         <div class="prospect-project-options prospect-project-options--metric">
           {% for value, label in form.order_frequency.field.choices %}{% if value %}
           <label class="prospect-project-option prospect-project-option--metric">
-            <input type="radio" name="order_frequency" value="{{ value }}" {% if form.order_frequency.value == value %}checked{% endif %} required>
+          <input id="id_order_frequency_{{ forloop.counter }}" type="radio" name="order_frequency" value="{{ value }}" {% if form.order_frequency.value == value %}checked{% endif %} required{% if forloop.first %} aria-describedby="order-frequency-error"{% if form.order_frequency.errors %} aria-invalid="true"{% endif %}{% endif %}>
+            <span class="prospect-project-option__marker" aria-hidden="true"></span>
             <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
-            <span class="prospect-project-option__check" aria-hidden="true">✓</span>
           </label>
           {% endif %}{% endfor %}
         </div>
-        {% if form.order_frequency.errors %}<p class="ui-field-error" role="alert">{{ form.order_frequency.errors.0 }}</p>{% endif %}
+        <p id="order-frequency-error" class="ui-field-error ui-error-text" role="alert"{% if not form.order_frequency.errors %} hidden{% endif %}>{% if form.order_frequency.errors %}{{ form.order_frequency.errors.0 }}{% endif %}</p>
       </fieldset>
     </div>
 
-    <fieldset class="prospect-project-fieldset prospect-project-fieldset--urgency">
+    <fieldset id="id_urgency" class="prospect-project-fieldset prospect-project-fieldset--urgency">
       <legend>{{ form.urgency.label }}</legend>
       <div class="prospect-project-options prospect-project-options--compact">
         {% for value, label in form.urgency.field.choices %}{% if value %}
         <label class="prospect-project-option prospect-project-option--compact">
-          <input type="radio" name="urgency" value="{{ value }}" {% if form.urgency.value == value %}checked{% endif %} required>
+        <input id="id_urgency_{{ forloop.counter }}" type="radio" name="urgency" value="{{ value }}" {% if form.urgency.value == value %}checked{% endif %} required{% if forloop.first %} aria-describedby="urgency-error"{% if form.urgency.errors %} aria-invalid="true"{% endif %}{% endif %}>
           <span class="prospect-project-option__marker" aria-hidden="true"></span>
           <span class="prospect-project-option__copy"><strong>{{ label }}</strong></span>
-          <span class="prospect-project-option__check" aria-hidden="true">✓</span>
         </label>
         {% endif %}{% endfor %}
       </div>
-      {% if form.urgency.errors %}<p class="ui-field-error" role="alert">{{ form.urgency.errors.0 }}</p>{% endif %}
+      <p id="urgency-error" class="ui-field-error ui-error-text" role="alert"{% if not form.urgency.errors %} hidden{% endif %}>{% if form.urgency.errors %}{{ form.urgency.errors.0 }}{% endif %}</p>
     </fieldset>
 
     <div class="ui-field-group prospect-project-goal">
@@ -103,9 +106,28 @@
     </div>
   </section>
 
+  <section class="prospect-confirmation prospect-confirmation--inline" aria-labelledby="confirm-title">
+    <div class="prospect-form__section-head">
+      <div>
+        <h3 id="confirm-title" class="prospect-form__section-title">Votre accord</h3>
+        <p class="prospect-form__section-note">Une dernière vérification avant l’envoi de votre demande.</p>
+      </div>
+      <span class="prospect-form__required-note">Requis</span>
+    </div>
+    <label class="prospect-consent-card{% if form.terms_accepted.errors %} is-error{% endif %}">
+      <input id="id_terms_accepted" type="checkbox" name="terms_accepted" required aria-describedby="terms-accepted-error" {% if form.terms_accepted.value %}checked{% endif %}{% if form.terms_accepted.errors %} aria-invalid="true"{% endif %}>
+      <span class="prospect-consent-card__control" aria-hidden="true">✓</span>
+      <span><strong>Je confirme l’exactitude des informations saisies.</strong><small>{{ form.terms_accepted.label }}</small></span>
+    </label>
+    <p id="terms-accepted-error" class="ui-field-error ui-error-text" role="alert"{% if not form.terms_accepted.errors %} hidden{% endif %}>{% if form.terms_accepted.errors %}{{ form.terms_accepted.errors.0 }}{% endif %}</p>
+  </section>
+
   <div class="prospect-form__footer prospect-journey__footer">
     <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'prospects:step1' %}">Retour</a>
-    <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Voir le récapitulatif <span aria-hidden="true">→</span></button>
+    <div class="prospect-form__submit-group">
+      <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Envoyer ma demande <span aria-hidden="true">→</span></button>
+      <p class="prospect-form__submit-note">Après l’envoi, vous recevrez un e-mail de vérification valable 48 heures.</p>
+    </div>
   </div>
 </form>
 {% endblock %}

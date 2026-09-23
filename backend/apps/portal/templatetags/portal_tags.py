@@ -17,7 +17,7 @@ from apps.orders.references import (
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260829-of-copy-v15"
+PORTAL_CSS_ASSET_V = "20260923-kpi-label-v1"
 
 STATUS_LABELS = {
     "draft": "Brouillon",
@@ -30,15 +30,15 @@ STATUS_LABELS = {
     "none": "N/A",
     "clear": "Encours OK",
     "cancelled": "Annulée",
-    "approved": "Approuvée",
-    "captured": "Capturée",
+    "approved": "En confirmation",
+    "captured": "Payé",
     "issued": "Émise",
     "void": "Annulée",
     "ok": "Valide",
     "warning": "À vérifier",
     "error": "Erreur",
     "synced": "Synchronisé",
-    "queued": "En file atelier",
+    "queued": "En traitement",
     "in_progress": "En production",
     "ready_to_ship": "Prête à expédier",
     "completed": "Terminée",
@@ -242,6 +242,50 @@ def portal_css_asset_v() -> str:
 @register.filter
 def client_order_panel_label(panel_slug):
     return CLIENT_ORDER_PANEL_LABELS.get(str(panel_slug or "").strip(), "Détail")
+
+
+@register.inclusion_tag("components/ui/django_messages_toasts.html", takes_context=True)
+def django_messages_toasts(context):
+    """Consomme les flash Django (dédupliqués) pour affichage toast unique.
+
+    Sur les pages Équipe (``flash_message_scope="team"``), seuls les flash tagués
+    ``team`` sont affichables ; le reste (paiement, compte client, etc.) est
+    consommé silencieusement pour ne pas polluer « Gérer l’équipe ».
+    """
+    request = context.get("request")
+    if request is None:
+        return {"flash_toasts": []}
+
+    from django.contrib import messages
+
+    from apps.portal.views_payments import user_facing_payment_error
+
+    scope = str(context.get("flash_message_scope") or "").strip()
+    items: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for message in messages.get_messages(request):
+        text = str(message.message).strip()
+        if not text:
+            continue
+        tags = str(message.tags or "")
+        if scope == "team" and "team" not in tags.split():
+            continue
+        # Nettoie d’anciens flash paiement encore en session (codes prestataire bruts).
+        text = user_facing_payment_error(text)
+        if "error" in tags:
+            variant = "error"
+        elif "success" in tags:
+            variant = "success"
+        elif "warning" in tags:
+            variant = "warning"
+        else:
+            variant = "info"
+        key = (variant, text)
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append({"message": text, "variant": variant})
+    return {"flash_toasts": items}
 
 
 @register.inclusion_tag("components/portal/client_refs.html")

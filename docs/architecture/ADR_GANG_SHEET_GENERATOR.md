@@ -21,8 +21,12 @@ Créer l’app dédiée `gang_sheets` autour de quatre modèles :
 - `GangSheetSourceAsset`, galerie source propre à la planche avec dimensions analysées ;
 - `GangSheetItem`, occurrence d’une `AssetVersion` avec position, taille réelle et rotation.
 
-La planche snapshotte la laize, les marges, l’espacement et les bornes de hauteur lors de sa
-création. Un changement de machine ne modifie donc jamais silencieusement un brouillon existant.
+La planche snapshotte la laize utile, l’espacement et les bornes de hauteur lors de sa création.
+`margin_mm` reste stocké sur les anciennes configurations et planches pour compatibilité, mais
+n’intervient plus dans la géométrie et n’est plus proposé dans les réglages Atelier. La largeur
+`width_mm` représente déjà toute la zone imprimable : `x=0`, `y=0` et le contact exact avec les
+bords droit et bas sont valides. Un changement de machine ne modifie donc jamais silencieusement
+un brouillon existant.
 La hauteur, la surface et l’estimation tarifaire sont recalculées par un service serveur. Le
 navigateur fournit un feedback instantané, mais ne constitue pas la source d’autorité.
 
@@ -38,7 +42,8 @@ pour les autres projets et pour la traçabilité documentaire. L’action est te
 
 Le placement automatique utilise une stratégie bottom-left déterministe : occurrences triées par
 surface, test des deux orientations sur les arêtes disponibles, score minimisant la hauteur puis
-l’abscisse. La validation serveur refuse tout débordement ou chevauchement.
+l’abscisse. La validation serveur refuse les coordonnées négatives et tout bord situé au-delà de
+la laize utile ou de la hauteur de planche, rotations comprises, ainsi que tout chevauchement.
 
 La quantité reste dérivée des occurrences afin de conserver une seule source de vérité. Les ajouts
 batch et les répétitions rangées × colonnes sont atomiques, limités à 200 occurrences par action et
@@ -99,7 +104,9 @@ planche (`cqw` du canvas), pas de la boîte. La mesure du cadre utilise une
 poignées d’angle permettent d’agrandir ; le corps se déplace au curseur
 « grab ».
 
-Le recadrage proposé dans la modal d’import est non destructif. La planche stocke une fenêtre
+L’import démarre directement depuis le panneau « Ajouter des visuels » de la bibliothèque. La
+galerie compacte affiche ensuite l’état de l’analyse et ouvre une modale propre à chaque fichier
+pour les anomalies, les overlays techniques et le recadrage. Ce recadrage est non destructif. La planche stocke une fenêtre
 normalisée `(x, y, largeur, hauteur)` sur `GangSheetSourceAsset`, tandis que l’`AssetVersion`
 originale reste inchangée. Les dimensions physiques proposées et les aperçus utilisent cette
 fenêtre. Dans le PDF HD, une source PDF ou mixte est placée avec un clip PDF natif ; ses tracés,
@@ -107,13 +114,17 @@ textes, polices et images embarquées ne sont donc pas aplatis. Les sources EPS/
 d’abord converties en PDF vectoriel selon la voie existante, puis clippées. Pour une source raster,
 seuls les pixels compris dans la fenêtre sont conservés, sans mise à l’échelle ni rééchantillonnage.
 
-La modal propose un mode Manuel et un mode Auto par fichier. Auto utilise la transparence ou le
+La modale détail reprend les contrôles de la commande par fichier : source complète médiée,
+overlays d’anomalies activables, zoom, fonds de contrôle, cadrage manuel manipulable, cadrage
+automatique recalculé depuis l’original côté serveur et conservation du visuel complet. Le cadrage
+est bloqué dès que le visuel possède une occurrence sur la planche afin de ne pas modifier son ratio
+sans recalculer les dimensions et collisions de la composition. À l’import, le mode Auto peut utiliser la transparence ou le
 fond dominant pour borner les pixels raster. Pour un PDF vectoriel, il unit les limites natives des
 tracés, textes et nuances ; pour un PDF mixte, il ajoute les limites des images embarquées. Les
 formats EPS/AI/PSD/TIFF sans aperçu navigateur sont analysés via leur aperçu serveur sécurisé. La
 proposition visuelle du navigateur reste indicative : lors de l’import, le serveur relit l’original,
 recalcule la fenêtre et audite le type détecté (`vector`, `raster` ou `mixed`). Une modification du
-cadre Auto dans la modal repasse explicitement le fichier en mode Manuel.
+cadre Auto repasse explicitement le fichier en mode Manuel.
 
 L’aperçu client et les diagnostics de finesse/semi-transparence restent volontairement
 rasterisés : ils sont indépendants du livrable HD. Le compositeur crée une page neuve et ne copie
@@ -121,16 +132,20 @@ pas les annotations, liens ou actions interactives des PDF sources. La taille, l
 position sont appliquées dans l’espace physique de la planche en millimètres.
 
 Le stockage Django privé sur le volume média reste la source transactionnelle et le secours local.
-Dès qu’un rendu HD est prêt, une seconde tâche Celery synchronise le PDF sur le Shared Drive dans
-`Gang Sheets/AAAA/MM/C-<client>/GS-<planche>/`. Chaque révision possède un nom distinct et une
-empreinte SHA-256 enregistrée dans `GangSheetDriveSync`. La tâche est idempotente, ses échecs sont
-audités et aucun identifiant Drive n’est envoyé au portail client.
+Dès qu’une planche validée est rattachée à une commande, une tâche Celery synchronise le PDF HD et
+les assets source dans `Commandes/…/<commande>/00_source_Client/`. Le dossier `01_Production` est
+créé vide et réservé à l’atelier. Il n’y a plus de staging `Gang Sheets/`. Chaque révision possède
+un nom distinct et une empreinte SHA-256 enregistrée dans `GangSheetDriveSync`. La tâche est
+idempotente, ses échecs sont audités et aucun identifiant Drive n’est envoyé au portail client.
 
 ## Sécurité
 
 - Tous les objets client sont filtrés par `Customer` et exposés par UUID public.
 - Une occurrence ne peut référencer que la version courante analysée d’un asset de sa galerie.
 - Les coordonnées de crop sont revalidées côté serveur et contraintes à la surface du visuel.
+- Le cadre manuel est calculé sur les limites rendues du fichier, réinitialisé après chaque échange HTMX et peut être tracé directement sur l’aperçu.
+- Le recadrage automatique reconstitue l’upload interne depuis le nom et le MIME de l’`AssetVersion`; les coordonnées du navigateur sont ignorées.
+- Les demandes d’auto-recadrage sont limitées par acteur et client avant toute lecture ou analyse du fichier privé.
 - Le mode Auto ignore les coordonnées proposées par le navigateur et recalcule depuis l’original.
 - Les membres `readonly` ne peuvent modifier, rendre ou valider une planche.
 - Aucun chemin de stockage ni `MEDIA_URL` n’est exposé.
@@ -142,12 +157,13 @@ audités et aucun identifiant Drive n’est envoyé au portail client.
 Une planche autonome validée crée, sur action explicite et idempotente, un `B2BOrderProject` en
 mode `READY_GANG_SHEET`. Ce projet contient exactement une ligne et un nouvel `Asset` : le PDF
 final produit par le serveur. Les fichiers sources restent dans la galerie et ne sont pas recopiés
-dans la commande. Son empreinte et ses octets sont conservés. Le PDF HD repasse ensuite dans le
-contrôle qualité du tunnel classique afin de produire l’aperçu et de détecter les détails fins et
-les semi-transparences. Sa résolution globale n’est toutefois pas déduite du plus grand visuel
-embarqué et aucun DPI artificiel n’est annoncé pour la planche : le contrôle distingue les
-éléments vectoriels des images raster conservées à leur définition source. Le client choisit la
-couleur du support, valide le contrôle, puis transmet le projet avec le tunnel habituel.
+dans la commande. Son empreinte et ses octets sont conservés. Le PDF HD est rattaché au projet
+pour le workflow Atelier ; le client ne revalide plus ce livrable dans une fiche projet séparée.
+Dans le Studio, il choisit la **couleur du support**, confirme **les visuels présents sur la
+planche**, puis transmet / paie via `.../gang-sheets/<id>/checkout/`. Le devis TTC
+(impression, préparation, port, TVA) est affiché dans l’inspecteur et se recalcule
+au changement de livraison sans défiler. La page
+`create-order/` reste un repli technique, plus liée depuis l’éditeur.
 
 L’asset final est relié à `GangSheet.production_asset`. Le portail client peut en afficher l’aperçu
 basse définition mais refuse son téléchargement et masque les actions de remplacement/suppression.
@@ -156,19 +172,21 @@ d’une image interne du PDF, tout en conservant les overlays de finesse et de s
 ainsi que l’obligation de couleur support. Le PDF HD reste servi uniquement au staff autorisé. Lors du
 checkout, la commande référence la même `AssetVersion`, donc le même fichier, puis la planche
 validée est rattachée à la commande et devient visible dans le panneau Production Atelier.
-Lorsque `GOOGLE_DRIVE_SYNC_ENABLED` est actif, le checkout refuse la création de la commande tant
+Une planche sauvegardée reste un catalogue : le Studio conserve le CTA « Je commande » après
+une commande existante. Un nouveau projet `READY_GANG_SHEET` réutilise `production_asset`
+(même fichier HD) ; les commandes précédentes ne sont pas écrasées. Lorsque `GOOGLE_DRIVE_SYNC_ENABLED` est actif, le checkout refuse la création de la commande tant
 que la révision HD courante n’est pas marquée synchronisée sur Drive. L’upload de commande conserve
 ensuite son workflow Drive historique dans l’arborescence `Commandes/`.
 
-Dès que le PDF HD est sécurisé dans un projet `READY_GANG_SHEET`, le client peut retirer la Gang
-Sheet de sa bibliothèque, y compris avant la création effective de la commande. La suppression
-n’est autorisée que si la planche validée référence l’asset de production réellement porté par une
-ligne de ce projet. Lorsque Google Drive est actif, la révision HD courante doit également être
-marquée synchronisée. Le projet, l’`AssetVersion` HD et, lorsqu’ils existent, la commande et son
-`OrderUpload` restent conservés. Le caractère non modifiable du livrable est alors dérivé du mode
-`READY_GANG_SHEET`, et non plus de la seule présence de la Gang Sheet supprimée. La copie locale
-propre au builder est nettoyée ; les artefacts déjà transmis au workflow de commande, à Drive et à
-la production ne sont pas supprimés.
+Dès que le PDF HD est sécurisé, le client peut retirer la Gang Sheet de sa bibliothèque, y
+compris après une commande. La bibliothèque n’est pas un historique de commandes : les cartes
+restent uniformes et mènent au studio. Lorsque Google Drive est actif, la révision HD courante
+doit d’abord être marquée synchronisée. Le projet, l’`AssetVersion` HD et, lorsqu’ils existent,
+la commande et son `OrderUpload` restent conservés. Le caractère non modifiable du livrable HD
+est dérivé du mode `READY_GANG_SHEET` / de l’asset de production, et non plus de la seule
+présence de la Gang Sheet. La copie locale propre au builder est nettoyée ; les artefacts déjà
+transmis au workflow de commande, à Drive et à la production ne sont pas supprimés. Sur une
+recommande, la quantité reste éditable même si la ligne porte le PDF HD.
 
 ## Alternatives refusées
 

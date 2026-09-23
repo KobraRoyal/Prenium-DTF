@@ -11,10 +11,15 @@
         <th>N° OF</th>
         {% endif %}
         <th>N° commande</th>
-        <th>{% if variant == "staff" %}Réf. client{% else %}Votre réf.{% endif %}</th>
+        {% if variant != "staff" %}
+        <th>Votre réf.</th>
+        {% endif %}
         <th>Statut</th>
         <th>Total</th>
         <th>Créée le</th>
+        {% if variant == "client" %}
+        <th>Remise prévue</th>
+        {% endif %}
         <th><span class="sr-only">Actions</span></th>
       </tr>
     </thead>
@@ -52,9 +57,10 @@
             {% endif %}
           </div>
         </td>
+        {% if variant != "staff" %}
         <td>
           <div class="ui-order-secondary">
-            <span class="ui-order-secondary__label">{% if variant == "staff" %}Réf. client{% else %}Votre réf.{% endif %}</span>
+            <span class="ui-order-secondary__label">Votre réf.</span>
             {% if order|order_client_ref %}
             <span class="ui-order-secondary__value">{{ order|order_client_ref }}</span>
             {% else %}
@@ -62,14 +68,10 @@
             {% endif %}
           </div>
         </td>
+        {% endif %}
         <td>
           <div class="ui-table-status-stack">
-            <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-            {% if variant == "staff" %}
-            <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
-            {% endif %}
-            {% if order.awaits_client_payment %}<span class="ui-inline-flag">Paiement non finalisé</span>{% endif %}
-            {% if order.pricing_status != 'priced' %}<span class="ui-inline-flag">Tarif à confirmer</span>{% endif %}
+            <span class="badge whitespace-nowrap {{ order.operational_status.tone }}">{{ order.operational_status.label }}</span>
           </div>
         </td>
         <td>
@@ -91,14 +93,28 @@
             <time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y H:i" }}</time>
           </div>
         </td>
+        {% if variant == "client" %}
+        <td>
+          <div class="ui-order-secondary">
+            <span class="ui-order-secondary__label">{{ order.client_handover.label }}</span>
+            {% if order.client_handover.occurred_at %}
+            <span class="ui-order-secondary__value">{{ order.client_handover.value }}{% if order.client_handover.value %} · {% endif %}<time datetime="{{ order.client_handover.occurred_at|date:'c' }}">{{ order.client_handover.occurred_at|date:"d/m/Y" }}</time></span>
+            {% else %}
+            <span class="ui-order-secondary__value{% if order.client_handover.value == 'À confirmer' %} muted{% endif %}">{{ order.client_handover.value }}</span>
+            {% endif %}
+          </div>
+        </td>
+        {% endif %}
         <td>
           <div class="ui-table-actions">
             {% if variant == "staff" %}
             <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
             {% elif order.awaits_client_payment %}
             <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}?panel=billing&amp;pay=1">Payer</a>
+            {% include "portal/client/partials/order_delete_button.html" %}
             {% else %}
             <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
+            {% include "portal/client/partials/order_delete_button.html" %}
             {% endif %}
           </div>
         </td>
@@ -126,8 +142,6 @@
         {% if variant == "staff" %}
         <p class="muted text-xs">Client</p>
         <p class="text-sm">{{ order.customer.name }}</p>
-        <p class="muted mt-1 text-xs">Réf. client</p>
-        <p class="text-sm break-words">{% if order|order_client_ref %}{{ order|order_client_ref }}{% else %}<span class="muted">—</span>{% endif %}</p>
         {% else %}
         <p class="muted text-xs">Votre réf.</p>
         <p class="text-sm break-words">{% if order|order_client_ref %}{{ order|order_client_ref }}{% else %}<span class="muted">—</span>{% endif %}</p>
@@ -135,16 +149,7 @@
       </div>
     </div>
     <div class="mt-3 flex flex-wrap items-center gap-2">
-      <span class="badge {{ order.status|badge_tone }}">{{ order.status|human_status }}</span>
-      {% if variant == "staff" %}
-      <span class="badge {{ order.billing_mode|badge_tone }}" title="{{ order.billing_mode|human_status }}">{{ order.billing_mode|settlement_badge }}</span>
-      {% endif %}
-      {% if order.awaits_client_payment %}
-      <span class="ui-inline-flag">Paiement non finalisé</span>
-      {% endif %}
-      {% if order.pricing_status != "priced" %}
-      <span class="ui-inline-flag">Tarif à confirmer</span>
-      {% endif %}
+      <span class="badge whitespace-nowrap {{ order.operational_status.tone }}">{{ order.operational_status.label }}</span>
       {% if order.pricing_status != "priced" %}
       <span class="text-sm">Total : <span class="muted">En attente</span></span>
       {% else %}
@@ -152,15 +157,27 @@
       {% endif %}
     </div>
     <p class="muted mt-2 text-xs">Créée le {{ order.created_at|date:"d/m/Y H:i" }}</p>
-    <div class="mt-4 flex flex-wrap gap-2">
+    {% if variant == "client" %}
+    <p class="muted mt-1 text-xs">{{ order.client_handover.label }} : {% if order.client_handover.occurred_at %}{{ order.client_handover.value }}{% if order.client_handover.value %} · {% endif %}<time datetime="{{ order.client_handover.occurred_at|date:'c' }}">{{ order.client_handover.occurred_at|date:"d/m/Y" }}</time>{% else %}{{ order.client_handover.value }}{% endif %}</p>
+    {% endif %}
+    <div class="mt-4 flex flex-wrap items-center gap-2">
       {% if variant == "staff" %}
       <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-order-detail' order_public_id=order.public_id %}">Fiche</a>
       {% elif order.awaits_client_payment %}
       <a class="ui-btn ui-btn-primary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}?panel=billing&amp;pay=1">Payer</a>
+      {% include "portal/client/partials/order_delete_button.html" %}
       {% else %}
       <a class="ui-btn ui-btn-secondary" href="{% url 'portal:client-order-detail' customer_public_id=customer.public_id order_public_id=order.public_id %}">Ouvrir</a>
+      {% include "portal/client/partials/order_delete_button.html" %}
       {% endif %}
     </div>
   </article>
   {% endfor %}
 </div>
+{% if variant == "client" %}
+<div class="client-order-delete-dialogs">
+  {% for order in orders %}
+  {% include "portal/client/partials/order_delete_dialog.html" with next_target="list" %}
+  {% endfor %}
+</div>
+{% endif %}

@@ -7,6 +7,10 @@ from django.utils import timezone
 from apps.accounts.services.access import AccessScopeService
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
+from apps.billing.services.production_payment_gate import (
+    order_has_captured_payment,
+    production_start_blocked_reason,
+)
 from apps.orders.models import Order
 from apps.production.models import (
     ProductionJob,
@@ -85,6 +89,13 @@ class ProductionMachineAssignmentService:
                     raise ValidationError("Cette imprimante n’est pas disponible.")
                 if locked_job.order.status == Order.Status.CANCELLED:
                     raise ValidationError("Une commande annulée ne peut pas être attribuée.")
+                if (
+                    locked_job.order.billing_mode == Order.BillingMode.IMMEDIATE
+                    and not order_has_captured_payment(locked_job.order)
+                ):
+                    payment_block = production_start_blocked_reason(locked_job.order)
+                    if payment_block is not None:
+                        raise ValidationError(payment_block)
                 if locked_job.status not in self.mutable_statuses:
                     raise ValidationError("Ce dossier ne peut plus être réattribué.")
 

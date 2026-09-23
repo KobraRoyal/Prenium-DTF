@@ -76,6 +76,21 @@ perdre l'historique et d'obtenir une analyse technique avant transmission à IDS
   421 tests, Ruff, formatage, JavaScript, Django et migrations conformes, recette navigateur sur
   le projet signalé et sur un projet temporaire avant analyse.
 
+## Extension client — dépôts par lots (septembre 2026)
+
+Branche : `codex/client-upload-batch-workflow`.
+
+- [x] Dépôt par glisser-déposer et sélection, limité à 5 fichiers par lot côté navigateur et serveur.
+- [x] Création initiale et ajout de lots sur un projet existant ; une ligne et une analyse par fichier.
+- [x] Liste responsive avec quantité, couleur du support, alertes et action « Analyse » par visuel.
+- [x] Conservation des dépôts réussis et retour explicite pour chaque fichier refusé.
+- [x] Protection des saisies en cours pendant le rafraîchissement de l'analyse.
+- [x] Tests fonctionnels, refus du sixième fichier et accès inter-client ; revue sécurité indépendante.
+- [x] Recette navigateur desktop/mobile, compilation CSS et contrôles ciblés.
+- [x] Documentation du parcours et graphe AST actualisés.
+- [x] Enregistrement automatique de la quantité et de la couleur du support, sans bouton de
+  sauvegarde, et validation atomique de tous les visuels prêts par une seule confirmation.
+
 ## Compatibilité
 
 - `OrderUpload` conserve tous ses champs et son comportement existants ;

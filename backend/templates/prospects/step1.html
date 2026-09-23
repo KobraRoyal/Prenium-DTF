@@ -6,90 +6,140 @@
 {% block prospect_section_head %}
 <div class="landing-section-head prospect-tunnel__intro prospect-step1__intro">
   <h2 class="prospect-tunnel__title">Votre entreprise</h2>
-  <p class="landing-auth-lead prospect-tunnel__lead">Identité et contact. Aucun document à transmettre.</p>
+  <p class="landing-auth-lead prospect-tunnel__lead">Vos coordonnées, adresse professionnelle et identifiant d’entreprise. Aucun document à transmettre.</p>
 </div>
 {% endblock %}
 
 {% block prospect_inner %}
-<form method="post" class="ui-form-stack prospect-form prospect-step1" novalidate data-submit-loading x-data="{ country: '{{ form.country.value|default:'FR' }}' }">
+<form method="post" class="ui-form-stack prospect-form prospect-step1" novalidate data-inline-required data-submit-loading data-prospect-error-recovery x-data="{ country: '{{ form.country.value|default:'FR' }}' }">
   {% csrf_token %}
+  {% if form.errors %}
+  <div class="alert alert--danger prospect-form__error-summary" data-prospect-error-summary role="alert" tabindex="-1" aria-labelledby="form-errors-title">
+    <p id="form-errors-title"><strong>Vérifiez les informations indiquées ci-dessous.</strong></p>
+    <ul>
+      {% for field in form %}{% if field.errors %}<li><a href="#id_{{ field.name }}">{{ field.label }} : {{ field.errors.0 }}</a></li>{% endif %}{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
   {% if form.non_field_errors %}
   <div class="alert alert--danger prospect-step1__alert" role="alert">{{ form.non_field_errors.0 }}</div>
   {% endif %}
 
   <section class="prospect-form__section prospect-step1__section" aria-labelledby="contact-heading">
-    <h3 id="contact-heading" class="prospect-form__section-title">Vos coordonnées</h3>
+    <div class="prospect-form__section-head">
+      <div>
+        <h3 id="contact-heading" class="prospect-form__section-title">Vos coordonnées</h3>
+        <p class="prospect-form__section-note">Le contact qui suivra la demande avec notre équipe.</p>
+      </div>
+      <span class="prospect-form__required-note">Tous requis</span>
+    </div>
     <div class="prospect-form__panel prospect-step1__surface prospect-step1__contact-grid">
       <div class="ui-field-group prospect-step1__field">
         <label class="ui-label" for="id_first_name">{{ form.first_name.label }}</label>
-        <input class="ui-input product-field-input w-full{% if form.first_name.errors %} ui-input--error{% endif %}" id="id_first_name" name="first_name" value="{{ form.first_name.value|default:'' }}" required autocomplete="given-name" placeholder="Camille">
-        {% if form.first_name.errors %}<p class="ui-field-error" role="alert">{{ form.first_name.errors.0 }}</p>{% endif %}
+        <input class="ui-input product-field-input w-full{% if form.first_name.errors %} ui-input--error{% endif %}" id="id_first_name" name="first_name" value="{{ form.first_name.value|default:'' }}" required autocomplete="given-name" placeholder="Camille" aria-describedby="first-name-error"{% if form.first_name.errors %} aria-invalid="true"{% endif %}>
+        <p id="first-name-error" class="ui-field-error ui-error-text" role="alert"{% if not form.first_name.errors %} hidden{% endif %}>{% if form.first_name.errors %}{{ form.first_name.errors.0 }}{% endif %}</p>
       </div>
       <div class="ui-field-group prospect-step1__field">
         <label class="ui-label" for="id_last_name">{{ form.last_name.label }}</label>
-        <input class="ui-input product-field-input w-full{% if form.last_name.errors %} ui-input--error{% endif %}" id="id_last_name" name="last_name" value="{{ form.last_name.value|default:'' }}" required autocomplete="family-name" placeholder="Martin">
-        {% if form.last_name.errors %}<p class="ui-field-error" role="alert">{{ form.last_name.errors.0 }}</p>{% endif %}
+        <input class="ui-input product-field-input w-full{% if form.last_name.errors %} ui-input--error{% endif %}" id="id_last_name" name="last_name" value="{{ form.last_name.value|default:'' }}" required autocomplete="family-name" placeholder="Martin" aria-describedby="last-name-error"{% if form.last_name.errors %} aria-invalid="true"{% endif %}>
+        <p id="last-name-error" class="ui-field-error ui-error-text" role="alert"{% if not form.last_name.errors %} hidden{% endif %}>{% if form.last_name.errors %}{{ form.last_name.errors.0 }}{% endif %}</p>
       </div>
       <div class="ui-field-group prospect-step1__field">
         <label class="ui-label" for="id_email">{{ form.email.label }}</label>
-        <input class="ui-input product-field-input w-full{% if form.email.errors %} ui-input--error{% endif %}" id="id_email" name="email" type="email" value="{{ form.email.value|default:'' }}" required autocomplete="email" inputmode="email" placeholder="camille@votre-societe.fr">
-        {% if form.email.errors %}<p class="ui-field-error" role="alert">{{ form.email.errors.0 }}</p>{% endif %}
+        <input class="ui-input product-field-input w-full{% if form.email.errors %} ui-input--error{% endif %}" id="id_email" name="email" type="email" value="{{ form.email.value|default:'' }}" required autocomplete="email" inputmode="email" placeholder="camille@votre-societe.fr" data-invalid-message="Indiquez un e-mail professionnel valide." aria-describedby="email-error"{% if form.email.errors %} aria-invalid="true"{% endif %}>
+        <p id="email-error" class="ui-field-error ui-error-text" role="alert"{% if not form.email.errors %} hidden{% endif %}>{% if form.email.errors %}{{ form.email.errors.0 }}{% endif %}</p>
       </div>
       <div class="ui-field-group prospect-step1__field">
         <label class="ui-label" for="id_phone">{{ form.phone.label }}</label>
-        <input class="ui-input product-field-input w-full{% if form.phone.errors %} ui-input--error{% endif %}" id="id_phone" name="phone" type="tel" value="{{ form.phone.value|default:'' }}" required autocomplete="tel" inputmode="tel" placeholder="+33 6 12 34 56 78">
-        {% if form.phone.errors %}<p class="ui-field-error" role="alert">{{ form.phone.errors.0 }}</p>{% endif %}
+        <input class="ui-input product-field-input w-full{% if form.phone.errors %} ui-input--error{% endif %}" id="id_phone" name="phone" type="tel" value="{{ form.phone.value|default:'' }}" required autocomplete="tel" inputmode="tel" placeholder="+33 6 12 34 56 78" aria-describedby="phone-error"{% if form.phone.errors %} aria-invalid="true"{% endif %}>
+        <p id="phone-error" class="ui-field-error ui-error-text" role="alert"{% if not form.phone.errors %} hidden{% endif %}>{% if form.phone.errors %}{{ form.phone.errors.0 }}{% endif %}</p>
       </div>
     </div>
   </section>
 
   <section class="prospect-form__section prospect-step1__section" aria-labelledby="company-heading">
-    <h3 id="company-heading" class="prospect-form__section-title">Votre structure</h3>
+    <div class="prospect-form__section-head">
+      <div>
+        <h3 id="company-heading" class="prospect-form__section-title">Votre structure</h3>
+        <p class="prospect-form__section-note">Ces informations nous aident à orienter votre demande.</p>
+      </div>
+    </div>
     <div class="prospect-form__panel prospect-step1__surface prospect-step1__company-grid">
       <div class="ui-field-group prospect-step1__field prospect-step1__field--full">
         <label class="ui-label" for="id_company">{{ form.company.label }}</label>
-        <input class="ui-input product-field-input w-full{% if form.company.errors %} ui-input--error{% endif %}" id="id_company" name="company" value="{{ form.company.value|default:'' }}" required autocomplete="organization" placeholder="Nom commercial ou raison sociale">
-        {% if form.company.errors %}<p class="ui-field-error" role="alert">{{ form.company.errors.0 }}</p>{% endif %}
-      </div>
-      <div class="ui-field-group prospect-step1__field">
-        <label class="ui-label" for="id_country">{{ form.country.label }}</label>
-        <select class="ui-input product-field-input w-full{% if form.country.errors %} ui-input--error{% endif %}" id="id_country" name="country" required x-model="country" autocomplete="country">
-          {% for value, label in form.country.field.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
-        </select>
-        {% if form.country.errors %}<p class="ui-field-error" role="alert">{{ form.country.errors.0 }}</p>{% endif %}
+        <input class="ui-input product-field-input w-full{% if form.company.errors %} ui-input--error{% endif %}" id="id_company" name="company" value="{{ form.company.value|default:'' }}" required autocomplete="organization" placeholder="Nom commercial ou raison sociale" aria-describedby="company-error"{% if form.company.errors %} aria-invalid="true"{% endif %}>
+        <p id="company-error" class="ui-field-error ui-error-text" role="alert"{% if not form.company.errors %} hidden{% endif %}>{% if form.company.errors %}{{ form.company.errors.0 }}{% endif %}</p>
       </div>
       <div class="ui-field-group prospect-step1__field" x-show="country === 'FR'" x-cloak>
         <label class="ui-label" for="id_siren">Numéro SIREN</label>
-        <input class="ui-input product-field-input w-full{% if form.siren.errors %} ui-input--error{% endif %}" id="id_siren" name="siren" value="{{ form.siren.value|default:'' }}" inputmode="numeric" maxlength="14" :required="country === 'FR'" placeholder="123 456 789">
-        {% if form.siren.errors %}<p class="ui-field-error" role="alert">{{ form.siren.errors.0 }}</p>{% endif %}
+        <input class="ui-input product-field-input w-full{% if form.siren.errors %} ui-input--error{% endif %}" id="id_siren" name="siren" value="{{ form.siren.value|default:'' }}" inputmode="numeric" maxlength="14" :required="country === 'FR'" placeholder="123 456 789" aria-describedby="siren-error"{% if form.siren.errors %} aria-invalid="true"{% endif %}>
+        <p id="siren-error" class="ui-field-error ui-error-text" role="alert"{% if not form.siren.errors %} hidden{% endif %}>{% if form.siren.errors %}{{ form.siren.errors.0 }}{% endif %}</p>
       </div>
       <div class="ui-field-group prospect-step1__field" x-show="country !== 'FR'" x-cloak>
         <label class="ui-label" for="id_vat_number">N° de TVA / identifiant fiscal</label>
-        <input class="ui-input product-field-input w-full{% if form.vat_number.errors %} ui-input--error{% endif %}" id="id_vat_number" name="vat_number" value="{{ form.vat_number.value|default:'' }}" maxlength="40" :required="country !== 'FR'" placeholder="Ex. BE0123456789">
-        {% if form.vat_number.errors %}<p class="ui-field-error" role="alert">{{ form.vat_number.errors.0 }}</p>{% endif %}
+        <input class="ui-input product-field-input w-full{% if form.vat_number.errors %} ui-input--error{% endif %}" id="id_vat_number" name="vat_number" value="{{ form.vat_number.value|default:'' }}" maxlength="40" :required="country !== 'FR'" placeholder="Ex. BE0123456789" aria-describedby="vat-number-error"{% if form.vat_number.errors %} aria-invalid="true"{% endif %}>
+        <p id="vat-number-error" class="ui-field-error ui-error-text" role="alert"{% if not form.vat_number.errors %} hidden{% endif %}>{% if form.vat_number.errors %}{{ form.vat_number.errors.0 }}{% endif %}</p>
       </div>
 
-      <fieldset class="prospect-step1__activity prospect-step1__field--full">
+      <fieldset id="id_activity_type" class="prospect-step1__activity prospect-step1__field--full">
         <legend>{{ form.activity_type.label }}</legend>
         <div class="prospect-step1__activity-grid" role="radiogroup">
           {% for value, label in form.activity_type.field.choices %}
           {% if value %}
           <label class="prospect-step1__activity-card">
-            <input type="radio" name="activity_type" value="{{ value }}" {% if form.activity_type.value == value %}checked{% endif %} required>
+            <input id="id_activity_type_{{ forloop.counter }}" type="radio" name="activity_type" value="{{ value }}" {% if form.activity_type.value == value %}checked{% endif %} required{% if forloop.first %} aria-describedby="activity-type-error"{% if form.activity_type.errors %} aria-invalid="true"{% endif %}{% endif %}>
+            <span class="prospect-step1__activity-marker" aria-hidden="true"></span>
             <span class="prospect-step1__activity-copy">
               <strong>{{ label }}</strong>
             </span>
-            <span class="prospect-step1__activity-check" aria-hidden="true">✓</span>
           </label>
           {% endif %}
           {% endfor %}
         </div>
-        {% if form.activity_type.errors %}<p class="ui-field-error" role="alert">{{ form.activity_type.errors.0 }}</p>{% endif %}
+        <p id="activity-type-error" class="ui-field-error ui-error-text" role="alert"{% if not form.activity_type.errors %} hidden{% endif %}>{% if form.activity_type.errors %}{{ form.activity_type.errors.0 }}{% endif %}</p>
       </fieldset>
     </div>
   </section>
 
-  <div class="prospect-form__footer prospect-step1__footer">
+  <section class="prospect-form__section prospect-step1__section" aria-labelledby="address-heading">
+    <div class="prospect-form__section-head">
+      <div>
+        <h3 id="address-heading" class="prospect-form__section-title">Adresse professionnelle</h3>
+        <p class="prospect-form__section-note">Elle sera reprise sur votre fiche client pour éviter une nouvelle saisie.</p>
+      </div>
+    </div>
+    <div class="prospect-form__panel prospect-step1__surface prospect-step1__address-grid">
+      <div class="ui-field-group prospect-step1__field prospect-step1__field--full">
+        <label class="ui-label" for="id_billing_address_line1">{{ form.billing_address_line1.label }}</label>
+        <input class="ui-input product-field-input w-full{% if form.billing_address_line1.errors %} ui-input--error{% endif %}" id="id_billing_address_line1" name="billing_address_line1" value="{{ form.billing_address_line1.value|default:'' }}" required autocomplete="address-line1" placeholder="12 rue des Ateliers" aria-describedby="billing-address-line1-error"{% if form.billing_address_line1.errors %} aria-invalid="true"{% endif %}>
+        <p id="billing-address-line1-error" class="ui-field-error ui-error-text" role="alert"{% if not form.billing_address_line1.errors %} hidden{% endif %}>{% if form.billing_address_line1.errors %}{{ form.billing_address_line1.errors.0 }}{% endif %}</p>
+      </div>
+      <div class="ui-field-group prospect-step1__field prospect-step1__field--full">
+        <label class="ui-label" for="id_billing_address_line2">{{ form.billing_address_line2.label }} <span class="prospect-form__optional">(facultatif)</span></label>
+        <input class="ui-input product-field-input w-full{% if form.billing_address_line2.errors %} ui-input--error{% endif %}" id="id_billing_address_line2" name="billing_address_line2" value="{{ form.billing_address_line2.value|default:'' }}" autocomplete="address-line2" placeholder="Bâtiment, étage, lieu-dit" aria-describedby="billing-address-line2-error"{% if form.billing_address_line2.errors %} aria-invalid="true"{% endif %}>
+        <p id="billing-address-line2-error" class="ui-field-error ui-error-text" role="alert"{% if not form.billing_address_line2.errors %} hidden{% endif %}>{% if form.billing_address_line2.errors %}{{ form.billing_address_line2.errors.0 }}{% endif %}</p>
+      </div>
+      <div class="ui-field-group prospect-step1__field">
+        <label class="ui-label" for="id_billing_postal_code">{{ form.billing_postal_code.label }}</label>
+        <input class="ui-input product-field-input w-full{% if form.billing_postal_code.errors %} ui-input--error{% endif %}" id="id_billing_postal_code" name="billing_postal_code" value="{{ form.billing_postal_code.value|default:'' }}" required autocomplete="postal-code" placeholder="75011" aria-describedby="billing-postal-code-error"{% if form.billing_postal_code.errors %} aria-invalid="true"{% endif %}>
+        <p id="billing-postal-code-error" class="ui-field-error ui-error-text" role="alert"{% if not form.billing_postal_code.errors %} hidden{% endif %}>{% if form.billing_postal_code.errors %}{{ form.billing_postal_code.errors.0 }}{% endif %}</p>
+      </div>
+      <div class="ui-field-group prospect-step1__field">
+        <label class="ui-label" for="id_billing_city">{{ form.billing_city.label }}</label>
+        <input class="ui-input product-field-input w-full{% if form.billing_city.errors %} ui-input--error{% endif %}" id="id_billing_city" name="billing_city" value="{{ form.billing_city.value|default:'' }}" required autocomplete="address-level2" placeholder="Paris" aria-describedby="billing-city-error"{% if form.billing_city.errors %} aria-invalid="true"{% endif %}>
+        <p id="billing-city-error" class="ui-field-error ui-error-text" role="alert"{% if not form.billing_city.errors %} hidden{% endif %}>{% if form.billing_city.errors %}{{ form.billing_city.errors.0 }}{% endif %}</p>
+      </div>
+      <div class="ui-field-group prospect-step1__field prospect-step1__field--full">
+        <label class="ui-label" for="id_country">{{ form.country.label }}</label>
+        <select class="ui-input product-field-input w-full{% if form.country.errors %} ui-input--error{% endif %}" id="id_country" name="country" required x-model="country" autocomplete="country" aria-describedby="country-error"{% if form.country.errors %} aria-invalid="true"{% endif %}>
+          {% for value, label in form.country.field.choices %}<option value="{{ value }}"{% if form.country.value == value or not form.country.value and value == 'FR' %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <p id="country-error" class="ui-field-error ui-error-text" role="alert"{% if not form.country.errors %} hidden{% endif %}>{% if form.country.errors %}{{ form.country.errors.0 }}{% endif %}</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="prospect-form__footer prospect-journey__footer">
     <a class="ui-btn ui-btn-secondary prospect-form__btn-secondary" href="{% url 'home' %}">Retour au site</a>
     <button type="submit" class="ui-btn ui-btn-primary ui-btn-wide prospect-form__btn-primary">Continuer <span aria-hidden="true">→</span></button>
   </div>

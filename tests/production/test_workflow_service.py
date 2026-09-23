@@ -2,14 +2,17 @@ from unittest.mock import patch
 
 import pytest
 from apps.auditlog.models import AuditLogEntry
+from apps.billing.models import Payment
 from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
+from apps.orders.services.business_days import add_business_days
 from apps.production.models import ProductionJob, ProductionJobScanLog, ProductionJobTransition
 from apps.production.services.scans import ProductionScanService
 from apps.production.services.workflow import ProductionWorkflowService
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 def create_customer_scope(email: str, customer_name: str):
@@ -28,6 +31,63 @@ def create_order(customer, actor, *, billing_mode=Order.BillingMode.DEFERRED):
         currency="EUR",
         subtotal_amount="0.00",
         total_amount="0.00",
+    )
+
+
+@pytest.mark.django_db
+def test_immediate_order_cannot_enter_workflow_until_its_own_payment_is_captured():
+    service = ProductionWorkflowService()
+    actor, customer, _ = create_customer_scope("unpaid-flow@example.com", "Unpaid")
+    other_actor, other_customer, _ = create_customer_scope("other-flow@example.com", "Other tenant")
+    order = create_order(customer, actor, billing_mode=Order.BillingMode.IMMEDIATE)
+    other_order = create_order(
+        other_customer, other_actor, billing_mode=Order.BillingMode.IMMEDIATE
+    )
+    job = service.get_or_create_for_order(order=order)
+    assert (
+        ProductionScanService().resolve_scan(
+            scan_identifier=job.scan_identifier, actor=actor, source="test"
+        )
+        is None
+    )
+    Payment.objects.create(
+        order=other_order,
+        amount="42.00",
+        currency="EUR",
+        status=Payment.Status.CAPTURED,
+        provider=Payment.Provider.STRIPE,
+    )
+
+    assert service.get_staff_job_for_document(order_public_id=order.public_id) == (None, None)
+    assert service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.BLOCKED,
+        actor=actor,
+        source="test",
+    ) == (None, None, None)
+    job.refresh_from_db()
+    assert job.status == ProductionJob.Status.QUEUED
+
+    Payment.objects.create(
+        order=order,
+        amount="42.00",
+        currency="EUR",
+        status=Payment.Status.CAPTURED,
+        provider=Payment.Provider.PAYPAL,
+    )
+    result_order, result_job, _ = service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.IN_PROGRESS,
+        actor=actor,
+        source="test",
+    )
+    assert result_order.pk == order.pk
+    assert result_job.status == ProductionJob.Status.IN_PROGRESS
+    assert (
+        ProductionScanService().resolve_scan(
+            scan_identifier=job.scan_identifier, actor=actor, source="test"
+        )
+        is not None
     )
 
 
@@ -68,6 +128,33 @@ def test_transition_job_updates_status_creates_history_and_audit():
     assert AuditLogEntry.objects.filter(
         action="production.status_changed",
         target_public_id=updated_job.public_id,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_pickup_production_start_sets_tomorrows_client_handover_date():
+    service = ProductionWorkflowService()
+    actor, customer, _membership = create_customer_scope("pickup-eta@example.com", "Acme")
+    staff_user = get_user_model().objects.create_user(
+        email="pickup-eta-staff@example.com", password="pass", is_staff=True
+    )
+    order = create_order(customer, actor)
+    order.shipping_method_code = "pickup"
+    order.save(update_fields=["shipping_method_code", "updated_at"])
+
+    service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.IN_PROGRESS,
+        actor=staff_user,
+        source="test",
+    )
+
+    order.refresh_from_db()
+    assert order.estimated_handover_date == add_business_days(timezone.localdate(), 1)
+    assert AuditLogEntry.objects.filter(
+        action="order.estimated_handover_date_updated",
+        target_public_id=order.public_id,
+        metadata__source="production_start_pickup_eta",
     ).exists()
 
 
@@ -368,18 +455,20 @@ def test_immediate_atelier_order_cannot_start_production_before_payment():
     order.save(update_fields=["pricing_status", "total_amount", "source", "updated_at"])
     service.get_or_create_for_order(order=order)
 
-    assert service.allowed_target_statuses(
-        current_status=ProductionJob.Status.QUEUED,
-        order=order,
-    ) == [ProductionJob.Status.BLOCKED]
-
-    with pytest.raises(ValidationError, match="paiement"):
-        service.transition_job(
-            order_public_id=order.public_id,
-            to_status=ProductionJob.Status.IN_PROGRESS,
-            actor=staff_user,
-            source="test",
+    assert (
+        service.allowed_target_statuses(
+            current_status=ProductionJob.Status.QUEUED,
+            order=order,
         )
+        == []
+    )
+
+    assert service.transition_job(
+        order_public_id=order.public_id,
+        to_status=ProductionJob.Status.IN_PROGRESS,
+        actor=staff_user,
+        source="test",
+    ) == (None, None, None)
 
 
 @pytest.mark.django_db

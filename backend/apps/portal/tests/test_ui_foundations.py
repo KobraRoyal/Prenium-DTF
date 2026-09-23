@@ -222,7 +222,8 @@ class UiFoundationSourceTests(SimpleTestCase):
         )
         self.assertIsNotNone(toggle)
 
-        self.assertIn("prospect-tunnel.css", portal_entry)
+        self.assertIn("access-management.css", portal_entry)
+        self.assertNotIn("prospect-tunnel.css", portal_entry)
         self.assertIn('content: ["./templates/**/*.html"]', surface_config)
         self.assertIn("corePlugins: []", surface_config)
         shell = source(CSS_DIR / "components" / "shell.css")
@@ -263,11 +264,11 @@ class UiFoundationSourceTests(SimpleTestCase):
             "perms.customers.view_customer",
             "perms.production.view_productionmachine",
             "perms.prospects.view_prospectprofile",
-            "perms.b2b_order_projects.view_b2borderproject",
             "perms.notifications.view_emailtemplate",
             "perms.customers.manage_customer_pricing",
             "perms.gang_sheets.configure_gangsheet",
             "perms.pod.access_pod_atelier",
+            "perms.billing.view_paymentgatewaysettings",
         ]:
             with self.subTest(permission_contract=permission_contract):
                 self.assertIn(permission_contract, staff)
@@ -314,6 +315,7 @@ class UiFoundationSourceTests(SimpleTestCase):
             "components/portal/breadcrumbs/staff_operations.html",
             "components/portal/breadcrumbs/staff_machines.html",
             "components/portal/breadcrumbs/staff_branding.html",
+            "components/portal/breadcrumbs/staff_payments.html",
         ]
         for relative_path in staff_wrappers:
             with self.subTest(relative_path=relative_path):

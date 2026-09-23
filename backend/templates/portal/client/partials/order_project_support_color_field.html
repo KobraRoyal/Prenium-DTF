@@ -20,13 +20,15 @@
       title="Multicolore"
     ></button>
     {% if item %}
+    {% with support_item_id=item.public_id|stringformat:"s" %}
       {% if item.support_color_is_multicolor %}
-        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color="#ffffff" disabled=1 %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_prefix|default:"support-hex-"|add:support_item_id initial_color="#ffffff" disabled=1 %}
       {% elif item.support_color_hex %}
-        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color=item.support_color_hex selected=1 %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_prefix|default:"support-hex-"|add:support_item_id initial_color=item.support_color_hex selected=1 %}
       {% else %}
-        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-"|add:item.public_id initial_color="#ffffff" %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_prefix|default:"support-hex-"|add:support_item_id initial_color="#ffffff" %}
       {% endif %}
+    {% endwith %}
     {% else %}
     {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-new" initial_color="#ffffff" %}
     {% endif %}

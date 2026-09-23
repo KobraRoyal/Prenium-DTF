@@ -1,21 +1,39 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import timedelta
+from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count, Exists, F, OuterRef, Q
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.billing.services.production_payment_gate import (
     order_awaits_client_payment,
+    order_has_captured_payment,
     production_start_blocked_reason,
 )
 from apps.orders.models import Order
 from apps.orders.references import order_business_number, order_client_reference, order_uuid_short
-from apps.production.models import ProductionJob
+from apps.production.models import ProductionJob, ProductionPrintRecord
+from apps.production.services.dashboard_noise import (
+    exclude_dashboard_noise_jobs,
+    exclude_dashboard_noise_orders,
+    exclude_dashboard_noise_print_records,
+)
 from apps.production.services.manufacturing_order_batch import ManufacturingOrderBatchService
 from apps.production.services.staff_order_list_filters import StaffOrderListFilterService
-from apps.production.services.workflow import ProductionWorkflowService
+from apps.production.services.workflow import (
+    ProductionWorkflowService,
+    production_ready_jobs_queryset,
+    production_ready_orders_queryset,
+)
 from apps.uploads.models import OrderUploadDriveSync, OrderUploadReview
+
+
+def _file_count_label(count: int) -> str:
+    return f"{count} fichier" if count == 1 else f"{count} fichiers"
 
 
 class AtelierDashboardService:
@@ -26,7 +44,9 @@ class AtelierDashboardService:
     def build_dashboard(self) -> dict[str, object]:
         all_orders = list(self._unissued_orders_queryset())
         rows = [self._serialize_order(order=order) for order in all_orders]
-        queue_counts = StaffOrderListFilterService().count_by_queue(Order.objects.all())
+        queue_counts = StaffOrderListFilterService().count_by_queue(
+            exclude_dashboard_noise_orders(Order.objects.all())
+        )
         metrics = self._build_metrics(queue_counts)
         batch_service = ManufacturingOrderBatchService()
         unprinted_total = metrics["unprinted"]
@@ -37,11 +57,339 @@ class AtelierDashboardService:
                 metrics=metrics,
                 unprinted_total=unprinted_total,
             ),
+            "activity_kpi_rows": self._build_activity_kpi_rows(),
+            "production_health": self._build_production_health(),
+            "production_trend": self._build_production_trend(),
+            "printed_meterage_trend": self._build_printed_meterage_trend(),
             "printable_count": sum(row["print_eligible"] for row in rows),
             "unprinted_of_total": unprinted_total,
             "unprinted_of_batch_count": min(unprinted_total, batch_service.max_batch_size),
             "batch_print_limit": batch_service.max_batch_size,
         }
+
+    def fresh_inbox_count(self) -> int:
+        """Commandes soumises encore non traitées (OF PDF non émis), hors bruit recette."""
+        queue_counts = StaffOrderListFilterService().count_by_queue(
+            exclude_dashboard_noise_orders(Order.objects.all())
+        )
+        return int(queue_counts.get("unprinted", 0))
+
+    def _build_production_trend(self) -> dict[str, object]:
+        """Historique réel à sept jours : entrées Atelier et commandes terminées."""
+        today = timezone.localdate()
+        dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        entries = {
+            day: exclude_dashboard_noise_orders(production_ready_orders_queryset(Order.objects))
+            .filter(status=Order.Status.SUBMITTED, created_at__date=day)
+            .count()
+            for day in dates
+        }
+        completed = {
+            day: exclude_dashboard_noise_jobs(production_ready_jobs_queryset(ProductionJob.objects))
+            .filter(
+                status=ProductionJob.Status.COMPLETED,
+                updated_at__date=day,
+            )
+            .count()
+            for day in dates
+        }
+        maximum = max([*entries.values(), *completed.values(), 1])
+
+        def points(values: dict) -> list[dict[str, object]]:
+            return [
+                {
+                    "x": round(index * (100 / (len(dates) - 1)), 2),
+                    "y": round(100 - (values[day] / maximum) * 100, 2),
+                    "label": day.strftime("%d/%m"),
+                    "value": values[day],
+                }
+                for index, day in enumerate(dates)
+            ]
+
+        return {
+            "maximum": maximum,
+            "labels": [day.strftime("%d/%m") for day in dates],
+            "entry_values": [entries[day] for day in dates],
+            "completed_values": [completed[day] for day in dates],
+            "entries": points(entries),
+            "completed": points(completed),
+        }
+
+    def build_financial_trend(self) -> dict[str, object]:
+        """CA TTC des commandes validées, pour le pilotage administratif Atelier."""
+        today = timezone.localdate()
+        dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        revenue_by_day = {day: Decimal("0.00") for day in dates}
+        orders_by_day = {day: 0 for day in dates}
+        priced_orders = (
+            exclude_dashboard_noise_orders(production_ready_orders_queryset(Order.objects))
+            .filter(
+                status=Order.Status.SUBMITTED,
+                pricing_status=Order.PricingStatus.PRICED,
+                created_at__date__gte=dates[0],
+            )
+            .values_list("created_at__date", "total_amount")
+        )
+        for created_on, total_amount in priced_orders:
+            if created_on not in revenue_by_day:
+                continue
+            revenue_by_day[created_on] += total_amount or Decimal("0.00")
+            orders_by_day[created_on] += 1
+
+        total = sum(revenue_by_day.values(), Decimal("0.00"))
+        order_count = sum(orders_by_day.values())
+        return {
+            "labels": [day.strftime("%d/%m") for day in dates],
+            "revenue_values": [float(revenue_by_day[day]) for day in dates],
+            "seven_day_total": total,
+            "today_total": revenue_by_day[today],
+            "average_order_total": total / order_count if order_count else Decimal("0.00"),
+            "order_count": order_count,
+        }
+
+    def _build_printed_meterage_trend(self) -> dict[str, object]:
+        """Métrage linéaire issu des preuves d'impression, réimpressions incluses."""
+        today = timezone.localdate()
+        dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        meterage_by_day = {day: Decimal("0.0000") for day in dates}
+        prints_by_day = {day: 0 for day in dates}
+        printed_meterages: list[Decimal] = []
+        print_records = exclude_dashboard_noise_print_records(
+            ProductionPrintRecord.objects.filter(
+                printed_at__date__gte=dates[0],
+                printed_linear_m__isnull=False,
+            )
+        ).values_list("printed_at__date", "printed_linear_m")
+        for printed_on, printed_linear_m in print_records:
+            if printed_on not in meterage_by_day:
+                continue
+            meterage_by_day[printed_on] += printed_linear_m
+            prints_by_day[printed_on] += 1
+            printed_meterages.append(printed_linear_m)
+
+        total = sum(meterage_by_day.values(), Decimal("0.0000"))
+        print_count = sum(prints_by_day.values())
+        today_total = meterage_by_day[today]
+        average_per_print = total / print_count if print_count else Decimal("0.0000")
+        peak_day_total = max(meterage_by_day.values(), default=Decimal("0.0000"))
+        largest_print = max(printed_meterages, default=Decimal("0.0000"))
+        active_day_count = sum(1 for meterage in meterage_by_day.values() if meterage > 0)
+
+        def percentage(value: Decimal, reference: Decimal) -> int:
+            if reference <= 0:
+                return 0
+            return min(100, round((value / reference) * 100))
+
+        return {
+            "seven_day_total": total,
+            "today_total": today_total,
+            "average_per_print": average_per_print,
+            "print_count": print_count,
+            "metric_gauges": [
+                {
+                    "label": "7 jours",
+                    "value": total,
+                    "detail": f"{active_day_count}/7 jours actifs",
+                    "progress": round((active_day_count / len(dates)) * 100),
+                },
+                {
+                    "label": "Aujourd’hui",
+                    "value": today_total,
+                    "detail": "vs pic quotidien",
+                    "progress": percentage(today_total, peak_day_total),
+                },
+                {
+                    "label": "Par impression",
+                    "value": average_per_print,
+                    "detail": "vs plus grand tirage",
+                    "progress": percentage(average_per_print, largest_print),
+                },
+            ],
+        }
+
+    def _build_production_health(self) -> dict[str, list[dict[str, object]]]:
+        """Indicateurs actionnables du responsable de production."""
+        now = timezone.now()
+        today = timezone.localdate()
+        aging_cutoff = now - timedelta(hours=24)
+        seven_day_start = today - timedelta(days=6)
+        orders_url = reverse("portal:staff-order-list")
+
+        job_counts = exclude_dashboard_noise_jobs(
+            production_ready_jobs_queryset(ProductionJob.objects)
+        ).aggregate(
+            blocked=Count(
+                "pk",
+                filter=Q(status=ProductionJob.Status.BLOCKED),
+            ),
+            overdue=Count(
+                "pk",
+                filter=(
+                    ~Q(status=ProductionJob.Status.COMPLETED)
+                    & Q(order__estimated_handover_date__lt=today)
+                ),
+            ),
+            aging=Count(
+                "pk",
+                filter=(
+                    Q(
+                        status__in=(
+                            ProductionJob.Status.QUEUED,
+                            ProductionJob.Status.IN_PROGRESS,
+                        )
+                    )
+                    & (
+                        Q(last_transition_at__lt=aging_cutoff)
+                        | Q(
+                            last_transition_at__isnull=True,
+                            created_at__lt=aging_cutoff,
+                        )
+                    )
+                ),
+            ),
+        )
+
+        recent_prints = exclude_dashboard_noise_print_records(
+            ProductionPrintRecord.objects.filter(
+                printed_at__date__gte=seven_day_start,
+            )
+        )
+        has_previous_print = Exists(
+            ProductionPrintRecord.objects.filter(
+                production_job_id=OuterRef("production_job_id"),
+                created_at__lt=OuterRef("created_at"),
+            )
+        )
+        print_count = recent_prints.count()
+        reprint_count = (
+            recent_prints.annotate(
+                _has_previous_print=has_previous_print,
+            )
+            .filter(_has_previous_print=True)
+            .count()
+        )
+        reprint_rate = (
+            (Decimal(reprint_count) * Decimal("100") / Decimal(print_count)).quantize(
+                Decimal("0.1")
+            )
+            if print_count
+            else Decimal("0.0")
+        )
+
+        completed_durations = exclude_dashboard_noise_jobs(
+            ProductionJob.objects.filter(
+                status=ProductionJob.Status.COMPLETED,
+                completed_at__date__gte=seven_day_start,
+                started_at__isnull=False,
+                completed_at__isnull=False,
+                completed_at__gte=F("started_at"),
+            )
+        ).values_list("started_at", "completed_at")
+        duration_seconds = [
+            Decimal(str((completed_at - started_at).total_seconds()))
+            for started_at, completed_at in completed_durations
+        ]
+        average_duration_hours = (
+            (
+                sum(duration_seconds, Decimal("0"))
+                / Decimal(len(duration_seconds))
+                / Decimal("3600")
+            ).quantize(Decimal("0.1"))
+            if duration_seconds
+            else Decimal("0.0")
+        )
+
+        blocked_count = job_counts["blocked"]
+        overdue_count = job_counts["overdue"]
+        aging_count = job_counts["aging"]
+        return {
+            "alerts": [
+                {
+                    "key": "blocked",
+                    "label": "OF bloquées",
+                    "value": blocked_count,
+                    "detail": "À débloquer maintenant" if blocked_count else "Aucun blocage actif",
+                    "tone": "is-danger" if blocked_count else "is-success",
+                    "href": f"{orders_url}?status={ProductionJob.Status.BLOCKED}",
+                },
+                {
+                    "key": "overdue",
+                    "label": "Retards de remise",
+                    "value": overdue_count,
+                    "detail": "Date de remise dépassée" if overdue_count else "Délais tenus",
+                    "tone": "is-danger" if overdue_count else "is-success",
+                },
+                {
+                    "key": "aging",
+                    "label": "Encours > 24 h",
+                    "value": aging_count,
+                    "detail": "Sans progression depuis 24 h" if aging_count else "Encours récents",
+                    "tone": "is-warning" if aging_count else "is-success",
+                },
+            ],
+            "quality": [
+                {
+                    "key": "reprint_rate",
+                    "label": "Taux de réimpression",
+                    "value": reprint_rate,
+                    "unit": "%",
+                    "detail": f"{reprint_count} sur {print_count} impressions · 7 j",
+                    "tone": "is-warning" if reprint_count else "is-success",
+                }
+            ],
+            "flow": [
+                {
+                    "key": "average_production_time",
+                    "label": "Délai moyen de production",
+                    "value": average_duration_hours,
+                    "unit": "h",
+                    "detail": f"{len(duration_seconds)} OF terminés · 7 j",
+                    "tone": "is-neutral",
+                }
+            ],
+        }
+
+    def _build_activity_kpi_rows(self) -> list[dict[str, object]]:
+        """KPI de production destinés au responsable Atelier."""
+        orders_url = reverse("portal:staff-order-list")
+        today = timezone.localdate()
+        jobs = exclude_dashboard_noise_jobs(production_ready_jobs_queryset(ProductionJob.objects))
+        completed_today = jobs.filter(
+            status=ProductionJob.Status.COMPLETED,
+            updated_at__date=today,
+        ).count()
+        rows = [
+            {
+                "label": "En traitement",
+                "value": jobs.filter(status=ProductionJob.Status.QUEUED).count(),
+                "hint": "OF à lancer en production.",
+                "card_href": f"{orders_url}?status={ProductionJob.Status.QUEUED}",
+            },
+            {
+                "label": "En production",
+                "value": jobs.filter(status=ProductionJob.Status.IN_PROGRESS).count(),
+                "hint": "OF actuellement sur le flux Atelier.",
+                "tone": "is-attention",
+                "card_href": f"{orders_url}?status={ProductionJob.Status.IN_PROGRESS}",
+            },
+            {
+                "label": "Prêtes à remettre",
+                "value": jobs.filter(status=ProductionJob.Status.READY_TO_SHIP).count(),
+                "hint": "Expédition ou retrait à confirmer.",
+                "tone": "is-ready",
+                "card_href": f"{orders_url}?status={ProductionJob.Status.READY_TO_SHIP}",
+            },
+            {
+                "label": "Terminées aujourd’hui",
+                "value": completed_today,
+                "hint": "Commandes finalisées depuis ce matin.",
+                "card_href": f"{orders_url}?status={ProductionJob.Status.COMPLETED}",
+            },
+        ]
+        maximum = max((int(row["value"]) for row in rows), default=0)
+        for row in rows:
+            row["share"] = round((int(row["value"]) / maximum) * 100) if maximum else 0
+        return rows
 
     def _build_metrics(self, queue_counts: dict[str, int]) -> dict[str, int]:
         return {
@@ -101,7 +449,7 @@ class AtelierDashboardService:
         return focus
 
     def _unissued_orders_queryset(self):
-        return (
+        return exclude_dashboard_noise_orders(
             ManufacturingOrderBatchService()
             ._unissued_queryset()
             .select_related("production_job__assigned_machine")
@@ -131,13 +479,17 @@ class AtelierDashboardService:
             and production_job is not None
             and production_status == ProductionJob.Status.QUEUED
             and not order_awaits_client_payment(order)
-            and production_start_blocked_reason(order) is None
+            and (
+                order.billing_mode == Order.BillingMode.DEFERRED
+                or order_has_captured_payment(order)
+            )
         )
         print_eligible = bool(
             production_job is not None
             and production_job.of_document_issued_at is None
             and production_status != ProductionJob.Status.COMPLETED
             and order.status == Order.Status.SUBMITTED
+            and production_start_blocked_reason(order) is None
         )
         files_to_process_count, files_to_process_label = self._files_to_process_summary(
             upload_count=len(uploads),
@@ -202,8 +554,11 @@ class AtelierDashboardService:
         if review_status == "missing_files":
             return 0, "Aucun fichier"
         if to_process == 0:
-            return 0, f"{upload_count} validé(s)"
-        return to_process, f"{to_process} à traiter"
+            suffix = "" if upload_count == 1 else "s"
+            return 0, f"{_file_count_label(upload_count)} validé{suffix}"
+        if to_process == upload_count:
+            return to_process, f"{_file_count_label(to_process)} à traiter"
+        return to_process, (f"{to_process} à traiter sur {_file_count_label(upload_count)}")
 
     def _review_state(self, *, upload_count: int, counter: Counter) -> tuple[str, str, str]:
         if upload_count == 0:
@@ -277,6 +632,8 @@ class AtelierDashboardService:
         )
 
     def _drive_needs_attention(self, upload) -> bool:
+        if upload.is_external:
+            return False
         try:
             drive_sync = upload.drive_sync
         except ObjectDoesNotExist:

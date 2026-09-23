@@ -26,7 +26,9 @@
         <tr class="{% if row.upload.inspection and row.upload.inspection.status == 'error' %}ui-row-anomaly{% elif row.upload.inspection and row.upload.inspection.status == 'warning' %}ui-row-warning{% endif %}">
           <td class="max-w-[18rem]">
             <div class="font-medium break-words text-[color:var(--ink)]">
-              {% if row.drive_browser_url %}
+              {% if row.upload.is_external %}
+{% include "portal/partials/external_upload_link.html" with upload=row.upload %}
+{% elif row.drive_browser_url %}
               <a
                 class="staff-upload-filename-link ui-inline-action"
                 href="{{ row.drive_browser_url }}"
@@ -40,16 +42,18 @@
             </div>
             <div class="muted text-xs break-all mt-0.5">{{ row.upload.mime_type }}</div>
           </td>
-          <td class="whitespace-nowrap">{{ row.upload.size_bytes|filesizeformat }}</td>
+          <td class="whitespace-nowrap">{% if row.upload.is_external %}Lien externe{% else %}{{ row.upload.size_bytes|filesizeformat }}{% endif %}</td>
           <td>
-            {% if row.upload.inspection %}
+            {% if row.upload.is_external %}<span class="badge is-neutral">Contrôle manuel</span>
+{% elif row.upload.inspection %}
             <span class="badge {{ row.upload.inspection.status|badge_tone }}">{{ row.upload.inspection.status|human_status }}</span>
             {% else %}
             <span class="badge is-neutral">—</span>
             {% endif %}
           </td>
           <td>
-            {% if row.upload.drive_sync %}
+            {% if row.upload.is_external %}<span class="badge is-neutral">Sans synchronisation</span>
+{% elif row.upload.drive_sync %}
             <span class="badge {{ row.upload.drive_sync.status|badge_tone }}">{{ row.upload.drive_sync.status|human_status }}</span>
             {% else %}
             <span class="badge is-neutral">—</span>
@@ -65,7 +69,9 @@
     {% for row in upload_rows %}
     <article class="ui-mobile-order-card product-mobile-file-card">
       <p class="break-words font-medium text-[color:var(--ink)] m-0">
-        {% if row.drive_browser_url %}
+        {% if row.upload.is_external %}
+{% include "portal/partials/external_upload_link.html" with upload=row.upload %}
+{% elif row.drive_browser_url %}
         <a
           class="staff-upload-filename-link ui-inline-action"
           href="{{ row.drive_browser_url }}"
@@ -78,10 +84,11 @@
         {% endif %}
       </p>
       <p class="muted mt-1 text-xs break-all">{{ row.upload.mime_type }}</p>
-      <p class="mt-2 text-sm">Taille : {{ row.upload.size_bytes|filesizeformat }}</p>
+      <p class="mt-2 text-sm">Taille : {% if row.upload.is_external %}Lien externe{% else %}{{ row.upload.size_bytes|filesizeformat }}{% endif %}</p>
       <div class="mt-3 flex flex-wrap items-center gap-2">
         <span class="text-xs text-[color:var(--ink)]/70">Inspection</span>
-        {% if row.upload.inspection %}
+        {% if row.upload.is_external %}<span class="badge is-neutral">Contrôle manuel</span>
+{% elif row.upload.inspection %}
         <span class="badge {{ row.upload.inspection.status|badge_tone }}">{{ row.upload.inspection.status|human_status }}</span>
         {% else %}
         <span class="badge is-neutral">—</span>
@@ -89,7 +96,8 @@
       </div>
       <div class="mt-2 flex flex-wrap items-center gap-2">
         <span class="text-xs text-[color:var(--ink)]/70">Drive</span>
-        {% if row.upload.drive_sync %}
+        {% if row.upload.is_external %}<span class="badge is-neutral">Sans synchronisation</span>
+{% elif row.upload.drive_sync %}
         <span class="badge {{ row.upload.drive_sync.status|badge_tone }}">{{ row.upload.drive_sync.status|human_status }}</span>
         {% else %}
         <span class="badge is-neutral">—</span>

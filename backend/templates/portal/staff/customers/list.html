@@ -32,9 +32,7 @@
         <tr>
           <th>Entreprise</th>
           <th>Mode</th>
-          <th>Canal</th>
-          <th>Tarif m²</th>
-          <th>Encours</th>
+          <th>CA mensuel / plafond encours</th>
           <th>Statut</th>
           <th><span class="sr-only">Actions</span></th>
         </tr>
@@ -49,20 +47,10 @@
           <td>
             <span class="badge {{ customer.default_billing_mode|badge_tone }}" title="{{ customer.default_billing_mode|human_status }}">{{ customer.default_billing_mode|settlement_badge }}</span>
           </td>
-          <td>{{ customer.get_preferred_settlement_method_display }}</td>
           <td>
-            {% if customer.billing_profile.price_per_sqm_eur %}
-            {{ customer.billing_profile.price_per_sqm_eur }} €/m²
-            {% else %}
-            <span class="muted">Catalogue</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if customer.billing_profile.credit_limit_eur %}
-            {{ customer.billing_profile.credit_limit_eur }} €
-            {% else %}
-            <span class="muted">—</span>
-            {% endif %}
+            <div class="ui-order-secondary">
+              <span class="ui-order-secondary__value">{{ customer.monthly_revenue_eur }} €{% if customer.default_billing_mode == "deferred" and customer.billing_profile.credit_limit_eur %} / {{ customer.billing_profile.credit_limit_eur }} €{% endif %}</span>
+            </div>
           </td>
           <td>
             {% if customer.is_active %}
@@ -77,7 +65,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="7">
+          <td colspan="5">
             {% include "components/ui/empty_state.html" with title="Aucun compte" message="Aucun compte client pour ces filtres." %}
           </td>
         </tr>
@@ -100,11 +88,7 @@
       <p class="muted m-0">{{ customer.billing_email|default:"—" }}</p>
       <dl class="ui-data-card__facts">
         <div><dt>Mode</dt><dd><span class="badge {{ customer.default_billing_mode|badge_tone }}">{{ customer.default_billing_mode|settlement_badge }}</span></dd></div>
-        <div><dt>Canal</dt><dd>{{ customer.get_preferred_settlement_method_display }}</dd></div>
-        <div>
-          <dt>Tarif m²</dt>
-          <dd>{% if customer.billing_profile.price_per_sqm_eur %}{{ customer.billing_profile.price_per_sqm_eur }} €/m²{% else %}Catalogue{% endif %}</dd>
-        </div>
+        <div><dt>CA mensuel / plafond encours</dt><dd>{{ customer.monthly_revenue_eur }} €{% if customer.default_billing_mode == "deferred" and customer.billing_profile.credit_limit_eur %} / {{ customer.billing_profile.credit_limit_eur }} €{% endif %}</dd></div>
       </dl>
       <span class="ui-data-card__cta">Ouvrir le compte</span>
     </a>

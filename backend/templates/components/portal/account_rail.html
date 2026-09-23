@@ -55,6 +55,9 @@
     <a class="ui-selection-control" href="#account-company">Société</a>
     {% endif %}
     {% endif %}
+    {% if can_view_pricing %}
+    <a class="ui-selection-control" href="{% if account_section == 'team' %}{{ profile_url }}?space=client#account-pricing{% else %}#account-pricing{% endif %}">Tarifs et remises</a>
+    {% endif %}
     {% if customer %}
       {% if selected_membership.can_manage_team or customer_membership %}
       <a

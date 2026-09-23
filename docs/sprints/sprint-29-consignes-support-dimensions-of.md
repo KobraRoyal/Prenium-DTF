@@ -68,3 +68,12 @@ Garantir que les informations confirmées par le client dans le configurateur DT
 - modification des dimensions depuis la fiche Atelier ;
 - recalcul automatique des dimensions client à partir des pixels ;
 - modification de la couleur du support après transmission de la commande.
+
+## Complément — QR code dans la colonne FICHIER
+
+- [x] le nom original du fichier reste affiché avec son extension ;
+- [x] les libellés `Taille demandée` et `Couleur du support` ne sont plus répétés sous le nom ;
+- [x] un QR code vectoriel est imprimé sous chaque nom et encode uniquement le nom sans extension ;
+- [x] le QR code utilise en priorité le nom réellement synchronisé dans Drive (`drive_filename`) ;
+- [x] la colonne `Support` affiche une pastille ronde HEX, ou une pastille multicolore pour `Multicolore` ;
+- [x] les colonnes dédiées `Taille` et `Support` restent la source visuelle de ces deux informations.

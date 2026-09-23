@@ -7,6 +7,15 @@ from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.production.models import ProductionJob, ProductionJobScanLog, ProductionJobTransition
+from apps.production.services.manufacturing_order_pdf import (
+    UUID_BARCODE_HEIGHT,
+    _build_file_qr_code,
+    _build_styles,
+    _build_support_color_cell,
+    _build_uploads_table,
+    _build_uuid_code128,
+    _build_uuid_identity_cell,
+)
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import (
     OrderUpload,
@@ -19,6 +28,8 @@ from django.contrib.auth.models import Permission
 from django.core.files.base import ContentFile
 from django.urls import reverse
 from PIL import Image
+from reportlab.graphics.barcode.qr import QrCode
+from reportlab.graphics.shapes import Circle, Drawing, String, Wedge
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -175,6 +186,7 @@ def test_staff_with_permission_can_view_workflow_snapshot():
     )
     assert payload["manufacturing_order"]["uploads"][0]["dimensions_label"] == "120 × 80 mm"
     assert payload["manufacturing_order"]["uploads"][0]["support_color_label"] == "#112233"
+    assert payload["manufacturing_order"]["uploads"][0]["drive_filename"] == "masked.pdf"
     assert payload["manufacturing_order"]["file_review_summary"] == {
         "total": 1,
         "approved": 1,
@@ -228,14 +240,18 @@ def test_staff_can_download_manufacturing_order_pdf():
 
     assert job.manufacturing_order_number in text
     assert f"#{short_public_ref(order.public_id).upper()}" in text
+    assert "UUID" in text
+    uuid_short = short_public_ref(order.public_id)
+    assert uuid_short in text
+    assert str(order.public_id) not in text
     assert "Livraison standard" in text
     assert "15/08/2026" in text
     assert "Urgent sample" in text
     assert "Date souhaitée : 2026-08-15" not in text
     assert text.count("design.pdf") == 1
-    assert "TAILLE DEMANDÉE" in text
+    assert "TAILLE DEMANDÉE" not in text
     assert "120 × 80 mm" in text
-    assert "COULEUR DU SUPPORT" in text
+    assert "COULEUR DU SUPPORT" not in text
     assert "#112233" in text
     assert "Total TTC" not in text
     job.refresh_from_db()
@@ -246,6 +262,118 @@ def test_staff_can_download_manufacturing_order_pdf():
     ).exists()
     assert "Sync Drive" not in text
     assert "Aperçu\nindisponible" in text
+
+    # Re-téléchargement : déjà émis ne doit plus provoquer d'erreur 500.
+    issued_at = job.of_document_issued_at
+    audit_count = AuditLogEntry.objects.filter(
+        action="production.manufacturing_orders_marked_issued",
+        actor=_staff_user,
+    ).count()
+    second = client.get(production_manufacturing_order_pdf_route(order.public_id))
+    assert second.status_code == status.HTTP_200_OK
+    assert second.content[:4] == b"%PDF"
+    job.refresh_from_db()
+    assert job.of_document_issued_at == issued_at
+    assert (
+        AuditLogEntry.objects.filter(
+            action="production.manufacturing_orders_marked_issued",
+            actor=_staff_user,
+        ).count()
+        == audit_count
+    )
+
+
+def test_manufacturing_order_file_qr_code_uses_filename_without_extension():
+    qr_code = _build_file_qr_code(filename="design.final.pdf")
+
+    assert isinstance(qr_code, QrCode)
+    assert qr_code.value == "design.final"
+    assert qr_code.width > 0
+    assert qr_code.height > 0
+
+
+def test_manufacturing_order_uuid_code128_is_compact_and_human_readable():
+    from reportlab.graphics.barcode.code128 import Code128
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Table
+
+    # Même forme que la fiche staff / dossier Drive : dernier segment du public_id.
+    full_uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    uuid_short = "ef1234567890"
+    usable_width = 5.6 * cm - 12
+    barcode = _build_uuid_code128(order_uuid=uuid_short, usable_width=usable_width)
+    cell = _build_uuid_identity_cell(order_uuid=full_uuid, styles=_build_styles())
+
+    assert isinstance(barcode, Code128)
+    assert barcode.value == uuid_short
+    assert barcode.hAlign == "LEFT"
+    assert barcode.lquiet == 0
+    assert barcode.barHeight == UUID_BARCODE_HEIGHT
+    assert barcode.width <= usable_width + 0.01
+    assert isinstance(cell, Table)
+    flat = [part for row in cell._cellvalues for part in row]
+    assert any(
+        isinstance(part, Code128) and part.value == uuid_short and part.hAlign == "LEFT"
+        for part in flat
+    )
+    captions = [getattr(part, "text", "") for part in flat if hasattr(part, "text")]
+    assert any(uuid_short in caption for caption in captions)
+    assert not any(full_uuid in caption for caption in captions)
+
+
+def test_manufacturing_order_support_color_cell_renders_hex_and_multicolor_swatches():
+    hex_upload = {
+        "support_color": "#112233",
+        "support_color_label": "#112233",
+        "support_color_is_multicolor": False,
+    }
+    hex_cell = _build_support_color_cell(upload=hex_upload)
+    table = _build_uploads_table(
+        uploads=[hex_upload],
+        previews={},
+        styles=_build_styles(),
+    )
+
+    assert isinstance(hex_cell, Drawing)
+    assert isinstance(table._cellvalues[1][4], Drawing)
+    hex_circle = next(shape for shape in hex_cell.contents if isinstance(shape, Circle))
+    assert hex_circle.fillColor.hexval() == "0x112233"
+    assert any(isinstance(shape, String) and shape.text == "#112233" for shape in hex_cell.contents)
+
+    multicolor_cell = _build_support_color_cell(
+        upload={
+            "support_color": "#multicolor",
+            "support_color_label": "Multicolore",
+            "support_color_is_multicolor": True,
+        }
+    )
+
+    assert sum(isinstance(shape, Wedge) for shape in multicolor_cell.contents) == 4
+    assert any(
+        isinstance(shape, String) and shape.text == "Multicolore"
+        for shape in multicolor_cell.contents
+    )
+
+
+def test_manufacturing_order_file_qr_code_prefers_drive_filename():
+    table = _build_uploads_table(
+        uploads=[
+            {
+                "original_filename": "design.pdf",
+                "drive_filename": "ORD-20260902-design-final.pdf",
+                "quantity": 1,
+                "dimensions_label": "120 × 80 mm",
+                "support_color_label": "#112233",
+            }
+        ],
+        previews={},
+        styles=_build_styles(),
+    )
+
+    qr_codes = [item for item in table._cellvalues[1][1] if isinstance(item, QrCode)]
+
+    assert len(qr_codes) == 1
+    assert qr_codes[0].value == "ORD-20260902-design-final"
 
 
 @pytest.mark.django_db

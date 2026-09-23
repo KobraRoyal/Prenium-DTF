@@ -9,6 +9,7 @@ from uuid import UUID
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files import File
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
@@ -16,6 +17,7 @@ from django.utils import timezone
 from apps.auditlog.services import record_event
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.b2b_order_projects.services.projects import B2BOrderProjectService, ProjectDomainError
+from apps.billing.services.production_payment_gate import order_awaits_client_payment
 from apps.gang_sheets.models import (
     GangSheet,
     GangSheetItem,
@@ -29,9 +31,11 @@ from apps.gang_sheets.services.cropping import (
     AutoCropError,
     AutoCropService,
     CropBox,
+    CropValidationError,
 )
 from apps.gang_sheets.services.drive import GangSheetDriveSyncService
 from apps.gang_sheets.services.geometry import GangSheetGeometryService, normalize_rotation
+from apps.gang_sheets.services.preflight import GangSheetPreflightService
 from apps.gang_sheets.services.text_items import (
     DEFAULT_TEXT_ALIGN,
     DEFAULT_TEXT_COLOR,
@@ -53,8 +57,9 @@ from apps.gang_sheets.services.text_items import (
     serialized_font_catalog,
     usable_text_max_width_mm,
 )
+from apps.orders.models import Order
 from apps.orders.services.pricing import OrderPricingService
-from apps.uploads.models import AssetVersion
+from apps.uploads.models import AssetAnalysis, AssetVersion
 from apps.uploads.services.assets import AssetDomainError, AssetService
 
 HUNDREDTH = Decimal("0.01")
@@ -111,32 +116,20 @@ class GangSheetService:
         return sheets
 
     def can_client_delete(self, sheet) -> bool:
-        editable_standalone = (
-            sheet.status in self.editable_statuses
-            and not sheet.project_id
-            and not sheet.order_id
-            and not sheet.production_asset_id
-        )
+        if sheet.status == GangSheet.Status.RENDERING:
+            return False
         drive_sync = getattr(sheet, "drive_sync", None)
-        drive_secured = not settings.GOOGLE_DRIVE_SYNC_ENABLED or bool(
+        needs_drive_archive = bool(
+            settings.GOOGLE_DRIVE_SYNC_ENABLED and (sheet.order_id or sheet.production_asset_id)
+        )
+        if not needs_drive_archive:
+            return True
+        return bool(
             drive_sync
             and drive_sync.status == drive_sync.Status.SYNCED
             and drive_sync.drive_file_id
             and drive_sync.revision == sheet.revision
         )
-        secured_in_order_project = (
-            sheet.status == GangSheet.Status.VALIDATED
-            and sheet.project_id
-            and sheet.production_asset_id
-            and sheet.project.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET
-            and sheet.project.items.filter(
-                customer=sheet.customer,
-                asset_id=sheet.production_asset_id,
-            ).exists()
-            and drive_secured
-            and (not sheet.order_id or sheet.project.converted_order_id == sheet.order_id)
-        )
-        return bool(editable_standalone or secured_in_order_project)
 
     def get_customer_sheet(self, *, customer, sheet_public_id):
         return (
@@ -286,6 +279,7 @@ class GangSheetService:
                 crop_width=crop.width,
                 crop_height=crop.height,
                 sort_order=next_position,
+                auto_placement_status=GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
             )
             self._audit(
                 "source_uploaded",
@@ -295,6 +289,7 @@ class GangSheetService:
                 metadata={
                     "asset_public_id": str(version.asset.public_id),
                     "asset_version_public_id": str(version.public_id),
+                    "initial_auto_place_requested": True,
                     "crop_mode": crop_mode,
                     "crop": crop.to_metadata(),
                     "auto_crop": auto_crop_metadata,
@@ -353,6 +348,171 @@ class GangSheetService:
         return imported
 
     @transaction.atomic
+    def update_source_asset_crop(
+        self,
+        *,
+        sheet,
+        source_asset_public_id,
+        crop: CropBox | None,
+        expected_revision,
+        actor,
+        crop_mode: str = CROP_MODE_MANUAL,
+        source="client_portal",
+    ):
+        """Met à jour le recadrage d'une source existante avec verrou optimiste."""
+        locked = self._lock_editable(sheet)
+        parsed_revision = self._parse_expected_revision(
+            expected_revision,
+            invalid_code="INVALID_CROP",
+        )
+        if parsed_revision != locked.revision:
+            raise GangSheetDomainError(
+                "STALE_REVISION",
+                "Ce brouillon a été modifié ailleurs. Rechargez la page avant de continuer.",
+                {"revision": locked.revision},
+            )
+        source_asset = (
+            locked.source_assets.select_for_update()
+            .select_related("asset")
+            .filter(
+                customer=locked.customer,
+                public_id=source_asset_public_id,
+            )
+            .first()
+        )
+        if source_asset is None:
+            raise GangSheetDomainError(
+                "SOURCE_ASSET_NOT_FOUND",
+                "Ce visuel n’est pas présent dans cette galerie.",
+            )
+        placed_items = list(
+            locked.items.select_for_update(of=("self",)).filter(
+                asset_version__asset_id=source_asset.asset_id
+            )
+        )
+        if crop_mode not in VALID_CROP_MODES:
+            raise GangSheetDomainError(
+                "INVALID_CROP_MODE",
+                "Le mode de recadrage est invalide.",
+            )
+
+        auto_crop_metadata = None
+        if crop_mode == CROP_MODE_AUTO:
+            version = (
+                AssetVersion.objects.for_customer(locked.customer)
+                .filter(
+                    pk=source_asset.asset.current_version_id,
+                    asset=source_asset.asset,
+                )
+                .first()
+            )
+            if version is None or not version.file.name:
+                raise GangSheetDomainError(
+                    "AUTO_CROP_FAILED",
+                    "Le fichier original de ce visuel n’est pas disponible.",
+                )
+            try:
+                with version.file.open("rb") as original_file:
+                    uploaded_file = SimpleUploadedFile(
+                        version.original_filename,
+                        original_file.read(),
+                        content_type=version.mime_type,
+                    )
+                    auto_crop_result = self.auto_crop.detect(uploaded_file)
+            except AutoCropError as error:
+                raise GangSheetDomainError("AUTO_CROP_FAILED", str(error)) from error
+            except (OSError, ValueError) as error:
+                raise GangSheetDomainError(
+                    "AUTO_CROP_FAILED",
+                    "Le fichier original de ce visuel ne peut pas être lu.",
+                ) from error
+            crop = auto_crop_result.crop
+            auto_crop_metadata = auto_crop_result.to_metadata()
+        elif crop is None:
+            raise GangSheetDomainError(
+                "INVALID_CROP",
+                "Les données de recadrage sont invalides.",
+            )
+        try:
+            crop.validate()
+        except CropValidationError as error:
+            raise GangSheetDomainError("INVALID_CROP", str(error)) from error
+
+        previous_crop = CropBox.from_source_asset(source_asset)
+        if crop == previous_crop:
+            return locked, source_asset
+
+        if placed_items:
+            width_ratio = crop.width / previous_crop.width
+            height_ratio = crop.height / previous_crop.height
+            for item in placed_items:
+                item.width_mm = max(
+                    HUNDREDTH,
+                    (Decimal(item.width_mm) * width_ratio).quantize(HUNDREDTH),
+                )
+                item.height_mm = max(
+                    HUNDREDTH,
+                    (Decimal(item.height_mm) * height_ratio).quantize(HUNDREDTH),
+                )
+            all_items = list(locked.items.all())
+            changed_by_id = {item.pk: item for item in placed_items}
+            all_items = [changed_by_id.get(item.pk, item) for item in all_items]
+            current_height = locked.height_mm
+            locked.height_mm = locked.maximum_height_mm
+            issues = self.geometry.issues(sheet=locked, items=all_items)
+            locked.height_mm = current_height
+            affected_ids = {str(item.public_id) for item in placed_items}
+            affected_issues = [
+                issue
+                for issue in issues
+                if affected_ids.intersection(issue.get("item_public_ids", []))
+            ]
+            if affected_issues:
+                raise GangSheetDomainError(
+                    "CROP_LAYOUT_CONFLICT",
+                    "Ce cadrage ferait déborder ou chevaucher un visuel sur la planche.",
+                    {"issues": affected_issues},
+                )
+
+        source_asset.crop_x = crop.x
+        source_asset.crop_y = crop.y
+        source_asset.crop_width = crop.width
+        source_asset.crop_height = crop.height
+        source_asset.save(
+            update_fields=[
+                "crop_x",
+                "crop_y",
+                "crop_width",
+                "crop_height",
+                "updated_at",
+            ]
+        )
+        if placed_items:
+            GangSheetItem.objects.bulk_update(
+                placed_items,
+                ["width_mm", "height_mm", "updated_at"],
+            )
+        self._mark_dirty(locked)
+        self._refresh_sheet(locked)
+        self._audit(
+            "source_crop_updated",
+            sheet=locked,
+            actor=actor,
+            source=source,
+            metadata={
+                "source_asset_public_id": str(source_asset.public_id),
+                "asset_public_id": str(source_asset.asset.public_id),
+                "previous_crop": previous_crop.to_metadata(),
+                "crop_mode": crop_mode,
+                "crop": crop.to_metadata(),
+                "auto_crop": auto_crop_metadata,
+                "revision": locked.revision,
+                "updated_occurrence_count": len(placed_items),
+            },
+        )
+        return locked, source_asset
+
+    @transaction.atomic
     def add_occurrence(self, *, sheet, asset_version_public_id, actor, source="client_portal"):
         return self.add_occurrences(
             sheet=sheet,
@@ -374,6 +534,8 @@ class GangSheetService:
         source="client_portal",
     ):
         locked = self._lock_editable(sheet)
+        if auto_place:
+            self._ensure_auto_place_has_no_groups(locked)
         version = self._resolve_available_version(locked, asset_version_public_id)
         quantity = self._bounded_positive_int(quantity, label="quantité")
         width, height = self._default_dimensions(locked, version)
@@ -385,8 +547,8 @@ class GangSheetService:
                     sheet=locked,
                     kind=GangSheetItem.Kind.VISUAL,
                     asset_version=version,
-                    x_mm=locked.margin_mm,
-                    y_mm=locked.margin_mm,
+                    x_mm=Decimal("0.00"),
+                    y_mm=Decimal("0.00"),
                     width_mm=width,
                     height_mm=height,
                     z_index=first_z_index + offset,
@@ -422,6 +584,269 @@ class GangSheetService:
         return items
 
     @transaction.atomic
+    def set_source_quantity(
+        self,
+        *,
+        sheet,
+        source_asset_public_id,
+        quantity,
+        expected_revision,
+        actor,
+        source="client_portal",
+    ):
+        """Ajuste les occurrences d'une source sans déplacer les visuels déjà placés."""
+        locked = self._lock_editable(sheet)
+        revision = self._parse_expected_revision(expected_revision, invalid_code="INVALID_QUANTITY")
+        if revision != locked.revision:
+            raise GangSheetDomainError(
+                "STALE_REVISION",
+                "La planche a changé. Actualisez-la avant de modifier la quantité.",
+                {"revision": locked.revision},
+            )
+        try:
+            desired = int(quantity)
+            if (
+                isinstance(quantity, bool)
+                or str(desired) != str(quantity)
+                or not 0 <= desired <= MAX_BATCH_OCCURRENCES
+            ):
+                raise ValueError
+        except (TypeError, ValueError) as error:
+            raise GangSheetDomainError(
+                "INVALID_QUANTITY", f"Saisissez une quantité entre 0 et {MAX_BATCH_OCCURRENCES}."
+            ) from error
+        entry = (
+            locked.source_assets.select_for_update(of=("self",))
+            .select_related("asset", "asset__current_version")
+            .filter(customer=locked.customer, public_id=source_asset_public_id)
+            .first()
+        )
+        if entry is None:
+            raise GangSheetDomainError(
+                "SOURCE_ASSET_NOT_FOUND", "Ce visuel n’est pas présent dans cette galerie."
+            )
+        existing = list(
+            locked.items.select_for_update(of=("self",))
+            .select_related("asset_version")
+            .order_by("z_index", "created_at", "pk")
+        )
+        matching = [
+            item
+            for item in existing
+            if item.asset_version_id and item.asset_version.asset_id == entry.asset_id
+        ]
+        previous = len(matching)
+        if desired == previous:
+            return locked, previous
+        changed_ids = []
+        if desired < previous:
+            removable = [item for item in reversed(matching) if not item.layout_group_id]
+            if len(removable) < previous - desired:
+                raise GangSheetDomainError(
+                    "GROUPED_ITEMS", "Dissociez les visuels groupés avant de réduire leur quantité."
+                )
+            removed = removable[: previous - desired]
+            changed_ids = [str(item.public_id) for item in removed]
+            GangSheetItem.objects.filter(pk__in=[item.pk for item in removed]).delete()
+            self._normalize_z_indexes(locked)
+        else:
+            version = entry.asset.current_version
+            if version is None:
+                raise GangSheetDomainError(
+                    "ASSET_NOT_AVAILABLE", "Ce fichier n'est plus disponible."
+                )
+            version = self._resolve_available_version(locked, version.public_id)
+            width, height = self._default_dimensions(locked, version)
+            for _ in range(desired - previous):
+                item = GangSheetItem(
+                    customer=locked.customer,
+                    sheet=locked,
+                    kind=GangSheetItem.Kind.VISUAL,
+                    asset_version=version,
+                    width_mm=width,
+                    height_mm=height,
+                    x_mm=Decimal("0.00"),
+                    y_mm=Decimal("0.00"),
+                    z_index=max((placed.z_index for placed in existing), default=0) + 1,
+                )
+                placement = self.geometry.first_free_placement(
+                    sheet=locked, item=item, existing_items=existing
+                )
+                if placement is None:
+                    raise GangSheetDomainError(
+                        "QUANTITY_NO_SPACE",
+                        "La quantité demandée ne tient pas sur la planche. "
+                        "Réduisez-la ou libérez de la place.",
+                    )
+                item.x_mm, item.y_mm, item.rotation = placement
+                item.save()
+                changed_ids.append(str(item.public_id))
+                existing.append(item)
+        if entry.auto_placement_status in {
+            GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE,
+            GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
+        }:
+            entry.auto_placement_status = GangSheetSourceAsset.AutoPlacementStatus.MANUAL
+            entry.auto_placement_error = ""
+            entry.save(
+                update_fields=["auto_placement_status", "auto_placement_error", "updated_at"]
+            )
+        self._refresh_sheet(locked)
+        self._mark_dirty(locked)
+        self._audit(
+            "source_quantity_updated",
+            sheet=locked,
+            actor=actor,
+            source=source,
+            metadata={
+                "source_asset_public_id": str(entry.public_id),
+                "asset_public_id": str(entry.asset.public_id),
+                "previous_quantity": previous,
+                "quantity": desired,
+                "item_public_ids": changed_ids,
+                "revision": locked.revision,
+            },
+        )
+        return locked, desired
+
+    @transaction.atomic
+    def auto_place_ready_sources(
+        self,
+        *,
+        sheet,
+        expected_revision,
+        actor,
+        retry_source_public_id=None,
+        source="client_portal",
+    ):
+        """Ajoute une fois chaque nouvel import prêt, sans déplacer les éléments existants."""
+
+        locked = self._lock_editable(sheet)
+        if str(expected_revision) != str(locked.revision):
+            raise GangSheetDomainError(
+                "STALE_REVISION",
+                "La planche a changé. Actualisez-la avant le placement automatique.",
+                {"revision": locked.revision},
+            )
+        statuses = [GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS]
+        if retry_source_public_id:
+            statuses.extend(
+                (
+                    GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE,
+                    GangSheetSourceAsset.AutoPlacementStatus.MANUAL,
+                )
+            )
+        sources = (
+            GangSheetSourceAsset.objects.for_sheet(locked)
+            .select_for_update(of=("self", "asset"))
+            .select_related("asset", "asset__current_version")
+            .filter(auto_placement_status__in=statuses)
+            .order_by("sort_order", "created_at")
+        )
+        if retry_source_public_id:
+            sources = sources.filter(public_id=retry_source_public_id)
+        source_rows = list(sources)
+        if retry_source_public_id and not source_rows:
+            raise GangSheetDomainError(
+                "SOURCE_ASSET_NOT_FOUND", "Ce visuel n’est pas disponible pour être replacé."
+            )
+
+        existing_items = list(locked.items.select_related("asset_version__asset"))
+        created_items = []
+        no_space_count = 0
+        for entry in source_rows:
+            version = entry.asset.current_version
+            if (
+                entry.customer_id != locked.customer_id
+                or entry.asset.customer_id != locked.customer_id
+                or version is None
+                or version.customer_id != locked.customer_id
+                or version.asset_id != entry.asset_id
+                or version.analysis_status
+                not in {AssetVersion.AnalysisStatus.READY, AssetVersion.AnalysisStatus.WARNING}
+            ):
+                continue
+            if any(
+                item.asset_version_id and item.asset_version.asset_id == entry.asset_id
+                for item in existing_items
+            ):
+                entry.auto_placement_status = GangSheetSourceAsset.AutoPlacementStatus.PLACED
+                entry.auto_placement_error = ""
+                entry.save(
+                    update_fields=["auto_placement_status", "auto_placement_error", "updated_at"]
+                )
+                continue
+            width, height = self._default_dimensions(locked, version)
+            candidate = GangSheetItem(
+                customer=locked.customer,
+                sheet=locked,
+                kind=GangSheetItem.Kind.VISUAL,
+                asset_version=version,
+                x_mm=Decimal("0.00"),
+                y_mm=Decimal("0.00"),
+                width_mm=width,
+                height_mm=height,
+                z_index=len(existing_items) + 1,
+            )
+            placement = self.geometry.first_free_placement(
+                sheet=locked,
+                item=candidate,
+                existing_items=existing_items,
+            )
+            if placement is None:
+                entry.auto_placement_status = GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE
+                entry.auto_placement_error = (
+                    "Aucun emplacement libre. Libérez de la place puis réessayez."
+                )
+                entry.save(
+                    update_fields=["auto_placement_status", "auto_placement_error", "updated_at"]
+                )
+                no_space_count += 1
+                self._audit(
+                    "source_auto_place_failed",
+                    sheet=locked,
+                    actor=actor,
+                    source=source,
+                    metadata={
+                        "source_asset_public_id": str(entry.public_id),
+                        "asset_public_id": str(entry.asset.public_id),
+                        "asset_version_public_id": str(version.public_id),
+                        "reason": "no_space",
+                        "revision": locked.revision,
+                    },
+                )
+                continue
+            candidate.x_mm, candidate.y_mm, candidate.rotation = placement
+            candidate.save()
+            existing_items.append(candidate)
+            created_items.append(candidate)
+            entry.auto_placement_status = GangSheetSourceAsset.AutoPlacementStatus.PLACED
+            entry.auto_placement_error = ""
+            entry.save(
+                update_fields=["auto_placement_status", "auto_placement_error", "updated_at"]
+            )
+            self._audit(
+                "source_auto_placed",
+                sheet=locked,
+                actor=actor,
+                source=source,
+                metadata={
+                    "source_asset_public_id": str(entry.public_id),
+                    "asset_public_id": str(entry.asset.public_id),
+                    "asset_version_public_id": str(version.public_id),
+                    "item_public_id": str(candidate.public_id),
+                    "x_mm": str(candidate.x_mm),
+                    "y_mm": str(candidate.y_mm),
+                    "rotation": candidate.rotation,
+                    "revision": locked.revision + 1,
+                },
+            )
+        if created_items:
+            self._mark_dirty(locked)
+            self._refresh_sheet(locked)
+        return locked, created_items, no_space_count
+
+    @transaction.atomic
     def add_text_item(
         self,
         *,
@@ -447,7 +872,6 @@ class GangSheetService:
             raise GangSheetDomainError(error.code, error.message) from error
         width_mm, height_mm = default_box_mm(
             sheet_width_mm=locked.width_mm,
-            margin_mm=locked.margin_mm,
             content=text_content,
             font=text_font,
             bold=text_bold,
@@ -530,8 +954,11 @@ class GangSheetService:
         origin_y = Decimal(source_item.y_mm)
         final_right = origin_x + columns * effective_width + (columns - 1) * spacing_x
         final_bottom = origin_y + rows * effective_height + (rows - 1) * spacing_y
-        if final_right > Decimal(locked.width_mm) or final_bottom > Decimal(
-            locked.maximum_height_mm
+        if (
+            origin_x < 0
+            or origin_y < 0
+            or final_right > Decimal(locked.width_mm)
+            or final_bottom > Decimal(locked.maximum_height_mm)
         ):
             raise GangSheetDomainError(
                 "GRID_TOO_LARGE",
@@ -591,15 +1018,34 @@ class GangSheetService:
         return [source_item, *clones]
 
     @transaction.atomic
-    def duplicate_occurrence(self, *, sheet, item_public_id, actor, source="client_portal"):
+    def duplicate_occurrence(
+        self, *, sheet, item_public_id, expected_revision, actor, source="client_portal"
+    ):
         locked = self._lock_editable(sheet)
+        if str(expected_revision) != str(locked.revision):
+            raise GangSheetDomainError(
+                "STALE_REVISION",
+                "La planche a changé. Rechargez-la avant de dupliquer ce visuel.",
+                {"revision": locked.revision},
+            )
         source_item = locked.items.filter(public_id=item_public_id).first()
         if source_item is None:
             raise GangSheetDomainError("ITEM_NOT_FOUND", "Occurrence introuvable.")
+        existing_items = list(locked.items.all())
+        position = self.geometry.first_available_position(
+            sheet=locked,
+            item=source_item,
+            existing_items=existing_items,
+        )
+        if position is None:
+            raise GangSheetDomainError(
+                "DUPLICATE_NO_SPACE",
+                "Aucun emplacement libre ne permet de dupliquer ce visuel dans la zone utile.",
+            )
         item = GangSheetItem.objects.create(
             **self._clone_item_fields(source_item),
-            x_mm=source_item.x_mm + locked.item_spacing_x_mm,
-            y_mm=source_item.y_mm + locked.item_spacing_y_mm,
+            x_mm=position[0],
+            y_mm=position[1],
             width_mm=source_item.width_mm,
             height_mm=source_item.height_mm,
             rotation=source_item.rotation,
@@ -749,9 +1195,8 @@ class GangSheetService:
                 message = "Attendez la fin du rendu avant de supprimer cette planche."
             else:
                 message = (
-                    "Pour garantir la traçabilité, cette planche ne peut être supprimée "
-                    "qu’avant son rattachement métier ou après sa transformation complète "
-                    "en commande."
+                    "La sauvegarde sécurisée du fichier HD n’est pas encore terminée. "
+                    "Réessayez dans un instant."
                 )
             raise GangSheetDomainError(
                 "SHEET_NOT_DELETABLE",
@@ -791,7 +1236,26 @@ class GangSheetService:
         self, *, sheet, payload: list[dict], expected_revision, actor, source="client_portal"
     ):
         locked = self._lock_editable(sheet)
-        if expected_revision is not None and int(expected_revision) != locked.revision:
+        if not isinstance(payload, list) or any(not isinstance(row, dict) for row in payload):
+            raise GangSheetDomainError("INVALID_LAYOUT", "La liste des occurrences est invalide.")
+        if expected_revision is None or isinstance(expected_revision, bool):
+            raise GangSheetDomainError(
+                "INVALID_LAYOUT", "La révision du brouillon est obligatoire."
+            )
+        try:
+            parsed_revision = Decimal(str(expected_revision))
+            if (
+                not parsed_revision.is_finite()
+                or parsed_revision != parsed_revision.to_integral_value()
+                or parsed_revision < 0
+            ):
+                raise ValueError
+            parsed_revision = int(parsed_revision)
+        except (InvalidOperation, OverflowError, TypeError, ValueError) as error:
+            raise GangSheetDomainError(
+                "INVALID_LAYOUT", "La révision du brouillon est invalide."
+            ) from error
+        if parsed_revision != locked.revision:
             raise GangSheetDomainError(
                 "STALE_REVISION",
                 "Ce brouillon a été modifié ailleurs. Rechargez la page avant de continuer.",
@@ -860,6 +1324,7 @@ class GangSheetService:
         items = list(locked.items.select_for_update())
         if not items:
             raise GangSheetDomainError("ITEMS_REQUIRED", "Ajoutez au moins un visuel ou un texte.")
+        self._ensure_auto_place_has_no_groups(locked, items=items)
         spacing_x = self._spacing_decimal(
             locked.item_spacing_x_mm if spacing_x_mm is None else spacing_x_mm
         )
@@ -903,7 +1368,8 @@ class GangSheetService:
     @transaction.atomic
     def request_render(self, *, sheet, actor, source="client_portal"):
         locked = self._lock_editable(sheet)
-        items = list(locked.items.select_for_update().select_related("asset_version"))
+        self._ensure_auto_placements_resolved(locked)
+        items = list(locked.items.select_related("asset_version").select_for_update(of=("self",)))
         issues = self.geometry.issues(sheet=locked, items=items)
         if not items:
             raise GangSheetDomainError("ITEMS_REQUIRED", "Ajoutez au moins un visuel ou un texte.")
@@ -924,17 +1390,108 @@ class GangSheetService:
         return locked
 
     @transaction.atomic
-    def validate_sheet(self, *, sheet, actor, source="client_portal"):
+    def validate_sheet(
+        self,
+        *,
+        sheet,
+        actor,
+        source="client_portal",
+        expected_revision=None,
+        preflight_fingerprint="",
+        acknowledge_quality=False,
+    ):
         locked = GangSheet.objects.select_for_update().get(pk=sheet.pk)
+        self._ensure_auto_placements_resolved(locked)
         if locked.status != GangSheet.Status.READY or not locked.final_file:
             raise GangSheetDomainError(
                 "RENDER_REQUIRED", "Le rendu final doit être terminé avant validation."
             )
-        items = list(locked.items.all())
+        if expected_revision is not None and str(expected_revision) != str(locked.revision):
+            raise GangSheetDomainError(
+                "STALE_PREFLIGHT", "Actualisez le contrôle qualité avant de confirmer."
+            )
+        version_ids = locked.items.exclude(asset_version_id=None).values_list(
+            "asset_version_id", flat=True
+        )
+        # Match AssetAnalysisService's analysis -> version order; lock deterministically.
+        list(
+            AssetAnalysis.objects.filter(
+                version_id__in=version_ids,
+                customer_id=locked.customer_id,
+            )
+            .order_by("pk")
+            .select_for_update()
+        )
+        list(
+            AssetVersion.objects.filter(
+                pk__in=version_ids,
+                customer_id=locked.customer_id,
+            )
+            .order_by("pk")
+            .select_for_update()
+        )
+        items = list(locked.items.select_related("asset_version__analysis"))
         issues = self.geometry.issues(sheet=locked, items=items)
         if issues:
             raise GangSheetDomainError(
                 "INVALID_GEOMETRY", "La géométrie de la planche est invalide."
+            )
+        preflight = GangSheetPreflightService().evaluate(sheet=locked, items=items)
+        if preflight["blocking"]:
+            raise GangSheetDomainError(
+                "PREFLIGHT_BLOCKED",
+                "Terminez l’analyse des fichiers avant confirmation.",
+                {"preflight": preflight},
+            )
+        if preflight["requires_acknowledgement"] or preflight_fingerprint:
+            if (
+                str(expected_revision) != str(locked.revision)
+                or preflight_fingerprint != preflight["fingerprint"]
+            ):
+                raise GangSheetDomainError(
+                    "STALE_PREFLIGHT",
+                    "Actualisez le contrôle qualité avant de confirmer.",
+                    {"preflight": preflight},
+                )
+            if preflight["requires_acknowledgement"] and acknowledge_quality is not True:
+                raise GangSheetDomainError(
+                    "PREFLIGHT_ACK_REQUIRED",
+                    "Prenez connaissance des avertissements qualité.",
+                    {"preflight": preflight},
+                )
+        if preflight["requires_acknowledgement"]:
+            self._audit(
+                "preflight_accepted",
+                sheet=locked,
+                actor=actor,
+                source=source,
+                metadata={
+                    "revision": locked.revision,
+                    "fingerprint": preflight["fingerprint"],
+                    "policy_version": preflight["policy_version"],
+                    "warning_codes": sorted({row["code"] for row in preflight["warnings"]}),
+                    "items": [
+                        {
+                            "item_public_id": str(item.public_id),
+                            "version_public_id": str(item.asset_version.public_id)
+                            if item.asset_version_id
+                            else None,
+                            "effective_dpi": preflight["items"][str(item.public_id)][
+                                "effective_dpi"
+                            ],
+                            "recommended_dpi": settings.B2B_RECOMMENDED_DPI,
+                            "minimum_dpi": settings.B2B_MIN_ACCEPTABLE_DPI,
+                            "codes": sorted(
+                                {
+                                    row["code"]
+                                    for row in preflight["items"][str(item.public_id)]["issues"]
+                                }
+                            ),
+                        }
+                        for item in items
+                        if preflight["items"][str(item.public_id)]["issues"]
+                    ],
+                },
             )
         locked.status = GangSheet.Status.VALIDATED
         locked.validated_at = timezone.now()
@@ -990,8 +1547,19 @@ class GangSheetService:
                 source=f"{source}.order_project",
             )
         )
-        if locked.project_id:
+        if locked.project_id and not locked.project.converted_order_id:
             project = locked.project
+            identity = {
+                "name": project_name,
+                "requested_date": project_date,
+                "customer_comment": project_comment,
+            }
+            project = self.projects.update_project(
+                project=project,
+                actor=actor,
+                data=identity,
+                source=source,
+            )
             item = project.items.order_by("sort_order", "created_at").first()
             if (
                 item is not None
@@ -1029,33 +1597,46 @@ class GangSheetService:
             },
             source=source,
         )
-        locked.final_file.open("rb")
-        final_upload = File(
-            locked.final_file.file,
-            name=f"{locked.public_id}-production.pdf",
-        )
-        final_upload.content_type = "application/pdf"
-        try:
-            version = self.assets.create_production_asset(
-                customer=locked.customer,
-                actor=actor,
-                name=f"{locked.name} — fichier production",
-                uploaded_file=final_upload,
-                source=source,
-                metadata={
-                    "gang_sheet_public_id": str(locked.public_id),
-                },
+        production_asset = locked.production_asset
+        if production_asset is None:
+            locked.final_file.open("rb")
+            final_upload = File(
+                locked.final_file.file,
+                name=f"{locked.public_id}-production.pdf",
             )
-        except AssetDomainError as error:
-            raise GangSheetDomainError(error.code, error.message, error.details) from error
-        finally:
-            locked.final_file.close()
-
-        item.asset = version.asset
-        item.save(update_fields=["asset", "updated_at"])
+            final_upload.content_type = "application/pdf"
+            try:
+                version = self.assets.create_production_asset(
+                    customer=locked.customer,
+                    actor=actor,
+                    name=f"{locked.name} — fichier production",
+                    uploaded_file=final_upload,
+                    source=source,
+                    metadata={
+                        "gang_sheet_public_id": str(locked.public_id),
+                    },
+                )
+            except AssetDomainError as error:
+                raise GangSheetDomainError(error.code, error.message, error.details) from error
+            finally:
+                locked.final_file.close()
+            production_asset = version.asset
+            item.asset = production_asset
+            item.save(update_fields=["asset", "updated_at"])
+        else:
+            try:
+                self.assets.link_existing_asset_to_item(
+                    project=project,
+                    item_public_id=item.public_id,
+                    asset=production_asset,
+                    actor=actor,
+                    source=source,
+                )
+            except AssetDomainError as error:
+                raise GangSheetDomainError(error.code, error.message, error.details) from error
         self.projects.refresh_completeness(project=project)
         locked.project = project
-        locked.production_asset = version.asset
+        locked.production_asset = production_asset
         locked.save(update_fields=["project", "production_asset", "updated_at"])
         self._audit(
             "order_project_created",
@@ -1064,10 +1645,11 @@ class GangSheetService:
             source=source,
             metadata={
                 "project_public_id": str(project.public_id),
-                "asset_public_id": str(version.asset.public_id),
+                "asset_public_id": str(production_asset.public_id),
                 "quantity": sheet_quantity,
                 "name": project_name,
                 "requested_date": project_date.isoformat() if project_date else None,
+                "repeat": bool(locked.order_id),
             },
         )
         return self.projects.get_customer_project(
@@ -1076,11 +1658,128 @@ class GangSheetService:
         )
 
     @transaction.atomic
+    def checkout_studio_sheet(
+        self,
+        *,
+        sheet,
+        actor,
+        customer_membership,
+        support_color_hex,
+        support_color_multicolor=False,
+        quantity=1,
+        shipping_method_code=None,
+        billing_mode=None,
+        name: str | None = None,
+        requested_date=None,
+        customer_comment: str | None = None,
+        delivery_address=None,
+        source="client_portal.studio_checkout",
+    ):
+        """Enregistre la couleur et convertit la planche déjà validée en commande."""
+        # project/order sont nullable : SELECT FOR UPDATE + OUTER JOIN casse PostgreSQL.
+        locked = (
+            GangSheet.objects.select_related("project", "order")
+            .select_for_update(of=("self",))
+            .get(pk=sheet.pk)
+        )
+        if locked.status != GangSheet.Status.VALIDATED or not locked.final_file:
+            raise GangSheetDomainError(
+                "VALIDATED_SHEET_REQUIRED",
+                "Confirmez la composition avant de commander.",
+            )
+        placed = list(locked.items.exclude(asset_version_id=None).select_related("asset_version"))
+        if not placed:
+            raise GangSheetDomainError(
+                "SHEET_ITEMS_REQUIRED",
+                "Ajoutez au moins un visuel sur la planche avant de commander.",
+            )
+        not_ready = [
+            item.asset_version.asset.name
+            for item in placed
+            if item.asset_version.analysis_status
+            not in {AssetVersion.AnalysisStatus.READY, AssetVersion.AnalysisStatus.WARNING}
+        ]
+        if not_ready:
+            raise GangSheetDomainError(
+                "ANALYSES_NOT_READY",
+                "Attendez la fin de l’analyse de tous les visuels avant de commander.",
+                {"items": not_ready},
+            )
+
+        # Comptant déjà créé mais non payé (ex. échec prestataire) : reprendre
+        # le règlement au lieu d'ouvrir une 2ᵉ commande sur la même planche.
+        existing_order = locked.order
+        if existing_order is None and locked.project_id:
+            existing_order = getattr(locked.project, "converted_order", None)
+        if (
+            existing_order is not None
+            and existing_order.status != Order.Status.CANCELLED
+            and order_awaits_client_payment(existing_order)
+        ):
+            return existing_order
+
+        project = self.create_order_project(
+            sheet=locked,
+            actor=actor,
+            quantity=quantity,
+            name=name,
+            requested_date=requested_date,
+            customer_comment=customer_comment,
+            source=source,
+        )
+        if project.converted_order_id:
+            return project.converted_order
+
+        item = (
+            project.items.select_related("asset__current_version")
+            .order_by("sort_order", "created_at")
+            .first()
+        )
+        if item is None:
+            raise GangSheetDomainError(
+                "PROJECT_ITEMS_REQUIRED",
+                "La commande n’a pas pu être préparée. Réessayez.",
+            )
+        try:
+            self._ensure_production_item_analysis_ready(item)
+            item.refresh_from_db()
+            if item.client_confirmed_asset_version_id is None:
+                self.projects.confirm_item_analysis(
+                    project=project,
+                    item_public_id=item.public_id,
+                    actor=actor,
+                    data={
+                        "support_color_hex": support_color_hex,
+                        "support_color_multicolor": support_color_multicolor,
+                        "quantity": quantity,
+                    },
+                    source=source,
+                )
+            if shipping_method_code != "pickup" and delivery_address:
+                project.shipping_address = self.projects._normalize_shipping_address(
+                    delivery_address
+                )
+                project.save(update_fields=["shipping_address", "updated_at"])
+            from apps.b2b_order_projects.services.checkout import B2BOrderProjectCheckoutService
+
+            return B2BOrderProjectCheckoutService().checkout_project(
+                project=project,
+                actor=actor,
+                customer_membership=customer_membership,
+                source=source,
+                billing_mode=billing_mode,
+                shipping_method_code=shipping_method_code,
+            )
+        except ProjectDomainError as error:
+            raise GangSheetDomainError(error.code, error.message, error.details) from error
+
+    @transaction.atomic
     def attach_validated_sheets_to_order(self, *, project, order, actor, source):
         sheets = list(
             GangSheet.objects.select_for_update()
             .for_project(project)
-            .filter(status=GangSheet.Status.VALIDATED, order__isnull=True)
+            .filter(status=GangSheet.Status.VALIDATED)
+            .exclude(order_id=order.pk)
         )
         for sheet in sheets:
             sheet.order = order
@@ -1104,7 +1803,8 @@ class GangSheetService:
         return sheets
 
     def serialize_sheet(self, sheet, *, preview_url_resolver) -> dict:
-        items = list(sheet.items.select_related("asset_version__asset"))
+        items = list(sheet.items.select_related("asset_version__asset", "asset_version__analysis"))
+        preflight = GangSheetPreflightService().evaluate(sheet=sheet, items=items)
         issues = self.geometry.issues(sheet=sheet, items=items)
         issue_ids = {item_id for issue in issues for item_id in issue["item_public_ids"]}
         return {
@@ -1126,13 +1826,25 @@ class GangSheetService:
             "estimated_price_eur": float(sheet.estimated_price_eur),
             "text_fonts": serialized_font_catalog(),
             "issues": issues,
+            "preflight": preflight,
             "items": [
-                self._serialize_item(
-                    item,
-                    issues=issue_ids,
-                    preview_url_resolver=preview_url_resolver,
-                )
+                {
+                    **self._serialize_item(
+                        item,
+                        issues=issue_ids,
+                        preview_url_resolver=preview_url_resolver,
+                    ),
+                    "quality": preflight["items"][str(item.public_id)],
+                }
                 for item in items
+                if item.customer_id == sheet.customer_id
+                and (
+                    not item.asset_version_id
+                    or (
+                        item.asset_version.customer_id == sheet.customer_id
+                        and item.asset_version.asset.customer_id == sheet.customer_id
+                    )
+                )
             ],
         }
 
@@ -1141,6 +1853,33 @@ class GangSheetService:
         if locked.status not in self.editable_statuses:
             raise GangSheetDomainError("SHEET_LOCKED", "Cette planche n'est plus modifiable.")
         return locked
+
+    @staticmethod
+    def _ensure_auto_placements_resolved(sheet):
+        unresolved = sheet.source_assets.filter(
+            auto_placement_status__in=(
+                GangSheetSourceAsset.AutoPlacementStatus.AWAITING_ANALYSIS,
+                GangSheetSourceAsset.AutoPlacementStatus.NO_SPACE,
+            )
+        )
+        if unresolved.exists():
+            raise GangSheetDomainError(
+                "AUTO_PLACEMENT_PENDING",
+                "Terminez le placement automatique des fichiers importés avant de continuer.",
+            )
+
+    @staticmethod
+    def _ensure_auto_place_has_no_groups(sheet, *, items=None) -> None:
+        has_groups = (
+            any(item.layout_group_id is not None for item in items)
+            if items is not None
+            else sheet.items.filter(layout_group_id__isnull=False).exists()
+        )
+        if has_groups:
+            raise GangSheetDomainError(
+                "AUTO_PLACE_GROUPED_ITEMS",
+                "Dissociez les groupes avant d'utiliser le placement automatique.",
+            )
 
     def _resolve_available_version(self, sheet, public_id):
         version = self.available_asset_versions(sheet=sheet).filter(public_id=public_id).first()
@@ -1261,7 +2000,6 @@ class GangSheetService:
         board = sheet or item.sheet
         max_width = usable_text_max_width_mm(
             sheet_width_mm=board.width_mm,
-            margin_mm=board.margin_mm,
             x_mm=item.x_mm,
             sheet_height_mm=board.height_mm,
             y_mm=item.y_mm,
@@ -1280,14 +2018,17 @@ class GangSheetService:
         text = is_text_item(item)
         preview_url = ""
         asset_version_public_id = None
+        asset_public_id = None
         if item.asset_version_id:
             asset_version_public_id = str(item.asset_version.public_id)
+            asset_public_id = str(item.asset_version.asset.public_id)
             preview_url = preview_url_resolver(item.asset_version)
         return {
             "public_id": str(item.public_id),
             "kind": item.kind,
             "asset_name": display_name(item),
             "asset_version_public_id": asset_version_public_id,
+            "asset_public_id": asset_public_id,
             "preview_url": preview_url,
             "x_mm": float(item.x_mm),
             "y_mm": float(item.y_mm),
@@ -1351,6 +2092,24 @@ class GangSheetService:
             return None
         return UUID(str(value))
 
+    @staticmethod
+    def _parse_expected_revision(value, *, invalid_code):
+        if value is None or isinstance(value, bool):
+            raise GangSheetDomainError(
+                invalid_code,
+                "La révision du brouillon est obligatoire.",
+            )
+        try:
+            parsed = Decimal(str(value))
+            if not parsed.is_finite() or parsed != parsed.to_integral_value() or parsed < 0:
+                raise ValueError
+            return int(parsed)
+        except (InvalidOperation, OverflowError, TypeError, ValueError) as error:
+            raise GangSheetDomainError(
+                invalid_code,
+                "La révision du brouillon est invalide.",
+            ) from error
+
     @classmethod
     def _spacing_decimal(cls, value):
         try:
@@ -1385,6 +2144,31 @@ class GangSheetService:
                 "INVALID_REQUESTED_DATE",
                 "La date souhaitée est invalide.",
             ) from error
+
+    @staticmethod
+    def _ensure_production_item_analysis_ready(item):
+        """Le PDF HD est généré atelier : le QC source a déjà eu lieu sur la planche."""
+        version = getattr(getattr(item, "asset", None), "current_version", None)
+        if version is None:
+            return
+        ready = {AssetVersion.AnalysisStatus.READY, AssetVersion.AnalysisStatus.WARNING}
+        if version.analysis_status in ready:
+            return
+        AssetAnalysis.objects.get_or_create(
+            version=version,
+            defaults={
+                "customer_id": version.customer_id,
+                "warnings": [],
+                "metadata": {
+                    "production_output": True,
+                    "thin_zone": {"detected": False},
+                    "semi_transparency": {"detected": False},
+                },
+            },
+        )
+        version.analysis_status = AssetVersion.AnalysisStatus.READY
+        version.analysis_error = ""
+        version.save(update_fields=["analysis_status", "analysis_error", "updated_at"])
 
     @staticmethod
     def _bounded_positive_int(value, *, label):

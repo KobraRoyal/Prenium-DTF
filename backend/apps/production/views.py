@@ -68,12 +68,15 @@ class StaffManufacturingOrderPdfView(APIView):
         )
         if order is None or job is None:
             raise Http404
-        pdf_bytes = render_manufacturing_order_pdf_bytes(order=order, production_job=job)
-        manufacturing_order_batch_service.mark_of_documents_issued(
-            orders=[order],
-            actor=request.user,
-            source="staff_api.manufacturing_order_pdf",
-        )
+        try:
+            pdf_bytes = render_manufacturing_order_pdf_bytes(order=order, production_job=job)
+            manufacturing_order_batch_service.mark_of_documents_issued(
+                orders=[order],
+                actor=request.user,
+                source="staff_api.manufacturing_order_pdf",
+            )
+        except DjangoValidationError as error:
+            raise_api_validation_error(error)
         filename = f"{job.manufacturing_order_number}.pdf"
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{filename}"'

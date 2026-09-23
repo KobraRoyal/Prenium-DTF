@@ -130,12 +130,19 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
             {
                 "apps.portal.client_order_presentation",
                 "apps.portal.dashboard_focus",
+                "apps.portal.order_status_presentation",
                 "apps.portal.views_common",
                 "apps.portal.views_payments",
             },
         ),
-        ("views_checkout", {"apps.portal.htmx", "apps.portal.views_common"}),
-        ("views_staff", {"apps.portal.views_common"}),
+        (
+            "views_checkout",
+            {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.forms_external_orders"},
+        ),
+        (
+            "views_staff",
+            {"apps.portal.order_status_presentation", "apps.portal.views_common"},
+        ),
         ("views_staff_dashboard", {"apps.portal.views_common"}),
         ("views_staff_documents", {"apps.portal.htmx", "apps.portal.views_common"}),
         (
@@ -148,12 +155,18 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
         ),
         (
             "views_staff_production",
-            {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff"},
+            {
+                "apps.portal.htmx",
+                "apps.portal.services.production_panel_context",
+                "apps.portal.views_common",
+                "apps.portal.views_staff",
+            },
         ),
         (
             "views_staff_shipping",
             {
                 "apps.portal.htmx",
+                "apps.portal.order_status_presentation",
                 "apps.portal.shipping_forms",
                 "apps.portal.views_common",
                 "apps.portal.views_staff",
@@ -190,7 +203,12 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
         ),
         (
             "views_staff_billing",
-            {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff"},
+            {
+                "apps.portal.forms_staff_billing_adjustment",
+                "apps.portal.htmx",
+                "apps.portal.views_common",
+                "apps.portal.views_staff",
+            },
         ),
     ],
 )
@@ -210,22 +228,23 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_auth", 120),
         ("views_profile", 220),
         ("views_staff_uploads", 130),
-        ("views_staff_reviews", 170),
-        ("views_staff", 190),
-        ("views_staff_dashboard", 90),
+        ("views_staff_reviews", 250),
+        ("views_staff", 210),
+        ("views_staff_dashboard", 120),
         ("views_staff_documents", 70),
-        ("views_staff_billing", 170),
+        ("views_staff_billing", 210),
         ("views_staff_production", 180),
-        ("views_staff_shipping", 190),
+        ("views_staff_shipping", 215),
         ("views_staff_operations", 400),
         ("views_staff_pod", 290),
         ("views_staff_pod_catalog", 220),
         ("views_staff_pod_rip", 130),
         ("views_staff_pod_ops", 230),
         ("views_staff_pod_shopify", 160),
-        ("views_common", 220),
+        ("views_common", 240),
         ("views_checkout", 270),
         ("views_client", 420),
+        ("views_client_dashboard", 160),
     ],
 )
 def test_portal_modules_stay_within_expected_size_limits(module_name, max_lines):

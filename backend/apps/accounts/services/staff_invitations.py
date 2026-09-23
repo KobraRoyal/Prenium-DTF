@@ -223,8 +223,7 @@ class StaffInvitationService:
         ):
             raise PermissionDenied
         if actor_membership.role == StaffMembership.Role.ADMIN and (
-            membership.role == StaffMembership.Role.ADMIN
-            or role == StaffMembership.Role.ADMIN
+            membership.role == StaffMembership.Role.ADMIN or role == StaffMembership.Role.ADMIN
         ):
             raise PermissionDenied
         if role not in StaffMembership.Role.values:
@@ -269,6 +268,13 @@ class StaffInvitationService:
             raise PermissionDenied
         membership.is_active = False
         membership.save(update_fields=("is_active", "updated_at"))
+        from apps.notifications.services.workshop_push import WorkshopNotificationService
+
+        WorkshopNotificationService().disable_for_membership(
+            staff_membership=membership,
+            actor=actor,
+            source="staff_offboarding",
+        )
         sync_staff_access(user=membership.user, role=membership.role, is_active=False)
         record_event(
             action="staff.membership.deactivated",

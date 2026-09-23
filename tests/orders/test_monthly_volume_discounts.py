@@ -439,7 +439,7 @@ def test_immediate_uses_default_ladder_until_customer_personalizes():
 
 @pytest.mark.django_db
 @override_settings(DTF_LAIZE_CM=100)
-def test_deferred_empty_ladder_does_not_fallback_to_defaults():
+def test_deferred_uses_default_ladder_when_customer_has_no_personalized_tiers():
     user = get_user_model().objects.create_user(
         email="deferred-default@example.com",
         password="pass",
@@ -453,8 +453,40 @@ def test_deferred_empty_ladder_does_not_fallback_to_defaults():
     order = _create_order(customer=customer, user=user, linear_m="6.0000")
     _price(order, user)
     order.refresh_from_db()
-    assert order.volume_discount_percent == Decimal("0.00")
-    assert order.total_amount == Decimal("70.00")
+    assert order.volume_discount_percent == Decimal("10.00")
+    assert order.volume_discount_amount == Decimal("6.00")
+    assert order.total_amount == Decimal("64.00")
+    summary = CustomerVolumeDiscountTierService().get_current_month_summary(customer=customer)
+    assert summary["uses_default_ladder"] is True
+    assert summary["current_tier"].discount_percent == Decimal("10.00")
+
+
+@pytest.mark.django_db
+@override_settings(DTF_LAIZE_CM=100)
+def test_deferred_personalized_ladder_overrides_default_ladder():
+    user = get_user_model().objects.create_user(
+        email="deferred-personalized@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Deferred Personalized",
+        default_billing_mode="deferred",
+    )
+    _seed_catalog()
+    DefaultCustomerVolumeDiscountTier.objects.create(
+        minimum_monthly_linear_m=Decimal("5.0000"),
+        discount_percent=Decimal("40.00"),
+    )
+    CustomerVolumeDiscountTier.objects.create(
+        customer=customer,
+        minimum_monthly_linear_m=Decimal("5.0000"),
+        discount_percent=Decimal("10.00"),
+    )
+    order = _create_order(customer=customer, user=user, linear_m="6.0000")
+    _price(order, user)
+    order.refresh_from_db()
+    assert order.volume_discount_percent == Decimal("10.00")
+    assert order.total_amount == Decimal("64.00")
 
 
 @pytest.mark.django_db
@@ -476,3 +508,52 @@ def test_captured_immediate_order_cannot_be_repriced():
     _capture_payment(order, user)
     with pytest.raises(ValidationError, match="figé après paiement"):
         _price(order, user)
+
+
+@pytest.mark.django_db
+@override_settings(DTF_LAIZE_CM=100)
+def test_deferred_account_dashboard_counts_paid_immediate_when_no_deferred_priced():
+    """Compte encours + commandes CB payées : le dashboard ne doit pas rester à 0 m."""
+    user = get_user_model().objects.create_user(email="mix-volume@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Mix Volume",
+        default_billing_mode=Customer.DefaultBillingMode.DEFERRED,
+    )
+    _seed_catalog()
+    DefaultCustomerVolumeDiscountTier.objects.create(
+        minimum_monthly_linear_m=Decimal("25.0000"),
+        discount_percent=Decimal("5.00"),
+    )
+    unpaid_deferred = _create_order(
+        customer=customer,
+        user=user,
+        linear_m="3.0000",
+        billing_mode=Order.BillingMode.DEFERRED,
+    )
+    assert unpaid_deferred.pricing_status == Order.PricingStatus.PENDING
+
+    first = _create_order(
+        customer=customer,
+        user=user,
+        linear_m="1.5000",
+        billing_mode=Order.BillingMode.IMMEDIATE,
+    )
+    _price(first, user)
+    _capture_payment(first, user)
+    second = _create_order(
+        customer=customer,
+        user=user,
+        linear_m="0.1500",
+        billing_mode=Order.BillingMode.IMMEDIATE,
+    )
+    _price(second, user)
+    _capture_payment(second, user)
+
+    summary = CustomerVolumeDiscountTierService().get_current_month_summary(customer=customer)
+    assert summary["policy"] == "prospective"
+    assert summary["eligible_order_count"] == 2
+    assert summary["monthly_volume_linear_m"] == Decimal("1.6500")
+    assert summary["remaining_to_next_tier_linear_m"] == Decimal("23.3500")
+    assert summary["current_tier"] is None
+    assert summary["next_tier"].discount_percent == Decimal("5.00")
+    assert "sans effet rétroactif" in summary["application_scope"]

@@ -335,7 +335,10 @@ class ProductPolishUITests(SimpleTestCase):
         ]
         alert_paths = [
             TEMPLATES_DIR / "portal" / "client" / "order_detail.html",
+        ]
+        toast_paths = [
             TEMPLATES_DIR / "portal" / "client" / "team.html",
+            TEMPLATES_DIR / "portal" / "layout.html",
         ]
         forbidden = [
             "dui-alert",
@@ -361,6 +364,16 @@ class ProductPolishUITests(SimpleTestCase):
             markup = source(path)
             with self.subTest(path=path.name):
                 self.assertIn("alert--", markup)
+                for marker in forbidden:
+                    self.assertNotIn(marker, markup)
+
+        for path in toast_paths:
+            markup = source(path)
+            with self.subTest(path=path.name):
+                if path.name == "layout.html":
+                    self.assertIn("django_messages_toasts", markup)
+                else:
+                    self.assertNotIn("for message in messages", markup)
                 for marker in forbidden:
                     self.assertNotIn(marker, markup)
 
@@ -438,7 +451,8 @@ class ProductPolishUITests(SimpleTestCase):
             "--journey-ink: var(--ink)",
             "--journey-paper: var(--bg)",
             "body.prospect-journey-page .prospect-journey__frame",
-            "body.prospect-journey-page .prospect-journey__rail",
+            "body.prospect-journey-page .prospect-journey__topbar",
+            "body.prospect-journey-page .prospect-journey__breadcrumb",
             "box-shadow: none !important",
         ]:
             with self.subTest(marker=marker):
@@ -515,14 +529,31 @@ class ProductPolishUITests(SimpleTestCase):
         self.assertIn("Suivre mon colis", shipping)
         self.assertIn('target="_blank" rel="noopener noreferrer"', shipping)
 
-    def test_studio_dialog_uses_b2b_dialog_head_instead_of_hidden_eyebrow(self) -> None:
+    def test_studio_import_is_inline_and_details_use_a_dialog(self) -> None:
         editor = source(TEMPLATES_DIR / "portal/client/gang_sheets/editor.html")
-        studio_entry = source(CSS_DIR / "entries/studio.css")
+        gallery = source(TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_gallery.html")
+        detail = source(
+            TEMPLATES_DIR / "portal/client/gang_sheets/partials/asset_detail_dialog.html"
+        )
 
         self.assertNotIn("product-eyebrow", editor)
-        self.assertIn('id="gang-asset-dialog-title">Importer', editor)
-        self.assertIn("b2b-dialog-head", editor)
-        self.assertIn(".gang-asset-modal-form__controls", studio_entry)
+        self.assertNotIn('id="gang-asset-dialog"', editor)
+        self.assertIn("data-gang-inline-import", editor)
+        self.assertIn("data-batch-auto-submit", editor)
+        self.assertNotIn('<details class="gang-inline-import"', editor)
+        self.assertIn("data-batch-dropzone", editor)
+        self.assertIn("data-selected-files-list", editor)
+        self.assertIn("data-batch-upload-progress", editor)
+        self.assertIn("gang_sheet_import_error", editor)
+        self.assertIn('data-dialog-open="gang-asset-detail-', gallery)
+        self.assertIn("data-asset-crop-editor", detail)
+        self.assertIn("data-existing-crop-manual", detail)
+        self.assertIn("data-existing-crop-auto", detail)
+        self.assertIn("data-analysis-overlay-toggle", detail)
+        self.assertIn("data-existing-preview-zoom-in", detail)
+        self.assertIn("gang-asset-detail__file-info", detail)
+        self.assertIn("data-existing-crop-dimensions", detail)
+        self.assertNotIn("asset_analysis_summary.html", detail)
 
     def test_marketing_entry_neutralizes_agency_defaults_on_conversion_pages(self) -> None:
         entry = source(CSS_DIR / "entries/marketing.css")
@@ -597,4 +628,7 @@ class ProductPolishUITests(SimpleTestCase):
             with self.subTest(template_path=template_path):
                 template = source(TEMPLATES_DIR / template_path)
                 self.assertIn("ui-destructive-action", template)
-                self.assertIn("ui-btn ui-btn-danger", template)
+                if "order_project" in template_path:
+                    self.assertIn("b2b-confirm-dialog__button--danger", template)
+                else:
+                    self.assertIn("ui-btn ui-btn-danger", template)

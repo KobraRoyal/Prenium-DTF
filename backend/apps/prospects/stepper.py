@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-# Libellés courts + aide — cohérents avec le tunnel simplifié en trois étapes.
+# Libellés courts + aide — cohérents avec le tunnel simplifié en deux étapes.
 PROSPECT_STEP_META: tuple[tuple[str, str], ...] = (
-    ("Entreprise", "Identité vérifiée"),
-    ("Projet", "Besoin & volume"),
-    ("Validation", "Récapitulatif"),
+    ("Entreprise", "Coordonnées & adresse"),
+    ("Projet", "Besoin & rythme"),
+    ("Validation", "Dernière vérification"),
 )
 
 

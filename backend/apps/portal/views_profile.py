@@ -10,12 +10,16 @@ from django.views import View
 from apps.accounts.forms import ProfileInformationForm
 from apps.accounts.services.profile import AccountProfileService
 from apps.customers.forms_client import ClientCompanyProfileForm
+from apps.customers.services.client_profile_presentation import ClientProfilePresentationService
 from apps.customers.services.company_profile import CompanyProfileService
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import ScopedCustomerMixin, access_scope_service
 
 account_profile_service = AccountProfileService()
 company_profile_service = CompanyProfileService()
+client_profile_presentation_service = ClientProfilePresentationService(
+    company_profile=company_profile_service
+)
 
 
 def _is_htmx(request) -> bool:
@@ -80,18 +84,17 @@ class PortalProfileView(LoginRequiredMixin, View):
                     .filter(public_id=selected_membership.customer_public_id)
                     .first()
                 )
-            can_edit_company = bool(
-                selected_membership is not None and selected_membership.can_manage_team
-            )
             context.update(
                 {
                     "customer": customer,
                     "selected_membership": selected_membership,
-                    "can_edit_company": can_edit_company,
-                    "company_profile": (
-                        company_profile_service.present(customer) if customer else None
-                    ),
                 }
+            )
+            context.update(
+                client_profile_presentation_service.present(
+                    customer=customer,
+                    selected_membership=selected_membership,
+                )
             )
         elif nav_mode == "staff":
             context["staff_membership"] = access_scope_service.get_staff_membership(request.user)

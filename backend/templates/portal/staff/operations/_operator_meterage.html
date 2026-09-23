@@ -34,7 +34,20 @@
     {% endif %}
     <button class="ui-btn ui-btn-primary" type="submit">Enregistrer le métrage</button>
   </form>
-  {% elif order.meterage_override_linear_m %}
-  <p>Métrage saisi : <strong>{{ order.meterage_override_linear_m }}</strong> m</p>
+  {% elif resolved_meterage_linear_m %}
+  <p>
+    {% if meterage_automatic %}Métrage automatique (Gang Sheet){% else %}Métrage saisi{% endif %}
+    : <strong>{{ resolved_meterage_linear_m }}</strong> m
+    {% if order_billable_sqm_preview is not None %}
+    <span class="muted">≈ {{ order_billable_sqm_preview }} m²</span>
+    {% endif %}
+  </p>
+  {% if meterage_payment_frozen %}
+  <p class="muted text-sm">Tarif figé (paiement lancé) — le workflow Atelier peut continuer.</p>
+  {% endif %}
+  {% elif meterage_payment_frozen %}
+  <div class="alert alert--danger" role="alert">
+    <p>Le tarif est figé dès qu’un paiement a été lancé. Aucun métrage exploitable n’a été trouvé.</p>
+  </div>
   {% endif %}
 </section>

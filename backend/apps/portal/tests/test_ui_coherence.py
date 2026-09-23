@@ -161,20 +161,61 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_audit_followups_remove_gated_reveal_side_tab_and_width_motion(self) -> None:
         conversion_css = static_source("css/components/landing-conversion.css")
-        tunnel_css = static_source("css/components/prospect-tunnel.css")
         journey_css = static_source("css/components/prospect-journey.css")
+        portal_core = static_source("css/entries/portal-core.css")
         tunnel_base = template_source("prospects/base_tunnel.html")
         design_md = (Path(settings.BASE_DIR).parent / "DESIGN.md").read_text(encoding="utf-8")
 
         self.assertIn("Contenu toujours lisible", conversion_css)
         self.assertNotIn("filter: blur(5px)", conversion_css)
-        self.assertNotIn("border-left: 4px solid var(--success)", tunnel_css)
-        self.assertIn("transform: scaleX(calc(var(--progress, 0) / 100))", tunnel_css)
-        self.assertIn("transition: transform 280ms", journey_css)
-        self.assertIn('style="--progress:', tunnel_base)
+        self.assertNotIn("prospect-tunnel.css", portal_core)
+        self.assertIn("@view-transition", journey_css)
+        self.assertIn("journey-panel-in", journey_css)
+        self.assertIn("view-transition-name: prospect-journey-main", journey_css)
+        self.assertIn("view-transition-name: prospect-journey-stepper", journey_css)
+        self.assertIn("journey-stepper-in", journey_css)
+        self.assertIn("position: sticky", journey_css)
+        self.assertIn("top: var(--journey-sticky-top)", journey_css)
+        self.assertIn("z-index: 20", journey_css)
+
+        self.assertIn("background: var(--journey-paper)", journey_css)
+        self.assertIn(".prospect-project-metrics {", journey_css)
+        self.assertIn("align-items: start;", journey_css)
+        self.assertIn(".prospect-project-metrics .prospect-project-fieldset {", journey_css)
+        self.assertIn("padding-top: 0;", journey_css)
+        self.assertIn("border-top: 0;", journey_css)
+        self.assertIn(".prospect-step1__activity-marker,", journey_css)
+        self.assertIn("grid-template-columns: 1.1rem minmax(0, 1fr);", journey_css)
+        self.assertIn("border-radius: var(--radius-sm);", journey_css)
+        self.assertNotIn(".prospect-project-option__check", journey_css)
+        self.assertIn("clip-path: inset(0 12% 0 0)", journey_css)
+        self.assertIn("transform: translate3d(-4rem, 0, 0)", journey_css)
+        self.assertIn("clip-path: inset(0 0 0 14%)", journey_css)
+        self.assertIn("transform: translate3d(6rem, 0, 0)", journey_css)
+        self.assertNotIn("prospect-journey__progress", tunnel_base)
+        self.assertNotIn('style="--progress:', tunnel_base)
         self.assertNotIn('style="width:', tunnel_base)
         self.assertIn("name: Prenium DTF", design_md)
         self.assertIn("## Do's and Don'ts", design_md)
+
+    def test_prospect_controls_share_premium_input_and_radio_contract(self) -> None:
+        journey_css = static_source("css/components/prospect-journey.css")
+        prospect_css = static_source("css/entries/prospect.css")
+        step1 = template_source("prospects/step1.html")
+        step2 = template_source("prospects/step2.html")
+
+        self.assertIn("grid-template-columns: 1.1rem minmax(0, 1fr);", journey_css)
+        self.assertIn("border-radius: 50%;", journey_css)
+        self.assertIn("min-height: 3rem;", journey_css)
+        self.assertIn("border-radius: var(--radius-sm);", prospect_css)
+        self.assertIn("min-height: 2.75rem;", prospect_css)
+        self.assertIn("box-shadow: 0 0 0 3px color-mix", prospect_css)
+        self.assertIn("prospect-step1__activity-marker", step1)
+        self.assertIn("prospect-project-option__marker", step2)
+        self.assertEqual(
+            step2.count('type="radio"'), step2.count("prospect-project-option__marker")
+        )
+        self.assertNotIn("prospect-project-option__check", step2)
 
     def test_landing_impeccable_accessibility_and_visual_contracts(self) -> None:
         landing_css = static_source("css/components/landing.css")
@@ -294,21 +335,34 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("client-billing-pay", panels)
         self.assertIn("client-billing-success", panels)
         self.assertIn("client-shipment-card", panels)
-        self.assertIn("Votre commande est en route", panels)
+        self.assertIn("shipping_panel.title", panels)
+        self.assertNotIn("sendcloud_status_message", panels)
         self.assertIn("Suivre mon colis", panels)
         self.assertIn("Merci, c’est confirmé", panels)
-        self.assertIn("pay-order-dialog-", panels)
+        self.assertNotIn("pay-order-dialog-", panels)
         self.assertIn("Télécharger le justificatif", panels)
         self.assertIn("b2b-settlement-choice__option", panels)
+        self.assertIn("client-billing-pay__mark", panels)
+        self.assertIn("client-billing-pay__networks", panels)
+        self.assertIn("payment_provider_marks.html", panels)
         self.assertIn("Payer maintenant", panels)
+        self.assertIn("Payer avec PayPal", panels)
+        self.assertIn("client-billing-pay__provider--solo", panels)
+        self.assertNotIn("Via {{ payment_providers.0.label }}", panels)
+        self.assertNotIn("Compte PayPal sécurisé.", panels)
+        self.assertIn('payment_providers.0.id != "paypal"', panels)
         self.assertIn("Paiement non finalisé", panels)
+        self.assertIn("Voir la production", panels)
         self.assertNotIn("Relancer le paiement", panels)
         self.assertNotIn("Reprendre le paiement en cours", panels)
-        self.assertIn("Continuer vers le paiement", panels)
+        self.assertNotIn("Continuer vers le paiement", panels)
         self.assertIn("order_status_banner", detail)
         self.assertIn("client-order-detail-banner", detail)
         self.assertIn(
-            'class="ui-btn ui-btn-primary ui-btn-sm" href="?panel=billing&amp;pay=1"',
+            (
+                'class="ui-btn ui-btn-secondary ui-btn-sm" '
+                'href="?panel=billing&amp;pay=1#client-billing-pay"'
+            ),
             detail,
         )
         self.assertNotIn('class="link font-medium"', detail)
@@ -398,26 +452,24 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_branding_settings_use_portal_alert_contract(self) -> None:
         branding = template_source("portal/staff/settings/branding.html")
+        payments = template_source("portal/staff/settings/payments.html")
 
         self.assertIn("alert alert--danger", branding)
         self.assertIn("alert alert--info", branding)
         self.assertNotIn("ui-alert", branding)
+        self.assertIn("alert alert--danger", payments)
+        self.assertIn("alert alert--info", payments)
+        self.assertNotIn("ui-alert", payments)
 
-    def test_checkout_and_prospect_mobile_layouts_are_compact(self) -> None:
+    def test_checkout_and_prospect_journey_layouts_are_compact(self) -> None:
         product_css = static_source("css/components/product-shell.css")
-        prospect_css = static_source("css/components/prospect-tunnel.css")
         journey_css = static_source("css/components/prospect-journey.css")
         invitation = template_source("portal/access/invitation_accept.html")
 
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", product_css)
         self.assertIn(".product-checkout-card > .dui-card-body", product_css)
         self.assertIn(".product-checkout-submit", product_css)
-        self.assertIn("body.prospect-tunnel-page .prospect-shell__trust", prospect_css)
-        self.assertIn(
-            "body.ui-marketing-body.prospect-tunnel-page .agency-menu-toggle",
-            prospect_css,
-        )
-        self.assertIn("display: none", prospect_css)
+        self.assertIn("body.prospect-journey-page .prospect-consent-card", journey_css)
         self.assertIn("@media (max-width: 767px)", journey_css)
         self.assertIn("grid-template-columns: 1fr", journey_css)
         self.assertIn("prefers-reduced-motion: reduce", journey_css)
@@ -570,6 +622,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('name="reason_code"', correction_form)
         self.assertIn("Le client sera notifié par e-mail", correction_form)
         self.assertIn("Ouvrir le HD dans Drive", operator_workflow)
+        self.assertIn("HD Drive indisponible", operator_workflow)
+        self.assertIn("Télécharger la source", operator_workflow)
+        self.assertIn("staff-order-upload-download", operator_workflow)
         self.assertIn("staff-atelier-operation-machine-assign", operator_workflow)
         self.assertIn("staff-atelier-operation-print-confirm", operator_workflow)
         self.assertIn("require_machine_selection", operator_workflow)
@@ -634,15 +689,17 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("▸", source)
         self.assertNotIn("<svg", source)
 
-    def test_staff_orders_table_shows_settlement_badge(self) -> None:
+    def test_orders_table_shows_one_operational_status_badge(self) -> None:
         orders = template_source("components/tables/orders_table.html")
         billing = template_source("portal/staff/panels/billing.html")
 
-        self.assertIn("settlement_badge", orders)
-        self.assertIn('variant == "staff"', orders)
+        self.assertIn("order.operational_status.label", orders)
+        self.assertIn("order.operational_status.tone", orders)
+        self.assertNotIn("settlement_badge", orders)
         self.assertIn(">N° OF<", orders)
         self.assertIn("N° commande", orders)
-        self.assertIn("Réf. client", orders)
+        self.assertNotIn("<th>Réf. client</th>", orders)
+        self.assertIn("Votre réf.", orders)
         self.assertIn("order_business_ref", orders)
         self.assertIn("order.production_job.manufacturing_order_number", orders)
         self.assertIn("components/actions/copy_icon_button.html", orders)
@@ -749,7 +806,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("rejection_form.rejection_reason", detail)
         self.assertIn("Valider et envoyer l’activation", detail)
         self.assertIn("Refuser et notifier", detail)
-        self.assertIn("workflow-panel__feedback", detail)
+        self.assertNotIn("for message in messages", detail)
+        self.assertNotIn("workflow-panel__feedback", detail)
+        self.assertIn("django_messages_toasts", template_source("portal/layout.html"))
         self.assertIn("portal:staff-access-request-list", detail_crumb)
         self.assertIn("Demandes d’accès", list_crumb)
         self.assertNotIn("dui-alert", detail)
@@ -816,20 +875,24 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Votre espace", client_nav)
         self.assertIn("Pilotage quotidien", staff_nav)
         self.assertIn("Administration Atelier", staff_nav)
-        self.assertIn(">Tableau de bord</a>", staff_nav)
+        self.assertIn("Tableau de bord", staff_nav)
+        self.assertIn("dashboard_inbox_slot.html", staff_nav)
+        self.assertIn("product-nav__link--inbox", staff_nav)
         self.assertIn(">Commandes</a>", staff_nav)
         self.assertIn("Réglages Atelier", staff_nav)
         self.assertIn("Parc machine", staff_nav)
         self.assertIn("Demandes d’accès", staff_nav)
         self.assertIn("Modèles d’e-mails", staff_nav)
         self.assertIn("Réglages de laize", staff_nav)
+        self.assertIn("Paiements en ligne", staff_nav)
+        self.assertIn("portal:staff-payment-settings", staff_nav)
         self.assertIn("portal:staff-default-catalog-pricing-settings", staff_nav)
         self.assertIn("Grille tarifaire", staff_nav)
         self.assertNotIn("Machines DTF", staff_nav)
         self.assertNotIn("Identité visuelle", staff_nav)
         self.assertIn("Votre compte", header)
         self.assertIn(">Atelier</span>", header)
-        self.assertNotIn(">Espace client<", header)
+        self.assertIn(">Espace client</span>", header)
         self.assertIn("product-menu-button__icon", header)
         self.assertIn("ui-btn ui-btn-ghost ui-btn-sm product-menu-button", header)
         self.assertIn("portal_profile_menu.html", header)
@@ -1058,7 +1121,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("staff_trail.html", team_breadcrumb)
         self.assertIn("Accueil Atelier", staff_trail)
         self.assertIn("ui-breadcrumb__list", staff_trail)
-        self.assertIn(".staff-profile-page.account-team-page .account-team-panel", portal_entrypoint)
+        self.assertIn(
+            ".staff-profile-page.account-team-page .account-team-panel", portal_entrypoint
+        )
 
     def test_client_portal_hardening_keeps_actions_named_and_contrasted(self) -> None:
         dashboard = template_source("portal/client/dashboard.html")
@@ -1075,7 +1140,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("components/portal/page_head.html", dashboard)
         self.assertIn('title="Tableau de bord"', dashboard)
         self.assertIn('id="client-volume-discount-title">', dashboard)
-        self.assertIn("client-dashboard-palier__meter", dashboard)
+        self.assertIn("client-dashboard-palier__chart", dashboard)
         self.assertEqual(editor.count('aria-label="Étape '), 4)
         self.assertIn("— Studio — Prenium DTF", editor)
         self.assertIn("display: block", studio_css)
@@ -1106,11 +1171,24 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('data-mobile-panel-tab="canvas"', editor)
         self.assertIn("data-zoom-reset", editor)
         self.assertIn("data-status-detail", editor)
-        self.assertIn("data-gang-crop-box", editor)
-        self.assertIn('name="crop_manifest"', editor)
-        self.assertIn("Recadrage", editor)
-        self.assertIn("data-crop-manual", editor)
-        self.assertIn("data-crop-auto", editor)
+        detail = template_source("portal/client/gang_sheets/partials/asset_detail_dialog.html")
+        self.assertIn("data-asset-crop-box", detail)
+        self.assertIn("data-asset-crop-bounds", detail)
+        self.assertIn('name="crop_width"', detail)
+        self.assertNotIn('type="range"', detail)
+        self.assertIn('type="hidden" name="crop_width"', detail)
+        self.assertIn("Rétablir l’original", detail)
+        self.assertIn("Appliquer le cadrage", detail)
+        self.assertIn("data-existing-crop-manual", detail)
+        self.assertIn("data-existing-crop-auto", detail)
+        self.assertIn("b2b-dialog-editor", detail)
+        self.assertIn("const rect = bounds.getBoundingClientRect()", runtime)
+        self.assertIn('event.target.querySelectorAll("[data-asset-crop-editor]")', runtime)
+        self.assertIn('const handle = selectedHandle || (shouldDraw ? "draw" : "move")', runtime)
+        self.assertIn('editor.dataset.cropDraw = "true"', runtime)
+        self.assertIn("fullSelection = start.x <= 0.0001", runtime)
+        self.assertIn('const shouldDraw = editor.dataset.cropDraw === "true"', runtime)
+        self.assertIn("delete editor.dataset.cropDraw", runtime)
         self.assertIn("Espacement auto-imposition", editor)
         self.assertIn("data-spacing-x", editor)
         self.assertIn("data-spacing-y", editor)
@@ -1124,8 +1202,11 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("data-grid-rows", editor)
         self.assertNotIn("Créer la grille", editor)
         self.assertIn("gang-validation-heading", editor)
-        self.assertIn("data-sheet-quantity", editor)
-        self.assertIn("Exemplaires de planche", editor)
+        checkout = template_source("portal/client/gang_sheets/partials/studio_checkout.html")
+        self.assertIn("data-sheet-quantity", checkout)
+        self.assertIn("Exemplaires de planche", checkout)
+        self.assertIn("Nom de la commande", checkout)
+        self.assertIn("studio_checkout.html", editor)
         self.assertIn("data-sheet-order-quote", editor)
         self.assertIn("data-sheet-quantity", runtime)
         self.assertIn("updateOrderQuoteUi", runtime)
@@ -1164,7 +1245,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("nextHeight = Math.max(1, round(start.height + signX * deltaX))", runtime)
         self.assertIn("function renderSelectedItemToolbar", runtime)
         self.assertIn('attribute: "data-canvas-rotate-item"', runtime)
+        self.assertIn('attribute: "data-canvas-duplicate-item"', runtime)
+        self.assertIn('attribute: "data-canvas-crop-item"', runtime)
         self.assertIn('attribute: "data-canvas-delete-item"', runtime)
+        self.assertIn("function openSelectedCropDialog", runtime)
+        self.assertIn("else await reloadState()", runtime)
+        self.assertIn("item = selected()", runtime)
+        self.assertIn("candidate.dataset.assetVersionId === item.asset_version_public_id", runtime)
+        self.assertIn('dialog.addEventListener("close", () => setMobilePanel("canvas")', runtime)
         self.assertIn("function spacingRequestBody", runtime)
         self.assertIn("function autoPlaceWithSpacing", runtime)
         self.assertIn('body.append("spacing_x_mm", spacingX)', runtime)
@@ -1201,7 +1289,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         )
         self.assertIn('window.addEventListener("beforeunload"', runtime)
         self.assertIn("allowUnload || !dirty", runtime)
-        self.assertIn(".gang-asset-modal-form", runtime)
+        self.assertIn(".gang-asset-upload-form", runtime)
         self.assertIn("root.dataset.dirty = String(dirty)", runtime)
 
     def test_gang_sheet_editor_exposes_safe_precision_tools(self) -> None:
@@ -1463,6 +1551,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Prochain geste", source)
         self.assertIn("ui_kpi_grid", source)
         self.assertIn("atelier-dashboard-metrics", source)
+        self.assertIn('id="atelier-dashboard-live-region"', source)
+        self.assertIn("atelier-inbox-refresh from:body", source)
+        self.assertIn("every 20s", source)
+        self.assertNotIn('hx-trigger="load, every 20s', source)
         self.assertNotIn('class="portal-page-surface atelier-dashboard-metrics', source)
         self.assertIn("atelier-dashboard-stack", source)
         self.assertNotIn('class="atelier-dashboard-panel"', source)
@@ -1479,6 +1571,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("ui-list-command", source)
         self.assertNotIn("atelier-worklist-results", source)
         self.assertIn("files_to_process_label", worklist_table)
+        self.assertNotIn("row.upload_count|pluralize", worklist_table)
+        self.assertNotIn("ui-inline-flag", worklist_table)
         self.assertIn(">N° OF<", worklist_table)
         self.assertIn("components/actions/copy_icon_button.html", worklist_table)
         self.assertNotIn(">UUID<", worklist_table)
@@ -1538,8 +1632,13 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertEqual(staff_nav.count("portal:staff-machine-fleet"), 1)
         self.assertIn("{% else %}Réglages{% endif %}", staff_nav)
         self.assertIn("nav_key == 'staff-machines'", staff_nav)
+        self.assertIn("staff-payment-settings", staff_nav)
+        self.assertIn("portal:staff-payment-settings", staff_nav)
         self.assertNotIn("staff-brand-settings", staff_nav)
         self.assertNotIn("portal:staff-brand-settings", staff_nav)
+        self.assertNotIn("portal:staff-order-project-list", staff_nav)
+        self.assertNotIn("staff-order-projects", staff_nav)
+        self.assertNotIn("Contrôler les commandes à finaliser", staff_nav)
 
     def test_staff_views_distill_secondary_actions_and_repeated_information(self) -> None:
         order = template_source("portal/staff/order_detail.html")
@@ -1602,8 +1701,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
         )
         self.assertIn('@import "../components/inspection-workbench.css";', portal_entry)
         self.assertIn(".atelier-inspection__review-block--decision", inspection_css)
-        self.assertIn("minmax(0, 1.18fr)", inspection_css)
+        self.assertIn("minmax(0, 1.22fr)", inspection_css)
         self.assertIn(".atelier-inspection__correction .ui-input", inspection_css)
+        self.assertIn(".atelier-inspection__qty-form", inspection_css)
+        self.assertIn("staff-order-upload-quantity", source)
+        self.assertIn("can_edit_upload_quantities", source)
+        self.assertIn("Exemplaires", source)
         self.assertIn(".atelier-inspection__correction select.ui-input", portal_entry)
         self.assertIn("@media (max-width: 639px)", inspection_css)
         self.assertIn("@media (prefers-reduced-motion: reduce)", inspection_css)
@@ -1638,10 +1741,53 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("operationScan.focus", operations)
         self.assertNotIn("Utiliser l’OF de cette commande", operations)
         self.assertNotIn("shipping-readiness", shipping)
-        self.assertIn("Suivi Sendcloud", shipping)
+        self.assertIn("Pilotage Sendcloud", shipping)
         self.assertIn("billing-total", billing)
-        self.assertIn("workflow-disclosure billing-breakdown", billing)
+        self.assertIn("billing_breakdown order", billing)
+        self.assertIn("billing_volume_discount.html", billing)
+        volume_discount = template_source("portal/staff/components/billing_volume_discount.html")
+        billing_edit_css = static_source("css/components/billing-edit.css")
+        self.assertIn("billing-discount", volume_discount)
+        self.assertIn("Remise volume", volume_discount)
+        self.assertIn("palier atteint", volume_discount)
+        self.assertIn(".billing-edit__row", billing_edit_css)
+        self.assertIn(
+            "grid-template-columns: minmax(0, 1.45fr) 7rem 7rem 7.25rem",
+            billing_edit_css,
+        )
+        self.assertIn(".billing-discount__line", billing_edit_css)
         self.assertNotIn("Pièces de la commande", billing)
+
+    def test_staff_handover_date_uses_shared_calendar_picker(self) -> None:
+        production = template_source("portal/staff/panels/production.html")
+        picker = template_source("components/forms/product_date_field.html")
+        product_css = static_source("css/components/product-shell.css")
+
+        self.assertIn('include "components/forms/product_date_field.html"', production)
+        self.assertIn('name="estimated_handover_date"', production)
+        self.assertNotIn('type="date"', production)
+        self.assertIn("data-product-date-picker", picker)
+        self.assertIn("product-date-picker__trigger-icon", picker)
+        self.assertNotIn("product-date-picker__trigger-chevron", picker)
+        self.assertIn("product-date-picker__nav-icon", picker)
+        self.assertIn("product-date-picker__trigger-icon", product_css)
+        self.assertIn("margin-left: auto", product_css)
+        self.assertIn("product-date-picker__popover.is-ported", product_css)
+        self.assertIn("product-date-picker__popover--month", product_css)
+        self.assertIn("--shadow-raised", product_css)
+
+    def test_staff_billing_statement_uses_shared_month_picker(self) -> None:
+        statements = template_source("portal/staff/customers/_billing_statements.html")
+        staff_css = static_source("css/entries/portal-staff.css")
+
+        self.assertIn("components/forms/product_date_field.html", statements)
+        self.assertIn('picker_mode="month"', statements)
+        self.assertIn("name=billing_statement_form.month.html_name", statements)
+        self.assertIn("billing_statement_form.is_bound", statements)
+        self.assertNotIn('type="month"', statements)
+        self.assertIn("product-date-picker--month", staff_css)
+        self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr))", staff_css)
+        self.assertIn(".billing-statement-dialog", staff_css)
 
     def test_staff_order_detail_flattens_nested_workflow_borders(self) -> None:
         product_css = static_source("css/components/product-shell.css")
@@ -1719,6 +1865,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
                 source = template_source(path) + template_source(
                     "components/portal/page_head_actions/staff_order_detail.html"
                 )
+            elif path == "portal/client/dashboard.html":
+                source = template_source(path) + template_source(
+                    "portal/client/partials/dashboard_orders.html"
+                )
             else:
                 source = template_source(path)
             with self.subTest(path=path):
@@ -1759,8 +1909,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("client_orders_list_results.html", client_source)
         self.assertIn('id="staff-orders-search-input"', staff_source)
         self.assertIn('results_id="staff-orders-list-results"', staff_source)
-        self.assertIn('preserved_name="queue"', staff_source)
-        self.assertIn('preserve_query="q"', staff_results)
+        self.assertIn("preserved_params=staff_orders_preserved_params", staff_source)
+        self.assertIn('preserve_query="q,status"', staff_results)
+        self.assertNotIn('preserve_query="q,queue"', staff_results)
         self.assertIn('htmx_target="#staff-orders-list-results"', staff_results)
         self.assertIn("Retour au tableau de bord", staff_results)
         self.assertIn("portal-page-surface", staff_source)
@@ -1869,13 +2020,17 @@ class PortalUiCoherenceTests(SimpleTestCase):
                 self.assertNotIn(f'class="ui-sr-only" for="{field_id}"', source)
 
         self.assertIn("<legend>{{ form.activity_type.label }}</legend>", source)
-        self.assertIn('class="ui-field-error"', source)
+        self.assertIn('class="ui-field-error ui-error-text"', source)
         self.assertNotIn('class="error-text"', source)
 
     def test_b2b_order_project_flow_reuses_portal_htmx_contracts(self) -> None:
         detail = template_source("portal/client/order_project_detail.html")
         fields = template_source("portal/client/partials/order_project_fields.html")
         items = template_source("portal/client/partials/order_project_items.html")
+        quantity_field = template_source(
+            "portal/client/partials/order_project_item_quantity_field.html"
+        )
+        order_project_css = static_source("css/components/b2b-order-project.css")
         editor = template_source("portal/client/partials/order_project_visual_editor.html")
         replace_form = template_source(
             "portal/client/partials/order_project_replace_asset_form.html"
@@ -1914,7 +2069,28 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("is-selected", shipping)
         self.assertIn('hx-indicator="#portal-htmx-indicator"', shipping)
 
-        self.assertIn("project_client_label", detail)
+        self.assertIn("product-nav__inbox-badge", product_shell)
+        self.assertIn("product-nav__inbox-slot", product_shell)
+        self.assertIn("product-nav__link--inbox", product_shell)
+        self.assertIn("var(--danger)", product_shell)
+        self.assertIn("dashboard_inbox_slot.html", staff_navigation)
+        inbox_slot = template_source("portal/staff/partials/dashboard_inbox_slot.html")
+        self.assertIn("dashboard_inbox_badge.html", inbox_slot)
+        self.assertIn("staff-dashboard-inbox-badge", inbox_slot)
+        self.assertIn("atelier-inbox-refresh", inbox_slot)
+        self.assertIn("every 20s", inbox_slot)
+        self.assertIn('hx-target="find .product-nav__inbox-badge"', inbox_slot)
+        inbox_badge = template_source("portal/staff/partials/dashboard_inbox_badge.html")
+        self.assertNotIn("hx-get", inbox_badge)
+        self.assertNotIn("hx-trigger", inbox_badge)
+        self.assertIn('role="status"', inbox_badge)
+        self.assertIn('aria-live="polite"', inbox_badge)
+        notifications_js = static_source("js/atelier-notifications.js")
+        self.assertIn("refreshInboxBadge", notifications_js)
+        self.assertIn("atelier-inbox-refresh", notifications_js)
+        self.assertNotIn('target: "#atelier-dashboard-live-region"', notifications_js)
+
+        self.assertIn('title="Projet de commande"', detail)
         self.assertIn("components/portal/page_head.html", detail)
         self.assertIn("breadcrumbs/client_order_project_detail.html", detail)
         self.assertIn("client-order-project-detail", detail)
@@ -1948,6 +2124,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Référence client final", fields)
         self.assertIn('id="order-project-items"', items)
         self.assertIn('id="order-project-item-dialogs"', items)
+        self.assertIn("b2b-inline-quantity-form", items)
+        self.assertIn("order_project_item_quantity_field.html", items)
+        self.assertIn("{% if project.can_edit_items %}", items)
+        self.assertNotIn("or item.is_production_gang_sheet_asset", items)
+        self.assertIn('name="quantity"', quantity_field)
+        self.assertIn("action='update'", items)
+        self.assertIn('hx-target="#order-project-items"', items)
+        self.assertIn("b2b-inline-quantity-form", order_project_css)
         self.assertIn(
             'hx-select-oob="#order-project-facts,#order-project-summary,#order-project-item-dialogs"',
             items,
@@ -1970,7 +2154,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("dialog[open][id^='visual-dialog-']", configurator_script)
         self.assertNotIn("Largeur (mm)", editor)
         self.assertIn('type="hidden" name="width_mm"', editor)
-        self.assertIn("ui-btn ui-btn-danger", item_delete)
+        self.assertIn("b2b-confirm-dialog__button--danger", item_delete)
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", product_shell)
+        self.assertIn("body.product-shell .b2b-confirm-dialog__content", product_shell)
+        self.assertIn("overflow-wrap: anywhere;", product_shell)
         validation_dimensions = template_source(
             "portal/client/partials/order_project_validation_dimensions_row.html"
         )
@@ -1984,18 +2171,23 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Zones &lt; 0,5 mm", quality_review)
         self.assertIn("Dégradés détectés", quality_review)
         self.assertIn("Pas de dégradé", quality_review)
-        self.assertIn("Je confirme le contrôle qualité.", validation_panel)
+        self.assertIn("J’ai vérifié l’aperçu et les alertes.", validation_panel)
         self.assertIn("validation_chrome=True", validation_panel)
         self.assertIn("b2b-dialog-actions--validate", validation_panel)
-        self.assertIn("Valider le visuel", items)
-        self.assertIn("Valider le visuel", items_response)
+        self.assertIn("Confirmer ce visuel", editor)
+        self.assertNotIn("Valider pour commander", editor)
+        self.assertIn("Contrôler le visuel", items)
+        self.assertIn("Contrôler le visuel", items_response)
         preflight = template_source("portal/client/partials/b2b_configurator_preflight.html")
         self.assertIn("data-preflight-dpi", preflight)
         self.assertIn("data-preflight-fade", preflight)
         self.assertIn("data-preflight-thin", preflight)
-        self.assertIn("b2b_configurator_preflight.html", add_form)
-        gang_editor = template_source("portal/client/gang_sheets/editor.html")
-        self.assertIn("b2b_configurator_preflight.html", gang_editor)
+        self.assertIn("order_project_batch_dropzone.html", add_form)
+        gang_asset_detail = template_source(
+            "portal/client/gang_sheets/partials/asset_detail_dialog.html"
+        )
+        self.assertIn("gang-asset-detail__file-info", gang_asset_detail)
+        self.assertNotIn("asset_analysis_summary.html", gang_asset_detail)
         self.assertIn("detectThinZonesFromMedia", configurator_script)
         self.assertIn("data-preflight-thin-overlay", configurator_script)
         self.assertIn("data-preflight-fade-overlay", configurator_script)
@@ -2006,14 +2198,16 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Cadre pointillé", validation_dimensions)
         self.assertIn("Taille", validation_dimensions)
         self.assertIn("limites du fichier", validation_dimensions)
+        self.assertIn("show_quantity != 0", validation_dimensions)
         self.assertNotIn("espace vide sera imprimé", validation_dimensions)
         self.assertNotIn("item.width_mm", quality_review)
         self.assertIn("order_project_item_quantity_field.html", editor)
-        self.assertIn('type="hidden" name="width_mm"', add_form)
-        self.assertIn("data-configurator-width", add_form)
+        self.assertNotIn('name="width_mm"', add_form)
+        self.assertIn("data-batch-auto-submit", add_form)
+        self.assertNotIn("data-configurator-submit", add_form)
         self.assertNotIn("Largeur (mm)", add_form)
         self.assertIn("data-analysis-pending", items)
-        self.assertIn('hx-trigger="load delay:1400ms"', items)
+        self.assertIn('hx-trigger="load delay:1400ms, every 2s"', items)
         self.assertIn('hx-trigger="load delay:1400ms, every 2s"', validation_panel)
         self.assertIn('data-analysis-poll="1"', validation_panel)
         interrupted = template_source(
@@ -2024,12 +2218,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("order_project_quality_review.html", items)
         self.assertIn("order_project_preview_stage.html", validation_panel)
         self.assertIn("order_project_rotation_hidden.html", validation_panel)
-        self.assertIn("order_project_item_delete_button.html", validation_panel)
-        self.assertIn("order_project_item_delete_button.html", editor)
         self.assertIn("order_project_item_delete_button.html", items)
         self.assertIn("action='delete'", item_delete)
         self.assertIn("Supprimer", item_delete)
         self.assertIn("b2b-confirm-dialog", item_delete)
+        self.assertIn("b2b-confirm-dialog__button--cancel", item_delete)
+        self.assertIn("b2b-confirm-dialog__button--danger", item_delete)
         self.assertIn("data-dialog-open", item_delete)
         self.assertIn("Supprimer ce visuel ?", item_delete)
         self.assertIn("Supprimer définitivement", item_delete)
@@ -2075,14 +2269,8 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("is-analysis-pending", editor)
         self.assertIn("validation_chrome=True", editor)
         self.assertIn("b2b-dialog-actions--editor", editor)
-        self.assertIn(
-            'button_class="b2b-dialog-actions__danger"',
-            editor,
-        )
-        self.assertIn(
-            'button_class="b2b-dialog-actions__danger"',
-            validation_panel,
-        )
+        self.assertNotIn('button_class="b2b-dialog-actions__danger"', editor)
+        self.assertNotIn('button_class="b2b-dialog-actions__danger"', validation_panel)
         self.assertNotIn(">×</button>", items)
         self.assertIn('class="b2b-dialog-close__icon"', items)
         modal_css = portal_client.split(
@@ -2134,14 +2322,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("b2b-hex-color-popover__presets", hex_swatch)
         self.assertIn("data-hex-color-live", hex_swatch)
         self.assertIn("Choisir une couleur", hex_swatch)
-        self.assertIn("Ouvrir", items)
+        self.assertIn(">Contrôler le visuel</button>", items)
         self.assertIn("order_project_item_delete_button.html", items)
         self.assertIn("Supprimer", item_delete)
         self.assertNotIn("data-awaiting-validation", items)
         self.assertNotIn("Valider ces informations", items)
         self.assertIn("confirm-analysis", editor)
-        self.assertIn('data-file-picker-dialog="add-visual-dialog"', items)
-        self.assertNotIn('data-dialog-open="add-visual-dialog"', items)
+        self.assertNotIn('data-file-picker-dialog="add-visual-dialog"', items)
+        self.assertIn('data-dialog-open="add-visual-dialog"', items)
         self.assertIn('data-dialog-open="visual-dialog-{{ item.public_id }}"', items)
         self.assertNotIn("Ajouter à ma commande", items)
         configurator_runtime = static_source("js/b2b-configurator.js")
@@ -2162,6 +2350,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("dialog.showModal()", configurator_runtime)
         self.assertIn("openAutoOpenDialogs", configurator_runtime)
         self.assertIn("dismissAutoOpenDialog", configurator_runtime)
+        self.assertIn('target.hasAttribute("data-studio-pay-dialog")', configurator_runtime)
         self.assertIn("clearOrderProjectValidateQuery", configurator_runtime)
         self.assertIn("autoOpenedDialogs", configurator_runtime)
         self.assertIn("new DataTransfer()", configurator_runtime)
@@ -2187,16 +2376,18 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("data-hex-color-control", configurator_runtime)
         self.assertIn("initHexColorControls", configurator_runtime)
         self.assertIn("readEmbeddedDpiFromFile", configurator_runtime)
-        self.assertIn("b2b-swatch-btn--checker", add_form)
-        self.assertIn("b2b_hex_color_swatch.html", add_form)
         self.assertIn("b2b-swatch-btn--rainbow-ring", hex_swatch)
         self.assertIn("b2b-swatch-btn--custom", hex_swatch)
         self.assertIn("data-hex-color-native", hex_swatch)
         self.assertIn("data-hex-color-preset", configurator_runtime)
         self.assertIn("syncHexColorControlSwatch", configurator_runtime)
         self.assertIn("mountHexPopover", configurator_runtime)
-        self.assertIn("b2b-preview-bounds", add_form)
-        self.assertIn("data-configurator-bounds", add_form)
+        self.assertIn("syncVisualConfirmSupportColor", configurator_runtime)
+        self.assertIn('!fieldset.closest("dialog[open]")', configurator_runtime)
+        self.assertIn("supportColorInOpenDialog", configurator_runtime)
+        self.assertIn("data-visual-confirm-support-hex", editor)
+        self.assertNotIn("order_project_item_delete_button.html", editor)
+        self.assertNotIn("order_project_item_delete_button.html", validation_panel)
         self.assertIn("setMulticolorMode", configurator_runtime)
         self.assertIn("handleSupportColorFieldEvent", configurator_runtime)
         self.assertIn("htmx:load", configurator_runtime)
@@ -2209,12 +2400,15 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("HTMLIFrameElement", configurator_runtime)
         self.assertNotIn("innerHTML", configurator_runtime)
         self.assertNotIn("Configurateur DTF", header)
-        self.assertIn("Gang Sheets", staff_navigation)
+        # File « Gang Sheets transmis » retirée du menu : le checkout client convertit
+        # directement en commande ; le contrôle atelier se fait sur Commandes.
+        self.assertNotIn("staff-order-project-list", staff_navigation)
+        self.assertNotIn("Contrôler les commandes à finaliser", staff_navigation)
         dashboard = template_source("portal/client/dashboard.html")
         self.assertNotIn("client-dashboard-toolbar", dashboard)
         self.assertNotIn(">Nouvelle commande</a>", dashboard)
-        self.assertIn("Commandes à finaliser", dashboard)
-        self.assertIn("Commandes transmises", dashboard)
+        self.assertIn("partials/dashboard_orders.html", dashboard)
+        self.assertIn("client-volume-chart", dashboard)
         self.assertNotIn("Commandes à continuer", dashboard)
         self.assertNotIn("Préparer une commande", dashboard)
         self.assertNotIn("Créer un projet DTF", dashboard)
@@ -2225,13 +2419,16 @@ class PortalUiCoherenceTests(SimpleTestCase):
         start_form = template_source("portal/client/order_project_form.html")
         self.assertNotIn("Mode de commande", start_form)
         self.assertNotIn('name="order_mode"', start_form)
-        self.assertIn("Étape 1 sur 2", start_form)
-        self.assertIn("Ajouter mes visuels", start_form)
+        self.assertNotIn("Créer et analyser", start_form)
+        self.assertIn("data-batch-auto-submit", start_form)
+        self.assertIn("analyse démarre automatiquement", start_form)
+        self.assertIn("order_project_batch_dropzone.html", start_form)
         self.assertIn('enctype="multipart/form-data"', start_form)
-        self.assertIn("data-order-start-form", start_form)
-        self.assertIn("data-order-start-pick-visual", start_form)
-        self.assertIn("data-order-start-file", start_form)
-        self.assertIn('name="file"', start_form)
+        dropzone = template_source("portal/client/partials/order_project_batch_dropzone.html")
+        self.assertIn('name="file"', dropzone)
+        self.assertIn("multiple", dropzone)
+        self.assertIn("data-max-files", dropzone)
+        self.assertNotIn('role="button"', dropzone)
         self.assertIn('name="requested_date"', start_form)
         self.assertIn("components/forms/product_date_field.html", start_form)
         self.assertNotIn('type="date"', start_form)
@@ -2241,6 +2438,18 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn('name="customer_comment"', start_form)
         self.assertIn("bindOrderStartPickVisual", configurator_runtime)
         self.assertIn("data-order-start-pick-visual", configurator_runtime)
+        self.assertIn("submitBatchUploadWhenReady", configurator_runtime)
+        self.assertIn("data-batch-auto-submit", configurator_runtime)
+        add_visual_form = template_source(
+            "portal/client/partials/order_project_add_visual_form.html"
+        )
+        self.assertIn("data-batch-auto-submit", add_visual_form)
+        self.assertNotIn("Envoyer pour analyse", add_visual_form)
+        visual_list = template_source("portal/client/partials/order_project_items.html")
+        self.assertNotIn("Je confirme le contrôle qualité de tous les visuels", visual_list)
+        self.assertNotIn("Validez chaque visuel pour transmettre.", summary)
+        self.assertIn("b2b-project-quality-gate", summary)
+        self.assertIn("Je confirme le contrôle qualité de tous les visuels", summary)
 
     def test_p3_retired_agency_partials_and_panel_empty_states(self) -> None:
         for dead_partial in [
@@ -2264,7 +2473,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         gang_editor = template_source("portal/client/gang_sheets/editor.html")
         self.assertNotIn("product-eyebrow", gang_editor)
-        self.assertIn('id="gang-asset-dialog-title"', gang_editor)
+        self.assertIn("data-gang-inline-import", gang_editor)
 
         operations = template_source("portal/staff/operations/index.html")
         self.assertNotIn("terracotta", operations)
@@ -2276,6 +2485,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
             "portal/client/gang_sheets/list.html",
             "portal/client/gang_sheets/editor.html",
             "portal/staff/settings/branding.html",
+            "portal/staff/settings/payments.html",
             "portal/staff/gang_sheets/settings.html",
             "portal/client/team.html",
         ]
@@ -2306,6 +2516,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
                 self.assertIn(needle, source)
                 self.assertNotIn("Aucun visuel", source)
 
+        client_items = template_source("portal/client/partials/order_project_items.html")
+        self.assertIn("Ajouter des visuels", client_items)
+        self.assertNotIn('cta_button_label="Choisir des fichiers"', client_items)
+
     def test_lot4_portal_header_nav_removes_parasite_borders(self) -> None:
         header = template_source("components/nav/portal_header.html")
         landing_header = template_source("components/nav/landing_header.html")
@@ -2322,3 +2536,18 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn(".product-header .ui-foundation-nav .ui-nav-rail", portal_entry)
         self.assertIn(".product-header .ui-foundation-nav .product-profile__trigger", portal_entry)
         self.assertIn("border: 0 !important", portal_entry.split("v15 — Header portail")[-1])
+        navigation_link_rule = portal_entry.split(
+            "Header partagé : les liens de navigation restent des liens, jamais des pastilles.",
+            1,
+        )[1].split("Exception : pastille inbox", 1)[0]
+        for declaration in [
+            "border-color: transparent !important;",
+            "background: transparent !important;",
+            "box-shadow: none !important;",
+            "transform: none !important;",
+        ]:
+            with self.subTest(declaration=declaration):
+                self.assertIn(declaration, navigation_link_rule)
+        self.assertIn("Exception : pastille inbox", portal_entry)
+        self.assertIn(".product-nav__inbox-badge.is-active", portal_entry)
+        self.assertIn("overflow: visible !important", portal_entry)

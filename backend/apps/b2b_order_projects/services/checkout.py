@@ -177,10 +177,7 @@ class B2BOrderProjectCheckoutService:
             source=source,
         )
 
-        if (
-            order.billing_mode == Order.BillingMode.IMMEDIATE
-            and locked.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET
-        ):
+        if locked.order_mode == B2BOrderProject.OrderMode.READY_GANG_SHEET:
             order = OrderPricingService().apply_gang_sheet_self_service_pricing(
                 order=order,
                 actor=actor,

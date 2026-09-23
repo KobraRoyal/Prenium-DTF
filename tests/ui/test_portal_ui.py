@@ -27,6 +27,8 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
         currency="EUR",
         subtotal_amount="42.00",
         total_amount="42.00",
+        billing_mode=Order.BillingMode.DEFERRED,
+        pricing_status=Order.PricingStatus.PRICED,
     )
 
     client = Client()
@@ -84,7 +86,7 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     dashboard_html = dashboard_response.content.decode()
     assert "product-shell--portal" in dashboard_html
     assert "client-dashboard" in dashboard_html
-    assert 'data-testid="client-dashboard-focus"' in dashboard_html
+    assert 'id="client-dashboard-orders"' in dashboard_html
     assert "Accès isolé" not in dashboard_html
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
@@ -92,7 +94,7 @@ def test_client_portal_pages_and_panels_are_accessible_for_scoped_customer():
     assert "client-order-detail" in detail_html
     assert "client-order-summary" in detail_html
     assert "client-order-summary__facts" in detail_html
-    assert "Soumise" in detail_html
+    assert "Commande transmise" in detail_html
     assert 'role="tablist"' in detail_html
     assert "client-order-panel" in detail_html
     assert "Visuels" in detail_html
@@ -189,7 +191,7 @@ def test_client_dashboard_cash_volume_copy_and_empty_lists():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
-def test_client_dashboard_does_not_repeat_focused_project_in_list():
+def test_client_dashboard_surfaces_project_through_the_operational_chart():
     user = get_user_model().objects.create_user(
         email="dashboard-focus-once@example.com",
         password="pass",
@@ -212,9 +214,8 @@ def test_client_dashboard_does_not_repeat_focused_project_in_list():
 
     html = client.get(reverse("portal:client-dashboard")).content.decode()
 
-    assert html.count("CMD-2026-000084") == 1
-    assert 'data-testid="client-dashboard-focus"' in html
-    assert "Reprendre" in html
+    assert 'id="client-activity-chart-data"' in html
+    assert 'id="client-dashboard-orders"' in html
     assert "Commandes à finaliser" not in html
     assert "visuel(s)" not in html
 
@@ -529,7 +530,7 @@ def test_staff_portal_pages_and_panels_require_domain_permissions():
     assert drive_panel_response.status_code == 200
     assert shipping_panel_response.status_code == 200
     shipping_html = shipping_panel_response.content.decode()
-    assert "Disponible quand l’OF sera prêt à expédier" in shipping_html
+    assert "Disponible lorsque l’OF sera prêt à expédier" in shipping_html
     assert "Consultation seule" in shipping_html
     assert "Générer l’étiquette" not in shipping_html
     assert "Déclarer dans Sendcloud" not in shipping_html
@@ -584,12 +585,12 @@ def test_shipping_panel_is_prefilled_only_when_workflow_and_permission_allow_cre
     assert response.status_code == 200
     html = response.content.decode()
     assert "Prêt à déclarer" in html
-    assert "Vérifiez le destinataire et le poids" in html
+    assert "Contrôlez le destinataire et le poids" in html
     assert 'value="Atelier Client"' in html
     assert 'value="logistique@example.com"' in html
     assert 'value="Rue des Imprimeurs"' in html
     assert 'value="59000"' in html
-    assert "Déclarer dans Sendcloud" in html
+    assert "Déclarer l’envoi" in html
 
     invalid_response = client.post(
         panel_url,
@@ -613,6 +614,72 @@ def test_shipping_panel_is_prefilled_only_when_workflow_and_permission_allow_cre
     assert 'value="retained@example.com"' in invalid_html
     assert 'value="1.25"' in invalid_html
     assert "alert--danger" in invalid_html
+
+
+@pytest.mark.django_db
+def test_staff_can_confirm_pickup_and_complete_the_production_job():
+    staff_user = get_user_model().objects.create_user(
+        email="pickup-validator@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    customer = Customer.objects.create(name="Pickup validation")
+    order = Order.objects.create(
+        customer=customer,
+        created_by=staff_user,
+        shipping_method_code="pickup",
+        billing_mode=Order.BillingMode.DEFERRED,
+    )
+    job = ProductionJob.objects.create(
+        order=order,
+        manufacturing_order_number="OF-PICKUP-VALIDATION",
+        status=ProductionJob.Status.READY_TO_SHIP,
+    )
+    for codename in (
+        "access_staff_portal",
+        "view_order",
+        "view_shipment",
+        "transition_productionjob",
+    ):
+        staff_user.user_permissions.add(Permission.objects.get(codename=codename))
+
+    client = Client()
+    assert client.login(email=staff_user.email, password="pass")
+    panel_url = reverse(
+        "portal:staff-order-panel-shipping", kwargs={"order_public_id": order.public_id}
+    )
+
+    initial = client.get(panel_url)
+    initial_html = initial.content.decode()
+    assert initial.status_code == 200
+    assert "Retrait atelier" in initial_html
+    assert "Confirmer le retrait" in initial_html
+    assert "Sendcloud" not in initial_html
+
+    stale_shipment_response = client.post(
+        panel_url,
+        {"shipping_option_code": "standard"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert stale_shipment_response.status_code == 200
+    assert "Le retrait atelier se confirme avec" in stale_shipment_response.content.decode()
+    job.refresh_from_db()
+    assert job.status == ProductionJob.Status.READY_TO_SHIP
+
+    response = client.post(
+        panel_url,
+        {"action": "confirm_pickup", "pickup_note": "Remis à l’accueil."},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    assert "Retrait confirmé" in response.content.decode()
+    job.refresh_from_db()
+    assert job.status == ProductionJob.Status.COMPLETED
+    assert job.completed_at is not None
+    assert job.last_transition_by == staff_user
+    assert job.last_transition_note == "Remis à l’accueil."
 
 
 @pytest.mark.django_db
@@ -773,6 +840,7 @@ def test_staff_order_list_is_paginated_in_portal():
         customer=customer,
         created_by=staff_user,
         status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
         currency="EUR",
         subtotal_amount="10.00",
         total_amount="10.00",
@@ -781,6 +849,7 @@ def test_staff_order_list_is_paginated_in_portal():
         customer=customer,
         created_by=staff_user,
         status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
         currency="EUR",
         subtotal_amount="20.00",
         total_amount="20.00",
@@ -789,6 +858,7 @@ def test_staff_order_list_is_paginated_in_portal():
         customer=customer,
         created_by=staff_user,
         status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
         currency="EUR",
         subtotal_amount="30.00",
         total_amount="30.00",
@@ -948,6 +1018,16 @@ def test_portal_feedback_js_uses_text_nodes_for_local_messages():
     assert "box.innerHTML" not in source
 
 
+def test_dashboard_chart_uses_server_rendered_drilldown_targets():
+    repo_root = Path(__file__).resolve().parents[2]
+    dashboard_js = repo_root / "backend" / "static_src" / "js" / "client-dashboard-chart.js"
+    source = dashboard_js.read_text()
+
+    assert "document.getElementById(targetId)?.click()" in source
+    assert "window.htmx.ajax" not in source
+    assert "window.location.assign" not in source
+
+
 @pytest.mark.django_db
 def test_orders_table_shows_pending_label_when_not_priced():
     user = get_user_model().objects.create_user(email="pending-price@example.com", password="pass")
@@ -984,7 +1064,11 @@ def test_orders_table_and_dashboard_show_unpaid_payment_flag():
         name="Client Unpaid",
         default_billing_mode=Customer.DefaultBillingMode.IMMEDIATE,
     )
-    CustomerMembership.objects.create(customer=customer, user=user)
+    CustomerMembership.objects.create(
+        customer=customer,
+        user=user,
+        role=CustomerMembership.Role.OWNER,
+    )
     order = Order.objects.create(
         customer=customer,
         created_by=user,
@@ -1019,14 +1103,14 @@ def test_orders_table_and_dashboard_show_unpaid_payment_flag():
     )
     assert list_response.status_code == 200
     list_body = list_response.content.decode()
-    assert "Paiement non finalisé" in list_body
+    assert "Paiement à effectuer" in list_body
+    assert "Paiement non finalisé" not in list_body
     assert "Payer" in list_body
     assert "panel=billing&amp;pay=1" in list_body or "panel=billing&pay=1" in list_body
 
     dash_response = client.get(reverse("portal:client-dashboard"))
     assert dash_response.status_code == 200
     dash_body = dash_response.content.decode()
-    assert "Paiement à finaliser" in dash_body
-    assert "Payer" in dash_body
-    assert dash_body.lower().count("paiement") >= 1
+    assert '"awaiting"' in dash_body
+    assert 'id="client-dashboard-orders"' in dash_body
     assert "Commandes transmises" not in dash_body

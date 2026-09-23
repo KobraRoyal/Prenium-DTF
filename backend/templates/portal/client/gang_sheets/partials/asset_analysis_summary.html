@@ -1,0 +1,42 @@
+<section class="gang-analysis-summary gang-analysis-summary--{{ asset.analysis_status }}" data-analysis-summary="{{ asset.public_id }}">
+  <div class="gang-analysis-summary__status">
+    <span aria-hidden="true"></span>
+    <strong>{{ asset.analysis_label }}</strong>
+  </div>
+
+  {% if asset.analysis_status == "pending" or asset.analysis_status == "processing" %}
+    <p class="gang-analysis-summary__message">Analyse du fichier en cours… Les résultats apparaîtront automatiquement.</p>
+  {% elif asset.analysis_error %}
+    <p class="gang-analysis-summary__message" role="alert">{{ asset.analysis_error }}</p>
+  {% else %}
+    {% if asset.resolution_label or asset.dpi_label %}
+      <dl class="gang-analysis-summary__facts">
+        {% if asset.resolution_label %}<div><dt>Pixels</dt><dd>{{ asset.resolution_label }}</dd></div>{% endif %}
+        {% if asset.dpi_label %}<div><dt>Résolution source</dt><dd>{{ asset.dpi_label }}</dd></div>{% endif %}
+        {% if asset.has_alpha is not None %}<div><dt>Transparence</dt><dd>{% if asset.has_alpha %}Présente{% else %}Non détectée{% endif %}</dd></div>{% endif %}
+      </dl>
+    {% endif %}
+
+    {% if asset.analysis_warnings or asset.thin_zone.detected or asset.semi_transparency.detected or asset.probable_white_background %}
+      <ul class="gang-analysis-summary__issues">
+        {% for warning in asset.analysis_warnings %}<li>{{ warning }}</li>{% endfor %}
+        {% if asset.thin_zone.detected %}
+          <li>Détails fins détectés{% if asset.thin_zone.coverage_percent is not None %} · {{ asset.thin_zone.coverage_percent|floatformat:1 }} % de la surface{% endif %}{% if asset.thin_zone.resolution_limited %} · aperçu partiel{% endif %}.</li>
+        {% endif %}
+        {% if asset.semi_transparency.detected %}
+          <li>Dégradés détectés{% if asset.semi_transparency.coverage_percent is not None %} · {{ asset.semi_transparency.coverage_percent|floatformat:1 }} % de la surface{% endif %}.</li>
+        {% endif %}
+        {% if asset.probable_white_background %}<li>Fond blanc probablement présent.</li>{% endif %}
+      </ul>
+    {% else %}
+      <p class="gang-analysis-summary__message gang-analysis-summary__message--ok">Aucune anomalie source détectée. Le DPI final sera contrôlé selon la taille placée.</p>
+    {% endif %}
+
+    {% if not hide_overlay_links and asset.thin_zone.overlay_available or not hide_overlay_links and asset.semi_transparency.overlay_available %}
+      <div class="gang-analysis-summary__overlays" aria-label="Aperçus des anomalies">
+        {% if asset.thin_zone.overlay_available %}<a class="ui-btn ui-btn-ghost ui-btn-sm" href="{{ asset.thin_zone.overlay_url }}" target="_blank" rel="noopener">Voir les détails fins</a>{% endif %}
+        {% if asset.semi_transparency.overlay_available %}<a class="ui-btn ui-btn-ghost ui-btn-sm" href="{{ asset.semi_transparency.overlay_url }}" target="_blank" rel="noopener">Voir les dégradés</a>{% endif %}
+      </div>
+    {% endif %}
+  {% endif %}
+</section>

@@ -28,6 +28,7 @@ Remonter automatiquement le statut colis Sendcloud dans Prenium DTF dès qu’un
 - Premier statut « handoff transporteur » → `shipped_at` + email unique `order_shipped` (tracking + lien)
 - Staff portail : bouton **Déclarer dans Sendcloud** (pas « Générer l’étiquette »)
 - Polling Celery existant conservé en filet de secours (résolution colis par `order_number` si besoin)
+- Portail Client : projection de livraison neutre, sans message brut ni vocabulaire Sendcloud ; le retrait atelier prévaut sur tout suivi transporteur et affiche la date `completed_at` lorsqu’il est confirmé comme « Retirée ».
 
 ## Configuration
 Voir `.env.example` :
@@ -57,6 +58,7 @@ Voir `.env.example` :
   - événement stale ignoré
   - statut post-handoff ne revenant pas à `READY_TO_SEND`
 - `tests/shipping/test_sendcloud_service.py` / `test_shipment_*` : déclaration sans label
+- `tests/portal/test_client_order_panels.py` : libellés client neutres, retrait atelier et masquage des états fournisseur
 
 ## Checklist de validation
 - [ ] Clés + `SENDCLOUD_INTEGRATION_ID` + adresse expéditeur renseignés dans `.env`

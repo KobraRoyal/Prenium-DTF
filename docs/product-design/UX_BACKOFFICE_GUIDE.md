@@ -14,6 +14,14 @@
 - historique immédiat
 - informations essentielles au-dessus de la ligne de flottaison
 
+## Listes de commandes
+
+La colonne **Statut** des listes Client et Atelier affiche un seul badge d’avancement
+opérationnel. Elle projette l’étape la plus utile à la lecture : prérequis tarif ou
+paiement, file Atelier, production, disponibilité, expédition puis fin de commande.
+Le mode de règlement (comptant ou encours) reste une information de facturation dans
+la fiche et ne doit pas être présenté comme un second statut.
+
 ## Fiche commande staff (workflow GPAO)
 
 Alignement **direction GPAO** × **design** :
@@ -30,6 +38,7 @@ Fichiers : `templates/portal/staff/order_detail.html`, `components/portal/staff_
 
 - champ OF/client autofocus compatible douchette ;
 - quatre files : à traiter, à expédier, terminés et tous ;
+- colonne Fichiers : un seul badge de synthèse ; le total n'est précisé que s'il diffère du nombre de fichiers à traiter ;
 - transitions autorisées proposées directement sur chaque ligne ;
 - prérequis paiement/tarif explicités avec lien de résolution ;
 - déclaration et synchronisation Sendcloud sans quitter la file ;

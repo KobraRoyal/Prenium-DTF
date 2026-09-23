@@ -5,6 +5,7 @@
     <div class="product-nav__brand">
       {% if nav_mode == "client" %}
       {% include "components/brand/logo.html" with brand_home_href="portal:client-dashboard" brand_home_label="Retour à l'accueil" %}
+      <span class="product-nav__workspace"><span aria-hidden="true"></span>Espace client</span>
       {% elif nav_mode == "staff" %}
       {% include "components/brand/logo.html" with brand_home_href="portal:staff-dashboard" brand_home_label="Retour à l'Atelier" %}
       <span class="product-nav__workspace"><span aria-hidden="true"></span>Atelier</span>

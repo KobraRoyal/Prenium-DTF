@@ -76,6 +76,13 @@ class Order(BaseModel):
         blank=True,
         help_text="Snapshot libellé option livraison au moment du choix.",
     )
+    estimated_handover_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Date prévisionnelle de remise : retrait atelier ou livraison, selon le mode choisi."
+        ),
+    )
     shipping_amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -182,6 +189,15 @@ class Order(BaseModel):
         ),
         validators=[MinValueValidator(MIN_METERAGE_LINEAR_M)],
     )
+    manual_billing_adjusted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Ajustement Atelier (encours) : qté / PU / port figés. "
+            "Exclut la commande du recalcul de remise volume mensuel ; "
+            "un nouveau calcul depuis le métrage efface ce gel."
+        ),
+    )
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancelled_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -280,7 +296,7 @@ class OrderLine(BaseModel):
     unit = models.CharField(max_length=32)
     quantity = models.DecimalField(
         max_digits=10,
-        decimal_places=2,
+        decimal_places=4,
         validators=[MinValueValidator(MIN_QUANTITY)],
     )
     unit_price = models.DecimalField(

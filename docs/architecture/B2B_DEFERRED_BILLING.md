@@ -52,6 +52,9 @@ permission tarifaire. Lors de l’approbation d’un prospect, chaque palier act
 grille `CustomerVolumeDiscountTier` propre au nouveau client en encours. Il n’existe aucun taux
 financier codé en dur : une grille globale vide ne crée aucune remise. Les modifications futures
 de la grille globale ne modifient pas les conditions déjà copiées chez les clients existants.
+Si aucune grille client n’existe (notamment pour les anciens comptes ou un compte créé alors que la
+grille globale était vide), le moteur utilise la grille globale active comme fallback, pour
+l’encours comme pour le comptant. Une grille client renseignée reste toujours prioritaire.
 
 ### `Order` (`orders`)
 
@@ -67,6 +70,10 @@ de la grille globale ne modifient pas les conditions déjà copiées chez les cl
 | `volume_discount_threshold_linear_m`, `volume_discount_percent` | Palier atteint et taux appliqué |
 | `volume_discount_amount` | Montant HT retiré des lignes DTF de la commande |
 | `volume_discount_base_unit_price_eur` | Prix DTF brut au m² conservé pour les recalculs rétroactifs |
+
+Les quantités DTF des `OrderLine` sont conservées à **4 décimales** : la répartition d’un métrage
+global entre plusieurs fichiers peut produire des valeurs comme `0,3163 m²`. Cette précision est
+nécessaire pour que le total facturé et le volume mensuel utilisent la même surface réelle.
 
 Les commandes **existantes** migrées restent en `immediate` + `pricing_status = priced`.
 
@@ -111,6 +118,49 @@ Effets :
 - Pour une commande en encours, recalcul de toutes les commandes éligibles du même mois avec le
   meilleur palier atteint sur le volume général.
 - Audit `order.pricing_computed`.
+
+## Correction quantité exemplaires (encours, avant production)
+
+Sur le panneau **Contrôle fichiers** (`portal:staff-order-panel-inspection`), l’opérateur peut
+corriger le nombre d’exemplaires d’un visuel (`OrderUpload.quantity`) **avant** le démarrage
+production.
+
+- Action : `POST` `portal:staff-order-upload-quantity` (permission `uploads.review_orderupload`).
+- Service : `OrderUploadService.set_staff_upload_quantity`.
+- Garde-fous : `billing_mode = deferred`, commande `draft` ou `submitted`, **production non
+  démarrée** (`ProductionJob.started_at` absent et statut hors `in_progress` /
+  `ready_to_ship` / `completed`), quantité entre 1 et 1000.
+- **Pas de recalcul de prix** à cette étape : le tarif encours reste piloté par la saisie
+  métrage atelier (comme aujourd’hui).
+- Audit `order_upload.quantity_updated`.
+
+## Ajustement Atelier (encours uniquement)
+
+Sur le panneau **Facturation** (`portal:staff-order-panel-billing`), l’opérateur peut :
+
+- changer le **mode de livraison** (snapshot code / libellé) ;
+- saisir un **montant de port HT libre** (le catalogue préremplit au changement de mode) ;
+- modifier **quantité** et **prix unitaire HT** ;
+  - les lignes DTF atelier (plusieurs visuels) sont **regroupées en une seule ligne** ;
+  - la saisie DTF se fait en **mètres linéaires** ; la quantité m² est dérivée automatiquement
+    via la laize (`DTF_LAIZE_CM`, ex. 55 cm → m² = m lin. × 0,55) côté UI et serveur ;
+  - à l’enregistrement, le métrage linéaire est conservé dans `meterage_override_linear_m`
+    et la quantité m² est **redistribuée proportionnellement** sur les `OrderLine` DTF existantes
+    (aucune fusion/suppression de lignes en base) ;
+  - les autres services (préparation fichiers, etc.) restent éditables ligne par ligne ;
+- voir les **totaux recalculés dynamiquement** (UI Alpine, y compris le total hero) puis persistés au submit.
+
+Garde-fous :
+
+- réservé à `billing_mode = deferred`, `pricing_status = priced`, commande `submitted`,
+  **sans** `billing_statement` ;
+- **interdit** pour le comptant CB (`immediate`) ;
+- service `OrderPricingService.apply_staff_billing_adjustments` ;
+- pose `manual_billing_adjusted_at` : la commande **compte** encore dans le volume mensuel
+  mais ses prix ne sont **pas** écrasés par `reprice_deferred_month` ;
+- un nouveau calcul depuis le métrage (`compute_and_persist_order_pricing`) **efface** le gel
+  et reconstruit le tarif catalogue ;
+- audit `order.manual_billing_adjusted` ; e-mail « commande tarifée » renvoyé.
 
 ## Remise générale sur volume mensuel
 
@@ -270,3 +320,8 @@ L’encours (`deferred`) n’est pas soumis à cette gate.
 - Au premier passage sur un nouveau seuil du mois courant : e-mail client
   `volume_discount_tier_reached`, idempotent par client/mois/seuil et éditable dans le même
   catalogue Atelier.
+
+## Commandes par lien et saisie manuelle
+
+Le parcours sans téléversement utilise une source externe et le métrage global Atelier.
+Voir [Commandes par lien](EXTERNAL_LINK_ORDERS.md) pour les droits, la tarification et la recette.

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import uuid
 
-from apps.portal.views_staff_production import production_panel_context
+from apps.orders.services.meterage import order_meterage_is_resolved
+from apps.portal.services.production_panel_context import build_production_panel_context
 from apps.production.models import ProductionJob
 
 
@@ -24,6 +25,7 @@ def build_operator_steps(
     production: dict,
     shipment=None,
 ) -> list[dict[str, str]]:
+    is_pickup = getattr(order, "shipping_method_code", "") == "pickup"
     uploads = inspection.get("uploads") or []
     control_required = bool(uploads)
     of_document_issued = bool(inspection.get("of_document_issued"))
@@ -48,7 +50,7 @@ def build_operator_steps(
     )
 
     uses_meterage = bool(order.uses_atelier_pricing())
-    meterage_done = (not uses_meterage) or order.meterage_override_linear_m is not None
+    meterage_done = (not uses_meterage) or order_meterage_is_resolved(order)
     meterage_active = prerequisites_done and machine_ready and uses_meterage and not meterage_done
 
     print_done = production.get("print_count", 0) > 0
@@ -121,7 +123,7 @@ def build_operator_steps(
     steps.append(
         {
             "key": "shipping",
-            "label": "Expédition",
+            "label": "Retrait atelier" if is_pickup else "Expédition",
             "state": _step_state(
                 done=shipping_done,
                 active=shipping_active and not shipping_done,
@@ -159,7 +161,7 @@ def build_operator_context(
     job = row["job"]
     from apps.portal.views_staff_reviews import _inspection_context
 
-    production = production_panel_context(
+    production = build_production_panel_context(
         request=request,
         order=order,
         job=job,
@@ -185,6 +187,9 @@ def build_operator_context(
             "can_set_meterage_override",
             "order_billable_sqm_preview",
             "dtf_laize_cm",
+            "resolved_meterage_linear_m",
+            "meterage_automatic",
+            "meterage_payment_frozen",
         )
         if key in production
     }

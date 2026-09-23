@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Sum
 from django.utils import timezone
 
 from apps.accounts.services.access import AccessScopeService
 from apps.auditlog.models import AuditLogEntry
 from apps.auditlog.services import record_event
+from apps.billing.services.production_payment_gate import (
+    order_has_captured_payment,
+    production_start_blocked_reason,
+)
+from apps.catalog.models import CatalogService
+from apps.customers.services.volume_discounts import linear_meters_from_sqm
 from apps.orders.models import Order
 from apps.production.models import (
     ProductionJob,
@@ -41,6 +49,7 @@ class ProductionPrintTrackingService:
         source: str,
         note: str = "",
         request_token=None,
+        printed_linear_m=None,
     ) -> tuple[ProductionJob, ProductionPrintRecord, bool]:
         try:
             self._require_permissions(actor)
@@ -67,6 +76,13 @@ class ProductionPrintTrackingService:
             )
             raise ValidationError(message)
         job = ProductionWorkflowService().get_or_create_for_order(order=order)
+        if order.billing_mode == Order.BillingMode.IMMEDIATE and not order_has_captured_payment(
+            order
+        ):
+            payment_block = production_start_blocked_reason(order)
+            if payment_block is not None:
+                self._record_rejection(job=job, actor=actor, source=source, message=payment_block)
+                raise ValidationError(payment_block)
         try:
             token = self._normalize_token(request_token)
         except ValidationError as exc:
@@ -103,11 +119,25 @@ class ProductionPrintTrackingService:
                     return locked_job, existing, False
                 if locked_job.order.status == Order.Status.CANCELLED:
                     raise ValidationError("Une commande annulée ne peut pas être confirmée.")
+                if (
+                    locked_job.order.billing_mode == Order.BillingMode.IMMEDIATE
+                    and not order_has_captured_payment(locked_job.order)
+                ):
+                    payment_block = production_start_blocked_reason(locked_job.order)
+                    if payment_block is not None:
+                        raise ValidationError(payment_block)
                 if locked_job.status not in self.confirmable_statuses:
                     raise ValidationError(
                         "L’impression peut être confirmée uniquement pendant "
                         "ou après la production."
                     )
+                from apps.production.services.external_order_gate import (
+                    external_order_blocked_reason,
+                )
+
+                external_block = external_order_blocked_reason(locked_job.order)
+                if external_block is not None:
+                    raise ValidationError(external_block)
                 machine = locked_job.assigned_machine
                 if machine is None:
                     raise ValidationError("Attribuez d’abord une imprimante à ce dossier.")
@@ -127,6 +157,13 @@ class ProductionPrintTrackingService:
                 is_reprint = locked_job.print_records.exists()
                 if is_reprint and not normalized_note:
                     raise ValidationError("Précisez le motif de cette réimpression.")
+                if is_reprint:
+                    recorded_linear_m = self._reprint_linear_m(
+                        order=locked_job.order,
+                        raw=printed_linear_m,
+                    )
+                else:
+                    recorded_linear_m = self._printed_linear_m_for_order(order=locked_job.order)
 
                 now = timezone.now()
                 if assignment.printing_started_at is None:
@@ -140,6 +177,7 @@ class ProductionPrintTrackingService:
                             assignment=assignment,
                             recorded_by=self._authenticated_actor(actor),
                             printed_at=now,
+                            printed_linear_m=recorded_linear_m,
                             source=source,
                             note=normalized_note,
                             request_token=token,
@@ -177,6 +215,11 @@ class ProductionPrintTrackingService:
                         "machine_code": machine.code,
                         "production_print_public_id": str(print_record.public_id),
                         "is_reprint": is_reprint,
+                        "printed_linear_m": (
+                            str(print_record.printed_linear_m)
+                            if print_record.printed_linear_m is not None
+                            else None
+                        ),
                         "note_present": bool(normalized_note),
                         "source": source,
                     },
@@ -217,6 +260,44 @@ class ProductionPrintTrackingService:
             return uuid.UUID(str(request_token))
         except (TypeError, ValueError, AttributeError) as exc:
             raise ValidationError("Jeton de confirmation invalide.") from exc
+
+    def _reprint_linear_m(self, *, order: Order, raw) -> Decimal:
+        """Métrage saisi pour une réimpression partielle, jamais le total implicite."""
+        if isinstance(raw, Decimal):
+            dec = raw
+        else:
+            text = str(raw or "").strip().replace(" ", "").replace(",", ".")
+            if not text:
+                raise ValidationError("Indiquez le métrage linéaire réellement réimprimé.")
+            try:
+                dec = Decimal(text)
+            except InvalidOperation:
+                raise ValidationError("Indiquez un métrage linéaire valide.") from None
+        if dec <= 0:
+            raise ValidationError("Le métrage de réimpression doit être strictement positif.")
+        dec = dec.quantize(Decimal("0.0001"))
+        order_total = self._printed_linear_m_for_order(order=order)
+        if order_total is not None and dec > order_total:
+            raise ValidationError(
+                "Le métrage de réimpression ne peut pas dépasser "
+                f"le métrage de la commande ({order_total} m)."
+            )
+        return dec
+
+    def _printed_linear_m_for_order(self, *, order: Order):
+        """Fige le métrage réellement exploité par l'Atelier au moment du print."""
+        from apps.orders.services.meterage import resolved_linear_meters
+
+        resolved = resolved_linear_meters(order)
+        if resolved is not None:
+            return resolved
+        printed_sqm = (
+            order.items.filter(service_type=CatalogService.ServiceType.DTF_TRANSFER).aggregate(
+                total=Sum("quantity")
+            )["total"]
+            or 0
+        )
+        return linear_meters_from_sqm(printed_sqm) if printed_sqm > 0 else None
 
     def _require_permissions(self, actor) -> None:
         if not self.access_scope_service.can_access_staff_portal(actor) or any(

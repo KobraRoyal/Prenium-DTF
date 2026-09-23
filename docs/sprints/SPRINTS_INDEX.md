@@ -58,6 +58,9 @@
 - [Sprint 50 — Page HTTP 404 Operate](sprint-50-page-404.md)
 - [Sprint 51 — Cohérence tokens et identité Atelier](sprint-51-tokens-brand-coherence.md)
 - [Sprint 52 — Soulignement animé des actions simples](sprint-52-simple-action-hover-motion.md)
+- [Sprint 55 — Pilotage financier du dashboard Atelier](sprint-55-dashboard-financier-atelier.md)
+- [Sprint 56 — Pilotage du métrage imprimé Atelier](sprint-56-metrage-imprime-atelier.md)
+- [Sprint 57 — Pilotage de production Atelier](sprint-57-pilotage-production-atelier.md)
 
 ## Vague POD — Shopify fulfillment + atelier pose + WMS
 - [ADR Shopify POD + WMS](../architecture/ADR_SHOPIFY_POD_WMS.md)
@@ -77,3 +80,5 @@
 - Architecture — Commandes B2B facturation différée (`docs/architecture/B2B_DEFERRED_BILLING.md`)
 - Product design — Audit UI/UX portail client 2026 (`docs/product-design/AUDIT_PORTAIL_CLIENT_UI_UX_2026.md`)
 - UI/UX — Frontend premium et refontes landing (`docs/sprints/sprint-uiux-frontend-premium.md`)
+
+- [Lot — commandes par lien et création manuelle Atelier](feature-commandes-par-lien.md)

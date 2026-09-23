@@ -20,6 +20,7 @@ from apps.b2b_order_projects.permissions import (
     b2b_order_projects_enabled_for_customer,
     client_new_order_url,
 )
+from apps.portal.forms_external_orders import ExternalOrderForm
 from apps.portal.htmx import with_toast
 from apps.portal.views_common import (
     ScopedCustomerMixin,
@@ -103,6 +104,7 @@ class ClientCheckoutView(ScopedCustomerMixin, View):
         return {
             "customer": self.customer,
             "selected_order": order,
+            "external_order_form": ExternalOrderForm(),
             "uploads": uploads,
             "creation_error": creation_error,
             "submit_error": request.GET.get("submit_error", ""),

@@ -1,0 +1,18 @@
+<aside class="billing-discount" aria-label="Remise volume client">
+  <p class="billing-discount__line">
+    <span class="billing-discount__label">Remise volume</span>
+    {% if volume_discount_summary.current_tier %}
+    <strong>−{{ volume_discount_summary.current_tier.discount_percent|floatformat:"-2" }}&nbsp;%</strong>
+    <span>palier atteint</span>
+    {% elif order.volume_discount_percent and order.volume_discount_percent > 0 %}
+    <strong>−{{ order.volume_discount_percent|floatformat:"-2" }}&nbsp;%</strong>
+    <span>appliquée</span>
+    {% else %}
+    <span>aucun palier atteint</span>
+    {% endif %}
+    {% if order.volume_discount_amount and order.volume_discount_amount > 0 %}
+    <span class="billing-discount__sep" aria-hidden="true">·</span>
+    <span>−{{ order.volume_discount_amount|floatformat:2 }}&nbsp;{{ order.currency }} sur cette cde</span>
+    {% endif %}
+  </p>
+</aside>

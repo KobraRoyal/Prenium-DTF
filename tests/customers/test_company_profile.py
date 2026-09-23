@@ -1,7 +1,9 @@
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer, CustomerMembership
+from apps.customers.services.company_profile import CompanyProfileService
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import Client
 from django.urls import reverse
 
@@ -168,3 +170,121 @@ def test_company_profile_is_isolated_between_customers():
     assert response.status_code == 403
     customer_a.refresh_from_db()
     assert customer_a.name != "Piratage"
+
+
+@pytest.mark.django_db
+def test_apply_checkout_delivery_copies_billing_address():
+    user, customer, _membership = _scope(
+        "checkout-copy@example.com",
+        CustomerMembership.Role.OWNER,
+    )
+    updated = CompanyProfileService().apply_checkout_delivery(
+        customer=customer,
+        actor=user,
+        same_as_billing=True,
+        source="test.studio_checkout",
+    )
+    assert updated.shipping_address_line1 == "10 rue de la Presse"
+    assert updated.shipping_postal_code == "75011"
+    assert updated.shipping_city == "Paris"
+    assert updated.shipping_country == "FR"
+    assert AuditLogEntry.objects.filter(action="customer.checkout_delivery.updated").exists()
+
+
+@pytest.mark.django_db
+def test_apply_checkout_delivery_requires_other_address():
+    user, customer, _membership = _scope(
+        "checkout-empty@example.com",
+        CustomerMembership.Role.OWNER,
+    )
+    with pytest.raises(ValidationError, match="adresse de livraison"):
+        CompanyProfileService().apply_checkout_delivery(
+            customer=customer,
+            actor=user,
+            same_as_billing=False,
+            payload={},
+        )
+
+
+@pytest.mark.django_db
+def test_apply_checkout_delivery_writes_other_address():
+    user, customer, _membership = _scope(
+        "checkout-other@example.com",
+        CustomerMembership.Role.OWNER,
+    )
+    updated = CompanyProfileService().apply_checkout_delivery(
+        customer=customer,
+        actor=user,
+        same_as_billing=False,
+        payload={
+            "shipping_address_line1": "12 quai de Loire",
+            "shipping_postal_code": "45000",
+            "shipping_city": "Orléans",
+            "shipping_country": "FR",
+        },
+    )
+    assert updated.shipping_address_line1 == "12 quai de Loire"
+    assert updated.shipping_city == "Orléans"
+    assert updated.billing_address_line1 == "10 rue de la Presse"
+
+
+@pytest.mark.django_db
+def test_build_checkout_delivery_snapshot_requires_sendcloud_recipient():
+    user, customer, _membership = _scope(
+        "checkout-recipient@example.com",
+        CustomerMembership.Role.OWNER,
+    )
+    customer.shipping_address_line1 = "quai de Loire"
+    customer.shipping_postal_code = "45000"
+    customer.shipping_city = "Orléans"
+    customer.shipping_country = "FR"
+    customer.save(
+        update_fields=[
+            "shipping_address_line1",
+            "shipping_postal_code",
+            "shipping_city",
+            "shipping_country",
+            "updated_at",
+        ]
+    )
+    with pytest.raises(ValidationError, match="n° de voie"):
+        CompanyProfileService().build_checkout_delivery_snapshot(
+            customer=customer,
+            payload={"name": customer.name, "email": customer.billing_email},
+        )
+
+
+@pytest.mark.django_db
+def test_build_checkout_delivery_snapshot_keeps_sendcloud_fields():
+    _user, customer, _membership = _scope(
+        "checkout-snapshot@example.com",
+        CustomerMembership.Role.OWNER,
+    )
+    customer.shipping_address_line1 = "quai de Loire"
+    customer.shipping_postal_code = "45000"
+    customer.shipping_city = "Orléans"
+    customer.shipping_country = "FR"
+    customer.save(
+        update_fields=[
+            "shipping_address_line1",
+            "shipping_postal_code",
+            "shipping_city",
+            "shipping_country",
+            "updated_at",
+        ]
+    )
+    snapshot = CompanyProfileService().build_checkout_delivery_snapshot(
+        customer=customer,
+        payload={
+            "name": "Marie Loire",
+            "email": "marie@example.com",
+            "phone": "0612345678",
+            "company_name": "Atelier Loire",
+            "house_number": "12",
+        },
+    )
+    assert snapshot["line1"] == "quai de Loire"
+    assert snapshot["house_number"] == "12"
+    assert snapshot["name"] == "Marie Loire"
+    assert snapshot["email"] == "marie@example.com"
+    assert snapshot["phone"] == "0612345678"

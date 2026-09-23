@@ -33,9 +33,8 @@ class StaffTeamView(StaffTeamManagerRequiredMixin, View):
     template_name = "portal/staff/team.html"
 
     def get(self, request):
-        memberships = (
-            StaffMembership.objects.select_related("user")
-            .order_by("-is_active", "role", "user__email")
+        memberships = StaffMembership.objects.select_related("user").order_by(
+            "-is_active", "role", "user__email"
         )
         return render(
             request,
@@ -48,6 +47,7 @@ class StaffTeamView(StaffTeamManagerRequiredMixin, View):
                 "nav_mode": "staff",
                 "nav_key": "staff-team",
                 "account_section": "team",
+                "flash_message_scope": "team",
             },
         )
 
@@ -89,9 +89,9 @@ class StaffTeamInviteView(StaffTeamManagerRequiredMixin, View):
             return with_toast(response, message, variant)
 
         if variant == "success":
-            messages.success(request, message)
+            messages.success(request, message, extra_tags="team")
         else:
-            messages.error(request, message)
+            messages.error(request, message, extra_tags="team")
         return redirect("portal:staff-team")
 
 
@@ -103,9 +103,13 @@ class StaffTeamInvitationRevokeView(StaffTeamManagerRequiredMixin, View):
                 actor=request.user,
                 ip_address=_client_ip(request),
             )
-            messages.success(request, "Invitation révoquée.")
+            messages.success(request, "Invitation révoquée.", extra_tags="team")
         except (StaffInvitationError, PermissionDenied):
-            messages.error(request, "Cette invitation ne peut pas être révoquée.")
+            messages.error(
+                request,
+                "Cette invitation ne peut pas être révoquée.",
+                extra_tags="team",
+            )
         return redirect("portal:staff-team")
 
 
@@ -120,9 +124,13 @@ class StaffTeamMemberRoleView(StaffTeamManagerRequiredMixin, View):
                     role=form.cleaned_data["role"],
                     ip_address=_client_ip(request),
                 )
-                messages.success(request, "Rôle mis à jour.")
+                messages.success(request, "Rôle mis à jour.", extra_tags="team")
             except (StaffInvitationError, PermissionDenied):
-                messages.error(request, "Ce rôle ne peut pas être modifié.")
+                messages.error(
+                    request,
+                    "Ce rôle ne peut pas être modifié.",
+                    extra_tags="team",
+                )
         return redirect("portal:staff-team")
 
 
@@ -134,7 +142,15 @@ class StaffTeamMemberDeactivateView(StaffTeamManagerRequiredMixin, View):
                 actor=request.user,
                 ip_address=_client_ip(request),
             )
-            messages.success(request, "Accès du collaborateur désactivé.")
+            messages.success(
+                request,
+                "Accès du collaborateur désactivé.",
+                extra_tags="team",
+            )
         except (StaffInvitationError, PermissionDenied):
-            messages.error(request, "Cet accès ne peut pas être désactivé.")
+            messages.error(
+                request,
+                "Cet accès ne peut pas être désactivé.",
+                extra_tags="team",
+            )
         return redirect("portal:staff-team")

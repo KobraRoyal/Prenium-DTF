@@ -1,4 +1,4 @@
-"""Règles de gate paiement / production pour les commandes comptant CB atelier."""
+"""Règles de paiement avant l'entrée en production des commandes comptant."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from apps.orders.models import Order
 
 
 def requires_captured_payment_before_production(order: Order) -> bool:
-    """True pour les dépôts atelier en paiement comptant CB."""
-    return order.billing_mode == Order.BillingMode.IMMEDIATE and order.uses_atelier_pricing()
+    """Toute commande comptant exige une capture avant l'Atelier."""
+    return order.billing_mode == Order.BillingMode.IMMEDIATE
 
 
 def order_has_captured_payment(order: Order) -> bool:
@@ -25,6 +25,8 @@ def order_has_captured_payment(order: Order) -> bool:
 
 def order_awaits_client_payment(order: Order) -> bool:
     """Commande tarifée comptant CB, en attente du règlement client."""
+    if order.status == Order.Status.CANCELLED:
+        return False
     if not requires_captured_payment_before_production(order):
         return False
     if order.pricing_status != Order.PricingStatus.PRICED:
@@ -46,7 +48,7 @@ def attach_awaits_client_payment(orders: list[Order]) -> list[Order]:
         ).values_list("order_id", flat=True)
     )
     for order in order_list:
-        if order.pk in captured_ids:
+        if order.pk in captured_ids or order.status == Order.Status.CANCELLED:
             order.awaits_client_payment = False
             continue
         if not requires_captured_payment_before_production(order):
@@ -63,29 +65,34 @@ def attach_awaits_client_payment(orders: list[Order]) -> list[Order]:
 
 
 def count_orders_awaiting_client_payment(customer) -> int:
-    """Nombre de commandes client encore à régler (comptant CB atelier)."""
+    """Nombre de commandes comptant tarifées encore à régler."""
     from django.db.models import Exists, OuterRef
 
     captured = Payment.objects.filter(
         order_id=OuterRef("pk"),
         status=Payment.Status.CAPTURED,
     )
-    candidates = list(
+    return (
         Order.objects.for_customer(customer)
         .filter(
             billing_mode=Order.BillingMode.IMMEDIATE,
             pricing_status=Order.PricingStatus.PRICED,
             total_amount__gt=Decimal("0.00"),
         )
+        .exclude(status=Order.Status.CANCELLED)
         .annotate(_has_captured_payment=Exists(captured))
         .filter(_has_captured_payment=False)
-        .prefetch_related("items", "uploads")
+        .count()
     )
-    return sum(1 for order in candidates if order.uses_atelier_pricing())
 
 
 def production_start_blocked_reason(order: Order) -> str | None:
     """Motif de refus du lancement production, ou None si autorisé."""
+    from apps.production.services.external_order_gate import external_order_blocked_reason
+
+    external_block = external_order_blocked_reason(order)
+    if external_block is not None:
+        return external_block
     if not requires_captured_payment_before_production(order):
         return None
     if order_has_captured_payment(order):

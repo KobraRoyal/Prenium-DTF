@@ -10,10 +10,28 @@ from apps.accounts.services.access import AccessScopeService
 from apps.auditlog.services import record_event
 from apps.orders.models import Order
 from apps.orders.services.pricing import OrderPricingService
+from apps.production.models import ProductionJob
 from apps.uploads.models import OrderUpload
 from apps.uploads.services.drive import OrderUploadDriveSyncService
 from apps.uploads.services.inspections import OrderUploadInspectionService
 from apps.uploads.services.validation import UploadValidationService
+
+STAFF_UPLOAD_QUANTITY_MAX = 1000
+
+
+def order_production_has_started(order: Order) -> bool:
+    """True dès qu’un job Atelier a démarré (ou dépassé) l’étape « En production »."""
+    try:
+        job = order.production_job
+    except ProductionJob.DoesNotExist:
+        return False
+    if job.started_at is not None:
+        return True
+    return job.status in {
+        ProductionJob.Status.IN_PROGRESS,
+        ProductionJob.Status.READY_TO_SHIP,
+        ProductionJob.Status.COMPLETED,
+    }
 
 
 class OrderUploadService:
@@ -243,6 +261,84 @@ class OrderUploadService:
             raise ValidationError("La quantité doit être au moins 1.")
         return value
 
+    def can_staff_edit_upload_quantity(self, *, order: Order) -> bool:
+        """Encours uniquement, commande non terminée, production non démarrée."""
+        return (
+            order.billing_mode == Order.BillingMode.DEFERRED
+            and order.status in (Order.Status.DRAFT, Order.Status.SUBMITTED)
+            and not order_production_has_started(order)
+        )
+
+    @transaction.atomic
+    def set_staff_upload_quantity(
+        self,
+        *,
+        order: Order,
+        upload_public_id,
+        actor,
+        quantity,
+        source: str = "staff_portal.upload_quantity",
+    ) -> OrderUpload:
+        """Corrige le nombre d’exemplaires d’un visuel (encours, avant production).
+
+        Ne recalcule pas le prix : le tarif encours reste piloté par la saisie
+        métrage atelier, comme aujourd’hui.
+        """
+        if not self.can_staff_edit_upload_quantity(order=order):
+            if order.billing_mode != Order.BillingMode.DEFERRED:
+                raise ValidationError(
+                    "La modification de quantité est réservée aux commandes encours."
+                )
+            if order_production_has_started(order):
+                raise ValidationError(
+                    "Impossible de modifier les quantités : la production a déjà démarré."
+                )
+            raise ValidationError("Statut de commande incompatible avec cette modification.")
+
+        from apps.customers.models import Customer
+
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().get(pk=order.pk)
+        if not self.can_staff_edit_upload_quantity(order=order):
+            if order_production_has_started(order):
+                raise ValidationError(
+                    "Impossible de modifier les quantités : la production a déjà démarré."
+                )
+            raise ValidationError("Statut de commande incompatible avec cette modification.")
+
+        order_upload = (
+            OrderUpload.objects.select_for_update()
+            .filter(order=order, public_id=upload_public_id)
+            .first()
+        )
+        if order_upload is None:
+            raise ValidationError("Fichier introuvable pour cette commande.")
+
+        resolved_qty = self._normalize_quantity(quantity)
+        if resolved_qty > STAFF_UPLOAD_QUANTITY_MAX:
+            raise ValidationError(f"La quantité ne peut pas dépasser {STAFF_UPLOAD_QUANTITY_MAX}.")
+
+        previous = order_upload.quantity
+        if previous == resolved_qty:
+            return order_upload
+
+        order_upload.quantity = resolved_qty
+        order_upload.save(update_fields=["quantity", "updated_at"])
+        record_event(
+            action="order_upload.quantity_updated",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=order_upload,
+            metadata={
+                "order_public_id": str(order.public_id),
+                "customer_public_id": str(order.customer.public_id),
+                "order_upload_public_id": str(order_upload.public_id),
+                "previous_quantity": previous,
+                "quantity": resolved_qty,
+                "source": source,
+            },
+        )
+        return order_upload
+
     def _normalize_support_color(self, raw: str) -> str:
         cleaned = str(raw or "").strip()
         if not cleaned:
@@ -316,7 +412,9 @@ class OrderUploadService:
         source: str,
         audience: str,
         customer_membership_public_id: str | None = None,
-    ) -> OrderUpload:
+    ) -> OrderUpload | None:
+        if order_upload.is_external:
+            return None
         metadata = {
             "order_public_id": str(order_upload.order.public_id),
             "customer_public_id": str(order_upload.order.customer.public_id),
@@ -355,6 +453,9 @@ class OrderUploadService:
         if order is None or order_upload is None:
             return order, order_upload, None
 
+        if order_upload.is_external:
+            return order, order_upload, None
+
         validated_membership = self._validate_customer_actor_scope(
             customer=customer,
             actor=actor,
@@ -390,6 +491,9 @@ class OrderUploadService:
         if order is None or order_upload is None:
             return order, order_upload, None
 
+        if order_upload.is_external:
+            return order, order_upload, None
+
         inspection = self.inspection_service.ensure_inspection(
             order_upload=order_upload,
             actor=actor,
@@ -419,6 +523,9 @@ class OrderUploadService:
         if order is None or order_upload is None:
             return order, order_upload, None
 
+        if order_upload.is_external:
+            return order, order_upload, None
+
         drive_sync = self.drive_sync_service.get_upload_sync(order_upload=order_upload)
         self.drive_sync_service.record_view_event(
             order_upload=order_upload,
@@ -428,16 +535,93 @@ class OrderUploadService:
         )
         return order, order_upload, drive_sync
 
+    def _set_external_visual_count(self, *, order, actor, value):
+        from apps.uploads.validators import normalize_external_visual_count
+
+        if not self.access_scope_service.can_access_staff_domain(actor, "orders.change_order"):
+            raise ValidationError("Permission de modification de commande requise.")
+        count = normalize_external_visual_count(value)
+        uploads = list(OrderUpload.objects.select_for_update().filter(order=order))
+        if len(uploads) != 1 or not uploads[0].is_external:
+            raise ValidationError("Cette saisie concerne une commande transmise par lien.")
+        upload = uploads[0]
+        previous = upload.external_visual_count
+        upload.external_visual_count = count
+        upload.save(update_fields=["external_visual_count", "updated_at"])
+        if previous != count:
+            record_event(
+                action="order.external_visual_count_updated",
+                actor=actor,
+                target=order,
+                metadata={"previous_count": previous, "external_visual_count": count},
+            )
+
+    @transaction.atomic
+    def set_staff_external_visual_count(self, *, order: Order, actor, value) -> Order:
+        """Record the contents of an external link without changing meterage."""
+        from apps.customers.models import Customer
+
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().get(pk=order.pk)
+        if not order.uses_atelier_pricing() or order.status not in (
+            Order.Status.DRAFT,
+            Order.Status.SUBMITTED,
+        ):
+            raise ValidationError("Statut incompatible avec la modification du nombre de fichiers.")
+        if order.billing_mode == Order.BillingMode.IMMEDIATE and order.payments.exists():
+            raise ValidationError("Le tarif est figé dès qu’un paiement a été lancé.")
+        was_priced = order.pricing_status == Order.PricingStatus.PRICED
+        self._set_external_visual_count(order=order, actor=actor, value=value)
+        self.pricing_service.invalidate_deferred_pricing_after_meterage_change(
+            order=order, actor=actor, source="staff_portal.external_visual_count"
+        )
+        order.refresh_from_db()
+        if was_priced:
+            return self.pricing_service.compute_and_persist_order_pricing(
+                order=order, actor=actor, source="staff_portal.external_visual_count"
+            )
+        return order
+
+    @transaction.atomic
     def set_staff_order_meterage_linear_override(
         self,
         *,
         order: Order,
         actor,
         raw_value: str | None,
+        external_visual_count=None,
     ) -> Order:
         """Saisie opérateur : mètres linéaires pour toute la commande
         (laize × linéaire = m² total réparti par fichier).
         """
+        from apps.customers.models import Customer
+
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().get(pk=order.pk)
+        from apps.orders.services.meterage import (
+            order_meterage_is_resolved,
+            order_pricing_is_payment_frozen,
+        )
+
+        raw = (raw_value or "").strip()
+        if order_pricing_is_payment_frozen(order):
+            # Tarif figé : confirmation vide OK si métrage déjà résolu (ex. Gang Sheet).
+            if order_meterage_is_resolved(order) and raw == "" and external_visual_count is None:
+                return order
+            raise ValidationError("Le tarif est figé dès qu’un paiement a été lancé.")
+        if external_visual_count is not None:
+            self._set_external_visual_count(order=order, actor=actor, value=external_visual_count)
+        if raw:
+            try:
+                dec = Decimal(raw.replace(",", "."))
+                if not dec.is_finite() or dec <= 0 or dec >= Decimal("100000000"):
+                    raise InvalidOperation
+                dec = dec.quantize(Decimal("0.0001"))
+                if dec <= 0:
+                    raise InvalidOperation
+            except (InvalidOperation, TypeError):
+                raise ValidationError("Indiquez un métrage linéaire positif valide.") from None
+
         if not order.uses_atelier_pricing():
             raise ValidationError(
                 "La saisie manuelle du métrage concerne les commandes atelier "
@@ -453,7 +637,6 @@ class OrderUploadService:
         )
         order.refresh_from_db()
 
-        raw = (raw_value or "").strip()
         if raw == "":
             with transaction.atomic():
                 locked = Order.objects.select_for_update().get(pk=order.pk)
@@ -467,14 +650,6 @@ class OrderUploadService:
             )
             order.refresh_from_db()
             return order
-
-        try:
-            dec = Decimal(raw.replace(",", "."))
-        except (InvalidOperation, TypeError):
-            raise ValidationError("Indiquez un nombre valide (mètres linéaires).") from None
-        if dec <= 0:
-            raise ValidationError("Le métrage linéaire doit être strictement positif.")
-        dec = dec.quantize(Decimal("0.0001"))
 
         with transaction.atomic():
             locked = Order.objects.select_for_update().get(pk=order.pk)

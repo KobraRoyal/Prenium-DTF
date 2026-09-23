@@ -45,11 +45,19 @@ def month_bounds(month):
     return month_start, next_month, starts_at, ends_at
 
 
-def linear_meters_from_sqm(total_sqm: Decimal) -> Decimal:
+def dtf_laize_m() -> Decimal:
     laize_m = Decimal(int(getattr(settings, "DTF_LAIZE_CM", 55))) / Decimal("100")
     if laize_m <= 0:
         raise ValidationError("DTF_LAIZE_CM doit être strictement positif.")
-    return (Decimal(str(total_sqm)) / laize_m).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+    return laize_m
+
+
+def linear_meters_from_sqm(total_sqm: Decimal) -> Decimal:
+    return (Decimal(str(total_sqm)) / dtf_laize_m()).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+
+
+def sqm_from_linear_meters(linear_m: Decimal) -> Decimal:
+    return (Decimal(str(linear_m)) * dtf_laize_m()).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
 
 
 def customer_has_personalized_ladder(customer: Customer) -> bool:
@@ -57,7 +65,7 @@ def customer_has_personalized_ladder(customer: Customer) -> bool:
 
 
 def resolve_active_ladder(customer: Customer) -> list[ResolvedVolumeTier]:
-    """Paliers actifs : grille client si elle existe, sinon défauts live (comptant only)."""
+    """Paliers actifs : grille client prioritaire, sinon grille globale par défaut."""
     if customer_has_personalized_ladder(customer):
         rows = (
             CustomerVolumeDiscountTier.objects.for_customer(customer)
@@ -72,8 +80,6 @@ def resolve_active_ladder(customer: Customer) -> list[ResolvedVolumeTier]:
             )
             for row in rows
         ]
-    if customer.default_billing_mode != Customer.DefaultBillingMode.IMMEDIATE:
-        return []
     rows = DefaultCustomerVolumeDiscountTier.objects.active().order_by(
         "minimum_monthly_linear_m",
         "created_at",
@@ -399,30 +405,44 @@ class CustomerVolumeDiscountTierService:
         )
 
     def get_current_month_summary(self, *, customer: Customer) -> dict[str, object]:
-        """Synthèse du volume DTF du mois civil courant (encours ou comptant payé)."""
+        """Synthèse du volume DTF du mois civil courant (encours ou comptant payé).
+
+        Compte encours : volume des commandes différées éligibles. Si aucune n’est
+        encore tarifée mais que des commandes comptant du mois sont déjà payées
+        (mix fréquent en recette / bascule), le dashboard bascule sur le volume
+        payé prospectif pour ne pas afficher un compteur à zéro trompeur.
+        """
         from apps.catalog.models import CatalogService
         from apps.orders.models import Order, OrderLine
 
         month_start, _next_month, starts_at, ends_at = month_bounds(timezone.localdate())
-        is_immediate = is_cash_volume_customer(customer)
-        if is_immediate:
-            eligible_orders = paid_immediate_orders_qs(
-                customer=customer,
-                starts_at=starts_at,
-                ends_at=ends_at,
-            )
+        paid_immediate = paid_immediate_orders_qs(
+            customer=customer,
+            starts_at=starts_at,
+            ends_at=ends_at,
+        )
+        deferred_eligible = Order.objects.filter(
+            customer=customer,
+            billing_mode=Order.BillingMode.DEFERRED,
+            pricing_status=Order.PricingStatus.PRICED,
+            billing_statement__isnull=True,
+            status=Order.Status.SUBMITTED,
+            created_at__gte=starts_at,
+            created_at__lt=ends_at,
+        )
+        use_prospective = is_cash_volume_customer(customer)
+        if not use_prospective and not deferred_eligible.exists() and paid_immediate.exists():
+            use_prospective = True
+
+        if use_prospective:
+            eligible_orders = paid_immediate
             policy = "prospective"
+            application_scope = IMMEDIATE_APPLICATION_SCOPE
         else:
-            eligible_orders = Order.objects.filter(
-                customer=customer,
-                billing_mode=Order.BillingMode.DEFERRED,
-                pricing_status=Order.PricingStatus.PRICED,
-                billing_statement__isnull=True,
-                status=Order.Status.SUBMITTED,
-                created_at__gte=starts_at,
-                created_at__lt=ends_at,
-            )
+            eligible_orders = deferred_eligible
             policy = "retroactive"
+            application_scope = DEFERRED_APPLICATION_SCOPE
+
         total_sqm = OrderLine.objects.filter(
             order__in=eligible_orders,
             service_type=CatalogService.ServiceType.DTF_TRANSFER,
@@ -449,10 +469,8 @@ class CustomerVolumeDiscountTierService:
             "next_tier": next_tier,
             "remaining_to_next_tier_linear_m": remaining_to_next_tier,
             "policy": policy,
-            "uses_default_ladder": (
-                is_immediate and not customer_has_personalized_ladder(customer)
-            ),
-            "application_scope": application_scope_for_customer(customer),
+            "uses_default_ladder": not customer_has_personalized_ladder(customer),
+            "application_scope": application_scope,
         }
 
     def notify_immediate_tier_after_capture(self, *, order, actor, source: str) -> None:

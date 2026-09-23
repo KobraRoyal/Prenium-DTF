@@ -1,7 +1,7 @@
 from urllib.parse import urlencode
 
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
 from django.views import View
 
@@ -18,7 +18,11 @@ class StaffOrderPanelScanView(StaffOrderContextMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, order_public_id):
-        job = production_workflow_service.get_or_create_for_order(order=self.order)
+        _order, job = production_workflow_service.get_staff_job_for_document(
+            order_public_id=self.order.public_id
+        )
+        if job is None:
+            raise Http404
         console_url = reverse("portal:staff-atelier-operations")
         return HttpResponseRedirect(f"{console_url}?{urlencode({'q': job.scan_identifier})}")
 

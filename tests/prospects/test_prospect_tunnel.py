@@ -29,6 +29,10 @@ def step1_payload(**overrides):
         "email": "prospect@example.com",
         "phone": "+33612345678",
         "company": "Atelier Martin",
+        "billing_address_line1": "12 rue des Ateliers",
+        "billing_address_line2": "Bâtiment B",
+        "billing_postal_code": "75011",
+        "billing_city": "Paris",
         "country": "FR",
         "siren": "123 456 789",
         "vat_number": "",
@@ -40,7 +44,6 @@ def step1_payload(**overrides):
 
 def step2_payload(**overrides):
     payload = {
-        "service_interest": "dtf_meter",
         "main_goal": "Lancer une capsule",
         "project_timing": "immediate",
         "monthly_volume": "10_50",
@@ -53,12 +56,14 @@ def step2_payload(**overrides):
 
 def submit_request(client: Client, *, email="prospect@example.com") -> ProspectProfile:
     assert client.post(reverse("prospects:step1"), step1_payload(email=email)).status_code == 302
-    assert client.post(reverse("prospects:step2"), step2_payload()).status_code == 302
     with patch(
         "apps.notifications.tasks.send_access_request_verification_email_task.delay"
     ) as delay:
         with TestCase.captureOnCommitCallbacks(execute=True):
-            response = client.post(reverse("prospects:step3"), {"terms_accepted": "on"})
+            response = client.post(
+                reverse("prospects:step2"),
+                {**step2_payload(), "terms_accepted": "on"},
+            )
     assert response.status_code == 302
     profile = ProspectProfile.objects.get(normalized_email=email)
     delay.assert_called_once_with(str(profile.public_id))
@@ -86,11 +91,48 @@ def test_france_requires_nine_digit_siren_and_foreign_country_requires_tax_id(cl
 
 
 @pytest.mark.django_db
+def test_step1_requires_customer_aligned_postal_address(client):
+    response = client.post(
+        reverse("prospects:step1"),
+        step1_payload(billing_address_line1="", billing_postal_code=""),
+    )
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Adresse postale" in html
+    assert "Ce champ est obligatoire" in html
+    assert "data-prospect-error-summary" in html
+    assert 'href="#id_billing_address_line1"' in html
+    assert 'aria-invalid="true"' in html
+    assert 'aria-describedby="billing-address-line1-error"' in html
+
+
+@pytest.mark.django_db
+def test_step2_requires_confirmation_before_submission(client):
+    assert client.post(reverse("prospects:step1"), step1_payload()).status_code == 302
+
+    response = client.post(reverse("prospects:step2"), step2_payload())
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Je confirme l’exactitude des informations saisies." in html
+    assert "data-prospect-error-summary" in html
+    assert 'href="#id_terms_accepted"' in html
+    assert 'aria-describedby="terms-accepted-error"' in html
+    assert ProspectProfile.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_submission_creates_only_pending_request_not_user_or_customer(client):
     profile = submit_request(client)
 
     assert profile.status == ProspectProfile.Status.PENDING_EMAIL_VERIFICATION
     assert profile.siren == "123456789"
+    assert profile.billing_address_line1 == "12 rue des Ateliers"
+    assert profile.billing_address_line2 == "Bâtiment B"
+    assert profile.billing_postal_code == "75011"
+    assert profile.billing_city == "Paris"
+    assert profile.service_interest == ProspectProfile.ServiceInterest.UNSURE
     assert profile.is_open is True
     assert profile.user is None
     assert profile.customer is None
@@ -104,12 +146,14 @@ def test_resubmission_rotates_verification_token_and_resends_email(client):
     initial_version = profile.verification_version
 
     assert client.post(reverse("prospects:step1"), step1_payload()).status_code == 302
-    assert client.post(reverse("prospects:step2"), step2_payload()).status_code == 302
     with patch(
         "apps.notifications.tasks.send_access_request_verification_email_task.delay"
     ) as delay:
         with TestCase.captureOnCommitCallbacks(execute=True):
-            response = client.post(reverse("prospects:step3"), {"terms_accepted": "on"})
+            response = client.post(
+                reverse("prospects:step2"),
+                {**step2_payload(), "terms_accepted": "on"},
+            )
 
     assert response.status_code == 302
     profile.refresh_from_db()
@@ -122,21 +166,19 @@ def test_resubmission_rotates_verification_token_and_resends_email(client):
 def test_spoofed_forwarded_ip_does_not_bypass_prospect_rate_limit(client):
     for forwarded_ip in ("198.51.100.1", "198.51.100.2"):
         assert client.post(reverse("prospects:step1"), step1_payload()).status_code == 302
-        assert client.post(reverse("prospects:step2"), step2_payload()).status_code == 302
         with patch("apps.notifications.tasks.send_access_request_verification_email_task.delay"):
             with TestCase.captureOnCommitCallbacks(execute=True):
                 response = client.post(
-                    reverse("prospects:step3"),
-                    {"terms_accepted": "on"},
+                    reverse("prospects:step2"),
+                    {**step2_payload(), "terms_accepted": "on"},
                     HTTP_X_FORWARDED_FOR=forwarded_ip,
                 )
         assert response.status_code == 302
 
     assert client.post(reverse("prospects:step1"), step1_payload()).status_code == 302
-    assert client.post(reverse("prospects:step2"), step2_payload()).status_code == 302
     response = client.post(
-        reverse("prospects:step3"),
-        {"terms_accepted": "on"},
+        reverse("prospects:step2"),
+        {**step2_payload(), "terms_accepted": "on"},
         HTTP_X_FORWARDED_FOR="198.51.100.3",
     )
     assert response.status_code == 429
@@ -219,6 +261,18 @@ def test_staff_access_request_queue_exposes_counts_and_scoped_search(client):
     assert response.status_code == 200
     assert response.context["active_status"] == ProspectProfile.Status.PENDING_REVIEW
 
+    detail_response = client.get(
+        reverse(
+            "portal:staff-access-request-detail",
+            kwargs={"profile_public_id": first.public_id},
+        )
+    )
+    assert detail_response.status_code == 200
+    detail_html = detail_response.content.decode()
+    assert "Adresse professionnelle" in detail_html
+    assert "12 rue des Ateliers" in detail_html
+    assert "75011 Paris" in detail_html
+
 
 @pytest.mark.django_db
 def test_only_reviewer_can_approve_and_approval_keeps_org_inactive(client):
@@ -253,6 +307,13 @@ def test_only_reviewer_can_approve_and_approval_keeps_org_inactive(client):
     assert profile.status == ProspectProfile.Status.APPROVED_PENDING_ACTIVATION
     assert profile.customer is not None
     assert profile.customer.is_active is False
+    assert profile.customer.billing_address_line1 == profile.billing_address_line1
+    assert profile.customer.billing_address_line2 == profile.billing_address_line2
+    assert profile.customer.billing_postal_code == profile.billing_postal_code
+    assert profile.customer.billing_city == profile.billing_city
+    assert profile.customer.shipping_address_line1 == profile.billing_address_line1
+    assert profile.customer.shipping_postal_code == profile.billing_postal_code
+    assert profile.customer.shipping_city == profile.billing_city
     invitation = CustomerInvitation.objects.get(customer=profile.customer)
     assert invitation.role == CustomerMembership.Role.OWNER
     delay.assert_called_once_with(str(invitation.public_id))
@@ -301,8 +362,8 @@ def test_owner_activation_creates_account_and_membership_without_auto_login(clie
 
 
 @pytest.mark.django_db
-def test_simplified_tunnel_has_three_steps_and_legacy_step4_redirects(client):
+def test_simplified_tunnel_has_two_steps_and_legacy_step4_redirects(client):
     assert reverse("prospects:step1") == "/demande-acces/etape-1/"
     response = client.get(reverse("prospects:step4"))
     assert response.status_code == 302
-    assert response.url == reverse("prospects:step3")
+    assert response.url == reverse("prospects:step2")

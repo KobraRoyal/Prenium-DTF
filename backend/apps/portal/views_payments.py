@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.views import View
 
 from apps.billing.models import Payment
+from apps.billing.services.gateways import PaymentGatewayTransientError
 from apps.customers.models import Customer
 from apps.orders.models import Order
 from apps.portal.htmx import with_toast
@@ -21,6 +22,26 @@ from apps.portal.views_common import (
 
 def _absolute_portal_url(path: str) -> str:
     return f"{settings.PUBLIC_BASE_URL.rstrip('/')}{path}"
+
+
+_PAYMENT_PROVIDER_GONE_MARKERS = (
+    "RESOURCE_NOT_FOUND",
+    "INVALID_RESOURCE_ID",
+    "NO SUCH CHECKOUT",
+)
+
+
+def user_facing_payment_error(error: DjangoValidationError | Exception | str) -> str:
+    """Message client lisible ; jamais de code brut prestataire (RESOURCE_NOT_FOUND, etc.)."""
+    if isinstance(error, DjangoValidationError) and hasattr(error, "messages"):
+        message = "; ".join(str(item) for item in error.messages)
+    else:
+        message = str(error)
+    message = message.strip()
+    upper = message.upper()
+    if any(marker in upper for marker in _PAYMENT_PROVIDER_GONE_MARKERS):
+        return "Paiement non validé. Vous pouvez relancer un nouveau règlement."
+    return message or "Le paiement n'a pas pu être confirmé. Réessayez."
 
 
 def client_order_billing_landing_url(
@@ -141,8 +162,11 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
                 success_url=success_url,
                 cancel_url=cancel_url,
             )
+        except PaymentGatewayTransientError:
+            messages.info(request, "Le prestataire de paiement est temporairement indisponible.")
+            return HttpResponseRedirect(billing_url)
         except DjangoValidationError as error:
-            message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+            message = user_facing_payment_error(error)
             messages.error(request, message)
             response = HttpResponseRedirect(billing_url)
             return with_toast(response, message=message, variant="error")
@@ -150,6 +174,57 @@ class ClientOrderPaymentInitiateView(ClientOwnerRequiredMixin, _ClientOrderLooku
         if payment is None or not payment.approval_url:
             raise Http404
         return HttpResponseRedirect(payment.approval_url)
+
+
+class ProviderCheckoutFallbackReturnView(View):
+    """Filet de sécurité pour d'anciennes URLs PayPal `/ok` et `/cancel`.
+
+    Les checkouts normaux utilisent déjà
+    ``/client/.../payments/return/?status=...``. Ce handler récupère les
+    retours legacy (token PayPal) et renvoie vers le retour portail canonique.
+    """
+
+    status_value: str = "cancel"
+
+    def get(self, request):
+        token = str(request.GET.get("token", "")).strip()
+        session_id = str(request.GET.get("session_id", "")).strip()
+        payment = None
+        if token:
+            payment = (
+                Payment.objects.select_related("order__customer")
+                .filter(paypal_order_id=token)
+                .order_by("-created_at")
+                .first()
+            )
+        elif session_id and session_id != "{CHECKOUT_SESSION_ID}":
+            payment = (
+                Payment.objects.select_related("order__customer")
+                .filter(stripe_checkout_session_id=session_id)
+                .order_by("-created_at")
+                .first()
+            )
+        if payment is None:
+            messages.warning(
+                request,
+                "Retour de paiement introuvable. Ouvrez la commande depuis votre espace.",
+            )
+            return HttpResponseRedirect(reverse("portal:client-dashboard"))
+
+        return_path = reverse(
+            "portal:client-order-payment-return",
+            kwargs={
+                "customer_public_id": payment.order.customer.public_id,
+                "order_public_id": payment.order.public_id,
+            },
+        )
+        query = f"status={self.status_value}"
+        if token:
+            query += f"&token={token}"
+        if session_id and session_id != "{CHECKOUT_SESSION_ID}":
+            query += f"&session_id={session_id}"
+        query += f"&payment={payment.public_id}"
+        return HttpResponseRedirect(f"{return_path}?{query}")
 
 
 class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupMixin, View):
@@ -164,11 +239,17 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
         )
 
         if status == "cancel":
-            Payment.objects.filter(
-                order_id=order.pk,
-                status__in={Payment.Status.PENDING, Payment.Status.APPROVED},
-            ).update(status=Payment.Status.CANCELLED)
-            messages.info(request, "Paiement non validé. Vous pouvez reprendre le règlement.")
+            # Annulation utilisateur : fermer la tentative locale pour permettre un
+            # nouveau checkout PayPal/Stripe au prochain clic « Payer ».
+            billing_service.cancel_open_checkouts_for_order(
+                order=order,
+                actor=request.user,
+                source="client_portal_cancel",
+            )
+            messages.info(
+                request,
+                "Paiement non validé. Vous pouvez relancer un nouveau règlement.",
+            )
             return HttpResponseRedirect(
                 client_order_billing_landing_url(
                     customer_public_id=customer_public_id,
@@ -206,8 +287,14 @@ class ClientOrderPaymentReturnView(ClientOwnerRequiredMixin, _ClientOrderLookupM
                     "Si le débit a été effectué, contactez le support.",
                 )
                 return HttpResponseRedirect(billing_url)
+        except PaymentGatewayTransientError:
+            messages.info(
+                request,
+                "Le prestataire confirme encore le paiement. Réessayez plus tard.",
+            )
+            return HttpResponseRedirect(billing_url)
         except DjangoValidationError as error:
-            message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+            message = user_facing_payment_error(error)
             messages.error(request, message)
             response = HttpResponseRedirect(billing_url)
             return with_toast(response, message=message, variant="error")

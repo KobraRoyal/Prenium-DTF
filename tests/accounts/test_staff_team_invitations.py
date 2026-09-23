@@ -1,3 +1,4 @@
+import base64
 from unittest.mock import patch
 
 import pytest
@@ -5,14 +6,19 @@ from apps.accounts.models import StaffInvitation, StaffMembership
 from apps.accounts.services.staff_invitations import StaffInvitationService, make_invitation_token
 from apps.accounts.services.staff_roles import sync_staff_access
 from apps.notifications.tasks import send_staff_invitation_email_task
+from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core import mail
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 User = get_user_model()
+WEB_PUSH_TEST_KEY = Fernet.generate_key().decode("ascii")
+WEB_PUSH_TEST_P256DH = base64.urlsafe_b64encode(b"\x04" + (b"p" * 64)).rstrip(b"=").decode("ascii")
+WEB_PUSH_TEST_AUTH = base64.urlsafe_b64encode(b"a" * 16).rstrip(b"=").decode("ascii")
 
 
 def _grant_portal_access(user) -> None:
@@ -163,3 +169,77 @@ def test_admin_cannot_change_or_deactivate_peer_admin():
     peer_membership.refresh_from_db()
     assert peer_membership.role == StaffMembership.Role.ADMIN
     assert peer_membership.is_active is True
+
+
+@pytest.mark.django_db
+@override_settings(
+    WEB_PUSH_ENABLED=True,
+    WEB_PUSH_VAPID_PUBLIC_KEY="public-test-key",
+    WEB_PUSH_VAPID_PRIVATE_KEY="private-test-key",
+    WEB_PUSH_VAPID_CONTACT="mailto:atelier@example.com",
+    WEB_PUSH_ENCRYPTION_KEYS=[f"v1:{WEB_PUSH_TEST_KEY}"],
+    WEB_PUSH_ALLOWED_DOMAINS=["fcm.googleapis.com"],
+)
+def test_staff_offboarding_erases_push_secrets_and_reactivation_requires_resubscribe():
+    from apps.notifications.models import StaffPushSubscription
+    from apps.notifications.services.push_crypto import PushSubscriptionCrypto
+    from apps.notifications.services.workshop_push import WorkshopNotificationService
+
+    owner, _ = staff_scope(
+        "owner-offboarding@example.com", StaffMembership.Role.OWNER, superuser=True
+    )
+    member, membership = staff_scope("member-offboarding@example.com", StaffMembership.Role.MEMBER)
+    endpoint = "https://fcm.googleapis.com/fcm/send/offboarding-token"
+    crypto = PushSubscriptionCrypto([f"v1:{WEB_PUSH_TEST_KEY}"])
+    subscription = StaffPushSubscription.objects.create(
+        staff_membership=membership,
+        endpoint_ciphertext=crypto.encrypt(endpoint),
+        endpoint_digest=crypto.endpoint_digest(endpoint),
+        p256dh_ciphertext=crypto.encrypt(WEB_PUSH_TEST_P256DH),
+        auth_ciphertext=crypto.encrypt(WEB_PUSH_TEST_AUTH),
+        last_seen_at=timezone.now(),
+    )
+
+    StaffInvitationService().deactivate_member(
+        membership_public_id=membership.public_id,
+        actor=owner,
+    )
+
+    subscription.refresh_from_db()
+    assert subscription.is_active is False
+    assert subscription.endpoint_ciphertext == ""
+    assert subscription.p256dh_ciphertext == ""
+    assert subscription.auth_ciphertext == ""
+
+    with patch("apps.notifications.tasks.send_staff_invitation_email_task.delay"):
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            invitation = StaffInvitationService().invite_collaborator(
+                actor=owner,
+                email=member.email,
+                role=StaffMembership.Role.MEMBER,
+            )
+    token = make_invitation_token(invitation)
+    with patch("apps.notifications.tasks.send_staff_account_activated_email_task.delay"):
+        StaffInvitationService().accept(token=token, authenticated_user=member)
+
+    subscription.refresh_from_db()
+    assert subscription.is_active is False
+    client = type(
+        "Client", (), {"configuration": type("Config", (), {"validate": lambda self: None})()}
+    )()
+    service = WorkshopNotificationService(client=client)
+    with patch(
+        "apps.notifications.services.workshop_push.validate_push_endpoint",
+        return_value=endpoint,
+    ):
+        resubscribed = service.subscribe(
+            actor=member,
+            endpoint=endpoint,
+            p256dh=WEB_PUSH_TEST_P256DH,
+            auth=WEB_PUSH_TEST_AUTH,
+            source="portal",
+        )
+
+    assert resubscribed.public_id == subscription.public_id
+    assert resubscribed.is_active is True
+    assert resubscribed.endpoint_ciphertext
