@@ -4,7 +4,6 @@ import pymupdf
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.core.public_refs import short_public_ref
-from apps.core.public_refs import short_public_ref
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.production.models import ProductionJob, ProductionJobScanLog, ProductionJobTransition
@@ -313,7 +312,10 @@ def test_manufacturing_order_uuid_code128_is_compact_and_human_readable():
     assert barcode.width <= usable_width + 0.01
     assert isinstance(cell, Table)
     flat = [part for row in cell._cellvalues for part in row]
-    assert any(isinstance(part, Code128) and part.value == uuid_short and part.hAlign == "LEFT" for part in flat)
+    assert any(
+        isinstance(part, Code128) and part.value == uuid_short and part.hAlign == "LEFT"
+        for part in flat
+    )
     captions = [getattr(part, "text", "") for part in flat if hasattr(part, "text")]
     assert any(uuid_short in caption for caption in captions)
     assert not any(full_uuid in caption for caption in captions)

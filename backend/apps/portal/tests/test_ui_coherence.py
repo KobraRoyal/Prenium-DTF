@@ -1745,12 +1745,19 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("billing-total", billing)
         self.assertIn("billing_breakdown order", billing)
         self.assertIn("billing_volume_discount.html", billing)
-        self.assertIn("billing-discount", template_source("portal/staff/components/billing_volume_discount.html"))
-        self.assertIn("Remise volume", template_source("portal/staff/components/billing_volume_discount.html"))
-        self.assertIn("palier atteint", template_source("portal/staff/components/billing_volume_discount.html"))
-        self.assertIn(".billing-edit__row", static_source("css/components/billing-edit.css"))
-        self.assertIn("grid-template-columns: minmax(0, 1.45fr) 7rem 7rem 7.25rem", static_source("css/components/billing-edit.css"))
-        self.assertIn(".billing-discount__line", static_source("css/components/billing-edit.css"))
+        volume_discount = template_source(
+            "portal/staff/components/billing_volume_discount.html"
+        )
+        billing_edit_css = static_source("css/components/billing-edit.css")
+        self.assertIn("billing-discount", volume_discount)
+        self.assertIn("Remise volume", volume_discount)
+        self.assertIn("palier atteint", volume_discount)
+        self.assertIn(".billing-edit__row", billing_edit_css)
+        self.assertIn(
+            "grid-template-columns: minmax(0, 1.45fr) 7rem 7rem 7.25rem",
+            billing_edit_css,
+        )
+        self.assertIn(".billing-discount__line", billing_edit_css)
         self.assertNotIn("Pièces de la commande", billing)
 
     def test_staff_handover_date_uses_shared_calendar_picker(self) -> None:
