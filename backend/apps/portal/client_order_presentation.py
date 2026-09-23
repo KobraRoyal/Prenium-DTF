@@ -246,9 +246,7 @@ def prepare_client_order_rows(orders, membership):
     from apps.billing.services.production_payment_gate import attach_awaits_client_payment
     from apps.portal.views_common import order_service
 
-    rows = order_service.attach_client_can_delete(
-        attach_awaits_client_payment(list(orders))
-    )
+    rows = order_service.attach_client_can_delete(attach_awaits_client_payment(list(orders)))
     if not client_may_delete_unpaid_order(membership):
         for order in rows:
             order.can_client_delete = False

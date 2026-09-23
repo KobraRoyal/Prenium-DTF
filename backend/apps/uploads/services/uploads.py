@@ -316,9 +316,7 @@ class OrderUploadService:
 
         resolved_qty = self._normalize_quantity(quantity)
         if resolved_qty > STAFF_UPLOAD_QUANTITY_MAX:
-            raise ValidationError(
-                f"La quantité ne peut pas dépasser {STAFF_UPLOAD_QUANTITY_MAX}."
-            )
+            raise ValidationError(f"La quantité ne peut pas dépasser {STAFF_UPLOAD_QUANTITY_MAX}.")
 
         previous = order_upload.quantity
         if previous == resolved_qty:

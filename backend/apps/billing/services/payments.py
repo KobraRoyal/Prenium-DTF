@@ -50,6 +50,8 @@ _REMOTE_CHECKOUT_MISSING_MARKERS = (
 def _remote_checkout_missing(exc: PaymentGatewayError) -> bool:
     detail = str(exc)
     return any(marker in detail for marker in _REMOTE_CHECKOUT_MISSING_MARKERS)
+
+
 STRIPE_FAILURE_RECONCILIATION_MESSAGE = (
     "Échec Stripe signalé ; vérification du règlement en cours avant nouvel essai."
 )

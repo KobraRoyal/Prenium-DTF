@@ -121,8 +121,7 @@ def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment
     story.append(Spacer(1, 0.6 * cm))
     story.append(
         Paragraph(
-            "Ce document atteste du règlement en ligne. "
-            "La facture fiscale est émise séparément.",
+            "Ce document atteste du règlement en ligne. La facture fiscale est émise séparément.",
             normal,
         )
     )

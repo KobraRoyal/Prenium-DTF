@@ -1745,9 +1745,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("billing-total", billing)
         self.assertIn("billing_breakdown order", billing)
         self.assertIn("billing_volume_discount.html", billing)
-        volume_discount = template_source(
-            "portal/staff/components/billing_volume_discount.html"
-        )
+        volume_discount = template_source("portal/staff/components/billing_volume_discount.html")
         billing_edit_css = static_source("css/components/billing-edit.css")
         self.assertIn("billing-discount", volume_discount)
         self.assertIn("Remise volume", volume_discount)
