@@ -14,13 +14,16 @@
   informations saisies dans la même carte. Le serveur conserve la validation HTTP(S) et
   l’isolation client avant création ; aucun projet ou asset n’est créé pour le lien.
 - Atelier : dans « Commandes », « Créer une commande manuelle » permet de sélectionner
-  un client actif, son mode de livraison, son lien, le nombre de visuels distincts et
-  éventuellement un métrage total en mètres linéaires sur la laize configurée.
+  un client actif, son mode de livraison, son lien, le nombre de visuels distincts,
+  la couleur du support (comme une commande par fichier) et éventuellement un métrage
+  total en mètres linéaires sur la laize configurée.
   Sans métrage à la création, la saisie se fait ensuite dans Pilotage (étape Métrage)
   ou sur la fiche commande (Production), comme une commande classique.
   Avec métrage, le service applique immédiatement le tarif habituel, les frais de
   préparation, les remises, le transport et la TVA existants. Une erreur de tarification
   annule toute la création. Chaque commande manuelle reçoit un N° métier `CMD-YYYY-NNNNNN`.
+  Si Drive est activé, un dossier commande est créé (arborescence classique) sans
+  synchroniser le fichier distant du lien ; l’atelier y dépose les fichiers récupérés.
 - Le compte client conserve son mode de règlement. Les comptes comptant restent sur le
   parcours Gang Sheet côté client ; l'Atelier peut créer leur commande manuelle mais
   le paiement reste obligatoire avant production.
@@ -72,9 +75,16 @@ L’initiation du paiement et la correction utilisent les mêmes verrous client 
 
 Le PDF OF et l'API Production ne divulguent pas l'URL : ils identifient la source externe
 et renvoient vers l'onglet Fichiers. Les aperçus et téléchargements locaux renvoient 404.
-Les sources externes sont ignorées par l'inspection et Drive (y compris réparation et tâche
-obsolète), et ne sont pas présentées comme incidents Drive. La recommande automatique exige
+Les sources externes sont ignorées par l'inspection et le sync fichier Drive (y compris
+réparation et tâche obsolète), et ne sont pas présentées comme incidents Drive.
+Un dossier commande Drive est toutefois créé à la création lorsque
+`GOOGLE_DRIVE_SYNC_ENABLED` (même logique que le checkout B2B), pour y déposer les
+fichiers récupérés manuellement. La recommande automatique exige
 un fichier local ; son bouton est masqué pour ces commandes et le service refuse explicitement.
+
+L’émission OF (dashboard / lot) n’exige pas le métrage ni le contrôle manuel : ces
+garde-fous restent réservés au démarrage production. Une commande par lien non tarifée
+reste donc sélectionnable pour imprimer l’OF.
 
 ## Déploiement et validation
 

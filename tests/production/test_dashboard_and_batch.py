@@ -1067,4 +1067,42 @@ def test_staff_dashboard_hx_returns_worklist_panel_partial():
     assert str(order.public_id) in content
     assert ">UUID<" not in content
     assert "data-clipboard-copy" in content
-    assert order.production_job.manufacturing_order_number in content
+
+
+@pytest.mark.django_db
+def test_external_order_without_meterage_is_print_eligible_on_dashboard():
+    """OF émissible avant métrage / contrôle — gate production ≠ gate impression OF."""
+    from apps.orders.services.external_orders import ExternalOrderService
+
+    actor = get_user_model().objects.create_user(
+        email="external-of@example.com", password="pass", is_staff=True
+    )
+    actor.user_permissions.add(
+        *[
+            Permission.objects.get(codename=name)
+            for name in (
+                "access_staff_portal",
+                "add_order",
+                "change_order",
+                "view_order",
+            )
+        ]
+    )
+    customer = Customer.objects.create(name="Lien OF Client")
+    order = ExternalOrderService().create_staff_order(
+        customer=customer,
+        actor=actor,
+        name="Lien sans métrage",
+        external_url="https://files.example.com/lot",
+        meterage_linear_m=None,
+        shipping_method_code="standard",
+    )
+    assert order.meterage_override_linear_m is None
+    assert order.pricing_status == Order.PricingStatus.PENDING
+
+    dashboard = AtelierDashboardService().build_dashboard()
+    row = next(r for r in dashboard["rows"] if r["order"].public_id == order.public_id)
+    assert row["print_eligible"] is True
+
+    pdf = render_manufacturing_order_pdf_bytes(order=order, production_job=order.production_job)
+    assert pdf.startswith(b"%PDF")

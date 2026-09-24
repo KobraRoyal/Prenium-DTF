@@ -484,13 +484,9 @@ class AtelierDashboardService:
                 or order_has_captured_payment(order)
             )
         )
-        print_eligible = bool(
-            production_job is not None
-            and production_job.of_document_issued_at is None
-            and production_status != ProductionJob.Status.COMPLETED
-            and order.status == Order.Status.SUBMITTED
-            and production_start_blocked_reason(order) is None
-        )
+        # Aligné sur ManufacturingOrderBatchService : OF imprimable sans attendre
+        # métrage / contrôle manuel (gate production ≠ gate émission OF).
+        print_eligible = ManufacturingOrderBatchService()._is_batch_eligible(order=order)
         files_to_process_count, files_to_process_label = self._files_to_process_summary(
             upload_count=len(uploads),
             review_status=review_status,
