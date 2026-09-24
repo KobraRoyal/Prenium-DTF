@@ -3,6 +3,22 @@ from django.db import models
 from apps.core.models import BaseModel
 
 
+def _blank_photo_upload_to(instance, _filename: str) -> str:
+    return f"pod/blanks/{instance.public_id}/photo.webp"
+
+
+def _blank_photo_thumb_upload_to(instance, _filename: str) -> str:
+    return f"pod/blanks/{instance.public_id}/thumb.webp"
+
+
+def _blank_variant_photo_upload_to(instance, _filename: str) -> str:
+    return f"pod/blanks/{instance.blank.public_id}/variants/{instance.public_id}/photo.webp"
+
+
+def _blank_variant_photo_thumb_upload_to(instance, _filename: str) -> str:
+    return f"pod/blanks/{instance.blank.public_id}/variants/{instance.public_id}/thumb.webp"
+
+
 class PrintTechniqueQuerySet(models.QuerySet):
     def active(self):
         return self.filter(is_active=True)
@@ -42,6 +58,10 @@ class Blank(BaseModel):
     name = models.CharField(max_length=160)
     brand = models.CharField(max_length=80, blank=True)
     is_active = models.BooleanField(default=True)
+    photo = models.ImageField(upload_to=_blank_photo_upload_to, blank=True, max_length=512)
+    photo_thumb = models.ImageField(
+        upload_to=_blank_photo_thumb_upload_to, blank=True, max_length=512
+    )
 
     objects = BlankQuerySet.as_manager()
 
@@ -54,6 +74,10 @@ class Blank(BaseModel):
     def __str__(self) -> str:
         return f"{self.sku} — {self.name}"
 
+    @property
+    def has_photo(self) -> bool:
+        return bool(self.photo_thumb) or bool(self.photo)
+
 
 class BlankVariant(BaseModel):
     blank = models.ForeignKey(Blank, on_delete=models.CASCADE, related_name="variants")
@@ -62,6 +86,12 @@ class BlankVariant(BaseModel):
     color_name = models.CharField(max_length=64)
     color_hex = models.CharField(max_length=7, blank=True)
     is_active = models.BooleanField(default=True)
+    photo = models.ImageField(
+        upload_to=_blank_variant_photo_upload_to, blank=True, max_length=512
+    )
+    photo_thumb = models.ImageField(
+        upload_to=_blank_variant_photo_thumb_upload_to, blank=True, max_length=512
+    )
 
     class Meta:
         ordering = ("size_label", "color_name", "sku")
@@ -71,6 +101,14 @@ class BlankVariant(BaseModel):
 
     def __str__(self) -> str:
         return self.sku
+
+    @property
+    def has_own_photo(self) -> bool:
+        return bool(self.photo_thumb) or bool(self.photo)
+
+    @property
+    def has_photo(self) -> bool:
+        return self.has_own_photo or self.blank.has_photo
 
 
 class BlankPlacementCapability(BaseModel):
@@ -154,6 +192,8 @@ class ShopifyProduct(BaseModel):
     external_id = models.CharField(max_length=64)
     title = models.CharField(max_length=255)
     handle = models.SlugField(max_length=255, blank=True)
+    image_url = models.URLField(max_length=512, blank=True, default="")
+    image_external_id = models.CharField(max_length=64, blank=True, default="")
 
     class Meta:
         ordering = ("title",)
@@ -170,6 +210,10 @@ class ShopifyProduct(BaseModel):
     def __str__(self) -> str:
         return self.title
 
+    @property
+    def has_image(self) -> bool:
+        return bool(self.image_url)
+
 
 class ShopifyVariant(BaseModel):
     product = models.ForeignKey(ShopifyProduct, on_delete=models.CASCADE, related_name="variants")
@@ -179,6 +223,8 @@ class ShopifyVariant(BaseModel):
     option1 = models.CharField(max_length=120, blank=True)
     option2 = models.CharField(max_length=120, blank=True)
     option3 = models.CharField(max_length=120, blank=True)
+    image_url = models.URLField(max_length=512, blank=True, default="")
+    image_external_id = models.CharField(max_length=64, blank=True, default="")
 
     class Meta:
         ordering = ("title", "sku")
@@ -194,6 +240,14 @@ class ShopifyVariant(BaseModel):
 
     def __str__(self) -> str:
         return self.title or self.sku or str(self.public_id)
+
+    @property
+    def has_image(self) -> bool:
+        return bool(self.image_url) or bool(self.product.image_url)
+
+    @property
+    def resolved_image_url(self) -> str:
+        return self.image_url or self.product.image_url or ""
 
 
 class IdsVariantConfig(BaseModel):
@@ -333,6 +387,7 @@ class PodRipWorkItem(BaseModel):
         QUEUED = "queued", "En file RIP"
         INCLUDED = "included", "Inclus dans un lot"
         SKIPPED = "skipped", "Ignoré (config incomplète)"
+        CANCELLED = "cancelled", "Annulé (Shopify)"
 
     store = models.ForeignKey(
         "ShopifyStore",
@@ -468,6 +523,67 @@ class PodUnit(BaseModel):
             models.UniqueConstraint(
                 fields=("work_item", "sequence"),
                 name="pod_unit_work_item_sequence_uniq",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.scan_identifier
+
+
+class PodPickSession(BaseModel):
+    code = models.CharField(max_length=32, unique=True)
+    created_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pod_pick_sessions",
+    )
+    piece_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return self.code
+
+
+class PodPickSessionLine(BaseModel):
+    session = models.ForeignKey(
+        PodPickSession,
+        on_delete=models.CASCADE,
+        related_name="lines",
+    )
+    work_item = models.ForeignKey(
+        PodRipWorkItem,
+        on_delete=models.PROTECT,
+        related_name="pick_lines",
+    )
+    sequence = models.PositiveIntegerField(default=1)
+    scan_identifier = models.CharField(max_length=32, unique=True, db_index=True)
+    unit = models.OneToOneField(
+        "pod.PodUnit",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pick_line",
+    )
+    shopify_order_number = models.CharField(max_length=64)
+    shopify_sku = models.CharField(max_length=80, blank=True, default="")
+    blank_name = models.CharField(max_length=160, blank=True, default="")
+    blank_sku = models.CharField(max_length=80, blank=True, default="")
+    size_label = models.CharField(max_length=32, blank=True, default="")
+    color_name = models.CharField(max_length=64, blank=True, default="")
+    location_code = models.CharField(max_length=64, blank=True, default="")
+    markings = models.CharField(max_length=255, blank=True, default="")
+    voided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("location_code", "blank_sku", "shopify_order_number", "sequence")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("work_item", "sequence"),
+                name="pod_pick_line_work_item_sequence_uniq",
             ),
         ]
 

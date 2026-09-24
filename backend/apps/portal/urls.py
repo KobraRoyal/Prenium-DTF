@@ -158,11 +158,12 @@ from .views_staff_payments import StaffPaymentSettingsView
 from .views_staff_pod import (
     StaffPodBlankDetailView,
     StaffPodBlankListView,
-    StaffPodHubView,
+    StaffPodBlankPhotoView,
     StaffPodLocationDetailView,
     StaffPodTechniqueListView,
     StaffPodWarehouseView,
 )
+from .views_staff_pod_board import StaffPodHubView, StaffPodPickSessionPdfView
 from .views_staff_pod_catalog import (
     StaffPodCatalogListView,
     StaffPodCatalogProductView,
@@ -622,6 +623,11 @@ urlpatterns = [
     ),
     path("staff/atelier/pod/", StaffPodHubView.as_view(), name="staff-pod-hub"),
     path(
+        "staff/atelier/pod/sessions/<uuid:session_public_id>/<str:document_kind>.pdf",
+        StaffPodPickSessionPdfView.as_view(),
+        name="staff-pod-pick-session-pdf",
+    ),
+    path(
         "staff/atelier/pod/techniques/",
         StaffPodTechniqueListView.as_view(),
         name="staff-pod-techniques",
@@ -635,6 +641,16 @@ urlpatterns = [
         "staff/atelier/pod/blanks/<uuid:blank_public_id>/",
         StaffPodBlankDetailView.as_view(),
         name="staff-pod-blank-detail",
+    ),
+    path(
+        "staff/atelier/pod/blanks/<uuid:blank_public_id>/photo/",
+        StaffPodBlankPhotoView.as_view(),
+        name="staff-pod-blank-photo",
+    ),
+    path(
+        "staff/atelier/pod/blanks/<uuid:blank_public_id>/variantes/<uuid:variant_public_id>/photo/",
+        StaffPodBlankPhotoView.as_view(),
+        name="staff-pod-blank-variant-photo",
     ),
     path(
         "staff/atelier/pod/entrepot/",

@@ -5,6 +5,7 @@ from django.db import IntegrityError, transaction
 
 from apps.auditlog.services import record_event
 from apps.pod.models import Blank, BlankPlacementCapability, BlankVariant, PrintTechnique
+from apps.pod.services.catalog_images import process_catalog_photo
 from apps.pod.services.validation import (
     clean_hex_color,
     clean_sku,
@@ -220,6 +221,93 @@ class BlankCatalogService:
                 metadata={"source": source},
             )
             raise
+
+    def set_blank_photo(self, *, actor, source: str, blank_public_id, uploaded_file) -> Blank:
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source=source,
+            action="pod.blank.permission_rejected",
+        )
+        blank = self.get_blank(actor=actor, blank_public_id=blank_public_id)
+        photo, thumb = process_catalog_photo(uploaded_file)
+        if blank.photo:
+            blank.photo.delete(save=False)
+        if blank.photo_thumb:
+            blank.photo_thumb.delete(save=False)
+        blank.photo.save("photo.webp", photo, save=False)
+        blank.photo_thumb.save("thumb.webp", thumb, save=False)
+        blank.save(update_fields=["photo", "photo_thumb", "updated_at"])
+        record_event(
+            action="pod.blank.photo_updated",
+            actor=actor,
+            target=blank,
+            metadata={"source": source},
+        )
+        return blank
+
+    def set_variant_photo(
+        self,
+        *,
+        actor,
+        source: str,
+        blank_public_id,
+        variant_public_id,
+        uploaded_file,
+    ) -> BlankVariant:
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source=source,
+            action="pod.blank.permission_rejected",
+        )
+        blank = self.get_blank(actor=actor, blank_public_id=blank_public_id)
+        variant = blank.variants.filter(public_id=variant_public_id).first()
+        if variant is None:
+            raise ValidationError("Variante support introuvable.")
+        photo, thumb = process_catalog_photo(uploaded_file)
+        if variant.photo:
+            variant.photo.delete(save=False)
+        if variant.photo_thumb:
+            variant.photo_thumb.delete(save=False)
+        variant.photo.save("photo.webp", photo, save=False)
+        variant.photo_thumb.save("thumb.webp", thumb, save=False)
+        variant.save(update_fields=["photo", "photo_thumb", "updated_at"])
+        record_event(
+            action="pod.blank_variant.photo_updated",
+            actor=actor,
+            target=variant,
+            metadata={"source": source, "blank": str(blank.public_id)},
+        )
+        return variant
+
+    def clear_variant_photo(
+        self, *, actor, source: str, blank_public_id, variant_public_id
+    ) -> BlankVariant:
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source=source,
+            action="pod.blank.permission_rejected",
+        )
+        blank = self.get_blank(actor=actor, blank_public_id=blank_public_id)
+        variant = blank.variants.filter(public_id=variant_public_id).first()
+        if variant is None:
+            raise ValidationError("Variante support introuvable.")
+        if variant.photo:
+            variant.photo.delete(save=False)
+        if variant.photo_thumb:
+            variant.photo_thumb.delete(save=False)
+        variant.photo = ""
+        variant.photo_thumb = ""
+        variant.save(update_fields=["photo", "photo_thumb", "updated_at"])
+        record_event(
+            action="pod.blank_variant.photo_cleared",
+            actor=actor,
+            target=variant,
+            metadata={"source": source},
+        )
+        return variant
 
     def add_capability(self, *, actor, source: str, blank_public_id, data: dict):
         require_staff_perm(

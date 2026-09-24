@@ -19,7 +19,9 @@ class ShopifyPodOAuthCallbackView(View):
         shops_url = reverse("portal:staff-pod-shops")
         try:
             store = connect_service.complete_oauth(query=request.GET)
-            request.session["pod_shopify_flash"] = f"Boutique {store.shop_domain} connectée."
+            request.session["pod_shopify_flash"] = (
+                f"{store.name} est connectée. Catalogue et commandes sont branchés."
+            )
         except ValidationError as exc:
             request.session["pod_shopify_flash_error"] = validation_message(exc)
         return HttpResponseRedirect(shops_url)

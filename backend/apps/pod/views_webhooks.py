@@ -20,6 +20,7 @@ class ShopifyPodFulfillmentWebhookView(View):
                 hmac_header=request.headers.get("X-Shopify-Hmac-Sha256", ""),
                 shop_domain=request.headers.get("X-Shopify-Shop-Domain", ""),
                 webhook_id=request.headers.get("X-Shopify-Webhook-Id", ""),
+                topic=request.headers.get("X-Shopify-Topic", "orders/create"),
             )
         except ValidationError as exc:
             message = validation_message(exc)

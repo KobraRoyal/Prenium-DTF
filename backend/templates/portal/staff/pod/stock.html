@@ -4,17 +4,38 @@
 
 {% block portal_content %}
 <div class="portal-page portal-page--staff">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Stocks" title="Mouvements WMS" subtitle="Réception, picking (scan bin) et putaway — owner atelier ou client isolé." %}
-  <section class="portal-page-surface ui-list-section">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Stocks" title="Stocks" subtitle="Un mouvement à la fois — réception, picking ou putaway." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section" aria-labelledby="pod-stock-title">
+    <h2 id="pod-stock-title" class="sr-only">Mouvements WMS</h2>
     {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+
     {% if can_manage_warehouse %}
-    <div class="grid gap-8 lg:grid-cols-3">
-      <form class="ui-form-stack" method="post" novalidate>
+    <div class="atelier-worklist-command ui-list-command ui-list-command--compact pod-board-command mb-4" aria-labelledby="pod-stock-command-title">
+      <div class="atelier-worklist-command__head">
+        <h2 class="font-display" id="pod-stock-command-title">Mouvement stock</h2>
+      </div>
+      <div class="ui-list-command__tools atelier-worklist-command__tools">
+        <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-warehouse' %}">Voir l’entrepôt</a>
+        <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-hub' %}">Retour À produire</a>
+      </div>
+    </div>
+    <div x-data="{ tab: 'receive' }">
+      <div class="pod-stock-tabs" role="tablist" aria-label="Type de mouvement">
+        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'receive' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'receive'" @click="tab = 'receive'">Réception blank</button>
+        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'pick' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'pick'" @click="tab = 'pick'">Picking blank</button>
+        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'putaway' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'putaway'" @click="tab = 'putaway'">Putaway</button>
+        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'fin_receive' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'fin_receive'" @click="tab = 'fin_receive'">Réception fini</button>
+        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'fin_pick' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'fin_pick'" @click="tab = 'fin_pick'">Picking fini</button>
+      </div>
+
+      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'receive'" x-cloak aria-labelledby="stock-receive-title">
         {% csrf_token %}
         <input type="hidden" name="intent" value="receive">
-        <h2 class="font-display text-lg">Réception</h2>
+        <h3 class="font-display text-lg" id="stock-receive-title">Réception blank</h3>
+        <p class="muted mb-4">Entrée de supports vierges vers un emplacement picking.</p>
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="recv" %}
-        <p>
+        <div class="ui-field-group">
           <label class="ui-label" for="recv-variant">Variante blank</label>
           <select class="ui-input" id="recv-variant" name="blank_variant_public_id">
             {% for blank in blanks %}
@@ -23,27 +44,39 @@
               {% endfor %}
             {% endfor %}
           </select>
-        </p>
-        <p>
+        </div>
+        <div class="ui-field-group">
           <label class="ui-label" for="recv-loc">Emplacement</label>
           <select class="ui-input" id="recv-loc" name="location_public_id">
             {% for location in locations %}
             <option value="{{ location.public_id }}">{{ location.code }} ({{ location.zone.name }})</option>
             {% endfor %}
           </select>
-        </p>
-        <p>
-          <label class="ui-label" for="recv-qty">Qté</label>
-          <input class="ui-input" id="recv-qty" name="quantity" type="number" min="1" value="1">
-        </p>
-        <button class="ui-btn ui-btn-primary" type="submit">Réceptionner</button>
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="recv-qty">Quantité</label>
+          <input class="ui-input ui-input--qty" id="recv-qty" name="quantity" type="number" min="1" value="1">
+        </div>
+        <div class="ui-form-actions">
+          <button class="ui-btn ui-btn-primary" type="submit">Enregistrer la réception</button>
+        </div>
       </form>
-      <form class="ui-form-stack" method="post" novalidate>
+
+      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'pick'" x-cloak aria-labelledby="stock-pick-title">
         {% csrf_token %}
         <input type="hidden" name="intent" value="pick">
-        <h2 class="font-display text-lg">Picking</h2>
+        <h3 class="font-display text-lg" id="stock-pick-title">Picking blank</h3>
+        <p class="muted mb-4">Sortie pour production — scannez le bin puis la quantité.</p>
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="pick" %}
-        <p>
+        <div class="ui-field-group">
+          <label class="ui-label" for="pick-bin">Scan bin</label>
+          <input class="ui-input" id="pick-bin" name="scanned_bin_code" required placeholder="A-01-01-A" autocomplete="off">
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="pick-qty">Quantité</label>
+          <input class="ui-input ui-input--qty" id="pick-qty" name="quantity" type="number" min="1" value="1">
+        </div>
+        <div class="ui-field-group">
           <label class="ui-label" for="pick-variant">Variante blank</label>
           <select class="ui-input" id="pick-variant" name="blank_variant_public_id">
             {% for blank in blanks %}
@@ -52,23 +85,19 @@
               {% endfor %}
             {% endfor %}
           </select>
-        </p>
-        <p>
-          <label class="ui-label" for="pick-bin">Scan bin (POD-17)</label>
-          <input class="ui-input" id="pick-bin" name="scanned_bin_code" required placeholder="A-01-01-A">
-        </p>
-        <p>
-          <label class="ui-label" for="pick-qty">Qté</label>
-          <input class="ui-input" id="pick-qty" name="quantity" type="number" min="1" value="1">
-        </p>
-        <button class="ui-btn ui-btn-secondary" type="submit">Picker</button>
+        </div>
+        <div class="ui-form-actions">
+          <button class="ui-btn ui-btn-primary" type="submit">Valider le picking</button>
+        </div>
       </form>
-      <form class="ui-form-stack" method="post" novalidate>
+
+      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'putaway'" x-cloak aria-labelledby="stock-putaway-title">
         {% csrf_token %}
         <input type="hidden" name="intent" value="putaway">
-        <h2 class="font-display text-lg">Putaway retours</h2>
+        <h3 class="font-display text-lg" id="stock-putaway-title">Putaway retours</h3>
+        <p class="muted mb-4">Rangement en zone retours après contrôle atelier.</p>
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="put" %}
-        <p>
+        <div class="ui-field-group">
           <label class="ui-label" for="put-variant">Variante blank</label>
           <select class="ui-input" id="put-variant" name="blank_variant_public_id">
             {% for blank in blanks %}
@@ -77,9 +106,9 @@
               {% endfor %}
             {% endfor %}
           </select>
-        </p>
-        <p>
-          <label class="ui-label" for="put-loc">Zone RETURNS</label>
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="put-loc">Emplacement retours</label>
           <select class="ui-input" id="put-loc" name="location_public_id">
             {% for location in locations %}
               {% if location.zone.kind == "returns" %}
@@ -87,26 +116,28 @@
               {% endif %}
             {% endfor %}
           </select>
-        </p>
-        <p>
-          <label class="ui-label" for="put-qty">Qté</label>
-          <input class="ui-input" id="put-qty" name="quantity" type="number" min="1" value="1">
-        </p>
-        <button class="ui-btn ui-btn-ghost" type="submit">Ranger</button>
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="put-qty">Quantité</label>
+          <input class="ui-input ui-input--qty" id="put-qty" name="quantity" type="number" min="1" value="1">
+        </div>
+        <div class="ui-form-actions">
+          <button class="ui-btn ui-btn-primary" type="submit">Ranger en retours</button>
+        </div>
       </form>
-    </div>
-    <div class="grid gap-8 lg:grid-cols-2 mt-8">
-      <form class="ui-form-stack" method="post" novalidate>
+
+      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'fin_receive'" x-cloak aria-labelledby="stock-finish-receive-title">
         {% csrf_token %}
         <input type="hidden" name="intent" value="receive_finished">
-        <h2 class="font-display text-lg">Réception produit fini (ON_STOCK)</h2>
+        <h3 class="font-display text-lg" id="stock-finish-receive-title">Réception produit fini</h3>
+        <p class="muted mb-4">Entrée de pièces finies prêtes à expédier.</p>
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="finr" %}
-        <p>
+        <div class="ui-field-group">
           <label class="ui-label" for="finr-sku">SKU fini</label>
-          <input class="ui-input" id="finr-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN" value="TEE-WHT-M-FIN">
-        </p>
-        <p>
-          <label class="ui-label" for="finr-loc">Emplacement FINISHED</label>
+          <input class="ui-input" id="finr-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN">
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="finr-loc">Emplacement finis</label>
           <select class="ui-input" id="finr-loc" name="location_public_id">
             {% for location in locations %}
               {% if location.zone.kind == "finished" %}
@@ -114,35 +145,42 @@
               {% endif %}
             {% endfor %}
           </select>
-        </p>
-        <p>
-          <label class="ui-label" for="finr-qty">Qté</label>
-          <input class="ui-input" id="finr-qty" name="quantity" type="number" min="1" value="1">
-        </p>
-        <button class="ui-btn ui-btn-primary" type="submit">Réceptionner le fini</button>
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="finr-qty">Quantité</label>
+          <input class="ui-input ui-input--qty" id="finr-qty" name="quantity" type="number" min="1" value="1">
+        </div>
+        <div class="ui-form-actions">
+          <button class="ui-btn ui-btn-primary" type="submit">Enregistrer le fini</button>
+        </div>
       </form>
-      <form class="ui-form-stack" method="post" novalidate>
+
+      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'fin_pick'" x-cloak aria-labelledby="stock-finish-pick-title">
         {% csrf_token %}
         <input type="hidden" name="intent" value="pick_finished">
-        <h2 class="font-display text-lg">Picking produit fini</h2>
+        <h3 class="font-display text-lg" id="stock-finish-pick-title">Picking produit fini</h3>
+        <p class="muted mb-4">Sortie pour expédition — scan bin puis quantité.</p>
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="finp" %}
-        <p>
+        <div class="ui-field-group">
+          <label class="ui-label" for="finp-bin">Scan bin</label>
+          <input class="ui-input" id="finp-bin" name="scanned_bin_code" required placeholder="F-01-01-A" autocomplete="off">
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="finp-qty">Quantité</label>
+          <input class="ui-input ui-input--qty" id="finp-qty" name="quantity" type="number" min="1" value="1">
+        </div>
+        <div class="ui-field-group">
           <label class="ui-label" for="finp-sku">SKU fini</label>
-          <input class="ui-input" id="finp-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN" value="TEE-WHT-M-FIN">
-        </p>
-        <p>
-          <label class="ui-label" for="finp-bin">Scan bin (POD-17)</label>
-          <input class="ui-input" id="finp-bin" name="scanned_bin_code" required placeholder="F-01-01-A">
-        </p>
-        <p>
-          <label class="ui-label" for="finp-qty">Qté</label>
-          <input class="ui-input" id="finp-qty" name="quantity" type="number" min="1" value="1">
-        </p>
-        <button class="ui-btn ui-btn-secondary" type="submit">Picker le fini</button>
+          <input class="ui-input" id="finp-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN">
+        </div>
+        <div class="ui-form-actions">
+          <button class="ui-btn ui-btn-primary" type="submit">Valider le picking fini</button>
+        </div>
       </form>
     </div>
     {% else %}
-    <p class="muted">Consultation seule — la gestion stock demande la permission entrepôt.</p>
+    {% url 'portal:staff-pod-warehouse' as wh_url %}
+    {% include "components/ui/empty_state.html" with title="Consultation seule" message="Les mouvements stock demandent la permission entrepôt." cta_url=wh_url cta_label="Voir l’entrepôt" %}
     {% endif %}
   </section>
 </div>

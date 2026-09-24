@@ -1,27 +1,49 @@
 {% extends "portal/layout.html" %}
+{% load portal_tags %}
 
 {% block title %}Catalogue Shopify POD — Prenium DTF{% endblock %}
 
 {% block portal_content %}
 <div class="portal-page portal-page--staff">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Catalogue Shopify" title="Catalogue Shopify" subtitle="Mapping variante → blank → slots techniques. Badges POD, ON_STOCK, VIRTUAL et NEEDS_CONFIG." %}
-  <section class="portal-page-surface ui-list-section">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Catalogue Shopify" title="Catalogue Shopify" subtitle="Corrigez le mapping variante → blank. Une action : Configurer." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section" aria-labelledby="pod-catalog-title">
+    <h2 id="pod-catalog-title" class="sr-only">Mapping catalogue</h2>
     <div class="ui-table-shell">
       <table class="ui-data-table w-full border-collapse">
         <thead>
           <tr>
-            <th>Boutique</th>
-            <th>Produit</th>
-            <th>Variante</th>
-            <th>SKU</th>
-            <th>Statut</th>
-            <th></th>
+            <th scope="col">Photo</th>
+            <th scope="col">Boutique</th>
+            <th scope="col">Produit</th>
+            <th scope="col">Variante</th>
+            <th scope="col">SKU</th>
+            <th scope="col">Statut</th>
+            <th scope="col"><span class="sr-only">Action</span></th>
           </tr>
         </thead>
         <tbody>
           {% for row in rows %}
             {% for variant_row in row.variants %}
             <tr>
+              <td>
+                {% with img=variant_row.variant.resolved_image_url %}
+                  {% if img %}
+                  <img
+                    class="pod-thumb"
+                    src="{{ img|shopify_cdn_thumb:80 }}"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    width="40"
+                    height="40"
+                    referrerpolicy="no-referrer"
+                  >
+                  {% else %}
+                  <span class="pod-thumb pod-thumb--empty" aria-hidden="true"></span>
+                  {% endif %}
+                {% endwith %}
+              </td>
               {% if forloop.first %}
               <td rowspan="{{ row.variants|length }}">{{ row.product.store.name }}</td>
               <td rowspan="{{ row.variants|length }}">
@@ -44,17 +66,28 @@
             </tr>
             {% empty %}
             <tr>
+              <td>
+                {% if row.product.image_url %}
+                <img class="pod-thumb" src="{{ row.product.image_url|shopify_cdn_thumb:80 }}" alt="" loading="lazy" decoding="async" width="40" height="40" referrerpolicy="no-referrer">
+                {% else %}
+                <span class="pod-thumb pod-thumb--empty" aria-hidden="true"></span>
+                {% endif %}
+              </td>
               <td>{{ row.product.store.name }}</td>
               <td colspan="5">Aucune variante importée.</td>
             </tr>
             {% endfor %}
           {% empty %}
-          <tr><td colspan="6">Aucun produit Shopify. {% if can_manage_catalog %}Rechargez la page pour créer le catalogue démo.{% endif %}</td></tr>
+          <tr><td colspan="7">
+            {% url 'portal:staff-pod-shops' as shops_url %}
+            Aucun produit importé.
+            {% if can_manage_catalog %}<a href="{{ shops_url }}">Ouvrir Boutiques</a> pour connecter et importer.{% endif %}
+          </td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    <aside id="pod-variant-drawer" class="mt-8 rounded-xl border border-[color:var(--ui-border)] p-4" aria-live="polite">
+    <aside id="pod-variant-drawer" class="mt-8" aria-live="polite">
       <p class="muted">Sélectionnez une variante pour ouvrir le configurateur.</p>
     </aside>
   </section>

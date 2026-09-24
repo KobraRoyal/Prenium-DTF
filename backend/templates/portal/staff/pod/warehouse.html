@@ -5,55 +5,60 @@
 {% block portal_content %}
 <div class="portal-page portal-page--staff">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Entrepôt" title="Plan entrepôt" subtitle="Zones atelier et emplacements de picking (code type A-03-02-B)." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
   <section class="portal-page-surface ui-list-section">
     {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
     {% if can_manage_warehouse %}
-    <form class="ui-form-stack mb-8 max-w-2xl" method="post" novalidate>
+    <form class="ui-form-stack mb-10 max-w-xl" method="post" novalidate aria-labelledby="warehouse-create-title">
       {% csrf_token %}
-      <div class="grid gap-3 sm:grid-cols-3">
-        <p>
-          <label class="ui-label" for="loc-zone">Zone</label>
-          <select class="ui-input" id="loc-zone" name="zone_public_id">
-            {% for zone in zones %}
-            <option value="{{ zone.public_id }}">{{ zone.name }}</option>
-            {% endfor %}
-          </select>
-        </p>
-        <p>
-          <label class="ui-label" for="loc-code">Code</label>
-          <input class="ui-input" id="loc-code" name="code" required placeholder="A-01-01-A">
-        </p>
-        <p>
-          <label class="ui-label" for="loc-label">Libellé</label>
-          <input class="ui-input" id="loc-label" name="label" placeholder="Allée A niveau 1">
-        </p>
-      </div>
-      <button class="ui-btn ui-btn-primary" type="submit">Créer un emplacement</button>
+      <h2 class="text-lg" id="warehouse-create-title">Nouvel emplacement</h2>
+      <p>
+        <label class="ui-label" for="loc-zone">Zone</label>
+        <select class="ui-input" id="loc-zone" name="zone_public_id">
+          {% for zone in zones %}
+          <option value="{{ zone.public_id }}">{{ zone.name }}</option>
+          {% endfor %}
+        </select>
+      </p>
+      <p>
+        <label class="ui-label" for="loc-code">Code</label>
+        <input class="ui-input" id="loc-code" name="code" required placeholder="A-01-01-A">
+      </p>
+      <p>
+        <label class="ui-label" for="loc-label">Libellé</label>
+        <input class="ui-input" id="loc-label" name="label" placeholder="Allée A niveau 1">
+      </p>
+      <button class="ui-btn ui-btn-primary" type="submit">Créer l’emplacement</button>
     </form>
     {% endif %}
 
     {% for zone in zones %}
-    <section class="mb-8" aria-labelledby="zone-{{ zone.code }}">
-      <h2 class="font-display text-lg" id="zone-{{ zone.code }}">{{ zone.name }} <span class="muted">{{ zone.get_kind_display }}</span></h2>
+    <section class="mb-10" aria-labelledby="zone-{{ zone.code }}">
+      <header class="ui-list-results__head mb-4">
+        <h2 class="text-lg" id="zone-{{ zone.code }}">{{ zone.name }} <span class="muted">{{ zone.get_kind_display }}</span></h2>
+      </header>
       <div class="ui-table-shell">
         <table class="ui-data-table w-full border-collapse">
           <thead>
-            <tr><th>Code</th><th>Libellé</th><th>État</th></tr>
+            <tr><th scope="col">Code</th><th scope="col">Libellé</th><th scope="col">État</th></tr>
           </thead>
           <tbody>
             {% for location in zone.locations.all %}
             <tr>
               <td><a href="{% url 'portal:staff-pod-location-detail' location_public_id=location.public_id %}"><code>{{ location.code }}</code></a></td>
               <td>{{ location.label|default:"—" }}</td>
-              <td>{% if location.is_active %}Actif{% else %}Inactif{% endif %}</td>
+              <td>{% if location.is_active %}<span class="badge is-success">Actif</span>{% else %}<span class="badge is-neutral">Inactif</span>{% endif %}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="3">Aucun emplacement dans cette zone.</td></tr>
+            <tr><td colspan="3">Aucun emplacement dans cette zone — créez un code ci-dessus pour commencer le picking.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </section>
+    {% empty %}
+    {% url 'portal:staff-pod-stock' as stock_url %}
+    {% include "components/ui/empty_state.html" with title="Aucune zone" message="L’entrepôt n’est pas initialisé. Ouvrez À produire une fois (seed) ou contactez l’admin atelier." cta_url=stock_url cta_label="Voir les stocks" %}
     {% endfor %}
   </section>
 </div>

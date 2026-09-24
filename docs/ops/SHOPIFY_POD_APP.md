@@ -12,8 +12,11 @@ OAuth app Partners **ou** token Admin API d’une app custom. Le token est chiff
    `{PUBLIC_BASE_URL}/integrations/shopify/pod/oauth/callback/`
    En local Docker, `PUBLIC_BASE_URL` vient de `DJANGO_DEV_PUBLIC_BASE_URL`.
    OAuth exige une URL HTTPS publique : tunnel (ngrok, Cloudflare) vers `localhost:8080`.
-4. Webhook fulfillment (enregistré automatiquement à l’install) :
-   `{PUBLIC_BASE_URL}/webhooks/shopify/pod/fulfillment/` (topic `orders/create`).
+4. Webhooks (enregistrés automatiquement à l’install) :
+   `{PUBLIC_BASE_URL}/webhooks/shopify/pod/fulfillment/`
+   Topics : `orders/create`, `orders/updated`, `orders/cancelled`.
+   - **create / updated** : upsert file RIP (qty sync, plancher = étiquettes picking déjà émises).
+   - **cancelled** : retire les lignes encore `QUEUED` ; si déjà en lot, gèle la pose (`ISSUE`) sans supprimer l’OF.
 
 ## 2. Variables `.env` (jamais commitées)
 
@@ -34,12 +37,14 @@ Recréez / relancez `web` et `worker` après modification du `.env`.
 
 Compte : `staff.ops@prenium.local` (perm. `pod.manage_pod_catalog`).
 
-1. Hub atelier → **Boutiques**.
-2. **OAuth** : domaine `xxx.myshopify.com` → installer → importer catalogue.
-   **Sans tunnel** : collez un Admin API token (app custom de la boutique de test).
-3. Catalogue → mapper les SKU en **POD** (recette + blank), sauf `staff_locked`.
-4. Passez une commande test dans Shopify ; le webhook met la file RIP.
-5. Lots → préparer DTF → OF / étiquette → pose / stocks.
+1. Hub atelier → menu **POD** → **Boutiques**.
+2. Saisir le nom de la boutique (`ma-boutique`) puis **Continuer sur Shopify**.
+   Le marchand approuve les accès. Au retour, le catalogue est importé et les webhooks
+   `orders/create`, `orders/updated`, `orders/cancelled` sont enregistrés.
+   **Sans OAuth** : ouvrir « J’ai déjà un token d’app custom » et coller le token Admin API.
+3. Catalogue → mapper les SKU en **POD**.
+4. Une commande test Shopify alimente **À produire**.
+5. Préparer le lot DTF, puis pose / stocks.
 
 HMAC : secret boutique **ou** `SHOPIFY_POD_API_SECRET` (apps OAuth).
 

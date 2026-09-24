@@ -1,53 +1,255 @@
 {% extends "portal/layout.html" %}
 
-{% block title %}Atelier POD — Prenium DTF{% endblock %}
+{% block title %}À produire — Atelier POD{% endblock %}
 
 {% block portal_content %}
 <div class="portal-page portal-page--staff">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Catalogue" title="Atelier POD" subtitle="Supports vierges, techniques d’impression et emplacements entrepôt — séparé du DTF au mètre." %}
-  <section class="portal-page-surface ui-list-section">
-    <div class="grid gap-4 md:grid-cols-3">
-      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-techniques' %}">
-        <p class="muted">Techniques</p>
-        <p class="font-display text-2xl">{{ technique_count }}</p>
-        <p>DTF, broderie, sublimation… répertoire RIP plat par technique.</p>
-      </a>
-      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-blanks' %}">
-        <p class="muted">Supports vierges</p>
-        <p class="font-display text-2xl">{{ blank_count }}</p>
-        <p>SKU, tailles, couleurs, poses requises et optionnelles.</p>
-      </a>
-      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-warehouse' %}">
-        <p class="muted">Entrepôt</p>
-        <p class="font-display text-2xl">{{ location_count }}</p>
-        <p>Zones, bins (ex. A-03-02-B) et emplacement par défaut.</p>
-      </a>
-      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5 md:col-span-3" href="{% url 'portal:staff-pod-shops' %}">
-        <p class="muted">Shopify</p>
-        <p class="font-display text-lg">Boutiques</p>
-        <p>OAuth app ou token admin chiffré, import catalogue, webhook commandes → file RIP.</p>
-      </a>
-      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5 md:col-span-3" href="{% url 'portal:staff-pod-catalog' %}">
-        <p class="muted">Catalogue Shopify</p>
-        <p class="font-display text-lg">Mapping variantes</p>
-        <p>POD · ON_STOCK · VIRTUAL · NEEDS_CONFIG — drawer staff (même contrat que l’app Shopify).</p>
-      </a>
-      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5 md:col-span-3" href="{% url 'portal:staff-pod-rip-lots' %}">
-        <p class="muted">Impression</p>
-        <p class="font-display text-lg">Lots RIP</p>
-        <p>File d’attente puis export plat 02_rip/ (ou 02_embroidery/) + OF / étiquettes.</p>
-      </a>
-      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-pose-dtf' %}">
-        <p class="muted">Poste pose</p>
-        <p class="font-display text-lg">Scan DTF</p>
-        <p>OF / étiquette → mockup, slots, confirmation pose.</p>
-      </a>
-      <a class="ui-card-link block rounded-xl border border-[color:var(--ui-border)] p-5" href="{% url 'portal:staff-pod-stock' %}">
-        <p class="muted">WMS</p>
-        <p class="font-display text-lg">Réception & picking</p>
-        <p>Scan bin obligatoire, refus si qty dispo = 0.</p>
-      </a>
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" title="À produire" subtitle="Cochez → picking PDF → lot DTF." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section" aria-labelledby="pod-board-title">
+    <h2 id="pod-board-title" class="sr-only">File de production POD</h2>
+    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+
+    <div
+      class="pod-board"
+      x-data="{
+        selected: [],
+        selectableIds() {
+          return Array.from(document.querySelectorAll('#pod-board-form input[name=work_item_public_ids]:not(:disabled)')).map((i) => i.value);
+        },
+        selectAll() { this.selected = this.selectableIds(); },
+        clearAll() { this.selected = []; },
+        confirmAction(label) {
+          if (!this.selected.length) return false;
+          return window.confirm(label + ' (' + this.selected.length + ') ?');
+        },
+        closeDrawer() {
+          const host = document.getElementById('pod-variant-drawer');
+          if (host) host.innerHTML = '';
+        }
+      }"
+      @keydown.escape.window="closeDrawer()"
+    >
+      <div class="atelier-worklist-command ui-list-command ui-list-command--compact pod-board-command" aria-labelledby="pod-board-command-title">
+        <div class="atelier-worklist-command__head">
+          <h2 class="font-display" id="pod-board-command-title">Sélection lot</h2>
+          <span class="badge is-neutral">
+            <span x-show="!selected.length">{{ board.ready_count }} prête{{ board.ready_count|pluralize }}</span>
+            <span x-show="selected.length" x-cloak x-text="selected.length + ' sel.'"></span>
+          </span>
+          {% if board.blocked_count %}<span class="badge is-warning">{{ board.blocked_count }} mapping</span>{% endif %}
+          {% if board.press_count %}<a class="badge is-neutral" href="{% url 'portal:staff-pod-pose-dtf' %}">{{ board.press_count }} à poser</a>{% endif %}
+        </div>
+        <p class="pod-board-command__hint muted" x-show="selected.length" x-cloak>Ensuite : picking PDF, puis lot DTF.</p>
+        <form class="ui-list-command__tools atelier-worklist-command__tools" method="get" role="search" aria-label="Filtrer">
+          <label class="sr-only" for="pod-board-q">Recherche</label>
+          <input class="ui-input pod-board-filter-q" id="pod-board-q" name="q" type="search" value="{{ board.q }}" placeholder="SO ou SKU">
+          <label class="sr-only" for="pod-board-readiness">Filtre</label>
+          <select class="ui-input pod-board-filter-queue" id="pod-board-readiness" name="queue">
+            <option value="all"{% if board.readiness == "all" %} selected{% endif %}>Toutes</option>
+            <option value="ready"{% if board.readiness == "ready" %} selected{% endif %}>Prêtes</option>
+            <option value="blocked"{% if board.readiness == "blocked" %} selected{% endif %}>Mapping</option>
+          </select>
+          <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit">OK</button>
+        </form>
+        {% if can_manage_catalog and board.picking_groups %}
+        <div class="ui-list-command__tools atelier-worklist-command__tools pod-board-actions" aria-label="Actions sélection">
+          <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" @click="selected.length ? clearAll() : selectAll()" x-text="selected.length ? 'Tout décocher' : 'Tout cocher'"></button>
+          <button
+            class="ui-btn ui-btn-primary ui-btn-sm"
+            type="submit"
+            form="pod-board-form"
+            name="intent"
+            value="print_session"
+            :disabled="selected.length === 0"
+            @click="if (!confirmAction('Générer picking + Zebra')) $event.preventDefault()"
+            x-text="selected.length ? `1 · Picking (${selected.length})` : '1 · Picking'"
+          ></button>
+          <button
+            class="ui-btn ui-btn-secondary ui-btn-sm"
+            type="submit"
+            form="pod-board-form"
+            name="intent"
+            value="prepare"
+            :disabled="selected.length === 0"
+            @click="if (!confirmAction('Préparer lot DTF')) $event.preventDefault()"
+            x-text="selected.length ? `2 · Lot DTF (${selected.length})` : '2 · Lot DTF'"
+          ></button>
+        </div>
+        {% endif %}
+      </div>
+
+      <form id="pod-board-form" method="post">{% csrf_token %}</form>
+
+      {% if board.picking_groups %}
+      {% for group in board.picking_groups %}
+      <article class="mb-6">
+        <header class="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h3 class="font-display text-base m-0">{{ group.model }}{% if group.variant_sku %} · {{ group.variant_sku }}{% endif %}</h3>
+          <p class="muted text-sm m-0">
+            {% if group.location_code %}<code>{{ group.location_code }}</code>{% else %}sans bin{% endif %}
+            · {{ group.total_quantity }} pcs
+          </p>
+        </header>
+        <div class="ui-table-shell">
+          <table class="ui-data-table w-full border-collapse">
+            <thead>
+              <tr>
+                <th scope="col"><span class="sr-only">Sel.</span></th>
+                <th scope="col">Commande</th>
+                <th scope="col">Qté</th>
+                <th scope="col">Marquages</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for line in group.lines %}
+              <tr>
+                <td>
+                  {% if can_manage_catalog and line.editable %}
+                  <input
+                    type="checkbox"
+                    name="work_item_public_ids"
+                    value="{{ line.work_item_public_id }}"
+                    form="pod-board-form"
+                    x-model="selected"
+                    aria-label="Sélectionner {{ line.order_number }}"
+                  >
+                  {% endif %}
+                </td>
+                <td>
+                  <code>{{ line.order_number }}</code>
+                  <span class="muted text-sm"> · {{ line.shopify_sku }}</span>
+                  {% if line.scan_identifier %}<br><code class="text-sm">{{ line.scan_identifier }}</code>{% endif %}
+                </td>
+                <td>
+                  {% if can_manage_catalog and line.editable %}
+                  <form method="post" class="ui-form-actions">
+                    {% csrf_token %}
+                    <input type="hidden" name="intent" value="set_quantity">
+                    <input type="hidden" name="work_item_public_id" value="{{ line.work_item_public_id }}">
+                    <label class="sr-only" for="pick-qty-{{ line.work_item_public_id }}">Qté {{ line.order_number }}</label>
+                    <input class="ui-input ui-input--qty" id="pick-qty-{{ line.work_item_public_id }}" name="quantity" type="number" min="1" value="{{ line.quantity }}">
+                    <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit" title="Enregistrer">OK</button>
+                  </form>
+                  {% else %}
+                  {{ line.quantity }}
+                  {% endif %}
+                </td>
+                <td class="text-sm">{% if line.markings %}{{ line.markings|join:" · " }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+      {% endfor %}
+      {% else %}
+      {% url 'portal:staff-pod-shops' as pod_shops_url %}
+      {% include "components/ui/empty_state.html" with title="Rien à prélever" message="Les commandes Shopify prêtes apparaissent ici." cta_url=pod_shops_url cta_label="Boutiques" %}
+      {% endif %}
     </div>
+
+    {% if pick_sessions %}
+    <details class="mb-6" open>
+      <summary class="font-display text-base">Sessions PDF ({{ pick_sessions|length }})</summary>
+      <div class="ui-table-shell mt-3">
+        <table class="ui-data-table w-full border-collapse">
+          <thead>
+            <tr><th scope="col">Session</th><th scope="col">Pcs</th><th scope="col"><span class="sr-only">PDF</span></th></tr>
+          </thead>
+          <tbody>
+            {% for session in pick_sessions %}
+            <tr>
+              <td>
+                <code>{{ session.code }}</code>
+                {% if session.is_voided %}<span class="badge is-warning">Annulée</span>{% endif %}
+              </td>
+              <td>{{ session.active_piece_count }}</td>
+              <td>
+                {% if session.is_voided %}
+                <span class="muted">—</span>
+                {% else %}
+                <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-pick-session-pdf' session_public_id=session.public_id document_kind='picking' %}">A4</a>
+                <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-pick-session-pdf' session_public_id=session.public_id document_kind='etiquettes' %}">Zebra</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endif %}
+
+    {% if board.blocked_count %}
+    <details class="mb-6" {% if board.readiness == "blocked" %}open{% endif %}>
+      <summary class="font-display text-base">Mapping à corriger ({{ board.blocked_count }})</summary>
+      <div class="ui-table-shell mt-3">
+        <table class="ui-data-table w-full border-collapse">
+          <thead>
+            <tr>
+              <th scope="col">Commande</th>
+              <th scope="col">SKU</th>
+              <th scope="col">État</th>
+              <th scope="col"><span class="sr-only">Action</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in board.queue_rows %}
+            {% if not row.ready %}
+            <tr>
+              <td><code>{{ row.item.shopify_order_number }}</code></td>
+              <td><code>{{ row.item.variant.sku|default:row.item.variant.title }}</code></td>
+              <td><span class="badge {{ row.tone }}">{{ row.status_label }}</span></td>
+              <td>
+                <button
+                  type="button"
+                  class="ui-btn ui-btn-ghost ui-btn-sm"
+                  aria-label="Configurer le mapping {{ row.item.variant.sku|default:row.item.variant.title }}"
+                  hx-get="{% url 'portal:staff-pod-variant-config' variant_public_id=row.item.variant.public_id %}"
+                  hx-target="#pod-variant-drawer"
+                  hx-swap="innerHTML"
+                  hx-indicator="#portal-htmx-indicator"
+                >Configurer</button>
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "components/portal/pagination.html" with page_obj=page_obj search_query=search_query active_queue=active_queue pagination_label="Pagination mapping" %}
+    </details>
+    {% endif %}
+
+    {% if board.skipped %}
+    <details class="mb-6">
+      <summary class="font-display text-base">Ignorées / annulées ({{ board.skipped|length }})</summary>
+      <div class="ui-table-shell mt-3">
+        <table class="ui-data-table w-full border-collapse">
+          <thead>
+            <tr><th scope="col">Commande</th><th scope="col">SKU</th><th scope="col">Raison</th></tr>
+          </thead>
+          <tbody>
+            {% for item in board.skipped %}
+            <tr>
+              <td><code>{{ item.shopify_order_number }}</code></td>
+              <td><code>{{ item.variant.sku|default:item.variant.title }}</code></td>
+              <td class="text-sm">{{ item.skip_reason|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endif %}
+
+    <aside
+      id="pod-variant-drawer"
+      class="pod-variant-drawer"
+      aria-live="polite"
+      hx-on::after-swap="const p = this.querySelector('#pod-variant-config-panel'); if (p) { p.focus({ preventScroll: false }); }"
+    ></aside>
   </section>
 </div>
 {% endblock %}

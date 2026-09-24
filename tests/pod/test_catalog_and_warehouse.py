@@ -66,7 +66,12 @@ def test_hub_seeds_dtf_and_warehouse_zones():
     assert response.status_code == 200
     assert PrintTechnique.objects.filter(code="dtf").exists()
     content = response.content.decode()
-    assert "Supports vierges" in content
+    assert "À produire" in content
+    assert "Pose" in content
+    assert "Lots RIP" in content
+    assert "Configurer" in content
+    assert 'aria-label="Configurer et admin POD"' in content
+    assert "Supports" in content
     assert "Entrepôt" in content
     assert warehouse.list_zones(actor=_user).count() == 5
 
@@ -88,6 +93,88 @@ def test_hub_bootstraps_ops_demo_for_managers():
     from apps.pod.models import PodRipWorkItem
 
     assert PodRipWorkItem.objects.filter(shopify_order_number="SO-DEMO-001").exists()
+
+
+def test_hub_updates_queued_quantity_and_lists_orders():
+    from apps.pod.models import PodRipWorkItem
+
+    _actor, client = staff_client(email="staff-pod-qty@example.com", permissions=MANAGE)
+    client.get(reverse("portal:staff-pod-hub"))
+    item = PodRipWorkItem.objects.get(shopify_order_number="SO-DEMO-001")
+    response = client.post(
+        reverse("portal:staff-pod-hub"),
+        {
+            "intent": "set_quantity",
+            "work_item_public_id": str(item.public_id),
+            "quantity": "3",
+        },
+    )
+    assert response.status_code == 302
+    item.refresh_from_db()
+    assert item.quantity == 3
+    page = client.get(reverse("portal:staff-pod-hub"))
+    body = page.content.decode()
+    assert "SO-DEMO-001" in body
+    assert "Sélection lot" in body
+    assert "T-shirt POD démo" in body
+    assert "Devant" in body
+    assert "pod-board-form" in body
+    assert "1 · Picking" in body
+    assert "2 · Lot DTF" in body
+    assert "Tout cocher" in body
+
+
+def test_hub_prepare_requires_selection():
+    from apps.pod.models import PodRipWorkItem
+
+    _actor, client = staff_client(email="staff-pod-prep-sel@example.com", permissions=MANAGE)
+    client.get(reverse("portal:staff-pod-hub"))
+    assert PodRipWorkItem.objects.filter(shopify_order_number="SO-DEMO-001").exists()
+    response = client.post(reverse("portal:staff-pod-hub"), {"intent": "prepare"})
+    assert response.status_code == 400
+    body = response.content.decode()
+    assert "Sélectionnez au moins une commande" in body
+
+
+def test_pick_session_pdf_keeps_later_orders_for_the_next_session():
+    import pymupdf
+    from apps.pod.models import PodPickSession, PodRipWorkItem
+
+    _actor, client = staff_client(email="staff-pod-pick@example.com", permissions=MANAGE)
+    client.get(reverse("portal:staff-pod-hub"))
+    item = PodRipWorkItem.objects.get(shopify_order_number="SO-DEMO-001")
+    created = client.post(
+        reverse("portal:staff-pod-hub"),
+        {"intent": "print_session", "work_item_public_ids": [str(item.public_id)]},
+    )
+    assert created.status_code == 302
+    session = PodPickSession.objects.get()
+    picking = client.get(
+        reverse(
+            "portal:staff-pod-pick-session-pdf",
+            kwargs={"session_public_id": session.public_id, "document_kind": "picking"},
+        )
+    )
+    labels = client.get(
+        reverse(
+            "portal:staff-pod-pick-session-pdf",
+            kwargs={"session_public_id": session.public_id, "document_kind": "etiquettes"},
+        )
+    )
+    picking_pdf = pymupdf.open(stream=b"".join(picking.streaming_content), filetype="pdf")
+    labels_pdf = pymupdf.open(stream=b"".join(labels.streaming_content), filetype="pdf")
+    assert abs(picking_pdf[0].rect.width - 595) < 2
+    assert abs(labels_pdf[0].rect.width - 100 * 72 / 25.4) < 2
+    assert abs(labels_pdf[0].rect.height - 50 * 72 / 25.4) < 2
+    page = client.get(reverse("portal:staff-pod-hub"))
+    body = page.content.decode()
+    assert "PICK-" in body
+    assert "Zebra" in body
+    again = client.post(
+        reverse("portal:staff-pod-hub"),
+        {"intent": "print_session", "work_item_public_ids": [str(item.public_id)]},
+    )
+    assert again.status_code == 400
 
 
 def test_staff_cannot_create_technique_without_manage_perm():

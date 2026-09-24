@@ -31,7 +31,28 @@ class FakeHttp:
                         "id": 11,
                         "title": "Tee POD",
                         "handle": "tee-pod",
-                        "variants": [{"id": 22, "title": "M", "sku": "TEE-BLK-M"}],
+                        "image": {
+                            "id": 1001,
+                            "src": "https://cdn.shopify.com/s/files/1/tee-product.jpg",
+                        },
+                        "images": [
+                            {
+                                "id": 1001,
+                                "src": "https://cdn.shopify.com/s/files/1/tee-product.jpg",
+                            },
+                            {
+                                "id": 1002,
+                                "src": "https://cdn.shopify.com/s/files/1/tee-black.jpg",
+                            },
+                        ],
+                        "variants": [
+                            {
+                                "id": 22,
+                                "title": "M / Noir",
+                                "sku": "TEE-BLK-M",
+                                "image_id": 1002,
+                            }
+                        ],
                     }
                 ]
             }
@@ -85,7 +106,13 @@ def test_oauth_callback_stores_encrypted_token_and_imports(settings):
     assert decrypt_shopify_token(store.access_token_encrypted) == "shpat_live_abcd1234"
     assert ShopifyVariant.objects.filter(sku="TEE-BLK-M").exists()
     assert IdsVariantConfig.objects.filter(variant__sku="TEE-BLK-M").exists()
-    assert any("webhooks.json" in item["url"] for item in http.calls)
+    variant = ShopifyVariant.objects.get(sku="TEE-BLK-M")
+    assert variant.image_url.endswith("tee-black.jpg")
+    assert variant.product.image_url.endswith("tee-product.jpg")
+    webhook_calls = [item for item in http.calls if "webhooks.json" in item["url"]]
+    assert len(webhook_calls) == 3
+    topics = {item["payload"]["webhook"]["topic"] for item in webhook_calls}
+    assert topics == {"orders/create", "orders/updated", "orders/cancelled"}
 
 
 def test_manual_token_and_staff_shops_page(settings):
@@ -105,6 +132,16 @@ def test_manual_token_and_staff_shops_page(settings):
     body = page.content.decode()
     assert "zzzz" in body
     assert "shpat_manual" not in body
+    assert "Connecter avec ce token" in body
+
+
+def test_oauth_page_is_one_click(settings):
+    settings.SHOPIFY_POD_API_KEY = "key-test"
+    settings.SHOPIFY_POD_API_SECRET = "secret-test"
+    _actor, client = staff_client(email="staff-oauth-ui@example.com", permissions=MANAGE)
+    body = client.get(reverse("portal:staff-pod-shops")).content.decode()
+    assert "Continuer sur Shopify" in body
+    assert "SHOPIFY_POD_API_KEY" not in body
 
 
 def test_client_cannot_open_shops():

@@ -10,7 +10,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen.canvas import Canvas
 
-from apps.pod.models import PodRipLot, PodUnit
+from apps.pod.models import PodPickSessionLine, PodRipLot, PodUnit
 from apps.pod.services.rip_naming import ascii_token
 
 OF_DIRECTORY = "03_of"
@@ -66,6 +66,14 @@ class PodUnitDocumentService:
         label_dir.mkdir(parents=True, exist_ok=True)
         seen_items = []
         units = []
+        item_ids = list({entry["work_item"].pk for entry in planned})
+        pick_by_piece = {
+            (line.work_item_id, line.sequence): line
+            for line in PodPickSessionLine.objects.filter(
+                work_item_id__in=item_ids,
+                voided_at__isnull=True,
+            )
+        }
         for entry in planned:
             item = entry["work_item"]
             if item.pk in seen_items:
@@ -82,7 +90,10 @@ class PodUnitDocumentService:
                 if file_entry["work_item"].pk == item.pk
             )
             for sequence in range(1, qty + 1):
-                scan_id = new_scan_identifier()
+                pick_line = pick_by_piece.get((item.pk, sequence))
+                scan_id = (
+                    pick_line.scan_identifier if pick_line is not None else new_scan_identifier()
+                )
                 of_name = f"{ascii_token(item.shopify_order_number)}_{sequence}_{scan_id}.pdf"
                 label_name = f"{scan_id}.pdf"
                 of_bytes = _write_of_pdf(
@@ -98,17 +109,19 @@ class PodUnitDocumentService:
                 label_bytes = _write_label_pdf(scan_id=scan_id, sku=item.variant.sku or blank_sku)
                 (of_dir / of_name).write_bytes(of_bytes)
                 (label_dir / label_name).write_bytes(label_bytes)
-                units.append(
-                    PodUnit.objects.create(
-                        lot=lot,
-                        work_item=item,
-                        variant=item.variant,
-                        sequence=sequence,
-                        scan_identifier=scan_id,
-                        of_relative_path=str(lot_root / OF_DIRECTORY / of_name),
-                        label_relative_path=str(lot_root / LABEL_DIRECTORY / label_name),
-                    )
+                unit = PodUnit.objects.create(
+                    lot=lot,
+                    work_item=item,
+                    variant=item.variant,
+                    sequence=sequence,
+                    scan_identifier=scan_id,
+                    of_relative_path=str(lot_root / OF_DIRECTORY / of_name),
+                    label_relative_path=str(lot_root / LABEL_DIRECTORY / label_name),
                 )
+                if pick_line is not None and pick_line.unit_id is None:
+                    pick_line.unit = unit
+                    pick_line.save(update_fields=["unit", "updated_at"])
+                units.append(unit)
         return units
 
     def document_path(self, *, unit: PodUnit, kind: str) -> Path:

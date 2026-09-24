@@ -99,6 +99,23 @@ Livrer l’app Shopify POD (mapping, RIP plat, pose, fulfillment) et le WMS empl
 - [x] Owner client dédié (chemin atelier livré)
 - [x] SKU fini ON_STOCK (réception / picking zone FINISHED)
 - [x] Contrat mapping marchand (sauf `staff_locked`)
+- [x] Hub Operate « À produire » : command bar type Pilotage (sélection, confirm, toasts)
+- [x] `prepare_lot(work_item_public_ids=…)` : sélection hub = seule vérité (hors page Lots RIP legacy)
+- [x] Session picking PDF A4 + étiquettes Zebra séparées
+
+## Suite Operate (anti-erreur)
+- [x] Unifier scan picking (`PodPickSessionLine`) avec `PodUnit.scan_identifier` (réemploi + FK `unit`)
+- [x] Webhooks `orders/cancelled` + `orders/updated` → file QUEUED / freeze production
+- [x] Pagination / filtres board (`q`, `queue=ready|blocked`)
+- [x] Pose refusée sur unités `ISSUE` ; pick lines voidées au cancel Shopify
+- [x] Bouton « Réinstaller webhooks » boutiques
+
+## DoD opérationnel
+- [x] Chaîne À produire → picking PDF → lot sélection → pose scan unique
+- [x] Cancel/qty Shopify ne cassent pas l’atelier (void + freeze)
+- [x] Migrations `0007`–`0010` ; tests POD critiques verts
+- [x] Docs ops webhooks 3 topics
+- [x] Passes Impeccable Operate : nav contexte POD + distill pose/RIP/stocks + cohérence ui-*
 
 ## Hors scope (ne pas toucher)
 - Pricing B2B métrage, gang sheets, Sendcloud (sauf lien expédition POD plus tard)

@@ -5,42 +5,63 @@
 {% block portal_content %}
 <div class="portal-page portal-page--staff">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Supports" title="Supports vierges" subtitle="Catalogue blanks : SKU, variantes et poses autorisées." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
   <section class="portal-page-surface ui-list-section">
-    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    {% if form_error %}<div class="alert alert--danger mb-4" role="alert">{{ form_error }}</div>{% endif %}
+
     {% if can_manage_catalog %}
     <form class="ui-form-stack mb-8 max-w-xl" method="post" novalidate>
       {% csrf_token %}
+      <h2 class="font-display text-lg">Nouveau support</h2>
       <div class="grid gap-3 sm:grid-cols-3">
-        <p>
+        <div class="ui-field-group">
           <label class="ui-label" for="blank-sku">SKU</label>
           <input class="ui-input" id="blank-sku" name="sku" required placeholder="TEE-200">
-        </p>
-        <p>
+        </div>
+        <div class="ui-field-group">
           <label class="ui-label" for="blank-name">Nom</label>
           <input class="ui-input" id="blank-name" name="name" required placeholder="T-shirt 185g">
-        </p>
-        <p>
+        </div>
+        <div class="ui-field-group">
           <label class="ui-label" for="blank-brand">Marque</label>
           <input class="ui-input" id="blank-brand" name="brand" placeholder="Stanley/Stella">
-        </p>
+        </div>
       </div>
-      <button class="ui-btn ui-btn-primary" type="submit">Créer un support</button>
+      <div class="ui-form-actions">
+        <button class="ui-btn ui-btn-primary" type="submit">Créer un support</button>
+      </div>
     </form>
     {% endif %}
+
     <div class="ui-table-shell">
       <table class="ui-data-table w-full border-collapse">
         <thead>
-          <tr><th>SKU</th><th>Nom</th><th>Variantes</th></tr>
+          <tr><th scope="col">Photo</th><th scope="col">SKU</th><th scope="col">Nom</th><th scope="col">Variantes</th></tr>
         </thead>
         <tbody>
           {% for blank in blanks %}
           <tr>
+            <td>
+              {% if blank.has_photo %}
+              <img
+                class="pod-thumb"
+                src="{% url 'portal:staff-pod-blank-photo' blank_public_id=blank.public_id %}?size=thumb"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                width="40"
+                height="40"
+              >
+              {% else %}
+              <span class="pod-thumb pod-thumb--empty" aria-hidden="true"></span>
+              {% endif %}
+            </td>
             <td><a href="{% url 'portal:staff-pod-blank-detail' blank_public_id=blank.public_id %}"><code>{{ blank.sku }}</code></a></td>
             <td>{{ blank.name }}{% if blank.brand %} <span class="muted">{{ blank.brand }}</span>{% endif %}</td>
             <td>{{ blank.variants.count }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="3">Aucun support. Créez le premier blank.</td></tr>
+          <tr><td colspan="4">Aucun support.{% if can_manage_catalog %} Créez le premier blank avec le formulaire ci-dessus, puis ouvrez la fiche pour les variantes.{% else %} Demandez à un administrateur catalogue d’en créer un.{% endif %}</td></tr>
           {% endfor %}
         </tbody>
       </table>

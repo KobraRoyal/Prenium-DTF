@@ -5,24 +5,62 @@
 {% block portal_content %}
 <div class="portal-page portal-page--staff">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=location.code title=location.code subtitle=location.zone.name %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
   <section class="portal-page-surface ui-list-section">
-    <p class="mb-6">{% if location.label %}{{ location.label }} — {% endif %}{{ location.zone.warehouse.name }}</p>
-    <h2 class="font-display text-lg">Règles d’emplacement par défaut</h2>
-    <ul class="mb-6">
-      {% for rule in rules %}
-      <li>{{ rule.get_sku_kind_display }} {% if rule.blank_variant %}{{ rule.blank_variant.sku }}{% endif %} {{ rule.finished_sku }} ({{ rule.get_owner_kind_display }})</li>
-      {% empty %}
-      <li class="muted">Aucune règle sur ce bin.</li>
-      {% endfor %}
-    </ul>
-    <h2 class="font-display text-lg">Stock présent</h2>
-    <ul>
-      {% for balance in balances %}
-      <li>{{ balance.get_sku_kind_display }} {% if balance.blank_variant %}{{ balance.blank_variant.sku }}{% endif %} {{ balance.finished_sku }} — {{ balance.qty_available }} dispo / {{ balance.qty_on_hand }} en stock ({{ balance.get_owner_kind_display }})</li>
-      {% empty %}
-      <li class="muted">Bin vide. Réception / picking : écran Stocks POD.</li>
-      {% endfor %}
-    </ul>
+    <p class="mb-8">{% if location.label %}{{ location.label }} — {% endif %}{{ location.zone.warehouse.name }}</p>
+
+    <section class="mb-10" aria-labelledby="location-rules-title">
+      <header class="ui-list-results__head mb-4">
+        <h2 class="text-lg" id="location-rules-title">Règles par défaut sur ce bin</h2>
+        <p class="muted text-sm">Produits autorisés à l’emplacement sans scan manuel.</p>
+      </header>
+      <div class="ui-table-shell">
+        <table class="ui-data-table w-full border-collapse">
+          <thead>
+            <tr><th scope="col">Type</th><th scope="col">Variante blank</th><th scope="col">SKU fini</th><th scope="col">Propriétaire</th></tr>
+          </thead>
+          <tbody>
+            {% for rule in rules %}
+            <tr>
+              <td>{{ rule.get_sku_kind_display }}</td>
+              <td>{% if rule.blank_variant %}<code>{{ rule.blank_variant.sku }}</code>{% else %}—{% endif %}</td>
+              <td>{% if rule.finished_sku %}<code>{{ rule.finished_sku }}</code>{% else %}—{% endif %}</td>
+              <td>{{ rule.get_owner_kind_display }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">Aucune règle — le bin accepte tout mouvement compatible. Ajoutez une règle depuis la fiche support si besoin.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="location-stock-title">
+      <header class="ui-list-results__head mb-4">
+        <h2 class="text-lg" id="location-stock-title">Stock sur place</h2>
+        <p class="muted text-sm">Quantités disponibles pour picking et expédition.</p>
+      </header>
+      <div class="ui-table-shell">
+        <table class="ui-data-table w-full border-collapse">
+          <thead>
+            <tr><th>Type</th><th>Référence</th><th>Disponible</th><th>En stock</th><th>Propriétaire</th></tr>
+          </thead>
+          <tbody>
+            {% for balance in balances %}
+            <tr>
+              <td>{{ balance.get_sku_kind_display }}</td>
+              <td>{% if balance.blank_variant %}<code>{{ balance.blank_variant.sku }}</code>{% elif balance.finished_sku %}<code>{{ balance.finished_sku }}</code>{% else %}—{% endif %}</td>
+              <td>{{ balance.qty_available }}</td>
+              <td>{{ balance.qty_on_hand }}</td>
+              <td>{{ balance.get_owner_kind_display }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">Bin vide — enregistrez une réception ou un putaway depuis <a href="{% url 'portal:staff-pod-stock' %}">Mouvements WMS</a>.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
   </section>
 </div>
 {% endblock %}

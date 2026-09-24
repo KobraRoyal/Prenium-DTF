@@ -5,7 +5,36 @@
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-operations' %}is-active{% endif %}" {% if nav_key == 'staff-operations' %}aria-current="page"{% endif %} href="{% url 'portal:staff-atelier-operations' %}">Pilotage</a>
   {% endif %}
   {% if perms.pod.access_pod_atelier %}
-  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-pod' %}is-active{% endif %}" {% if nav_key == 'staff-pod' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-hub' %}">POD</a>
+  {% with url_name=request.resolver_match.url_name %}
+  <details class="product-nav__more" data-product-nav-details>
+    <summary class="product-nav__more-trigger {% if nav_key == 'staff-pod' %}is-active{% endif %}">
+      <span>
+        {% if url_name == 'staff-pod-techniques' %}Techniques
+        {% elif url_name == 'staff-pod-blanks' or url_name == 'staff-pod-blank-detail' %}Supports
+        {% elif url_name == 'staff-pod-warehouse' or url_name == 'staff-pod-location-detail' %}Entrepôt
+        {% elif url_name == 'staff-pod-shops' %}Boutiques
+        {% elif url_name == 'staff-pod-catalog' or url_name == 'staff-pod-catalog-product' or url_name == 'staff-pod-variant-config' %}Catalogue
+        {% elif url_name == 'staff-pod-rip-lots' or url_name == 'staff-pod-rip-lot-detail' or url_name == 'staff-pod-unit-document' %}Lots RIP
+        {% elif url_name == 'staff-pod-pose-dtf' %}Pose DTF
+        {% elif url_name == 'staff-pod-stock' %}Stocks
+        {% else %}POD{% endif %}
+      </span>
+      <span class="product-nav__chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="product-nav__more-menu" aria-label="Atelier POD">
+      <span class="product-nav__section-label">Atelier POD</span>
+      <a class="product-nav__more-link {% if url_name == 'staff-pod-hub' %}is-active{% endif %}" {% if url_name == 'staff-pod-hub' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-hub' %}"><strong>À produire</strong><small>File, mapping et pose</small></a>
+      <a class="product-nav__more-link {% if url_name == 'staff-pod-techniques' %}is-active{% endif %}" {% if url_name == 'staff-pod-techniques' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-techniques' %}"><strong>Techniques</strong><small>Répertoires RIP plats</small></a>
+      <a class="product-nav__more-link {% if url_name == 'staff-pod-blanks' or url_name == 'staff-pod-blank-detail' %}is-active{% endif %}" {% if url_name == 'staff-pod-blanks' or url_name == 'staff-pod-blank-detail' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-blanks' %}"><strong>Supports vierges</strong><small>SKU, poses et couleurs</small></a>
+      <a class="product-nav__more-link {% if url_name == 'staff-pod-warehouse' or url_name == 'staff-pod-location-detail' %}is-active{% endif %}" {% if url_name == 'staff-pod-warehouse' or url_name == 'staff-pod-location-detail' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-warehouse' %}"><strong>Entrepôt</strong><small>Zones et emplacements</small></a>
+      <a class="product-nav__more-link {% if url_name == 'staff-pod-shops' %}is-active{% endif %}" {% if url_name == 'staff-pod-shops' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-shops' %}"><strong>Boutiques Shopify</strong><small>OAuth, token et import</small></a>
+      <a class="product-nav__more-link {% if url_name == 'staff-pod-catalog' or url_name == 'staff-pod-catalog-product' or url_name == 'staff-pod-variant-config' %}is-active{% endif %}" {% if url_name == 'staff-pod-catalog' or url_name == 'staff-pod-catalog-product' or url_name == 'staff-pod-variant-config' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-catalog' %}"><strong>Catalogue Shopify</strong><small>Mapping des variantes</small></a>
+      <a class="product-nav__more-link {% if url_name == 'staff-pod-rip-lots' or url_name == 'staff-pod-rip-lot-detail' or url_name == 'staff-pod-unit-document' %}is-active{% endif %}" {% if url_name == 'staff-pod-rip-lots' or url_name == 'staff-pod-rip-lot-detail' or url_name == 'staff-pod-unit-document' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-rip-lots' %}"><strong>Lots RIP</strong><small>File, export et OF</small></a>
+      <a class="product-nav__more-link {% if url_name == 'staff-pod-pose-dtf' %}is-active{% endif %}" {% if url_name == 'staff-pod-pose-dtf' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-pose-dtf' %}"><strong>Poste pose DTF</strong><small>Scan puis confirmation</small></a>
+      <a class="product-nav__more-link {% if url_name == 'staff-pod-stock' %}is-active{% endif %}" {% if url_name == 'staff-pod-stock' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-stock' %}"><strong>Réception et picking</strong><small>Scan bin obligatoire</small></a>
+    </div>
+  </details>
+  {% endwith %}
   {% endif %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes</a>
   {% if perms.customers.view_customer %}

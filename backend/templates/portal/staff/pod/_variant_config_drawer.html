@@ -1,11 +1,26 @@
-<div id="pod-variant-config-panel" class="pod-variant-config">
+<div
+  id="pod-variant-config-panel"
+  class="pod-variant-config"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="pod-variant-config-title"
+  tabindex="-1"
+>
   <header class="mb-4 flex flex-wrap items-start justify-between gap-3">
     <div>
-      <h2 class="font-display text-lg">Config variante</h2>
+      <h2 class="font-display text-lg mt-0" id="pod-variant-config-title">Config variante</h2>
       <p class="muted">{{ variant.product.title }} — {{ variant.title }}{% if variant.sku %} · <code>{{ variant.sku }}</code>{% endif %}</p>
-      <p class="mt-1">Boutique {{ variant.product.store.name }} (lecture seule)</p>
+      <p class="muted text-sm">Boutique {{ variant.product.store.name }} (lecture seule)</p>
     </div>
-    <span class="badge {% if status == 'pod' or status == 'on_stock' %}is-success{% elif status == 'needs_config' %}is-warning{% else %}is-neutral{% endif %}">{{ status }}</span>
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="badge {% if status == 'pod' or status == 'on_stock' %}is-success{% elif status == 'needs_config' %}is-warning{% else %}is-neutral{% endif %}">{{ status }}</span>
+      <button
+        type="button"
+        class="ui-btn ui-btn-ghost ui-btn-sm"
+        aria-label="Fermer la configuration variante"
+        onclick="document.getElementById('pod-variant-drawer').innerHTML=''"
+      >Fermer</button>
+    </div>
   </header>
 
   {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
@@ -22,15 +37,15 @@
     {% csrf_token %}
     <input type="hidden" name="intent" value="save">
     <div class="grid gap-4 md:grid-cols-2">
-      <p>
+      <div class="ui-field-group">
         <label class="ui-label" for="variant-mode">Mode</label>
         <select class="ui-input" id="variant-mode" name="mode">
           {% for value, label in modes %}
           <option value="{{ value }}" {% if config.mode == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
-      </p>
-      <p>
+      </div>
+      <div class="ui-field-group">
         <label class="ui-label" for="variant-blank">Blank (POD)</label>
         <select class="ui-input" id="variant-blank" name="blank_variant_public_id">
           <option value="">—</option>
@@ -38,14 +53,14 @@
           <option value="{{ blank_variant.public_id }}" {% if config.blank_variant_id == blank_variant.id %}selected{% endif %}>{{ blank_variant.sku }} — {{ blank_variant.blank.name }}</option>
           {% endfor %}
         </select>
-      </p>
-      <p>
+      </div>
+      <div class="ui-field-group">
         <label class="ui-label" for="variant-finished-sku">SKU fini (ON_STOCK)</label>
         <input class="ui-input" id="variant-finished-sku" name="finished_sku" value="{{ config.finished_sku }}">
-      </p>
-      <p class="flex items-end">
+      </div>
+      <div class="ui-field-group flex items-end">
         <label class="ui-label"><input type="checkbox" name="staff_locked" {% if config.staff_locked %}checked{% endif %}> Verrou staff (bloque le marchand)</label>
-      </p>
+      </div>
     </div>
 
     {% if slot_rows %}
@@ -53,7 +68,12 @@
     <div class="ui-table-shell">
       <table class="ui-data-table w-full border-collapse text-sm">
         <thead>
-          <tr><th>Zone</th><th>Technique</th><th>Actif</th><th>Fichier HD</th></tr>
+          <tr>
+            <th scope="col">Zone</th>
+            <th scope="col">Technique</th>
+            <th scope="col">Actif</th>
+            <th scope="col">Fichier HD</th>
+          </tr>
         </thead>
         <tbody>
           {% for row in slot_rows %}
@@ -71,11 +91,13 @@
               <input type="hidden" name="slot_enabled" value="{{ row.placement }}:{{ row.technique.public_id }}">
               Oui
               {% else %}
-              <input type="checkbox" name="slot_enabled" value="{{ row.placement }}:{{ row.technique.public_id }}" {% if row.is_enabled %}checked{% endif %}>
+              <label class="sr-only" for="slot-enabled-{{ forloop.counter0 }}">Activer {{ row.placement_label }}</label>
+              <input id="slot-enabled-{{ forloop.counter0 }}" type="checkbox" name="slot_enabled" value="{{ row.placement }}:{{ row.technique.public_id }}" {% if row.is_enabled %}checked{% endif %}>
               {% endif %}
             </td>
             <td>
-              <input class="ui-input" name="slot_print_reference" value="{{ row.print_reference }}" placeholder="boutique_SO_front.png">
+              <label class="sr-only" for="slot-ref-{{ forloop.counter0 }}">Fichier HD {{ row.placement_label }}</label>
+              <input class="ui-input" id="slot-ref-{{ forloop.counter0 }}" name="slot_print_reference" value="{{ row.print_reference }}" placeholder="boutique_SO_front.png">
             </td>
           </tr>
           {% endfor %}
@@ -93,7 +115,7 @@
 
   {% if templates.exists %}
   <form
-    class="mt-4 flex flex-wrap items-end gap-2"
+    class="ui-form-stack mt-4 max-w-md"
     method="post"
     hx-post="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}"
     hx-target="#pod-variant-drawer"
@@ -102,15 +124,17 @@
   >
     {% csrf_token %}
     <input type="hidden" name="intent" value="apply_template">
-    <p>
+    <div class="ui-field-group">
       <label class="ui-label" for="template-select">Charger depuis template</label>
       <select class="ui-input" id="template-select" name="template_public_id">
         {% for template in templates %}
         <option value="{{ template.public_id }}">{{ template.name }}</option>
         {% endfor %}
       </select>
-    </p>
-    <button class="ui-btn ui-btn-secondary" type="submit">Appliquer</button>
+    </div>
+    <div class="ui-form-actions">
+      <button class="ui-btn ui-btn-ghost" type="submit">Appliquer</button>
+    </div>
   </form>
   {% endif %}
   {% else %}

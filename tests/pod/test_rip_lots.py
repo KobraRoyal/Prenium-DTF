@@ -152,6 +152,51 @@ def test_view_only_staff_cannot_prepare():
     assert response.status_code == 403
 
 
+def test_prepare_lot_respects_work_item_selection(tmp_path, settings):
+    settings.MEDIA_ROOT = tmp_path
+    actor, _client = staff_client(email="staff-rip-sel@example.com", permissions=MANAGE)
+    dtf, _blank, blank_variant, variant = pod_fixture(actor=actor)
+    configure_pod(actor, dtf, blank_variant, variant)
+    first = rip.enqueue(
+        actor=actor,
+        source="test",
+        variant_public_id=variant.public_id,
+        shopify_order_number="SO-SEL-1",
+    )
+    second = rip.enqueue(
+        actor=actor,
+        source="test",
+        variant_public_id=variant.public_id,
+        shopify_order_number="SO-SEL-2",
+    )
+    lot = rip.prepare_dtf_lot(
+        actor=actor,
+        source="test",
+        work_item_public_ids=[str(first.public_id)],
+    )
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert first.status == PodRipWorkItem.Status.INCLUDED
+    assert second.status == PodRipWorkItem.Status.QUEUED
+    assert lot.units.filter(work_item=first).exists()
+    assert not lot.units.filter(work_item=second).exists()
+
+
+def test_prepare_lot_rejects_empty_selection(tmp_path, settings):
+    settings.MEDIA_ROOT = tmp_path
+    actor, _client = staff_client(email="staff-rip-empty-sel@example.com", permissions=MANAGE)
+    dtf, _blank, blank_variant, variant = pod_fixture(actor=actor)
+    configure_pod(actor, dtf, blank_variant, variant)
+    rip.enqueue(
+        actor=actor,
+        source="test",
+        variant_public_id=variant.public_id,
+        shopify_order_number="SO-EMPTY",
+    )
+    with pytest.raises(ValidationError, match="Sélectionnez au moins une commande"):
+        rip.prepare_dtf_lot(actor=actor, source="test", work_item_public_ids=[])
+
+
 def test_embroidery_lot_writes_flat_technique_directory(tmp_path, settings):
     settings.MEDIA_ROOT = tmp_path
     actor, _client = staff_client(email="staff-rip-emb@example.com", permissions=MANAGE)

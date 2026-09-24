@@ -1,0 +1,88 @@
+{% extends "portal/layout.html" %}
+{% load portal_tags %}
+
+{% block title %}{{ product.title }} — Catalogue POD{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=product.title title=product.title subtitle=product.store.name %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section">
+    <p class="mb-4"><a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-pod-catalog' %}">Retour au catalogue</a></p>
+
+    <div class="pod-photo-hero mb-6">
+      {% if product.image_url %}
+      <img
+        class="pod-thumb pod-thumb--lg"
+        src="{{ product.image_url|shopify_cdn_thumb:240 }}"
+        alt="{{ product.title }}"
+        loading="eager"
+        decoding="async"
+        width="160"
+        height="160"
+        referrerpolicy="no-referrer"
+      >
+      {% else %}
+      <div class="pod-thumb pod-thumb--lg pod-thumb--empty" aria-hidden="true"></div>
+      {% endif %}
+      <p class="muted mb-0">Photos Shopify via CDN (pas de copie locale) — sync catalogue pour rafraîchir.</p>
+    </div>
+
+    <div class="ui-table-shell">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr>
+            <th scope="col">Photo</th>
+            <th scope="col">Variante</th>
+            <th scope="col">SKU</th>
+            <th scope="col">Statut</th>
+            <th scope="col"><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in variant_rows %}
+          <tr>
+            <td>
+              {% with img=row.variant.resolved_image_url %}
+                {% if img %}
+                <img
+                  class="pod-thumb"
+                  src="{{ img|shopify_cdn_thumb:80 }}"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  width="40"
+                  height="40"
+                  referrerpolicy="no-referrer"
+                >
+                {% else %}
+                <span class="pod-thumb pod-thumb--empty" aria-hidden="true"></span>
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td>{{ row.variant.title }}</td>
+            <td><code>{% if row.variant.sku %}{{ row.variant.sku }}{% else %}—{% endif %}</code></td>
+            <td><span class="badge {{ row.badge_tone }}">{{ row.status }}</span></td>
+            <td>
+              <button
+                type="button"
+                class="ui-btn ui-btn-ghost ui-btn-sm"
+                hx-get="{% url 'portal:staff-pod-variant-config' variant_public_id=row.variant.public_id %}"
+                hx-target="#pod-variant-drawer"
+                hx-swap="innerHTML"
+                hx-indicator="#portal-htmx-indicator"
+              >Configurer</button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">Aucune variante importée pour ce produit. Relancez l’import depuis Boutiques Shopify.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <aside id="pod-variant-drawer" class="mt-8" aria-live="polite">
+      <p class="muted">Sélectionnez une variante pour ouvrir le configurateur.</p>
+    </aside>
+  </section>
+</div>
+{% endblock %}

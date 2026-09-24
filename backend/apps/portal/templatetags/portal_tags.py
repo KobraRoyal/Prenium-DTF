@@ -17,7 +17,7 @@ from apps.orders.references import (
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260923-kpi-label-v1"
+PORTAL_CSS_ASSET_V = "20260923-pod-photos-v1"
 
 STATUS_LABELS = {
     "draft": "Brouillon",
@@ -308,3 +308,14 @@ def client_project_refs(project, variant="row"):
         "variant": variant,
         "mono_ids": False,
     }
+
+
+@register.filter(name="shopify_cdn_thumb")
+def shopify_cdn_thumb(url, width=96):
+    from apps.pod.services.catalog_images import shopify_cdn_resized
+
+    try:
+        width_int = int(width)
+    except (TypeError, ValueError):
+        width_int = 96
+    return shopify_cdn_resized(str(url or ""), width=width_int)

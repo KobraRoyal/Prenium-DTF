@@ -4,91 +4,133 @@
 
 {% block portal_content %}
 <div class="portal-page portal-page--staff">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Lots RIP" title="Lots impression DTF" subtitle="File d’attente puis export plat 02_rip/ (watch folder NAS). Manifest hors RIP." %}
-  <section class="portal-page-surface ui-list-section">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Lots RIP" title="Lots RIP" subtitle="Préparez depuis À produire (sélection) ou ajoutez une ligne manuelle ici." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section" aria-labelledby="pod-rip-title">
+    <h2 id="pod-rip-title" class="sr-only">Lots et file RIP</h2>
     {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
 
-    <h2 class="font-display text-lg">File RIP</h2>
-    {% if can_manage_catalog %}
-    <form class="ui-form-stack mb-6 max-w-3xl" method="post">
-      {% csrf_token %}
-      <input type="hidden" name="intent" value="enqueue">
-      <div class="grid gap-3 sm:grid-cols-3">
-        <p>
-          <label class="ui-label" for="rip-variant">Variante</label>
-          <select class="ui-input" id="rip-variant" name="variant_public_id">
-            {% for product in products %}
-              {% for variant in product.variants.all %}
-              <option value="{{ variant.public_id }}"{% if variant.sku == "TEE-BLK-M" %} selected{% endif %}>{{ product.store.slug }} — {{ variant.sku|default:variant.title }}</option>
-              {% endfor %}
+    <div class="atelier-worklist-command ui-list-command ui-list-command--compact pod-board-command mb-6" aria-labelledby="pod-rip-command-title">
+      <div class="atelier-worklist-command__head">
+        <h2 class="font-display" id="pod-rip-command-title">Lots préparés</h2>
+        <span class="badge is-neutral">{{ lots|length }} lot{{ lots|length|pluralize }}</span>
+        <span class="badge is-neutral">{{ queue|length }} en file</span>
+      </div>
+      <div class="ui-list-command__tools atelier-worklist-command__tools">
+        <a class="ui-btn ui-btn-primary ui-btn-sm" href="{% url 'portal:staff-pod-hub' %}">Préparer depuis À produire</a>
+        {% if can_manage_catalog and queue %}
+        <form method="post" class="ui-form-actions">
+          {% csrf_token %}
+          <input type="hidden" name="intent" value="prepare">
+          <label class="sr-only" for="rip-tech">Technique</label>
+          <select class="ui-input" id="rip-tech" name="technique_code" aria-label="Technique RIP">
+            {% for technique in techniques %}
+            <option value="{{ technique.code }}">{{ technique.name }}</option>
             {% endfor %}
           </select>
-        </p>
-        <p>
-          <label class="ui-label" for="rip-so">N° commande Shopify</label>
-          <input class="ui-input" id="rip-so" name="shopify_order_number" required placeholder="SO-1042">
-        </p>
-        <p>
-          <label class="ui-label" for="rip-qty">Qté</label>
-          <input class="ui-input" id="rip-qty" name="quantity" type="number" min="1" value="1">
-        </p>
+          <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Préparer toute la file</button>
+        </form>
+        {% endif %}
       </div>
-      <button class="ui-btn ui-btn-secondary" type="submit">Ajouter à la file</button>
-    </form>
-    <form method="post" class="mb-8">
-      {% csrf_token %}
-      <input type="hidden" name="intent" value="prepare">
-      <p class="mb-3 max-w-xs">
-        <label class="ui-label" for="rip-tech">Technique</label>
-        <select class="ui-input" id="rip-tech" name="technique_code">
-          {% for technique in techniques %}
-          <option value="{{ technique.code }}">{{ technique.name }} ({{ technique.rip_directory }})</option>
-          {% endfor %}
-        </select>
-      </p>
-      <button class="ui-btn ui-btn-primary" type="submit">Préparer le lot RIP</button>
-    </form>
-    {% endif %}
+    </div>
 
     <div class="ui-table-shell mb-8">
       <table class="ui-data-table w-full border-collapse">
         <thead>
-          <tr><th>Boutique</th><th>SO</th><th>SKU</th><th>État</th></tr>
+          <tr>
+            <th scope="col">Code</th>
+            <th scope="col">Fichiers</th>
+            <th scope="col">Chemin NAS</th>
+            <th scope="col"><span class="sr-only">Ouvrir</span></th>
+          </tr>
         </thead>
         <tbody>
-          {% for item in queue %}
+          {% for lot in lots %}
           <tr>
-            <td>{{ item.store.slug }}</td>
-            <td><code>{{ item.shopify_order_number }}</code></td>
-            <td><code>{{ item.variant.sku }}</code></td>
-            <td>{{ item.get_status_display }}</td>
+            <td><code>{{ lot.code }}</code></td>
+            <td>{{ lot.file_count }}</td>
+            <td><code>{{ lot.nas_relative_path }}/{{ lot.technique.rip_directory }}/</code></td>
+            <td>
+              <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-rip-lot-detail' lot_public_id=lot.public_id %}">Ouvrir</a>
+            </td>
           </tr>
           {% empty %}
-          <tr><td colspan="4">File vide. Ajoutez des pièces configurées POD.</td></tr>
+          <tr>
+            <td colspan="4">
+              Aucun lot.
+              <a href="{% url 'portal:staff-pod-hub' %}">Cochez des commandes sur À produire</a>
+              pour générer OF et étiquettes.
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <h2 class="font-display text-lg">Lots préparés</h2>
-    <div class="ui-table-shell">
+    <h3 class="font-display text-lg">File en attente</h3>
+    <div class="ui-table-shell mb-8">
       <table class="ui-data-table w-full border-collapse">
         <thead>
-          <tr><th>Code</th><th>Fichiers</th><th>Chemin NAS</th></tr>
+          <tr>
+            <th scope="col">Boutique</th>
+            <th scope="col">Commande</th>
+            <th scope="col">SKU</th>
+            <th scope="col">État</th>
+          </tr>
         </thead>
         <tbody>
-          {% for lot in lots %}
+          {% for item in queue %}
           <tr>
-            <td><a href="{% url 'portal:staff-pod-rip-lot-detail' lot_public_id=lot.public_id %}"><code>{{ lot.code }}</code></a></td>
-            <td>{{ lot.file_count }}</td>
-            <td><code>{{ lot.nas_relative_path }}/{{ lot.technique.rip_directory }}/</code></td>
+            <td>{{ item.store.name }}</td>
+            <td><code>{{ item.shopify_order_number }}</code></td>
+            <td><code>{{ item.variant.sku|default:item.variant.title }}</code></td>
+            <td><span class="badge is-neutral">{{ item.get_status_display }}</span></td>
           </tr>
           {% empty %}
-          <tr><td colspan="3">Aucun lot.</td></tr>
+          <tr>
+            <td colspan="4">
+              File vide.
+              <a href="{% url 'portal:staff-pod-hub' %}">Sélectionnez sur À produire</a>
+              pour un lot ciblé.
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
+    {% if can_manage_catalog %}
+    <details class="mb-8 max-w-3xl">
+      <summary class="font-display text-lg">Ajout manuel (debug / rattrapage)</summary>
+      <form class="ui-form-stack mt-4" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="enqueue">
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div class="ui-field-group">
+            <label class="ui-label" for="rip-variant">Variante</label>
+            <select class="ui-input" id="rip-variant" name="variant_public_id">
+              {% for product in products %}
+                {% for variant in product.variants.all %}
+                <option value="{{ variant.public_id }}">{{ product.store.slug }} — {{ variant.sku|default:variant.title }}</option>
+                {% endfor %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="ui-field-group">
+            <label class="ui-label" for="rip-so">N° commande</label>
+            <input class="ui-input" id="rip-so" name="shopify_order_number" required placeholder="SO-1042">
+          </div>
+          <div class="ui-field-group">
+            <label class="ui-label" for="rip-qty">Qté</label>
+            <input class="ui-input ui-input--qty" id="rip-qty" name="quantity" type="number" min="1" value="1">
+          </div>
+        </div>
+        <div class="ui-form-actions">
+          <button class="ui-btn ui-btn-ghost" type="submit">Ajouter à la file</button>
+        </div>
+      </form>
+    </details>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

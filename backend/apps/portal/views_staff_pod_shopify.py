@@ -53,6 +53,14 @@ class StaffPodShopifyStoresView(StaffPodPermissionMixin, View):
                     store_public_id=request.POST.get("store_public_id"),
                     intent=intent,
                 )
+                if intent == "webhooks":
+                    request.session["pod_shopify_flash"] = (
+                        "Webhooks réinstallés (create, updated, cancelled)."
+                    )
+                elif intent == "sync":
+                    request.session["pod_shopify_flash"] = (
+                        "Catalogue synchronisé et webhooks à jour."
+                    )
         except PermissionDenied:
             raise
         except ValidationError as exc:

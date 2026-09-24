@@ -61,7 +61,7 @@ def test_portal_legacy_views_facade_is_removed():
         (
             "portal:staff-pod-hub",
             {},
-            "apps.portal.views_staff_pod",
+            "apps.portal.views_staff_pod_board",
         ),
         (
             "portal:staff-pod-variant-config",
@@ -186,6 +186,10 @@ def test_portal_routes_resolve_to_specialized_modules(route_name, kwargs, expect
             {"apps.portal.views_common"},
         ),
         (
+            "views_staff_pod_board",
+            {"apps.portal.views_common", "apps.portal.views_staff_pod"},
+        ),
+        (
             "views_staff_pod_catalog",
             {"apps.portal.htmx", "apps.portal.views_common", "apps.portal.views_staff_pod"},
         ),
@@ -237,6 +241,7 @@ def test_portal_modules_keep_expected_internal_import_boundaries(
         ("views_staff_shipping", 215),
         ("views_staff_operations", 400),
         ("views_staff_pod", 290),
+        ("views_staff_pod_board", 160),
         ("views_staff_pod_catalog", 220),
         ("views_staff_pod_rip", 130),
         ("views_staff_pod_ops", 230),

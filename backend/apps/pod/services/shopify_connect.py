@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.signing import BadSignature, TimestampSigner
+from django.db.models import Count
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -61,7 +62,7 @@ class ShopifyConnectService:
             source="pod.shopify",
             action="pod.shopify.permission_rejected",
         )
-        return ShopifyStore.objects.all()
+        return ShopifyStore.objects.annotate(product_count=Count("products"))
 
     def get_store(self, *, actor, store_public_id) -> ShopifyStore:
         store = self.list_stores(actor=actor).filter(public_id=store_public_id).first()
@@ -165,72 +166,165 @@ class ShopifyConnectService:
     def install_webhooks(self, *, store: ShopifyStore) -> None:
         token = decrypt_shopify_token(store.access_token_encrypted)
         address = f"{settings.PUBLIC_BASE_URL}/webhooks/shopify/pod/fulfillment/"
-        payload = {
-            "webhook": {
-                "topic": "orders/create",
-                "address": address,
-                "format": "json",
+        for topic in ("orders/create", "orders/updated", "orders/cancelled"):
+            payload = {
+                "webhook": {
+                    "topic": topic,
+                    "address": address,
+                    "format": "json",
+                }
             }
-        }
-        try:
-            self.http.request(
-                method="POST",
-                url=shopify_admin_url(store.shop_domain, "webhooks.json"),
-                headers={"X-Shopify-Access-Token": token},
-                payload=payload,
-            )
-        except ValidationError as exc:
-            if "422" not in str(exc):
-                raise
+            try:
+                self.http.request(
+                    method="POST",
+                    url=shopify_admin_url(store.shop_domain, "webhooks.json"),
+                    headers={"X-Shopify-Access-Token": token},
+                    payload=payload,
+                )
+            except ValidationError as exc:
+                if "422" not in str(exc):
+                    raise
 
     def import_catalog(self, *, store: ShopifyStore) -> int:
         token = decrypt_shopify_token(store.access_token_encrypted)
-        data = self.http.request(
-            method="GET",
-            url=shopify_admin_url(store.shop_domain, "products.json?limit=50"),
-            headers={"X-Shopify-Access-Token": token},
-        )
         created = 0
-        for product_payload in data.get("products") or []:
-            handle = slugify(
-                str(product_payload.get("handle") or product_payload.get("title") or "produit")
-            )
-            product_external = str(
-                product_payload.get("id") or product_payload.get("admin_graphql_api_id")
-            )[:64]
-            product, _ = ShopifyProduct.objects.get_or_create(
-                store=store,
-                external_id=product_external,
-                defaults={
-                    "title": str(product_payload.get("title") or "Produit Shopify")[:255],
-                    "handle": handle[:255],
-                },
-            )
-            for variant_payload in product_payload.get("variants") or []:
-                variant_external = str(
-                    variant_payload.get("id") or variant_payload.get("admin_graphql_api_id")
-                )[:64]
-                variant, was_created = ShopifyVariant.objects.get_or_create(
-                    product=product,
-                    external_id=variant_external,
-                    defaults={
-                        "title": str(variant_payload.get("title") or "")[:255],
-                        "sku": str(variant_payload.get("sku") or "")[:80],
-                    },
-                )
-                if was_created:
-                    IdsVariantConfig.objects.get_or_create(variant=variant)
-                    created += 1
-                else:
-                    variant.sku = str(variant_payload.get("sku") or variant.sku)[:80]
-                    variant.title = str(variant_payload.get("title") or variant.title)[:255]
-                    variant.save(update_fields=["sku", "title", "updated_at"])
+        for product_payload in self._iter_shopify_products(store=store, token=token):
+            created += self._upsert_product_payload(store=store, product_payload=product_payload)
         record_event(
             action="pod.shopify.catalog_imported",
             target=store,
             metadata={"variants": created, "shop": store.shop_domain},
         )
         return created
+
+    def _iter_shopify_products(self, *, store: ShopifyStore, token: str):
+        since_id = 0
+        while True:
+            data = self.http.request(
+                method="GET",
+                url=shopify_admin_url(
+                    store.shop_domain,
+                    f"products.json?limit=250&since_id={since_id}",
+                ),
+                headers={"X-Shopify-Access-Token": token},
+            )
+            products = data.get("products") or []
+            if not products:
+                break
+            yield from products
+            last_id = products[-1].get("id")
+            try:
+                since_id = int(last_id)
+            except (TypeError, ValueError):
+                break
+            if len(products) < 250:
+                break
+
+    def _upsert_product_payload(self, *, store: ShopifyStore, product_payload: dict) -> int:
+        handle = slugify(
+            str(product_payload.get("handle") or product_payload.get("title") or "produit")
+        )
+        product_external = str(
+            product_payload.get("id") or product_payload.get("admin_graphql_api_id")
+        )[:64]
+        image_map, product_image_url, product_image_id = self._extract_product_images(
+            product_payload
+        )
+        product, _ = ShopifyProduct.objects.get_or_create(
+            store=store,
+            external_id=product_external,
+            defaults={
+                "title": str(product_payload.get("title") or "Produit Shopify")[:255],
+                "handle": handle[:255],
+                "image_url": product_image_url[:512],
+                "image_external_id": product_image_id[:64],
+            },
+        )
+        product.title = str(product_payload.get("title") or product.title)[:255]
+        product.handle = handle[:255]
+        product.image_url = product_image_url[:512]
+        product.image_external_id = product_image_id[:64]
+        product.save(
+            update_fields=["title", "handle", "image_url", "image_external_id", "updated_at"]
+        )
+        created = 0
+        for variant_payload in product_payload.get("variants") or []:
+            variant_external = str(
+                variant_payload.get("id") or variant_payload.get("admin_graphql_api_id")
+            )[:64]
+            variant_image_id, variant_image_url = self._resolve_variant_image(
+                variant_payload,
+                image_map=image_map,
+                fallback_url=product_image_url,
+            )
+            variant, was_created = ShopifyVariant.objects.get_or_create(
+                product=product,
+                external_id=variant_external,
+                defaults={
+                    "title": str(variant_payload.get("title") or "")[:255],
+                    "sku": str(variant_payload.get("sku") or "")[:80],
+                    "option1": str(variant_payload.get("option1") or "")[:120],
+                    "option2": str(variant_payload.get("option2") or "")[:120],
+                    "option3": str(variant_payload.get("option3") or "")[:120],
+                    "image_url": variant_image_url[:512],
+                    "image_external_id": variant_image_id[:64],
+                },
+            )
+            if was_created:
+                IdsVariantConfig.objects.get_or_create(variant=variant)
+                created += 1
+            else:
+                variant.sku = str(variant_payload.get("sku") or variant.sku)[:80]
+                variant.title = str(variant_payload.get("title") or variant.title)[:255]
+                variant.option1 = str(variant_payload.get("option1") or "")[:120]
+                variant.option2 = str(variant_payload.get("option2") or "")[:120]
+                variant.option3 = str(variant_payload.get("option3") or "")[:120]
+                variant.image_url = variant_image_url[:512]
+                variant.image_external_id = variant_image_id[:64]
+                variant.save(
+                    update_fields=[
+                        "sku",
+                        "title",
+                        "option1",
+                        "option2",
+                        "option3",
+                        "image_url",
+                        "image_external_id",
+                        "updated_at",
+                    ]
+                )
+        return created
+
+    @staticmethod
+    def _extract_product_images(product_payload: dict) -> tuple[dict[str, str], str, str]:
+        image_map: dict[str, str] = {}
+        for image in product_payload.get("images") or []:
+            image_id = str(image.get("id") or "").strip()
+            src = str(image.get("src") or "").strip()
+            if image_id and src:
+                image_map[image_id] = src
+        featured = product_payload.get("image") or {}
+        featured_id = str(featured.get("id") or "").strip()
+        featured_src = str(featured.get("src") or "").strip()
+        if featured_id and featured_src:
+            image_map.setdefault(featured_id, featured_src)
+        if not featured_src and image_map:
+            featured_id, featured_src = next(iter(image_map.items()))
+        return image_map, featured_src, featured_id
+
+    @staticmethod
+    def _resolve_variant_image(
+        variant_payload: dict, *, image_map: dict[str, str], fallback_url: str
+    ) -> tuple[str, str]:
+        image_id = str(variant_payload.get("image_id") or "").strip()
+        if image_id and image_id in image_map:
+            return image_id, image_map[image_id]
+        nested = variant_payload.get("image") or {}
+        nested_src = str(nested.get("src") or "").strip()
+        nested_id = str(nested.get("id") or image_id or "").strip()
+        if nested_src:
+            return nested_id, nested_src
+        return "", fallback_url
 
     def run_store_action(self, *, actor, store_public_id, intent: str) -> ShopifyStore:
         require_staff_perm(
@@ -246,13 +340,33 @@ class ShopifyConnectService:
             self.import_catalog(store=store)
         elif intent == "webhooks":
             self.install_webhooks(store=store)
+        elif intent == "sync":
+            self.install_webhooks(store=store)
+            self.import_catalog(store=store)
         else:
             raise ValidationError("Action boutique inconnue.")
         return store
 
     def _after_token(self, *, store: ShopifyStore) -> None:
+        self._remember_shop_name(store)
         self.install_webhooks(store=store)
         self.import_catalog(store=store)
+
+    def _remember_shop_name(self, store: ShopifyStore) -> None:
+        token = decrypt_shopify_token(store.access_token_encrypted)
+        try:
+            data = self.http.request(
+                method="GET",
+                url=shopify_admin_url(store.shop_domain, "shop.json"),
+                headers={"X-Shopify-Access-Token": token},
+            )
+        except ValidationError:
+            return
+        name = str((data.get("shop") or {}).get("name") or "").strip()
+        if not name or name == store.name:
+            return
+        store.name = name[:160]
+        store.save(update_fields=["name", "updated_at"])
 
     def _persist_token(
         self, *, shop: str, token: str, scopes: str, source: str, name: str = ""
