@@ -96,6 +96,7 @@ class ExternalOrderService:
         external_url,
         meterage_linear_m=None,
         external_visual_count=1,
+        support_color_hex: str = "",
         customer_note: str = "",
         shipping_method_code: str | None = None,
         source: str = "staff_portal",
@@ -118,6 +119,7 @@ class ExternalOrderService:
             shipping_method_code=shipping_method_code,
             meterage=meterage,
             external_visual_count=normalize_external_visual_count(external_visual_count),
+            support_color_hex=support_color_hex,
             membership=None,
             source=source,
             assign_business_number=True,
@@ -160,10 +162,17 @@ class ExternalOrderService:
         membership,
         source,
         external_visual_count=1,
+        support_color_hex: str = "",
         assign_business_number: bool = False,
     ) -> Order:
+        from django.conf import settings
+
+        from apps.uploads.services.drive import OrderDriveFolderService
+        from apps.uploads.services.uploads import OrderUploadService
+
         cleaned_name = self._name(name)
         cleaned_url = self.validate_external_url(external_url)
+        support_color = OrderUploadService()._normalize_support_color(support_color_hex)
         billing_mode = OrderService._resolve_b2b_billing_mode_for_customer(
             customer=customer,
             billing_mode=None,
@@ -201,6 +210,7 @@ class ExternalOrderService:
                 mime_type="",
                 size_bytes=0,
                 sort_order=1,
+                support_color_hex=support_color,
             )
             order.status = Order.Status.SUBMITTED
             order.save(update_fields=["status", "updated_at"])
@@ -224,6 +234,15 @@ class ExternalOrderService:
             from apps.production.services.workflow import ProductionWorkflowService
 
             ProductionWorkflowService().get_or_create_for_order(order=order)
+
+            # Dossier commande (comme B2B / upload fichier) — sans sync du lien externe.
+            if settings.GOOGLE_DRIVE_SYNC_ENABLED:
+                OrderDriveFolderService().ensure_order_folder(
+                    order=order,
+                    actor=actor,
+                    source=source,
+                )
+
             metadata = {
                 "customer_public_id": str(customer.public_id),
                 "order_public_id": str(order.public_id),
@@ -232,6 +251,7 @@ class ExternalOrderService:
                 "source": source,
                 "meterage_linear_m": str(meterage) if meterage is not None else None,
                 "external_visual_count": external_visual_count,
+                "support_color_hex": support_color or None,
                 "shipping_method_code": str(shipping["shipping_method_code"]),
             }
             if membership is not None:

@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django import forms
+from django.core.exceptions import ValidationError
 
 from apps.customers.models import Customer
 from apps.orders.services.external_orders import ExternalOrderService
@@ -87,12 +88,27 @@ class StaffExternalOrderForm(ExternalOrderForm):
         initial=1,
         help_text="Visuels distincts dans le lien, pour calculer les frais de préparation.",
     )
+    support_color_hex = forms.CharField(
+        label="Couleur du support",
+        required=False,
+        max_length=11,
+        initial="#ffffff",
+        help_text="Indicatif pour l’atelier, comme sur une commande par fichier.",
+        widget=forms.TextInput(attrs={"type": "color"}),
+    )
+    support_color_multicolor = forms.BooleanField(
+        label="Support multicolore",
+        required=False,
+        help_text="Cochez si plusieurs couleurs de support (à la place d’une teinte unique).",
+    )
     field_order = [
         "customer",
         "name",
         "external_url",
         "shipping_method_code",
         "external_visual_count",
+        "support_color_hex",
+        "support_color_multicolor",
         "meterage_linear_m",
         "customer_note",
     ]
@@ -112,6 +128,12 @@ class StaffExternalOrderForm(ExternalOrderForm):
                 methods[0].code,
             )
             self.fields["shipping_method_code"].initial = default_code
+        # Checkbox : pas la classe ui-input pleine largeur.
+        self.fields["support_color_multicolor"].widget.attrs.pop("class", None)
+        self.fields["support_color_hex"].widget.attrs["class"] = (
+            "h-10 w-14 cursor-pointer rounded-[var(--radius-sm)] "
+            "border border-[color-mix(in_srgb,var(--line)_80%,transparent)] p-1"
+        )
 
     def clean(self):
         cleaned = super().clean()
@@ -123,4 +145,16 @@ class StaffExternalOrderForm(ExternalOrderForm):
                 shipping_method_code=code or None,
             )
             cleaned["shipping_method_code"] = method.code
+        if cleaned.get("support_color_multicolor"):
+            cleaned["support_color_hex"] = "#multicolor"
+        else:
+            from apps.uploads.services.uploads import OrderUploadService
+
+            try:
+                cleaned["support_color_hex"] = OrderUploadService()._normalize_support_color(
+                    cleaned.get("support_color_hex") or ""
+                )
+            except ValidationError as error:
+                self.add_error("support_color_hex", error)
+        cleaned.pop("support_color_multicolor", None)
         return cleaned

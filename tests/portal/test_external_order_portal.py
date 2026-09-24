@@ -215,6 +215,8 @@ def test_staff_creates_priced_order_for_customer_without_impersonation(scope):
     assert f'value="{customer.public_id}"' in form.content.decode()
     assert 'name="external_visual_count"' in form.content.decode()
     assert 'name="shipping_method_code"' in form.content.decode()
+    assert 'name="support_color_hex"' in form.content.decode()
+    assert 'name="support_color_multicolor"' in form.content.decode()
     response = admin.post(
         url,
         payload(
@@ -222,6 +224,7 @@ def test_staff_creates_priced_order_for_customer_without_impersonation(scope):
             meterage_linear_m="2.5",
             external_visual_count="3",
             shipping_method_code="standard",
+            support_color_hex="#112233",
         ),
     )
     assert response.status_code == 302
@@ -231,6 +234,7 @@ def test_staff_creates_priced_order_for_customer_without_impersonation(scope):
     assert order.meterage_override_linear_m == Decimal("2.5")
     assert order.shipping_method_code == "standard"
     assert order.uploads.get().external_visual_count == 3
+    assert order.uploads.get().support_color_hex == "#112233"
     assert order.items.get(service_type="file_preparation").quantity == 3
     from apps.orders.references import order_business_number
 

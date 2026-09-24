@@ -377,3 +377,55 @@ def test_frozen_meterage_empty_confirm_is_noop_when_already_resolved():
         OrderUploadService().set_staff_order_meterage_linear_override(
             order=order, actor=actor, raw_value="4", external_visual_count=None
         )
+
+
+@pytest.mark.django_db
+def test_staff_creation_stores_support_color_without_drive_sync_record():
+    _, customer = client_scope()
+    actor = staff_user()
+    order = ExternalOrderService().create_staff_order(
+        customer=customer,
+        actor=actor,
+        name="Visuel couleur",
+        external_url="https://files.example.com/a",
+        support_color_hex="#AABBCC",
+        shipping_method_code="standard",
+    )
+    upload = order.uploads.get()
+    assert upload.support_color_hex == "#aabbcc"
+    assert not OrderUploadDriveSync.objects.filter(order_upload=upload).exists()
+
+
+@pytest.mark.django_db
+def test_staff_creation_ensures_drive_folder_when_sync_enabled(monkeypatch):
+    from types import SimpleNamespace
+
+    from django.test import override_settings
+
+    _, customer = client_scope()
+    actor = staff_user()
+    created = {}
+
+    class FakeFolderService:
+        def ensure_order_folder(self, *, order, actor=None, source="system"):
+            created["order_id"] = order.pk
+            created["source"] = source
+            created["actor_id"] = getattr(actor, "pk", None)
+            return SimpleNamespace(order_folder_id="folder-1", relative_path="Commandes/2026/x")
+
+    monkeypatch.setattr(
+        "apps.uploads.services.drive.OrderDriveFolderService",
+        FakeFolderService,
+    )
+    with override_settings(GOOGLE_DRIVE_SYNC_ENABLED=True):
+        order = ExternalOrderService().create_staff_order(
+            customer=customer,
+            actor=actor,
+            name="Dossier Drive",
+            external_url="https://files.example.com/a",
+            shipping_method_code="standard",
+        )
+    assert created["order_id"] == order.pk
+    assert created["source"] == "staff_portal"
+    assert created["actor_id"] == actor.pk
+    assert not OrderUploadDriveSync.objects.filter(order_upload__order=order).exists()
