@@ -1998,3 +1998,9 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell.product-
   border-color: var(--danger) !important;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 28%, transparent) !important;
 }
+
+.ui-input.ui-input--qty {
+  width: 5.5rem;
+  max-width: 5.5rem;
+  flex: 0 0 5.5rem;
+}

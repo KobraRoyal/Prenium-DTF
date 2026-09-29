@@ -20,14 +20,12 @@ workshop_notification_service = WorkshopNotificationService()
 
 
 class StaffWorkshopPushPermissionMixin(StaffPortalMixin):
-    required_permissions = (
-        "orders.view_order",
-        "production.view_productionjob",
-    )
+    order_permissions = ("orders.view_order", "production.view_productionjob")
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated and any(
-            not request.user.has_perm(permission) for permission in self.required_permissions
+        if request.user.is_authenticated and not (
+            all(request.user.has_perm(permission) for permission in self.order_permissions)
+            or request.user.has_perm("pod.access_pod_atelier")
         ):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
@@ -138,6 +136,7 @@ class StaffPushNotificationEventsView(StaffWorkshopPushPermissionMixin, View):
                     {
                         "public_id": item.public_id,
                         "created_at": item.created_at,
+                        "event_type": item.event_type,
                     }
                     for item in page.events
                 ],

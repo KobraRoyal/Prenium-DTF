@@ -267,6 +267,7 @@ class UiFoundationSourceTests(SimpleTestCase):
             "perms.notifications.view_emailtemplate",
             "perms.customers.manage_customer_pricing",
             "perms.gang_sheets.configure_gangsheet",
+            "perms.pod.access_pod_atelier",
             "perms.billing.view_paymentgatewaysettings",
         ]:
             with self.subTest(permission_contract=permission_contract):

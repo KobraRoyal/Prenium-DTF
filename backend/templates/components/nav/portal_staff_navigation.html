@@ -4,6 +4,9 @@
   {% if perms.orders.view_order and perms.production.view_productionjob and perms.production.scan_productionjob %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-operations' %}is-active{% endif %}" {% if nav_key == 'staff-operations' %}aria-current="page"{% endif %} href="{% url 'portal:staff-atelier-operations' %}">Pilotage</a>
   {% endif %}
+  {% if perms.pod.access_pod_atelier %}
+  <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-pod' %}is-active{% endif %}" {% if nav_key == 'staff-pod' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-hub' %}">POD</a>
+  {% endif %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes</a>
   {% if perms.customers.view_customer %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-customers' %}is-active{% endif %}" {% if nav_key == 'staff-customers' %}aria-current="page"{% endif %} href="{% url 'portal:staff-customer-list' %}">Comptes</a>
@@ -13,16 +16,7 @@
 {% if perms.production.view_productionmachine or perms.prospects.view_prospectprofile or perms.notifications.view_emailtemplate or perms.customers.manage_customer_pricing or perms.gang_sheets.configure_gangsheet or perms.billing.view_paymentgatewaysettings %}
 <details class="product-nav__more" data-product-nav-details>
   <summary class="product-nav__more-trigger {% if nav_key == 'staff-machines' or nav_key == 'staff-access-requests' or nav_key == 'staff-email-templates' or nav_key == 'staff-default-volume-discounts' or nav_key == 'staff-default-catalog-pricing' or nav_key == 'staff-gang-sheet-settings' or nav_key == 'staff-payment-settings' %}is-active{% endif %}">
-    <span>
-      {% if nav_key == 'staff-machines' %}Parc machine
-      {% elif nav_key == 'staff-access-requests' %}Demandes d’accès
-      {% elif nav_key == 'staff-email-templates' %}E-mails
-      {% elif nav_key == 'staff-default-volume-discounts' %}Remises par défaut
-      {% elif nav_key == 'staff-default-catalog-pricing' %}Grille tarifaire
-      {% elif nav_key == 'staff-gang-sheet-settings' %}Réglages de laize
-      {% elif nav_key == 'staff-payment-settings' %}Paiements en ligne
-      {% else %}Réglages{% endif %}
-    </span>
+    <span>Réglages Atelier</span>
     <span class="product-nav__chevron" aria-hidden="true"></span>
   </summary>
   <div class="product-nav__more-menu" aria-label="Réglages Atelier">

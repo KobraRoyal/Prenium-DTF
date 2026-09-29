@@ -67,6 +67,7 @@ _ADMIN_PERMISSIONS = (
     "billing.change_paymentgatewaysettings",
     "pod.access_pod_atelier",
     "pod.manage_pod_catalog",
+    "pod.operate_pod_production",
     "inventory.manage_warehouse",
 )
 

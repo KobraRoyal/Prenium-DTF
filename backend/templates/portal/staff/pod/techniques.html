@@ -1,0 +1,90 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Techniques POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Techniques" title="Techniques d’impression" subtitle="Chaque technique a son répertoire plat d’export RIP (02_rip, 02_embroidery…)." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section">
+    {% include "portal/staff/pod/_form_error.html" %}
+
+    {% if can_manage_catalog %}
+    <details class="pod-editor" id="pod-create" {% if form_error and submitted_intent != "update" %}open{% endif %}>
+    <summary>Créer une technique</summary>
+    <form data-inline-required data-submit-loading class="ui-form-stack mb-8 max-w-xl" method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="create">
+      <h2 class="font-display text-lg">Nouvelle technique</h2>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="ui-field-group">
+          <label class="ui-label" for="technique-code">Code</label>
+          <input class="ui-input" id="technique-code" name="code" value="{{ form_data.code }}" required placeholder="dtf">
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="technique-name">Nom</label>
+          <input class="ui-input" id="technique-name" name="name" value="{% if submitted_intent != 'update' %}{{ form_data.name }}{% endif %}" required placeholder="DTF">
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="technique-rip">Répertoire RIP</label>
+          <input class="ui-input" id="technique-rip" name="rip_directory" value="{{ form_data.rip_directory|default:'02_rip' }}">
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="technique-ext">Extension</label>
+          <select class="ui-input" id="technique-ext" name="export_extension">
+            <option value=".png">PNG validé</option>
+          </select>
+          <p class="ui-field-help">Les autres formats nécessitent une validation de sécurité dédiée.</p>
+        </div>
+      </div>
+      {% include "portal/staff/pod/_editor_actions.html" with submit_label="Créer une technique" %}
+    </form>
+    </details>
+    {% endif %}
+
+    {% include "portal/staff/pod/_list_toolbar.html" with heading="Techniques" count=page_obj.paginator.count searchable=True %}
+    <div class="ui-table-shell" role="region" aria-label="Techniques" tabindex="0">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr><th scope="col">Code</th><th scope="col">Nom</th><th scope="col">RIP</th><th scope="col">Export</th><th scope="col">État</th><th scope="col">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for technique in techniques %}
+          <tr>
+            <td><code>{{ technique.code }}</code></td>
+            <td>{{ technique.name }}</td>
+            <td><code>{{ technique.rip_directory }}</code></td>
+            <td>{{ technique.export_extension }}</td>
+            <td>{% if technique.is_active %}<span class="badge is-success">Active</span>{% else %}<span class="badge is-neutral">Inactive</span>{% endif %}</td>
+            <td>
+              <details class="pod-editor pod-editor--row" {% if form_error and form_data.technique_public_id == technique.public_id|stringformat:"s" %}open{% endif %}>
+                <summary aria-label="Modifier la technique {{ technique.name }}">Modifier</summary>
+                <form data-inline-required data-submit-loading method="post" class="ui-form-stack" novalidate>
+                  {% csrf_token %}
+                  <input type="hidden" name="intent" value="update">
+                  <input type="hidden" name="technique_public_id" value="{{ technique.public_id }}">
+                  <div class="ui-field-group">
+                    <label class="ui-label" for="technique-name-{{ technique.public_id }}">Nom</label>
+                    <input class="ui-input" id="technique-name-{{ technique.public_id }}" name="name" value="{% if form_error and form_data.technique_public_id == technique.public_id|stringformat:'s' %}{{ form_data.name }}{% else %}{{ technique.name }}{% endif %}" required maxlength="120">
+                  </div>
+                  <p class="ui-field-help">Le code et le chemin RIP restent fixes pour préserver les lots.</p>
+                  {% if form_error and form_data.technique_public_id == technique.public_id|stringformat:"s" %}
+                    {% include "portal/staff/pod/_active_field.html" with field_id=technique.public_id active=form_data.is_active %}
+                  {% else %}
+                    {% include "portal/staff/pod/_active_field.html" with field_id=technique.public_id active=technique.is_active %}
+                  {% endif %}
+                  {% include "portal/staff/pod/_editor_actions.html" %}
+                </form>
+              </details>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">{% if search_query %}Aucune technique ne correspond à cette recherche. <a href="{{ request.path }}">Effacer la recherche</a>.{% else %}Aucune technique. Ouvrez « Créer une technique » pour définir le premier export RIP.{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "components/portal/pagination.html" %}
+  </section>
+</div>
+{% endblock %}

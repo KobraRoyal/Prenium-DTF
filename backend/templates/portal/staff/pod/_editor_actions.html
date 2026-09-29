@@ -1,0 +1,4 @@
+<div class="ui-form-actions pod-editor-actions">
+  <button class="ui-btn ui-btn-primary" type="submit" {% if submit_disabled %}disabled{% endif %}>{{ submit_label|default:"Enregistrer les modifications" }}</button>
+  <button class="ui-btn ui-btn-ghost" type="button" x-data @click="$el.closest('details').open = false">Fermer sans enregistrer</button>
+</div>

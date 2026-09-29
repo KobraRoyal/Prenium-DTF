@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import F, Q
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import StaffMembership
@@ -67,10 +68,11 @@ class WorkshopEventPage:
 class WorkshopNotificationService:
     """Own workshop subscriptions, events and reliable Web Push delivery."""
 
-    required_permissions = (
+    order_required_permissions = (
         "orders.view_order",
         "production.view_productionjob",
     )
+    pod_required_permission = "pod.access_pod_atelier"
 
     def __init__(
         self,
@@ -126,7 +128,7 @@ class WorkshopNotificationService:
         digest = crypto.endpoint_digest(endpoint)
         now = timezone.now()
         membership = StaffMembership.objects.select_for_update().get(pk=membership.pk)
-        if not membership.is_active or not self._has_required_permissions(actor):
+        if not membership.is_active or not self._has_workshop_access(actor):
             raise PermissionDenied("Workshop notification access denied")
         existing = (
             StaffPushSubscription.objects.select_for_update().filter(endpoint_digest=digest).first()
@@ -280,9 +282,18 @@ class WorkshopNotificationService:
     ) -> WorkshopEventPage:
         self._require_workshop_access(actor)
         safe_limit = max(1, min(limit, settings.WEB_PUSH_POLL_MAX_EVENTS))
-        queryset = WorkshopNotificationEvent.objects.order_by("created_at", "id")
+        candidate_limit = min(safe_limit * 5, 100)
+        queryset = (
+            WorkshopNotificationEvent.objects.filter(event_type__in=self._event_types_for(actor))
+            .select_related("pod_order__customer", "pod_order__store__customer")
+            .order_by("created_at", "id")
+        )
         if not cursor:
-            latest = WorkshopNotificationEvent.objects.order_by("-created_at", "-id").first()
+            candidates = list(queryset.order_by("-created_at", "-id")[:candidate_limit])
+            latest = next(
+                (event for event in candidates if self._event_is_current(event)),
+                None,
+            )
             summaries = (
                 (
                     WorkshopEventSummary(
@@ -296,15 +307,27 @@ class WorkshopNotificationService:
             )
             return WorkshopEventPage(
                 events=summaries,
-                cursor=str(latest.public_id) if latest else None,
+                cursor=(
+                    str(latest.public_id)
+                    if latest
+                    else (str(candidates[0].public_id) if candidates else None)
+                ),
             )
-        anchor = WorkshopNotificationEvent.objects.filter(public_id=cursor).first()
+        anchor = queryset.filter(public_id=cursor).first()
         if anchor is None:
             raise ValidationError("Unknown workshop event cursor")
         queryset = queryset.filter(
             Q(created_at__gt=anchor.created_at) | Q(created_at=anchor.created_at, id__gt=anchor.id)
         )
-        events = list(queryset[:safe_limit])
+        candidates = list(queryset[:candidate_limit])
+        events = []
+        last_scanned = None
+        for event in candidates:
+            last_scanned = event
+            if self._event_is_current(event):
+                events.append(event)
+                if len(events) == safe_limit:
+                    break
         summaries = tuple(
             WorkshopEventSummary(
                 public_id=str(event.public_id),
@@ -313,7 +336,7 @@ class WorkshopNotificationService:
             )
             for event in events
         )
-        next_cursor = str(events[-1].public_id) if events else (str(cursor) if cursor else None)
+        next_cursor = str(last_scanned.public_id) if last_scanned else str(cursor)
         return WorkshopEventPage(events=summaries, cursor=next_cursor)
 
     @transaction.atomic
@@ -357,12 +380,67 @@ class WorkshopNotificationService:
         return event
 
     @transaction.atomic
+    def publish_pod_order_qc_ready(
+        self, *, pod_order, check, actor, source: str
+    ) -> WorkshopNotificationEvent | None:
+        from apps.pod.models import PodQualityCheck, PodShopifyOrder, ShopifyStore
+        from apps.pod.services.qc import is_pod_order_qc_ready
+
+        ShopifyStore.objects.select_for_update(of=("self",)).get(pk=pod_order.store_id)
+        locked_order = (
+            PodShopifyOrder.objects.select_for_update(of=("self",))
+            .select_related("customer", "store__customer")
+            .get(pk=pod_order.pk)
+        )
+        if not is_pod_order_qc_ready(locked_order):
+            return None
+        locked_check = (
+            PodQualityCheck.objects.select_for_update(of=("self",))
+            .select_related("unit__work_item")
+            .get(pk=check.pk)
+        )
+        if (
+            locked_check.result != PodQualityCheck.Result.PASS
+            or locked_check.unit.work_item.shopify_order_id != locked_order.pk
+        ):
+            raise ValidationError("POD ready check does not match its order")
+        event, created = WorkshopNotificationEvent.objects.get_or_create(
+            event_type=WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY,
+            pod_ready_check=locked_check,
+            defaults={
+                "customer": locked_order.customer,
+                "pod_order": locked_order,
+                "actor": actor if getattr(actor, "is_authenticated", False) else None,
+                "source": self._safe_source(source),
+            },
+        )
+        if event.customer_id != locked_order.customer_id:
+            raise ValidationError("Workshop event tenant does not match its POD order")
+        if created:
+            record_event(
+                action=WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY,
+                actor=actor if getattr(actor, "is_authenticated", False) else None,
+                target=event,
+                metadata={
+                    "customer_public_id": str(locked_order.customer.public_id),
+                    "pod_order_public_id": str(locked_order.public_id),
+                    "source": self._safe_source(source),
+                },
+            )
+            if settings.WEB_PUSH_ENABLED:
+                event_public_id = str(event.public_id)
+                transaction.on_commit(lambda: self._schedule_fanout(event_public_id))
+        return event
+
+    @transaction.atomic
     def fanout(self, *, event_public_id: UUID | str) -> int:
         if not settings.WEB_PUSH_ENABLED:
             return 0
         self._require_enabled_configuration()
         event = WorkshopNotificationEvent.objects.filter(public_id=event_public_id).first()
         if event is None:
+            return 0
+        if not self._event_is_current(event):
             return 0
         now = timezone.now()
         subscriptions = list(
@@ -378,7 +456,7 @@ class WorkshopNotificationService:
         eligible = [
             item
             for item in subscriptions
-            if self._has_required_permissions(item.staff_membership.user)
+            if self._can_receive_event(item.staff_membership.user, event.event_type)
         ]
         existing_ids = set(
             PushDelivery.objects.filter(event=event, subscription__in=eligible).values_list(
@@ -409,6 +487,13 @@ class WorkshopNotificationService:
             return PushDelivery.Status.SKIPPED
         subscription = delivery.subscription
         user = subscription.staff_membership.user
+        if not self._event_is_current(delivery.event):
+            self._finish_delivery(
+                delivery,
+                status=PushDelivery.Status.SKIPPED,
+                code="event_obsolete",
+            )
+            return PushDelivery.Status.SKIPPED
         if not subscription.is_active or (
             subscription.expires_at and subscription.expires_at <= timezone.now()
         ):
@@ -418,7 +503,9 @@ class WorkshopNotificationService:
                 code="subscription_inactive",
             )
             return PushDelivery.Status.SKIPPED
-        if not subscription.staff_membership.is_active or not self._has_required_permissions(user):
+        if not subscription.staff_membership.is_active or not self._can_receive_event(
+            user, delivery.event.event_type
+        ):
             self._finish_delivery(
                 delivery, status=PushDelivery.Status.SKIPPED, code="access_revoked"
             )
@@ -429,13 +516,7 @@ class WorkshopNotificationService:
                 endpoint=crypto.decrypt(subscription.endpoint_ciphertext),
                 p256dh=crypto.decrypt(subscription.p256dh_ciphertext),
                 auth=crypto.decrypt(subscription.auth_ciphertext),
-                payload={
-                    "title": "Nouvelle commande Atelier",
-                    "body": "Une nouvelle commande est disponible.",
-                    "tag": f"workshop-{delivery.event.public_id}",
-                    "url": "/staff/",
-                    "event_public_id": str(delivery.event.public_id),
-                },
+                payload=self._payload_for_event(delivery.event),
             )
         except WebPushGone as exc:
             self._disable_gone_subscription(subscription, code=exc.code)
@@ -609,15 +690,76 @@ class WorkshopNotificationService:
 
     def _require_workshop_access(self, actor) -> StaffMembership:
         membership = self.access_service.get_staff_membership(actor)
-        if membership is None or not self._has_required_permissions(actor):
+        if membership is None or not self._has_workshop_access(actor):
             raise PermissionDenied("Workshop notification access denied")
         return membership
 
-    def _has_required_permissions(self, user) -> bool:
+    def _has_workshop_access(self, user) -> bool:
         return bool(
             self.access_service.can_access_staff_portal(user)
-            and all(user.has_perm(permission) for permission in self.required_permissions)
+            and (
+                all(user.has_perm(permission) for permission in self.order_required_permissions)
+                or user.has_perm(self.pod_required_permission)
+            )
         )
+
+    def _can_receive_event(self, user, event_type: str) -> bool:
+        if not self.access_service.can_access_staff_portal(user):
+            return False
+        if event_type == WorkshopNotificationEvent.EventType.ORDER_SUBMITTED:
+            return all(user.has_perm(permission) for permission in self.order_required_permissions)
+        if event_type == WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY:
+            return user.has_perm(self.pod_required_permission)
+        return False
+
+    @staticmethod
+    def _event_is_current(event: WorkshopNotificationEvent) -> bool:
+        if event.event_type != WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY:
+            return True
+        if event.pod_order_id is None or event.customer_id != event.pod_order.customer_id:
+            return False
+        latest_event_id = (
+            WorkshopNotificationEvent.objects.filter(
+                event_type=WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY,
+                pod_order_id=event.pod_order_id,
+            )
+            .order_by("-created_at", "-id")
+            .values_list("id", flat=True)
+            .first()
+        )
+        if latest_event_id != event.id:
+            return False
+        from apps.pod.services.qc import is_pod_order_qc_ready
+
+        return is_pod_order_qc_ready(event.pod_order)
+
+    def _event_types_for(self, user) -> tuple[str, ...]:
+        return tuple(
+            event_type
+            for event_type in WorkshopNotificationEvent.EventType.values
+            if self._can_receive_event(user, event_type)
+        )
+
+    @staticmethod
+    def _payload_for_event(event: WorkshopNotificationEvent) -> dict[str, str]:
+        common = {
+            "tag": f"workshop-{event.public_id}",
+            "event_public_id": str(event.public_id),
+            "event_type": event.event_type,
+        }
+        if event.event_type == WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY:
+            return {
+                "title": "Production POD terminée",
+                "body": "Toutes les pièces POD ont passé le QC.",
+                "url": reverse("portal:staff-pod-qc"),
+                **common,
+            }
+        return {
+            "title": "Nouvelle commande Atelier",
+            "body": "Une nouvelle commande est disponible.",
+            "url": "/staff/",
+            **common,
+        }
 
     def _configuration_is_valid(self) -> bool:
         if not settings.WEB_PUSH_ENABLED:

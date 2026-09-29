@@ -1,0 +1,205 @@
+{% extends "portal/layout.html" %}
+{% load static portal_tags %}
+
+{% block title %}Contrôle qualité — Atelier POD{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" breadcrumb_actions_template="portal/staff/partials/push_notification_controls.html" current_label="Contrôle qualité" title="Contrôle qualité" subtitle="Scannez une pièce posée, contrôlez-la, puis consignez la décision." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+
+  <section class="portal-page-surface ui-list-section" aria-labelledby="pod-qc-title">
+    <h2 id="pod-qc-title" class="sr-only">Poste de contrôle qualité</h2>
+
+    {% if outcome == "passed" %}<p class="alert alert--success" role="status">Contrôle validé. Si toutes les pièces POD de la commande sont conformes, l’atelier reçoit un avis de fin de production.</p>{% endif %}
+    {% if outcome == "failed" %}<p class="alert alert--warning" role="status">Refus enregistré. La pièce reste bloquée jusqu’à sa reprise.</p>{% endif %}
+    {% if outcome == "reopened" %}<p class="alert alert--success" role="status">Pièce remise en contrôle après correction.</p>{% endif %}
+    {% if form_error %}<p class="alert alert--danger" id="pod-qc-form-error" role="alert">{{ form_error }}</p>{% endif %}
+
+    <form data-inline-required data-submit-loading class="ui-form-stack max-w-xl" method="post" novalidate aria-labelledby="pod-qc-scan-label">
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="lookup">
+      <div class="ui-field-group">
+        <label class="ui-label" id="pod-qc-scan-label" for="qc-scan-id">Identifiant pièce</label>
+        <input
+          class="ui-input"
+          id="qc-scan-id"
+          name="scan_identifier"
+          value="{{ scan_identifier }}"
+          required
+          placeholder="POD-…"
+          autocomplete="off"
+          autofocus
+          aria-describedby="qc-scan-help{% if form_error and not lookup %} pod-qc-form-error{% endif %}"
+          {% if form_error and not lookup %}aria-invalid="true"{% endif %}
+        >
+        <p class="ui-field-help" id="qc-scan-help">Scannez l’étiquette de la pièce après la pose.</p>
+      </div>
+      <div class="ui-form-actions">
+        <button class="ui-btn {% if lookup %}ui-btn-ghost{% else %}ui-btn-primary{% endif %}" type="submit">{% if lookup %}Rescanner{% else %}Afficher la pièce{% endif %}</button>
+      </div>
+    </form>
+
+    {% if lookup %}
+    <article class="pod-focus-panel mt-6" aria-label="Pièce à contrôler" tabindex="-1" id="pod-qc-result">
+      <p class="mb-0"><span class="badge {% if lookup.unit.status == 'qc_passed' %}is-success{% elif lookup.unit.status == 'qc_failed' %}is-danger{% else %}is-warning{% endif %}">{{ lookup.unit.get_status_display }}</span></p>
+      <p class="pod-focus-panel__scan"><code>{{ lookup.unit.scan_identifier }}</code></p>
+      <dl class="pod-focus-panel__facts">
+        <div>
+          <dt>Commande</dt>
+          <dd><code>{{ lookup.unit.work_item.shopify_order_number }}</code></dd>
+        </div>
+        <div>
+          <dt>Pièce</dt>
+          <dd>{{ lookup.unit.variant.sku|default:lookup.unit.variant.title }}</dd>
+        </div>
+        <div>
+          <dt>Boutique</dt>
+          <dd>{{ lookup.unit.work_item.store.name }}</dd>
+        </div>
+      </dl>
+
+      {% if can_manage_qc and lookup.unit.status == "pressed" %}
+      <div class="grid gap-6 lg:grid-cols-2">
+        <section aria-labelledby="pod-qc-pass-title">
+          <h3 id="pod-qc-pass-title" class="font-display text-lg mt-0">Valider le contrôle</h3>
+          <p class="muted">Confirmez seulement après inspection de la pièce complète.</p>
+          <form method="post" class="ui-form-stack" @submit="submitting = true" x-data="{ submitting: false }">
+            {% csrf_token %}
+            <input type="hidden" name="intent" value="decide">
+            <input type="hidden" name="decision" value="pass">
+            <input type="hidden" name="scan_identifier" value="{{ lookup.unit.scan_identifier }}">
+            <div class="ui-field-group">
+              <label class="ui-label" for="qc-pass-note">Note de contrôle <span class="muted">(facultatif)</span></label>
+              <textarea class="ui-input" id="qc-pass-note" name="note" rows="3">{{ submitted_note }}</textarea>
+            </div>
+            <div class="ui-form-actions">
+              <button class="ui-btn ui-btn-primary" type="submit" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Validation…' : 'Valider le QC'">Valider le QC</button>
+            </div>
+          </form>
+        </section>
+
+        <section aria-labelledby="pod-qc-fail-title">
+          <h3 id="pod-qc-fail-title" class="font-display text-lg mt-0">Refuser la pièce</h3>
+          <form method="post" class="ui-form-stack" novalidate @submit="submitting = true" x-data="{ submitting: false }">
+            {% csrf_token %}
+            <input type="hidden" name="intent" value="decide">
+            <input type="hidden" name="decision" value="fail">
+            <input type="hidden" name="scan_identifier" value="{{ lookup.unit.scan_identifier }}">
+            <div class="ui-field-group">
+              <label class="ui-label" for="qc-defect-code">Motif du refus</label>
+              <input
+                class="ui-input"
+                id="qc-defect-code"
+                name="defect_code"
+                value="{{ submitted_defect_code }}"
+                required
+                maxlength="80"
+                placeholder="Ex. défaut de pose"
+                aria-describedby="qc-defect-help{% if form_error and submitted_decision == 'fail' %} pod-qc-form-error{% endif %}"
+                {% if form_error and submitted_decision == 'fail' %}aria-invalid="true"{% endif %}
+              >
+              <p class="ui-field-help" id="qc-defect-help">Obligatoire — décrivez le défaut de façon actionnable pour la correction.</p>
+            </div>
+            <div class="ui-field-group">
+              <label class="ui-label" for="qc-fail-note">Précisions <span class="muted">(facultatif)</span></label>
+              <textarea class="ui-input" id="qc-fail-note" name="note" rows="3">{{ submitted_note }}</textarea>
+            </div>
+            <div class="ui-form-actions">
+              <button class="ui-btn ui-btn-danger" type="submit" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Enregistrement…' : 'Refuser la pièce'">Refuser la pièce</button>
+            </div>
+          </form>
+        </section>
+      </div>
+      {% elif can_manage_qc and lookup.unit.status == "qc_failed" %}
+      <form method="post" class="ui-form-stack max-w-xl" @submit="submitting = true" x-data="{ submitting: false }">
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="reopen">
+        <input type="hidden" name="scan_identifier" value="{{ lookup.unit.scan_identifier }}">
+        <p class="alert alert--warning" role="status">Pièce bloquée après refus. Utilisez cette action uniquement quand la correction est terminée.</p>
+        <div class="ui-form-actions">
+          <button class="ui-btn ui-btn-secondary" type="submit" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Réouverture…' : 'Reprendre après correction'">Reprendre après correction</button>
+        </div>
+      </form>
+      {% elif not can_manage_qc %}
+      <p class="muted" role="status">Consultation seule — la validation, le refus et la reprise nécessitent le droit de production atelier.</p>
+      {% endif %}
+
+      <section class="mt-8" aria-labelledby="pod-qc-history-title">
+        <h3 id="pod-qc-history-title" class="font-display text-lg">Historique qualité</h3>
+        {% if lookup.checks %}
+        <div class="ui-table-shell" role="region" aria-label="Historique qualité" tabindex="0">
+          <table class="ui-data-table w-full border-collapse">
+            <thead><tr><th scope="col">Date</th><th scope="col">Décision</th><th scope="col">Motif</th><th scope="col">Contrôlé par</th><th scope="col">Note</th></tr></thead>
+            <tbody>
+              {% for check in lookup.checks %}
+              <tr>
+                <td>{{ check.created_at|date:"d/m/Y H:i" }}</td>
+                <td><span class="badge {% if check.result == 'pass' %}is-success{% else %}is-danger{% endif %}">{{ check.get_result_display }}</span></td>
+                <td>{{ check.defect_code|default:"—" }}</td>
+                <td>{{ check.checked_by|default:"Système" }}</td>
+                <td>{{ check.note|default:"—" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="muted">Aucun contrôle enregistré pour cette pièce.</p>
+        {% endif %}
+      </section>
+    </article>
+    {% else %}
+    <section class="mt-8" aria-labelledby="pod-qc-queue-title">
+      <h3 id="pod-qc-queue-title" class="font-display text-lg">File à contrôler</h3>
+      {% if pending_units %}
+      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {% for unit in pending_units %}
+        <article class="ui-data-card">
+          <p class="mb-1"><span class="badge is-warning">Posée</span></p>
+          <h4 class="mt-0 mb-1"><code>{{ unit.scan_identifier }}</code></h4>
+          <p class="muted mb-3">Commande {{ unit.work_item.shopify_order_number }} · {{ unit.variant.sku|default:unit.variant.title }}</p>
+          <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-qc' %}?scan={{ unit.scan_identifier|urlencode }}">Contrôler</a>
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}
+      {% include "components/ui/empty_state.html" with title="File qualité vide" message="Aucune pièce posée n’attend de contrôle." %}
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="mt-8" id="pod-ready-list" aria-labelledby="pod-ready-title">
+      <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <h3 id="pod-ready-title" class="font-display text-lg mt-0">Production POD terminée</h3>
+        <span class="badge is-success">{{ ready_orders|length }} récente{{ ready_orders|length|pluralize }}</span>
+      </div>
+      <p class="muted">Toutes les pièces POD de ces commandes ont passé le contrôle qualité. L’expédition reste gérée dans Shopify et Sendcloud.</p>
+      {% if ready_orders %}
+      <div class="ui-table-shell" role="region" aria-label="Commandes POD terminées" tabindex="0">
+        <table class="ui-data-table w-full border-collapse">
+          <thead><tr><th scope="col">Commande</th><th scope="col">Boutique</th><th scope="col">Terminée le</th><th scope="col">État</th></tr></thead>
+          <tbody>
+            {% for event in ready_orders %}
+            <tr>
+              <td><code>{{ event.pod_order.order_number }}</code></td>
+              <td>{{ event.pod_order.store.name }}</td>
+              <td>{{ event.created_at|date:"d/m/Y H:i" }}</td>
+              <td><span class="badge is-success">QC complet</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      {% include "components/ui/empty_state.html" with title="Aucune production terminée" message="Les commandes apparaîtront ici après le dernier contrôle qualité conforme." %}
+      {% endif %}
+    </section>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% portal_css_asset_v as asset_v %}
+<script type="module" src="{% static 'js/atelier-notifications.js' %}?v={{ asset_v }}"></script>
+{% endblock %}

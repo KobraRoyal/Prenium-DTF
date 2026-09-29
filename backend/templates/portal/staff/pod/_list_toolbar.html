@@ -1,0 +1,14 @@
+<div class="pod-list-toolbar">
+  <div class="pod-list-toolbar__heading">
+    <h2>{{ heading }}</h2>
+    {% if count != None %}<span class="badge is-neutral">{{ count }} résultat{{ count|pluralize }}</span>{% endif %}
+  </div>
+  {% if searchable %}
+  <form method="get" class="pod-list-search" role="search" aria-label="Rechercher dans {{ heading }}">
+    <label class="sr-only" for="pod-list-search">Rechercher</label>
+    <input class="ui-input" id="pod-list-search" type="search" name="q" value="{{ search_query }}" placeholder="{{ search_placeholder|default:'Rechercher un nom ou une référence' }}">
+    <button class="ui-btn ui-btn-secondary" type="submit">Rechercher</button>
+    {% if search_query %}<a class="ui-btn ui-btn-ghost" href="{{ request.path }}">Effacer</a>{% endif %}
+  </form>
+  {% endif %}
+</div>

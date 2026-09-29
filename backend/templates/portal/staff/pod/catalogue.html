@@ -1,0 +1,142 @@
+{% extends "portal/layout.html" %}
+{% load portal_tags %}
+
+{% block title %}Catalogue Shopify POD — Prenium DTF{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Catalogue & mapping" title="Catalogue & mapping" subtitle="Retrouvez un produit et configurez le support, les marquages et les visuels de ses variantes." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section
+    class="portal-page-surface ui-list-section"
+    aria-labelledby="pod-catalog-title"
+    x-data="{
+      lastDrawerTrigger: null,
+      rememberDrawerTrigger(trigger) { this.lastDrawerTrigger = trigger; },
+      drawerFocusables() {
+        const host = document.getElementById('pod-variant-drawer');
+        if (!host) return [];
+        return Array.from(host.querySelectorAll(`a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])`));
+      },
+      trapDrawerFocus(event) {
+        const focusables = this.drawerFocusables();
+        const panel = document.getElementById('pod-variant-config-panel');
+        if (!focusables.length) {
+          event.preventDefault();
+          if (panel) panel.focus();
+          return;
+        }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      },
+      closeDrawer() {
+        const host = document.getElementById('pod-variant-drawer');
+        if (!host || !host.childElementCount) return;
+        const panel = document.getElementById('pod-variant-config-panel');
+        if (panel && panel.open) panel.close();
+        host.innerHTML = '';
+        this.$nextTick(() => {
+          if (this.lastDrawerTrigger && document.contains(this.lastDrawerTrigger)) {
+            this.lastDrawerTrigger.focus({ preventScroll: true });
+          }
+        });
+      }
+    }"
+    @keydown.escape.window="closeDrawer()"
+  >
+    <h2 id="pod-catalog-title" class="sr-only">Mapping catalogue</h2>
+    {% include "portal/staff/pod/_list_toolbar.html" with heading="Produits Shopify" count=page_obj.paginator.count searchable=True search_placeholder="Produit, boutique ou SKU" %}
+    <p class="ui-field-help">Les produits sont importés depuis Shopify. Modifiez ici leur configuration de production, pas le catalogue commercial.</p>
+    <div class="ui-table-shell" role="region" aria-label="Catalogue" tabindex="0">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr>
+            <th scope="col">Photo</th>
+            <th scope="col">Boutique</th>
+            <th scope="col">Produit</th>
+            <th scope="col">Variante</th>
+            <th scope="col">SKU</th>
+            <th scope="col">Statut</th>
+            <th scope="col"><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            {% for variant_row in row.variants %}
+            <tr>
+              <td>
+                {% with img=variant_row.variant.resolved_image_url %}
+                  {% if img %}
+                  <img
+                    class="pod-thumb"
+                    src="{{ img|shopify_cdn_thumb:80 }}"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    width="40"
+                    height="40"
+                    referrerpolicy="no-referrer"
+                  >
+                  {% else %}
+                  <span class="pod-thumb pod-thumb--empty" aria-hidden="true"></span>
+                  {% endif %}
+                {% endwith %}
+              </td>
+              {% if forloop.first %}
+              <td rowspan="{{ row.variants|length }}">{{ row.product.store.name }}</td>
+              <td rowspan="{{ row.variants|length }}">
+                <a href="{% url 'portal:staff-pod-catalog-product' product_public_id=row.product.public_id %}">{{ row.product.title }}</a>
+              </td>
+              {% endif %}
+              <td>{{ variant_row.variant.title }}</td>
+              <td><code>{% if variant_row.variant.sku %}{{ variant_row.variant.sku }}{% else %}—{% endif %}</code></td>
+              <td><span class="badge {{ variant_row.badge_tone }}">{{ variant_row.status }}</span></td>
+              <td>
+                <button
+                  type="button"
+                  class="ui-btn ui-btn-ghost ui-btn-sm"
+                  aria-label="Configurer le mapping {{ variant_row.variant.sku|default:variant_row.variant.title }}"
+                  aria-haspopup="dialog"
+                  aria-controls="pod-variant-config-panel"
+                  hx-get="{% url 'portal:staff-pod-variant-config' variant_public_id=variant_row.variant.public_id %}"
+                  hx-target="#pod-variant-drawer"
+                  hx-swap="innerHTML"
+                  hx-indicator="#portal-htmx-indicator"
+                  @click="rememberDrawerTrigger($event.currentTarget)"
+                >Configurer</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td>
+                {% if row.product.image_url %}
+                <img class="pod-thumb" src="{{ row.product.image_url|shopify_cdn_thumb:80 }}" alt="" loading="lazy" decoding="async" width="40" height="40" referrerpolicy="no-referrer">
+                {% else %}
+                <span class="pod-thumb pod-thumb--empty" aria-hidden="true"></span>
+                {% endif %}
+              </td>
+              <td>{{ row.product.store.name }}</td>
+              <td colspan="5">Aucune variante importée.</td>
+            </tr>
+            {% endfor %}
+          {% empty %}
+          <tr><td colspan="7">
+            {% url 'portal:staff-pod-shops' as shops_url %}
+            {% if search_query %}Aucun produit ne correspond à cette recherche. <a href="{{ request.path }}">Effacer la recherche</a>.{% else %}Aucun produit importé. {% if can_manage_catalog %}<a href="{{ shops_url }}">Ouvrir Boutiques</a> pour connecter et importer.{% endif %}{% endif %}
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "components/portal/pagination.html" %}
+    {% include "portal/staff/pod/_variant_drawer_host.html" with drawer_placeholder="Sélectionnez une variante pour ouvrir le configurateur." %}
+  </section>
+</div>
+{% endblock %}

@@ -155,6 +155,31 @@ from .views_staff_operations import (
     StaffAtelierOperationUploadReviewView,
 )
 from .views_staff_payments import StaffPaymentSettingsView
+from .views_staff_pod import (
+    StaffPodBlankDetailView,
+    StaffPodBlankListView,
+    StaffPodLocationDetailView,
+    StaffPodTechniqueListView,
+    StaffPodWarehouseView,
+)
+from .views_staff_pod_board import StaffPodHubView
+from .views_staff_pod_suivi import StaffPodSuiviView
+from .views_staff_pod_catalog import (
+    StaffPodCatalogListView,
+    StaffPodCatalogProductView,
+    StaffPodVariantConfigDrawerView,
+)
+from .views_staff_pod_ops import (
+    StaffPodPoseDtfView,
+    StaffPodStockView,
+    StaffPodUnitDocumentView,
+)
+from .views_staff_pod_photos import StaffPodBlankPhotoView
+from .views_staff_pod_pick_pdf import StaffPodPickSessionPdfView
+from .views_staff_pod_qc import StaffPodQcView
+from .views_staff_pod_rip import StaffPodRipLotDetailView, StaffPodRipLotListView
+from .views_staff_pod_settings import StaffPodSettingsView
+from .views_staff_pod_shopify import StaffPodShopifyStoresView
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_push_notifications import (
     StaffPushNotificationEventsView,
@@ -599,6 +624,107 @@ urlpatterns = [
         "staff/atelier/pilotage/<uuid:order_public_id>/shipment/sync/",
         StaffAtelierOperationShipmentSyncView.as_view(),
         name="staff-atelier-operation-shipment-sync",
+    ),
+    path("staff/atelier/pod/", StaffPodHubView.as_view(), name="staff-pod-hub"),
+    path(
+        "staff/atelier/pod/suivi/",
+        StaffPodSuiviView.as_view(),
+        name="staff-pod-suivi",
+    ),
+    path(
+        "staff/atelier/pod/reglages/",
+        StaffPodSettingsView.as_view(),
+        name="staff-pod-settings",
+    ),
+    path(
+        "staff/atelier/pod/sessions/<uuid:session_public_id>/<str:document_kind>.pdf",
+        StaffPodPickSessionPdfView.as_view(),
+        name="staff-pod-pick-session-pdf",
+    ),
+    path(
+        "staff/atelier/pod/techniques/",
+        StaffPodTechniqueListView.as_view(),
+        name="staff-pod-techniques",
+    ),
+    path(
+        "staff/atelier/pod/blanks/",
+        StaffPodBlankListView.as_view(),
+        name="staff-pod-blanks",
+    ),
+    path(
+        "staff/atelier/pod/blanks/<uuid:blank_public_id>/",
+        StaffPodBlankDetailView.as_view(),
+        name="staff-pod-blank-detail",
+    ),
+    path(
+        "staff/atelier/pod/blanks/<uuid:blank_public_id>/photo/",
+        StaffPodBlankPhotoView.as_view(),
+        name="staff-pod-blank-photo",
+    ),
+    path(
+        "staff/atelier/pod/blanks/<uuid:blank_public_id>/variantes/<uuid:variant_public_id>/photo/",
+        StaffPodBlankPhotoView.as_view(),
+        name="staff-pod-blank-variant-photo",
+    ),
+    path(
+        "staff/atelier/pod/entrepot/",
+        StaffPodWarehouseView.as_view(),
+        name="staff-pod-warehouse",
+    ),
+    path(
+        "staff/atelier/pod/entrepot/emplacements/<uuid:location_public_id>/",
+        StaffPodLocationDetailView.as_view(),
+        name="staff-pod-location-detail",
+    ),
+    path(
+        "staff/atelier/pod/catalogue/",
+        StaffPodCatalogListView.as_view(),
+        name="staff-pod-catalog",
+    ),
+    path(
+        "staff/atelier/pod/catalogue/<uuid:product_public_id>/",
+        StaffPodCatalogProductView.as_view(),
+        name="staff-pod-catalog-product",
+    ),
+    path(
+        "staff/atelier/pod/catalogue/variantes/<uuid:variant_public_id>/config/",
+        StaffPodVariantConfigDrawerView.as_view(),
+        name="staff-pod-variant-config",
+    ),
+    path(
+        "staff/atelier/pod/boutiques/",
+        StaffPodShopifyStoresView.as_view(),
+        name="staff-pod-shops",
+    ),
+    path(
+        "staff/atelier/pod/lots/",
+        StaffPodRipLotListView.as_view(),
+        name="staff-pod-rip-lots",
+    ),
+    path(
+        "staff/atelier/pod/lots/<uuid:lot_public_id>/",
+        StaffPodRipLotDetailView.as_view(),
+        name="staff-pod-rip-lot-detail",
+    ),
+    path(
+        "staff/atelier/pod/pose/dtf/",
+        StaffPodPoseDtfView.as_view(),
+        name="staff-pod-pose-dtf",
+    ),
+    path(
+        "staff/atelier/pod/controle-qualite/",
+        StaffPodQcView.as_view(),
+        name="staff-pod-qc",
+    ),
+    path(
+        "staff/atelier/pod/stocks/",
+        StaffPodStockView.as_view(),
+        name="staff-pod-stock",
+    ),
+    path(
+        "staff/atelier/pod/pieces/<uuid:unit_public_id>/<str:document_kind>/",
+        StaffPodUnitDocumentView.as_view(),
+        name="staff-pod-unit-document",
     ),
     path(
         "staff/machines/",

@@ -1630,7 +1630,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("portal:staff-machine-fleet", primary_navigation)
         self.assertIn("portal:staff-machine-fleet", settings_navigation)
         self.assertEqual(staff_nav.count("portal:staff-machine-fleet"), 1)
-        self.assertIn("{% else %}Réglages{% endif %}", staff_nav)
+        self.assertIn("<span>Réglages Atelier</span>", staff_nav)
         self.assertIn("nav_key == 'staff-machines'", staff_nav)
         self.assertIn("staff-payment-settings", staff_nav)
         self.assertIn("portal:staff-payment-settings", staff_nav)

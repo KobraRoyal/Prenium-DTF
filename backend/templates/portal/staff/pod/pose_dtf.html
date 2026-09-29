@@ -1,0 +1,104 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Pose DTF — Atelier POD{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Pose DTF" title="Pose DTF" subtitle="Scannez l’étiquette, vérifiez les marquages, puis confirmez la pose." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section" aria-labelledby="pod-pose-title">
+    <h2 id="pod-pose-title" class="sr-only">Poste de pose</h2>
+    {% include "portal/staff/pod/_form_error.html" %}
+
+    <form data-inline-required data-submit-loading class="ui-form-stack pod-pose-scan max-w-xl" method="post" novalidate aria-labelledby="pod-pose-scan-label">
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="lookup">
+      <div class="ui-field-group">
+        <label class="ui-label" id="pod-pose-scan-label" for="scan-id">Identifiant pièce</label>
+        <input
+          class="ui-input"
+          id="scan-id"
+          name="scan_identifier"
+          value="{{ scan_identifier }}"
+          required
+          placeholder="POD-…"
+          autocomplete="off"
+          autofocus
+          aria-describedby="scan-id-help"
+        >
+        <p class="ui-field-help" id="scan-id-help">Code Zebra picking — le même scan suit la pièce jusqu’à la pose et au QC.</p>
+      </div>
+      <div class="ui-form-actions">
+        <button class="ui-btn {% if lookup %}ui-btn-ghost{% else %}ui-btn-primary{% endif %}" type="submit">
+          {% if lookup %}Rescanner{% else %}Afficher la pièce{% endif %}
+        </button>
+      </div>
+    </form>
+
+    {% if lookup %}
+    <article class="pod-focus-panel" aria-label="Pièce scannée" tabindex="-1" id="pod-pose-result">
+      <p class="muted mb-0">
+        <span class="badge {% if lookup.unit.status == 'waiting_press' %}is-warning{% elif lookup.unit.status == 'pressed' %}is-success{% else %}is-danger{% endif %}">{{ lookup.unit.get_status_display }}</span>
+      </p>
+      <p class="pod-focus-panel__scan"><code>{{ lookup.unit.scan_identifier }}</code></p>
+      <dl class="pod-focus-panel__facts">
+        <div>
+          <dt>Commande</dt>
+          <dd><code>{{ lookup.unit.work_item.shopify_order_number }}</code></dd>
+        </div>
+        <div>
+          <dt>SKU</dt>
+          <dd><code>{{ lookup.unit.variant.sku|default:lookup.unit.variant.title }}</code></dd>
+        </div>
+        {% if lookup.config.blank_variant %}
+        <div>
+          <dt>Support vierge</dt>
+          <dd><code>{{ lookup.config.blank_variant.sku }}</code></dd>
+        </div>
+        {% endif %}
+      </dl>
+
+      <h3 class="font-display text-lg mt-0">Marquages à poser</h3>
+      <div class="ui-table-shell mb-4" role="region" aria-label="Marquages de la pièce" tabindex="0">
+        <table class="ui-data-table w-full border-collapse">
+          <thead>
+            <tr>
+              <th scope="col">Pose</th>
+              <th scope="col">Technique</th>
+              <th scope="col">Fichier</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for slot in lookup.slots %}
+            <tr>
+              <td>{{ slot.get_placement_display }}</td>
+              <td>{{ slot.technique.name }}</td>
+              <td><code>{{ slot.print_reference }}</code></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3">Aucun marquage configuré. Corrigez le mapping catalogue avant de poser.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if can_operate_production and lookup.unit.status == "waiting_press" %}
+      <form data-inline-required data-submit-loading method="post" class="ui-form-actions">
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="press">
+        <input type="hidden" name="scan_identifier" value="{{ lookup.unit.scan_identifier }}">
+        <button class="ui-btn ui-btn-primary" type="submit" aria-label="Confirmer la pose de {{ lookup.unit.scan_identifier }}">Confirmer la pose</button>
+      </form>
+      {% elif lookup.unit.status == "pressed" %}
+      <p class="muted mb-0" role="status">Pièce déjà posée — passez à la suivante.</p>
+      {% elif lookup.unit.status == "issue" %}
+      <p class="alert alert--warning" role="status">Pièce gelée (annulation ou incident). Elle ne peut pas être posée.</p>
+      {% endif %}
+    </article>
+    {% else %}
+    {% url 'portal:staff-pod-hub' as pod_hub_url %}
+    {% include "components/ui/empty_state.html" with title="En attente de scan" message="Scannez l’étiquette Zebra picking pour afficher la recette et confirmer la pose." cta_url=pod_hub_url cta_label="Voir À produire" %}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

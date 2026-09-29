@@ -144,9 +144,17 @@ Cartes blanches bordées `1px var(--line)`, rayon 16–18px. Fiches focus staff/
 
 `shell.css` possède `ui-table-shell`, `ui-data-table`, `ui-data-card`, `ui-mobile-order-card`, `ui-list-pagination`. Breakpoint table/cartes : 960px. `components/portal/pagination.html` et `components/forms/form_actions.html` mutualisent pagination et actions.
 
+POD : scope `pod-page`, barre de liste/recherche commune, éditeurs `details`
+repliables, actions enregistrer/fermer, erreurs et activation partagées.
+Les référentiels se désactivent sans suppression de l’historique. Les vues atelier
+conservent leurs actions métier plutôt qu’un CRUD artificiel. Contrat :
+`docs/product-design/POD_CRUD_CONTRACT.md`.
+
 ### Navigation / Status
 
 Header : lockup corail, label workspace (point vert « Atelier » / « Espace client »), nav pills avec état actif fond corail pâle, dropdown « Outils » staff, menu « Mon compte ». Breadcrumbs : partials `staff_trail.html` et `client_trail.html` ; wrappers par section pour compatibilité.
+
+POD : entrée directe et libellé stable dans le header Atelier. Rail de production partagé dans l’ordre « À produire → Lots RIP → Pose → Contrôle qualité ». Stocks est une opération WMS, visible aux utilisateurs habilités. Réglages POD mène à une vue d’ensemble puis au rail de configuration (boutiques, catalogue/mapping, supports, techniques, emplacements) ; un retour à production reste visible. Les réglages sont réservés aux responsables selon les permissions catalogue et entrepôt, avec contrôle serveur des URL. Sur mobile, quatre accès de production occupent une grille compacte, sans empilement de menus déroulants. Les libellés complets restent accessibles aux lecteurs d’écran.
 
 Badges : pills calmes `is-success`, `is-warning`, `is-danger`, `is-neutral`.
 

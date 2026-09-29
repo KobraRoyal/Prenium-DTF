@@ -1,0 +1,33 @@
+<section class="ui-form-stack mb-8" aria-labelledby="blank-marking-options-title">
+  <h2 class="font-display" id="blank-marking-options-title">Zones et techniques possibles</h2>
+  <p class="ui-field-help">Deux listes indépendantes pour ce support parent. Toutes ses variantes en héritent automatiquement. La combinaison zone + technique + fichier HD se définit uniquement dans le mapping du produit POD.</p>
+  <form class="ui-form-stack max-w-3xl" method="post" data-submit-loading>
+    {% csrf_token %}
+    <input type="hidden" name="intent" value="marking_options">
+    <div class="grid gap-4 md:grid-cols-2">
+      <fieldset class="ui-form-stack" style="min-width:0;border:0;padding:0;margin:0">
+        <legend class="ui-label">Zones possibles</legend>
+        <p class="ui-field-help">Cochez les zones disponibles sur ce support.</p>
+        {% for zone in marking_zones %}
+        <label class="ui-checkbox-row" for="blank-zone-{{ zone.public_id }}">
+          <input type="checkbox" id="blank-zone-{{ zone.public_id }}" name="zone_public_ids" value="{{ zone.public_id }}" {% if zone.public_id|stringformat:'s' in selected_marking_zones %}checked{% endif %} {% if not can_manage_catalog %}disabled{% endif %}>
+          <span>{{ zone.name }}</span>
+        </label>
+        {% empty %}<p class="muted">Aucune zone active dans le référentiel.</p>{% endfor %}
+      </fieldset>
+      <fieldset class="ui-form-stack" style="min-width:0;border:0;padding:0;margin:0">
+        <legend class="ui-label">Techniques possibles</legend>
+        <p class="ui-field-help">Cochez les techniques compatibles avec ce support.</p>
+        {% for technique in marking_techniques %}
+        <label class="ui-checkbox-row" for="blank-technique-{{ technique.public_id }}">
+          <input type="checkbox" id="blank-technique-{{ technique.public_id }}" name="technique_public_ids" value="{{ technique.public_id }}" {% if technique.public_id|stringformat:'s' in selected_marking_techniques %}checked{% endif %} {% if not can_manage_catalog %}disabled{% endif %}>
+          <span>{{ technique.name }}</span>
+        </label>
+        {% empty %}<p class="muted">Aucune technique active. Ajoutez-en dans <a href="{% url 'portal:staff-pod-techniques' %}">Techniques</a>.</p>{% endfor %}
+      </fieldset>
+    </div>
+    {% if can_manage_catalog %}
+    <div class="ui-form-actions"><button class="ui-btn ui-btn-primary" type="submit">Enregistrer les possibilités</button></div>
+    {% endif %}
+  </form>
+</section>

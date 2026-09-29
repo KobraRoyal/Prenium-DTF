@@ -30,7 +30,9 @@ async function jsonRequest(root, url, options = {}) {
   }
   const payload = await response.json();
   if (!response.ok || payload.ok === false) {
-    throw new Error(payload.error?.message || "Les notifications ne sont pas disponibles.");
+    const error = new Error(payload.error?.message || "Les notifications ne sont pas disponibles.");
+    error.code = payload.error?.code || "request_failed";
+    throw error;
   }
   return payload;
 }
@@ -52,7 +54,7 @@ function markEventSeen(publicId) {
   return true;
 }
 
-function refreshDashboard(root) {
+function refreshDashboard(root, eventType) {
   // KPI / worklist + pastille nav : un seul événement (évite double fetch).
   if (window.htmx?.trigger) {
     window.htmx.trigger(document.body, "atelier-inbox-refresh");
@@ -65,6 +67,13 @@ function refreshDashboard(root) {
       swap: "outerHTML",
     });
   }
+  if (eventType === "workshop.pod_order_qc_ready" && root.dataset.readyRefreshUrl && window.htmx?.ajax) {
+    window.htmx.ajax("GET", root.dataset.readyRefreshUrl, {
+      target: "#pod-ready-list",
+      select: "#pod-ready-list",
+      swap: "outerHTML",
+    });
+  }
 }
 
 function refreshInboxBadge() {
@@ -73,10 +82,14 @@ function refreshInboxBadge() {
   }
 }
 
-function announceEvent(root, publicId) {
+function announceEvent(root, publicId, eventType) {
   if (!markEventSeen(publicId)) return;
-  window.preniumToast?.("Une nouvelle commande est disponible dans l’Atelier.", "info");
-  refreshDashboard(root);
+  const podReady = eventType === "workshop.pod_order_qc_ready";
+  window.preniumToast?.(
+    podReady ? "Production POD terminée : la commande est prête pour l’atelier interne." : "Une nouvelle commande est disponible dans l’Atelier.",
+    "info",
+  );
+  refreshDashboard(root, eventType);
 }
 
 function setControlState(root, state) {
@@ -85,7 +98,7 @@ function setControlState(root, state) {
   const help = root.querySelector("[data-push-help]");
   const labels = {
     loading: ["Vérification…", "Vérification…", "Vérification des alertes sur cet appareil."],
-    enabled: ["Alertes activées", "Désactiver les alertes", "Les nouvelles commandes peuvent apparaître dans le centre de notifications."],
+    enabled: ["Alertes activées", "Désactiver les alertes", "Les nouvelles commandes et fins de production POD peuvent apparaître dans le centre de notifications."],
     disabled: ["Alertes désactivées", "Activer les alertes", "Votre navigateur demandera votre accord uniquement après un clic sur le bouton."],
     denied: ["Alertes refusées", "Alertes refusées", "Autorisez les notifications dans les réglages du navigateur pour les activer."],
     unsupported: ["Alertes non compatibles", "Alertes non compatibles", "Ce navigateur ne prend pas en charge les notifications système."],
@@ -177,10 +190,16 @@ function startFallbackPolling(root) {
       if (!payload) return;
       cursor = payload.cursor || cursor;
       if (bootstrapped) {
-        (payload.events || []).forEach((event) => announceEvent(root, event.public_id));
+        (payload.events || []).forEach((event) => announceEvent(root, event.public_id, event.event_type));
       }
       bootstrapped = true;
-    } catch {
+    } catch (error) {
+      if (error.code === "invalid_cursor") {
+        // A role change can make the former event type invisible. Re-bootstrap
+        // from the latest event that the current staff member may now read.
+        cursor = null;
+        bootstrapped = false;
+      }
       // Le polling est un filet de sécurité silencieux ; le prochain cycle réessaiera.
     }
   };
@@ -247,7 +266,7 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data?.type !== "atelier-notification") return;
     const root = document.querySelector("[data-atelier-notifications]");
-    if (root) announceEvent(root, event.data.eventPublicId);
+    if (root) announceEvent(root, event.data.eventPublicId, event.data.eventType);
   });
 }
 

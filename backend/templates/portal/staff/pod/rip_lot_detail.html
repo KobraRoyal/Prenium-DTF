@@ -1,0 +1,116 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}{{ lot.code }} — Lot RIP{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=lot.code title=lot.code subtitle="Visuels HD regroupés par session picking — impression par technique." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section">
+    <p class="pod-detail-back"><a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-pod-suivi' %}?stage=print">Retour au suivi</a></p>
+    {% include "portal/staff/pod/_form_error.html" %}
+
+    <article class="pod-focus-panel" aria-label="État du lot">
+      <dl class="pod-focus-panel__facts">
+        <div>
+          <dt>Session picking</dt>
+          <dd><code>{{ lot.nas_relative_path }}</code></dd>
+        </div>
+        <div>
+          <dt>Technique</dt>
+          <dd>{{ lot.technique.name }}</dd>
+        </div>
+        <div>
+          <dt>Fichiers RIP</dt>
+          <dd>{{ lot.file_count }}</dd>
+        </div>
+        <div>
+          <dt>NAS / Drive</dt>
+          <dd><code>POD_RIP/{{ lot.nas_relative_path }}/{{ lot.technique.rip_directory }}/</code></dd>
+        </div>
+        <div>
+          <dt>Sync Drive</dt>
+          <dd>
+            {% if lot.drive_synced_at %}
+            {{ lot.drive_file_count }} fichier(s)
+            {% elif lot.drive_error %}
+            <span class="badge is-danger">Erreur</span>
+            {% else %}
+            <span class="badge is-neutral">Non sync</span>
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
+      {% if can_operate_production %}
+      <form data-inline-required data-submit-loading method="post" class="ui-form-actions">
+        {% csrf_token %}
+        <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit" name="intent" value="sync_drive">Synchroniser Drive</button>
+        <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-pose-dtf' %}">Aller à la pose</a>
+      </form>
+      {% endif %}
+      {% if lot.drive_error %}<p class="alert alert--danger mt-3" role="alert">{{ lot.drive_error }}</p>{% endif %}
+    </article>
+
+    <h3 class="font-display text-lg">Visuels HD ({{ lot.technique.rip_directory }})</h3>
+    <div class="ui-table-shell mb-8" role="region" aria-label="Fichiers et pièces du lot" tabindex="0">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr>
+            <th scope="col">Fichier</th>
+            <th scope="col">Pose</th>
+            <th scope="col">Commande</th>
+            <th scope="col">Origine HD</th>
+            <th scope="col">Checksum</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for file in files %}
+          <tr>
+            <td><code>{{ file.filename }}</code></td>
+            <td>{{ file.placement }}</td>
+            <td>{% if file.work_item %}<code>{{ file.work_item.shopify_order_number }}</code>{% else %}—{% endif %}</td>
+            <td><code>{{ file.source_print_reference }}</code></td>
+            <td><code>{{ file.checksum_sha256|truncatechars:12 }}</code></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">Aucun fichier RIP dans ce lot.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="font-display text-lg">Pièces (suivi Zebra picking)</h3>
+    <p class="muted text-sm">L’étiquette Zebra de la session picking suit la pièce jusqu’à la pose et au QC. Pas d’OF ni d’étiquette générés au lot RIP.</p>
+    <div class="ui-table-shell mb-6" role="region" aria-label="Fichiers et pièces du lot" tabindex="0">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr>
+            <th scope="col">Scan</th>
+            <th scope="col">SKU</th>
+            <th scope="col">État</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for unit in units %}
+          <tr>
+            <td><code>{{ unit.scan_identifier }}</code></td>
+            <td><code>{{ unit.variant.sku|default:unit.variant.title }}</code></td>
+            <td>
+              <span class="badge {% if unit.status == 'waiting_press' %}is-warning{% elif unit.status == 'pressed' %}is-success{% else %}is-danger{% endif %}">{{ unit.get_status_display }}</span>
+            </td>
+            <td>
+              {% if unit.status == 'waiting_press' %}
+              <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-pose-dtf' %}?scan={{ unit.scan_identifier }}">Poser</a>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">Aucune pièce rattachée à ce lot.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

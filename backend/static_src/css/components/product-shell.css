@@ -631,6 +631,11 @@
     background: color-mix(in srgb, var(--product-danger) 8%, var(--product-panel));
   }
 
+  body.product-shell .product-nav__primary .product-nav__more-menu {
+    left: 0;
+    right: auto;
+  }
+
   body.product-shell .product-nav__more-menu {
     position: absolute;
     top: calc(100% + 0.65rem);

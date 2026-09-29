@@ -8,6 +8,7 @@ import "./email-template-editor.js?v=20260813-email-workbench";
 import "./gang-sheet-editor.js?v=20260918-studio-inspector-v16";
 import "./clipboard-copy.js?v=20260829-of-copy-v1";
 import "./staff-billing-adjustment.js?v=20260921-billing-edit-v5";
+import "./pod-workspace.js?v=20260926-dynamic-v2";
 
 window.preniumToast = function (message, variant = "info") {
   window.dispatchEvent(

@@ -82,6 +82,7 @@ class Command(BaseCommand):
             source="seed_recipe",
         )
         self._seed_catalog_services()
+        self._seed_pod_ops(users.staff_ops, customer_a)
         orders = self._seed_b2b_orders(users, customer_a, customer_b)
         self._seed_uploads_inspections_drive(users, orders)
         self._seed_shipments(users, orders)
@@ -107,6 +108,18 @@ class Command(BaseCommand):
         self.stdout.write(
             "- Seed Client Comptant — login client.cash.owner@prenium.local, paliers 5 m / 10 m"
         )
+        self.stdout.write(
+            "- Atelier POD : blank TEE-POD-M, bins A/R/C/F, variante Shopify TEE-BLK-M en POD"
+        )
+        self.stdout.write(
+            "- Seed POD Drive HD : fichier bibliothèque HD, "
+            "SO-SEED-QUEUE / PICK / POSE / QC (voir seed_pod_wms)"
+        )
+
+    def _seed_pod_ops(self, staff_ops, customer_a):
+        from apps.pod.services.ops_demo import PodOpsBootstrapService
+
+        PodOpsBootstrapService().ensure_ready(actor=staff_ops, customer=customer_a)
 
     def _reset_seed_data(self):
         user_model = get_user_model()
@@ -273,6 +286,10 @@ class Command(BaseCommand):
             "billing.add_billingstatement",
             "billing.view_paymentgatewaysettings",
             "billing.change_paymentgatewaysettings",
+            "pod.access_pod_atelier",
+            "pod.manage_pod_catalog",
+            "pod.operate_pod_production",
+            "inventory.manage_warehouse",
         ]
 
     def _seed_customers_and_memberships(self, users: SeedUsers):

@@ -1,0 +1,220 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}{{ blank.name }} — Support POD{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=blank.sku title=blank.name subtitle=blank.sku %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section">
+    {% include "portal/staff/pod/_form_error.html" %}
+    <p class="pod-detail-back"><a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-pod-blanks' %}">Retour aux supports</a></p>
+    <span class="badge {% if blank.is_active %}is-success{% else %}is-neutral{% endif %}">{% if blank.is_active %}Actif{% else %}Inactif{% endif %}</span>
+    <details class="pod-editor" {% if form_error and submitted_intent == "update_blank" %}open{% endif %}>
+      <summary>Modifier le support</summary>
+      <form data-inline-required data-submit-loading method="post" class="ui-form-stack" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="update_blank">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="ui-field-group">
+            <label class="ui-label" for="blank-edit-name">Nom</label>
+            <input class="ui-input" id="blank-edit-name" name="name" value="{% if submitted_intent == 'update_blank' %}{{ form_data.name }}{% else %}{{ blank.name }}{% endif %}" required>
+          </div>
+          <div class="ui-field-group">
+            <label class="ui-label" for="blank-edit-brand">Marque</label>
+            <input class="ui-input" id="blank-edit-brand" name="brand" value="{% if submitted_intent == 'update_blank' %}{{ form_data.brand }}{% else %}{{ blank.brand }}{% endif %}">
+          </div>
+        </div>
+        <p class="ui-field-help">Le SKU reste fixe. La désactivation conserve les variantes et l’historique.</p>
+        {% if submitted_intent == "update_blank" %}{% include "portal/staff/pod/_active_field.html" with field_id="blank-active" active=form_data.is_active %}{% else %}{% include "portal/staff/pod/_active_field.html" with field_id="blank-active" active=blank.is_active %}{% endif %}
+        {% include "portal/staff/pod/_editor_actions.html" %}
+      </form>
+    </details>
+
+    <div class="pod-photo-hero mb-8">
+      {% if blank.has_photo %}
+      <img
+        class="pod-thumb pod-thumb--lg"
+        src="{% url 'portal:staff-pod-blank-photo' blank_public_id=blank.public_id %}?size=full"
+        alt="Photo {{ blank.name }}"
+        loading="lazy"
+        decoding="async"
+        width="160"
+        height="160"
+      >
+      {% else %}
+      <div class="pod-thumb pod-thumb--lg pod-thumb--empty" aria-hidden="true"></div>
+      {% endif %}
+      {% if can_manage_catalog %}
+      <details class="pod-editor" {% if form_error and submitted_intent == "blank_photo" %}open{% endif %}>
+      <summary>{% if blank.has_photo %}Remplacer{% else %}Ajouter{% endif %} la photo du support</summary>
+      <form data-inline-required data-submit-loading class="ui-form-stack" method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="blank_photo">
+        <div class="ui-field-group">
+          <label class="ui-label" for="blank-photo">Photo du support</label>
+          <input class="ui-input" id="blank-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+          <p class="ui-field-help">JPEG, PNG ou WebP — max 5 Mo. Miniatures générées automatiquement.</p>
+        </div>
+        {% include "portal/staff/pod/_editor_actions.html" with submit_label="Enregistrer la photo" %}
+      </form>
+      </details>
+      {% endif %}
+    </div>
+
+    <div class="pod-section-head"><h2 class="font-display">Variantes</h2><span class="badge is-neutral">{{ blank.variants.count }} variante{{ blank.variants.count|pluralize }}</span></div>
+    <div class="ui-table-shell mb-8" role="region" aria-label="Variantes et marquages" tabindex="0">
+      <table class="ui-data-table w-full border-collapse">
+        <thead>
+          <tr>
+            <th scope="col">Photo</th>
+            <th scope="col">SKU</th>
+            <th scope="col">Taille</th>
+            <th scope="col">Couleur</th>
+            <th scope="col">Bin défaut</th>
+            <th scope="col">État</th>
+            {% if can_manage_catalog %}<th scope="col">Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for variant in blank.variants.all %}
+          <tr>
+            <td>
+              {% if variant.has_photo %}
+              <img
+                class="pod-thumb"
+                src="{% url 'portal:staff-pod-blank-variant-photo' blank_public_id=blank.public_id variant_public_id=variant.public_id %}?size=thumb"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                width="40"
+                height="40"
+              >
+              {% elif variant.color_hex %}
+              <span class="pod-swatch" style="--pod-swatch: {{ variant.color_hex }}" title="{{ variant.color_name }}"></span>
+              {% else %}
+              <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td><code>{{ variant.sku }}</code></td>
+            <td>{{ variant.size_label }}</td>
+            <td>{{ variant.color_name }}{% if variant.has_own_photo %} <span class="badge is-neutral">photo propre</span>{% endif %}</td>
+            <td>
+              {% with rule=variant.location_rules.first %}
+                {% if rule %}{% if can_manage_warehouse %}<a href="{% url 'portal:staff-pod-location-detail' location_public_id=rule.location.public_id %}"><code>{{ rule.location.code }}</code></a>{% else %}<code>{{ rule.location.code }}</code>{% endif %}
+                {% else %}—{% endif %}
+              {% endwith %}
+            </td>
+            <td><span class="badge {% if variant.is_active %}is-success{% else %}is-neutral{% endif %}">{% if variant.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+            {% if can_manage_catalog %}
+            <td>
+              <details class="pod-editor pod-editor--row" {% if form_error and submitted_intent == "update_variant" and form_data.variant_public_id == variant.public_id|stringformat:"s" %}open{% endif %}>
+                <summary aria-label="Modifier la variante {{ variant.sku }}">Modifier</summary>
+                <form data-inline-required data-submit-loading class="ui-form-stack" method="post" novalidate>
+                  {% csrf_token %}
+                  <input type="hidden" name="intent" value="update_variant">
+                  <input type="hidden" name="variant_public_id" value="{{ variant.public_id }}">
+                  <div class="ui-field-group"><label class="ui-label" for="variant-size-{{ variant.public_id }}">Taille</label><input class="ui-input" id="variant-size-{{ variant.public_id }}" name="size_label" value="{% if submitted_intent == 'update_variant' and form_data.variant_public_id == variant.public_id|stringformat:'s' %}{{ form_data.size_label }}{% else %}{{ variant.size_label }}{% endif %}"></div>
+                  <div class="ui-field-group"><label class="ui-label" for="variant-color-{{ variant.public_id }}">Couleur</label><input class="ui-input" id="variant-color-{{ variant.public_id }}" name="color_name" value="{% if submitted_intent == 'update_variant' and form_data.variant_public_id == variant.public_id|stringformat:'s' %}{{ form_data.color_name }}{% else %}{{ variant.color_name }}{% endif %}"></div>
+                  <div class="ui-field-group"><label class="ui-label" for="variant-hex-{{ variant.public_id }}">Code couleur</label><input class="ui-input" id="variant-hex-{{ variant.public_id }}" name="color_hex" value="{% if submitted_intent == 'update_variant' and form_data.variant_public_id == variant.public_id|stringformat:'s' %}{{ form_data.color_hex }}{% else %}{{ variant.color_hex }}{% endif %}" placeholder="#111111"></div>
+                  {% if submitted_intent == "update_variant" and form_data.variant_public_id == variant.public_id|stringformat:"s" %}{% include "portal/staff/pod/_active_field.html" with field_id=variant.public_id active=form_data.is_active %}{% else %}{% include "portal/staff/pod/_active_field.html" with field_id=variant.public_id active=variant.is_active %}{% endif %}
+                  {% include "portal/staff/pod/_editor_actions.html" %}
+                </form>
+              </details>
+              <details class="pod-editor pod-editor--row" {% if form_error and submitted_intent == "variant_photo" and form_data.variant_public_id == variant.public_id|stringformat:"s" %}open{% endif %}>
+              <summary aria-label="Gérer la photo {{ variant.sku }}">Photo</summary>
+              <form data-inline-required data-submit-loading class="ui-form-actions" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="intent" value="variant_photo">
+                <input type="hidden" name="variant_public_id" value="{{ variant.public_id }}">
+                <label class="sr-only" for="variant-photo-{{ variant.public_id }}">Photo {{ variant.sku }}</label>
+                <input class="ui-input" id="variant-photo-{{ variant.public_id }}" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+                <button class="ui-btn ui-btn-secondary" type="submit">Enregistrer la photo</button>
+              </form>
+              {% if variant.has_own_photo %}
+              <form data-inline-required data-submit-loading method="post" class="ui-form-actions">
+                {% csrf_token %}
+                <input type="hidden" name="intent" value="clear_variant_photo">
+                <input type="hidden" name="variant_public_id" value="{{ variant.public_id }}">
+                <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit">Retirer</button>
+              </form>
+              {% endif %}
+              </details>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="{% if can_manage_catalog %}7{% else %}6{% endif %}">Aucune variante. Ouvrez « Ajouter une variante » pour définir les tailles et couleurs.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if can_manage_catalog %}
+    <details class="pod-editor" {% if form_error and submitted_intent == "variant" %}open{% endif %}>
+    <summary>Ajouter une variante</summary>
+    <form data-inline-required data-submit-loading class="ui-form-stack mb-8 max-w-3xl" method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="variant">
+      <h2 class="font-display text-lg">Ajouter une variante</h2>
+      <div class="grid gap-3 sm:grid-cols-4">
+        <div class="ui-field-group">
+          <label class="ui-label" for="variant-sku">SKU variante</label>
+          <input class="ui-input" id="variant-sku" name="sku" value="{% if submitted_intent == 'variant' %}{{ form_data.sku }}{% endif %}" required>
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="variant-size">Taille</label>
+          <input class="ui-input" id="variant-size" name="size_label" value="{% if submitted_intent == 'variant' %}{{ form_data.size_label }}{% endif %}" placeholder="M">
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="variant-color">Couleur</label>
+          <input class="ui-input" id="variant-color" name="color_name" value="{% if submitted_intent == 'variant' %}{{ form_data.color_name }}{% endif %}" placeholder="Noir">
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="variant-hex">Hex</label>
+          <input class="ui-input" id="variant-hex" name="color_hex" value="{% if submitted_intent == 'variant' %}{{ form_data.color_hex }}{% endif %}" placeholder="#111111">
+        </div>
+      </div>
+      {% include "portal/staff/pod/_editor_actions.html" with submit_label="Ajouter une variante" %}
+    </form>
+    </details>
+    {% endif %}
+
+    {% include 'portal/staff/pod/_blank_marking_options.html' %}
+
+    {% if can_manage_warehouse and blank.variants.exists %}
+    <details class="pod-editor" {% if form_error and submitted_intent == "default_location" %}open{% endif %}>
+    <summary>Définir l’emplacement de prélèvement</summary>
+    <form data-inline-required data-submit-loading class="ui-form-stack max-w-3xl" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="default_location">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="ui-field-group">
+          <label class="ui-label" for="rule-variant">Variante</label>
+          <select class="ui-input" id="rule-variant" name="variant_public_id">
+            {% for variant in blank.variants.all %}
+            {% if variant.is_active and blank.is_active %}<option value="{{ variant.public_id }}" {% if form_data.variant_public_id == variant.public_id|stringformat:"s" %}selected{% endif %}>{{ variant.sku }}</option>{% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ui-field-group">
+          <label class="ui-label" for="rule-location">Emplacement</label>
+          <select class="ui-input" id="rule-location" name="location_public_id">
+            {% for location in locations %}
+            <option value="{{ location.public_id }}" {% if form_data.location_public_id == location.public_id|stringformat:"s" %}selected{% endif %}>{{ location.code }} — {{ location.zone.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      {% if locations and blank.is_active %}
+      {% include "portal/staff/pod/_editor_actions.html" with submit_label="Enregistrer l’emplacement" %}
+      {% else %}
+      <p class="text-sm text-muted">Un support actif et un emplacement actif sont nécessaires.</p>
+      {% include "portal/staff/pod/_editor_actions.html" with submit_label="Enregistrer l’emplacement" submit_disabled=True %}
+      {% endif %}
+    </form>
+    </details>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

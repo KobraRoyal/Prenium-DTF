@@ -62,6 +62,11 @@
 - [Sprint 56 — Pilotage du métrage imprimé Atelier](sprint-56-metrage-imprime-atelier.md)
 - [Sprint 57 — Pilotage de production Atelier](sprint-57-pilotage-production-atelier.md)
 
+## Vague POD — Shopify fulfillment + atelier pose + WMS
+- [ADR Shopify POD + WMS](../architecture/ADR_SHOPIFY_POD_WMS.md)
+- [Sprint POD Shopify + WMS (lots D0→G)](sprint-pod-shopify-wms.md)
+- [Prompt orchestration économe](../prompts/PROMPT_SHOPIFY_POD_ORCHESTRATION.md)
+
 ## Vague 3 — Roadmap post-audit Docker
 - [Roadmap de sprints post-audit Docker](sprint-roadmap-post-audit-docker.md)
 - [Sprint 2 — Sécurité applicative ciblée](sprint-2-securite-applicative-ciblee.md)

@@ -32,10 +32,22 @@ from apps.notifications.services.web_push_client import (
 )
 from apps.notifications.services.workshop_push import WorkshopNotificationService
 from apps.orders.models import Order
+from apps.pod.models import (
+    PodQualityCheck,
+    PodRipLot,
+    PodRipWorkItem,
+    PodShopifyOrder,
+    PodUnit,
+    PrintTechnique,
+    ShopifyProduct,
+    ShopifyStore,
+    ShopifyVariant,
+)
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -99,6 +111,56 @@ def _order(*, actor=None, customer_name: str = "Client A") -> Order:
         status=Order.Status.SUBMITTED,
         billing_mode=Order.BillingMode.DEFERRED,
     )
+
+
+def _pod_order(*, customer_name: str = "POD client") -> PodShopifyOrder:
+    customer = Customer.objects.create(name=customer_name)
+    store = ShopifyStore.objects.create(
+        customer=customer,
+        slug=f"pod-{customer.pk}",
+        name=f"POD {customer.pk}",
+        shop_domain=f"pod-{customer.pk}.myshopify.com",
+    )
+    return PodShopifyOrder.objects.create(
+        store=store,
+        customer=customer,
+        external_order_id=f"order-{customer.pk}",
+        order_number=f"#POD-{customer.pk}",
+    )
+
+
+def _pod_check(order: PodShopifyOrder) -> PodQualityCheck:
+    product = ShopifyProduct.objects.create(
+        store=order.store, external_id=f"product-{order.pk}", title="POD product"
+    )
+    variant = ShopifyVariant.objects.create(
+        product=product, external_id=f"variant-{order.pk}", title="POD variant"
+    )
+    item = PodRipWorkItem.objects.create(
+        store=order.store,
+        variant=variant,
+        shopify_order_number=order.order_number,
+        shopify_order=order,
+        shopify_line_item_id=f"line-{order.pk}",
+        quantity=1,
+        status=PodRipWorkItem.Status.INCLUDED,
+    )
+    technique = PrintTechnique.objects.create(code=f"dtf-{order.pk}", name="DTF")
+    lot = PodRipLot.objects.create(
+        code=f"LOT-{order.pk}",
+        customer=order.customer,
+        technique=technique,
+        nas_relative_path=f"pod/{order.pk}",
+    )
+    unit = PodUnit.objects.create(
+        lot=lot,
+        work_item=item,
+        variant=variant,
+        sequence=1,
+        scan_identifier=f"POD-{order.pk}",
+        status=PodUnit.Status.QC_PASSED,
+    )
+    return PodQualityCheck.objects.create(unit=unit, result=PodQualityCheck.Result.PASS)
 
 
 @pytest.mark.django_db
@@ -655,6 +717,7 @@ def test_success_payload_has_no_customer_data_and_task_args_use_public_ids(caplo
         "tag": f"workshop-{delivery.event.public_id}",
         "url": "/staff/",
         "event_public_id": str(delivery.event.public_id),
+        "event_type": WorkshopNotificationEvent.EventType.ORDER_SUBMITTED,
     }
     serialized = repr(client.sent)
     assert delivery.event.customer.name not in serialized
@@ -726,3 +789,149 @@ def test_subscription_state_requires_all_workshop_permissions():
 
     with pytest.raises(PermissionDenied):
         WorkshopNotificationService(client=FakePushClient()).subscription_state(actor=actor)
+
+
+@pytest.mark.django_db
+@override_settings(**WEB_PUSH_SETTINGS)
+def test_pod_event_fanout_and_delivery_are_limited_to_pod_permission():
+    pod_actor, pod_membership = _staff(email="pod-push@example.com", permissions=False)
+    pod_actor.user_permissions.add(
+        Permission.objects.get(content_type__app_label="accounts", codename="access_staff_portal"),
+        Permission.objects.get(content_type__app_label="pod", codename="access_pod_atelier"),
+    )
+    _subscription(membership=pod_membership)
+    pod_order = _pod_order()
+    pod_event = WorkshopNotificationEvent.objects.create(
+        event_type=WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY,
+        customer=pod_order.customer,
+        pod_order=pod_order,
+        pod_ready_check=_pod_check(pod_order),
+        source="test",
+    )
+    native_order = _order(customer_name="Native order client")
+    native_event = WorkshopNotificationEvent.objects.create(
+        event_type=WorkshopNotificationEvent.EventType.ORDER_SUBMITTED,
+        customer=native_order.customer,
+        order=native_order,
+        source="test",
+    )
+    client = FakePushClient()
+    service = WorkshopNotificationService(client=client)
+
+    with (
+        patch("apps.pod.services.qc.is_pod_order_qc_ready", return_value=True),
+        patch.object(service, "_schedule_deliveries"),
+    ):
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            assert service.fanout(event_public_id=pod_event.public_id) == 1
+        assert service.fanout(event_public_id=native_event.public_id) == 0
+
+    delivery = PushDelivery.objects.get(event=pod_event)
+    with patch("apps.pod.services.qc.is_pod_order_qc_ready", return_value=True):
+        assert service.deliver(delivery_public_id=delivery.public_id) == PushDelivery.Status.SENT
+    assert client.sent[0]["payload"] == {
+        "title": "Production POD terminée",
+        "body": "Toutes les pièces POD ont passé le QC.",
+        "url": "/staff/atelier/pod/controle-qualite/",
+        "tag": f"workshop-{pod_event.public_id}",
+        "event_public_id": str(pod_event.public_id),
+        "event_type": WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY,
+    }
+
+    with patch("apps.pod.services.qc.is_pod_order_qc_ready", return_value=True):
+        page = service.read_recent_events(actor=pod_actor)
+    assert [item.public_id for item in page.events] == [str(pod_event.public_id)]
+
+
+@pytest.mark.django_db
+@override_settings(**WEB_PUSH_SETTINGS)
+def test_order_permission_does_not_receive_pod_event():
+    order_actor, order_membership = _staff(email="order-only-push@example.com")
+    _subscription(membership=order_membership)
+    pod_order = _pod_order(customer_name="Isolated POD client")
+    pod_event = WorkshopNotificationEvent.objects.create(
+        event_type=WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY,
+        customer=pod_order.customer,
+        pod_order=pod_order,
+        pod_ready_check=_pod_check(pod_order),
+        source="test",
+    )
+    service = WorkshopNotificationService(client=FakePushClient())
+
+    with patch("apps.pod.services.qc.is_pod_order_qc_ready", return_value=True):
+        assert service.fanout(event_public_id=pod_event.public_id) == 0
+    assert service.read_recent_events(actor=order_actor).events == ()
+
+
+@pytest.mark.django_db
+@override_settings(**WEB_PUSH_SETTINGS)
+def test_obsolete_pod_event_is_rejected_at_fanout_and_delivery():
+    pod_actor, pod_membership = _staff(email="obsolete-pod@example.com", permissions=False)
+    pod_actor.user_permissions.add(
+        Permission.objects.get(content_type__app_label="accounts", codename="access_staff_portal"),
+        Permission.objects.get(content_type__app_label="pod", codename="access_pod_atelier"),
+    )
+    subscription = _subscription(membership=pod_membership)
+    pod_order = _pod_order(customer_name="Cancelled POD client")
+    event = WorkshopNotificationEvent.objects.create(
+        event_type=WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY,
+        customer=pod_order.customer,
+        pod_order=pod_order,
+        pod_ready_check=_pod_check(pod_order),
+        source="test",
+    )
+    delivery = PushDelivery.objects.create(event=event, subscription=subscription)
+    client = FakePushClient()
+    service = WorkshopNotificationService(client=client)
+
+    with patch("apps.pod.services.qc.is_pod_order_qc_ready", return_value=False):
+        assert service.fanout(event_public_id=event.public_id) == 0
+        assert service.deliver(delivery_public_id=delivery.public_id) == PushDelivery.Status.SKIPPED
+        assert service.read_recent_events(actor=pod_actor).events == ()
+
+    delivery.refresh_from_db()
+    assert delivery.failure_code == "event_obsolete"
+    assert client.sent == []
+
+
+@pytest.mark.django_db
+def test_event_type_cannot_target_the_wrong_order_domain():
+    native_order = _order(customer_name="Wrong target client")
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        WorkshopNotificationEvent.objects.create(
+            event_type=WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY,
+            customer=native_order.customer,
+            order=native_order,
+            source="invalid",
+        )
+
+
+@pytest.mark.django_db
+def test_role_change_can_rebootstrap_polling_after_old_cursor_is_denied():
+    actor, _membership = _staff(email="role-change-push@example.com")
+    service = WorkshopNotificationService(client=FakePushClient())
+    native_event = service.publish_order_submitted(_order(actor=actor), actor, "test")
+    assert service.read_recent_events(actor=actor).cursor == str(native_event.public_id)
+
+    actor.user_permissions.remove(
+        Permission.objects.get(content_type__app_label="orders", codename="view_order")
+    )
+    actor.user_permissions.add(
+        Permission.objects.get(content_type__app_label="pod", codename="access_pod_atelier")
+    )
+    actor = get_user_model().objects.get(pk=actor.pk)
+    pod_order = _pod_order(customer_name="Role changed POD client")
+    pod_event = WorkshopNotificationEvent.objects.create(
+        event_type=WorkshopNotificationEvent.EventType.POD_ORDER_QC_READY,
+        customer=pod_order.customer,
+        pod_order=pod_order,
+        pod_ready_check=_pod_check(pod_order),
+        source="test",
+    )
+
+    with pytest.raises(ValidationError, match="cursor"):
+        service.read_recent_events(actor=actor, cursor=native_event.public_id)
+    baseline = service.read_recent_events(actor=actor)
+    assert baseline.cursor == str(pod_event.public_id)
+    assert [item.public_id for item in baseline.events] == [str(pod_event.public_id)]

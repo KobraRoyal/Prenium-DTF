@@ -1,0 +1,30 @@
+{% load portal_tags %}
+{% pod_navigation as pod_nav %}
+<nav class="pod-workspace-nav{% if pod_nav.in_settings %} pod-workspace-nav--settings{% endif %}" aria-label="{% if pod_nav.in_settings %}Réglages POD{% else %}Production POD{% endif %}">
+  <div class="pod-workspace-nav__pages">
+    {% for entry in pod_nav.entries %}
+    <a class="pod-workspace-nav__link{% if entry.active %} is-active{% endif %}" href="{{ entry.url }}"{% if entry.active %} aria-current="page"{% endif %}>
+      <span class="pod-workspace-nav__label">{{ entry.label }}</span>
+      <span class="pod-workspace-nav__short" aria-hidden="true">{{ entry.short_label }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% if pod_nav.in_settings or pod_nav.can_stock or pod_nav.can_settings %}
+  <div class="pod-workspace-nav__utilities">
+    {% if pod_nav.in_settings %}
+    <a class="pod-workspace-nav__utility" href="{% url 'portal:staff-pod-hub' %}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m10 6-6 6 6 6M4 12h16"/></svg>
+      Retour à production
+    </a>
+    {% else %}
+      {% if pod_nav.can_stock %}<a class="pod-workspace-nav__utility{% if pod_nav.stock_active %} is-active{% endif %}" href="{% url 'portal:staff-pod-stock' %}"{% if pod_nav.stock_active %} aria-current="page"{% endif %}>Stocks</a>{% endif %}
+      {% if pod_nav.can_settings %}
+      <a class="pod-workspace-nav__utility" href="{% url 'portal:staff-pod-settings' %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--surface)"/><circle cx="15" cy="17" r="2" fill="var(--surface)"/></svg>
+        Réglages POD
+      </a>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+</nav>

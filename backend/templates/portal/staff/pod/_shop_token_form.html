@@ -1,0 +1,20 @@
+<form data-inline-required data-submit-loading class="ui-form-stack mb-8 max-w-xl" method="post" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="intent" value="save_token">
+  <div class="ui-field-group">
+    <label class="ui-label" for="shop-domain-token">Boutique</label>
+    <input class="ui-input" id="shop-domain-token" name="shop_domain" value="{{ form_data.shop_domain }}" required placeholder="ma-boutique" autocomplete="off">
+  </div>
+  <div class="ui-field-group">
+    <label class="ui-label" for="shop-name">Nom affiché</label>
+    <input class="ui-input" id="shop-name" name="name" value="{{ form_data.name }}" placeholder="Boutique test">
+  </div>
+  <div class="ui-field-group">
+    <label class="ui-label" for="shop-token">Token Admin API</label>
+    <input class="ui-input" id="shop-token" name="access_token" type="password" required autocomplete="off">
+    <p class="ui-field-help">Il est chiffré. Seuls les 4 derniers caractères restent visibles.</p>
+  </div>
+  <div class="ui-form-actions">
+    <button class="ui-btn {% if primary %}ui-btn-primary{% else %}ui-btn-ghost{% endif %}" type="submit">Connecter avec ce token</button>
+  </div>
+</form>

@@ -1,0 +1,56 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Réglages POD — Atelier{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Réglages" title="Réglages POD" subtitle="Connectez les boutiques, préparez les variantes et organisez les emplacements de l’atelier." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+  <section class="portal-page-surface ui-list-section pod-settings" aria-labelledby="pod-settings-title">
+    <h2 id="pod-settings-title">Configuration de l’atelier</h2>
+    <p class="muted">Les réglages préparent la production. Les opérations et le picking restent dans « À produire ».</p>
+    {% if can_manage_catalog %}
+    <div class="pod-settings__attention" aria-labelledby="pod-settings-attention-title">
+      <h3 id="pod-settings-attention-title">À vérifier</h3>
+      <ul>
+        {% if settings_overview.disconnected_shops_count %}<li><span>{{ settings_overview.disconnected_shops_count }} boutique{{ settings_overview.disconnected_shops_count|pluralize }} à reconnecter</span><a href="{% url 'portal:staff-pod-shops' %}">Voir les connexions</a></li>{% endif %}
+        {% if settings_overview.variants_needing_mapping_count %}<li><span>{{ settings_overview.variants_needing_mapping_count }} variante{{ settings_overview.variants_needing_mapping_count|pluralize }} à configurer</span><a href="{% url 'portal:staff-pod-catalog' %}">Ouvrir le catalogue</a></li>{% endif %}
+        {% if settings_overview.supports_without_variants_count %}<li><span>{{ settings_overview.supports_without_variants_count }} support{{ settings_overview.supports_without_variants_count|pluralize }} sans variante</span><a href="{% url 'portal:staff-pod-blanks' %}">Compléter les supports</a></li>{% endif %}
+        {% if not settings_overview.disconnected_shops_count and not settings_overview.variants_needing_mapping_count and not settings_overview.supports_without_variants_count %}<li class="pod-settings__quiet">Aucun point à corriger parmi les connexions et variantes existantes.</li>{% endif %}
+      </ul>
+    </div>
+    {% endif %}
+    <div class="pod-settings__sections">
+      {% if can_manage_catalog %}
+      <section aria-labelledby="pod-settings-products-title">
+        <h3 id="pod-settings-products-title">Connexions et produits</h3>
+        <div class="pod-settings__links">
+          <a href="{% url 'portal:staff-pod-shops' %}"><span><strong>Boutiques Shopify</strong><small>Connexion, synchronisation et association client.</small></span>{% include "portal/staff/pod/_settings_arrow.html" %}</a>
+          <a href="{% url 'portal:staff-pod-catalog' %}"><span><strong>Catalogue & mapping</strong><small>Support, variante et recette de chaque produit.</small></span>{% include "portal/staff/pod/_settings_arrow.html" %}</a>
+          <a href="{% url 'portal:staff-pod-blanks' %}"><span><strong>Supports vierges</strong><small>Modèles, tailles, couleurs et références de stock.</small></span>{% include "portal/staff/pod/_settings_arrow.html" %}</a>
+          <a href="{% url 'portal:staff-pod-techniques' %}"><span><strong>Techniques</strong><small>Méthodes de marquage et répertoires de production.</small></span>{% include "portal/staff/pod/_settings_arrow.html" %}</a>
+        </div>
+      </section>
+      {% endif %}
+      {% if can_manage_warehouse %}
+      <section aria-labelledby="pod-settings-warehouse-title">
+        <h3 id="pod-settings-warehouse-title">Organisation du stock</h3>
+        <div class="pod-settings__links">
+          <a href="{% url 'portal:staff-pod-warehouse' %}"><span><strong>Emplacements</strong><small>Zones et bacs · {{ settings_overview.locations_count }} emplacement{{ settings_overview.locations_count|pluralize }}.</small></span>{% include "portal/staff/pod/_settings_arrow.html" %}</a>
+        </div>
+        <p class="pod-settings__stock-note muted">Pour une réception ou un mouvement, utilisez <a href="{% url 'portal:staff-pod-stock' %}">Stocks</a> dans l’espace production.</p>
+      </section>
+      {% endif %}
+      {% if can_operate_production %}
+      <section aria-labelledby="pod-settings-diagnostic-title">
+        <h3 id="pod-settings-diagnostic-title">Diagnostic production</h3>
+        <div class="pod-settings__links">
+          <a href="{% url 'portal:staff-pod-rip-lots' %}"><span><strong>Lots RIP</strong><small>Liste technique NAS/Drive — hors parcours opérateur quotidien.</small></span>{% include "portal/staff/pod/_settings_arrow.html" %}</a>
+        </div>
+      </section>
+      {% endif %}
+    </div>
+    <p class="pod-settings__boundary muted">L’expédition est gérée directement dans Shopify et Sendcloud. Cet espace configure uniquement la production interne.</p>
+  </section>
+</div>
+{% endblock %}

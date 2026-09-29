@@ -1,0 +1,224 @@
+{
+  "generated_at": "2026-09-29T08:11:22.810810+00:00",
+  "nodes": {
+    "backend_apps_notifications_models_event": {
+      "code_fingerprint": "37ad1e38f488ba4317cddd76c5b0e61ce3ec838447525b9af7268119f9c1fa82",
+      "label": "Event",
+      "last": "2026-09-08T09:26:10.510762+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-08T09:26:10.510762+00:00",
+          "outcome": "useful",
+          "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
+        }
+      ],
+      "score": 0.616311393,
+      "source_file": "backend/apps/notifications/models.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_apps_notifications_tasks": {
+      "code_fingerprint": "e8c12a79bd94616918754bce81ece76e91f84d14a20132b02b95d87a85830040",
+      "label": "notifications/tasks.py",
+      "last": "2026-09-08T09:26:10.510762+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-08T09:26:10.510762+00:00",
+          "outcome": "useful",
+          "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
+        }
+      ],
+      "score": 0.616311393,
+      "source_file": "backend/apps/notifications/tasks.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_apps_orders_services_orders_orderservice": {
+      "code_fingerprint": "befe7a4e3e5f765ed9981966d282d4a943dbff602ca303f3d1f98e13ece874fb",
+      "label": "OrderService",
+      "last": "2026-09-08T09:26:10.510762+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-08T09:26:10.510762+00:00",
+          "outcome": "useful",
+          "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
+        }
+      ],
+      "score": 0.616311393,
+      "source_file": "backend/apps/orders/services/orders.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_apps_pod_services_pick_sessions_podpicksessionservice": {
+      "code_fingerprint": "6200785ba65aa7f9312631b55c7c1826dafc187286f408b2bb23db6bd0c9949b",
+      "label": "PodPickSessionService",
+      "last": "2026-09-25T17:13:05.573629+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-25T17:13:05.573629+00:00",
+          "outcome": "useful",
+          "q": "Optimiser la vue Atelier POD pour un workflow fluide"
+        }
+      ],
+      "score": 0.919681556,
+      "source_file": "backend/apps/pod/services/pick_sessions.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_apps_portal_views_staff_pod_board_staffpodhubview": {
+      "code_fingerprint": "968eb76fb8bdf35f7a0fccf9a6dc1d3f1d016e16c9f008e8b682b122bd50374c",
+      "label": "StaffPodHubView",
+      "last": "2026-09-25T17:13:05.573629+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-25T17:13:05.573629+00:00",
+          "outcome": "useful",
+          "q": "Optimiser la vue Atelier POD pour un workflow fluide"
+        }
+      ],
+      "score": 0.919681556,
+      "source_file": "backend/apps/portal/views_staff_pod_board.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_apps_production_services_dashboard_atelierdashboardservice": {
+      "code_fingerprint": "3a7b31b6fb1954ce38e9170106ba1ccce7d57e70e89741004db97058d640a8b5",
+      "label": "AtelierDashboardService",
+      "last": "2026-09-08T09:26:10.510762+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-08T09:26:10.510762+00:00",
+          "outcome": "useful",
+          "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
+        }
+      ],
+      "score": 0.616311393,
+      "source_file": "backend/apps/production/services/dashboard.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_apps_uploads_models_orderupload": {
+      "code_fingerprint": "924d29f708558d47f6f7fe312aadde85d031d27c320b76047379297516566a0f",
+      "label": "OrderUpload",
+      "last": "2026-09-04T13:45:33.915482+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-04T13:45:33.915482+00:00",
+          "outcome": "useful",
+          "q": "IDENTIFICATION D' un client me remonte une information qu'il ne eut pas passer une commande de plus de 200 en quantité pour une commande au fichier regarde cela et identifie le probleme sans rein coder"
+        }
+      ],
+      "score": 0.564248441,
+      "source_file": "backend/apps/uploads/models.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_apps_uploads_services_uploads_orderuploadservice": {
+      "code_fingerprint": "ca7c9847109b44f41b5033882582decca654f9fc0d1f4316fab55f4e9eef3eee",
+      "label": "OrderUploadService",
+      "last": "2026-09-04T13:45:33.915482+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-04T13:45:33.915482+00:00",
+          "outcome": "useful",
+          "q": "IDENTIFICATION D' un client me remonte une information qu'il ne eut pas passer une commande de plus de 200 en quantité pour une commande au fichier regarde cela et identifie le probleme sans rein coder"
+        }
+      ],
+      "score": 0.564248441,
+      "source_file": "backend/apps/uploads/services/uploads.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_config_asgi": {
+      "code_fingerprint": "fef31d48ad567f2bb23c6f5bd3c77329ab6b8d2f33b8d30c884ece6f10f16bcf",
+      "label": "asgi.py",
+      "last": "2026-09-08T09:48:20.373930+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-08T09:48:20.373930+00:00",
+          "outcome": "useful",
+          "q": "quel est la diffrence entre WebSocket/ASGI et Gunicorn/WSGI"
+        }
+      ],
+      "score": 0.61653061,
+      "source_file": "backend/config/asgi.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_config_wsgi": {
+      "code_fingerprint": "219dc9187b14ed1a0d8bfd5bcfd8c315cbf2f682d918bf34b3363dba20a2f481",
+      "label": "wsgi.py",
+      "last": "2026-09-08T09:48:20.373930+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-08T09:48:20.373930+00:00",
+          "outcome": "useful",
+          "q": "quel est la diffrence entre WebSocket/ASGI et Gunicorn/WSGI"
+        }
+      ],
+      "score": 0.61653061,
+      "source_file": "backend/config/wsgi.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_static_src_js_atelier_dashboard_batch": {
+      "code_fingerprint": "4bd9c440aedbde3fc719a28d413cf49537db90a5d1f91b2ac404714616a15a57",
+      "label": "atelier-dashboard-batch.js",
+      "last": "2026-09-08T09:26:10.510762+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-08T09:26:10.510762+00:00",
+          "outcome": "useful",
+          "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
+        }
+      ],
+      "score": 0.616311393,
+      "source_file": "backend/static_src/js/atelier-dashboard-batch.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "infra_readme_redis": {
+      "code_fingerprint": "1330233451d9407972596fab22032239f9ba159f4fd238374e4417d6f44a2f83",
+      "label": "Redis",
+      "last": "2026-09-08T09:48:20.373930+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-08T09:48:20.373930+00:00",
+          "outcome": "useful",
+          "q": "quel est la diffrence entre WebSocket/ASGI et Gunicorn/WSGI"
+        },
+        {
+          "date": "2026-09-08T09:26:10.510762+00:00",
+          "outcome": "useful",
+          "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
+        }
+      ],
+      "score": 1.232842003,
+      "source_file": "infra/README.md",
+      "status": "preferred",
+      "uses": 2
+    },
+    "infra_scripts_web_entrypoint": {
+      "code_fingerprint": "5134ef7f1a5c91b2783a7442489eaffad7fa6d8411d289d7b21963947a10c661",
+      "label": "web-entrypoint.sh",
+      "last": "2026-09-08T09:48:20.373930+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-08T09:48:20.373930+00:00",
+          "outcome": "useful",
+          "q": "quel est la diffrence entre WebSocket/ASGI et Gunicorn/WSGI"
+        },
+        {
+          "date": "2026-09-05T06:54:56.217589+00:00",
+          "outcome": "useful",
+          "q": "ok j'ai passé le max à 1000 pour quantité dans partial_project_item_quantity_fireld.html pour qu'il soit pris en compte dans docker il faut le relancer ?"
+        }
+      ],
+      "score": 1.190175759,
+      "source_file": "infra/scripts/web-entrypoint.sh",
+      "status": "preferred",
+      "uses": 2
+    }
+  },
+  "version": 1
+}

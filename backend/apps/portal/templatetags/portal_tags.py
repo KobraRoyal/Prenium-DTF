@@ -17,7 +17,7 @@ from apps.orders.references import (
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260923-kpi-label-v1"
+PORTAL_CSS_ASSET_V = "20260926-pod-dynamic-v2"
 
 STATUS_LABELS = {
     "draft": "Brouillon",
@@ -239,6 +239,15 @@ def portal_css_asset_v() -> str:
     return PORTAL_CSS_ASSET_V
 
 
+@register.simple_tag(takes_context=True)
+def pod_navigation(context):
+    from apps.portal.pod_navigation import navigation_for
+
+    request = context["request"]
+    url_name = request.resolver_match.url_name if request.resolver_match else ""
+    return navigation_for(request.user, url_name)
+
+
 @register.filter
 def client_order_panel_label(panel_slug):
     return CLIENT_ORDER_PANEL_LABELS.get(str(panel_slug or "").strip(), "Détail")
@@ -308,3 +317,14 @@ def client_project_refs(project, variant="row"):
         "variant": variant,
         "mono_ids": False,
     }
+
+
+@register.filter(name="shopify_cdn_thumb")
+def shopify_cdn_thumb(url, width=96):
+    from apps.pod.services.catalog_images import shopify_cdn_resized
+
+    try:
+        width_int = int(width)
+    except (TypeError, ValueError):
+        width_int = 96
+    return shopify_cdn_resized(str(url or ""), width=width_int)
