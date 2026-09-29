@@ -3,11 +3,33 @@
 {% block title %}{{ blank.name }} — Support POD{% endblock %}
 
 {% block portal_content %}
-<div class="portal-page portal-page--staff">
+<div class="portal-page portal-page--staff pod-page">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=blank.sku title=blank.name subtitle=blank.sku %}
   {% include "portal/staff/pod/_pod_context_nav.html" %}
   <section class="portal-page-surface ui-list-section">
-    {% if form_error %}<div class="alert alert--danger mb-4" role="alert">{{ form_error }}</div>{% endif %}
+    {% include "portal/staff/pod/_form_error.html" %}
+    <p class="pod-detail-back"><a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-pod-blanks' %}">Retour aux supports</a></p>
+    <span class="badge {% if blank.is_active %}is-success{% else %}is-neutral{% endif %}">{% if blank.is_active %}Actif{% else %}Inactif{% endif %}</span>
+    <details class="pod-editor" {% if form_error and submitted_intent == "update_blank" %}open{% endif %}>
+      <summary>Modifier le support</summary>
+      <form data-inline-required data-submit-loading method="post" class="ui-form-stack" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="update_blank">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="ui-field-group">
+            <label class="ui-label" for="blank-edit-name">Nom</label>
+            <input class="ui-input" id="blank-edit-name" name="name" value="{% if submitted_intent == 'update_blank' %}{{ form_data.name }}{% else %}{{ blank.name }}{% endif %}" required>
+          </div>
+          <div class="ui-field-group">
+            <label class="ui-label" for="blank-edit-brand">Marque</label>
+            <input class="ui-input" id="blank-edit-brand" name="brand" value="{% if submitted_intent == 'update_blank' %}{{ form_data.brand }}{% else %}{{ blank.brand }}{% endif %}">
+          </div>
+        </div>
+        <p class="ui-field-help">Le SKU reste fixe. La désactivation conserve les variantes et l’historique.</p>
+        {% if submitted_intent == "update_blank" %}{% include "portal/staff/pod/_active_field.html" with field_id="blank-active" active=form_data.is_active %}{% else %}{% include "portal/staff/pod/_active_field.html" with field_id="blank-active" active=blank.is_active %}{% endif %}
+        {% include "portal/staff/pod/_editor_actions.html" %}
+      </form>
+    </details>
 
     <div class="pod-photo-hero mb-8">
       {% if blank.has_photo %}
@@ -24,7 +46,9 @@
       <div class="pod-thumb pod-thumb--lg pod-thumb--empty" aria-hidden="true"></div>
       {% endif %}
       {% if can_manage_catalog %}
-      <form class="ui-form-stack" method="post" enctype="multipart/form-data" novalidate>
+      <details class="pod-editor" {% if form_error and submitted_intent == "blank_photo" %}open{% endif %}>
+      <summary>{% if blank.has_photo %}Remplacer{% else %}Ajouter{% endif %} la photo du support</summary>
+      <form data-inline-required data-submit-loading class="ui-form-stack" method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         <input type="hidden" name="intent" value="blank_photo">
         <div class="ui-field-group">
@@ -32,15 +56,14 @@
           <input class="ui-input" id="blank-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
           <p class="ui-field-help">JPEG, PNG ou WebP — max 5 Mo. Miniatures générées automatiquement.</p>
         </div>
-        <div class="ui-form-actions">
-          <button class="ui-btn ui-btn-primary" type="submit">Enregistrer la photo</button>
-        </div>
+        {% include "portal/staff/pod/_editor_actions.html" with submit_label="Enregistrer la photo" %}
       </form>
+      </details>
       {% endif %}
     </div>
 
-    <h2 class="font-display text-lg">Variantes</h2>
-    <div class="ui-table-shell mb-8">
+    <div class="pod-section-head"><h2 class="font-display">Variantes</h2><span class="badge is-neutral">{{ blank.variants.count }} variante{{ blank.variants.count|pluralize }}</span></div>
+    <div class="ui-table-shell mb-8" role="region" aria-label="Variantes et marquages" tabindex="0">
       <table class="ui-data-table w-full border-collapse">
         <thead>
           <tr>
@@ -49,7 +72,8 @@
             <th scope="col">Taille</th>
             <th scope="col">Couleur</th>
             <th scope="col">Bin défaut</th>
-            {% if can_manage_catalog %}<th scope="col"><span class="sr-only">Photo variante</span></th>{% endif %}
+            <th scope="col">État</th>
+            {% if can_manage_catalog %}<th scope="col">Actions</th>{% endif %}
           </tr>
         </thead>
         <tbody>
@@ -77,124 +101,91 @@
             <td>{{ variant.color_name }}{% if variant.has_own_photo %} <span class="badge is-neutral">photo propre</span>{% endif %}</td>
             <td>
               {% with rule=variant.location_rules.first %}
-                {% if rule %}<a href="{% url 'portal:staff-pod-location-detail' location_public_id=rule.location.public_id %}"><code>{{ rule.location.code }}</code></a>
+                {% if rule %}{% if can_manage_warehouse %}<a href="{% url 'portal:staff-pod-location-detail' location_public_id=rule.location.public_id %}"><code>{{ rule.location.code }}</code></a>{% else %}<code>{{ rule.location.code }}</code>{% endif %}
                 {% else %}—{% endif %}
               {% endwith %}
             </td>
+            <td><span class="badge {% if variant.is_active %}is-success{% else %}is-neutral{% endif %}">{% if variant.is_active %}Active{% else %}Inactive{% endif %}</span></td>
             {% if can_manage_catalog %}
             <td>
-              <form class="ui-form-actions" method="post" enctype="multipart/form-data">
+              <details class="pod-editor pod-editor--row" {% if form_error and submitted_intent == "update_variant" and form_data.variant_public_id == variant.public_id|stringformat:"s" %}open{% endif %}>
+                <summary aria-label="Modifier la variante {{ variant.sku }}">Modifier</summary>
+                <form data-inline-required data-submit-loading class="ui-form-stack" method="post" novalidate>
+                  {% csrf_token %}
+                  <input type="hidden" name="intent" value="update_variant">
+                  <input type="hidden" name="variant_public_id" value="{{ variant.public_id }}">
+                  <div class="ui-field-group"><label class="ui-label" for="variant-size-{{ variant.public_id }}">Taille</label><input class="ui-input" id="variant-size-{{ variant.public_id }}" name="size_label" value="{% if submitted_intent == 'update_variant' and form_data.variant_public_id == variant.public_id|stringformat:'s' %}{{ form_data.size_label }}{% else %}{{ variant.size_label }}{% endif %}"></div>
+                  <div class="ui-field-group"><label class="ui-label" for="variant-color-{{ variant.public_id }}">Couleur</label><input class="ui-input" id="variant-color-{{ variant.public_id }}" name="color_name" value="{% if submitted_intent == 'update_variant' and form_data.variant_public_id == variant.public_id|stringformat:'s' %}{{ form_data.color_name }}{% else %}{{ variant.color_name }}{% endif %}"></div>
+                  <div class="ui-field-group"><label class="ui-label" for="variant-hex-{{ variant.public_id }}">Code couleur</label><input class="ui-input" id="variant-hex-{{ variant.public_id }}" name="color_hex" value="{% if submitted_intent == 'update_variant' and form_data.variant_public_id == variant.public_id|stringformat:'s' %}{{ form_data.color_hex }}{% else %}{{ variant.color_hex }}{% endif %}" placeholder="#111111"></div>
+                  {% if submitted_intent == "update_variant" and form_data.variant_public_id == variant.public_id|stringformat:"s" %}{% include "portal/staff/pod/_active_field.html" with field_id=variant.public_id active=form_data.is_active %}{% else %}{% include "portal/staff/pod/_active_field.html" with field_id=variant.public_id active=variant.is_active %}{% endif %}
+                  {% include "portal/staff/pod/_editor_actions.html" %}
+                </form>
+              </details>
+              <details class="pod-editor pod-editor--row" {% if form_error and submitted_intent == "variant_photo" and form_data.variant_public_id == variant.public_id|stringformat:"s" %}open{% endif %}>
+              <summary aria-label="Gérer la photo {{ variant.sku }}">Photo</summary>
+              <form data-inline-required data-submit-loading class="ui-form-actions" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" name="intent" value="variant_photo">
                 <input type="hidden" name="variant_public_id" value="{{ variant.public_id }}">
                 <label class="sr-only" for="variant-photo-{{ variant.public_id }}">Photo {{ variant.sku }}</label>
                 <input class="ui-input" id="variant-photo-{{ variant.public_id }}" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit">Photo</button>
+                <button class="ui-btn ui-btn-secondary" type="submit">Enregistrer la photo</button>
               </form>
               {% if variant.has_own_photo %}
-              <form method="post" class="ui-form-actions">
+              <form data-inline-required data-submit-loading method="post" class="ui-form-actions">
                 {% csrf_token %}
                 <input type="hidden" name="intent" value="clear_variant_photo">
                 <input type="hidden" name="variant_public_id" value="{{ variant.public_id }}">
                 <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit">Retirer</button>
               </form>
               {% endif %}
+              </details>
             </td>
             {% endif %}
           </tr>
           {% empty %}
-          <tr><td colspan="{% if can_manage_catalog %}6{% else %}5{% endif %}">Aucune variante.{% if can_manage_catalog %} Ajoutez une ligne ci-dessous pour définir tailles et couleurs.{% else %} Demandez à un administrateur catalogue d’en ajouter.{% endif %}</td></tr>
+          <tr><td colspan="{% if can_manage_catalog %}7{% else %}6{% endif %}">Aucune variante. Ouvrez « Ajouter une variante » pour définir les tailles et couleurs.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
     {% if can_manage_catalog %}
-    <form class="ui-form-stack mb-8 max-w-3xl" method="post" novalidate>
+    <details class="pod-editor" {% if form_error and submitted_intent == "variant" %}open{% endif %}>
+    <summary>Ajouter une variante</summary>
+    <form data-inline-required data-submit-loading class="ui-form-stack mb-8 max-w-3xl" method="post" novalidate>
       {% csrf_token %}
       <input type="hidden" name="intent" value="variant">
       <h2 class="font-display text-lg">Ajouter une variante</h2>
       <div class="grid gap-3 sm:grid-cols-4">
         <div class="ui-field-group">
           <label class="ui-label" for="variant-sku">SKU variante</label>
-          <input class="ui-input" id="variant-sku" name="sku" required>
+          <input class="ui-input" id="variant-sku" name="sku" value="{% if submitted_intent == 'variant' %}{{ form_data.sku }}{% endif %}" required>
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="variant-size">Taille</label>
-          <input class="ui-input" id="variant-size" name="size_label" placeholder="M">
+          <input class="ui-input" id="variant-size" name="size_label" value="{% if submitted_intent == 'variant' %}{{ form_data.size_label }}{% endif %}" placeholder="M">
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="variant-color">Couleur</label>
-          <input class="ui-input" id="variant-color" name="color_name" placeholder="Noir">
+          <input class="ui-input" id="variant-color" name="color_name" value="{% if submitted_intent == 'variant' %}{{ form_data.color_name }}{% endif %}" placeholder="Noir">
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="variant-hex">Hex</label>
-          <input class="ui-input" id="variant-hex" name="color_hex" placeholder="#111111">
+          <input class="ui-input" id="variant-hex" name="color_hex" value="{% if submitted_intent == 'variant' %}{{ form_data.color_hex }}{% endif %}" placeholder="#111111">
         </div>
       </div>
-      <div class="ui-form-actions">
-        <button class="ui-btn ui-btn-primary" type="submit">Ajouter une variante</button>
-      </div>
+      {% include "portal/staff/pod/_editor_actions.html" with submit_label="Ajouter une variante" %}
     </form>
+    </details>
     {% endif %}
 
-    <h2 class="font-display text-lg">Poses autorisées</h2>
-    <div class="ui-table-shell mb-6">
-      <table class="ui-data-table w-full border-collapse">
-        <thead>
-          <tr><th scope="col">Zone</th><th scope="col">Technique</th><th scope="col">Obligation</th></tr>
-        </thead>
-        <tbody>
-          {% for capability in blank.placement_capabilities.all %}
-          <tr>
-            <td>{{ capability.get_placement_display }}</td>
-            <td>{{ capability.technique.name }}</td>
-            <td>{% if capability.is_required %}<span class="badge is-warning">Requise</span>{% else %}<span class="badge is-neutral">Optionnelle</span>{% endif %}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="3">Aucune pose configurée.{% if can_manage_catalog %} Enregistrez une zone et une technique dans le formulaire ci-dessous.{% else %} Demandez à un administrateur catalogue de les définir.{% endif %}</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% if can_manage_catalog %}
-    <form class="ui-form-stack mb-8 max-w-3xl" method="post">
-      {% csrf_token %}
-      <input type="hidden" name="intent" value="capability">
-      <h2 class="font-display text-lg">Nouvelle pose</h2>
-      <div class="grid gap-3 sm:grid-cols-3">
-        <div class="ui-field-group">
-          <label class="ui-label" for="cap-placement">Zone</label>
-          <select class="ui-input" id="cap-placement" name="placement">
-            {% for value, label in placements %}
-            <option value="{{ value }}">{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="ui-field-group">
-          <label class="ui-label" for="cap-technique">Technique</label>
-          <select class="ui-input" id="cap-technique" name="technique_public_id">
-            {% for technique in techniques %}
-            <option value="{{ technique.public_id }}">{{ technique.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="ui-field-group flex items-end">
-          <label class="ui-checkbox-row" for="cap-required">
-            <input type="checkbox" id="cap-required" name="is_required">
-            <span>Requise</span>
-          </label>
-        </div>
-      </div>
-      <div class="ui-form-actions">
-        <button class="ui-btn ui-btn-ghost" type="submit">Enregistrer la pose</button>
-      </div>
-    </form>
-    {% endif %}
+    {% include 'portal/staff/pod/_blank_marking_options.html' %}
 
     {% if can_manage_warehouse and blank.variants.exists %}
-    <h2 class="font-display text-lg">Emplacement de picking par défaut</h2>
-    <form class="ui-form-stack max-w-3xl" method="post">
+    <details class="pod-editor" {% if form_error and submitted_intent == "default_location" %}open{% endif %}>
+    <summary>Définir l’emplacement de prélèvement</summary>
+    <form data-inline-required data-submit-loading class="ui-form-stack max-w-3xl" method="post">
       {% csrf_token %}
       <input type="hidden" name="intent" value="default_location">
       <div class="grid gap-3 sm:grid-cols-2">
@@ -202,7 +193,7 @@
           <label class="ui-label" for="rule-variant">Variante</label>
           <select class="ui-input" id="rule-variant" name="variant_public_id">
             {% for variant in blank.variants.all %}
-            <option value="{{ variant.public_id }}">{{ variant.sku }}</option>
+            {% if variant.is_active and blank.is_active %}<option value="{{ variant.public_id }}" {% if form_data.variant_public_id == variant.public_id|stringformat:"s" %}selected{% endif %}>{{ variant.sku }}</option>{% endif %}
             {% endfor %}
           </select>
         </div>
@@ -210,15 +201,19 @@
           <label class="ui-label" for="rule-location">Emplacement</label>
           <select class="ui-input" id="rule-location" name="location_public_id">
             {% for location in locations %}
-            <option value="{{ location.public_id }}">{{ location.code }} — {{ location.zone.name }}</option>
+            <option value="{{ location.public_id }}" {% if form_data.location_public_id == location.public_id|stringformat:"s" %}selected{% endif %}>{{ location.code }} — {{ location.zone.name }}</option>
             {% endfor %}
           </select>
         </div>
       </div>
-      <div class="ui-form-actions">
-        <button class="ui-btn ui-btn-ghost" type="submit" {% if not locations %}disabled{% endif %}>Définir le bin</button>
-      </div>
+      {% if locations and blank.is_active %}
+      {% include "portal/staff/pod/_editor_actions.html" with submit_label="Enregistrer l’emplacement" %}
+      {% else %}
+      <p class="text-sm text-muted">Un support actif et un emplacement actif sont nécessaires.</p>
+      {% include "portal/staff/pod/_editor_actions.html" with submit_label="Enregistrer l’emplacement" submit_disabled=True %}
+      {% endif %}
     </form>
+    </details>
     {% endif %}
   </section>
 </div>

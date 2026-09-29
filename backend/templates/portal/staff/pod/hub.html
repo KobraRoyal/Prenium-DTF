@@ -3,57 +3,138 @@
 {% block title %}À produire — Atelier POD{% endblock %}
 
 {% block portal_content %}
-<div class="portal-page portal-page--staff">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" title="À produire" subtitle="Cochez → picking PDF → lot DTF." %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" title="À produire" subtitle="Préparez les pièces, confirmez le prélèvement, puis lancez le lot DTF." %}
   {% include "portal/staff/pod/_pod_context_nav.html" %}
-  <section class="portal-page-surface ui-list-section" aria-labelledby="pod-board-title">
-    <h2 id="pod-board-title" class="sr-only">File de production POD</h2>
-    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
-
-    <div
-      class="pod-board"
-      x-data="{
-        selected: [],
-        selectableIds() {
-          return Array.from(document.querySelectorAll('#pod-board-form input[name=work_item_public_ids]:not(:disabled)')).map((i) => i.value);
-        },
-        selectAll() { this.selected = this.selectableIds(); },
-        clearAll() { this.selected = []; },
-        confirmAction(label) {
-          if (!this.selected.length) return false;
-          return window.confirm(label + ' (' + this.selected.length + ') ?');
-        },
-        closeDrawer() {
-          const host = document.getElementById('pod-variant-drawer');
-          if (host) host.innerHTML = '';
+  <section
+    class="portal-page-surface ui-list-section pod-board-surface"
+    aria-labelledby="pod-board-title"
+    x-data="{
+      selected: [],
+      lastDrawerTrigger: null,
+      selectableIds() {
+        return Array.from(document.querySelectorAll('#pod-board-form input[name=work_item_public_ids]:not(:disabled)')).map((i) => i.value);
+      },
+      selectAll() { this.selected = this.selectableIds(); },
+      clearAll() { this.selected = []; },
+      confirmAction(label) {
+        if (!this.selected.length) return false;
+        return window.confirm(label + ' (' + this.selected.length + ') ?');
+      },
+      rememberDrawerTrigger(trigger) {
+        this.lastDrawerTrigger = trigger;
+      },
+      drawerFocusables() {
+        const host = document.getElementById('pod-variant-drawer');
+        if (!host) return [];
+        return Array.from(host.querySelectorAll(`a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])`));
+      },
+      trapDrawerFocus(event) {
+        const focusables = this.drawerFocusables();
+        const panel = document.getElementById('pod-variant-config-panel');
+        if (!focusables.length) {
+          event.preventDefault();
+          if (panel) panel.focus();
+          return;
         }
-      }"
-      @keydown.escape.window="closeDrawer()"
-    >
-      <div class="atelier-worklist-command ui-list-command ui-list-command--compact pod-board-command" aria-labelledby="pod-board-command-title">
-        <div class="atelier-worklist-command__head">
-          <h2 class="font-display" id="pod-board-command-title">Sélection lot</h2>
-          <span class="badge is-neutral">
-            <span x-show="!selected.length">{{ board.ready_count }} prête{{ board.ready_count|pluralize }}</span>
-            <span x-show="selected.length" x-cloak x-text="selected.length + ' sel.'"></span>
-          </span>
-          {% if board.blocked_count %}<span class="badge is-warning">{{ board.blocked_count }} mapping</span>{% endif %}
-          {% if board.press_count %}<a class="badge is-neutral" href="{% url 'portal:staff-pod-pose-dtf' %}">{{ board.press_count }} à poser</a>{% endif %}
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      },
+      closeDrawer() {
+        const host = document.getElementById('pod-variant-drawer');
+        if (!host || !host.childElementCount) return;
+        const panel = document.getElementById('pod-variant-config-panel');
+        if (panel && panel.open) panel.close();
+        host.innerHTML = '';
+        this.$nextTick(() => {
+          if (this.lastDrawerTrigger && document.contains(this.lastDrawerTrigger)) {
+            this.lastDrawerTrigger.focus({ preventScroll: true });
+          }
+        });
+      }
+    }"
+    @keydown.escape.window="closeDrawer()"
+  >
+    <h2 id="pod-board-title" class="sr-only">File de production POD</h2>
+    {% include "portal/staff/pod/_form_error.html" %}
+
+    <div class="pod-next-action" aria-label="Prochaine action atelier">
+      <div class="pod-next-action__copy">
+        {% if pick_reserved_count %}
+        <h2>{{ pick_reserved_count }} pièce{{ pick_reserved_count|pluralize }} à prélever</h2>
+        <p>Scannez l’étiquette, puis le bin indiqué sur la session active.</p>
+        {% elif board.picking_groups %}
+        <h2>Des pièces sont prêtes pour le picking</h2>
+        <p>Sélectionnez les lignes, puis générez le picking A4 et les étiquettes.</p>
+        {% elif board.blocked_count %}
+        <h2>{{ board.blocked_count }} mapping{{ board.blocked_count|pluralize }} à corriger</h2>
+        <p>{% if can_manage_catalog %}La production reste en attente tant que ces variantes ne sont pas configurées.{% else %}Un responsable doit configurer ces variantes avant leur mise en production.{% endif %}</p>
+        {% elif pick_untracked_count %}
+        <h2>Anciennes étiquettes à reprendre</h2>
+        <p>Vérifiez les pièces physiques avant de réimprimer une session avec réservation.</p>
+        {% elif board.press_count %}
+        <h2>{{ board.press_count }} pièce{{ board.press_count|pluralize }} à poser</h2>
+        <p>La préparation est terminée ; poursuivez au poste de pose.</p>
+        {% else %}
+        <h2>Aucune action de production en attente</h2>
+        <p>Les nouvelles commandes apparaîtront ici dès leur arrivée et leur configuration.</p>
+        {% endif %}
+      </div>
+      {% if pick_reserved_count %}
+        {% if not pick_sessions %}<a class="ui-btn ui-btn-secondary" href="#pod-pick-workflow">Reprendre le prélèvement</a>{% endif %}
+      {% elif board.picking_groups %}<a class="ui-btn ui-btn-secondary" href="#pod-board-command-title">Préparer le picking</a>
+      {% elif board.blocked_count %}
+        {% if board.readiness == 'ready' %}
+        <a class="ui-btn ui-btn-primary" href="?queue=blocked{% if board.q %}&amp;q={{ board.q|urlencode }}{% endif %}#pod-board-mapping">Voir les mappings</a>
+        {% else %}
+        <a class="ui-btn ui-btn-primary" href="#pod-board-mapping">{% if can_manage_catalog %}Corriger le mapping{% else %}Voir les blocages{% endif %}</a>
+        {% endif %}
+      {% elif pick_untracked_count %}<a class="ui-btn ui-btn-primary" href="#pod-pick-workflow">Voir la session</a>
+      {% elif board.press_count %}<a class="ui-btn ui-btn-primary" href="{% url 'portal:staff-pod-pose-dtf' %}">Aller à la pose</a>
+      {% elif can_manage_catalog %}<a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-pod-shops' %}">Voir les boutiques</a>{% endif %}
+    </div>
+
+    {# Poste GPAO en premier quand une session a encore des pièces à sortir. #}
+    {% if pick_sessions and pick_reserved_count %}
+    {% include "portal/staff/pod/_pick_workflow.html" %}
+    {% endif %}
+
+    <div class="pod-board{% if not board.picking_groups %} is-idle{% endif %}">
+      <div class="atelier-worklist-command ui-list-command ui-list-command--compact pod-board-command{% if not board.picking_groups %} pod-board-command--idle{% endif %}" aria-labelledby="pod-board-command-title">
+        <div class="atelier-worklist-command__head pod-board-command__title-row">
+          <h2 class="font-display" id="pod-board-command-title">Nouvelles pièces à préparer</h2>
+          <div class="pod-board-command__meta">
+            <span class="badge is-neutral">
+              <span x-show="!selected.length">{{ board.pickable_count }} à préparer</span>
+              <span x-show="selected.length" x-cloak x-text="selected.length + ' sel.'"></span>
+            </span>
+            {% if board.blocked_count %}<span class="badge is-warning">{{ board.blocked_count }} mapping</span>{% endif %}
+            {% if board.press_count %}<a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-pose-dtf' %}">{{ board.press_count }} à poser</a>{% endif %}
+          </div>
         </div>
         <p class="pod-board-command__hint muted" x-show="selected.length" x-cloak>Ensuite : picking PDF, puis lot DTF.</p>
-        <form class="ui-list-command__tools atelier-worklist-command__tools" method="get" role="search" aria-label="Filtrer">
-          <label class="sr-only" for="pod-board-q">Recherche</label>
-          <input class="ui-input pod-board-filter-q" id="pod-board-q" name="q" type="search" value="{{ board.q }}" placeholder="SO ou SKU">
-          <label class="sr-only" for="pod-board-readiness">Filtre</label>
+        {% if board.picking_groups or board.q or board.readiness != 'all' or board.blocked_count %}
+        <form class="ui-list-command__tools atelier-worklist-command__tools pod-board-command__filters" method="get" role="search" aria-label="Filtrer">
+          <label class="sr-only" for="pod-board-q">Rechercher une commande ou un SKU</label>
+          <input class="ui-input pod-board-filter-q" id="pod-board-q" name="q" type="search" value="{{ board.q }}" placeholder="Commande ou SKU">
+          <label class="sr-only" for="pod-board-readiness">État de la file</label>
           <select class="ui-input pod-board-filter-queue" id="pod-board-readiness" name="queue">
             <option value="all"{% if board.readiness == "all" %} selected{% endif %}>Toutes</option>
             <option value="ready"{% if board.readiness == "ready" %} selected{% endif %}>Prêtes</option>
             <option value="blocked"{% if board.readiness == "blocked" %} selected{% endif %}>Mapping</option>
           </select>
-          <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit">OK</button>
+          <button class="ui-btn ui-btn-secondary ui-btn-sm" type="submit">Filtrer</button>
         </form>
-        {% if can_manage_catalog and board.picking_groups %}
-        <div class="ui-list-command__tools atelier-worklist-command__tools pod-board-actions" aria-label="Actions sélection">
+        {% endif %}
+        {% if can_operate_production and board.picking_groups %}
+        <div class="ui-list-command__tools atelier-worklist-command__tools pod-board-actions pod-board-command__actions" aria-label="Actions sélection">
           <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" @click="selected.length ? clearAll() : selectAll()" x-text="selected.length ? 'Tout décocher' : 'Tout cocher'"></button>
           <button
             class="ui-btn ui-btn-primary ui-btn-sm"
@@ -79,33 +160,33 @@
         {% endif %}
       </div>
 
-      <form id="pod-board-form" method="post">{% csrf_token %}</form>
+      <form data-inline-required data-submit-loading id="pod-board-form" method="post">{% csrf_token %}</form>
 
       {% if board.picking_groups %}
       {% for group in board.picking_groups %}
-      <article class="mb-6">
-        <header class="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <article class="pod-board-group">
+        <header class="pod-board-group__head">
           <h3 class="font-display text-base m-0">{{ group.model }}{% if group.variant_sku %} · {{ group.variant_sku }}{% endif %}</h3>
           <p class="muted text-sm m-0">
             {% if group.location_code %}<code>{{ group.location_code }}</code>{% else %}sans bin{% endif %}
             · {{ group.total_quantity }} pcs
           </p>
         </header>
-        <div class="ui-table-shell">
+        <div class="ui-table-shell pod-table-shell" role="region" aria-label="Commandes {{ group.model }}" tabindex="0">
           <table class="ui-data-table w-full border-collapse">
             <thead>
               <tr>
-                <th scope="col"><span class="sr-only">Sel.</span></th>
+                <th scope="col" class="pod-board-col-check"><span class="sr-only">Sel.</span></th>
                 <th scope="col">Commande</th>
-                <th scope="col">Qté</th>
+                <th scope="col" class="pod-board-col-qty">Qté</th>
                 <th scope="col">Marquages</th>
               </tr>
             </thead>
             <tbody>
               {% for line in group.lines %}
               <tr>
-                <td>
-                  {% if can_manage_catalog and line.editable %}
+                <td class="pod-board-col-check">
+                  {% if can_operate_production and line.editable %}
                   <input
                     type="checkbox"
                     name="work_item_public_ids"
@@ -119,11 +200,10 @@
                 <td>
                   <code>{{ line.order_number }}</code>
                   <span class="muted text-sm"> · {{ line.shopify_sku }}</span>
-                  {% if line.scan_identifier %}<br><code class="text-sm">{{ line.scan_identifier }}</code>{% endif %}
                 </td>
-                <td>
-                  {% if can_manage_catalog and line.editable %}
-                  <form method="post" class="ui-form-actions">
+                <td class="pod-board-col-qty">
+                  {% if can_operate_production and line.editable %}
+                  <form data-inline-required data-submit-loading method="post" class="pod-qty-form">
                     {% csrf_token %}
                     <input type="hidden" name="intent" value="set_quantity">
                     <input type="hidden" name="work_item_public_id" value="{{ line.work_item_public_id }}">
@@ -144,47 +224,29 @@
       </article>
       {% endfor %}
       {% else %}
-      {% url 'portal:staff-pod-shops' as pod_shops_url %}
-      {% include "components/ui/empty_state.html" with title="Rien à prélever" message="Les commandes Shopify prêtes apparaissent ici." cta_url=pod_shops_url cta_label="Boutiques" %}
+      <div class="pod-board-empty" role="status">
+        <h3>Aucune nouvelle pièce à préparer</h3>
+        {% if board.q or board.readiness != 'all' %}
+        <p>Aucun résultat avec ces filtres. <a href="{% url 'portal:staff-pod-hub' %}">Effacer les filtres</a></p>
+        {% elif board.blocked_count %}
+        <p>{% if can_manage_catalog %}Corrigez le mapping ci-dessous pour débloquer la file.{% else %}Transmettez les références bloquées ci-dessous au responsable du catalogue.{% endif %}</p>
+        {% elif pick_reserved_count %}
+        <p>Les pièces déjà étiquetées attendent leur scan dans la session de picking.</p>
+        {% elif pick_untracked_count %}
+        <p>La session ancienne ci-dessous doit être contrôlée avant réimpression.</p>
+        {% elif board.press_count %}
+        <p>{{ board.press_count }} pièce{{ board.press_count|pluralize }} en attente de pose — <a href="{% url 'portal:staff-pod-pose-dtf' %}">ouvrir le poste Pose</a>.</p>
+        {% else %}
+        <p>Les commandes Shopify prêtes apparaîtront ici.{% if can_manage_catalog %} <a href="{% url 'portal:staff-pod-shops' %}">Vérifier les boutiques</a>{% endif %}</p>
+        {% endif %}
+      </div>
       {% endif %}
     </div>
 
-    {% if pick_sessions %}
-    <details class="mb-6" open>
-      <summary class="font-display text-base">Sessions PDF ({{ pick_sessions|length }})</summary>
-      <div class="ui-table-shell mt-3">
-        <table class="ui-data-table w-full border-collapse">
-          <thead>
-            <tr><th scope="col">Session</th><th scope="col">Pcs</th><th scope="col"><span class="sr-only">PDF</span></th></tr>
-          </thead>
-          <tbody>
-            {% for session in pick_sessions %}
-            <tr>
-              <td>
-                <code>{{ session.code }}</code>
-                {% if session.is_voided %}<span class="badge is-warning">Annulée</span>{% endif %}
-              </td>
-              <td>{{ session.active_piece_count }}</td>
-              <td>
-                {% if session.is_voided %}
-                <span class="muted">—</span>
-                {% else %}
-                <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-pick-session-pdf' session_public_id=session.public_id document_kind='picking' %}">A4</a>
-                <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-pick-session-pdf' session_public_id=session.public_id document_kind='etiquettes' %}">Zebra</a>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </details>
-    {% endif %}
-
-    {% if board.blocked_count %}
-    <details class="mb-6" {% if board.readiness == "blocked" %}open{% endif %}>
+    {% if board.blocked_count and board.readiness != 'ready' %}
+    <details id="pod-board-mapping" class="pod-board-section" {% if board.readiness == "blocked" or not board.picking_groups %}open{% endif %}>
       <summary class="font-display text-base">Mapping à corriger ({{ board.blocked_count }})</summary>
-      <div class="ui-table-shell mt-3">
+      <div class="ui-table-shell pod-table-shell mt-3" role="region" aria-label="Mapping à corriger" tabindex="0">
         <table class="ui-data-table w-full border-collapse">
           <thead>
             <tr>
@@ -202,15 +264,20 @@
               <td><code>{{ row.item.variant.sku|default:row.item.variant.title }}</code></td>
               <td><span class="badge {{ row.tone }}">{{ row.status_label }}</span></td>
               <td>
+                {% if can_manage_catalog %}
                 <button
                   type="button"
                   class="ui-btn ui-btn-ghost ui-btn-sm"
                   aria-label="Configurer le mapping {{ row.item.variant.sku|default:row.item.variant.title }}"
+                  aria-haspopup="dialog"
+                  aria-controls="pod-variant-config-panel"
                   hx-get="{% url 'portal:staff-pod-variant-config' variant_public_id=row.item.variant.public_id %}"
                   hx-target="#pod-variant-drawer"
                   hx-swap="innerHTML"
                   hx-indicator="#portal-htmx-indicator"
+                  @click="rememberDrawerTrigger($event.currentTarget)"
                 >Configurer</button>
+                {% else %}<span class="muted">À traiter par un responsable</span>{% endif %}
               </td>
             </tr>
             {% endif %}
@@ -222,10 +289,14 @@
     </details>
     {% endif %}
 
+    {% if pick_sessions and not pick_reserved_count %}
+    {% include "portal/staff/pod/_pick_workflow.html" %}
+    {% endif %}
+
     {% if board.skipped %}
-    <details class="mb-6">
+    <details class="pod-board-section">
       <summary class="font-display text-base">Ignorées / annulées ({{ board.skipped|length }})</summary>
-      <div class="ui-table-shell mt-3">
+      <div class="ui-table-shell pod-table-shell mt-3" role="region" aria-label="Commandes ignorées" tabindex="0">
         <table class="ui-data-table w-full border-collapse">
           <thead>
             <tr><th scope="col">Commande</th><th scope="col">SKU</th><th scope="col">Raison</th></tr>
@@ -244,12 +315,7 @@
     </details>
     {% endif %}
 
-    <aside
-      id="pod-variant-drawer"
-      class="pod-variant-drawer"
-      aria-live="polite"
-      hx-on::after-swap="const p = this.querySelector('#pod-variant-config-panel'); if (p) { p.focus({ preventScroll: false }); }"
-    ></aside>
+    {% include "portal/staff/pod/_variant_drawer_host.html" %}
   </section>
 </div>
 {% endblock %}

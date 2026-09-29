@@ -1,8 +1,8 @@
 <div class="ui-field-group">
   <label class="ui-label" for="{{ prefix }}-owner">Propriétaire</label>
   <select class="ui-input" id="{{ prefix }}-owner" name="owner_kind">
-    <option value="atelier">Atelier</option>
-    <option value="customer">Client</option>
+    <option value="atelier" {% if form_data.owner_kind != "customer" %}selected{% endif %}>Atelier</option>
+    <option value="customer" {% if form_data.owner_kind == "customer" %}selected{% endif %}>Client</option>
   </select>
 </div>
 {% if customers %}
@@ -11,7 +11,7 @@
   <select class="ui-input" id="{{ prefix }}-customer" name="customer_public_id">
     <option value="">—</option>
     {% for customer in customers %}
-    <option value="{{ customer.public_id }}">{{ customer.name }}</option>
+    <option value="{{ customer.public_id }}" {% if form_data.customer_public_id == customer.public_id|stringformat:"s" %}selected{% endif %}>{{ customer.name }}</option>
     {% endfor %}
   </select>
 </div>

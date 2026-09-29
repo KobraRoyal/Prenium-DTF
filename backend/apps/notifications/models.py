@@ -219,6 +219,7 @@ class WorkshopNotificationEvent(BaseModel):
 
     class EventType(models.TextChoices):
         ORDER_SUBMITTED = "workshop.order_submitted", "Nouvelle commande Atelier"
+        POD_ORDER_QC_READY = "workshop.pod_order_qc_ready", "Commande POD contrôlée"
 
     event_type = models.CharField(max_length=64, choices=EventType.choices)
     customer = models.ForeignKey(
@@ -228,7 +229,23 @@ class WorkshopNotificationEvent(BaseModel):
     )
     order = models.ForeignKey(
         "orders.Order",
+        null=True,
+        blank=True,
         on_delete=models.CASCADE,
+        related_name="workshop_notification_events",
+    )
+    pod_order = models.ForeignKey(
+        "pod.PodShopifyOrder",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="workshop_notification_events",
+    )
+    pod_ready_check = models.ForeignKey(
+        "pod.PodQualityCheck",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
         related_name="workshop_notification_events",
     )
     actor = models.ForeignKey(
@@ -243,9 +260,39 @@ class WorkshopNotificationEvent(BaseModel):
     class Meta:
         ordering = ("-created_at", "-id")
         constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(order__isnull=False, pod_order__isnull=True)
+                    | models.Q(order__isnull=True, pod_order__isnull=False)
+                ),
+                name="notif_workshop_event_order_xor",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        event_type="workshop.pod_order_qc_ready",
+                        order__isnull=True,
+                        pod_order__isnull=False,
+                        pod_ready_check__isnull=False,
+                    )
+                    | models.Q(
+                        event_type="workshop.order_submitted",
+                        order__isnull=False,
+                        pod_order__isnull=True,
+                        pod_ready_check__isnull=True,
+                    )
+                ),
+                name="notif_workshop_event_type_target",
+            ),
             models.UniqueConstraint(
                 fields=("event_type", "order"),
+                condition=models.Q(order__isnull=False),
                 name="uniq_workshop_event_type_order",
+            ),
+            models.UniqueConstraint(
+                fields=("pod_ready_check",),
+                condition=models.Q(event_type="workshop.pod_order_qc_ready"),
+                name="uniq_workshop_pod_ready_check",
             ),
         ]
         indexes = [

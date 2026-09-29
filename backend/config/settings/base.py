@@ -178,11 +178,15 @@ GOOGLE_DRIVE_API_BASE_URL = os.environ.get(
 GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON = env("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON", "")
 GOOGLE_DRIVE_SYNC_ENABLED = env_bool("GOOGLE_DRIVE_SYNC_ENABLED", False)
 GOOGLE_DRIVE_TIMEOUT_SECONDS = env_int("GOOGLE_DRIVE_TIMEOUT_SECONDS", 30)
+GOOGLE_DRIVE_POD_HD_SOURCE_FOLDER_ID = env("GOOGLE_DRIVE_POD_HD_SOURCE_FOLDER_ID", "")
+GOOGLE_DRIVE_POD_PRODUCTION_FOLDER_ID = env("GOOGLE_DRIVE_POD_PRODUCTION_FOLDER_ID", "")
+POD_DRIVE_HD_MAX_BYTES = env_int("POD_DRIVE_HD_MAX_BYTES", 100 * 1024 * 1024)
+POD_AUTO_RIP_ON_PICK_SESSION = env_bool("POD_AUTO_RIP_ON_PICK_SESSION", True)
 SHOPIFY_POD_API_KEY = os.environ.get("SHOPIFY_POD_API_KEY", "")
 SHOPIFY_POD_API_SECRET = os.environ.get("SHOPIFY_POD_API_SECRET", "")
 SHOPIFY_POD_SCOPES = os.environ.get(
     "SHOPIFY_POD_SCOPES",
-    "read_products,read_orders,read_assigned_fulfillment_orders,write_assigned_fulfillment_orders",
+    "read_products,read_orders",
 )
 SHOPIFY_API_VERSION = os.environ.get("SHOPIFY_API_VERSION", "2024-10")
 SHOPIFY_TOKEN_FERNET_KEY = os.environ.get("SHOPIFY_TOKEN_FERNET_KEY", "")
@@ -330,6 +334,14 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = env_int("CELERY_TASK_TIME_LIMIT", 300)
 CELERY_TASK_SOFT_TIME_LIMIT = env_int("CELERY_TASK_SOFT_TIME_LIMIT", 240)
 CELERY_BEAT_SCHEDULE = {
+    "pod-recover-drive-hd-sources": {
+        "task": "pod.recover_drive_hd_sources",
+        "schedule": max(60, env_int("POD_DRIVE_HD_RECOVERY_INTERVAL_SECONDS", 60)),
+    },
+    "pod-recover-shopify-webhook-inbox": {
+        "task": "pod.recover_shopify_pod_inbox",
+        "schedule": max(60, env_int("POD_WEBHOOK_RECOVERY_INTERVAL_SECONDS", 60)),
+    },
     "billing-reconcile-active-payments": {
         "task": "billing.reconcile_active_payments",
         "schedule": max(60, env_int("PAYMENT_RECOVERY_INTERVAL_SECONDS", 300)),

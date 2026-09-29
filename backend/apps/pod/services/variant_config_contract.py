@@ -10,6 +10,8 @@ class VariantSlotPayload:
     technique_public_id: str
     is_enabled: bool = True
     print_reference: str = ""
+    source_asset_version_public_id: str = ""
+    source_drive_file_id: str = ""
     display_order: int = 0
 
 
@@ -31,6 +33,10 @@ class VariantConfigPayload:
                 technique_public_id=str(item.get("technique_public_id", "")).strip(),
                 is_enabled=bool(item.get("is_enabled", True)),
                 print_reference=str(item.get("print_reference", "")).strip(),
+                source_asset_version_public_id=str(
+                    item.get("source_asset_version_public_id", "")
+                ).strip(),
+                source_drive_file_id=str(item.get("source_drive_file_id", "")).strip(),
                 display_order=int(item.get("display_order", 0) or 0),
             )
             for item in data.get("slots") or []

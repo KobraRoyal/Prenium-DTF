@@ -1,34 +1,30 @@
-{# Chrome Operate POD — chaîne atelier visible ; Config/Admin en menu secondaire. #}
-{% with url_name=request.resolver_match.url_name %}
-<nav class="pod-context-nav" aria-label="Section POD">
-  <div class="pod-context-nav__ops" role="group" aria-label="Opérer">
-    <a class="pod-context-nav__link{% if url_name == 'staff-pod-hub' %} is-active{% endif %}" {% if url_name == 'staff-pod-hub' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-hub' %}">À produire</a>
-    <a class="pod-context-nav__link{% if url_name == 'staff-pod-pose-dtf' %} is-active{% endif %}" {% if url_name == 'staff-pod-pose-dtf' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-pose-dtf' %}">Pose</a>
-    <a class="pod-context-nav__link{% if url_name == 'staff-pod-rip-lots' or url_name == 'staff-pod-rip-lot-detail' or url_name == 'staff-pod-unit-document' %} is-active{% endif %}" {% if url_name == 'staff-pod-rip-lots' or url_name == 'staff-pod-rip-lot-detail' or url_name == 'staff-pod-unit-document' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-rip-lots' %}">Lots RIP</a>
+{% load portal_tags %}
+{% pod_navigation as pod_nav %}
+<nav class="pod-workspace-nav{% if pod_nav.in_settings %} pod-workspace-nav--settings{% endif %}" aria-label="{% if pod_nav.in_settings %}Réglages POD{% else %}Production POD{% endif %}">
+  <div class="pod-workspace-nav__pages">
+    {% for entry in pod_nav.entries %}
+    <a class="pod-workspace-nav__link{% if entry.active %} is-active{% endif %}" href="{{ entry.url }}"{% if entry.active %} aria-current="page"{% endif %}>
+      <span class="pod-workspace-nav__label">{{ entry.label }}</span>
+      <span class="pod-workspace-nav__short" aria-hidden="true">{{ entry.short_label }}</span>
+    </a>
+    {% endfor %}
   </div>
-  <details class="pod-context-nav__more" data-product-nav-details>
-    <summary class="pod-context-nav__more-trigger{% if url_name == 'staff-pod-shops' or url_name == 'staff-pod-catalog' or url_name == 'staff-pod-catalog-product' or url_name == 'staff-pod-variant-config' or url_name == 'staff-pod-blanks' or url_name == 'staff-pod-blank-detail' or url_name == 'staff-pod-techniques' or url_name == 'staff-pod-stock' or url_name == 'staff-pod-warehouse' or url_name == 'staff-pod-location-detail' %} is-active{% endif %}">
-      <span>
-        {% if url_name == 'staff-pod-stock' %}Stocks
-        {% elif url_name == 'staff-pod-warehouse' or url_name == 'staff-pod-location-detail' %}Entrepôt
-        {% elif url_name == 'staff-pod-shops' %}Boutiques
-        {% elif url_name == 'staff-pod-catalog' or url_name == 'staff-pod-catalog-product' or url_name == 'staff-pod-variant-config' %}Catalogue
-        {% elif url_name == 'staff-pod-blanks' or url_name == 'staff-pod-blank-detail' %}Supports
-        {% elif url_name == 'staff-pod-techniques' %}Techniques
-        {% else %}Configurer{% endif %}
-      </span>
-      <span class="pod-context-nav__chevron" aria-hidden="true"></span>
-    </summary>
-    <div class="pod-context-nav__more-menu" aria-label="Configurer et admin POD">
-      <p class="pod-context-nav__more-heading">WMS</p>
-      <a class="pod-context-nav__more-link{% if url_name == 'staff-pod-stock' %} is-active{% endif %}" {% if url_name == 'staff-pod-stock' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-stock' %}">Stocks</a>
-      <a class="pod-context-nav__more-link{% if url_name == 'staff-pod-warehouse' or url_name == 'staff-pod-location-detail' %} is-active{% endif %}" {% if url_name == 'staff-pod-warehouse' or url_name == 'staff-pod-location-detail' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-warehouse' %}">Entrepôt</a>
-      <p class="pod-context-nav__more-heading">Catalogue</p>
-      <a class="pod-context-nav__more-link{% if url_name == 'staff-pod-shops' %} is-active{% endif %}" {% if url_name == 'staff-pod-shops' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-shops' %}">Boutiques</a>
-      <a class="pod-context-nav__more-link{% if url_name == 'staff-pod-catalog' or url_name == 'staff-pod-catalog-product' or url_name == 'staff-pod-variant-config' %} is-active{% endif %}" {% if url_name == 'staff-pod-catalog' or url_name == 'staff-pod-catalog-product' or url_name == 'staff-pod-variant-config' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-catalog' %}">Catalogue</a>
-      <a class="pod-context-nav__more-link{% if url_name == 'staff-pod-blanks' or url_name == 'staff-pod-blank-detail' %} is-active{% endif %}" {% if url_name == 'staff-pod-blanks' or url_name == 'staff-pod-blank-detail' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-blanks' %}">Supports</a>
-      <a class="pod-context-nav__more-link{% if url_name == 'staff-pod-techniques' %} is-active{% endif %}" {% if url_name == 'staff-pod-techniques' %}aria-current="page"{% endif %} href="{% url 'portal:staff-pod-techniques' %}">Techniques</a>
-    </div>
-  </details>
+  {% if pod_nav.in_settings or pod_nav.can_stock or pod_nav.can_settings %}
+  <div class="pod-workspace-nav__utilities">
+    {% if pod_nav.in_settings %}
+    <a class="pod-workspace-nav__utility" href="{% url 'portal:staff-pod-hub' %}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m10 6-6 6 6 6M4 12h16"/></svg>
+      Retour à production
+    </a>
+    {% else %}
+      {% if pod_nav.can_stock %}<a class="pod-workspace-nav__utility{% if pod_nav.stock_active %} is-active{% endif %}" href="{% url 'portal:staff-pod-stock' %}"{% if pod_nav.stock_active %} aria-current="page"{% endif %}>Stocks</a>{% endif %}
+      {% if pod_nav.can_settings %}
+      <a class="pod-workspace-nav__utility" href="{% url 'portal:staff-pod-settings' %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--surface)"/><circle cx="15" cy="17" r="2" fill="var(--surface)"/></svg>
+        Réglages POD
+      </a>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
 </nav>
-{% endwith %}

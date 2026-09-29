@@ -1,0 +1,37 @@
+{# Parcours opérateur — prélèvement → impression DTF → pose #}
+{% if operate_rail and active_pick_session %}
+<nav class="pod-operate-rail" aria-label="Parcours production session {{ active_pick_session.code }}">
+  <ol class="pod-operate-rail__list">
+    {% for step in operate_rail %}
+    <li class="pod-operate-rail__step is-{{ step.state }}">
+      <div class="pod-operate-rail__head">
+        <span class="pod-operate-rail__index" aria-hidden="true">
+          {% if step.state == "done" %}✓{% else %}{{ forloop.counter }}{% endif %}
+        </span>
+        <span class="pod-operate-rail__label">{{ step.label }}</span>
+        <span class="pod-operate-rail__state badge {% if step.state == 'done' %}is-success{% elif step.state == 'active' %}is-warning{% elif step.state == 'locked' %}is-neutral{% else %}is-neutral{% endif %}">
+          {% if step.state == "done" %}Validé{% elif step.state == "active" %}En cours{% elif step.state == "locked" %}Bloqué{% else %}À faire{% endif %}
+        </span>
+      </div>
+      <p class="pod-operate-rail__detail muted text-sm">{{ step.detail }}</p>
+      {% if step.key == "print" and step.state == "active" and can_operate_production %}
+      <div class="pod-operate-rail__action" id="pod-operate-print">
+        <form data-submit-loading method="post" action="{% url 'portal:staff-pod-hub' %}">
+          {% csrf_token %}
+          <input type="hidden" name="intent" value="confirm_dtf_print">
+          <input type="hidden" name="session_public_id" value="{{ active_pick_session.public_id }}">
+          <button class="ui-btn ui-btn-primary ui-btn-sm" type="submit">{{ step.action_label }}</button>
+        </form>
+      </div>
+      {% elif step.key == "pick" and step.state == "active" %}
+      <a class="ui-btn ui-btn-secondary ui-btn-sm pod-operate-rail__action" href="{{ step.href }}">{{ step.action_label }}</a>
+      {% elif step.key == "pose" and step.state == "active" %}
+      <a class="ui-btn ui-btn-secondary ui-btn-sm pod-operate-rail__action" href="{% url 'portal:staff-pod-pose-dtf' %}">{{ step.action_label }}</a>
+      {% elif step.key == "pose" and step.state == "done" %}
+      <a class="ui-btn ui-btn-ghost ui-btn-sm pod-operate-rail__action" href="{% url 'portal:staff-pod-qc' %}">Contrôle qualité</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}

@@ -6,6 +6,7 @@
   data-unsubscribe-url-template="{% url 'portal:staff-push-notification-unsubscribe' subscription_public_id='00000000-0000-0000-0000-000000000000' %}"
   data-poll-url="{% url 'portal:staff-push-notification-events' %}"
   data-dashboard-refresh-url="{% url 'portal:staff-dashboard' %}"
+  {% if pod_ready_context %}data-ready-refresh-url="{% url 'portal:staff-pod-qc' %}"{% endif %}
 >
   <span class="ui-sr-only" data-push-status aria-live="polite">Vérification…</span>
   <button

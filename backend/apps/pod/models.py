@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.core.models import BaseModel
@@ -47,6 +49,26 @@ class PrintTechnique(BaseModel):
         permissions = [
             ("access_pod_atelier", "Can access POD atelier catalog and warehouse"),
             ("manage_pod_catalog", "Can manage POD techniques and blanks"),
+            ("operate_pod_production", "Can operate POD production floor"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class MarkingZone(BaseModel):
+    code = models.SlugField(max_length=32, unique=True, editable=False)
+    name = models.CharField(max_length=120)
+    display_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("display_order", "name")
+        indexes = [
+            models.Index(
+                fields=("is_active", "display_order"),
+                name="pod_marking_active_order_idx",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -62,6 +84,17 @@ class Blank(BaseModel):
     photo_thumb = models.ImageField(
         upload_to=_blank_photo_thumb_upload_to, blank=True, max_length=512
     )
+    allowed_zones = models.ManyToManyField(
+        MarkingZone,
+        blank=True,
+        related_name="blanks",
+    )
+    allowed_techniques = models.ManyToManyField(
+        PrintTechnique,
+        blank=True,
+        related_name="allowed_blanks",
+    )
+    marking_options_configured = models.BooleanField(default=False)
 
     objects = BlankQuerySet.as_manager()
 
@@ -86,9 +119,7 @@ class BlankVariant(BaseModel):
     color_name = models.CharField(max_length=64)
     color_hex = models.CharField(max_length=7, blank=True)
     is_active = models.BooleanField(default=True)
-    photo = models.ImageField(
-        upload_to=_blank_variant_photo_upload_to, blank=True, max_length=512
-    )
+    photo = models.ImageField(upload_to=_blank_variant_photo_upload_to, blank=True, max_length=512)
     photo_thumb = models.ImageField(
         upload_to=_blank_variant_photo_thumb_upload_to, blank=True, max_length=512
     )
@@ -153,6 +184,13 @@ class BlankPlacementCapability(BaseModel):
 
 
 class ShopifyStore(BaseModel):
+    customer = models.ForeignKey(
+        "customers.Customer",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pod_shopify_stores",
+    )
     slug = models.SlugField(max_length=64, unique=True)
     name = models.CharField(max_length=160)
     shop_domain = models.CharField(max_length=255, unique=True)
@@ -176,12 +214,29 @@ class ShopifyStore(BaseModel):
 
 
 class ShopifyWebhookReceipt(BaseModel):
-    webhook_id = models.CharField(max_length=128, unique=True)
+    class Status(models.TextChoices):
+        PENDING = "pending", "En attente"
+        PROCESSED = "processed", "Traité"
+        FAILED = "failed", "À rejouer"
+
+    webhook_id = models.CharField(max_length=128)
     shop_domain = models.CharField(max_length=255)
     topic = models.CharField(max_length=64, default="orders/create")
+    raw_body = models.BinaryField(blank=True, default=bytes)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PROCESSED)
+    attempts = models.PositiveIntegerField(default=0)
+    next_retry_at = models.DateTimeField(null=True, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=500, blank=True, default="")
 
     class Meta:
         ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("webhook_id",),
+                name="pod_webhook_receipt_id_uniq",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.webhook_id
@@ -301,6 +356,81 @@ class PodRecipe(BaseModel):
         return f"Recette {self.variant_config.variant_id}"
 
 
+class PodDriveHdSourceQuerySet(models.QuerySet):
+    def for_customer(self, customer):
+        return self.filter(customer=customer)
+
+
+class PodDriveHdSource(BaseModel):
+    """Provenance immuable d'un fichier HD Drive importé pour un Customer."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Import en attente"
+        IMPORTING = "importing", "Import en cours"
+        READY = "ready", "Importé"
+        FAILED = "failed", "Échec"
+
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.CASCADE,
+        related_name="pod_drive_hd_sources",
+    )
+    selected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="selected_pod_drive_hd_sources",
+    )
+    drive_file_id = models.CharField(max_length=255)
+    canonical_url = models.URLField(max_length=512)
+    original_filename = models.CharField(max_length=255)
+    mime_type = models.CharField(max_length=127)
+    size_bytes = models.PositiveBigIntegerField()
+    md5_checksum = models.CharField(max_length=32)
+    drive_version = models.CharField(max_length=64)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    asset_version = models.ForeignKey(
+        "uploads.AssetVersion",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pod_drive_hd_sources",
+    )
+    last_error = models.CharField(max_length=255, blank=True, default="")
+
+    objects = PodDriveHdSourceQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("customer", "drive_file_id", "drive_version"),
+                name="pod_drive_hd_source_customer_file_version_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("customer", "status", "created_at"),
+                name="pod_hd_customer_status_idx",
+            ),
+            models.Index(
+                fields=("customer", "drive_file_id"),
+                name="pod_hd_customer_file_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.asset_version_id and self.asset_version.customer_id != self.customer_id:
+            raise ValidationError(
+                {"asset_version": "La version importée doit appartenir au même client."}
+            )
+
+    def __str__(self) -> str:
+        return f"{self.customer_id}:{self.original_filename}@{self.drive_version}"
+
+
 class PodRecipeSlot(BaseModel):
     recipe = models.ForeignKey(PodRecipe, on_delete=models.CASCADE, related_name="slots")
     placement = models.CharField(max_length=32, choices=BlankPlacementCapability.Placement.choices)
@@ -316,6 +446,20 @@ class PodRecipeSlot(BaseModel):
         default="",
         help_text="Référence fichier HD (nom RIP ou public_id AssetVersion).",
     )
+    source_asset_version = models.ForeignKey(
+        "uploads.AssetVersion",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pod_recipe_slots",
+    )
+    source_drive_hd = models.ForeignKey(
+        PodDriveHdSource,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="recipe_slots",
+    )
     display_order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -329,6 +473,37 @@ class PodRecipeSlot(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.placement}:{self.technique.code}"
+
+    def clean(self):
+        super().clean()
+        if not self.source_drive_hd_id and not self.source_asset_version_id:
+            return
+        customer_id = self.recipe.variant_config.variant.product.store.customer_id
+        if customer_id is None:
+            raise ValidationError(
+                "La boutique doit être liée à un client pour référencer un visuel HD."
+            )
+        if self.source_drive_hd_id and self.source_drive_hd.customer_id != customer_id:
+            raise ValidationError(
+                {"source_drive_hd": "La source Drive HD doit appartenir au client de la boutique."}
+            )
+        if self.source_asset_version_id and self.source_asset_version.customer_id != customer_id:
+            raise ValidationError(
+                {
+                    "source_asset_version": (
+                        "La version HD doit appartenir au client de la boutique."
+                    )
+                }
+            )
+        if (
+            self.source_drive_hd_id
+            and self.source_asset_version_id
+            and self.source_drive_hd.asset_version_id
+            and self.source_drive_hd.asset_version_id != self.source_asset_version_id
+        ):
+            raise ValidationError(
+                {"source_asset_version": "La version HD ne correspond pas à la source Drive."}
+            )
 
 
 class PodRecipeTemplate(BaseModel):
@@ -382,6 +557,38 @@ class PodRecipeTemplateSlot(BaseModel):
         ]
 
 
+class PodShopifyOrder(BaseModel):
+    store = models.ForeignKey(
+        ShopifyStore,
+        on_delete=models.PROTECT,
+        related_name="pod_orders",
+    )
+    customer = models.ForeignKey(
+        "customers.Customer",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pod_shopify_orders",
+    )
+    external_order_id = models.CharField(max_length=64)
+    order_number = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("store", "external_order_id"),
+                name="pod_shopify_order_store_external_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("customer", "created_at")),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.store.slug} {self.order_number}"
+
+
 class PodRipWorkItem(BaseModel):
     class Status(models.TextChoices):
         QUEUED = "queued", "En file RIP"
@@ -400,6 +607,14 @@ class PodRipWorkItem(BaseModel):
         related_name="rip_work_items",
     )
     shopify_order_number = models.CharField(max_length=64)
+    shopify_order = models.ForeignKey(
+        PodShopifyOrder,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="work_items",
+    )
+    shopify_line_item_id = models.CharField(max_length=64, null=True, blank=True)
     quantity = models.PositiveIntegerField(default=1)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED)
     skip_reason = models.CharField(max_length=255, blank=True, default="")
@@ -408,6 +623,30 @@ class PodRipWorkItem(BaseModel):
         ordering = ("-created_at",)
         indexes = [
             models.Index(fields=("status", "created_at")),
+            models.Index(fields=("store", "shopify_order")),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        shopify_order__isnull=True,
+                        shopify_line_item_id__isnull=True,
+                    )
+                    | models.Q(
+                        shopify_order__isnull=False,
+                        shopify_line_item_id__isnull=False,
+                    )
+                ),
+                name="pod_rip_item_shopify_identity_pair",
+            ),
+            models.UniqueConstraint(
+                fields=("shopify_order", "shopify_line_item_id"),
+                condition=models.Q(
+                    shopify_order__isnull=False,
+                    shopify_line_item_id__isnull=False,
+                ),
+                name="pod_rip_item_shopify_identity_uniq",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -420,6 +659,13 @@ class PodRipLot(BaseModel):
         FAILED = "failed", "Échec préparation"
 
     code = models.CharField(max_length=48, unique=True)
+    customer = models.ForeignKey(
+        "customers.Customer",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pod_rip_lots",
+    )
     technique = models.ForeignKey(
         PrintTechnique,
         on_delete=models.PROTECT,
@@ -441,6 +687,14 @@ class PodRipLot(BaseModel):
     drive_file_count = models.PositiveIntegerField(default=0)
     drive_synced_at = models.DateTimeField(null=True, blank=True)
     drive_error = models.CharField(max_length=255, blank=True, default="")
+    operator_print_confirmed_at = models.DateTimeField(null=True, blank=True)
+    operator_print_confirmed_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="confirmed_pod_rip_prints",
+    )
 
     class Meta:
         ordering = ("-created_at",)
@@ -467,6 +721,13 @@ class PodRipLotFile(BaseModel):
     technique = models.ForeignKey(PrintTechnique, on_delete=models.PROTECT, related_name="+")
     filename = models.CharField(max_length=255)
     source_print_reference = models.CharField(max_length=255)
+    source_asset_version = models.ForeignKey(
+        "uploads.AssetVersion",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pod_rip_files",
+    )
     checksum_sha256 = models.CharField(max_length=64, blank=True, default="")
 
     class Meta:
@@ -486,6 +747,8 @@ class PodUnit(BaseModel):
     class Status(models.TextChoices):
         WAITING_PRESS = "waiting_press", "Attente pose"
         PRESSED = "pressed", "Posé"
+        QC_PASSED = "qc_passed", "Contrôle validé"
+        QC_FAILED = "qc_failed", "Contrôle refusé"
         ISSUE = "issue", "Incident"
 
     lot = models.ForeignKey(PodRipLot, on_delete=models.CASCADE, related_name="units")
@@ -519,6 +782,9 @@ class PodUnit(BaseModel):
 
     class Meta:
         ordering = ("scan_identifier",)
+        indexes = [
+            models.Index(fields=("status", "created_at"), name="pod_unit_qc_queue_idx"),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=("work_item", "sequence"),
@@ -530,8 +796,46 @@ class PodUnit(BaseModel):
         return self.scan_identifier
 
 
+class PodQualityCheck(BaseModel):
+    class Result(models.TextChoices):
+        PASS = "pass", "Conforme"
+        FAIL = "fail", "Refusé"
+
+    unit = models.ForeignKey(
+        PodUnit,
+        on_delete=models.PROTECT,
+        related_name="quality_checks",
+    )
+    result = models.CharField(max_length=8, choices=Result.choices)
+    defect_code = models.CharField(max_length=80, blank=True, default="")
+    note = models.CharField(max_length=500, blank=True, default="")
+    checked_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pod_quality_checks",
+    )
+
+    class Meta:
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=("unit", "created_at"), name="pod_qc_unit_created_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.unit.scan_identifier}: {self.get_result_display()}"
+
+
 class PodPickSession(BaseModel):
     code = models.CharField(max_length=32, unique=True)
+    customer = models.ForeignKey(
+        "customers.Customer",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pod_pick_sessions",
+    )
     created_by = models.ForeignKey(
         "accounts.User",
         null=True,
@@ -549,6 +853,12 @@ class PodPickSession(BaseModel):
 
 
 class PodPickSessionLine(BaseModel):
+    class ReservationStatus(models.TextChoices):
+        UNTRACKED = "untracked", "Non réservé"
+        RESERVED = "reserved", "Réservé"
+        PICKED = "picked", "Prélevé"
+        RELEASED = "released", "Libéré"
+
     session = models.ForeignKey(
         PodPickSession,
         on_delete=models.CASCADE,
@@ -576,6 +886,43 @@ class PodPickSessionLine(BaseModel):
     color_name = models.CharField(max_length=64, blank=True, default="")
     location_code = models.CharField(max_length=64, blank=True, default="")
     markings = models.CharField(max_length=255, blank=True, default="")
+    reservation_status = models.CharField(
+        max_length=16,
+        choices=ReservationStatus.choices,
+        default=ReservationStatus.UNTRACKED,
+        db_index=True,
+    )
+    stock_balance = models.ForeignKey(
+        "inventory.StockBalance",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pod_pick_lines",
+    )
+    reserved_at = models.DateTimeField(null=True, blank=True)
+    reserved_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reserved_pod_pick_lines",
+    )
+    picked_at = models.DateTimeField(null=True, blank=True)
+    picked_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="picked_pod_pick_lines",
+    )
+    released_at = models.DateTimeField(null=True, blank=True)
+    released_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="released_pod_pick_lines",
+    )
     voided_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

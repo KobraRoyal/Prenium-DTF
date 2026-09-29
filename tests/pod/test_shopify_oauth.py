@@ -4,6 +4,8 @@ import hashlib
 import hmac
 
 import pytest
+from apps.auditlog.models import AuditLogEntry
+from apps.customers.models import Customer
 from apps.pod.models import IdsVariantConfig, ShopifyStore, ShopifyVariant
 from apps.pod.services.shopify_connect import ShopifyConnectService
 from apps.pod.services.token_crypto import decrypt_shopify_token, encrypt_shopify_token
@@ -14,6 +16,7 @@ from tests.pod.test_variant_config import MANAGE, VIEW, staff_client
 pytestmark = pytest.mark.django_db
 
 SHOP = "demo-pod.myshopify.com"
+MANAGE_CUSTOMERS = (*MANAGE, "view_customer")
 
 
 class FakeHttp:
@@ -104,6 +107,7 @@ def test_oauth_callback_stores_encrypted_token_and_imports(settings):
     assert store.token_suffix == "1234"
     assert "shpat" not in store.access_token_encrypted
     assert decrypt_shopify_token(store.access_token_encrypted) == "shpat_live_abcd1234"
+    assert store.webhook_secret == ""
     assert ShopifyVariant.objects.filter(sku="TEE-BLK-M").exists()
     assert IdsVariantConfig.objects.filter(variant__sku="TEE-BLK-M").exists()
     variant = ShopifyVariant.objects.get(sku="TEE-BLK-M")
@@ -164,3 +168,106 @@ def test_view_only_staff_cannot_save_token():
     )
     assert response.status_code == 403
     assert not ShopifyStore.objects.filter(shop_domain=SHOP).exists()
+
+
+def test_staff_assigns_store_customer_once_and_cannot_reassign():
+    actor, client = staff_client(
+        email="staff-store-owner@example.com", permissions=MANAGE_CUSTOMERS
+    )
+    store = ShopifyStore.objects.create(
+        slug="store-owner",
+        name="Store owner",
+        shop_domain="store-owner.myshopify.com",
+    )
+    first = Customer.objects.create(name="Client A")
+    second = Customer.objects.create(name="Client B")
+    url = reverse("portal:staff-pod-shops")
+    page = client.get(url)
+    assert page.status_code == 200
+    assert "Client A" in page.content.decode()
+    response = client.post(
+        url,
+        {
+            "intent": "assign_customer",
+            "store_public_id": str(store.public_id),
+            "customer_public_id": str(first.public_id),
+        },
+    )
+    assert response.status_code == 302
+    store.refresh_from_db()
+    assert store.customer == first
+    assert AuditLogEntry.objects.filter(action="pod.shopify.store_customer_assigned").exists()
+
+    rejected = client.post(
+        url,
+        {
+            "intent": "assign_customer",
+            "store_public_id": str(store.public_id),
+            "customer_public_id": str(second.public_id),
+        },
+    )
+    assert rejected.status_code == 400
+    store.refresh_from_db()
+    assert store.customer == first
+
+
+def test_view_only_staff_cannot_assign_store_customer():
+    _actor, client = staff_client(email="staff-store-owner-ro@example.com", permissions=VIEW)
+    store = ShopifyStore.objects.create(
+        slug="store-owner-ro",
+        name="Store owner RO",
+        shop_domain="store-owner-ro.myshopify.com",
+    )
+    customer = Customer.objects.create(name="Client interdit")
+    response = client.post(
+        reverse("portal:staff-pod-shops"),
+        {
+            "intent": "assign_customer",
+            "store_public_id": str(store.public_id),
+            "customer_public_id": str(customer.public_id),
+        },
+    )
+    assert response.status_code == 403
+    store.refresh_from_db()
+    assert store.customer_id is None
+
+
+def test_catalog_manager_without_customer_permission_cannot_list_or_assign_customers():
+    actor, client = staff_client(email="staff-store-no-customers@example.com", permissions=MANAGE)
+    store = ShopifyStore.objects.create(
+        slug="store-no-customers",
+        name="Store without customer permission",
+        shop_domain="store-no-customers.myshopify.com",
+    )
+    customer = Customer.objects.create(name="Client confidentiel")
+    url = reverse("portal:staff-pod-shops")
+
+    page = client.get(url)
+
+    assert page.status_code == 200
+    body = page.content.decode()
+    assert customer.name not in body
+    assert str(customer.public_id) not in body
+    assert 'name="customer_public_id"' not in body
+
+    response = client.post(
+        url,
+        {
+            "intent": "assign_customer",
+            "store_public_id": str(store.public_id),
+            "customer_public_id": str(customer.public_id),
+        },
+    )
+
+    assert response.status_code == 403
+    store.refresh_from_db()
+    assert store.customer_id is None
+    rejection = AuditLogEntry.objects.get(
+        action="pod.shopify.permission_rejected",
+        actor=actor,
+        status=AuditLogEntry.Status.FAILURE,
+    )
+    assert rejection.metadata == {
+        "source": "pod.shopify.store_customer",
+        "permission": "customers.view_customer",
+    }

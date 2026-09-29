@@ -1,0 +1,122 @@
+/* POD Operate: one CRUD vocabulary, with existing production semantics intact. */
+html[data-theme="prenium"] body.product-shell .pod-page {
+  min-width: 0;
+  --ui-action-shadow: none;
+  --ui-action-shadow-hover: none;
+  --ui-action-shadow-active: none;
+}
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.pod-page .page-head h1 {
+  font-size: 2rem !important;
+  line-height: 1.15;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .portal-page-surface > .badge {
+  width: fit-content;
+  justify-self: start;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .ui-btn {
+  min-height: 2.75rem;
+  font-family: var(--ui-font-body, "DM Sans", sans-serif);
+  box-shadow: none;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .ui-btn:is(:hover, :active) {
+  box-shadow: none;
+  transform: none;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .ui-input { min-width: 0; max-width: 100%; }
+html[data-theme="prenium"] body.product-shell .pod-page .ui-field-group { min-width: 0; }
+html[data-theme="prenium"] body.product-shell .pod-page .ui-label { display: block; margin-bottom: .4rem; }
+html[data-theme="prenium"] body.product-shell .pod-page .ui-table-shell {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .portal-page-surface,
+html[data-theme="prenium"] body.product-shell .pod-page .portal-page-surface > section {
+  min-width: 0;
+  max-width: 100%;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .ui-data-table td { vertical-align: middle; }
+html[data-theme="prenium"] body.product-shell .pod-page .ui-data-table code { overflow-wrap: anywhere; }
+html[data-theme="prenium"] body.product-shell .pod-page .ui-data-table td[colspan] {
+  padding-block: 1.5rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .ui-form-stack { gap: 1rem; }
+html[data-theme="prenium"] body.product-shell .pod-page .ui-form-actions { flex-wrap: wrap; }
+html[data-theme="prenium"] body.product-shell .pod-page .pod-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-list-toolbar__heading {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .6rem;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-list-toolbar h2 { margin: 0; font-size: 1.1rem; }
+html[data-theme="prenium"] body.product-shell .pod-page .pod-list-search {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-list-search input { width: 15rem; }
+html[data-theme="prenium"] body.product-shell .pod-page .pod-editor {
+  margin-block: 0 1.25rem;
+  border-block: 1px solid var(--line);
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-editor > summary {
+  padding: .8rem .25rem;
+  min-height: 2.75rem;
+  color: var(--ink);
+  font-family: var(--ui-font-body, "DM Sans", sans-serif);
+  font-size: .9rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-editor > summary:hover {
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface));
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-editor > summary:focus-visible,
+html[data-theme="prenium"] body.product-shell .pod-page .ui-table-shell:focus-visible {
+  outline: 2px solid var(--focus-ring); outline-offset: 3px;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-editor > form {
+  max-width: 48rem;
+  padding-block: .5rem 1.25rem;
+  margin: 0;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-editor h2,
+html[data-theme="prenium"] body.product-shell .pod-page .pod-editor h3 { margin: 0; font-size: 1rem; }
+html[data-theme="prenium"] body.product-shell .pod-page .pod-editor--row {
+  margin: 0; border: 0; min-width: 12rem;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-editor--row > form {
+  width: 22rem; max-width: 100%; padding: .75rem .25rem;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-active-field {
+  align-items: flex-start; gap: .6rem;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-active-field small {
+  display: block; margin-top: .25rem; color: var(--muted); font-weight: 400;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-detail-back { margin: 0 0 1rem; }
+html[data-theme="prenium"] body.product-shell .pod-page .pod-section-head {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: .75rem; margin: 1.5rem 0 .75rem;
+}
+html[data-theme="prenium"] body.product-shell .pod-page .pod-section-head h2 { margin: 0; font-size: 1.1rem; }
+html[data-theme="prenium"] body.product-shell .pod-page .pod-hd-archive {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+}
+@media (max-width: 640px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .portal-page.pod-page .page-head h1 { font-size: 1.65rem !important; }
+  html[data-theme="prenium"] body.product-shell .pod-page .pod-list-search { width: 100%; }
+  html[data-theme="prenium"] body.product-shell .pod-page .pod-list-search input { flex: 1 1 10rem; width: auto; }
+  html[data-theme="prenium"] body.product-shell .pod-page .pod-editor--row > form { width: 17rem; }
+  html[data-theme="prenium"] body.product-shell .pod-page .pod-editor-actions { align-items: stretch; }
+  html[data-theme="prenium"] body.product-shell .pod-page .pod-editor-actions > * { flex: 1 1 100%; }
+}

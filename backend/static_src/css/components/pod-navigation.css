@@ -1,0 +1,109 @@
+/* POD: one workspace rail, production first and configuration by permission. */
+body.product-shell .pod-workspace-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+body.product-shell .pod-workspace-nav__pages,
+body.product-shell .pod-workspace-nav__utilities {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .25rem;
+}
+
+body.product-shell .pod-workspace-nav__link,
+body.product-shell .pod-workspace-nav__utility {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  min-height: 2.75rem;
+  padding: .5rem .8rem;
+  border-radius: var(--radius-sm, 14px);
+  color: var(--ink);
+  font-family: var(--ui-font-body, "DM Sans", sans-serif);
+  font-size: .8125rem;
+  font-weight: 650;
+  line-height: 1.3;
+  text-decoration: none;
+  transition: background-color 160ms ease-out;
+}
+
+body.product-shell .pod-workspace-nav__utility { color: var(--muted); }
+body.product-shell .pod-workspace-nav__link:hover,
+body.product-shell .pod-workspace-nav__utility:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+body.product-shell .pod-workspace-nav :is(.pod-workspace-nav__link, .pod-workspace-nav__utility).is-active {
+  background: color-mix(in srgb, var(--brand) 20%, var(--surface));
+  color: var(--ink);
+}
+body.product-shell .pod-workspace-nav a:focus-visible,
+body.product-shell .pod-settings a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+body.product-shell .pod-workspace-nav__short { display: none; }
+
+body.product-shell .pod-settings > h2 { margin: 0 0 .4rem; font-size: 1.1rem; }
+body.product-shell .pod-settings > p { max-width: 70ch; font-size: .875rem; }
+body.product-shell .pod-settings__attention { margin: 1.5rem 0; }
+body.product-shell .pod-settings h3 { margin: 0 0 .75rem; font-size: .95rem; }
+body.product-shell .pod-settings__attention ul { margin: 0; padding: 0; list-style: none; }
+body.product-shell .pod-settings__attention li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .3rem 1rem;
+  padding: .75rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: .875rem;
+}
+body.product-shell .pod-settings__attention li a { font-weight: 650; }
+body.product-shell .pod-settings__quiet { color: var(--muted); }
+body.product-shell .pod-settings__sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+body.product-shell .pod-settings__links { border-top: 1px solid var(--line); }
+body.product-shell .pod-settings__links > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem .25rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+body.product-shell .pod-settings__links > a:hover { background: var(--surface); }
+body.product-shell .pod-settings__links strong { display: block; font-size: .9rem; }
+body.product-shell .pod-settings__links small { display: block; margin-top: .25rem; color: var(--muted); font-size: .8125rem; }
+body.product-shell .pod-settings__stock-note { margin-top: 1rem; max-width: 45ch; font-size: .8125rem; }
+body.product-shell .pod-settings__boundary { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: .8125rem; }
+
+@media (max-width: 640px) {
+  body.product-shell .pod-workspace-nav { display: grid; gap: .5rem; }
+  body.product-shell .pod-workspace-nav__pages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .2rem; }
+  body.product-shell .pod-workspace-nav--settings .pod-workspace-nav__pages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.product-shell .pod-workspace-nav__link { padding: .5rem .25rem; font-size: .75rem; }
+  body.product-shell .pod-workspace-nav__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body.product-shell .pod-workspace-nav__short { display: inline; }
+  body.product-shell .pod-workspace-nav__utilities { justify-content: flex-end; }
+  body.product-shell .pod-workspace-nav__utilities:empty { display: none; }
+  body.product-shell .pod-settings__sections { gap: 1.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.product-shell .pod-workspace-nav a { transition: none; }
+}

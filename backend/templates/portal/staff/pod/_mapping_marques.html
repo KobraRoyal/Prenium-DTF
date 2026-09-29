@@ -1,0 +1,150 @@
+{% if config.mode == 'pod' and config.blank_variant_id %}
+<section class="ui-form-stack" aria-labelledby="mapping-marks-title">
+  <h3 class="font-display text-base" id="mapping-marks-title">Marquages à produire</h3>
+  <p class="ui-field-help">Possibilités héritées du support parent <strong>{{ config.blank_variant.blank.name }}</strong>. Ajoutez uniquement les zones à personnaliser pour cette variante.</p>
+  {% if drive_source_error %}
+  <p class="alert alert--danger" role="alert">Impossible de charger le dossier Drive des fichiers HD : {{ drive_source_error }}</p>
+  {% elif not drive_source_configured %}
+  <p class="alert alert--warning" role="status">Le dossier Drive source des fichiers HD n’est pas encore configuré. L’archive locale reste disponible temporairement.</p>
+  {% endif %}
+  {% if drive_empty_file_count %}
+  <p class="alert alert--warning" role="status">
+    {% if drive_empty_file_count == 1 %}Un fichier HD du dossier Drive est vide (0 octet) et ne peut pas être sélectionné. Remplacez-le par un original complet, puis actualisez la liste.
+    {% else %}{{ drive_empty_file_count }} fichiers HD du dossier Drive sont vides (0 octet) et ne peuvent pas être sélectionnés. Remplacez-les par des originaux complets, puis actualisez la liste.{% endif %}
+  </p>
+  {% endif %}
+  {% if drive_source_configured and not drive_source_error %}
+  <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button"
+    hx-post="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}"
+    hx-include="closest form" hx-vals='{"intent":"refresh_drive"}'
+    hx-target="#pod-variant-drawer" hx-swap="innerHTML"
+    hx-sync="closest form:queue last" hx-indicator="#portal-htmx-indicator">Actualiser les fichiers Drive</button>
+  {% endif %}
+  {% for row in mapping_rows %}
+  <fieldset
+    class="ui-form-stack"
+    style="min-width:0;border:0;border-block-end:1px solid var(--line);padding:0 0 1rem;margin:0"
+    x-data="{
+      sourceKind: '{% if row.source_drive_file_id %}drive{% elif row.source_asset_version_public_id %}local{% elif row.drive_options %}drive{% elif row.asset_options %}local{% endif %}',
+      driveFileId: '{{ row.source_drive_file_id|default_if_none:""|escapejs }}',
+      assetVersionId: '{{ row.source_asset_version_public_id|default_if_none:""|escapejs }}',
+      hasDriveOptions: {% if drive_source_configured and not drive_source_error and row.drive_options %}true{% else %}false{% endif %},
+      hasLocalOptions: {% if row.asset_options %}true{% else %}false{% endif %}
+    }"
+  >
+    <legend class="ui-label">{{ row.placement_label }} · {{ row.technique.name }}{% if row.is_required %} — requis{% endif %}</legend>
+    <input type="hidden" name="slot_placement" value="{{ row.placement }}">
+    <input type="hidden" name="slot_technique_public_id" value="{{ row.technique.public_id }}">
+    <input type="hidden" name="slot_enabled" value="{{ row.mapping_key }}">
+    <input type="hidden" name="slot_print_reference" value="{{ row.print_reference }}">
+    <input type="hidden" name="slot_source_drive_file_id" value="{{ row.source_drive_file_id }}" :value="sourceKind === 'drive' ? driveFileId : ''">
+    <input type="hidden" name="slot_source_asset_version_public_id" value="{{ row.source_asset_version_public_id }}" :value="sourceKind === 'local' ? assetVersionId : ''">
+    {% if row.is_required %}<input type="hidden" name="slot_required_{{ forloop.counter0 }}" value="1">{% endif %}
+    <div class="ui-form-stack" role="group" aria-labelledby="slot-source-label-{{ forloop.counter0 }}">
+      <p class="ui-label" id="slot-source-label-{{ forloop.counter0 }}">Fichier HD · {{ row.placement_label }} · {{ row.technique.name }}</p>
+
+      <div class="ui-field-group">
+        <label class="ui-label" for="slot-source-kind-drive-{{ forloop.counter0 }}">
+          <input
+            id="slot-source-kind-drive-{{ forloop.counter0 }}"
+            type="radio"
+            value="drive"
+            x-model="sourceKind"
+            {% if not drive_source_configured or drive_source_error or not row.drive_options %}disabled{% endif %}
+          >
+          Google Drive — dossier HD source
+        </label>
+        <select
+          class="ui-input"
+          id="slot-drive-source-{{ forloop.counter0 }}"
+          x-model="driveFileId"
+          :disabled="sourceKind !== 'drive' || !hasDriveOptions"
+          aria-label="Fichier HD Google Drive pour {{ row.placement_label }}"
+          aria-describedby="slot-drive-help-{{ forloop.counter0 }}"
+          {% if not drive_source_configured or drive_source_error or not row.drive_options %}disabled{% endif %}
+        >
+          <option value="">Choisir un fichier Drive</option>
+          {% for option in row.drive_options %}
+          <option value="{{ option.file_id }}" {% if row.source_drive_file_id == option.file_id|stringformat:'s' %}selected{% endif %}>{{ option.name }}</option>
+          {% endfor %}
+        </select>
+        <p class="ui-field-help" id="slot-drive-help-{{ forloop.counter0 }}">
+          {% if drive_source_error %}La liste Drive est temporairement indisponible.
+          {% elif not drive_source_configured %}Aucun dossier Drive source n’est configuré.
+          {% elif not row.drive_options %}Aucun fichier HD utilisable pour ce marquage dans le dossier Drive.{% if drive_source_folder_url %} <a href="{{ drive_source_folder_url }}" target="_blank" rel="noopener noreferrer">Ouvrir le dossier HD Drive</a>.{% endif %}
+          {% elif row.print_reference and not row.source_drive_file_id %}Sélectionnez le fichier HD autorisé pour rendre ce marquage imprimable.
+          {% else %}Seuls les fichiers présents dans le dossier HD source configuré sont proposés.{% endif %}
+        </p>
+        {% if row.drive_source_status == 'pending' or row.drive_source_status == 'importing' %}
+        <p class="ui-field-help" role="status">Import HD en cours. La recette sera prête après validation du fichier source.
+          <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" hx-get="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}" hx-target="#pod-variant-drawer" hx-swap="innerHTML" hx-indicator="#portal-htmx-indicator">Actualiser l’état</button>
+        </p>
+        {% elif row.drive_source_status == 'failed' %}
+        <p class="alert alert--danger" role="alert">Import HD bloqué : {{ row.drive_source_error|default:'fichier non validé' }}. Vérifiez le fichier source puis réenregistrez ce marquage.</p>
+        {% elif row.drive_source_status == 'ready' %}
+        <p class="ui-field-help" role="status">Visuel HD validé et prêt pour la production.</p>
+        {% endif %}
+      </div>
+
+      <div class="ui-field-group pod-hd-archive">
+        <label class="ui-label" for="slot-source-kind-local-{{ forloop.counter0 }}">
+          <input
+            id="slot-source-kind-local-{{ forloop.counter0 }}"
+            type="radio"
+            value="local"
+            x-model="sourceKind"
+            {% if not row.asset_options %}disabled{% endif %}
+          >
+          Archive locale — option historique
+        </label>
+        <select
+          class="ui-input"
+          id="slot-local-source-{{ forloop.counter0 }}"
+          x-model="assetVersionId"
+          :disabled="sourceKind !== 'local' || !hasLocalOptions"
+          aria-label="Archive locale pour {{ row.placement_label }}"
+          aria-describedby="slot-local-help-{{ forloop.counter0 }}"
+          {% if not row.asset_options %}disabled{% endif %}
+        >
+          <option value="">Choisir une version locale{% if row.technique.code == 'dtf' %} · PNG ou TIFF{% else %} {{ row.technique.export_extension }}{% endif %}</option>
+          {% for version in row.asset_options %}
+          <option value="{{ version.public_id }}" {% if row.source_asset_version_public_id == version.public_id|stringformat:'s' %}selected{% endif %}>{{ version.asset.name }} · v{{ version.version_number }} · {{ version.original_filename }}</option>
+          {% endfor %}
+        </select>
+        <p class="ui-field-help" id="slot-local-help-{{ forloop.counter0 }}">{% if not row.asset_options %}Aucune version locale{% if row.technique.code == 'dtf' %} PNG ou TIFF{% else %} {{ row.technique.export_extension }}{% endif %} compatible et validée pour ce client.{% else %}À utiliser uniquement pour les anciens fichiers déjà archivés dans IDS Hub.{% endif %}</p>
+      </div>
+    </div>
+    {% if not row.is_required %}
+    <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" aria-label="Retirer {{ row.placement_label }} {{ row.technique.name }}"
+      hx-post="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}" hx-include="closest form"
+      hx-vals='{"intent":"remove_slot","slot_key":"{{ row.mapping_key }}"}' hx-target="#pod-variant-drawer" hx-swap="innerHTML"
+      hx-sync="closest form:queue last" hx-indicator="#portal-htmx-indicator">Retirer ce marquage</button>
+    {% endif %}
+  </fieldset>
+  {% empty %}<p class="muted">Aucun marquage sélectionné. Ajoutez une zone et sa technique ci-dessous.</p>{% endfor %}
+  {% if mapping_zones %}
+  <h4 class="font-display text-base">Ajouter un marquage</h4>
+  <div class="grid gap-4 md:grid-cols-2">
+    <div class="ui-field-group">
+      <label class="ui-label" for="mapping-placement">Zone de marquage</label>
+      <select class="ui-input" id="mapping-placement" name="mapping_placement"
+        hx-post="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}" hx-trigger="change" hx-include="closest form"
+        hx-vals='{"intent":"preview"}' hx-target="#pod-variant-drawer" hx-swap="innerHTML" hx-sync="closest form:queue last" hx-indicator="#portal-htmx-indicator">
+        {% for value,label in mapping_zones %}<option value="{{ value }}" {% if mapping_placement == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="ui-field-group">
+      <label class="ui-label" for="mapping-technique">Technique autorisée</label>
+      <select class="ui-input" id="mapping-technique" name="mapping_technique">
+        {% for technique in mapping_techniques %}<option value="{{ technique.public_id }}" {% if mapping_technique == technique.public_id|stringformat:'s' %}selected{% endif %}>{{ technique.name }} · {% if technique.code == 'dtf' %}PNG / PDF / AI / EPS / TIFF{% else %}{{ technique.export_extension }}{% endif %}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <button class="ui-btn ui-btn-ghost" type="button"
+    hx-post="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}" hx-include="closest form"
+    hx-vals='{"intent":"add_slot"}' hx-target="#pod-variant-drawer" hx-swap="innerHTML" hx-sync="closest form:queue last" hx-indicator="#portal-htmx-indicator">Ajouter ce marquage</button>
+  {% elif slot_rows %}<p class="ui-field-help">Toutes les possibilités du support sont déjà sélectionnées.</p>
+  {% else %}<p class="alert alert--warning">Aucune zone/technique active sur ce support. Configurez ses possibilités dans la fiche du support parent.</p>{% endif %}
+  <p class="ui-field-help">Les ajouts et retraits restent un brouillon jusqu’à « Enregistrer ».</p>
+</section>
+{% endif %}

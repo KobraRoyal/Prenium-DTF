@@ -1,16 +1,23 @@
-<div
+<dialog
   id="pod-variant-config-panel"
   class="pod-variant-config"
   role="dialog"
   aria-modal="true"
   aria-labelledby="pod-variant-config-title"
   tabindex="-1"
+  @keydown.tab="trapDrawerFocus($event)"
+  @click.self="closeDrawer()"
 >
   <header class="mb-4 flex flex-wrap items-start justify-between gap-3">
     <div>
-      <h2 class="font-display text-lg mt-0" id="pod-variant-config-title">Config variante</h2>
+      <h2 class="font-display text-lg mt-0" id="pod-variant-config-title">Configuration de variante</h2>
       <p class="muted">{{ variant.product.title }} — {{ variant.title }}{% if variant.sku %} · <code>{{ variant.sku }}</code>{% endif %}</p>
       <p class="muted text-sm">Boutique {{ variant.product.store.name }} (lecture seule)</p>
+      {% if store_customer %}
+      <p class="muted text-sm">Client des visuels : {{ store_customer.name }}</p>
+      {% else %}
+      <p class="alert alert--warning text-sm" role="status">Associez d’abord cette boutique à un client dans <a href="{% url 'portal:staff-pod-shops' %}">Boutiques Shopify</a> avant d’imprimer.</p>
+      {% endif %}
     </div>
     <div class="flex flex-wrap items-center gap-2">
       <span class="badge {% if status == 'pod' or status == 'on_stock' %}is-success{% elif status == 'needs_config' %}is-warning{% else %}is-neutral{% endif %}">{{ status }}</span>
@@ -18,7 +25,7 @@
         type="button"
         class="ui-btn ui-btn-ghost ui-btn-sm"
         aria-label="Fermer la configuration variante"
-        onclick="document.getElementById('pod-variant-drawer').innerHTML=''"
+        @click="closeDrawer()"
       >Fermer</button>
     </div>
   </header>
@@ -27,89 +34,73 @@
 
   {% if can_manage_catalog %}
   <form
+    id="pod-variant-config-form"
     class="ui-form-stack"
     method="post"
+    action="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}"
     hx-post="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}"
     hx-target="#pod-variant-drawer"
     hx-swap="innerHTML"
     hx-indicator="#portal-htmx-indicator"
+    hx-sync="this:queue last"
+    hx-disabled-elt="#pod-variant-config-form button[type='submit']"
   >
     {% csrf_token %}
-    <input type="hidden" name="intent" value="save">
     <div class="grid gap-4 md:grid-cols-2">
       <div class="ui-field-group">
         <label class="ui-label" for="variant-mode">Mode</label>
-        <select class="ui-input" id="variant-mode" name="mode">
+        <select class="ui-input" id="variant-mode" name="mode"
+          hx-post="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}"
+          hx-trigger="change changed" hx-include="closest form" hx-vals='{"intent":"preview"}'
+          hx-target="#pod-variant-drawer" hx-swap="innerHTML"
+          hx-indicator="#portal-htmx-indicator" hx-sync="closest form:queue last">
           {% for value, label in modes %}
           <option value="{{ value }}" {% if config.mode == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
+      {% if config.mode == 'pod' %}
       <div class="ui-field-group">
-        <label class="ui-label" for="variant-blank">Blank (POD)</label>
-        <select class="ui-input" id="variant-blank" name="blank_variant_public_id">
+        <label class="ui-label" for="variant-blank">Support vierge (POD)</label>
+        <select class="ui-input" id="variant-blank" name="blank_variant_public_id"
+          hx-post="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}"
+          hx-trigger="change changed" hx-include="closest form" hx-vals='{"intent":"preview"}'
+          hx-target="#pod-variant-drawer" hx-swap="innerHTML"
+          hx-indicator="#portal-htmx-indicator" hx-sync="closest form:queue last">
           <option value="">—</option>
           {% for blank_variant in blank_variants %}
           <option value="{{ blank_variant.public_id }}" {% if config.blank_variant_id == blank_variant.id %}selected{% endif %}>{{ blank_variant.sku }} — {{ blank_variant.blank.name }}</option>
           {% endfor %}
         </select>
       </div>
+      {% endif %}
+      {% if config.mode != 'on_stock' %}<input type="hidden" name="finished_sku" value="{{ config.finished_sku }}">{% endif %}
+      {% if config.mode != 'pod' and config.blank_variant_id %}<input type="hidden" name="blank_variant_public_id" value="{{ config.blank_variant.public_id }}">{% endif %}
+      {% if config.mode == 'on_stock' %}
       <div class="ui-field-group">
         <label class="ui-label" for="variant-finished-sku">SKU fini (ON_STOCK)</label>
         <input class="ui-input" id="variant-finished-sku" name="finished_sku" value="{{ config.finished_sku }}">
       </div>
+      {% endif %}
       <div class="ui-field-group flex items-end">
-        <label class="ui-label"><input type="checkbox" name="staff_locked" {% if config.staff_locked %}checked{% endif %}> Verrou staff (bloque le marchand)</label>
+        <label class="ui-label"><input type="checkbox" name="staff_locked" {% if config.staff_locked %}checked{% endif %}> Réserver les modifications à l’atelier</label>
       </div>
     </div>
 
-    {% if slot_rows %}
-    <h3 class="font-display text-base mt-6 mb-2">Grille slots (mix techniques)</h3>
-    <div class="ui-table-shell">
-      <table class="ui-data-table w-full border-collapse text-sm">
-        <thead>
-          <tr>
-            <th scope="col">Zone</th>
-            <th scope="col">Technique</th>
-            <th scope="col">Actif</th>
-            <th scope="col">Fichier HD</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in slot_rows %}
-          <tr>
-            <td>
-              {{ row.placement_label }}
-              {% if row.is_required %}<span class="badge is-warning">requise</span>{% endif %}
-              <input type="hidden" name="slot_placement" value="{{ row.placement }}">
-              <input type="hidden" name="slot_technique_public_id" value="{{ row.technique.public_id }}">
-              {% if row.is_required %}<input type="hidden" name="slot_required_{{ forloop.counter0 }}" value="1">{% endif %}
-            </td>
-            <td>{{ row.technique.name }}</td>
-            <td>
-              {% if row.is_required %}
-              <input type="hidden" name="slot_enabled" value="{{ row.placement }}:{{ row.technique.public_id }}">
-              Oui
-              {% else %}
-              <label class="sr-only" for="slot-enabled-{{ forloop.counter0 }}">Activer {{ row.placement_label }}</label>
-              <input id="slot-enabled-{{ forloop.counter0 }}" type="checkbox" name="slot_enabled" value="{{ row.placement }}:{{ row.technique.public_id }}" {% if row.is_enabled %}checked{% endif %}>
-              {% endif %}
-            </td>
-            <td>
-              <label class="sr-only" for="slot-ref-{{ forloop.counter0 }}">Fichier HD {{ row.placement_label }}</label>
-              <input class="ui-input" id="slot-ref-{{ forloop.counter0 }}" name="slot_print_reference" value="{{ row.print_reference }}" placeholder="boutique_SO_front.png">
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% elif config.mode == 'pod' and config.blank_variant_id %}
-    <p class="muted mt-4">Aucune pose configurée sur ce blank — ajoutez des capabilities sur la fiche blank.</p>
+    {% if config.mode != 'pod' %}
+    {% for slot in draft_slots %}
+    <input type="hidden" name="slot_placement" value="{{ slot.placement }}">
+    <input type="hidden" name="slot_technique_public_id" value="{{ slot.technique_public_id }}">
+    <input type="hidden" name="slot_print_reference" value="{{ slot.print_reference }}">
+    <input type="hidden" name="slot_source_asset_version_public_id" value="{{ slot.source_asset_version_public_id }}">
+    <input type="hidden" name="slot_source_drive_file_id" value="{{ slot.source_drive_file_id }}">
+    {% if slot.is_enabled %}<input type="hidden" name="slot_enabled" value="{{ slot.placement }}:{{ slot.technique_public_id }}">{% endif %}
+    {% endfor %}
     {% endif %}
+    {% include 'portal/staff/pod/_mapping_marques.html' %}
 
     <div class="mt-4 flex flex-wrap gap-2">
-      <button class="ui-btn ui-btn-primary" type="submit">Enregistrer</button>
+      <button class="ui-btn ui-btn-primary" type="submit" name="intent" value="save">Enregistrer</button>
     </div>
   </form>
 
@@ -117,10 +108,13 @@
   <form
     class="ui-form-stack mt-4 max-w-md"
     method="post"
+    action="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}"
     hx-post="{% url 'portal:staff-pod-variant-config' variant_public_id=variant.public_id %}"
     hx-target="#pod-variant-drawer"
     hx-swap="innerHTML"
     hx-indicator="#portal-htmx-indicator"
+    hx-sync="#pod-variant-config-panel:drop"
+    hx-disabled-elt="this"
   >
     {% csrf_token %}
     <input type="hidden" name="intent" value="apply_template">
@@ -140,4 +134,4 @@
   {% else %}
   <p class="muted">Lecture seule — permission manage_pod_catalog requise pour modifier.</p>
   {% endif %}
-</div>
+</dialog>

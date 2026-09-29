@@ -3,11 +3,17 @@ from __future__ import annotations
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.pod.models import PodUnit
+from apps.pod.services.operate_workflow import PodOperateWorkflowService
 from apps.pod.services.pose import PodPoseService
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 
-from tests.pod.test_rip_lots import configure_pod, rip
+from tests.pod.test_rip_lots import (
+    configure_pod,
+    confirm_session,
+    open_pick_session_for_items,
+    rip,
+)
 from tests.pod.test_variant_config import MANAGE, VIEW, pod_fixture, staff_client
 
 pytestmark = pytest.mark.django_db
@@ -19,14 +25,25 @@ def _prepared_unit(tmp_path, settings, actor):
     settings.MEDIA_ROOT = tmp_path
     dtf, _blank, blank_variant, variant = pod_fixture(actor=actor)
     configure_pod(actor, dtf, blank_variant, variant)
-    rip.enqueue(
+    item = rip.enqueue(
         actor=actor,
         source="test",
         variant_public_id=variant.public_id,
         shopify_order_number="SO-POSE",
         quantity=1,
     )
+    session, location = open_pick_session_for_items(
+        actor=actor,
+        blank_variant=blank_variant,
+        items=[item],
+    )
+    confirm_session(actor=actor, session=session, location=location)
     lot = rip.prepare_dtf_lot(actor=actor, source="test")
+    PodOperateWorkflowService().confirm_dtf_print(
+        actor=actor,
+        session=session,
+        source="test",
+    )
     return lot.units.get()
 
 
@@ -34,7 +51,9 @@ def test_prepare_reuses_pick_session_scan_for_pose(tmp_path, settings):
     from apps.pod.models import PodPickSessionLine
     from apps.pod.services.pick_sessions import PodPickSessionService
 
-    actor, _client = staff_client(email="staff-pose-unify@example.com", permissions=MANAGE)
+    actor, _client = staff_client(
+        email="staff-pose-unify@example.com", permissions=MANAGE + ("manage_warehouse",)
+    )
     settings.MEDIA_ROOT = tmp_path
     dtf, _blank, blank_variant, variant = pod_fixture(actor=actor)
     configure_pod(actor, dtf, blank_variant, variant)
@@ -45,17 +64,30 @@ def test_prepare_reuses_pick_session_scan_for_pose(tmp_path, settings):
         shopify_order_number="SO-UNIFY",
         quantity=2,
     )
-    session = PodPickSessionService().open_session(
+    picking = PodPickSessionService()
+    session, location = open_pick_session_for_items(
         actor=actor,
-        source="test",
-        work_item_public_ids=[str(item.public_id)],
+        blank_variant=blank_variant,
+        items=[item],
     )
     pick_ids = list(session.lines.order_by("sequence").values_list("scan_identifier", flat=True))
     assert len(pick_ids) == 2
+    for scan_identifier in pick_ids:
+        picking.confirm_pick(
+            actor=actor,
+            source="test",
+            scan_identifier=scan_identifier,
+            scanned_bin_code=location.code,
+        )
     lot = rip.prepare_dtf_lot(
         actor=actor,
         source="test",
         work_item_public_ids=[str(item.public_id)],
+    )
+    PodOperateWorkflowService().confirm_dtf_print(
+        actor=actor,
+        session=session,
+        source="test",
     )
     unit_ids = list(lot.units.order_by("sequence").values_list("scan_identifier", flat=True))
     assert unit_ids == pick_ids
@@ -69,7 +101,9 @@ def test_prepare_reuses_pick_session_scan_for_pose(tmp_path, settings):
 
 
 def test_pose_rejects_issue_unit(tmp_path, settings):
-    actor, _client = staff_client(email="staff-pose-issue@example.com", permissions=MANAGE)
+    actor, _client = staff_client(
+        email="staff-pose-issue@example.com", permissions=MANAGE + ("manage_warehouse",)
+    )
     unit = _prepared_unit(tmp_path, settings, actor)
     unit.status = PodUnit.Status.ISSUE
     unit.save(update_fields=["status", "updated_at"])
@@ -78,7 +112,9 @@ def test_pose_rejects_issue_unit(tmp_path, settings):
 
 
 def test_pose_scan_and_confirm(tmp_path, settings):
-    actor, client = staff_client(email="staff-pose@example.com", permissions=MANAGE)
+    actor, client = staff_client(
+        email="staff-pose@example.com", permissions=MANAGE + ("manage_warehouse",)
+    )
     unit = _prepared_unit(tmp_path, settings, actor)
     page = client.get(reverse("portal:staff-pod-pose-dtf"), {"scan": unit.scan_identifier})
     assert page.status_code == 200
@@ -100,8 +136,100 @@ def test_unknown_scan_is_rejected(tmp_path, settings):
         pose.lookup(actor=actor, scan_identifier="POD-MISSING")
 
 
+def test_pick_label_without_rip_lot_explains_next_step(tmp_path, settings):
+    actor, _client = staff_client(
+        email="staff-pose-early@example.com", permissions=MANAGE + ("manage_warehouse",)
+    )
+    settings.MEDIA_ROOT = tmp_path
+    dtf, _blank, blank_variant, variant = pod_fixture(actor=actor)
+    configure_pod(actor, dtf, blank_variant, variant)
+    item = rip.enqueue(
+        actor=actor,
+        source="test",
+        variant_public_id=variant.public_id,
+        shopify_order_number="SO-POSE-EARLY",
+        quantity=1,
+    )
+    session, _location = open_pick_session_for_items(
+        actor=actor,
+        blank_variant=blank_variant,
+        items=[item],
+    )
+    scan = session.lines.get().scan_identifier
+    with pytest.raises(ValidationError, match="lot DTF pas encore lancé"):
+        pose.lookup(actor=actor, scan_identifier=scan)
+
+
+def test_pose_blocks_when_unit_exists_but_blank_not_picked(tmp_path, settings):
+    actor, _client = staff_client(
+        email="staff-pose-unpicked@example.com", permissions=MANAGE + ("manage_warehouse",)
+    )
+    settings.MEDIA_ROOT = tmp_path
+    dtf, _blank, blank_variant, variant = pod_fixture(actor=actor)
+    configure_pod(actor, dtf, blank_variant, variant)
+    item = rip.enqueue(
+        actor=actor,
+        source="test",
+        variant_public_id=variant.public_id,
+        shopify_order_number="SO-POSE-UNPICKED",
+        quantity=1,
+    )
+    session, _location = open_pick_session_for_items(
+        actor=actor,
+        blank_variant=blank_variant,
+        items=[item],
+    )
+    scan = session.lines.get().scan_identifier
+    rip.prepare_dtf_lot(
+        actor=actor,
+        source="test",
+        work_item_public_ids=[str(item.public_id)],
+    )
+    PodOperateWorkflowService().confirm_dtf_print(
+        actor=actor,
+        session=session,
+        source="test",
+    )
+    with pytest.raises(ValidationError, match="support n.est pas encore sorti"):
+        pose.lookup(actor=actor, scan_identifier=scan)
+
+
+def test_picked_without_rip_lot_points_to_dtf_step(tmp_path, settings):
+    from apps.pod.services.pick_sessions import PodPickSessionService
+
+    actor, _client = staff_client(
+        email="staff-pose-picked@example.com", permissions=MANAGE + ("manage_warehouse",)
+    )
+    settings.MEDIA_ROOT = tmp_path
+    dtf, _blank, blank_variant, variant = pod_fixture(actor=actor)
+    configure_pod(actor, dtf, blank_variant, variant)
+    item = rip.enqueue(
+        actor=actor,
+        source="test",
+        variant_public_id=variant.public_id,
+        shopify_order_number="SO-POSE-PICKED",
+        quantity=1,
+    )
+    session, location = open_pick_session_for_items(
+        actor=actor,
+        blank_variant=blank_variant,
+        items=[item],
+    )
+    scan = session.lines.get().scan_identifier
+    PodPickSessionService().confirm_pick(
+        actor=actor,
+        source="test",
+        scan_identifier=scan,
+        scanned_bin_code=location.code,
+    )
+    with pytest.raises(ValidationError, match="lot DTF n.a pas encore"):
+        pose.lookup(actor=actor, scan_identifier=scan)
+
+
 def test_view_only_cannot_confirm_pose(tmp_path, settings):
-    manager, _client = staff_client(email="staff-pose-mgr@example.com", permissions=MANAGE)
+    manager, _client = staff_client(
+        email="staff-pose-mgr@example.com", permissions=MANAGE + ("manage_warehouse",)
+    )
     unit = _prepared_unit(tmp_path, settings, manager)
     _viewer, client = staff_client(email="staff-pose-ro@example.com", permissions=VIEW)
     response = client.post(

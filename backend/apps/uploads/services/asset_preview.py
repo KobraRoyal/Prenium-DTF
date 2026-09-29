@@ -177,9 +177,14 @@ class AssetPreviewRenderer:
                     document,
                     is_pure_vector=is_pure_vector,
                 )
-                warnings = [f"Aperçu généré depuis la première page du {label}."]
-                if source_metrics.dpi_x is None or source_metrics.dpi_y is None:
+                notices = [f"Aperçu généré depuis la première page du {label}."]
+                warnings = []
+                if document.page_count > 1:
                     warnings.append(
+                        "Document multipage : seule la première page a été prévisualisée."
+                    )
+                if source_metrics.dpi_x is None or source_metrics.dpi_y is None:
+                    notices.append(
                         "Document vectoriel ou sans image embarquée : "
                         "la résolution source n’est pas applicable."
                     )
@@ -193,6 +198,7 @@ class AssetPreviewRenderer:
                     warnings=warnings,
                     metadata={
                         "pages": document.page_count,
+                        "notices": notices,
                         "page_width_points": round(float(page.rect.width), 2),
                         "page_height_points": round(float(page.rect.height), 2),
                         "page_width_in": source_metrics.page_width_in,
@@ -282,11 +288,12 @@ class AssetPreviewRenderer:
             source_height=source_height,
             dpi_x=None,
             dpi_y=None,
-            warnings=[
-                "Aperçu rasterisé ; le fichier vectoriel original reste inchangé.",
-                "Document vectoriel : la résolution source n’est pas applicable.",
-            ],
+            warnings=[],
             metadata={
+                "notices": [
+                    "Aperçu rasterisé ; le fichier vectoriel original reste inchangé.",
+                    "Document vectoriel : la résolution source n’est pas applicable.",
+                ],
                 "renderer": "ghostscript",
                 "render_dpi": self.vector_dpi,
                 "has_vector_artwork": True,

@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+import re
+
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
 from apps.auditlog.services import record_event
-from apps.pod.models import Blank, BlankPlacementCapability, BlankVariant, PrintTechnique
+from apps.inventory.models import StockBalance
+from apps.pod.models import (
+    Blank,
+    BlankPlacementCapability,
+    BlankVariant,
+    PodRipWorkItem,
+    PrintTechnique,
+)
 from apps.pod.services.catalog_images import process_catalog_photo
 from apps.pod.services.validation import (
     clean_hex_color,
@@ -14,6 +23,79 @@ from apps.pod.services.validation import (
 )
 
 DTF_TECHNIQUE_CODE = "dtf"
+RIP_DIRECTORY_PATTERN = re.compile(r"02_[a-z0-9_-]+\Z")
+
+
+def validate_rip_directory(value: str) -> str:
+    if not RIP_DIRECTORY_PATTERN.fullmatch(value or ""):
+        raise ValidationError("Le répertoire RIP doit être un nom plat de type 02_nom.")
+    return value
+
+
+def _is_checked(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "on", "yes"}
+
+
+def _locked_count(queryset) -> int:
+    return len(list(queryset.select_for_update().values_list("pk", flat=True)))
+
+
+def _queued_for_technique(technique: PrintTechnique) -> int:
+    return _locked_count(
+        PodRipWorkItem.objects.filter(
+            status=PodRipWorkItem.Status.QUEUED,
+            variant__ids_config__recipe__slots__technique=technique,
+            variant__ids_config__recipe__slots__is_enabled=True,
+        ).distinct()
+    )
+
+
+def _queued_for_blank(blank: Blank) -> int:
+    return _locked_count(
+        PodRipWorkItem.objects.filter(
+            status=PodRipWorkItem.Status.QUEUED,
+            variant__ids_config__blank_variant__blank=blank,
+        ).distinct()
+    )
+
+
+def _queued_for_variant(variant: BlankVariant) -> int:
+    return _locked_count(
+        PodRipWorkItem.objects.filter(
+            status=PodRipWorkItem.Status.QUEUED,
+            variant__ids_config__blank_variant=variant,
+        ).distinct()
+    )
+
+
+def _queued_for_capability(capability: BlankPlacementCapability) -> int:
+    return _locked_count(
+        PodRipWorkItem.objects.filter(
+            status=PodRipWorkItem.Status.QUEUED,
+            variant__ids_config__blank_variant__blank=capability.blank,
+            variant__ids_config__recipe__slots__placement=capability.placement,
+            variant__ids_config__recipe__slots__technique=capability.technique,
+            variant__ids_config__recipe__slots__is_enabled=True,
+        ).distinct()
+    )
+
+
+def _reserved_for_blank(blank: Blank) -> int:
+    balances = StockBalance.objects.select_for_update().filter(
+        blank_variant__blank=blank,
+        qty_reserved__gt=0,
+    )
+    return sum(balance.qty_reserved for balance in balances)
+
+
+def _reserved_for_variant(variant: BlankVariant) -> int:
+    balances = StockBalance.objects.select_for_update().filter(
+        blank_variant=variant,
+        qty_reserved__gt=0,
+    )
+    return sum(balance.qty_reserved for balance in balances)
 
 
 class PrintTechniqueService:
@@ -72,18 +154,23 @@ class PrintTechniqueService:
             export_extension = (data.get("export_extension") or ".png").strip().lower()
             if not code or not name:
                 raise ValidationError("Code et nom sont obligatoires.")
-            if not rip_directory.startswith("02_"):
-                raise ValidationError("Le répertoire RIP doit commencer par 02_.")
+            validate_rip_directory(rip_directory)
             if not export_extension.startswith("."):
                 export_extension = f".{export_extension}"
+            if export_extension != ".png":
+                raise ValidationError(
+                    "Seul l'export PNG analysé est disponible en production automatique."
+                )
             with transaction.atomic():
-                technique = PrintTechnique.objects.create(
+                technique = PrintTechnique(
                     code=code,
                     name=name,
                     rip_directory=rip_directory,
                     export_extension=export_extension,
                     is_active=True,
                 )
+                technique.full_clean()
+                technique.save()
                 record_event(
                     action="pod.technique.created",
                     actor=actor,
@@ -111,6 +198,62 @@ class PrintTechniqueService:
             )
             raise
 
+    def update_technique(
+        self, *, actor, source: str, technique_public_id, data: dict
+    ) -> PrintTechnique:
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source=source,
+            action="pod.technique.permission_rejected",
+        )
+        try:
+            with transaction.atomic():
+                technique = (
+                    PrintTechnique.objects.select_for_update()
+                    .filter(public_id=technique_public_id)
+                    .first()
+                )
+                if technique is None:
+                    raise ValidationError("Technique introuvable.")
+                requested_active = _is_checked(data.get("is_active"))
+                name = (data.get("name") or "").strip()
+                if technique.name != name or technique.is_active != requested_active:
+                    queued_count = _queued_for_technique(technique)
+                    if queued_count:
+                        raise ValidationError(
+                            "Modification impossible : "
+                            f"{queued_count} commande(s) POD en cours utilisent cette technique."
+                        )
+                previous = {"name": technique.name, "is_active": technique.is_active}
+                technique.name = name
+                technique.is_active = requested_active
+                technique.full_clean()
+                technique.save(update_fields=["name", "is_active", "updated_at"])
+                record_event(
+                    action="pod.technique.updated",
+                    actor=actor,
+                    target=technique,
+                    metadata={
+                        "source": source,
+                        "previous": previous,
+                        "changes": {
+                            "name": technique.name,
+                            "is_active": technique.is_active,
+                        },
+                    },
+                )
+                return technique
+        except ValidationError as exc:
+            record_event(
+                action="pod.technique.update_rejected",
+                actor=actor,
+                status="failure",
+                message=validation_message(exc),
+                metadata={"source": source},
+            )
+            raise
+
 
 class BlankCatalogService:
     view_permission = "pod.access_pod_atelier"
@@ -126,6 +269,8 @@ class BlankCatalogService:
         return Blank.objects.prefetch_related(
             "variants__location_rules__location",
             "placement_capabilities__technique",
+            "allowed_zones",
+            "allowed_techniques",
         )
 
     def get_blank(self, *, actor, blank_public_id):
@@ -148,7 +293,9 @@ class BlankCatalogService:
             if not name:
                 raise ValidationError("Le nom du support est obligatoire.")
             with transaction.atomic():
-                blank = Blank.objects.create(sku=sku, name=name, brand=brand)
+                blank = Blank(sku=sku, name=name, brand=brand)
+                blank.full_clean()
+                blank.save()
                 record_event(
                     action="pod.blank.created",
                     actor=actor,
@@ -176,6 +323,74 @@ class BlankCatalogService:
             )
             raise
 
+    def update_blank(self, *, actor, source: str, blank_public_id, data: dict) -> Blank:
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source=source,
+            action="pod.blank.permission_rejected",
+        )
+        try:
+            with transaction.atomic():
+                blank = Blank.objects.select_for_update().filter(public_id=blank_public_id).first()
+                if blank is None:
+                    raise ValidationError("Support vierge introuvable.")
+                requested_active = _is_checked(data.get("is_active"))
+                name = (data.get("name") or "").strip()
+                brand = (data.get("brand") or "").strip()
+                if (
+                    blank.name != name
+                    or blank.brand != brand
+                    or blank.is_active != requested_active
+                ):
+                    queued_count = _queued_for_blank(blank)
+                    if queued_count:
+                        raise ValidationError(
+                            "Modification impossible : "
+                            f"{queued_count} commande(s) POD en cours utilisent ce support."
+                        )
+                if blank.is_active and not requested_active:
+                    reserved_qty = _reserved_for_blank(blank)
+                    if reserved_qty:
+                        raise ValidationError(
+                            "Désactivation impossible : "
+                            f"{reserved_qty} unité(s) réservée(s) utilisent ce support."
+                        )
+                previous = {
+                    "name": blank.name,
+                    "brand": blank.brand,
+                    "is_active": blank.is_active,
+                }
+                blank.name = name
+                blank.brand = brand
+                blank.is_active = requested_active
+                blank.full_clean()
+                blank.save(update_fields=["name", "brand", "is_active", "updated_at"])
+                record_event(
+                    action="pod.blank.updated",
+                    actor=actor,
+                    target=blank,
+                    metadata={
+                        "source": source,
+                        "previous": previous,
+                        "changes": {
+                            "name": blank.name,
+                            "brand": blank.brand,
+                            "is_active": blank.is_active,
+                        },
+                    },
+                )
+                return blank
+        except ValidationError as exc:
+            record_event(
+                action="pod.blank.update_rejected",
+                actor=actor,
+                status="failure",
+                message=validation_message(exc),
+                metadata={"source": source},
+            )
+            raise
+
     def create_variant(self, *, actor, source: str, blank_public_id, data: dict) -> BlankVariant:
         require_staff_perm(
             actor,
@@ -188,13 +403,17 @@ class BlankCatalogService:
                 blank = Blank.objects.select_for_update().filter(public_id=blank_public_id).first()
                 if blank is None:
                     raise ValidationError("Support vierge introuvable.")
-                variant = BlankVariant.objects.create(
+                if not blank.is_active:
+                    raise ValidationError("Le support vierge est inactif.")
+                variant = BlankVariant(
                     blank=blank,
                     sku=clean_sku(data.get("sku", ""), field_label="SKU variante"),
                     size_label=(data.get("size_label") or "").strip() or "U",
                     color_name=(data.get("color_name") or "").strip() or "Standard",
                     color_hex=clean_hex_color(data.get("color_hex", "")),
                 )
+                variant.full_clean()
+                variant.save()
                 record_event(
                     action="pod.blank_variant.created",
                     actor=actor,
@@ -219,6 +438,107 @@ class BlankCatalogService:
                 status="failure",
                 message=validation_message(exc),
                 metadata={"source": source},
+            )
+            raise
+
+    def update_variant(
+        self,
+        *,
+        actor,
+        source: str,
+        blank_public_id,
+        variant_public_id,
+        data: dict,
+    ) -> BlankVariant:
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source=source,
+            action="pod.blank.permission_rejected",
+        )
+        try:
+            with transaction.atomic():
+                blank = Blank.objects.select_for_update().filter(public_id=blank_public_id).first()
+                if blank is None:
+                    raise ValidationError("Support vierge introuvable.")
+                variant = (
+                    BlankVariant.objects.select_for_update()
+                    .filter(public_id=variant_public_id, blank=blank)
+                    .first()
+                )
+                if variant is None:
+                    raise ValidationError("Variante support introuvable.")
+                requested_active = _is_checked(data.get("is_active"))
+                size_label = (data.get("size_label") or "").strip() or "U"
+                color_name = (data.get("color_name") or "").strip() or "Standard"
+                color_hex = clean_hex_color(data.get("color_hex", ""))
+                if (
+                    variant.size_label != size_label
+                    or variant.color_name != color_name
+                    or variant.color_hex != color_hex
+                    or variant.is_active != requested_active
+                ):
+                    queued_count = _queued_for_variant(variant)
+                    if queued_count:
+                        raise ValidationError(
+                            "Modification impossible : "
+                            f"{queued_count} commande(s) POD en cours utilisent cette variante."
+                        )
+                if variant.is_active and not requested_active:
+                    reserved_qty = _reserved_for_variant(variant)
+                    if reserved_qty:
+                        raise ValidationError(
+                            "Désactivation impossible : "
+                            f"{reserved_qty} unité(s) réservée(s) utilisent cette variante."
+                        )
+                previous = {
+                    "size_label": variant.size_label,
+                    "color_name": variant.color_name,
+                    "color_hex": variant.color_hex,
+                    "is_active": variant.is_active,
+                }
+                variant.size_label = size_label
+                variant.color_name = color_name
+                variant.color_hex = color_hex
+                if requested_active and not blank.is_active:
+                    raise ValidationError(
+                        "Réactivation impossible : le support vierge est inactif."
+                    )
+                variant.is_active = requested_active
+                variant.full_clean()
+                variant.save(
+                    update_fields=[
+                        "size_label",
+                        "color_name",
+                        "color_hex",
+                        "is_active",
+                        "updated_at",
+                    ]
+                )
+                record_event(
+                    action="pod.blank_variant.updated",
+                    actor=actor,
+                    target=variant,
+                    metadata={
+                        "source": source,
+                        "blank": str(blank.public_id),
+                        "previous": previous,
+                        "changes": {
+                            "size_label": variant.size_label,
+                            "color_name": variant.color_name,
+                            "color_hex": variant.color_hex,
+                            "is_active": variant.is_active,
+                        },
+                    },
+                )
+                return variant
+        except ValidationError as exc:
+            record_event(
+                action="pod.blank_variant.update_rejected",
+                actor=actor,
+                status="failure",
+                message=validation_message(exc),
+                metadata={"source": source, "blank": str(blank_public_id)},
             )
             raise
 
@@ -320,25 +640,36 @@ class BlankCatalogService:
             placement = (data.get("placement") or "").strip()
             if placement not in BlankPlacementCapability.Placement.values:
                 raise ValidationError("Zone de pose invalide.")
-            technique = PrintTechnique.objects.filter(
-                public_id=data.get("technique_public_id"),
-                is_active=True,
-            ).first()
-            if technique is None:
-                raise ValidationError("Technique introuvable.")
             with transaction.atomic():
                 blank = Blank.objects.select_for_update().filter(public_id=blank_public_id).first()
                 if blank is None:
                     raise ValidationError("Support vierge introuvable.")
+                if blank.marking_options_configured:
+                    raise ValidationError(
+                        "Configurez les zones et techniques dans les listes du support."
+                    )
+                if not blank.is_active:
+                    raise ValidationError("Le support vierge est inactif.")
+                technique = (
+                    PrintTechnique.objects.select_for_update()
+                    .filter(
+                        public_id=data.get("technique_public_id"),
+                        is_active=True,
+                    )
+                    .first()
+                )
+                if technique is None:
+                    raise ValidationError("Technique introuvable.")
                 capability, created = BlankPlacementCapability.objects.update_or_create(
                     blank=blank,
                     placement=placement,
                     technique=technique,
                     defaults={
-                        "is_required": bool(data.get("is_required")),
+                        "is_required": _is_checked(data.get("is_required")),
                         "is_active": True,
                     },
                 )
+                capability.full_clean()
                 record_event(
                     action="pod.blank_capability.saved",
                     actor=actor,
@@ -363,5 +694,84 @@ class BlankCatalogService:
                 status="failure",
                 message=validation_message(exc),
                 metadata={"source": source},
+            )
+            raise
+
+    def update_capability(
+        self,
+        *,
+        actor,
+        source: str,
+        blank_public_id,
+        capability_public_id,
+        data: dict,
+    ) -> BlankPlacementCapability:
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source=source,
+            action="pod.blank.permission_rejected",
+        )
+        try:
+            with transaction.atomic():
+                blank = Blank.objects.select_for_update().filter(public_id=blank_public_id).first()
+                if blank is None:
+                    raise ValidationError("Support vierge introuvable.")
+                if blank.marking_options_configured:
+                    raise ValidationError(
+                        "Configurez les zones et techniques dans les listes du support."
+                    )
+                capability = (
+                    BlankPlacementCapability.objects.select_for_update()
+                    .filter(public_id=capability_public_id, blank=blank)
+                    .first()
+                )
+                if capability is None:
+                    raise ValidationError("Pose autorisée introuvable.")
+                requested_required = _is_checked(data.get("is_required"))
+                requested_active = _is_checked(data.get("is_active"))
+                if (
+                    capability.is_active and not requested_active
+                ) or capability.is_required != requested_required:
+                    queued_count = _queued_for_capability(capability)
+                    if queued_count:
+                        raise ValidationError(
+                            "Modification impossible : "
+                            f"{queued_count} commande(s) POD en cours utilisent cette pose."
+                        )
+                if requested_active and (not blank.is_active or not capability.technique.is_active):
+                    raise ValidationError(
+                        "Réactivation impossible : le support ou la technique est inactif."
+                    )
+                previous = {
+                    "is_required": capability.is_required,
+                    "is_active": capability.is_active,
+                }
+                capability.is_required = requested_required
+                capability.is_active = requested_active
+                capability.full_clean()
+                capability.save(update_fields=["is_required", "is_active", "updated_at"])
+                record_event(
+                    action="pod.blank_capability.updated",
+                    actor=actor,
+                    target=capability,
+                    metadata={
+                        "source": source,
+                        "blank": str(blank.public_id),
+                        "previous": previous,
+                        "changes": {
+                            "is_required": capability.is_required,
+                            "is_active": capability.is_active,
+                        },
+                    },
+                )
+                return capability
+        except ValidationError as exc:
+            record_event(
+                action="pod.blank_capability.update_rejected",
+                actor=actor,
+                status="failure",
+                message=validation_message(exc),
+                metadata={"source": source, "blank": str(blank_public_id)},
             )
             raise

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.paginator import Paginator
 from django.http import FileResponse, Http404, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
@@ -30,7 +32,7 @@ class StaffPodPoseDtfView(StaffPodPermissionMixin, View):
             **_nav(),
             "lookup": lookup,
             "form_error": form_error,
-            "can_manage_catalog": request.user.has_perm("pod.manage_pod_catalog"),
+            "can_operate_production": request.user.has_perm("pod.operate_pod_production"),
             "scan_identifier": request.POST.get("scan_identifier") or request.GET.get("scan", ""),
         }
 
@@ -56,6 +58,8 @@ class StaffPodPoseDtfView(StaffPodPermissionMixin, View):
                     reverse("portal:staff-pod-pose-dtf")
                     + f"?scan={request.POST.get('scan_identifier', '').strip().upper()}"
                 )
+            if request.POST.get("intent", "lookup") != "lookup":
+                raise ValidationError("Action de pose inconnue.")
             lookup = pose_service.lookup(
                 actor=request.user,
                 scan_identifier=request.POST.get("scan_identifier", ""),
@@ -69,27 +73,52 @@ class StaffPodPoseDtfView(StaffPodPermissionMixin, View):
 
 class StaffPodStockView(StaffPodPermissionMixin, View):
     template_name = "portal/staff/pod/stock.html"
+    _tabs_by_intent = {
+        "receive": "receive",
+        "pick": "pick",
+        "putaway": "putaway",
+        "receive_finished": "fin_receive",
+        "pick_finished": "fin_pick",
+    }
 
-    def _context(self, request, form_error=""):
+    def _context(self, request, form_error="", active_stock_tab="receive"):
         zones = warehouse_layout_service.list_zones(actor=request.user)
-        locations = [location for zone in zones for location in zone.locations.all()]
+        locations = [
+            location
+            for zone in zones
+            if zone.is_active and zone.warehouse.is_active
+            for location in zone.locations.all()
+            if location.is_active
+        ]
+        can_manage_warehouse = request.user.has_perm("inventory.manage_warehouse")
+        search_query = request.GET.get("q", "").strip()[:160]
+        page_obj = (
+            Paginator(stock_ops.list_balances(actor=request.user, query=search_query), 30).get_page(
+                request.GET.get("page")
+            )
+            if can_manage_warehouse
+            else None
+        )
         return {
             **_nav(),
-            "blanks": blank_catalog_service.list_blanks(actor=request.user),
+            "blanks": blank_catalog_service.list_blanks(actor=request.user).filter(is_active=True),
             "locations": locations,
             "customers": stock_ops.eligible_customers(actor=request.user),
-            "can_manage_warehouse": request.user.has_perm("inventory.manage_warehouse"),
+            "can_manage_warehouse": can_manage_warehouse,
+            "page_obj": page_obj,
+            "search_query": search_query,
             "form_error": form_error,
+            "active_stock_tab": active_stock_tab,
         }
 
     def get(self, request):
-        print_technique_service.ensure_dtf_technique(actor=request.user)
-        warehouse_layout_service.ensure_default_layout(actor=request.user)
         return render(request, self.template_name, self._context(request))
 
     def post(self, request):
         intent = request.POST.get("intent", "receive")
         try:
+            if intent not in self._tabs_by_intent:
+                raise ValidationError("Action de stock inconnue.")
             qty = int(request.POST.get("quantity") or 0)
             owner_kwargs = {
                 "owner_kind": request.POST.get("owner_kind") or "atelier",
@@ -131,7 +160,7 @@ class StaffPodStockView(StaffPodPermissionMixin, View):
                     quantity=qty,
                     **owner_kwargs,
                 )
-            else:
+            elif intent == "receive":
                 stock_ops.receive_blank(
                     actor=request.user,
                     source="staff_pod",
@@ -149,8 +178,15 @@ class StaffPodStockView(StaffPodPermissionMixin, View):
                 else "Quantité invalide."
             )
             return _render_error(
-                request, self.template_name, self._context(request), ValidationError(message)
+                request,
+                self.template_name,
+                self._context(
+                    request,
+                    active_stock_tab=self._tabs_by_intent.get(intent, "receive"),
+                ),
+                ValidationError(message),
             )
+        messages.success(request, "Mouvement de stock enregistré.")
         return HttpResponseRedirect(reverse("portal:staff-pod-stock"))
 
 

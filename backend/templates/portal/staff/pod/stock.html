@@ -3,12 +3,12 @@
 {% block title %}Stocks POD — Prenium DTF{% endblock %}
 
 {% block portal_content %}
-<div class="portal-page portal-page--staff">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Stocks" title="Stocks" subtitle="Un mouvement à la fois — réception, picking ou putaway." %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Stocks" title="Stocks" subtitle="Un mouvement à la fois — réception, sortie ou rangement." %}
   {% include "portal/staff/pod/_pod_context_nav.html" %}
   <section class="portal-page-surface ui-list-section" aria-labelledby="pod-stock-title">
     <h2 id="pod-stock-title" class="sr-only">Mouvements WMS</h2>
-    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    {% include "portal/staff/pod/_form_error.html" %}
 
     {% if can_manage_warehouse %}
     <div class="atelier-worklist-command ui-list-command ui-list-command--compact pod-board-command mb-4" aria-labelledby="pod-stock-command-title">
@@ -20,27 +20,39 @@
         <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-hub' %}">Retour À produire</a>
       </div>
     </div>
-    <div x-data="{ tab: 'receive' }">
-      <div class="pod-stock-tabs" role="tablist" aria-label="Type de mouvement">
-        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'receive' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'receive'" @click="tab = 'receive'">Réception blank</button>
-        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'pick' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'pick'" @click="tab = 'pick'">Picking blank</button>
-        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'putaway' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'putaway'" @click="tab = 'putaway'">Putaway</button>
-        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'fin_receive' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'fin_receive'" @click="tab = 'fin_receive'">Réception fini</button>
-        <button type="button" class="ui-btn ui-btn-sm" role="tab" :class="tab === 'fin_pick' ? 'ui-btn-primary' : 'ui-btn-ghost'" :aria-selected="tab === 'fin_pick'" @click="tab = 'fin_pick'">Picking fini</button>
+    <div
+      x-data="{
+        tab: '{{ active_stock_tab|default:'receive' }}',
+        submitting: false,
+        moveTab(event, direction) {
+          const tabs = Array.from(event.currentTarget.parentElement.querySelectorAll('[role=tab]'));
+          const current = tabs.indexOf(event.currentTarget);
+          const next = tabs[(current + direction + tabs.length) % tabs.length];
+          next.click();
+          next.focus();
+        }
+      }"
+    >
+      <div class="pod-stock-tabs ui-list-tabs ui-selection-rail ui-selection-rail--horizontal" role="tablist" aria-label="Type de mouvement">
+        <button id="stock-tab-receive" type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" aria-controls="stock-panel-receive" :aria-selected="tab === 'receive'" :tabindex="tab === 'receive' ? 0 : -1" @click="tab = 'receive'" @keydown.right.prevent="moveTab($event, 1)" @keydown.left.prevent="moveTab($event, -1)"><span class="ui-list-tabs__label">Réception support</span></button>
+        <button id="stock-tab-pick" type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" aria-controls="stock-panel-pick" :aria-selected="tab === 'pick'" :tabindex="tab === 'pick' ? 0 : -1" @click="tab = 'pick'" @keydown.right.prevent="moveTab($event, 1)" @keydown.left.prevent="moveTab($event, -1)"><span class="ui-list-tabs__label">Sortie support</span></button>
+        <button id="stock-tab-putaway" type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" aria-controls="stock-panel-putaway" :aria-selected="tab === 'putaway'" :tabindex="tab === 'putaway' ? 0 : -1" @click="tab = 'putaway'" @keydown.right.prevent="moveTab($event, 1)" @keydown.left.prevent="moveTab($event, -1)"><span class="ui-list-tabs__label">Rangement</span></button>
+        <button id="stock-tab-fin-receive" type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" aria-controls="stock-panel-fin-receive" :aria-selected="tab === 'fin_receive'" :tabindex="tab === 'fin_receive' ? 0 : -1" @click="tab = 'fin_receive'" @keydown.right.prevent="moveTab($event, 1)" @keydown.left.prevent="moveTab($event, -1)"><span class="ui-list-tabs__label">Réception fini</span></button>
+        <button id="stock-tab-fin-pick" type="button" class="ui-list-tabs__tab ui-selection-control" role="tab" aria-controls="stock-panel-fin-pick" :aria-selected="tab === 'fin_pick'" :tabindex="tab === 'fin_pick' ? 0 : -1" @click="tab = 'fin_pick'" @keydown.right.prevent="moveTab($event, 1)" @keydown.left.prevent="moveTab($event, -1)"><span class="ui-list-tabs__label">Sortie fini</span></button>
       </div>
 
-      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'receive'" x-cloak aria-labelledby="stock-receive-title">
+      <form id="stock-panel-receive" class="ui-form-stack max-w-xl" method="post" novalidate role="tabpanel" aria-labelledby="stock-tab-receive stock-receive-title" x-show="tab === 'receive'" x-cloak @submit="submitting = true">
         {% csrf_token %}
         <input type="hidden" name="intent" value="receive">
-        <h3 class="font-display text-lg" id="stock-receive-title">Réception blank</h3>
+        <h3 class="font-display text-lg" id="stock-receive-title">Réception support</h3>
         <p class="muted mb-4">Entrée de supports vierges vers un emplacement picking.</p>
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="recv" %}
         <div class="ui-field-group">
-          <label class="ui-label" for="recv-variant">Variante blank</label>
+          <label class="ui-label" for="recv-variant">Variante support</label>
           <select class="ui-input" id="recv-variant" name="blank_variant_public_id">
             {% for blank in blanks %}
               {% for variant in blank.variants.all %}
-              <option value="{{ variant.public_id }}">{{ variant.sku }}</option>
+              {% if variant.is_active %}<option value="{{ variant.public_id }}" {% if form_data.blank_variant_public_id == variant.public_id|stringformat:"s" %}selected{% endif %}>{{ variant.sku }}</option>{% endif %}
               {% endfor %}
             {% endfor %}
           </select>
@@ -49,60 +61,60 @@
           <label class="ui-label" for="recv-loc">Emplacement</label>
           <select class="ui-input" id="recv-loc" name="location_public_id">
             {% for location in locations %}
-            <option value="{{ location.public_id }}">{{ location.code }} ({{ location.zone.name }})</option>
+            <option value="{{ location.public_id }}" {% if form_data.location_public_id == location.public_id|stringformat:"s" %}selected{% endif %}>{{ location.code }} ({{ location.zone.name }})</option>
             {% endfor %}
           </select>
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="recv-qty">Quantité</label>
-          <input class="ui-input ui-input--qty" id="recv-qty" name="quantity" type="number" min="1" value="1">
+          <input class="ui-input ui-input--qty" id="recv-qty" name="quantity" type="number" min="1" value="{{ form_data.quantity|default:'1' }}">
         </div>
         <div class="ui-form-actions">
-          <button class="ui-btn ui-btn-primary" type="submit">Enregistrer la réception</button>
+          <button class="ui-btn ui-btn-primary" type="submit" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Enregistrement…' : 'Enregistrer la réception'">Enregistrer la réception</button>
         </div>
       </form>
 
-      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'pick'" x-cloak aria-labelledby="stock-pick-title">
+      <form id="stock-panel-pick" class="ui-form-stack max-w-xl" method="post" novalidate role="tabpanel" aria-labelledby="stock-tab-pick stock-pick-title" x-show="tab === 'pick'" x-cloak @submit="submitting = true">
         {% csrf_token %}
         <input type="hidden" name="intent" value="pick">
-        <h3 class="font-display text-lg" id="stock-pick-title">Picking blank</h3>
+        <h3 class="font-display text-lg" id="stock-pick-title">Sortie support</h3>
         <p class="muted mb-4">Sortie pour production — scannez le bin puis la quantité.</p>
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="pick" %}
         <div class="ui-field-group">
           <label class="ui-label" for="pick-bin">Scan bin</label>
-          <input class="ui-input" id="pick-bin" name="scanned_bin_code" required placeholder="A-01-01-A" autocomplete="off">
+          <input class="ui-input" id="pick-bin" name="scanned_bin_code" value="{{ form_data.scanned_bin_code }}" required placeholder="A-01-01-A" autocomplete="off">
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="pick-qty">Quantité</label>
-          <input class="ui-input ui-input--qty" id="pick-qty" name="quantity" type="number" min="1" value="1">
+          <input class="ui-input ui-input--qty" id="pick-qty" name="quantity" type="number" min="1" value="{{ form_data.quantity|default:'1' }}">
         </div>
         <div class="ui-field-group">
-          <label class="ui-label" for="pick-variant">Variante blank</label>
+          <label class="ui-label" for="pick-variant">Variante support</label>
           <select class="ui-input" id="pick-variant" name="blank_variant_public_id">
             {% for blank in blanks %}
               {% for variant in blank.variants.all %}
-              <option value="{{ variant.public_id }}">{{ variant.sku }}</option>
+              {% if variant.is_active %}<option value="{{ variant.public_id }}" {% if form_data.blank_variant_public_id == variant.public_id|stringformat:"s" %}selected{% endif %}>{{ variant.sku }}</option>{% endif %}
               {% endfor %}
             {% endfor %}
           </select>
         </div>
         <div class="ui-form-actions">
-          <button class="ui-btn ui-btn-primary" type="submit">Valider le picking</button>
+          <button class="ui-btn ui-btn-primary" type="submit" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Validation…' : 'Valider la sortie'">Valider la sortie</button>
         </div>
       </form>
 
-      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'putaway'" x-cloak aria-labelledby="stock-putaway-title">
+      <form id="stock-panel-putaway" class="ui-form-stack max-w-xl" method="post" novalidate role="tabpanel" aria-labelledby="stock-tab-putaway stock-putaway-title" x-show="tab === 'putaway'" x-cloak @submit="submitting = true">
         {% csrf_token %}
         <input type="hidden" name="intent" value="putaway">
-        <h3 class="font-display text-lg" id="stock-putaway-title">Putaway retours</h3>
+        <h3 class="font-display text-lg" id="stock-putaway-title">Rangement</h3>
         <p class="muted mb-4">Rangement en zone retours après contrôle atelier.</p>
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="put" %}
         <div class="ui-field-group">
-          <label class="ui-label" for="put-variant">Variante blank</label>
+          <label class="ui-label" for="put-variant">Variante support</label>
           <select class="ui-input" id="put-variant" name="blank_variant_public_id">
             {% for blank in blanks %}
               {% for variant in blank.variants.all %}
-              <option value="{{ variant.public_id }}">{{ variant.sku }}</option>
+              {% if variant.is_active %}<option value="{{ variant.public_id }}" {% if form_data.blank_variant_public_id == variant.public_id|stringformat:"s" %}selected{% endif %}>{{ variant.sku }}</option>{% endif %}
               {% endfor %}
             {% endfor %}
           </select>
@@ -112,21 +124,21 @@
           <select class="ui-input" id="put-loc" name="location_public_id">
             {% for location in locations %}
               {% if location.zone.kind == "returns" %}
-              <option value="{{ location.public_id }}">{{ location.code }}</option>
+              <option value="{{ location.public_id }}" {% if form_data.location_public_id == location.public_id|stringformat:"s" %}selected{% endif %}>{{ location.code }}</option>
               {% endif %}
             {% endfor %}
           </select>
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="put-qty">Quantité</label>
-          <input class="ui-input ui-input--qty" id="put-qty" name="quantity" type="number" min="1" value="1">
+          <input class="ui-input ui-input--qty" id="put-qty" name="quantity" type="number" min="1" value="{{ form_data.quantity|default:'1' }}">
         </div>
         <div class="ui-form-actions">
-          <button class="ui-btn ui-btn-primary" type="submit">Ranger en retours</button>
+          <button class="ui-btn ui-btn-primary" type="submit" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Rangement…' : 'Ranger en retours'">Ranger en retours</button>
         </div>
       </form>
 
-      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'fin_receive'" x-cloak aria-labelledby="stock-finish-receive-title">
+      <form id="stock-panel-fin-receive" class="ui-form-stack max-w-xl" method="post" novalidate role="tabpanel" aria-labelledby="stock-tab-fin-receive stock-finish-receive-title" x-show="tab === 'fin_receive'" x-cloak @submit="submitting = true">
         {% csrf_token %}
         <input type="hidden" name="intent" value="receive_finished">
         <h3 class="font-display text-lg" id="stock-finish-receive-title">Réception produit fini</h3>
@@ -134,53 +146,76 @@
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="finr" %}
         <div class="ui-field-group">
           <label class="ui-label" for="finr-sku">SKU fini</label>
-          <input class="ui-input" id="finr-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN">
+          <input class="ui-input" id="finr-sku" name="finished_sku" value="{{ form_data.finished_sku }}" required placeholder="TEE-WHT-M-FIN">
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="finr-loc">Emplacement finis</label>
           <select class="ui-input" id="finr-loc" name="location_public_id">
             {% for location in locations %}
               {% if location.zone.kind == "finished" %}
-              <option value="{{ location.public_id }}">{{ location.code }}</option>
+              <option value="{{ location.public_id }}" {% if form_data.location_public_id == location.public_id|stringformat:"s" %}selected{% endif %}>{{ location.code }}</option>
               {% endif %}
             {% endfor %}
           </select>
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="finr-qty">Quantité</label>
-          <input class="ui-input ui-input--qty" id="finr-qty" name="quantity" type="number" min="1" value="1">
+          <input class="ui-input ui-input--qty" id="finr-qty" name="quantity" type="number" min="1" value="{{ form_data.quantity|default:'1' }}">
         </div>
         <div class="ui-form-actions">
-          <button class="ui-btn ui-btn-primary" type="submit">Enregistrer le fini</button>
+          <button class="ui-btn ui-btn-primary" type="submit" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Enregistrement…' : 'Enregistrer le fini'">Enregistrer le fini</button>
         </div>
       </form>
 
-      <form class="ui-form-stack max-w-xl" method="post" novalidate x-show="tab === 'fin_pick'" x-cloak aria-labelledby="stock-finish-pick-title">
+      <form id="stock-panel-fin-pick" class="ui-form-stack max-w-xl" method="post" novalidate role="tabpanel" aria-labelledby="stock-tab-fin-pick stock-finish-pick-title" x-show="tab === 'fin_pick'" x-cloak @submit="submitting = true">
         {% csrf_token %}
         <input type="hidden" name="intent" value="pick_finished">
-        <h3 class="font-display text-lg" id="stock-finish-pick-title">Picking produit fini</h3>
+        <h3 class="font-display text-lg" id="stock-finish-pick-title">Sortie produit fini</h3>
         <p class="muted mb-4">Sortie pour expédition — scan bin puis quantité.</p>
         {% include "portal/staff/pod/_stock_owner_fields.html" with prefix="finp" %}
         <div class="ui-field-group">
           <label class="ui-label" for="finp-bin">Scan bin</label>
-          <input class="ui-input" id="finp-bin" name="scanned_bin_code" required placeholder="F-01-01-A" autocomplete="off">
+          <input class="ui-input" id="finp-bin" name="scanned_bin_code" value="{{ form_data.scanned_bin_code }}" required placeholder="F-01-01-A" autocomplete="off">
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="finp-qty">Quantité</label>
-          <input class="ui-input ui-input--qty" id="finp-qty" name="quantity" type="number" min="1" value="1">
+          <input class="ui-input ui-input--qty" id="finp-qty" name="quantity" type="number" min="1" value="{{ form_data.quantity|default:'1' }}">
         </div>
         <div class="ui-field-group">
           <label class="ui-label" for="finp-sku">SKU fini</label>
-          <input class="ui-input" id="finp-sku" name="finished_sku" required placeholder="TEE-WHT-M-FIN">
+          <input class="ui-input" id="finp-sku" name="finished_sku" value="{{ form_data.finished_sku }}" required placeholder="TEE-WHT-M-FIN">
         </div>
         <div class="ui-form-actions">
-          <button class="ui-btn ui-btn-primary" type="submit">Valider le picking fini</button>
+          <button class="ui-btn ui-btn-primary" type="submit" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Validation…' : 'Valider la sortie fini'">Valider la sortie fini</button>
         </div>
       </form>
     </div>
+    <section class="mt-8" aria-label="Stock disponible">
+      {% include "portal/staff/pod/_list_toolbar.html" with heading="Stock disponible" count=page_obj.paginator.count searchable=True search_placeholder="SKU, emplacement ou propriétaire" %}
+      <div class="ui-table-shell" role="region" aria-label="Solde des stocks" tabindex="0">
+        <table class="ui-data-table w-full border-collapse">
+          <thead><tr><th scope="col">Référence</th><th scope="col">Emplacement</th><th scope="col">Propriétaire</th><th scope="col">En stock</th><th scope="col">Réservé</th><th scope="col">Disponible</th></tr></thead>
+          <tbody>
+          {% for balance in page_obj %}
+            <tr>
+              <td><code>{% if balance.blank_variant %}{{ balance.blank_variant.sku }}{% else %}{{ balance.finished_sku }}{% endif %}</code><br><span class="muted">{{ balance.get_sku_kind_display }}</span></td>
+              <td><a href="{% url 'portal:staff-pod-location-detail' location_public_id=balance.location.public_id %}"><code>{{ balance.location.code }}</code></a></td>
+              <td>{{ balance.get_owner_kind_display }}{% if balance.customer %} · {{ balance.customer.name }}{% endif %}</td>
+              <td>{{ balance.qty_on_hand }}</td>
+              <td>{{ balance.qty_reserved }}</td>
+              <td><strong>{{ balance.qty_available }}</strong></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">{% if search_query %}Aucun stock ne correspond à cette recherche.{% else %}Aucun stock enregistré. Commencez par une réception pour alimenter les bacs de production.{% endif %}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "components/portal/pagination.html" %}
+    </section>
     {% else %}
-    {% url 'portal:staff-pod-warehouse' as wh_url %}
-    {% include "components/ui/empty_state.html" with title="Consultation seule" message="Les mouvements stock demandent la permission entrepôt." cta_url=wh_url cta_label="Voir l’entrepôt" %}
+    {% url 'portal:staff-pod-hub' as hub_url %}
+    {% include "components/ui/empty_state.html" with title="Consultation seule" message="Les mouvements stock demandent la permission entrepôt." cta_url=hub_url cta_label="Retour à production" %}
     {% endif %}
   </section>
 </div>

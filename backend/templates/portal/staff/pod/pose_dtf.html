@@ -3,14 +3,14 @@
 {% block title %}Pose DTF — Atelier POD{% endblock %}
 
 {% block portal_content %}
-<div class="portal-page portal-page--staff">
-  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Pose DTF" title="Pose DTF" subtitle="Scannez l’étiquette, vérifiez les slots, confirmez — une pièce à la fois." %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Pose DTF" title="Pose DTF" subtitle="Scannez l’étiquette, vérifiez les marquages, puis confirmez la pose." %}
   {% include "portal/staff/pod/_pod_context_nav.html" %}
   <section class="portal-page-surface ui-list-section" aria-labelledby="pod-pose-title">
     <h2 id="pod-pose-title" class="sr-only">Poste de pose</h2>
-    {% if form_error %}<p class="alert alert--danger" role="alert">{{ form_error }}</p>{% endif %}
+    {% include "portal/staff/pod/_form_error.html" %}
 
-    <form class="ui-form-stack pod-pose-scan max-w-xl" method="post" novalidate aria-labelledby="pod-pose-scan-label">
+    <form data-inline-required data-submit-loading class="ui-form-stack pod-pose-scan max-w-xl" method="post" novalidate aria-labelledby="pod-pose-scan-label">
       {% csrf_token %}
       <input type="hidden" name="intent" value="lookup">
       <div class="ui-field-group">
@@ -26,7 +26,7 @@
           autofocus
           aria-describedby="scan-id-help"
         >
-        <p class="ui-field-help" id="scan-id-help">Code Zebra picking ou OF — le même scan suit la pièce jusqu’à la pose.</p>
+        <p class="ui-field-help" id="scan-id-help">Code Zebra picking — le même scan suit la pièce jusqu’à la pose et au QC.</p>
       </div>
       <div class="ui-form-actions">
         <button class="ui-btn {% if lookup %}ui-btn-ghost{% else %}ui-btn-primary{% endif %}" type="submit">
@@ -52,14 +52,14 @@
         </div>
         {% if lookup.config.blank_variant %}
         <div>
-          <dt>Blank</dt>
+          <dt>Support vierge</dt>
           <dd><code>{{ lookup.config.blank_variant.sku }}</code></dd>
         </div>
         {% endif %}
       </dl>
 
-      <h3 class="font-display text-lg mt-0">Slots à poser</h3>
-      <div class="ui-table-shell mb-4">
+      <h3 class="font-display text-lg mt-0">Marquages à poser</h3>
+      <div class="ui-table-shell mb-4" role="region" aria-label="Marquages de la pièce" tabindex="0">
         <table class="ui-data-table w-full border-collapse">
           <thead>
             <tr>
@@ -76,14 +76,14 @@
               <td><code>{{ slot.print_reference }}</code></td>
             </tr>
             {% empty %}
-            <tr><td colspan="3">Aucun slot configuré — corrigez le mapping catalogue avant de poser.</td></tr>
+            <tr><td colspan="3">Aucun marquage configuré. Corrigez le mapping catalogue avant de poser.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
 
-      {% if can_manage_catalog and lookup.unit.status == "waiting_press" %}
-      <form method="post" class="ui-form-actions">
+      {% if can_operate_production and lookup.unit.status == "waiting_press" %}
+      <form data-inline-required data-submit-loading method="post" class="ui-form-actions">
         {% csrf_token %}
         <input type="hidden" name="intent" value="press">
         <input type="hidden" name="scan_identifier" value="{{ lookup.unit.scan_identifier }}">
@@ -97,7 +97,7 @@
     </article>
     {% else %}
     {% url 'portal:staff-pod-hub' as pod_hub_url %}
-    {% include "components/ui/empty_state.html" with title="En attente de scan" message="Scannez une étiquette Zebra ou un OF pour afficher la recette et confirmer la pose." cta_url=pod_hub_url cta_label="Voir À produire" %}
+    {% include "components/ui/empty_state.html" with title="En attente de scan" message="Scannez l’étiquette Zebra picking pour afficher la recette et confirmer la pose." cta_url=pod_hub_url cta_label="Voir À produire" %}
     {% endif %}
   </section>
 </div>

@@ -163,6 +163,10 @@ class UploadValidationService:
                 mime_type=mime_type,
                 ext=ext,
             )
+        if ext == ".ai" and header.startswith(_PDF_PREFIXES):
+            # AI files can use a PDF container even when the browser reports
+            # generic binary or PostScript. Persist the actual container MIME.
+            mime_type = "application/pdf"
 
         return ValidatedUpload(
             uploaded_file=uploaded_file,

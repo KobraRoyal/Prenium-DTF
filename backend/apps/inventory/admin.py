@@ -10,6 +10,16 @@ from apps.inventory.models import (
 )
 
 
+class ProtectedReferenceAdminMixin:
+    """Reference lifecycle is managed by audited application services."""
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 class WarehouseZoneInline(admin.TabularInline):
     model = WarehouseZone
     extra = 0
@@ -24,10 +34,10 @@ class WarehouseAdmin(admin.ModelAdmin):
 
 
 @admin.register(StorageLocation)
-class StorageLocationAdmin(admin.ModelAdmin):
+class StorageLocationAdmin(ProtectedReferenceAdminMixin, admin.ModelAdmin):
     list_display = ("code", "zone", "is_active", "public_id")
     search_fields = ("code",)
-    readonly_fields = ("public_id",)
+    readonly_fields = ("public_id", "code", "zone", "label", "is_active")
     autocomplete_fields = ("zone",)
 
 

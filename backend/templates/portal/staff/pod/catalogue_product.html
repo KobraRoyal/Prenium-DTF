@@ -4,11 +4,53 @@
 {% block title %}{{ product.title }} — Catalogue POD{% endblock %}
 
 {% block portal_content %}
-<div class="portal-page portal-page--staff">
+<div class="portal-page portal-page--staff pod-page">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=product.title title=product.title subtitle=product.store.name %}
   {% include "portal/staff/pod/_pod_context_nav.html" %}
-  <section class="portal-page-surface ui-list-section">
-    <p class="mb-4"><a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-pod-catalog' %}">Retour au catalogue</a></p>
+  <section
+    class="portal-page-surface ui-list-section"
+    x-data="{
+      lastDrawerTrigger: null,
+      rememberDrawerTrigger(trigger) { this.lastDrawerTrigger = trigger; },
+      drawerFocusables() {
+        const host = document.getElementById('pod-variant-drawer');
+        if (!host) return [];
+        return Array.from(host.querySelectorAll(`a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])`));
+      },
+      trapDrawerFocus(event) {
+        const focusables = this.drawerFocusables();
+        const panel = document.getElementById('pod-variant-config-panel');
+        if (!focusables.length) {
+          event.preventDefault();
+          if (panel) panel.focus();
+          return;
+        }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      },
+      closeDrawer() {
+        const host = document.getElementById('pod-variant-drawer');
+        if (!host || !host.childElementCount) return;
+        const panel = document.getElementById('pod-variant-config-panel');
+        if (panel && panel.open) panel.close();
+        host.innerHTML = '';
+        this.$nextTick(() => {
+          if (this.lastDrawerTrigger && document.contains(this.lastDrawerTrigger)) {
+            this.lastDrawerTrigger.focus({ preventScroll: true });
+          }
+        });
+      }
+    }"
+    @keydown.escape.window="closeDrawer()"
+  >
+    <p class="pod-detail-back"><a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-pod-catalog' %}">Retour au catalogue</a></p>
 
     <div class="pod-photo-hero mb-6">
       {% if product.image_url %}
@@ -25,10 +67,11 @@
       {% else %}
       <div class="pod-thumb pod-thumb--lg pod-thumb--empty" aria-hidden="true"></div>
       {% endif %}
-      <p class="muted mb-0">Photos Shopify via CDN (pas de copie locale) — sync catalogue pour rafraîchir.</p>
+      <p class="muted mb-0">Produit importé de {{ product.store.name }}. Configurez chaque variante avant sa mise en production.</p>
     </div>
 
-    <div class="ui-table-shell">
+    {% include "portal/staff/pod/_list_toolbar.html" with heading="Variantes du produit" count=variant_rows|length %}
+    <div class="ui-table-shell" role="region" aria-label="Variantes du produit" tabindex="0">
       <table class="ui-data-table w-full border-collapse">
         <thead>
           <tr>
@@ -67,10 +110,14 @@
               <button
                 type="button"
                 class="ui-btn ui-btn-ghost ui-btn-sm"
+                aria-label="Configurer le mapping {{ row.variant.sku|default:row.variant.title }}"
+                aria-haspopup="dialog"
+                aria-controls="pod-variant-config-panel"
                 hx-get="{% url 'portal:staff-pod-variant-config' variant_public_id=row.variant.public_id %}"
                 hx-target="#pod-variant-drawer"
                 hx-swap="innerHTML"
                 hx-indicator="#portal-htmx-indicator"
+                @click="rememberDrawerTrigger($event.currentTarget)"
               >Configurer</button>
             </td>
           </tr>
@@ -80,9 +127,7 @@
         </tbody>
       </table>
     </div>
-    <aside id="pod-variant-drawer" class="mt-8" aria-live="polite">
-      <p class="muted">Sélectionnez une variante pour ouvrir le configurateur.</p>
-    </aside>
+    {% include "portal/staff/pod/_variant_drawer_host.html" with drawer_placeholder="Sélectionnez une variante pour ouvrir le configurateur." %}
   </section>
 </div>
 {% endblock %}

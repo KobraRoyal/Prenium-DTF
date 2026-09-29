@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from django.conf import settings
 from django.utils import timezone
 
@@ -23,7 +25,9 @@ class PodRipDriveSyncService:
             client = gateway or GoogleDriveGateway()
             root_id = settings.GOOGLE_DRIVE_ROOT_FOLDER_ID
             pod_root = client.ensure_folder(parent_id=root_id, name=POD_RIP_DRIVE_ROOT)
-            lot_folder = client.ensure_folder(parent_id=pod_root, name=lot.code)
+            # Dossier opérateur = session picking (nas_relative_path), pas le code lot interne.
+            session_folder_name = Path(lot.nas_relative_path).parts[0]
+            lot_folder = client.ensure_folder(parent_id=pod_root, name=session_folder_name)
             uploaded = 0
             lot_root = PodRipLotService().nas_root() / lot.nas_relative_path
             if lot_root.exists():
@@ -34,9 +38,14 @@ class PodRipDriveSyncService:
                     relative = path.relative_to(lot_root)
                     for part in relative.parts[:-1]:
                         parent_id = client.ensure_folder(parent_id=parent_id, name=part)
-                    mime = (
-                        "application/json" if path.suffix == ".json" else "application/octet-stream"
-                    )
+                    mime = "application/octet-stream"
+                    suffix = path.suffix.lower()
+                    if suffix == ".png":
+                        mime = "image/png"
+                    elif suffix in {".jpg", ".jpeg"}:
+                        mime = "image/jpeg"
+                    elif suffix == ".pdf":
+                        mime = "application/pdf"
                     client.upload_file(
                         parent_id=parent_id,
                         name=path.name,
@@ -61,7 +70,11 @@ class PodRipDriveSyncService:
                 action="pod.rip.drive_synced",
                 actor=actor,
                 target=lot,
-                metadata={"files": uploaded, "folder": lot_folder},
+                metadata={
+                    "files": uploaded,
+                    "folder": lot_folder,
+                    "session_folder": session_folder_name,
+                },
             )
             return {"skipped": False, "files": uploaded, "folder": lot_folder}
         except (GoogleDriveConfigurationError, GoogleDriveSyncError, OSError) as exc:

@@ -1,0 +1,9 @@
+{# Host HTMX + Alpine du drawer variante (partagé catalogue / fiche produit). #}
+<aside
+  id="pod-variant-drawer"
+  hx-preserve
+  class="pod-variant-drawer"
+  aria-live="polite"
+  @click.self="closeDrawer()"
+  hx-on::after-swap="const p = this.querySelector('#pod-variant-config-panel'); if (p && !p.open) { p.showModal(); p.focus({ preventScroll: true }); }"
+>{% if drawer_placeholder %}<p class="muted">{{ drawer_placeholder }}</p>{% endif %}</aside>

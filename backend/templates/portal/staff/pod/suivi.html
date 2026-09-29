@@ -1,0 +1,119 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Suivi POD — Atelier{% endblock %}
+
+{% block portal_content %}
+<div class="portal-page portal-page--staff pod-page">
+  {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label="Suivi" title="Suivi POD" subtitle="Où en est chaque session : prélèvement, impression DTF, pose, contrôle — une action claire par ligne." %}
+  {% include "portal/staff/pod/_pod_context_nav.html" %}
+
+  <section class="portal-page-surface ui-list-section pod-suivi" aria-labelledby="pod-suivi-title">
+    <h2 id="pod-suivi-title" class="sr-only">Avancement des sessions</h2>
+    {% include "portal/staff/pod/_form_error.html" %}
+
+    <div class="pod-suivi-kpis" role="group" aria-label="Filtres par étape">
+      <a class="pod-suivi-kpi{% if board.stage == 'all' %} is-active{% endif %}" href="?stage=all">
+        <span class="pod-suivi-kpi__value">{{ board.active_count }}</span>
+        <span class="pod-suivi-kpi__label">En cours</span>
+      </a>
+      <a class="pod-suivi-kpi{% if board.stage == 'pick' %} is-active{% endif %}" href="?stage=pick">
+        <span class="pod-suivi-kpi__value">{{ board.counts.pick }}</span>
+        <span class="pod-suivi-kpi__label">Prélèvement</span>
+      </a>
+      <a class="pod-suivi-kpi{% if board.stage == 'print' %} is-active{% endif %}" href="?stage=print">
+        <span class="pod-suivi-kpi__value">{{ board.counts.print }}</span>
+        <span class="pod-suivi-kpi__label">Impression</span>
+      </a>
+      <a class="pod-suivi-kpi{% if board.stage == 'pose' %} is-active{% endif %}" href="?stage=pose">
+        <span class="pod-suivi-kpi__value">{{ board.counts.pose }}</span>
+        <span class="pod-suivi-kpi__label">Pose</span>
+        {% if board.waiting_press %}<span class="pod-suivi-kpi__hint muted">{{ board.waiting_press }} pièce{{ board.waiting_press|pluralize }}</span>{% endif %}
+      </a>
+      <a class="pod-suivi-kpi{% if board.stage == 'qc' %} is-active{% endif %}" href="?stage=qc">
+        <span class="pod-suivi-kpi__value">{{ board.counts.qc }}</span>
+        <span class="pod-suivi-kpi__label">Qualité</span>
+        {% if board.waiting_qc %}<span class="pod-suivi-kpi__hint muted">{{ board.waiting_qc }} pièce{{ board.waiting_qc|pluralize }}</span>{% endif %}
+      </a>
+    </div>
+
+    {% if board.rows %}
+    <div class="ui-table-shell pod-table-shell" role="region" aria-label="Sessions en production" tabindex="0">
+      <table class="ui-data-table w-full border-collapse pod-suivi-table">
+        <thead>
+          <tr>
+            <th scope="col">Session</th>
+            <th scope="col">Commandes</th>
+            <th scope="col">Étape</th>
+            <th scope="col">Progression</th>
+            <th scope="col"><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in board.rows %}
+          <tr class="pod-suivi-row is-{{ row.stage }}">
+            <td>
+              <code class="pod-suivi-session">{{ row.session.code }}</code>
+              <span class="muted text-sm"> · {{ row.pick_total }} pièce{{ row.pick_total|pluralize }}</span>
+              {% if row.rip_path %}<p class="muted text-sm m-0 mt-1"><code>{{ row.rip_path }}</code></p>{% endif %}
+            </td>
+            <td class="text-sm">
+              {% for order in row.orders %}
+              <code>{{ order }}</code>{% if not forloop.last %} · {% endif %}
+              {% empty %}
+              <span class="muted">—</span>
+              {% endfor %}
+            </td>
+            <td>
+              <span class="badge {% if row.stage == 'pick' or row.stage == 'print' or row.stage == 'pose' %}is-warning{% elif row.stage == 'qc' %}is-neutral{% else %}is-success{% endif %}">{{ row.stage_label }}</span>
+              <p class="muted text-sm m-0 mt-1">{{ row.detail }}</p>
+              {% if row.drive_error %}<p class="alert alert--danger text-sm mt-1 mb-0" role="status">{{ row.drive_error }}</p>{% endif %}
+            </td>
+            <td>
+              <ol class="pod-suivi-mini" aria-label="Jalons">
+                <li class="{% if row.pick_done >= row.pick_total %}is-done{% elif row.stage == 'pick' %}is-active{% endif %}" title="Prélèvement">P</li>
+                <li class="{% if row.print_state == 'done' %}is-done{% elif row.stage == 'print' %}is-active{% endif %}" title="Impression">I</li>
+                <li class="{% if row.pose_done >= row.pose_total and row.pose_total %}is-done{% elif row.stage == 'pose' %}is-active{% endif %}" title="Pose">Z</li>
+                <li class="{% if row.stage == 'done' or row.qc_done and row.qc_done >= row.qc_total %}is-done{% elif row.stage == 'qc' %}is-active{% endif %}" title="QC">Q</li>
+              </ol>
+            </td>
+            <td class="pod-suivi-cta">
+              {% if can_operate_production and row.stage == 'print' and row.lot_public_id %}
+              <form data-submit-loading method="post" class="pod-suivi-inline-actions">
+                {% csrf_token %}
+                <input type="hidden" name="stage" value="{{ board.stage }}">
+                <input type="hidden" name="session_public_id" value="{{ row.session.public_id }}">
+                <input type="hidden" name="lot_public_id" value="{{ row.lot_public_id }}">
+                <button class="ui-btn ui-btn-primary ui-btn-sm" type="submit" name="intent" value="confirm_dtf_print">Valider impression</button>
+                <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit" name="intent" value="sync_drive" title="Relancer la sync Drive (asynchrone)">Resync Drive</button>
+              </form>
+              {% elif row.stage == 'print' and not row.lot_public_id %}
+              <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{{ row.cta_url }}">Préparer lot DTF</a>
+              {% else %}
+              <a class="ui-btn ui-btn-primary ui-btn-sm" href="{{ row.cta_url }}">{{ row.cta_label }}</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="pod-board-empty" role="status">
+      <h3>{% if board.stage == 'all' %}Aucune session en cours{% else %}Rien à cette étape{% endif %}</h3>
+      <p>
+        {% if board.stage == 'all' %}
+        Générez un picking sur <a href="{% url 'portal:staff-pod-hub' %}">À produire</a> pour démarrer le suivi.
+        {% else %}
+        <a href="?stage=all">Voir toutes les sessions actives</a>
+        {% endif %}
+      </p>
+    </div>
+    {% endif %}
+
+    <p class="pod-suivi-legend muted text-sm">
+      Le suivi oriente vers les postes — il ne remplace pas le scan ni la confirmation de pose.
+      {% if board.counts.done %}<a href="?stage=done">{{ board.counts.done }} terminée{{ board.counts.done|pluralize }}</a>{% endif %}
+    </p>
+  </section>
+</div>
+{% endblock %}

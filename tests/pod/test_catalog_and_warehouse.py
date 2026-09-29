@@ -3,13 +3,29 @@ from __future__ import annotations
 import pytest
 from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer, CustomerMembership
-from apps.inventory.models import ProductLocationRule, SkuKind, StockOwnerKind, StorageLocation
+from apps.inventory.models import (
+    ProductLocationRule,
+    SkuKind,
+    StockBalance,
+    StockOwnerKind,
+    StorageLocation,
+    WarehouseZone,
+)
 from apps.inventory.services import WarehouseLayoutService
-from apps.pod.models import BlankPlacementCapability, PrintTechnique
+from apps.pod.models import (
+    Blank,
+    MarkingZone,
+    PodRipWorkItem,
+    PrintTechnique,
+    ShopifyProduct,
+    ShopifyStore,
+    ShopifyVariant,
+)
 from apps.pod.services import BlankCatalogService, PrintTechniqueService
+from apps.pod.services.ops_demo import PodOpsBootstrapService
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import Client
 from django.urls import reverse
 
@@ -18,6 +34,7 @@ pytestmark = pytest.mark.django_db
 catalog = PrintTechniqueService()
 blanks = BlankCatalogService()
 warehouse = WarehouseLayoutService()
+pod_demo = PodOpsBootstrapService()
 
 
 def grant(user, *codenames):
@@ -40,7 +57,7 @@ def staff_client(*, email: str, permissions: tuple[str, ...]):
 
 
 VIEW = ("access_pod_atelier",)
-MANAGE = ("access_pod_atelier", "manage_pod_catalog", "manage_warehouse")
+MANAGE = ("access_pod_atelier", "manage_pod_catalog", "operate_pod_production", "manage_warehouse")
 
 
 def test_client_cannot_open_pod_hub():
@@ -60,29 +77,70 @@ def test_staff_without_pod_perm_is_denied():
     assert AuditLogEntry.objects.filter(action="pod.atelier.permission_rejected").exists()
 
 
-def test_hub_seeds_dtf_and_warehouse_zones():
-    _user, client = staff_client(email="staff-pod-hub@example.com", permissions=VIEW)
+def test_hub_get_is_read_only_even_for_manager():
+    _user, client = staff_client(email="staff-pod-hub@example.com", permissions=MANAGE)
     response = client.get(reverse("portal:staff-pod-hub"))
     assert response.status_code == 200
-    assert PrintTechnique.objects.filter(code="dtf").exists()
+    assert PrintTechnique.objects.count() == 0
+    assert WarehouseZone.objects.count() == 0
+    assert Blank.objects.count() == 0
+    assert ShopifyStore.objects.count() == 0
+    assert ShopifyProduct.objects.count() == 0
+    assert ShopifyVariant.objects.count() == 0
+    assert PodRipWorkItem.objects.count() == 0
+    assert StockBalance.objects.count() == 0
     content = response.content.decode()
     assert "À produire" in content
     assert "Pose" in content
-    assert "Lots RIP" in content
-    assert "Configurer" in content
-    assert 'aria-label="Configurer et admin POD"' in content
-    assert "Supports" in content
-    assert "Entrepôt" in content
-    assert warehouse.list_zones(actor=_user).count() == 5
+    assert "Suivi" in content
+    assert "Lots RIP" not in content.split('class="pod-workspace-nav__pages"', 1)[1].split("</div>", 1)[0]
+    assert "Réglages POD" in content
+    assert 'aria-label="Production POD"' in content
+    assert reverse("portal:staff-pod-settings") in content
+    assert "Aucune action de production en attente" in content
+    assert 'id="pod-pick-scan"' not in content
 
 
-def test_hub_bootstraps_ops_demo_for_managers():
-    from apps.pod.models import Blank, ShopifyVariant
+def test_pod_catalog_stock_and_rip_gets_do_not_bootstrap_rows():
+    _actor, client = staff_client(email="staff-pod-all-gets@example.com", permissions=MANAGE)
+    for name in (
+        "portal:staff-pod-techniques",
+        "portal:staff-pod-warehouse",
+        "portal:staff-pod-stock",
+        "portal:staff-pod-rip-lots",
+        "portal:staff-pod-catalog",
+    ):
+        assert client.get(reverse(name)).status_code == 200
+    assert PrintTechnique.objects.count() == 0
+    assert WarehouseZone.objects.count() == 0
+
+
+@pytest.mark.parametrize("directory", ["02_../../outside", "02_rip/other", "02_rip\\other"])
+def test_technique_rejects_non_flat_rip_directory(directory):
+    actor, _client = staff_client(
+        email=f"staff-rip-dir-{abs(hash(directory))}@example.com", permissions=MANAGE
+    )
+    with pytest.raises(ValidationError, match="répertoire RIP"):
+        catalog.create_technique(
+            actor=actor,
+            source="test",
+            data={"code": "bad", "name": "Bad", "rip_directory": directory},
+        )
+    assert not PrintTechnique.objects.filter(code="bad").exists()
+
+
+def test_demo_bootstrap_requires_explicit_service_call():
     from apps.pod.services.variant_config import VariantConfigService
 
     actor, client = staff_client(email="staff-pod-boot@example.com", permissions=MANAGE)
+    grant(actor, "view_customer")
     response = client.get(reverse("portal:staff-pod-hub"))
     assert response.status_code == 200
+    assert not Blank.objects.exists()
+    assert not PodRipWorkItem.objects.exists()
+
+    pod_demo.ensure_ready(actor=actor)
+
     assert Blank.objects.filter(sku="TEE-POD").exists()
     assert StorageLocation.objects.filter(code="A-01-01-A").exists()
     variant = ShopifyVariant.objects.get(sku="TEE-BLK-M")
@@ -90,17 +148,18 @@ def test_hub_bootstraps_ops_demo_for_managers():
     assert VariantConfigService().configuration_status(config) == "pod"
     assert blanks.list_blanks(actor=actor).count() >= 1
     assert warehouse.list_zones(actor=actor).first().locations.count() >= 1
-    from apps.pod.models import PodRipWorkItem
-
-    assert PodRipWorkItem.objects.filter(shopify_order_number="SO-DEMO-001").exists()
+    assert PodRipWorkItem.objects.filter(shopify_order_number="SO-SEED-QUEUE").exists()
+    assert PodRipWorkItem.objects.filter(shopify_order_number="SO-SEED-PICK").exists()
+    assert PodRipWorkItem.objects.filter(shopify_order_number="SO-SEED-POSE").exists()
+    assert PodRipWorkItem.objects.filter(shopify_order_number="SO-SEED-QC").exists()
 
 
 def test_hub_updates_queued_quantity_and_lists_orders():
-    from apps.pod.models import PodRipWorkItem
-
-    _actor, client = staff_client(email="staff-pod-qty@example.com", permissions=MANAGE)
+    actor, client = staff_client(email="staff-pod-qty@example.com", permissions=MANAGE)
+    grant(actor, "view_customer")
+    pod_demo.ensure_ready(actor=actor)
     client.get(reverse("portal:staff-pod-hub"))
-    item = PodRipWorkItem.objects.get(shopify_order_number="SO-DEMO-001")
+    item = PodRipWorkItem.objects.get(shopify_order_number="SO-SEED-QUEUE")
     response = client.post(
         reverse("portal:staff-pod-hub"),
         {
@@ -114,8 +173,8 @@ def test_hub_updates_queued_quantity_and_lists_orders():
     assert item.quantity == 3
     page = client.get(reverse("portal:staff-pod-hub"))
     body = page.content.decode()
-    assert "SO-DEMO-001" in body
-    assert "Sélection lot" in body
+    assert "SO-SEED-QUEUE" in body
+    assert "Nouvelles pièces à préparer" in body
     assert "T-shirt POD démo" in body
     assert "Devant" in body
     assert "pod-board-form" in body
@@ -125,11 +184,11 @@ def test_hub_updates_queued_quantity_and_lists_orders():
 
 
 def test_hub_prepare_requires_selection():
-    from apps.pod.models import PodRipWorkItem
-
-    _actor, client = staff_client(email="staff-pod-prep-sel@example.com", permissions=MANAGE)
+    actor, client = staff_client(email="staff-pod-prep-sel@example.com", permissions=MANAGE)
+    grant(actor, "view_customer")
+    pod_demo.ensure_ready(actor=actor)
     client.get(reverse("portal:staff-pod-hub"))
-    assert PodRipWorkItem.objects.filter(shopify_order_number="SO-DEMO-001").exists()
+    assert PodRipWorkItem.objects.filter(shopify_order_number="SO-SEED-QUEUE").exists()
     response = client.post(reverse("portal:staff-pod-hub"), {"intent": "prepare"})
     assert response.status_code == 400
     body = response.content.decode()
@@ -138,17 +197,23 @@ def test_hub_prepare_requires_selection():
 
 def test_pick_session_pdf_keeps_later_orders_for_the_next_session():
     import pymupdf
-    from apps.pod.models import PodPickSession, PodRipWorkItem
+    from apps.pod.models import PodPickSession
 
-    _actor, client = staff_client(email="staff-pod-pick@example.com", permissions=MANAGE)
+    actor, client = staff_client(email="staff-pod-pick@example.com", permissions=MANAGE)
+    grant(actor, "view_customer")
+    pod_demo.ensure_ready(actor=actor, customer=Customer.objects.create(name="Client démo picking"))
     client.get(reverse("portal:staff-pod-hub"))
-    item = PodRipWorkItem.objects.get(shopify_order_number="SO-DEMO-001")
+    item = PodRipWorkItem.objects.get(shopify_order_number="SO-SEED-QUEUE")
     created = client.post(
         reverse("portal:staff-pod-hub"),
         {"intent": "print_session", "work_item_public_ids": [str(item.public_id)]},
     )
     assert created.status_code == 302
-    session = PodPickSession.objects.get()
+    session = (
+        PodPickSession.objects.filter(lines__work_item=item, lines__voided_at__isnull=True)
+        .distinct()
+        .get()
+    )
     picking = client.get(
         reverse(
             "portal:staff-pod-pick-session-pdf",
@@ -166,15 +231,72 @@ def test_pick_session_pdf_keeps_later_orders_for_the_next_session():
     assert abs(picking_pdf[0].rect.width - 595) < 2
     assert abs(labels_pdf[0].rect.width - 100 * 72 / 25.4) < 2
     assert abs(labels_pdf[0].rect.height - 50 * 72 / 25.4) < 2
+    active_lines = list(session.lines.filter(voided_at__isnull=True))
+    assert len(labels_pdf) == len(active_lines)
+    picking_text = "\n".join(page.get_text() for page in picking_pdf)
+    assert "PICKING POD" in picking_text
+    assert "emplacement(s)" in picking_text
+    for line, label_page in zip(active_lines, labels_pdf, strict=True):
+        label_text = label_page.get_text()
+        assert line.scan_identifier in picking_text
+        assert line.scan_identifier in label_text
+        assert line.shopify_order_number in label_text
+        assert line.location_code in label_text
+        assert "POD / PIÈCE" in label_text
     page = client.get(reverse("portal:staff-pod-hub"))
     body = page.content.decode()
     assert "PICK-" in body
     assert "Zebra" in body
+    assert 'id="pod-pick-workflow"' in body
+    assert 'id="pod-pick-scan"' in body
+    assert "à préparer" in body
+    # CTA « Reprendre » seulement si sessions absentes ; ici le poste est déjà affiché.
+    assert "Sortie de stock" in body
     again = client.post(
         reverse("portal:staff-pod-hub"),
         {"intent": "print_session", "work_item_public_ids": [str(item.public_id)]},
     )
     assert again.status_code == 400
+
+
+def test_pick_sheet_paginates_without_losing_piece_identifiers():
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+
+    import pymupdf
+    from apps.pod.services.pick_sheet import write_picking_list_pdf
+
+    lines = [
+        SimpleNamespace(
+            location_code="A-01",
+            blank_sku="TEE-BLACK-M",
+            blank_name="T-shirt premium",
+            size_label="M",
+            color_name="Noir",
+            shopify_order_number=f"SO-{index:04d}",
+            sequence=index,
+            scan_identifier=f"POD-{index:010d}",
+            shopify_sku="TEE-PERSONNALISE",
+            markings="Devant - impression DTF",
+        )
+        for index in range(1, 36)
+    ]
+    session = SimpleNamespace(
+        code="PICK-TEST-001",
+        created_at=datetime.now(timezone.utc),
+        lines=SimpleNamespace(filter=lambda **kwargs: lines),
+    )
+    document = pymupdf.open(stream=write_picking_list_pdf(session), filetype="pdf")
+    assert len(document) > 1
+    all_text = "\n".join(page.get_text() for page in document)
+    for line in lines:
+        assert all_text.count(line.scan_identifier) == 1
+    for page in document:
+        assert "PICKING POD" in page.get_text()
+        assert "Page " in page.get_text()
+        for word in page.get_text("words"):
+            assert word[0] >= 0 and word[2] <= page.rect.width
+            assert word[1] >= 0 and word[3] <= page.rect.height
 
 
 def test_staff_cannot_create_technique_without_manage_perm():
@@ -188,7 +310,8 @@ def test_staff_cannot_create_technique_without_manage_perm():
 
 def test_create_blank_variant_capability_and_default_bin():
     actor, client = staff_client(email="staff-pod-rw@example.com", permissions=MANAGE)
-    client.get(reverse("portal:staff-pod-hub"))
+    catalog.ensure_dtf_technique(actor=actor)
+    warehouse.ensure_default_layout(actor=actor)
     create_blank = client.post(
         reverse("portal:staff-pod-blanks"),
         {"sku": "tee-200", "name": "T-shirt 185g", "brand": "Stanley"},
@@ -211,10 +334,9 @@ def test_create_blank_variant_capability_and_default_bin():
     cap_response = client.post(
         detail,
         {
-            "intent": "capability",
-            "placement": BlankPlacementCapability.Placement.FRONT,
-            "technique_public_id": str(dtf.public_id),
-            "is_required": "on",
+            "intent": "marking_options",
+            "zone_public_ids": [str(MarkingZone.objects.get(code="front").public_id)],
+            "technique_public_ids": [str(dtf.public_id)],
         },
     )
     assert cap_response.status_code == 302

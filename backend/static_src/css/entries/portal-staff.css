@@ -8,6 +8,8 @@
 @import "../components/volume-nudge-copy.css";
 @import "../components/atelier-operations.css";
 @import "../components/kpi-metrics.css";
+@import "../components/pod-navigation.css";
+@import "../components/pod-workspace.css";
 
 @tailwind components;
 @tailwind utilities;
@@ -2740,21 +2742,534 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment
 }
 
 /* POD À produire — command bar Operate (sélection = vérité). */
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-surface {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-surface > :is(.pod-board, .pod-focus-panel, details) {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-next-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem 1.5rem;
+  min-width: 0;
+  margin: 0 0 1.1rem;
+  padding: 0 0 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-next-action__copy {
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-next-action h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-next-action p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-next-action .ui-btn {
+  flex: 0 0 auto;
+}
+
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board > .pod-board-command.ui-list-command--compact {
   position: sticky;
   top: 4.5rem;
   z-index: 20;
   display: flex !important;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 0.75rem !important;
-  margin-bottom: 0.75rem !important;
-  padding: 0.625rem 0.75rem !important;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.55rem !important;
+  margin-bottom: 0.85rem !important;
+  padding: 0.75rem 0.85rem !important;
   grid-template-columns: none !important;
   background: var(--raised, #fffdf8);
   border: 1px solid var(--line, #e2dccb);
   box-shadow: 0 8px 24px rgba(83, 67, 43, 0.08);
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0 !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board > .pod-board-command.pod-board-command--idle {
+  position: static;
+  z-index: auto;
+  box-shadow: none;
+  padding: 0.55rem 0.15rem !important;
+  border: 0;
+  border-bottom: 1px solid var(--line, #e2dccb);
+  background: transparent;
+  margin-bottom: 0.35rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem 0.85rem;
+  width: 100%;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command__title-row h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command__meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command .ui-list-command__tools {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.4rem !important;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  grid-template-columns: none !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command__filters {
+  justify-content: flex-start;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command__actions {
+  justify-content: flex-start;
+  padding-top: 0.15rem !important;
+  border-top: 1px solid var(--line, #e2dccb) !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command .ui-list-command__tools > .pod-board-filter-q {
+  flex: 1 1 12rem;
+  width: auto !important;
+  max-width: 16rem;
+  min-width: 8rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command .ui-list-command__tools > .pod-board-filter-queue {
+  flex: 0 0 8.5rem;
+  width: 8.5rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-group {
+  margin: 0 0 1.1rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-group__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+  margin: 0 0 0.45rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-col-check {
+  width: 2.25rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-col-qty {
+  width: 7.5rem;
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-qty-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-qty-form .ui-input--qty {
+  width: 4.25rem !important;
+  max-width: 4.25rem !important;
+  min-width: 4.25rem;
+  flex: 0 0 4.25rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-section {
+  margin: 0 0 1.25rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-empty {
+  min-width: 0;
+  margin: 0 0 1.25rem;
+  padding: 0.7rem 0.15rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-empty h3 {
+  margin: 0;
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 0.95rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-empty p,
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-unavailable {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0 0 1.1rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--line, #e2dccb);
+  border-radius: 12px;
+  background: var(--raised, #fffdf8);
+  text-decoration: none;
+  color: inherit;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-kpi.is-active {
+  border-color: color-mix(in srgb, var(--brand, #ff8775) 55%, var(--line, #e2dccb));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand, #ff8775) 35%, transparent);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-kpi__value {
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-kpi__label {
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-kpi__hint {
+  font-size: 0.72rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-mini {
+  display: inline-flex;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-mini li {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border: 1px solid var(--line, #e2dccb);
+  color: var(--muted);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-mini li.is-active {
+  border-color: var(--brand, #ff8775);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--brand, #ff8775) 14%, transparent);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-mini li.is-done {
+  border-color: transparent;
+  background: var(--ink, #1a1a1a);
+  color: var(--raised, #fffdf8);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-cta {
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-legend {
+  margin: 0.85rem 0 0;
+}
+
+@media (max-width: 839px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-suivi-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line, #e2dccb);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--raised, #fffdf8) 92%, var(--brand, #ff8775) 8%);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__step {
+  min-width: 0;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__step.is-active {
+  border-color: color-mix(in srgb, var(--brand, #ff8775) 45%, var(--line, #e2dccb));
+  background: var(--raised, #fffdf8);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__step.is-done {
+  opacity: 0.92;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--ink, #1a1a1a);
+  color: var(--raised, #fffdf8);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__step.is-done .pod-operate-rail__index {
+  background: var(--brand, #ff8775);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__label {
+  font-family: var(--ui-font-display, "Space Grotesk", system-ui, sans-serif);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__detail {
+  margin: 0.25rem 0 0;
+  line-height: 1.35;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__action {
+  margin-top: 0.45rem;
+}
+
+@media (max-width: 839px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-operate-rail__list {
+    grid-template-columns: 1fr;
+  }
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-station__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem 1rem;
+  margin-bottom: 0.65rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-station__progress {
+  margin: 0;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-align: right;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-station__progress .muted {
+  font-weight: 500;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-station__session {
+  margin: 0 0 0.75rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-session-rail {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  margin: 0 0 0.75rem;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  padding-bottom: 0.15rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-session-rail .ui-selection-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  text-decoration: none;
+  color: inherit;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-session-rail .ui-selection-control code {
+  font-size: 0.78rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-station__facts {
+  margin-bottom: 0.55rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-station__docs {
+  margin: 0 0 0.75rem;
+  justify-content: flex-start;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-scan-form {
+  margin: 0 0 0.75rem;
+  max-width: 42rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-scan-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr) auto;
+  gap: 0.55rem 0.65rem;
+  align-items: end;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-scan-row .ui-field-group {
+  margin: 0;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-scan-row .ui-input {
+  width: 100%;
+  min-width: 0;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-scan-row__action {
+  display: flex;
+  align-items: flex-end;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-scan-row__action .ui-btn {
+  white-space: nowrap;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-reissue {
+  margin: 0 0 0.75rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-worklist {
+  margin-top: 0.35rem;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-line.is-next {
+  background: color-mix(in srgb, var(--brand, #ff8775) 10%, transparent);
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-line.is-done {
+  opacity: 0.62;
+}
+
+@media (max-width: 719px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-scan-row {
+    grid-template-columns: 1fr;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-scan-row__action .ui-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pick-station__progress {
+    text-align: left;
+  }
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-empty a {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell :is(
+  .pod-board-surface,
+  .pod-board-surface > details,
+  .pod-board,
+  .pod-board > article,
+  .pod-board-command,
+  .pod-board-surface .ui-table-shell
+) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-table-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-table-shell:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--accent, #770176));
+  outline-offset: 2px;
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command .ui-list-command__facts {
@@ -2794,128 +3309,6 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-boa
   }
 }
 
-/* POD Operate — context nav (ops primary + config secondary). */
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-  margin: 0 0 1rem;
-  padding: 0;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__ops {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__link,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 2.5rem;
-  padding: 0.4rem 0.95rem;
-  border: 1px solid var(--line, #e2dccb);
-  border-radius: 999px;
-  background: var(--surface, #fbf6ee);
-  color: var(--ink, #1a1815);
-  font-family: "DM Sans", system-ui, sans-serif;
-  font-size: 0.8125rem;
-  font-weight: 650;
-  line-height: 1.2;
-  text-decoration: none;
-  cursor: pointer;
-  list-style: none;
-  transition: background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-trigger::-webkit-details-marker {
-  display: none;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__link:hover,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-trigger:hover {
-  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
-  background: color-mix(in srgb, var(--brand) 10%, var(--surface));
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__link.is-active,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-trigger.is-active {
-  border-color: transparent;
-  background: color-mix(in srgb, var(--brand) 22%, var(--surface));
-  color: var(--ink);
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__link:focus-visible,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-trigger:focus-visible,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-link:focus-visible {
-  outline: 2px solid var(--accent, #770176);
-  outline-offset: 2px;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more {
-  position: relative;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__chevron {
-  display: inline-block;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: translateY(-1px) rotate(45deg);
-  transition: transform 160ms ease-out;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more[open] .pod-context-nav__chevron {
-  transform: translateY(1px) rotate(225deg);
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-menu {
-  position: absolute;
-  top: calc(100% + 0.35rem);
-  right: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 12.5rem;
-  padding: 0.55rem;
-  border: 1px solid var(--line, #e2dccb);
-  border-radius: 12px;
-  background: var(--raised, #fffdf8);
-  box-shadow: 0 12px 28px rgba(83, 67, 43, 0.12);
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-heading {
-  margin: 0.35rem 0.4rem 0.15rem;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-heading:first-child {
-  margin-top: 0;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-link {
-  display: block;
-  padding: 0.45rem 0.65rem;
-  border-radius: 8px;
-  color: var(--ink);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-link:hover,
-html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-link.is-active {
-  background: color-mix(in srgb, var(--brand) 12%, var(--surface));
-}
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command__hint {
   flex: 1 1 100%;
@@ -2945,12 +3338,27 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pos
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-variant-drawer:not(:empty) {
-  margin-top: 1rem;
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--line, #e2dccb);
-  border-radius: 16px;
+  display: contents;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-variant-config {
+  width: min(42rem, calc(100vw - 1rem));
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 0 0 auto;
+  overflow-y: auto;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 0;
+  border-left: 1px solid var(--line, #e2dccb);
   background: var(--raised, #fffdf8);
-  box-shadow: 0 12px 32px rgba(83, 67, 43, 0.1);
+  box-shadow: -16px 0 48px rgba(32, 25, 17, 0.18);
+  box-sizing: border-box;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-variant-config::backdrop {
+  background: color-mix(in srgb, var(--ink, #1a1815) 34%, transparent);
+  backdrop-filter: blur(3px);
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-variant-config:focus {
@@ -2963,8 +3371,8 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-var
 }
 
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-focus-panel {
-  margin-bottom: 1.5rem;
-  padding: 1rem 1.1rem;
+  margin-bottom: 1.25rem;
+  padding: 0.9rem 1rem;
   border: 1px solid var(--line, #e2dccb);
   border-radius: 16px;
   background: var(--raised, #fffdf8);
@@ -3012,6 +3420,61 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-sto
   margin: 0 0 1rem;
 }
 
+@media (max-width: 639px) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-next-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-next-action .ui-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command .ui-list-command__tools > .pod-board-filter-q {
+    flex: 1 1 100%;
+    width: 100% !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command .ui-list-command__tools > .pod-board-filter-queue {
+    flex: 1 1 8rem;
+    width: auto !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board > .pod-board-command.ui-list-command--compact {
+    position: static;
+    align-items: stretch;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command .ui-list-command__tools,
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-actions {
+    width: 100%;
+    justify-content: stretch !important;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-board-command .ui-list-command__tools > :is(.ui-input, .ui-btn) {
+    flex: 1 1 8rem;
+    max-width: none;
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-stock-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-stock-tabs :is(.ui-btn, .ui-list-tabs__tab) {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-variant-config::backdrop {
+    backdrop-filter: none;
+  }
+}
+
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-photo-hero {
   display: flex;
   flex-wrap: wrap;
@@ -3054,14 +3517,7 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-swa
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__link,
-  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-trigger,
-  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__chevron {
-    transition: none;
-  }
-
-  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pose-scan,
-  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-context-nav__more-menu {
+  html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .pod-pose-scan {
     box-shadow: none;
   }
 }

@@ -111,6 +111,10 @@ class Command(BaseCommand):
         self.stdout.write(
             "- Atelier POD : blank TEE-POD-M, bins A/R/C/F, variante Shopify TEE-BLK-M en POD"
         )
+        self.stdout.write(
+            "- Seed POD Drive HD : fichier bibliothèque HD, "
+            "SO-SEED-QUEUE / PICK / POSE / QC (voir seed_pod_wms)"
+        )
 
     def _seed_pod_ops(self, staff_ops, customer_a):
         from apps.pod.services.ops_demo import PodOpsBootstrapService
@@ -284,6 +288,7 @@ class Command(BaseCommand):
             "billing.change_paymentgatewaysettings",
             "pod.access_pod_atelier",
             "pod.manage_pod_catalog",
+            "pod.operate_pod_production",
             "inventory.manage_warehouse",
         ]
 

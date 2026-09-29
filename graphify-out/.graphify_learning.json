@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-23T11:48:57.792854+00:00",
+  "generated_at": "2026-09-29T08:11:22.810810+00:00",
   "nodes": {
     "backend_apps_notifications_models_event": {
-      "code_fingerprint": "7c170253c741a83854c4a9ec9c6643f8bd89b6d0b0b7527f835e95d2b02f8c32",
+      "code_fingerprint": "37ad1e38f488ba4317cddd76c5b0e61ce3ec838447525b9af7268119f9c1fa82",
       "label": "Event",
       "last": "2026-09-08T09:26:10.510762+00:00",
       "provenance": [
@@ -12,7 +12,7 @@
           "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
         }
       ],
-      "score": 0.705488622,
+      "score": 0.616311393,
       "source_file": "backend/apps/notifications/models.py",
       "status": "tentative",
       "uses": 1
@@ -28,7 +28,7 @@
           "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
         }
       ],
-      "score": 0.705488622,
+      "score": 0.616311393,
       "source_file": "backend/apps/notifications/tasks.py",
       "status": "tentative",
       "uses": 1
@@ -44,13 +44,45 @@
           "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
         }
       ],
-      "score": 0.705488622,
+      "score": 0.616311393,
       "source_file": "backend/apps/orders/services/orders.py",
       "status": "tentative",
       "uses": 1
     },
+    "backend_apps_pod_services_pick_sessions_podpicksessionservice": {
+      "code_fingerprint": "6200785ba65aa7f9312631b55c7c1826dafc187286f408b2bb23db6bd0c9949b",
+      "label": "PodPickSessionService",
+      "last": "2026-09-25T17:13:05.573629+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-25T17:13:05.573629+00:00",
+          "outcome": "useful",
+          "q": "Optimiser la vue Atelier POD pour un workflow fluide"
+        }
+      ],
+      "score": 0.919681556,
+      "source_file": "backend/apps/pod/services/pick_sessions.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_apps_portal_views_staff_pod_board_staffpodhubview": {
+      "code_fingerprint": "968eb76fb8bdf35f7a0fccf9a6dc1d3f1d016e16c9f008e8b682b122bd50374c",
+      "label": "StaffPodHubView",
+      "last": "2026-09-25T17:13:05.573629+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-25T17:13:05.573629+00:00",
+          "outcome": "useful",
+          "q": "Optimiser la vue Atelier POD pour un workflow fluide"
+        }
+      ],
+      "score": 0.919681556,
+      "source_file": "backend/apps/portal/views_staff_pod_board.py",
+      "status": "tentative",
+      "uses": 1
+    },
     "backend_apps_production_services_dashboard_atelierdashboardservice": {
-      "code_fingerprint": "6dd6cdf41db713d09b60eed70905f3b3b6142608bf39e4aff9f1dc5f62f6d59c",
+      "code_fingerprint": "3a7b31b6fb1954ce38e9170106ba1ccce7d57e70e89741004db97058d640a8b5",
       "label": "AtelierDashboardService",
       "last": "2026-09-08T09:26:10.510762+00:00",
       "provenance": [
@@ -60,8 +92,24 @@
           "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
         }
       ],
-      "score": 0.705488622,
+      "score": 0.616311393,
       "source_file": "backend/apps/production/services/dashboard.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "backend_apps_uploads_models_orderupload": {
+      "code_fingerprint": "924d29f708558d47f6f7fe312aadde85d031d27c320b76047379297516566a0f",
+      "label": "OrderUpload",
+      "last": "2026-09-04T13:45:33.915482+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-04T13:45:33.915482+00:00",
+          "outcome": "useful",
+          "q": "IDENTIFICATION D' un client me remonte une information qu'il ne eut pas passer une commande de plus de 200 en quantité pour une commande au fichier regarde cela et identifie le probleme sans rein coder"
+        }
+      ],
+      "score": 0.564248441,
+      "source_file": "backend/apps/uploads/models.py",
       "status": "tentative",
       "uses": 1
     },
@@ -76,7 +124,7 @@
           "q": "IDENTIFICATION D' un client me remonte une information qu'il ne eut pas passer une commande de plus de 200 en quantité pour une commande au fichier regarde cela et identifie le probleme sans rein coder"
         }
       ],
-      "score": 0.645892417,
+      "score": 0.564248441,
       "source_file": "backend/apps/uploads/services/uploads.py",
       "status": "tentative",
       "uses": 1
@@ -92,7 +140,7 @@
           "q": "quel est la diffrence entre WebSocket/ASGI et Gunicorn/WSGI"
         }
       ],
-      "score": 0.705739559,
+      "score": 0.61653061,
       "source_file": "backend/config/asgi.py",
       "status": "tentative",
       "uses": 1
@@ -108,7 +156,7 @@
           "q": "quel est la diffrence entre WebSocket/ASGI et Gunicorn/WSGI"
         }
       ],
-      "score": 0.705739559,
+      "score": 0.61653061,
       "source_file": "backend/config/wsgi.py",
       "status": "tentative",
       "uses": 1
@@ -124,7 +172,7 @@
           "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
         }
       ],
-      "score": 0.705488622,
+      "score": 0.616311393,
       "source_file": "backend/static_src/js/atelier-dashboard-batch.js",
       "status": "tentative",
       "uses": 1
@@ -145,7 +193,7 @@
           "q": "Planifier un système de notification Atelier en direct pour les nouvelles commandes, avec notification native macOS"
         }
       ],
-      "score": 1.411228182,
+      "score": 1.232842003,
       "source_file": "infra/README.md",
       "status": "preferred",
       "uses": 2
@@ -166,7 +214,7 @@
           "q": "ok j'ai passé le max à 1000 pour quantité dans partial_project_item_quantity_fireld.html pour qu'il soit pris en compte dans docker il faut le relancer ?"
         }
       ],
-      "score": 1.362388342,
+      "score": 1.190175759,
       "source_file": "infra/scripts/web-entrypoint.sh",
       "status": "preferred",
       "uses": 2

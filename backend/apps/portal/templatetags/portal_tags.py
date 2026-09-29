@@ -17,7 +17,7 @@ from apps.orders.references import (
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260923-pod-photos-v1"
+PORTAL_CSS_ASSET_V = "20260926-pod-dynamic-v2"
 
 STATUS_LABELS = {
     "draft": "Brouillon",
@@ -237,6 +237,15 @@ CLIENT_ORDER_PANEL_LABELS = {
 @register.simple_tag
 def portal_css_asset_v() -> str:
     return PORTAL_CSS_ASSET_V
+
+
+@register.simple_tag(takes_context=True)
+def pod_navigation(context):
+    from apps.portal.pod_navigation import navigation_for
+
+    request = context["request"]
+    url_name = request.resolver_match.url_name if request.resolver_match else ""
+    return navigation_for(request.user, url_name)
 
 
 @register.filter

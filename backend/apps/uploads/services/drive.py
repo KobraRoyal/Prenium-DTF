@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import io
 import json
+import tempfile
 from dataclasses import dataclass
+from typing import BinaryIO
 
 from django.conf import settings
 from django.db import models, transaction
@@ -64,6 +66,12 @@ class GoogleDriveSyncError(Exception):
 class DriveRemoteFile:
     file_id: str
     name: str
+    mime_type: str = ""
+    size: int | None = None
+    web_view_link: str = ""
+    md5_checksum: str = ""
+    parents: tuple[str, ...] = ()
+    drive_id: str = ""
 
 
 class GoogleDriveGateway:
@@ -148,7 +156,10 @@ class GoogleDriveGateway:
                 self.service.files()
                 .get(
                     fileId=file_id,
-                    fields="id,name,trashed,mimeType,parents",
+                    fields=(
+                        "id,name,trashed,mimeType,size,webViewLink,"
+                        "md5Checksum,version,parents,driveId"
+                    ),
                     supportsAllDrives=True,
                 )
                 .execute()
@@ -158,6 +169,210 @@ class GoogleDriveGateway:
             if status in {403, 404}:
                 return None
             raise GoogleDriveSyncError(f"Unable to read Drive item '{file_id}'.") from error
+
+    def list_binary_files(
+        self,
+        *,
+        parent_id: str,
+        page_token: str | None = None,
+        page_size: int = 100,
+        search: str | None = None,
+        name_contains: str | None = None,
+    ) -> tuple[list[DriveRemoteFile], str | None]:
+        """Liste une page de fichiers binaires appartenant exactement au dossier cible."""
+        normalized_parent_id = str(parent_id or "").strip()
+        if not normalized_parent_id:
+            raise ValueError("parent_id must not be empty.")
+        if (
+            isinstance(page_size, bool)
+            or not isinstance(page_size, int)
+            or not 1 <= page_size <= 100
+        ):
+            raise ValueError("page_size must be between 1 and 100.")
+
+        clauses = [
+            "trashed = false",
+            f"'{self._escape_query_literal(normalized_parent_id)}' in parents",
+            f"mimeType != '{self.folder_mime_type}'",
+            "mimeType != 'application/vnd.google-apps.shortcut'",
+        ]
+        normalized_search = str(search or "").strip()
+        normalized_name_contains = str(name_contains or "").strip()
+        if (
+            normalized_search
+            and normalized_name_contains
+            and normalized_search != normalized_name_contains
+        ):
+            raise ValueError("search and name_contains must match when both are provided.")
+        normalized_search = normalized_name_contains or normalized_search
+        if normalized_search:
+            clauses.append(f"name contains '{self._escape_query_literal(normalized_search)}'")
+
+        request_kwargs = {
+            "corpora": "drive",
+            "driveId": self.shared_drive_id,
+            "includeItemsFromAllDrives": True,
+            "supportsAllDrives": True,
+            "q": " and ".join(clauses),
+            "pageSize": page_size,
+            "fields": (
+                "nextPageToken,files(id,name,mimeType,size,webViewLink,md5Checksum,parents,driveId)"
+            ),
+        }
+        normalized_page_token = str(page_token or "").strip()
+        if normalized_page_token:
+            request_kwargs["pageToken"] = normalized_page_token
+
+        try:
+            response = self.service.files().list(**request_kwargs).execute()
+        except Exception as error:
+            raise GoogleDriveSyncError("Unable to list Drive binary files.") from error
+
+        files = []
+        for item in response.get("files", []):
+            remote_file = self._remote_file_from_metadata(item)
+            if remote_file is None:
+                continue
+            if remote_file.parents != (normalized_parent_id,):
+                continue
+            if remote_file.drive_id != self.shared_drive_id:
+                continue
+            if remote_file.mime_type.startswith("application/vnd.google-apps."):
+                continue
+            files.append(remote_file)
+
+        next_page_token = str(response.get("nextPageToken") or "").strip() or None
+        return files, next_page_token
+
+    def copy_file(
+        self,
+        *,
+        source_file_id: str,
+        target_folder_id: str,
+        target_name: str,
+    ) -> DriveRemoteFile:
+        """Copie un fichier dans un dossier, sans dupliquer un nom déjà présent."""
+        normalized_source_id = str(source_file_id or "").strip()
+        normalized_target_id = str(target_folder_id or "").strip()
+        normalized_target_name = str(target_name or "").strip()
+        if not normalized_source_id:
+            raise ValueError("source_file_id must not be empty.")
+        if not normalized_target_id:
+            raise ValueError("target_folder_id must not be empty.")
+        if not normalized_target_name:
+            raise ValueError("target_name must not be empty.")
+
+        existing = self.find_file_by_name(
+            parent_id=normalized_target_id,
+            name=normalized_target_name,
+        )
+        if existing is not None and self._is_same_binary_in_target(
+            source_file_id=normalized_source_id,
+            candidate_file_id=existing.file_id,
+            target_folder_id=normalized_target_id,
+        ):
+            return existing
+        if existing is not None:
+            raise GoogleDriveSyncError(
+                f"Drive target name collision for '{normalized_target_name}'."
+            )
+
+        try:
+            copied = (
+                self.service.files()
+                .copy(
+                    fileId=normalized_source_id,
+                    body={"name": normalized_target_name, "parents": [normalized_target_id]},
+                    fields="id,name,parents",
+                    supportsAllDrives=True,
+                )
+                .execute()
+            )
+        except Exception as error:
+            retry = self.find_file_by_name(
+                parent_id=normalized_target_id,
+                name=normalized_target_name,
+            )
+            if retry is not None and self._is_same_binary_in_target(
+                source_file_id=normalized_source_id,
+                candidate_file_id=retry.file_id,
+                target_folder_id=normalized_target_id,
+            ):
+                return retry
+            raise GoogleDriveSyncError(
+                f"Unable to copy Drive file '{normalized_target_name}'."
+            ) from error
+
+        return DriveRemoteFile(
+            file_id=copied["id"],
+            name=copied["name"],
+            parents=tuple(copied.get("parents") or ()),
+        )
+
+    def download_file(
+        self,
+        *,
+        file_id: str,
+        max_bytes: int,
+        chunk_size: int = 1024 * 1024,
+    ) -> BinaryIO:
+        """Télécharge un binaire Drive dans un fichier temporaire anonyme et borné."""
+        normalized_file_id = str(file_id or "").strip()
+        if not normalized_file_id:
+            raise ValueError("file_id must not be empty.")
+        if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes < 1:
+            raise ValueError("max_bytes must be a positive integer.")
+        if isinstance(chunk_size, bool) or not isinstance(chunk_size, int) or chunk_size < 1:
+            raise ValueError("chunk_size must be a positive integer.")
+
+        metadata = self.get_file_metadata(normalized_file_id)
+        if metadata is None:
+            raise GoogleDriveSyncError(f"Unable to read Drive item '{normalized_file_id}'.")
+        raw_size = metadata.get("size")
+        try:
+            declared_size = int(raw_size) if raw_size not in (None, "") else None
+        except (TypeError, ValueError):
+            declared_size = None
+        if declared_size is not None and declared_size > max_bytes:
+            raise GoogleDriveSyncError(
+                f"Drive file '{normalized_file_id}' exceeds the allowed size."
+            )
+
+        try:
+            from googleapiclient.http import MediaIoBaseDownload
+        except ImportError as error:
+            raise GoogleDriveConfigurationError(
+                "Google Drive dependencies are not installed."
+            ) from error
+
+        temporary_file = tempfile.TemporaryFile(mode="w+b")
+        try:
+            request = self.service.files().get_media(
+                fileId=normalized_file_id,
+                supportsAllDrives=True,
+            )
+            downloader = MediaIoBaseDownload(
+                temporary_file,
+                request,
+                chunksize=min(chunk_size, max_bytes + 1),
+            )
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+                if temporary_file.tell() > max_bytes:
+                    raise GoogleDriveSyncError(
+                        f"Drive file '{normalized_file_id}' exceeds the allowed size."
+                    )
+            temporary_file.seek(0)
+            return temporary_file
+        except GoogleDriveSyncError:
+            temporary_file.close()
+            raise
+        except Exception as error:
+            temporary_file.close()
+            raise GoogleDriveSyncError(
+                f"Unable to download Drive file '{normalized_file_id}'."
+            ) from error
 
     def is_active_folder(self, file_id: str) -> bool:
         try:
@@ -207,10 +422,11 @@ class GoogleDriveGateway:
         name: str,
         mime_type: str | None = None,
     ) -> DriveRemoteFile | None:
-        sanitized_name = name.replace("'", "\\'")
+        sanitized_parent_id = self._escape_query_literal(parent_id)
+        sanitized_name = self._escape_query_literal(name)
         clauses = [
             "trashed = false",
-            f"'{parent_id}' in parents",
+            f"'{sanitized_parent_id}' in parents",
             f"name = '{sanitized_name}'",
         ]
         if mime_type:
@@ -238,6 +454,51 @@ class GoogleDriveGateway:
             return None
         item = files[0]
         return DriveRemoteFile(file_id=item["id"], name=item["name"])
+
+    @staticmethod
+    def _escape_query_literal(value: str) -> str:
+        return str(value).replace("\\", "\\\\").replace("'", "\\'")
+
+    @staticmethod
+    def _remote_file_from_metadata(item: dict) -> DriveRemoteFile | None:
+        file_id = str(item.get("id") or "").strip()
+        name = str(item.get("name") or "").strip()
+        if not file_id or not name:
+            return None
+        raw_size = item.get("size")
+        try:
+            size = int(raw_size) if raw_size not in (None, "") else None
+        except (TypeError, ValueError):
+            size = None
+        return DriveRemoteFile(
+            file_id=file_id,
+            name=name,
+            mime_type=str(item.get("mimeType") or ""),
+            size=size,
+            web_view_link=str(item.get("webViewLink") or ""),
+            md5_checksum=str(item.get("md5Checksum") or ""),
+            parents=tuple(str(parent) for parent in (item.get("parents") or ())),
+            drive_id=str(item.get("driveId") or ""),
+        )
+
+    def _is_same_binary_in_target(
+        self,
+        *,
+        source_file_id: str,
+        candidate_file_id: str,
+        target_folder_id: str,
+    ) -> bool:
+        source = self.get_file_metadata(source_file_id)
+        candidate = self.get_file_metadata(candidate_file_id)
+        if source is None or candidate is None:
+            return False
+        if tuple(candidate.get("parents") or ()) != (target_folder_id,):
+            return False
+        if str(candidate.get("driveId") or "") != self.shared_drive_id:
+            return False
+        source_md5 = str(source.get("md5Checksum") or "").strip()
+        candidate_md5 = str(candidate.get("md5Checksum") or "").strip()
+        return bool(source_md5 and candidate_md5 and source_md5 == candidate_md5)
 
 
 class OrderDriveFolderService:

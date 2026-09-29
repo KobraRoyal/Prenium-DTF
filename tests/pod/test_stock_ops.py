@@ -4,6 +4,7 @@ import pytest
 from apps.inventory.models import StockBalance, StockMovement, WarehouseZone
 from apps.inventory.services import StockOpsService, WarehouseLayoutService
 from apps.pod.services import BlankCatalogService
+from django.contrib.auth.models import Permission
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 
@@ -73,13 +74,19 @@ def test_receive_pick_putaway_and_pod_18(tmp_path, settings):
     assert StockBalance.objects.get(location=returns_bin).qty_on_hand == 1
     page = client.get(reverse("portal:staff-pod-stock"))
     assert page.status_code == 200
-    assert b"Picking" in page.content
+    body = page.content.decode()
+    assert "Sortie support" in body
+    assert "Rangement" in body
+    assert "Putaway" not in body
 
 
 def test_customer_stock_is_isolated_from_atelier_pick():
     from apps.customers.models import Customer
 
     actor, _client = staff_client(email="staff-wms-client@example.com", permissions=MANAGE)
+    actor.user_permissions.add(
+        Permission.objects.get(codename="view_customer")
+    )
     _dtf, _blank, blank_variant, _variant = pod_fixture(actor=actor)
     client_bin = _bin(actor, zone_kind=WarehouseZone.Kind.CLIENT, code="C-01-01-A")
     customer = Customer.objects.create(name="Owner Client Stock")

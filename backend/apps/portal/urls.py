@@ -158,12 +158,12 @@ from .views_staff_payments import StaffPaymentSettingsView
 from .views_staff_pod import (
     StaffPodBlankDetailView,
     StaffPodBlankListView,
-    StaffPodBlankPhotoView,
     StaffPodLocationDetailView,
     StaffPodTechniqueListView,
     StaffPodWarehouseView,
 )
-from .views_staff_pod_board import StaffPodHubView, StaffPodPickSessionPdfView
+from .views_staff_pod_board import StaffPodHubView
+from .views_staff_pod_suivi import StaffPodSuiviView
 from .views_staff_pod_catalog import (
     StaffPodCatalogListView,
     StaffPodCatalogProductView,
@@ -174,7 +174,11 @@ from .views_staff_pod_ops import (
     StaffPodStockView,
     StaffPodUnitDocumentView,
 )
+from .views_staff_pod_photos import StaffPodBlankPhotoView
+from .views_staff_pod_pick_pdf import StaffPodPickSessionPdfView
+from .views_staff_pod_qc import StaffPodQcView
 from .views_staff_pod_rip import StaffPodRipLotDetailView, StaffPodRipLotListView
+from .views_staff_pod_settings import StaffPodSettingsView
 from .views_staff_pod_shopify import StaffPodShopifyStoresView
 from .views_staff_production import StaffOrderPanelProductionView
 from .views_staff_push_notifications import (
@@ -623,6 +627,16 @@ urlpatterns = [
     ),
     path("staff/atelier/pod/", StaffPodHubView.as_view(), name="staff-pod-hub"),
     path(
+        "staff/atelier/pod/suivi/",
+        StaffPodSuiviView.as_view(),
+        name="staff-pod-suivi",
+    ),
+    path(
+        "staff/atelier/pod/reglages/",
+        StaffPodSettingsView.as_view(),
+        name="staff-pod-settings",
+    ),
+    path(
         "staff/atelier/pod/sessions/<uuid:session_public_id>/<str:document_kind>.pdf",
         StaffPodPickSessionPdfView.as_view(),
         name="staff-pod-pick-session-pdf",
@@ -696,6 +710,11 @@ urlpatterns = [
         "staff/atelier/pod/pose/dtf/",
         StaffPodPoseDtfView.as_view(),
         name="staff-pod-pose-dtf",
+    ),
+    path(
+        "staff/atelier/pod/controle-qualite/",
+        StaffPodQcView.as_view(),
+        name="staff-pod-qc",
     ),
     path(
         "staff/atelier/pod/stocks/",

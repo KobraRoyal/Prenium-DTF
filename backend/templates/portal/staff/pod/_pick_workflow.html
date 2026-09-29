@@ -1,0 +1,232 @@
+{# Poste GPAO — validation sortie de stock par session picking. #}
+{% if pick_sessions %}
+<section id="pod-pick-workflow" class="pod-focus-panel pod-pick-station" aria-labelledby="pod-pick-title" aria-live="polite">
+  {% include "portal/staff/pod/_pod_operate_rail.html" %}
+  <div class="pod-pick-station__head">
+    <div>
+      <h2 class="font-display text-lg m-0" id="pod-pick-title">Sortie de stock</h2>
+      <p class="muted text-sm mt-1 mb-0" id="pod-pick-help">Session active → scan pièce → scan bin. Une pièce à la fois.</p>
+    </div>
+    {% if active_pick_session and pick_total_active %}
+    <p class="pod-pick-station__progress" aria-label="Progression session">
+      <strong>{{ pick_done_lines|length }}</strong><span class="muted">/{{ pick_total_active }}</span>
+      <span class="muted text-sm">prélevée{{ pick_done_lines|length|pluralize }}</span>
+    </p>
+    {% endif %}
+  </div>
+
+  {% if pick_sessions|length > 1 %}
+  <div class="pod-pick-session-rail ui-selection-rail ui-selection-rail--horizontal" role="tablist" aria-label="Sessions picking">
+    {% for session in pick_sessions %}
+    {% if session.reserved_piece_count or session.untracked_piece_count or active_pick_session and session.public_id == active_pick_session.public_id %}
+    <a
+      class="ui-selection-control{% if active_pick_session and session.public_id == active_pick_session.public_id %} is-active{% endif %}"
+      role="tab"
+      aria-selected="{% if active_pick_session and session.public_id == active_pick_session.public_id %}true{% else %}false{% endif %}"
+      href="{% url 'portal:staff-pod-hub' %}?session={{ session.public_id }}#pod-pick-workflow"
+    >
+      <code>{{ session.code }}</code>
+      {% if session.is_voided %}
+      <span class="badge is-warning">Annulée</span>
+      {% elif session.reserved_piece_count %}
+      <span class="badge is-warning">{{ session.reserved_piece_count }} restante{{ session.reserved_piece_count|pluralize:"s" }}</span>
+      {% elif session.untracked_piece_count %}
+      <span class="badge is-neutral">{{ session.untracked_piece_count }} legacy</span>
+      {% elif session.picked_piece_count %}
+      <span class="badge is-success">Terminée</span>
+      {% endif %}
+    </a>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% elif active_pick_session %}
+  <p class="pod-pick-station__session muted text-sm mb-0">
+    Session <code>{{ active_pick_session.code }}</code>
+  </p>
+  {% endif %}
+
+  {% if active_pick_session and not active_pick_session.is_voided %}
+  <dl class="pod-focus-panel__facts pod-pick-station__facts">
+    {% if pick_next_line %}
+    <div>
+      <dt>Prochaine pièce</dt>
+      <dd><code>{{ pick_next_line.scan_identifier }}</code></dd>
+    </div>
+    <div>
+      <dt>Bin attendu</dt>
+      <dd><code>{{ pick_next_line.location_code|default:"—" }}</code></dd>
+    </div>
+    <div>
+      <dt>Commande</dt>
+      <dd><code>{{ pick_next_line.shopify_order_number }}</code></dd>
+    </div>
+    {% else %}
+    <div>
+      <dt>État</dt>
+      <dd>
+        {% if pick_done_lines %}
+        Session complète — préparez le lot RIP
+        {% else %}
+        Aucune pièce active
+        {% endif %}
+      </dd>
+    </div>
+    {% endif %}
+  </dl>
+
+  <div class="pod-pick-station__docs ui-form-actions">
+    <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-pick-session-pdf' session_public_id=active_pick_session.public_id document_kind='picking' %}">Picking A4</a>
+    <a class="ui-btn ui-btn-ghost ui-btn-sm" href="{% url 'portal:staff-pod-pick-session-pdf' session_public_id=active_pick_session.public_id document_kind='etiquettes' %}">Étiquettes Zebra</a>
+    {% if can_operate_production and pick_rip_ready_items %}
+    <form data-submit-loading method="post" action="{% url 'portal:staff-pod-hub' %}" class="inline">
+      {% csrf_token %}
+      <input type="hidden" name="intent" value="prepare">
+      {% for item in pick_rip_ready_items %}
+      <input type="hidden" name="work_item_public_ids" value="{{ item.public_id }}">
+      {% endfor %}
+      <button class="ui-btn ui-btn-primary ui-btn-sm" type="submit">Préparer lot DTF</button>
+    </form>
+    {% elif pick_done_lines and not pick_remaining_lines %}
+    <a class="ui-btn ui-btn-secondary ui-btn-sm" href="{% url 'portal:staff-pod-suivi' %}?stage=print">Suivi impression</a>
+    {% endif %}
+  </div>
+
+  {% if can_operate_production %}
+  {% if pick_remaining_lines or pick_form_error %}
+  <form
+    class="pod-pick-scan-form"
+    method="post"
+    action="{% url 'portal:staff-pod-hub' %}"
+    novalidate
+    hx-post="{% url 'portal:staff-pod-hub' %}"
+    hx-target="#pod-pick-workflow"
+    hx-select="#pod-pick-workflow"
+    hx-swap="outerHTML"
+    hx-indicator="#portal-htmx-indicator"
+    x-data="{
+      focusBin() {
+        const bin = document.getElementById('pod-pick-bin');
+        if (bin) bin.focus();
+      }
+    }"
+  >
+    {% csrf_token %}
+    <input type="hidden" name="intent" value="confirm_pick">
+    <input type="hidden" name="session_public_id" value="{{ active_pick_session.public_id }}">
+    {% if pick_form_error %}<p class="alert alert--danger" id="pod-pick-error" role="alert">{{ pick_form_error }}</p>{% endif %}
+    <div class="pod-pick-scan-row">
+      <div class="ui-field-group">
+        <label class="ui-label" for="pod-pick-scan">Étiquette pièce</label>
+        <input
+          class="ui-input"
+          id="pod-pick-scan"
+          name="scan_identifier"
+          value="{{ pick_scan_identifier }}"
+          required
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          autofocus
+          placeholder="POD-…"
+          aria-describedby="pod-pick-help{% if pick_form_error %} pod-pick-error{% endif %}"
+          {% if pick_form_error %}aria-invalid="true"{% endif %}
+          @keydown.enter.prevent="focusBin()"
+        >
+      </div>
+      <div class="ui-field-group">
+        <label class="ui-label" for="pod-pick-bin">Bin{% if pick_next_line and pick_next_line.location_code %} <span class="muted">({{ pick_next_line.location_code }})</span>{% endif %}</label>
+        <input
+          class="ui-input"
+          id="pod-pick-bin"
+          name="scanned_bin_code"
+          value="{{ pick_bin_code }}"
+          required
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          placeholder="{% if pick_next_line and pick_next_line.location_code %}{{ pick_next_line.location_code }}{% else %}A-01-01-A{% endif %}"
+          aria-describedby="pod-pick-help{% if pick_form_error %} pod-pick-error{% endif %}"
+          {% if pick_form_error %}aria-invalid="true"{% endif %}
+        >
+      </div>
+      <div class="pod-pick-scan-row__action">
+        <button class="ui-btn ui-btn-primary" type="submit">Valider sortie</button>
+      </div>
+    </div>
+  </form>
+  {% elif not pick_remaining_lines and not pick_untracked_lines %}
+  <p class="pod-pick-unavailable">Toutes les pièces de cette session sont prélevées.</p>
+  {% elif pick_untracked_lines and not pick_remaining_lines %}
+  <p class="pod-pick-unavailable">Anciennes étiquettes sans réservation — contrôle physique avant réimpression.</p>
+  {% endif %}
+  {% endif %}
+
+  {% if can_operate_production and active_pick_session.can_reissue_legacy %}
+  <form data-inline-required data-submit-loading method="post" class="pod-pick-reissue">
+    {% csrf_token %}
+    <input type="hidden" name="intent" value="reissue_legacy_session">
+    <input type="hidden" name="session_public_id" value="{{ active_pick_session.public_id }}">
+    <button class="ui-btn ui-btn-ghost ui-btn-sm" type="submit"
+      x-on:click="if (!window.confirm('Annuler les anciennes étiquettes et réimprimer après contrôle physique ?')) $event.preventDefault()">
+      Annuler ces étiquettes pour réimpression
+    </button>
+  </form>
+  {% endif %}
+
+  {% if pick_remaining_lines or pick_done_lines or pick_untracked_lines %}
+  <div class="ui-table-shell pod-table-shell pod-pick-worklist" role="region" aria-label="Pièces {{ active_pick_session.code }}" tabindex="0">
+    <table class="ui-data-table w-full border-collapse">
+      <thead>
+        <tr>
+          <th scope="col">Pièce</th>
+          <th scope="col">SO / SKU</th>
+          <th scope="col">Bin</th>
+          <th scope="col">État</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in pick_remaining_lines %}
+        <tr class="pod-pick-line{% if pick_next_line and line.pk == pick_next_line.pk %} is-next{% endif %}">
+          <td><code>{{ line.scan_identifier }}</code></td>
+          <td>
+            <code>{{ line.shopify_order_number }}</code>
+            <span class="muted text-sm"> · {{ line.shopify_sku }}</span>
+          </td>
+          <td><code>{{ line.location_code|default:"—" }}</code></td>
+          <td><span class="badge is-warning">À prélever</span></td>
+        </tr>
+        {% endfor %}
+        {% for line in pick_untracked_lines %}
+        <tr class="pod-pick-line">
+          <td><code>{{ line.scan_identifier }}</code></td>
+          <td>
+            <code>{{ line.shopify_order_number }}</code>
+            <span class="muted text-sm"> · {{ line.shopify_sku }}</span>
+          </td>
+          <td><code>{{ line.location_code|default:"—" }}</code></td>
+          <td><span class="badge is-neutral">Sans stock</span></td>
+        </tr>
+        {% endfor %}
+        {% for line in pick_done_lines %}
+        <tr class="pod-pick-line is-done">
+          <td><code>{{ line.scan_identifier }}</code></td>
+          <td>
+            <code>{{ line.shopify_order_number }}</code>
+            <span class="muted text-sm"> · {{ line.shopify_sku }}</span>
+          </td>
+          <td><code>{{ line.location_code|default:"—" }}</code></td>
+          <td><span class="badge is-success">Prélevée</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% elif active_pick_session and active_pick_session.is_voided %}
+  <p class="pod-pick-unavailable">Session annulée — recréez un picking depuis la file.</p>
+  {% else %}
+  <p class="pod-pick-unavailable">Aucune session. Cochez des commandes ci-dessus, puis générez picking + Zebra.</p>
+  {% endif %}
+</section>
+{% endif %}

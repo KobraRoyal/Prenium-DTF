@@ -273,6 +273,29 @@ def test_order_upload_service_accepts_octet_stream_ai_as_postscript():
     ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
     ORDER_UPLOAD_MAX_BYTES=1024,
 )
+def test_order_upload_service_detects_pdf_compatible_ai_from_generic_mime():
+    user, customer, membership = create_customer_scope("pdf-ai@example.com", "Acme")
+    order = create_order(customer, user)
+    upload = OrderUploadService().create_upload(
+        customer=customer,
+        actor=user,
+        customer_membership=membership,
+        order_public_id=order.public_id,
+        uploaded_file=SimpleUploadedFile(
+            "logo.ai",
+            b"%PDF-1.7\n",
+            content_type="application/octet-stream",
+        ),
+        source="client_api",
+    )
+    assert upload.mime_type == "application/pdf"
+
+
+@pytest.mark.django_db
+@override_settings(
+    ORDER_UPLOAD_ALLOWED_MIME_TYPES=ALLOWED_MIME_TYPES,
+    ORDER_UPLOAD_MAX_BYTES=1024,
+)
 def test_order_upload_service_accepts_jpeg_with_matching_signature():
     user, customer, membership = create_customer_scope("jpeg@example.com", "Acme")
     order = create_order(customer, user)

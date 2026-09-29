@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import render
@@ -19,23 +20,32 @@ class StaffPodRipLotListView(StaffPodPermissionMixin, View):
     template_name = "portal/staff/pod/rip_lots.html"
 
     def _context(self, request, form_error: str = ""):
-        return {
+        show_enqueue = (request.GET.get("enqueue") == "1") or bool(
+            form_error and request.POST.get("intent") == "enqueue"
+        )
+        ctx = {
             **_nav(),
-            "queue": rip_lot_service.list_queue(actor=request.user),
-            "lots": rip_lot_service.list_lots(actor=request.user),
-            "products": shopify_catalog_service.list_products(actor=request.user),
-            "techniques": print_technique_service.list_techniques(actor=request.user),
-            "can_manage_catalog": request.user.has_perm("pod.manage_pod_catalog"),
+            "queue": list(rip_lot_service.list_queue(actor=request.user, light=True)[:40]),
+            "lots": list(rip_lot_service.list_lots(actor=request.user)),
+            "products": [],
+            "techniques": [],
+            "show_enqueue": show_enqueue,
+            "can_operate_production": request.user.has_perm("pod.operate_pod_production"),
             "form_error": form_error,
         }
+        if show_enqueue and ctx["can_operate_production"]:
+            ctx["products"] = shopify_catalog_service.list_products(actor=request.user)
+            ctx["techniques"] = print_technique_service.list_techniques(actor=request.user)
+        return ctx
 
     def get(self, request):
-        print_technique_service.ensure_dtf_technique(actor=request.user)
         return render(request, self.template_name, self._context(request))
 
     def post(self, request):
         intent = request.POST.get("intent", "enqueue")
         try:
+            if intent not in {"prepare", "enqueue"}:
+                raise ValidationError("Action RIP inconnue.")
             if intent == "prepare":
                 lot = rip_lot_service.prepare_lot(
                     actor=request.user,
@@ -69,6 +79,7 @@ class StaffPodRipLotListView(StaffPodPermissionMixin, View):
                 self._context(request),
                 ValidationError(message),
             )
+        messages.success(request, "Commande ajoutée à la file de production.")
         return HttpResponseRedirect(reverse("portal:staff-pod-rip-lots"))
 
 
@@ -88,7 +99,7 @@ class StaffPodRipLotDetailView(StaffPodPermissionMixin, View):
                 "lot": lot,
                 "files": lot.files.select_related("variant", "work_item", "technique"),
                 "units": lot.units.select_related("variant", "work_item"),
-                "can_manage_catalog": request.user.has_perm("pod.manage_pod_catalog"),
+                "can_operate_production": request.user.has_perm("pod.operate_pod_production"),
                 "form_error": "",
             },
         )
@@ -113,7 +124,7 @@ class StaffPodRipLotDetailView(StaffPodPermissionMixin, View):
                     "lot": lot,
                     "files": lot.files.select_related("variant", "work_item", "technique"),
                     "units": lot.units.select_related("variant", "work_item"),
-                    "can_manage_catalog": request.user.has_perm("pod.manage_pod_catalog"),
+                    "can_operate_production": request.user.has_perm("pod.operate_pod_production"),
                 },
                 exc,
             )

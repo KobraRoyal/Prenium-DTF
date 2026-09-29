@@ -31,6 +31,7 @@ Un seul lot par session. Produis d’abord le **plan compact** (template sprint)
 - Pas de logique métier dans vues / templates / app blocks Shopify.
 - Services SRP + DRY ; réutiliser patterns `production` (OF, scan) sans coupler au métrage.
 - Zone UI POD : `/staff/atelier/pod/` séparée du DTF métrage.
+- Frontière POD : production et notification « QC terminé » à l’atelier interne uniquement ; Shopify ↔ Sendcloud assure colis, étiquette, suivi et fulfillment. Ne pas ajouter de workflow d’expédition POD à cette plateforme.
 - `public_id` en URL ; permissions objet serveur ; isolation owner stock (client vs atelier).
 - `02_rip/` **strictement plat** ; mix techniques = N slots / 1 pièce.
 - Modes variante : `POD|ON_STOCK|VIRTUAL|UNMANAGED|DISABLED`.
@@ -67,7 +68,7 @@ Fin: tests listés verts ; CR ≤ 15 lignes (fichiers, décisions, dettes)
 | A | `PodRipLot` + sync plat `02_rip/` + manifest |
 | B | OF pièce + étiquettes |
 | C | Poste pose scan DTF |
-| E | Fulfillment Shopify OAuth/webhooks |
+| E | Connexion Shopify OAuth + webhooks de commandes pour la production POD |
 | F | Techniques non-DTF (export + poste) |
 | G | Mouvements, picking trié bin, putaway retours |
 

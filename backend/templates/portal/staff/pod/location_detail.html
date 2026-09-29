@@ -3,18 +3,35 @@
 {% block title %}{{ location.code }} — Emplacement{% endblock %}
 
 {% block portal_content %}
-<div class="portal-page portal-page--staff">
+<div class="portal-page portal-page--staff pod-page">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/staff_pod.html" current_label=location.code title=location.code subtitle=location.zone.name %}
   {% include "portal/staff/pod/_pod_context_nav.html" %}
   <section class="portal-page-surface ui-list-section">
+    <p class="pod-detail-back"><a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-pod-warehouse' %}">Retour aux emplacements</a></p>
+    {% include "portal/staff/pod/_form_error.html" %}
     <p class="mb-8">{% if location.label %}{{ location.label }} — {% endif %}{{ location.zone.warehouse.name }}</p>
+    <span class="badge {% if location.is_active %}is-success{% else %}is-neutral{% endif %}">{% if location.is_active %}Actif{% else %}Inactif{% endif %}</span>
+    <details class="pod-editor" {% if form_error %}open{% endif %}>
+      <summary>Modifier l’emplacement</summary>
+      <form data-inline-required data-submit-loading class="ui-form-stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="update">
+        <div class="ui-field-group">
+          <label class="ui-label" for="location-label">Libellé</label>
+          <input class="ui-input" id="location-label" name="label" value="{% if form_error %}{{ form_data.label }}{% else %}{{ location.label }}{% endif %}">
+          <p class="ui-field-help">Le code et la zone restent fixes. Videz le bac et retirez ses règles avant de le désactiver.</p>
+        </div>
+        {% if form_error %}{% include "portal/staff/pod/_active_field.html" with field_id="location-active" active=form_data.is_active %}{% else %}{% include "portal/staff/pod/_active_field.html" with field_id="location-active" active=location.is_active %}{% endif %}
+        {% include "portal/staff/pod/_editor_actions.html" %}
+      </form>
+    </details>
 
     <section class="mb-10" aria-labelledby="location-rules-title">
       <header class="ui-list-results__head mb-4">
-        <h2 class="text-lg" id="location-rules-title">Règles par défaut sur ce bin</h2>
+        <h2 class="text-lg" id="location-rules-title">Règles de prélèvement</h2>
         <p class="muted text-sm">Produits autorisés à l’emplacement sans scan manuel.</p>
       </header>
-      <div class="ui-table-shell">
+      <div class="ui-table-shell" role="region" aria-label="Contenu de l’emplacement" tabindex="0">
         <table class="ui-data-table w-full border-collapse">
           <thead>
             <tr><th scope="col">Type</th><th scope="col">Variante blank</th><th scope="col">SKU fini</th><th scope="col">Propriétaire</th></tr>
@@ -25,7 +42,7 @@
               <td>{{ rule.get_sku_kind_display }}</td>
               <td>{% if rule.blank_variant %}<code>{{ rule.blank_variant.sku }}</code>{% else %}—{% endif %}</td>
               <td>{% if rule.finished_sku %}<code>{{ rule.finished_sku }}</code>{% else %}—{% endif %}</td>
-              <td>{{ rule.get_owner_kind_display }}</td>
+              <td>{{ rule.get_owner_kind_display }}{% if rule.customer %} · {{ rule.customer.name }}{% endif %}</td>
             </tr>
             {% empty %}
             <tr><td colspan="4">Aucune règle — le bin accepte tout mouvement compatible. Ajoutez une règle depuis la fiche support si besoin.</td></tr>
@@ -38,9 +55,9 @@
     <section aria-labelledby="location-stock-title">
       <header class="ui-list-results__head mb-4">
         <h2 class="text-lg" id="location-stock-title">Stock sur place</h2>
-        <p class="muted text-sm">Quantités disponibles pour picking et expédition.</p>
+        <p class="muted text-sm">Quantités présentes et disponibles pour la production.</p>
       </header>
-      <div class="ui-table-shell">
+      <div class="ui-table-shell" role="region" aria-label="Contenu de l’emplacement" tabindex="0">
         <table class="ui-data-table w-full border-collapse">
           <thead>
             <tr><th>Type</th><th>Référence</th><th>Disponible</th><th>En stock</th><th>Propriétaire</th></tr>
@@ -52,7 +69,7 @@
               <td>{% if balance.blank_variant %}<code>{{ balance.blank_variant.sku }}</code>{% elif balance.finished_sku %}<code>{{ balance.finished_sku }}</code>{% else %}—{% endif %}</td>
               <td>{{ balance.qty_available }}</td>
               <td>{{ balance.qty_on_hand }}</td>
-              <td>{{ balance.get_owner_kind_display }}</td>
+              <td>{{ balance.get_owner_kind_display }}{% if balance.customer %} · {{ balance.customer.name }}{% endif %}</td>
             </tr>
             {% empty %}
             <tr><td colspan="5">Bin vide — enregistrez une réception ou un putaway depuis <a href="{% url 'portal:staff-pod-stock' %}">Mouvements WMS</a>.</td></tr>

@@ -8,11 +8,13 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.signing import BadSignature, TimestampSigner
+from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.auditlog.services import record_event
+from apps.customers.models import Customer
 from apps.pod.models import IdsVariantConfig, ShopifyProduct, ShopifyStore, ShopifyVariant
 from apps.pod.services.shopify_http import ShopifyHttpClient, shopify_admin_url, shopify_form_post
 from apps.pod.services.token_crypto import (
@@ -49,6 +51,7 @@ def hmac_secrets_for_store(store: ShopifyStore) -> list[bytes]:
 class ShopifyConnectService:
     view_permission = "pod.access_pod_atelier"
     manage_permission = "pod.manage_pod_catalog"
+    customer_view_permission = "customers.view_customer"
     signer = TimestampSigner(salt="pod.shopify.oauth")
 
     def __init__(self, http_client: ShopifyHttpClient | None = None, token_exchange=None):
@@ -62,13 +65,53 @@ class ShopifyConnectService:
             source="pod.shopify",
             action="pod.shopify.permission_rejected",
         )
-        return ShopifyStore.objects.annotate(product_count=Count("products"))
+        return ShopifyStore.objects.select_related("customer").annotate(
+            product_count=Count("products")
+        )
 
     def get_store(self, *, actor, store_public_id) -> ShopifyStore:
         store = self.list_stores(actor=actor).filter(public_id=store_public_id).first()
         if store is None:
             raise ValidationError("Boutique introuvable.")
         return store
+
+    def assign_store_customer(self, *, actor, store_public_id, customer_public_id) -> ShopifyStore:
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source="pod.shopify.store_customer",
+            action="pod.shopify.permission_rejected",
+        )
+        require_staff_perm(
+            actor,
+            self.customer_view_permission,
+            source="pod.shopify.store_customer",
+            action="pod.shopify.permission_rejected",
+        )
+        with transaction.atomic():
+            store = (
+                ShopifyStore.objects.select_for_update().filter(public_id=store_public_id).first()
+            )
+            if store is None:
+                raise ValidationError("Boutique introuvable.")
+            customer = Customer.objects.active().filter(public_id=customer_public_id).first()
+            if customer is None:
+                raise ValidationError("Client actif introuvable.")
+            if store.customer_id not in (None, customer.pk):
+                raise ValidationError(
+                    "Cette boutique est déjà liée à un autre client. "
+                    "Une migration contrôlée est requise."
+                )
+            if store.customer_id is None:
+                store.customer = customer
+                store.save(update_fields=["customer", "updated_at"])
+                record_event(
+                    action="pod.shopify.store_customer_assigned",
+                    actor=actor,
+                    target=store,
+                    metadata={"customer_public_id": str(customer.public_id)},
+                )
+            return store
 
     def oauth_is_configured(self) -> bool:
         return bool(settings.SHOPIFY_POD_API_KEY and settings.SHOPIFY_POD_API_SECRET)
@@ -386,8 +429,10 @@ class ShopifyConnectService:
         store.oauth_scopes = scopes[:255]
         store.connected_at = timezone.now()
         store.is_active = True
-        if not store.webhook_secret and settings.SHOPIFY_POD_API_SECRET:
-            store.webhook_secret = settings.SHOPIFY_POD_API_SECRET
+        # The app OAuth secret is read from settings for HMAC verification. It
+        # must never be duplicated in cleartext in every ShopifyStore row.
+        if store.webhook_secret == settings.SHOPIFY_POD_API_SECRET:
+            store.webhook_secret = ""
         store.save(
             update_fields=[
                 "access_token_encrypted",

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 
 from apps.auditlog.services import record_event
 from apps.customers.models import Customer
@@ -21,6 +21,32 @@ from apps.pod.services.validation import clean_sku, require_staff_perm, validati
 class StockOpsService:
     view_permission = "pod.access_pod_atelier"
     manage_permission = "inventory.manage_warehouse"
+
+    def list_balances(self, *, actor, query: str = ""):
+        require_staff_perm(
+            actor,
+            self.manage_permission,
+            source="inventory.stock",
+            action="inventory.stock.permission_rejected",
+        )
+        balances = StockBalance.objects.select_related(
+            "location",
+            "location__zone",
+            "customer",
+            "blank_variant",
+            "blank_variant__blank",
+        )
+        search = (query or "").strip()
+        if search:
+            balances = balances.filter(
+                Q(finished_sku__icontains=search)
+                | Q(blank_variant__sku__icontains=search)
+                | Q(blank_variant__blank__sku__icontains=search)
+                | Q(location__code__icontains=search)
+                | Q(location__label__icontains=search)
+                | Q(customer__name__icontains=search)
+            )
+        return balances.order_by("location__code", "pk")
 
     def eligible_customers(self, *, actor):
         require_staff_perm(
@@ -163,7 +189,12 @@ class StockOpsService:
             delta=-1,
         )
 
-    def _resolve_owner(self, *, owner_kind: str, customer_public_id):
+    def _resolve_owner(
+        self,
+        *,
+        owner_kind: str,
+        customer_public_id,
+    ):
         kind = (owner_kind or StockOwnerKind.ATELIER).strip().lower()
         if kind == StockOwnerKind.CUSTOMER:
             customer = Customer.objects.filter(public_id=customer_public_id, is_active=True).first()
@@ -214,32 +245,47 @@ class StockOpsService:
             source=source,
             action="inventory.stock.permission_rejected",
         )
+        requested_owner = (owner_kind or StockOwnerKind.ATELIER).strip().lower()
+        if requested_owner == StockOwnerKind.CUSTOMER:
+            require_staff_perm(
+                actor,
+                "customers.view_customer",
+                source=source,
+                action="inventory.stock.customer_permission_rejected",
+            )
         if quantity < 1:
             raise ValidationError("Quantité invalide.")
         try:
             with transaction.atomic():
                 resolved_owner, customer = self._resolve_owner(
-                    owner_kind=owner_kind, customer_public_id=customer_public_id
+                    owner_kind=owner_kind,
+                    customer_public_id=customer_public_id,
                 )
                 variant = None
                 sku = ""
                 if sku_kind == SkuKind.FINISHED:
                     sku = clean_sku(finished_sku, field_label="SKU fini")
                 else:
-                    variant = (
-                        BlankVariant.objects.select_for_update()
-                        .filter(public_id=blank_variant_public_id)
-                        .first()
+                    variant_query = BlankVariant.objects.select_for_update().filter(
+                        public_id=blank_variant_public_id,
+                        is_active=True,
+                        blank__is_active=True,
                     )
+                    variant = variant_query.first()
                     if variant is None:
-                        raise ValidationError("Variante blank introuvable.")
+                        raise ValidationError("Variante blank active introuvable.")
                 if kind == StockMovement.Kind.PICK:
                     bin_code = (scanned_bin_code or "").strip().upper()
                     if not bin_code:
                         raise ValidationError("Scan du bin obligatoire (POD-17).")
                     location = (
                         StorageLocation.objects.select_for_update()
-                        .filter(code__iexact=bin_code, is_active=True)
+                        .filter(
+                            code__iexact=bin_code,
+                            is_active=True,
+                            zone__is_active=True,
+                            zone__warehouse__is_active=True,
+                        )
                         .first()
                     )
                     if location is None:
@@ -248,7 +294,12 @@ class StockOpsService:
                 else:
                     location = (
                         StorageLocation.objects.select_for_update()
-                        .filter(public_id=location_public_id, is_active=True)
+                        .filter(
+                            public_id=location_public_id,
+                            is_active=True,
+                            zone__is_active=True,
+                            zone__warehouse__is_active=True,
+                        )
                         .first()
                     )
                     if location is None:
@@ -301,6 +352,9 @@ class StockOpsService:
                         "qty": quantity,
                         "bin": scanned,
                         "owner": resolved_owner,
+                        "customer_public_id": (
+                            str(customer.public_id) if customer is not None else None
+                        ),
                     },
                 )
                 return balance
