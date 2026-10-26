@@ -1,0 +1,19 @@
+{% load static %}
+<div class="dtf-hero__transfer" id="technologie" data-anatomy>
+  <div class="dtf-transfer-visual">
+    <div class="dtf-figure" data-transfer-stage role="button" tabindex="0" aria-label="Explorer les couches du transfert" aria-expanded="false" aria-controls="dtf-layer-tooltip">
+      <svg viewBox="0 0 400 320" role="img" aria-label="Planche DTF de cinq motifs sur un film PET au coin relevé. Film, couleurs, blanc et poudre sont séparés à l’interaction."><image href="{% static 'img/dtf/transfer-sheet.svg' %}" width="400" height="320"/></svg>
+    </div>
+  </div>
+  <div class="dtf-layer-tabs" role="group" aria-label="Explorer les couches du transfert">
+    <button type="button" id="layer-tab-0" data-layer="0" aria-pressed="false">Film PET</button>
+    <button type="button" id="layer-tab-1" data-layer="1" aria-pressed="false">Couleur</button>
+    <button type="button" id="layer-tab-2" data-layer="2" aria-pressed="false">Blanc</button>
+    <button type="button" id="layer-tab-3" data-layer="3" aria-pressed="false">Poudre</button>
+  </div>
+  <div class="dtf-transfer-message">
+    <div class="dtf-layer-tooltip" id="dtf-layer-tooltip" role="tooltip" hidden><div class="dtf-layer-tooltip__body"><span class="dtf-layer-tooltip__index" data-tooltip-index>Couleur</span><strong data-tooltip-title>Les encres couleur.</strong><p data-tooltip-copy>Le motif est imprimé sur le film, avant le dépôt du blanc.</p></div></div>
+  </div>
+  <div class="dtf-transfer-help"><button type="button" class="dtf-transfer-close" data-transfer-close disabled>Refermer</button></div>
+  <noscript><p>Le film PET porte le motif couleur, le blanc soutient son opacité et la poudre thermofusible assure la liaison au textile.</p></noscript>
+</div>

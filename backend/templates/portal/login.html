@@ -12,7 +12,7 @@
     <div class="product-auth-card product-login-card">
       <header class="product-login-card__intro">
         <h1 id="login-heading">Connexion</h1>
-        <p>Retrouvez vos commandes, vos fichiers et vos documents dans un espace unique.</p>
+        <p>Retrouvez vos commandes, vos fichiers et vos documents dans un espace unique, exclusivement réservé aux professionnels (B2B).</p>
       </header>
       {% if form.non_field_errors %}
       <div class="alert alert--danger" role="alert">
@@ -63,7 +63,7 @@
         {% include "components/forms/form_actions.html" with primary_label="Se connecter" primary_class_full="ui-btn ui-btn-primary ui-btn-block" %}
       </form>
       <footer class="product-login-footer">
-        <p class="product-login-access">Première visite ? <a class="ui-link" href="{% url 'prospects:step1' %}">Demander un accès professionnel</a></p>
+        <p class="product-login-access">Première visite ? <a class="ui-link" href="{% url 'prospects:step1' %}">Demander votre accès</a></p>
         {% include "portal/partials/auth_support.html" %}
       </footer>
     </div>

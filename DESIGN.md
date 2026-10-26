@@ -165,3 +165,164 @@ Canevas clair ; chrome, toolbar et poignées corail. `studio-polish.css` reste p
 - **Don't** ajouter gradients décoratifs, eyebrows ou CTA dupliqués sur une même vue.
 - **Don't** créer de styles locaux de table ou header si `shell.css` / `product-polish.css` couvrent déjà le cas.
 - **Don't** hardcoder `#8f3d1f` / `#6f2f17` (ancien brun) ni un second écran de thème à côté d’Identité visuelle.
+
+## Surface marketing DTF by IDS Supply — 24 octobre 2026
+
+L’accueil `/` suit une direction technique éditoriale dans le monde clair existant :
+ivoire, graphite, actions corail pilotées par `--brand`, Space Grotesk et DM Sans.
+Le lockup partagé « Prenium DTF / By IDS.Supply » est identique dans la landing,
+les services, la connexion, le tunnel professionnel, les portails et le Studio. Les actions de la landing ont un rayon de 4 px,
+les panneaux techniques un rayon de 3–8 px, sans changer les tokens des espaces métier.
+
+Les gradients sont réservés aux encres et aux matières explicatives. Les simulations
+sont identifiées ; la galerie attend des photos réelles. La figure originale Hairline
+sépare PET, couleur, blanc et adhésif sur un moteur à ressorts qui dort au repos.
+Les contrôles restent accessibles au clavier et au toucher, avec mouvement réduit.
+
+La composition, les sources et les hypothèses commerciales sont détaillées dans
+[DTF_INTERACTIVE_LANDING_2026-10-24.md](docs/product-design/DTF_INTERACTIVE_LANDING_2026-10-24.md).
+
+### Passe Impeccable — identité B2B et matières
+
+La conversion publique se nomme « Demander votre accès » et conduit au tunnel
+professionnel. L’exclusivité B2B est explicite dès le hero et la connexion. Les comptes
+connectés gardent leur entrée dans l’espace professionnel.
+
+La vue de transfert se lit du bas vers le haut : film PET, couleur florale, même
+silhouette en blanc, poudre granuleuse. La figure et le hero utilisent ce même ordre.
+Les infobulles sont spécifiques à chaque matière, accessibles au survol, au clavier
+et au toucher, et fermables par Échap. Leur contenu reste survolable ; sur mobile,
+il est placé dans le flux pour garder les contrôles dégagés.
+
+### Landing — rédaction, preuve produit et ancrage breton
+
+Chaque section porte un argument distinct. Le bandeau d’origine est discret, défilant,
+avec pause explicite ; il devient fixe en mouvement réduit. Les captures du portail
+forment une démonstration à deux onglets, annotée données et montants fictifs, avec
+agrandissement et taille réelle. La FAQ utilise les disclosures HTML natifs. Les photos
+de machines et de résultats restent des emplacements réservés aux images réelles.
+Les frais éventuels demeurent visibles avant tout dépliage de conditions.
+
+[Dossier rédaction et médias](docs/product-design/DTF_MARKETING_REFINEMENT_2026-10-24.md).
+
+### Landing — clarté métier, sans fioritures
+
+L’offre est nommée dès le titre : « Votre DTF au mètre ». Les schémas doivent montrer
+une opération identifiable, avec un contrôle explicite et une légende courte. Le motif,
+les couleurs d’encre et les matières portent l’expression ; repères décoratifs, slogans
+redondants et mouvements sans rôle explicatif sont retirés. La préparation de détail
+reste locale, les trois traitements de contour restent distincts et les simulations
+ne sont jamais présentées comme des résultats de production.
+
+[Dossier de clarté](docs/product-design/DTF_CLARITY_2026-10-24.md).
+
+### Hero — transfert Hairline et diagramme chromatique
+
+Le hero porte l’unique anatomie interactive : film PET fin, motif floral, blanc et
+poudre proches au repos, séparés à l’interaction. Chaque matière dispose d’une
+infobulle ; les boutons assurent l’équivalence tactile et clavier. L’image statique
+du hero et l’ancienne section d’anatomie séparée disparaissent. Le gamut étendu
+dispose de son propre schéma explicatif, explicitement sans données de mesure.
+
+[Dossier hero et gamut](docs/product-design/DTF_HERO_TRANSFER_2026-10-24.md).
+
+### Passe Taste — 25 octobre 2026
+
+Le transfert est posé sur un champ clair, face à un titre monochrome. Le corps marketing
+est en encre pleine à 17 px ; les légendes et commandes visent 13 px. Les surfaces se
+séparent par leurs tons. Les lignes restent dans les schémas et les contrôles techniques.
+Les entrées sont ponctuelles ; les changements de panneau et d’infobulle sont courts et
+interruptibles. Le contenu HTML reste visible sans animation. Le mouvement réduit et
+les onglets cachés annulent les animations en cours.
+
+[Passe Taste et recette](docs/product-design/DTF_TASTE_MOTION_2026-10-25.md).
+
+### Motion-graphics — séquences de lecture, 25 octobre 2026
+
+Le gamut s’ouvre en une poussée SVG, suivie de quatre accents nommés et d’un état
+final immobile. La lecture est courte, contrôlable, interruptible et suspendue hors
+écran. Le balayage du fichier accompagne les zones à vérifier sans changer la zone
+choisie. Les timelines sont déterministes ; le mouvement réduit garde l’état final.
+
+[Installation Hyperframes et recette](docs/product-design/DTF_HYPERFRAMES_MOTION_2026-10-25.md).
+
+### Landing — argumentaire et photographie, 25 octobre 2026
+
+Le premier parcours compte neuf chapitres : offre, résultats, couleurs, préparation,
+atelier, commande, budget, FAQ et accès. Les trois démonstrations prépresse approfondies
+restent accessibles dans un disclosure natif et par lien direct. Chaque chapitre porte
+une question du professionnel, sans réexpliquer le chapitre précédent.
+
+Douze emplacements photo sont répartis dans ce récit, avec deux captures du portail.
+Les cadres provisoires sont identifiés et non interactifs. Une source réelle fournie au
+composant photo active l’agrandissement. La palette et le hero Hairline restent la référence.
+
+[Argumentaire, prises de vue et recette](docs/product-design/DTF_EDITORIAL_PHOTOGRAPHY_2026-10-25.md).
+
+### Hero — film souple et planche de motifs
+
+Le transfert est placé directement sur le fond crème, sans panneau blanc. Le PET garde
+une faible épaisseur et un coin droit relevé ; les deux traits intérieurs sont retirés.
+Cinq motifs de tailles différentes remplacent le visuel unique. Leurs silhouettes sont
+communes aux encres, au blanc et à la poudre granuleuse. Les contrôles et infobulles
+conservent leur lisibilité et les mêmes interactions clavier / tactile.
+
+[Figure Hairline, matières et recette](docs/product-design/DTF_HERO_GANG_SHEET_2026-10-25.md).
+
+
+## Affinement essentiel — 25 octobre 2026
+
+Une idée par section et une action principale : demander son accès professionnel. Titres plus courts, corps de texte direct, couleurs et typographies de marque conservées. Le carrousel de préparation présente une photo et une explication par étape ; les démonstrations techniques restent dans une divulgation native. Les résultats sont une bande de photos à parcourir. Les douze photographies de production restent explicitement en attente. Pas de rotation automatique des contenus à lire. Les certifications sont attachées aux encres uniquement.
+
+Petites notes de la landing : supprimer les commentaires de construction et les légendes redondantes. Un cadre photo en attente porte seulement son titre et son statut ; une vraie photo peut garder sa légende. Les informations de couche se consultent à la demande. Les précisions commerciales restent dans les conditions et les simulations portent une identification courte.
+
+## Direction actuelle — composition inspirée d’Odoo, 25 octobre 2026
+
+La palette reste exactement celle de la marque : fond #f4f0e6, surface #fbf6ee, surface claire #fffdf8, corail #FF8775, corail clair #FFEAE3, texte #1a1815. Aucun remplacement du logo.
+
+Les h1/h2 utilisent Caveat variable locale, avec licence SIL OFL. Les paragraphes et contrôles restent en DM Sans ; Space Grotesk est conservée dans le logo et certains repères techniques SVG. Le hero est centré en une colonne, suivi de la planche Hairline interactive. L’accent corail derrière « des pros. » reprend le traitement de titre de la référence demandée. Une flèche courbe accompagne le tarif de base près du bouton d’accès, à la demande du 25 octobre.
+
+Introductions des sections centrées ; contenu visuel alterné dans les rubriques couleur, préparation et atelier ; deux sélecteurs de commande compacts ; FAQ sur une colonne. Les cadres de médias ont un rayon de 12 px. La galerie affiche deux images entières sur grand écran, une sur mobile, avec défilement natif. Les douze réservations photo, les prix et les interactions sont conservés. Les petites notes retirées ne reviennent pas.
+
+Les galeries et le carrousel de préparation partagent des commandes de navigation de 44 px. Les photos en attente restent statiques ; les flèches parcourent les cadres. La couleur textile active porte un anneau distinct. Les outils d’analyse se réorganisent sur tablette et leurs onglets s’empilent sur petits écrans pour rester entièrement visibles.
+
+### Tarif et conversion dans le hero — 25 octobre 2026
+
+La landing DTF affiche le tarif public de base dès le hero, près de l’action d’accès B2B, avec une flèche SVG courbe. Le prix est issu du contexte public existant ; largeur, dégressivité mensuelle et exclusions utiles restent explicites. Sur mobile, le prix précède le bouton. Le lien secondaire mène au simulateur. Le fond crème, le corail, les titres Caveat et le transfert Hairline restent canoniques. Voir `docs/product-design/DTF_HERO_CONVERSION_2026-10-25.md`.
+
+### Direction livrée — hero commercial et Hairline visible, 25 octobre 2026
+
+La passe commerciale remplace le hero centré précédent par une grille : « Votre DTF. Notre exigence. », bénéfice de préparation des fichiers et offre à gauche, transfert interactif à droite dès 601 px. Sur téléphone, le transfert et ses quatre commandes précèdent le prix et le CTA, tous deux visibles dans le premier écran au repos aux largeurs de référence. Les titres Caveat, l’accent corail, les motifs, la géométrie et le comportement Hairline sont conservés.
+
+L’action publique est « Demander mon accès pro », accompagnée dans le hero de la validation préalable du compte. Commande et tarifs précèdent les démonstrations techniques. Le simulateur propose directement la demande d’accès avec un lien distinct vers les modes de commande. Les photos en attente restent identifiées et les conditions de prix inchangées.
+
+[Rédaction, composition et recette](docs/product-design/DTF_PREMIUM_HERO_2026-10-25.md).
+
+### Sections livrées — Impeccable, 25 octobre 2026
+
+Le récit après le hero présente la commande et son budget avant les réalisations encore en attente. Les introductions s’alignent en deux colonnes sur grand écran et s’empilent sur téléphone. La capture de commande se lit avec son explication ; les paliers tarifaires utilisent une grille de deux ou quatre colonnes selon la largeur de leur conteneur. Les exclusions restent près du résultat.
+
+Les réservations photo sont plus compactes et explicitement identifiées. Couleurs, préparation et atelier expliquent le soin de production, avec les mêmes figures et contrôles. Le texte des couleurs précède son diagramme. La FAQ possède une introduction latérale et le final rapproche la demande d’accès de la validation du compte. Le hero et Hairline ne changent pas.
+
+[Wording, choix UI et validation](docs/product-design/DTF_PREMIUM_SECTIONS_2026-10-25.md).
+
+### Passe premium — épreuves, légal et passe d’impression, 26 octobre 2026
+
+Les réservations photo prennent la forme d’une épreuve : repères de coupe, barre de contrôle des huit encres et pastille « Photo à venir ». Chaque action d’accès est suivie de trois faits vérifiés (3 étapes, réponse sous 1 à 2 jours ouvrés, sans engagement). Sur téléphone, une barre d’accès apparaît seulement quand aucun autre bouton d’accès n’est visible. Le footer porte conditions commerciales, mentions légales et confidentialité ; une donnée légale absente s’affiche « À compléter ».
+
+Mouvement : le rail de trois pixels sous le header se remplit des huit encres au fil de la lecture ; les épreuves « s’impriment » à leur entrée. Ces effets passent par les scroll timelines CSS, avec état final sans support ou en mouvement réduit. Les gradients restent réservés aux encres. Les pages légales gardent Space Grotesk pour leurs intertitres de lecture.
+
+[Livrables, mouvement et réserves](docs/product-design/DTF_PREMIUM_PASS_2026-10-26.md).
+
+### Passe taste-skill — composition, images et typographie, 26 octobre 2026
+
+Remplace les points contraires des passes précédentes. La landing tient sur deux familles : Caveat pour h1/h2 et le mot-symbole du footer, DM Sans pour tout le reste (y compris les intertitres des pages légales). Space Grotesk ne sert plus sur la surface DTF ; le token portail reste inchangé. Échelle : 14 · 17 · 20 · 36 · 60 · 88 px.
+
+- **Hero** : le bandeau défilant au-dessus du h1 est retiré. Les onglets de couches portent la couleur de leur matière. Les puces de volume (1 m + paliers publics) recalculent le prix sans quitter le hero ; elles restent masquées sans script, le texte « Dégressif selon votre volume mensuel » sert de repli. La flèche courbe est retirée. La mention B2B reste à côté de l’action.
+- **Images** : trois réservations seulement, dans « Du motif au textile » (grille de trois sur grand écran). La préparation utilise les dessins de couches (expression, blanc, poudre) sur fond textile noir. Deux images sourcées : carte postale de Rennes (domaine public) dans l’atelier, presse à chaud (CC0) dans la FAQ ; crédits liés dans le footer de l’accueil uniquement. Le final montre la capture du Studio Gang Sheet.
+- **Composition** : bande « 8 encres » sur fond textile noir `#222321` ; introductions de section en 5/7 ; footer clos par le mot-symbole « Prenium DTF ».
+- **Retraits** : repères de coupe, pointillés et contours des réservations ; filets décoratifs ; ombres au repos (sauf barre mobile flottante).
+- **Barre d’accès mobile** : visible seulement en remontant la page, hors hero et quand aucun autre bouton d’accès n’est à l’écran.
+- **Mouvement ajouté** : la carte de Rennes se pose, les encres de la bande noire arrivent, le mot-symbole monte. Même garde `@supports` et mouvement réduit.
+
+[Mesures et réserves](docs/product-design/DTF_PREMIUM_PASS_2026-10-26.md#passe-taste-skill--26-octobre-2026).

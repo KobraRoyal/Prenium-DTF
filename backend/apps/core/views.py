@@ -8,6 +8,8 @@ from django.views import View
 from apps.catalog.services.catalog import CatalogQueryService
 
 from .services.health import HealthcheckService
+from .services.legal import LEGAL_PAGES, LegalIdentityService, LegalPage
+from .services.marketing import PublicDtfOfferService
 
 catalog_query_service = CatalogQueryService()
 
@@ -50,8 +52,29 @@ class MarketingHomeView(View):
             self.template_name,
             {
                 "services": services,
+                "dtf_offer": PublicDtfOfferService().snapshot(),
+                "footer_contact_email": LegalIdentityService().contact_email(),
             },
         )
+
+
+class LegalPageView(View):
+    """Public legal pages stay reachable even when the home redirects to login."""
+
+    http_method_names = ["get"]
+    page: LegalPage | None = None
+
+    def get(self, request, *args, **kwargs):
+        legal = LegalIdentityService().snapshot()
+        context = {
+            "legal_page": self.page,
+            "legal_pages": LEGAL_PAGES,
+            "legal": legal,
+            "footer_contact_email": legal["contact_email"],
+        }
+        if self.page.slug == "conditions":
+            context["dtf_offer"] = PublicDtfOfferService().snapshot()
+        return render(request, self.page.template_name, context)
 
 
 class MarketingServicesView(View):

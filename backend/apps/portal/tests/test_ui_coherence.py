@@ -93,7 +93,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
         for source in [home, services]:
             self.assertIn("{% block runtime_scripts %}", source)
-            self.assertIn("js/marketing.js", source)
+            self.assertNotIn("vendor/htmx", source)
+            self.assertNotIn("vendor/alpinejs", source)
+        self.assertIn("js/marketing.js", services)
+        self.assertIn("js/dtf-landing.js", home)
+        self.assertIn("vendor/hairline/kernel.js", home)
+        self.assertIn("menu.addEventListener", static_source("js/dtf-landing.js"))
 
         self.assertIn('import "./landing-motion.js', marketing_script)
         self.assertIn('import "./product-shell.js', marketing_script)
@@ -145,19 +150,19 @@ class PortalUiCoherenceTests(SimpleTestCase):
 
     def test_landing_conversion_keeps_one_primary_funnel_and_no_duplicate_form(self) -> None:
         home = template_source("shop/home.html")
-        hero = template_source("shop/partials/landing_hero.html")
-        process = template_source("shop/partials/landing_how_it_works.html")
-        final_cta = template_source("shop/partials/landing_cta_final.html")
-
-        self.assertIn("landing-conversion-page", home)
+        hero = template_source("shop/partials/dtf/hero.html")
+        final_cta = template_source("shop/partials/dtf/final.html")
+        access_cta = template_source("shop/partials/dtf/cta.html")
+        self.assertIn("dtf-page", home)
         self.assertNotIn('include "shop/partials/landing_contact.html"', home)
         self.assertNotIn('include "shop/partials/landing_team.html"', home)
-        self.assertIn("prospects:step1", hero)
-        self.assertNotIn("prospects:step1", process)
-        self.assertNotIn("conversion-button", process)
-        self.assertIn("prospects:step1", final_cta)
-        self.assertNotIn("<form", hero + process + final_cta)
-        self.assertNotIn("{% url 'services' %}", final_cta)
+        self.assertIn("prospects:step1", access_cta)
+        self.assertIn("Demander mon accès pro", access_cta)
+        self.assertIn("request.user.is_authenticated", access_cta)
+        self.assertIn("dtf/cta.html", hero)
+        self.assertIn("dtf/cta.html", final_cta)
+        self.assertNotIn("<form", hero + final_cta + access_cta)
+        self.assertIn("exclusivement réservé aux professionnels (B2B)", hero)
 
     def test_audit_followups_remove_gated_reveal_side_tab_and_width_motion(self) -> None:
         conversion_css = static_source("css/components/landing-conversion.css")
@@ -284,9 +289,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("@keyframes conversion-board-step-in", conversion_css)
         self.assertIn("@keyframes conversion-em-underline", conversion_css)
         self.assertIn("scroll-behavior: smooth", conversion_css)
-        self.assertIn(
-            'include "shop/partials/landing_footer.html"', template_source("shop/home.html")
-        )
+        self.assertIn('include "shop/partials/dtf/footer.html"', template_source("shop/home.html"))
         self.assertIn("conversion-footer", template_source("shop/partials/landing_footer.html"))
         self.assertIn('role="contentinfo"', template_source("shop/partials/landing_footer.html"))
         self.assertEqual(logo.count("<a "), 1)
@@ -850,7 +853,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("Méthode", source)
         self.assertIn("Pour qui", source)
         self.assertIn("Connexion", source)
-        self.assertIn("Demander un accès", source)
+        self.assertIn("Demander votre accès", source)
         self.assertNotIn("Contact", source)
         self.assertNotIn(">Équipe<", source)
         self.assertNotIn(">Commander<", source)
@@ -860,7 +863,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         source = template_source("components/nav/landing_header.html")
 
         self.assertIn('current_namespace != "prospects"', source)
-        self.assertIn("Demander un accès", source)
+        self.assertIn("Demander votre accès", source)
 
     def test_portal_header_uses_role_focused_labels(self) -> None:
         header = template_source("components/nav/portal_header.html")
@@ -1483,12 +1486,14 @@ class PortalUiCoherenceTests(SimpleTestCase):
             template_source("components/nav/landing_header.html"),
             template_source("components/nav/portal_header.html"),
             template_source("components/nav/auth_header.html"),
+            template_source("shop/partials/dtf/header.html"),
+            template_source("shop/partials/dtf/footer.html"),
         ]
 
         self.assertIn("ui-brand-lockup__mark", logo)
         self.assertIn("ui-brand-lockup__home", logo)
         self.assertIn("Prenium DTF", logo)
-        self.assertIn("via IDS supply", logo)
+        self.assertIn("By IDS.Supply", logo)
         self.assertIn("brand_home_url as resolved_brand_home_url", logo)
         self.assertIn("brand_home_href", template_source("components/nav/portal_header.html"))
         portal_header = template_source("components/nav/portal_header.html")
@@ -1509,7 +1514,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("product-login-card__intro", source)
         self.assertNotIn("product-login-heading", source)
         self.assertIn("Retrouvez vos commandes, vos fichiers et vos documents", source)
-        self.assertIn("Demander un accès professionnel", source)
+        self.assertIn("Demander votre accès", source)
         self.assertIn("Mot de passe oublié", source)
         self.assertIn("portal/partials/auth_support.html", source)
         for forbidden in ["client", "staff", "backend", "permissions", "droits"]:

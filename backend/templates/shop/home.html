@@ -1,40 +1,53 @@
 {% extends "base.html" %}
 {% load static %}
-
-{% block title %}Prenium DTF — production DTF B2B, fichier contrôlé et suivi atelier{% endblock %}
-
+{% block title %}Prenium DTF By IDS.Supply — DTF au mètre, impression professionnelle 8 couleurs{% endblock %}
 {% block extra_head %}
-<meta name="description" content="Production DTF réservée aux professionnels : contrôle prépresse, suivi atelier et expédition dans un portail B2B sécurisé. Demandez votre accès Prenium DTF.">
+<link rel="preload" href="{% static 'fonts/caveat/caveat-latin-variable.woff2' %}" as="font" type="font/woff2" crossorigin>
+<meta name="description" content="Impression DTF 8 couleurs réservée aux professionnels. Atelier en Bretagne près de Rennes, préparation des fichiers, commande en ligne et livraison partout en France.">
+<meta property="og:title" content="Prenium DTF By IDS.Supply — Votre DTF. Notre exigence.">
+<meta property="og:description" content="Impression DTF 8 couleurs, contrôle des fichiers et commande en ligne. Un service réservé aux professionnels.">
+<meta property="og:type" content="website">
+{% url 'home' as home_path %}{% static 'img/dtf/og-share.jpg' as og_image_path %}
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ home_path }}">
+<meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ home_path }}">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ og_image_path }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Planche DTF de cinq motifs multicolores sur film PET">
+<meta name="twitter:card" content="summary_large_image">
 {% endblock %}
-
-{% block body_class %}landing-saas ui-marketing-body landing-conversion-page{% endblock %}
-
+{% block body_class %}dtf-page{% endblock %}
 {% block surface_styles %}
-<link rel="stylesheet" href="{% static 'css/marketing.css' %}?v=20260823-brand-light-v14">
+<link rel="stylesheet" href="{% static 'css/marketing.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/dtf-landing.css' %}?v=20261025p">
+<link rel="stylesheet" href="{% static 'css/components/dtf-taste.css' %}?v=20261025t">
+<link rel="stylesheet" href="{% static 'css/components/dtf-editorial.css' %}?v=20261025-sections-2">
+<link rel="stylesheet" href="{% static 'css/components/dtf-premium.css' %}?v=20261026h">
 {% endblock %}
-
 {% block content %}
-<!--
-THESIS: Prenium DTF rend la production visible du fichier à l’expédition, sans empiler les promesses marketing attendues.
-OWN-WORLD: ivoire chaud, encre presque noire, corail signal, courbes généreuses, bordures franches et ombres souples.
-STORY: comprendre la promesse, voir le workflow, vérifier les preuves, se reconnaître dans un cas, lever ses doutes puis demander l’accès.
-FIRST VIEWPORT: promesse et deux actions à gauche; démonstration honnêtement étiquetée du suivi atelier à droite; action primaire immédiatement visible.
-FORM: landing éditoriale B2B ludique, direction verrouillée par le brief utilisateur; navigation hors lot.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
--->
-{% include "components/nav/landing_header.html" %}
-<main class="landing-main" id="main-content">
-  {% include "shop/partials/landing_hero.html" %}
-  {% include "shop/partials/landing_services.html" %}
-  {% include "shop/partials/landing_how_it_works.html" %}
-  {% include "shop/partials/landing_quality_proof.html" %}
-  {% include "shop/partials/landing_case_studies.html" %}
-  {% include "shop/partials/landing_faq.html" %}
-  {% include "shop/partials/landing_cta_final.html" %}
+{% include "shop/partials/dtf/header.html" %}
+<main id="main-content">
+  {% include "shop/partials/dtf/hero.html" %}
+  <span id="landing-services" aria-hidden="true"></span>
+  <span id="landing-how-it-works" aria-hidden="true"></span>
+  {% include "shop/partials/dtf/ordering.html" %}
+  {% include "shop/partials/dtf/pricing.html" %}
+  <span id="landing-cases" aria-hidden="true"></span>
+  {% include "shop/partials/dtf/gallery.html" %}
+  {% include "shop/partials/dtf/gamut.html" %}
+  {% include "shop/partials/dtf/analysis.html" %}
+  {% include "shop/partials/dtf/expertise.html" %}
+  {% include "shop/partials/dtf/faq.html" %}
+  {% include "shop/partials/dtf/final.html" %}
 </main>
-{% include "shop/partials/landing_footer.html" %}
+{% include "shop/partials/dtf/footer.html" with show_photo_credits=True %}
+{% if not request.user.is_authenticated %}<div class="dtf-sticky-cta" data-sticky-cta hidden><p>Tarif de base{% if dtf_offer.pricing %} <strong>{{ dtf_offer.price_per_m|floatformat:2 }}&nbsp;€ HT / m</strong>{% endif %}</p>{% include "shop/partials/dtf/cta.html" with button_class="dtf-button--small" %}</div>{% endif %}
 {% endblock %}
-
 {% block runtime_scripts %}
-<script type="module" src="{% static 'js/marketing.js' %}"></script>
+<script defer src="{% static 'vendor/hairline/kernel.js' %}?v=20261025p"></script>
+<script defer src="{% static 'js/dtf-hairline-adapter.js' %}?v=20261025p"></script>
+<script defer src="{% static 'js/dtf-transfer.js' %}?v=20261025p"></script>
+<script type="module" src="{% static 'js/dtf-landing.js' %}?v=20261026a"></script>
+<script type="module" src="{% static 'js/dtf-sticky-cta.js' %}?v=20261026b"></script>
 {% endblock %}

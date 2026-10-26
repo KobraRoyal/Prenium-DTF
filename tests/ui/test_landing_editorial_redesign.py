@@ -34,20 +34,28 @@ def test_services_page_uses_conversion_shell_and_preserves_service_copy() -> Non
 def test_home_keeps_one_landing_narrative_in_the_expected_order() -> None:
     home = read(LANDING_DIR / "home.html")
     partials = [
-        "landing_hero.html",
-        "landing_services.html",
-        "landing_how_it_works.html",
-        "landing_quality_proof.html",
-        "landing_case_studies.html",
-        "landing_faq.html",
-        "landing_cta_final.html",
+        "dtf/hero.html",
+        "dtf/ordering.html",
+        "dtf/pricing.html",
+        "dtf/gallery.html",
+        "dtf/gamut.html",
+        "dtf/analysis.html",
+        "dtf/expertise.html",
+        "dtf/faq.html",
+        "dtf/final.html",
     ]
-
     positions = [home.index(partial) for partial in partials]
-
     assert positions == sorted(positions)
-    assert "THESIS: Prenium DTF rend la production visible" in home
-    assert "components/nav/landing_header.html" in home
+    preparation = read(PARTIALS_DIR / "dtf" / "analysis.html")
+    for detail in ["details", "textile", "transparency"]:
+        assert f"dtf/{detail}.html" not in home
+        assert f"dtf/{detail}.html" in preparation
+    assert "dtf/header.html" in home
+    assert "dtf/footer.html" in home
+    assert "dtf/marquee.html" not in home
+    hero = read(PARTIALS_DIR / "dtf" / "hero.html")
+    assert hero.count('include "shop/partials/dtf/anatomy.html"') == 1
+    assert "dtf/anatomy.html" not in home
 
 
 def test_hero_has_two_actions_and_an_honestly_labelled_tracking_demo() -> None:

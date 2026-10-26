@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ legal_page.title }} — Prenium DTF By IDS.Supply{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, follow">{% endblock %}
+{% block body_class %}dtf-page dtf-legal-page{% endblock %}
+{% block surface_styles %}
+<link rel="stylesheet" href="{% static 'css/marketing.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/dtf-landing.css' %}?v=20261025p">
+<link rel="stylesheet" href="{% static 'css/components/dtf-taste.css' %}?v=20261025t">
+<link rel="stylesheet" href="{% static 'css/components/dtf-editorial.css' %}?v=20261025-sections-2">
+<link rel="stylesheet" href="{% static 'css/components/dtf-premium.css' %}?v=20261026h">
+{% endblock %}
+{% block content %}
+<header class="dtf-header">
+  <div class="dtf-shell dtf-header__inner">
+    {% include "components/brand/logo.html" with brand_home_href="home" brand_home_label="Prenium DTF By IDS.Supply — accueil" %}
+    <a class="dtf-text-link dtf-legal__back" href="{% url 'home' %}">Retour à l’accueil</a>
+  </div>
+</header>
+<main id="main-content" class="dtf-legal dtf-shell">
+  <nav class="dtf-legal__tabs" aria-label="Informations légales">
+    {% for page in legal_pages %}<a href="{% url page.url_name %}"{% if page.slug == legal_page.slug %} aria-current="page"{% endif %}>{{ page.title }}</a>{% endfor %}
+  </nav>
+  <article class="dtf-legal__body" aria-labelledby="legal-title">
+    <h1 id="legal-title">{{ legal_page.title }}</h1>
+    {% block legal_body %}{% endblock %}
+  </article>
+</main>
+{% include "shop/partials/dtf/footer.html" %}
+{% endblock %}
+{% block runtime_scripts %}{% endblock %}

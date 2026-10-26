@@ -1,0 +1,18 @@
+<section class="dtf-section dtf-gallery" id="realisations" aria-labelledby="gallery-title" data-photo-carousel><div class="dtf-shell">
+  <div class="dtf-section-head"><h2 id="gallery-title">Du motif<br>au textile.</h2><p>Typographies fines, aplats et dégradés : les détails qui signent votre marquage textile.</p></div>
+  <div class="dtf-photo-editorial" id="dtf-photo-track" data-photo-track tabindex="0" role="region" aria-label="Photographies de production, défilement horizontal">
+    {% include "shop/partials/dtf/photo.html" with photo_id="result-finished" title="La pièce finie" caption="Un vêtement personnalisé, photographié après la pose." %}
+    {% include "shop/partials/dtf/photo.html" with photo_id="result-type" title="Typographie fine" caption="Petits caractères et texture du textile, vus de près." %}
+    {% include "shop/partials/dtf/photo.html" with photo_id="result-multicolor" title="Motif multicolore" caption="Un visuel complet, avec ses nuances et ses détails." %}
+  </div>
+  <div class="dtf-carousel-navigation" data-photo-controls hidden>
+    <span class="dtf-carousel-counter" role="status" aria-live="polite" data-photo-counter></span>
+    <div class="dtf-carousel-arrows"><button type="button" data-photo-previous aria-label="Photos précédentes" aria-controls="dtf-photo-track" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><button type="button" data-photo-next aria-label="Photos suivantes" aria-controls="dtf-photo-track"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div>
+  </div>
+  </div>
+  <dialog class="dtf-lightbox" aria-labelledby="gallery-dialog-title" data-gallery-dialog>
+    <button type="button" class="dtf-lightbox__close" aria-label="Fermer l’aperçu">Fermer <span aria-hidden="true">×</span></button>
+    <div class="dtf-lightbox__content"><div data-gallery-media></div><h3 id="gallery-dialog-title">Photographie de production</h3><p data-gallery-caption></p></div>
+    <div class="dtf-lightbox__navigation"><button type="button" data-gallery-prev>Précédent</button><span data-gallery-counter aria-live="polite"></span><button type="button" data-gallery-next>Suivant</button></div>
+  </dialog>
+</section>

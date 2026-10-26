@@ -1,0 +1,14 @@
+{% load static %}
+<figure class="dtf-photo {{ photo_class }}" data-photo-slot="{{ photo_id }}">
+  {% if image_src %}
+    <button type="button" class="dtf-photo__frame dtf-photo__open" data-gallery="{{ title }}" data-gallery-caption="{{ caption }}" aria-label="Agrandir : {{ title }}">
+      <img src="{% static image_src %}" alt="{{ alt_text|default:title }}" width="{{ image_width|default:1200 }}" height="{{ image_height|default:800 }}" loading="lazy" decoding="async">
+    </button>
+    <figcaption>{{ caption }}</figcaption>
+  {% else %}
+    <div class="dtf-photo__frame dtf-photo__placeholder" role="img" aria-label="Emplacement photo : {{ title }}. Photographie IDS.Supply à venir.">
+      <i class="dtf-proof-inks" aria-hidden="true"></i>
+      <span>Photo à venir</span><strong>{{ title }}</strong>
+    </div>
+  {% endif %}
+</figure>

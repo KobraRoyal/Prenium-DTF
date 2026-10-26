@@ -1,0 +1,14 @@
+{% load static %}
+<section class="dtf-section dtf-analysis" id="preparation" aria-labelledby="analysis-title" data-analysis><div class="dtf-shell">
+  <div class="dtf-section-head"><h2 id="analysis-title">Le soin commence<br>dans le fichier.</h2><p>Contrôle du visuel, blanc adapté au textile et préparation de l’adhérence : chaque étape compte avant la pose.</p></div>
+  {% include "shop/partials/dtf/preparation_carousel.html" %}
+  <details class="dtf-prepress-demos" data-prepress-demos><summary>Voir les contrôles de préparation <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></summary>
+    <div class="dtf-prepress-demos__body">
+      <p class="dtf-caption">Simulations illustratives, adaptées selon le fichier et le textile.</p>
+      {% include "shop/partials/dtf/analysis_workstation.html" %}
+      {% include "shop/partials/dtf/details.html" %}
+      {% include "shop/partials/dtf/textile.html" %}
+      {% include "shop/partials/dtf/transparency.html" %}
+    </div>
+  </details>
+</div></section>

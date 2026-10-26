@@ -51,6 +51,7 @@ build/
 
 # Local agent and browser audit artifacts
 .impeccable/
+.taste-skill/
 .playwright-cli/
 output/
 

@@ -1,0 +1,25 @@
+{% load static %}
+<section class="dtf-hero dtf-shell" aria-labelledby="dtf-hero-title">
+  <div class="dtf-hero__copy">
+    <h1 id="dtf-hero-title"><span data-hero-line>Votre DTF.</span> <span data-hero-line>Notre exigence.</span></h1>
+    <p class="dtf-lead">Des transferts 8 couleurs pour les professionnels, imprimés près de Rennes. Vos fichiers contrôlés et préparés pour une impression nette, jusque dans les détails.</p>
+  </div>
+  {% include "shop/partials/dtf/anatomy.html" %}
+  <div class="dtf-hero__conversion">
+      {% if dtf_offer.pricing %}
+      <div class="dtf-hero__offer">
+        <p class="dtf-hero__price"><strong data-hero-price>{{ dtf_offer.price_per_m|floatformat:2 }}&nbsp;€</strong> <span>HT / m</span></p>
+        <p class="dtf-hero__volume" data-hero-volume aria-live="polite">Dégressif selon votre volume mensuel.</p>
+        {% if dtf_offer.tiers %}<div class="dtf-hero__tiers" role="group" aria-labelledby="hero-tiers-label" data-hero-tiers hidden><span id="hero-tiers-label">Par mois</span><button type="button" data-hero-tier="1" aria-pressed="true">1 m</button>{% for tier in dtf_offer.tiers %}<button type="button" data-hero-tier="{{ tier.minimum_monthly_linear_m|stringformat:'f' }}" aria-pressed="false">{{ tier.minimum_monthly_linear_m|floatformat:'-2' }} m</button>{% endfor %}</div>{% endif %}
+        <p class="dtf-hero__price-terms">Tarif de base au mètre · largeur {{ dtf_offer.width_cm }} cm. Hors transport et préparation.</p>
+      </div>
+      {% endif %}
+      <div class="dtf-hero__access-actions">
+        <div class="dtf-actions">
+        {% include "shop/partials/dtf/cta.html" %}
+        <a class="dtf-text-link" href="#tarifs">{% if dtf_offer.pricing %}Simuler mon tarif{% else %}Voir les tarifs{% endif %} <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></a>
+        </div>
+        {% if not request.user.is_authenticated %}<p class="dtf-hero__access">Service exclusivement réservé aux professionnels (B2B). Commandez après validation de votre compte.</p>{% include "shop/partials/dtf/access_facts.html" %}{% endif %}
+      </div>
+  </div>
+</section>

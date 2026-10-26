@@ -1,0 +1,28 @@
+<section class="dtf-section dtf-shell dtf-two-column" id="transparences" aria-labelledby="alpha-title" data-alpha>
+  <div><h3 id="alpha-title">Anticiper la transparence.</h3><p>Une ombre ou un dégradé transparent ne s’imprime pas comme un aplat opaque.</p><p>Comparez le fichier, son opacité et une préparation possible en points. Le rendu sur textile peut différer de l’écran.</p></div>
+  <div class="dtf-alpha-workspace"><div class="dtf-segmented" role="tablist" aria-label="Analyse des transparences" data-tabs><button role="tab" id="alpha-tab-0" aria-selected="true" aria-controls="alpha-panel-0">Visuel original</button><button role="tab" id="alpha-tab-1" aria-selected="false" tabindex="-1" aria-controls="alpha-panel-1">Carte d’opacité</button><button role="tab" id="alpha-tab-2" aria-selected="false" tabindex="-1" aria-controls="alpha-panel-2">Préparé pour DTF</button></div>
+    <div class="dtf-alpha-stage" data-alpha-state="0">
+      <svg viewBox="0 0 500 360" role="img" aria-label="Une feuille passe d’une couleur opaque à la transparence ; les vues suivantes montrent son opacité et une préparation en points">
+        <defs>
+          <linearGradient id="alpha-fade"><stop stop-color="#d87743"/><stop offset=".5" stop-color="#995c9f" stop-opacity=".65"/><stop offset="1" stop-color="#497caa" stop-opacity="0"/></linearGradient>
+          <linearGradient id="alpha-gray"><stop stop-color="#fff"/><stop offset=".5" stop-color="#a6a6a6"/><stop offset="1" stop-color="#000"/></linearGradient>
+          <linearGradient id="alpha-color"><stop stop-color="#d87743"/><stop offset=".5" stop-color="#995c9f"/><stop offset="1" stop-color="#497caa"/></linearGradient>
+          <pattern id="alpha-dots-0" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="4.95" fill="#fff"/></pattern>
+          <pattern id="alpha-dots-1" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="3.5" fill="#fff"/></pattern>
+          <pattern id="alpha-dots-2" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="3.1" fill="#fff"/></pattern>
+          <pattern id="alpha-dots-3" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="2.7" fill="#fff"/></pattern>
+          <pattern id="alpha-dots-4" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="2.2" fill="#fff"/></pattern>
+          <pattern id="alpha-dots-5" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="1.7" fill="#fff"/></pattern>
+          <pattern id="alpha-dots-6" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="1.1" fill="#fff"/></pattern>
+          <pattern id="alpha-dots-7" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="0.4" fill="#fff"/></pattern>
+          <mask id="alpha-point-mask"><rect x="65" width="46" height="360" fill="url(#alpha-dots-0)"/><rect x="111" width="46" height="360" fill="url(#alpha-dots-1)"/><rect x="157" width="46" height="360" fill="url(#alpha-dots-2)"/><rect x="203" width="46" height="360" fill="url(#alpha-dots-3)"/><rect x="249" width="46" height="360" fill="url(#alpha-dots-4)"/><rect x="295" width="46" height="360" fill="url(#alpha-dots-5)"/><rect x="341" width="46" height="360" fill="url(#alpha-dots-6)"/><rect x="387" width="46" height="360" fill="url(#alpha-dots-7)"/></mask>
+        </defs>
+        <path class="dtf-alpha-original" d="M65 225C105 90 270 55 430 92C405 251 250 296 65 225Z" fill="url(#alpha-fade)"/>
+        <path class="dtf-alpha-map" d="M65 225C105 90 270 55 430 92C405 251 250 296 65 225Z" fill="url(#alpha-gray)"/>
+        <g class="dtf-alpha-prepared"><g mask="url(#alpha-point-mask)"><path d="M65 225C105 90 270 55 430 92C405 251 250 296 65 225Z" fill="#fffdf7"/><path d="M65 225C105 90 270 55 430 92C405 251 250 296 65 225Z" fill="url(#alpha-color)"/></g></g>
+        <g class="dtf-alpha-key" fill="#1a1815" font-family="var(--ui-font-body)" font-size="15"><text x="65" y="322">Opaque</text><text x="430" y="322" text-anchor="end">Transparent</text><path d="M155 317h178m-6-4 6 4-6 4" fill="none" stroke="currentColor"/></g>
+      </svg>
+    </div>
+    <div class="dtf-alpha-description" data-tab-panels><p role="tabpanel" id="alpha-panel-0" aria-labelledby="alpha-tab-0" tabindex="0">Le damier indique la transparence du fichier : le fond apparaît progressivement à travers la feuille.</p><p role="tabpanel" id="alpha-panel-1" aria-labelledby="alpha-tab-1" tabindex="0" hidden>Blanc : opaque. Noir : transparent. Les gris montrent les opacités intermédiaires du canal alpha.</p><p role="tabpanel" id="alpha-panel-2" aria-labelledby="alpha-tab-2" tabindex="0" hidden>Exemple de trame avec une base blanche sous les points couleur. L’atelier détermine la préparation selon le fichier ; ce schéma ne prédit pas le rendu final.</p></div>
+  </div>
+</section>

@@ -1,0 +1,31 @@
+{% load static %}
+  <div class="dtf-workstation"><div class="dtf-workstation__bar"><span>Contrôle du fichier</span></div>
+    <div class="dtf-workstation__body">
+      <div class="dtf-analysis__canvas" data-analysis-canvas data-analysis-scene data-inspect="0">
+        <svg class="dtf-analysis-art" viewBox="0 0 500 420" role="img" aria-label="Exemple floral : un trait fin à gauche, une ombre translucide en bas et un bord couleur à droite">
+          <defs><linearGradient id="analysis-shadow"><stop stop-color="#2f4965" stop-opacity=".5"/><stop offset="1" stop-color="#2f4965" stop-opacity="0"/></linearGradient></defs>
+          <ellipse cx="300" cy="320" rx="125" ry="28" fill="url(#analysis-shadow)"/>
+          <image href="{% static 'img/dtf/expression.svg' %}" x="65" y="0" width="370" height="370"/>
+          <g fill="none" stroke="#315d46"><path d="M100 305q5-65 65-82M100 305q-45-38-35-80" stroke-width="1.2"/><path d="M100 305v30" stroke-width="3"/></g>
+          <text x="245" y="392" text-anchor="middle" fill="#1a1815" font-family="var(--ui-font-display)" font-size="24" letter-spacing="5">FLORA</text>
+          <g class="dtf-analysis-mark" fill="none" stroke="#1a1815" stroke-width="1.4" stroke-dasharray="4 4"><circle data-mark="0" cx="103" cy="280" r="28"/><ellipse data-mark="1" cx="330" cy="320" rx="43" ry="23"/><circle data-mark="2" cx="365" cy="200" r="26"/></g>
+          <g class="dtf-analysis-detection" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle id="analysis-detect-detail" pathLength="1" cx="103" cy="280" r="32"/>
+            <ellipse id="analysis-detect-alpha" pathLength="1" cx="330" cy="320" rx="48" ry="28"/>
+            <circle id="analysis-detect-edge" pathLength="1" cx="365" cy="200" r="30"/>
+          </g>
+        </svg>
+        <div id="analysis-scan-line" class="dtf-scan-line" aria-hidden="true"></div>
+        <button type="button" class="dtf-hotspot dtf-hotspot--detail is-active" data-analysis-pick="0" aria-controls="analysis-panel-0" aria-pressed="true">Trait fin</button>
+        <button type="button" class="dtf-hotspot dtf-hotspot--alpha" data-analysis-pick="1" aria-controls="analysis-panel-1" aria-pressed="false">Ombre</button>
+        <button type="button" class="dtf-hotspot dtf-hotspot--edge" data-analysis-pick="2" aria-controls="analysis-panel-2" aria-pressed="false">Contour</button>
+      </div>
+      <div class="dtf-analysis__info"><div class="dtf-segmented" role="tablist" aria-label="Zones à examiner" data-tabs><button role="tab" id="analysis-tab-0" aria-controls="analysis-panel-0" aria-selected="true">Détails fins</button><button role="tab" id="analysis-tab-1" aria-controls="analysis-panel-1" aria-selected="false" tabindex="-1">Transparences</button><button role="tab" id="analysis-tab-2" aria-controls="analysis-panel-2" aria-selected="false" tabindex="-1">Contours</button></div>
+        <div data-tab-panels>
+          <div role="tabpanel" id="analysis-panel-0" aria-labelledby="analysis-tab-0" tabindex="0"><h3>Traits fins et petits caractères.</h3><p>Un renfort local peut être nécessaire sur un trait isolé. Le reste du dessin conserve ses proportions.</p><a class="dtf-text-link" href="#details-fins">Voir le détail <span aria-hidden="true">↓</span></a></div>
+          <div role="tabpanel" id="analysis-panel-1" aria-labelledby="analysis-tab-1" tabindex="0" hidden><h3>Ombres et dégradés.</h3><p>Une zone translucide à l’écran demande une préparation spécifique. L’atelier examine son opacité avant de préparer le blanc.</p><a class="dtf-text-link" href="#transparences">Explorer la transparence <span aria-hidden="true">↓</span></a></div>
+          <div role="tabpanel" id="analysis-panel-2" aria-labelledby="analysis-tab-2" tabindex="0" hidden><h3>Contours et sous-couche blanche.</h3><p>Le blanc peut être réduit vers l’intérieur pour limiter les liserés. Une correction du bord couleur est une opération distincte.</p><a class="dtf-text-link" href="#couleur-textile">Changer de textile <span aria-hidden="true">↓</span></a></div>
+        </div>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,13 @@
+{% url 'home' as home_url %}
+<footer class="dtf-footer"><div class="dtf-shell">
+  <div class="dtf-footer__top">
+    <div class="dtf-footer__brand">{% include "components/brand/logo.html" with brand_home_href="home" brand_home_label="Prenium DTF By IDS.Supply — accueil" %}<p>Imprimé en Bretagne.<br>Livré partout en France.</p></div>
+    <nav class="dtf-footer__nav" aria-label="Pied de page">
+      <div><p class="dtf-footer__heading">Découvrir</p><a href="{{ home_url }}#technologie">La technologie</a><a href="{{ home_url }}#tarifs">Les tarifs</a><a href="{{ home_url }}#faq">Questions fréquentes</a><a href="{% url 'portal:login' %}">Espace professionnel</a></div>
+      <div><p class="dtf-footer__heading">Informations</p><a href="{% url 'legal_terms' %}">Conditions commerciales</a><a href="{% url 'legal_notice' %}">Mentions légales</a><a href="{% url 'legal_privacy' %}">Confidentialité</a>{% if footer_contact_email %}<a href="mailto:{{ footer_contact_email }}">{{ footer_contact_email }}</a>{% endif %}</div>
+    </nav>
+  </div>
+  <p class="dtf-footer__wordmark" aria-hidden="true">Prenium DTF</p>
+  <div class="dtf-footer__bottom"><span>© {% now "Y" %} Prenium DTF By IDS.Supply</span><span>Un service exclusivement réservé aux professionnels (B2B).</span><a href="https://ids.supply" target="_blank" rel="noopener noreferrer">IDS.Supply <span aria-hidden="true">↗</span><span class="dtf-sr-only"> (nouvel onglet)</span></a></div>
+  {% if show_photo_credits %}<p class="dtf-footer__credits">Photographies : <a href="https://commons.wikimedia.org/wiki/File:AB_9_-_RENNES_-_La_Vilaine.JPG" target="_blank" rel="noopener noreferrer">« RENNES – La Vilaine »<span class="dtf-sr-only"> (nouvel onglet)</span></a>, carte postale numérisée par Claude_villetaneuse, domaine public ; <a href="https://commons.wikimedia.org/wiki/File:HASHIMA_HP54_at_TechShop_Ark_Hills.jpg" target="_blank" rel="noopener noreferrer">« HASHIMA HP54 »<span class="dtf-sr-only"> (nouvel onglet)</span></a>, par Pocsywe, CC0. Via Wikimedia Commons.</p>{% endif %}
+</div></footer>

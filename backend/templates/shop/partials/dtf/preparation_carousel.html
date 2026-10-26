@@ -1,0 +1,21 @@
+<div class="dtf-preparation" data-preparation-carousel role="region" aria-roledescription="carrousel" aria-label="Les étapes de préparation du transfert">
+  <div class="dtf-preparation__track" data-preparation-track tabindex="0" role="group" aria-label="Étapes de préparation, défilement horizontal">
+    <div class="dtf-preparation__slide" data-preparation-slide role="group" aria-roledescription="diapositive" aria-label="1 sur 3 : le fichier">
+      {% include "shop/partials/dtf/prep_drawing.html" with src="img/dtf/expression.svg" alt_text="Dessin du motif floral en huit couleurs, tel qu’il est contrôlé avant impression" %}
+      <div class="dtf-preparation__copy"><h3>Contrôler<br>avant d’imprimer.</h3><p>Dimensions, détails fins, transparences : nous identifions les points à reprendre avant impression.</p></div>
+    </div>
+    <div class="dtf-preparation__slide" data-preparation-slide role="group" aria-roledescription="diapositive" aria-label="2 sur 3 : le blanc">
+      {% include "shop/partials/dtf/prep_drawing.html" with src="img/dtf/flower-white.svg" alt_text="Dessin de la sous-couche blanche, même silhouette que le motif" %}
+      <div class="dtf-preparation__copy"><h3>Le blanc adapté<br>à votre textile.</h3><p>La sous-couche est ajustée au visuel et à la couleur du support pour soutenir les couleurs et privilégier un toucher souple.</p></div>
+    </div>
+    <div class="dtf-preparation__slide" data-preparation-slide role="group" aria-roledescription="diapositive" aria-label="3 sur 3 : l’adhésif">
+      {% include "shop/partials/dtf/prep_drawing.html" with src="img/dtf/flower-powder.svg" alt_text="Dessin de la poudre thermofusible déposée sur la silhouette du motif" %}
+      <div class="dtf-preparation__copy"><h3>Préparer<br>l’adhérence.</h3><p>La poudre thermofusible est déposée sur l’encre humide, puis cuite pour préparer la fixation au pressage.</p></div>
+    </div>
+  </div>
+  <div class="dtf-carousel-navigation" data-preparation-controls hidden>
+    <div class="dtf-preparation__dots" role="group" aria-label="Choisir une étape"><button type="button" data-preparation-pick="0" aria-label="Étape 1 : vérifier le fichier" aria-pressed="true"></button><button type="button" data-preparation-pick="1" aria-label="Étape 2 : adapter le blanc" aria-pressed="false"></button><button type="button" data-preparation-pick="2" aria-label="Étape 3 : préparer l’adhésif" aria-pressed="false"></button></div>
+    <span class="dtf-carousel-counter" role="status" aria-live="polite" data-preparation-counter>1 / 3</span>
+    <div class="dtf-carousel-arrows"><button type="button" data-preparation-prev aria-label="Étape précédente" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><button type="button" data-preparation-next aria-label="Étape suivante"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div>
+  </div>
+</div>

@@ -27,28 +27,33 @@ def test_marketing_pages_are_accessible_for_anonymous():
     prospect_url = reverse("prospects:step1")
     login_url = reverse("portal:login")
 
-    # Local / tests : landing marketing intacte.
+    # Public DTF surface, with honest simulations and verified portal entrypoints.
     assert home.status_code == 200
-    assert "Prenium DTF" in home_html
-    assert "production DTF B2B" in home_html
-    assert "Du fichier au transfert" in home_html
+    assert "Prenium DTF By IDS.Supply" in home_html
+    assert "Votre DTF." in home_html
+    assert "Notre exigence." in home_html
+    assert "Vos fichiers contrôlés et préparés pour une impression nette" in home_html
     assert "dtf-brutalist-workshop.webp" not in home_html
-    assert "Ouvrir mon accès pro" in home_html
-    assert "Voir le process" in home_html
+    assert "Demander mon accès pro" in home_html
+    assert "Simuler mon tarif" in home_html
     assert "Connexion" in home_html
-    assert "Transferts DTF prêts atelier" in home_html
-    assert "Fichiers fiabilisés avant impression" in home_html
-    assert "Votre métier change. L’exigence reste." in home_html
-    assert 'id="landing-services"' in home_html
-    assert 'id="landing-cases"' in home_html
-    assert 'id="landing-how-it-works"' in home_html
-    assert 'id="landing-quality"' in home_html
-    assert 'id="landing-faq"' in home_html
-    assert 'id="landing-cta-final"' in home_html
-    assert "numéro de TVA intracommunautaire" in home_html
+    for section in (
+        "technologie",
+        "preparation",
+        "details-fins",
+        "couleur-textile",
+        "transparences",
+        "realisations",
+        "commander",
+        "tarifs",
+    ):
+        assert f'id="{section}"' in home_html
+    assert "Photo à venir" in home_html
+    assert "data-photo-slot" in home_html
+    assert "6 € HT" in home_html
     assert f'href="{prospect_url}"' in home_html
     assert f'href="{login_url}"' in home_html
-    assert "js/marketing.js" in home_html
+    assert "js/dtf-landing.js" in home_html
     assert "vendor/htmx-1.9.12.min.js" not in home_html
     assert "vendor/alpinejs-3.14.3.min.js" not in home_html
     assert "<form" not in home_html
@@ -68,7 +73,7 @@ def test_marketing_pages_are_accessible_for_anonymous():
     assert 'id="services-use-cases"' in services_html
     assert 'id="services-cta-final"' in services_html
     assert "impression dtf premium ou préparation fichier" in services_html.lower()
-    assert "faire optimiser un fichier" in services_html.lower()
+    assert "demander votre accès" in services_html.lower()
     assert "Déjà client ? Connexion" in services_html
     assert "Impression DTF premium" in services_html
     assert "Préparation de fichiers DTF" in services_html

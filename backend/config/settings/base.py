@@ -278,6 +278,23 @@ PASSWORD_RESET_EMAIL_MAX_ATTEMPTS = env_int("PASSWORD_RESET_EMAIL_MAX_ATTEMPTS",
 PASSWORD_RESET_EMAIL_WINDOW_SECONDS = env_int("PASSWORD_RESET_EMAIL_WINDOW_SECONDS", 3600)
 PASSWORD_RESET_TIMEOUT = env_int("PASSWORD_RESET_TIMEOUT", 86400)
 SUPPORT_CONTACT_EMAIL = os.environ.get("SUPPORT_CONTACT_EMAIL", "").strip()
+# Public legal notice (LCEN). Empty values render as visible "à compléter" markers.
+LEGAL_IDENTITY = {
+    key: os.environ.get(f"LEGAL_{key.upper()}", "").strip()
+    for key in (
+        "company_name",
+        "legal_form",
+        "share_capital",
+        "head_office",
+        "registration",
+        "vat_number",
+        "publication_director",
+        "contact_email",
+        "contact_phone",
+        "host_name",
+        "host_address",
+    )
+}
 PROSPECT_RATE_LIMIT_MAX_ATTEMPTS = env_int("PROSPECT_RATE_LIMIT_MAX_ATTEMPTS", 5)
 PROSPECT_RATE_LIMIT_WINDOW_SECONDS = env_int("PROSPECT_RATE_LIMIT_WINDOW_SECONDS", 3600)
 PROSPECT_RATE_LIMIT_TRUST_X_FORWARDED_FOR = env_bool(

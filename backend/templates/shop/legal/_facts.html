@@ -1,0 +1,1 @@
+<dl class="dtf-legal__facts">{% for fact in facts %}<div><dt>{{ fact.label }}</dt><dd>{% if fact.missing %}<span class="dtf-legal__missing">À compléter</span>{% else %}{{ fact.value|linebreaksbr }}{% endif %}</dd></div>{% endfor %}</dl>

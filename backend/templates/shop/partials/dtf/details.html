@@ -1,0 +1,9 @@
+<section class="dtf-section dtf-shell dtf-two-column" id="details-fins" aria-labelledby="details-title" data-comparison>
+  <div class="dtf-detail-copy"><h3 id="details-title">Un renfort local.</h3><p>Comparez la nervure centrale : elle seule reçoit un léger renfort. Les autres lignes gardent leurs proportions.</p><div class="dtf-detail-modes" role="group" aria-label="Comparer la préparation"><button type="button" data-compare-to="0">Fichier original</button><button type="button" data-compare-to="100">Préparation ciblée</button></div></div>
+  <div class="dtf-comparison"><div class="dtf-comparison__labels"><span>Trait d’origine</span><span>Renfort local</span></div>
+    <div class="dtf-comparison__stage dtf-fabric" style="--compare:50%">
+      {% include "shop/partials/dtf/fine_detail_art.html" %}
+      <div class="dtf-comparison__prepared">{% include "shop/partials/dtf/fine_detail_art.html" with prepared=True %}</div><div class="dtf-comparison__handle" aria-hidden="true"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 8-4 4 4 4m8-8 4 4-4 4M4 12h16"/></svg></span></div>
+    </div><label class="dtf-range-label" for="detail-comparison">Déplacer la séparation <output id="detail-comparison-value">50 % de la vue préparée</output></label><input id="detail-comparison" type="range" min="0" max="100" value="50" aria-describedby="detail-comparison-value">
+  </div>
+</section>

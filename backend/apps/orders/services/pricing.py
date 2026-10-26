@@ -101,7 +101,8 @@ class OrderPricingService:
             raise ValidationError(missing_message)
         return service
 
-    def get_default_dtf_service(self) -> CatalogService:
+    def get_default_dtf_service(self, *, bootstrap: bool = True) -> CatalogService:
+        """Resolve the shared default; public read paths disable the lazy bootstrap."""
         try:
             return self._pick_preferred_catalog_service(
                 queryset=CatalogService.objects.active().filter(
@@ -113,6 +114,8 @@ class OrderPricingService:
                 prefer_seed_fallback=False,
             )
         except ValidationError:
+            if not bootstrap:
+                raise
             self.catalog_bootstrap.ensure_default_services()
             return self._pick_preferred_catalog_service(
                 queryset=CatalogService.objects.active().filter(

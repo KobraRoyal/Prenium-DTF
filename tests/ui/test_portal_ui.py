@@ -965,7 +965,7 @@ def test_login_page_uses_minimal_brand_shell_without_internal_roles():
     assert "Retour au site" in body
     assert "Email professionnel" in body
     assert "Retrouvez vos commandes, vos fichiers et vos documents" in body
-    assert "Demander un accès professionnel" in body
+    assert "Demander votre accès" in body
     assert "data-product-menu-toggle" not in body
     assert "portal-primary-nav" not in body
     assert "Commandes et fichiers" not in body

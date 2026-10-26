@@ -1,0 +1,24 @@
+{% load static %}
+<section class="dtf-section dtf-shell dtf-ordering" id="commander" aria-labelledby="ordering-title" data-ordering>
+  <div class="dtf-section-head"><h2 id="ordering-title">Commandez<br>à votre façon.</h2><p>Déposez vos visuels séparément ou composez votre planche dans le Studio. Deux modes de commande, selon les conditions de votre compte.</p></div>
+  <div class="dtf-ordering-demo">
+    <div class="dtf-ordering-demo__nav" role="tablist" aria-label="Modes de commande" data-tabs>
+      <button type="button" role="tab" id="ordering-tab-file" aria-controls="ordering-panel-file" aria-selected="true"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M6 24V4h11l5 5v15ZM17 4v6h5M14 20v-7m-3 3 3-3 3 3"/></svg><span>Par fichier</span></button>
+      <button type="button" role="tab" id="ordering-tab-studio" aria-controls="ordering-panel-studio" aria-selected="false" tabindex="-1"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M4 5h20v18H4Zm4 4h7v7H8Zm11 0h2v11M8 20h7"/></svg><span>Gang Sheet</span></button>
+    </div>
+    <div class="dtf-ordering-demo__panels" data-tab-panels>
+      <div role="tabpanel" id="ordering-panel-file" aria-labelledby="ordering-tab-file" tabindex="0">
+        <div class="dtf-ordering-demo__description"><h3>Chaque visuel,<br>bien cadré.</h3><p>Dimensions, quantités, couleur du textile : précisez votre besoin pour chaque fichier.</p><p>Vous fournissez les visuels ; l’atelier prend en charge leur préparation.</p></div>
+        <div class="dtf-screen-frame"><div class="dtf-screen-frame__bar"><span>Capture de démonstration</span></div><button type="button" class="dtf-screen-capture" data-product-screen data-screen-title="Commande par fichiers" aria-label="Agrandir la capture de commande par fichiers"><img src="{% static 'img/dtf/screens/order-by-file.webp' %}" alt="Capture de démonstration : deux visuels avec leurs quantités, couleurs textile et contrôles de qualité" width="1080" height="478" loading="lazy"><span>Agrandir la capture <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 8V4h4m4 0h4v4M4 12v4h4m4 0h4v-4"/></svg></span></button></div>
+      </div>
+      <div role="tabpanel" id="ordering-panel-studio" aria-labelledby="ordering-tab-studio" tabindex="0" hidden>
+        <div class="dtf-ordering-demo__description"><h3>Votre planche.<br>À votre main.</h3><p>Une Gang Sheet regroupe plusieurs motifs sur une seule planche d’impression. Importez et placez vos motifs dans le Studio, puis vérifiez votre composition.</p><p>Pas de format de planche imposé : choisissez la longueur utile, dans les dimensions disponibles du Studio.</p></div>
+        <div class="dtf-screen-frame"><div class="dtf-screen-frame__bar"><span>Capture de démonstration</span></div><button type="button" class="dtf-screen-capture" data-product-screen data-screen-title="Studio Gang Sheet" aria-label="Agrandir la capture du Studio Gang Sheet"><img src="{% static 'img/dtf/screens/gang-sheet-studio.webp' %}" alt="Capture de démonstration du Studio : import des fichiers, six motifs placés sur la planche et panneau de contrôle" width="1360" height="803" loading="lazy"><span>Agrandir la capture <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 8V4h4m4 0h4v4M4 12v4h4m4 0h4v-4"/></svg></span></button></div>
+      </div>
+    </div>
+  </div>
+  <div class="dtf-ordering-footer">
+    <div class="dtf-ordering__bottom"><p>Le règlement comptant utilise le Studio Gang Sheet. Les autres parcours disponibles sont précisés dans votre espace.</p><a class="dtf-text-link" href="#tarifs">Estimer mon budget <span aria-hidden="true">→</span></a></div>
+  </div>
+  <dialog class="dtf-screen-dialog" aria-labelledby="screen-dialog-title"><div class="dtf-screen-dialog__bar"><div><h3 id="screen-dialog-title">Capture du portail</h3><p>Données et montants de démonstration</p></div><div class="dtf-screen-dialog__actions"><button type="button" data-screen-zoom aria-pressed="false">Taille réelle</button><button type="button" data-close-screen aria-label="Fermer la capture">Fermer <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M5 15 15 5"/></svg></button></div></div><div class="dtf-screen-dialog__image"><img src="{% static 'img/dtf/screens/order-by-file.webp' %}" alt="Capture de démonstration de la commande par fichiers" width="1080" height="478" loading="lazy" data-screen-image></div></dialog>
+</section>

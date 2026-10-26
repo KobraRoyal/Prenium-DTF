@@ -3,6 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 const vendorDirectory = new URL("../static_src/vendor/", import.meta.url);
 const fontDirectory = new URL("fonts/", vendorDirectory);
 const pdfJsDirectory = new URL("pdfjs/", vendorDirectory);
+const gsapDirectory = new URL("gsap/", vendorDirectory);
 
 async function copyPdfJsWithoutSourceMap(source, destination) {
   const content = await readFile(source, "utf8");
@@ -17,7 +18,16 @@ async function copyJsWithoutSourceMap(source, destination) {
 await mkdir(vendorDirectory, { recursive: true });
 await mkdir(fontDirectory, { recursive: true });
 await mkdir(pdfJsDirectory, { recursive: true });
+await mkdir(gsapDirectory, { recursive: true });
 await Promise.all([
+  copyJsWithoutSourceMap(
+    new URL("../node_modules/gsap/dist/gsap.min.js", import.meta.url),
+    new URL("gsap-3.15.0.min.js", gsapDirectory),
+  ),
+  copyFile(
+    new URL("../node_modules/gsap/README.md", import.meta.url),
+    new URL("README.md", gsapDirectory),
+  ),
   copyFile(
     new URL("../node_modules/htmx.org/dist/htmx.min.js", import.meta.url),
     new URL("htmx-1.9.12.min.js", vendorDirectory),

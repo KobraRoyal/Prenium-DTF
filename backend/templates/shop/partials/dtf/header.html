@@ -1,0 +1,7 @@
+<header class="dtf-header">
+  <div class="dtf-shell dtf-header__inner">
+    {% include "components/brand/logo.html" with brand_home_href="home" brand_home_label="Prenium DTF By IDS.Supply — accueil" %}
+    <button class="dtf-menu" type="button" aria-expanded="false" aria-controls="dtf-navigation">Menu <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 8h18M3 16h18"/></svg></button>
+    <nav id="dtf-navigation" class="dtf-nav" aria-label="Navigation principale"><a href="#commander">Commander</a><a href="#tarifs">Tarifs</a><a href="#couleurs">8 encres</a><a href="#preparation">Préparation</a><a class="dtf-nav__login" href="{% url 'portal:login' %}">Connexion</a>{% include "shop/partials/dtf/cta.html" with label="Mon espace professionnel" button_class="dtf-button--small" %}</nav>
+  </div>
+</header>

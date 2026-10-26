@@ -94,6 +94,8 @@ body .ui-brand-lockup__name:hover {
 }
 
 body .ui-brand-lockup__subtitle {
+  text-transform: none;
+  letter-spacing: 0.025em;
   color: #6f675a !important;
 }
 

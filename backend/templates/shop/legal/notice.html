@@ -1,0 +1,10 @@
+{% extends "shop/legal/base.html" %}
+{% block legal_body %}
+<p class="dtf-legal__lead">Informations prévues par l’article 6 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l’économie numérique.</p>
+{% if not legal.is_complete %}<p class="dtf-legal__notice" role="note">Certaines informations sont en cours de renseignement.</p>{% endif %}
+<section aria-labelledby="notice-publisher"><h2 id="notice-publisher">Éditeur du site</h2>{% include "shop/legal/_facts.html" with facts=legal.publisher %}</section>
+<section aria-labelledby="notice-contact"><h2 id="notice-contact">Contact</h2>{% include "shop/legal/_facts.html" with facts=legal.contact %}</section>
+<section aria-labelledby="notice-host"><h2 id="notice-host">Hébergement</h2>{% include "shop/legal/_facts.html" with facts=legal.host %}</section>
+<section aria-labelledby="notice-ip"><h2 id="notice-ip">Propriété intellectuelle</h2><p>Les textes, schémas, illustrations et éléments graphiques de ce site sont la propriété de leur éditeur, sauf mention contraire. Toute reproduction sans autorisation préalable est interdite. Les fichiers déposés par les clients restent leur propriété.</p></section>
+<section aria-labelledby="notice-data"><h2 id="notice-data">Données personnelles</h2><p>Le traitement des données collectées est décrit dans la page <a href="{% url 'legal_privacy' %}">Confidentialité</a>.</p></section>
+{% endblock %}

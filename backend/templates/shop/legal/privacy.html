@@ -1,0 +1,18 @@
+{% extends "shop/legal/base.html" %}
+{% block legal_body %}
+<p class="dtf-legal__lead">Comment nous traitons les données des professionnels qui demandent un accès et utilisent le portail.</p>
+<section aria-labelledby="privacy-controller"><h2 id="privacy-controller">Responsable du traitement</h2><p>L’éditeur du site, identifié dans les <a href="{% url 'legal_notice' %}">mentions légales</a>.</p></section>
+<section aria-labelledby="privacy-data"><h2 id="privacy-data">Données collectées</h2><ul>
+  <li><strong>Demande d’accès</strong> : nom, prénom, e-mail et téléphone professionnels, société, adresse de facturation, SIREN, numéro de TVA et informations sur votre activité et vos volumes.</li>
+  <li><strong>Portail professionnel</strong> : compte utilisateur, commandes, fichiers déposés, adresses de livraison, facturation et suivi d’expédition.</li>
+</ul></section>
+<section aria-labelledby="privacy-purposes"><h2 id="privacy-purposes">Finalités et bases légales</h2><ul>
+  <li>Étudier votre demande d’accès et vous recontacter, avec votre accord donné dans le formulaire.</li>
+  <li>Exécuter vos commandes : contrôle des fichiers, production, expédition et facturation (exécution du contrat).</li>
+  <li>Respecter nos obligations comptables et fiscales (obligation légale).</li>
+</ul></section>
+<section aria-labelledby="privacy-recipients"><h2 id="privacy-recipients">Destinataires</h2><p>Les équipes habilitées de l’atelier et, pour l’expédition, les prestataires de transport. Les données d’un client ne sont jamais accessibles aux autres clients du portail.</p></section>
+<section aria-labelledby="privacy-retention"><h2 id="privacy-retention">Durées de conservation</h2><p class="dtf-legal__notice" role="note">Les durées de conservation par catégorie de données sont en cours de renseignement.</p></section>
+<section aria-labelledby="privacy-cookies"><h2 id="privacy-cookies">Cookies</h2><p>Le site n’utilise que les cookies nécessaires à son fonctionnement : session de connexion et protection des formulaires (CSRF). Aucun cookie de mesure d’audience ni de publicité n’est déposé.</p></section>
+<section aria-labelledby="privacy-rights"><h2 id="privacy-rights">Vos droits</h2><p>Vous disposez d’un droit d’accès, de rectification, d’effacement, de limitation, d’opposition et de portabilité de vos données{% if legal.contact_email %}, à exercer à l’adresse <a href="mailto:{{ legal.contact_email }}">{{ legal.contact_email }}</a>{% else %} (adresse de contact : <span class="dtf-legal__missing">À compléter</span>){% endif %}. Vous pouvez également saisir la CNIL (cnil.fr).</p></section>
+{% endblock %}

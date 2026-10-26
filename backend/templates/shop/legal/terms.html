@@ -1,0 +1,20 @@
+{% extends "shop/legal/base.html" %}
+{% block legal_body %}
+<p class="dtf-legal__lead">Les conditions commerciales publiées sur ce site. Les conditions de votre compte et vos éventuels accords personnalisés prévalent.</p>
+<section aria-labelledby="terms-access"><h2 id="terms-access">Un service réservé aux professionnels</h2><p>Prenium DTF By IDS.Supply s’adresse exclusivement aux professionnels (B2B). L’accès au portail de commande est ouvert après une demande d’accès et la validation du compte par notre équipe.</p></section>
+<section aria-labelledby="terms-prices"><h2 id="terms-prices">Prix</h2><ul>
+  <li>Les prix sont exprimés en euros hors taxes.</li>
+  {% if dtf_offer.pricing %}<li>Tarif de base : {{ dtf_offer.price_per_m|floatformat:2 }} € HT par mètre linéaire, sur une largeur d’impression de {{ dtf_offer.width_cm }} cm, calculé à partir du tarif catalogue au m².</li>{% endif %}
+  <li>Le transport est facturé en sus ; ses options et frais sont précisés lors de la commande.</li>
+  <li>Un coût de traitement de 6 € HT pourra être appliqué si le ou les fichiers fournis ne sont pas conformes.</li>
+  <li>Les simulations du site sont des estimations, sans valeur de devis. Le montant applicable est celui affiché dans votre espace avant validation de la commande.</li>
+</ul></section>
+<section aria-labelledby="terms-discounts"><h2 id="terms-discounts">Remises de volume</h2><ul>
+  <li><strong>Encours</strong> (facturation mensuelle) : la remise porte sur l’ensemble du volume DTF éligible du mois.</li>
+  <li><strong>Comptant</strong> (paiement à la commande) : le palier dépend des commandes payées du mois et de la commande en cours, sans rétroactivité.</li>
+</ul>
+{% if dtf_offer.tiers %}<table class="dtf-legal__table"><caption>Grille standard de remise mensuelle</caption><thead><tr><th scope="col">Volume mensuel</th><th scope="col">Remise</th></tr></thead><tbody>{% for tier in dtf_offer.tiers %}<tr><td>Dès {{ tier.minimum_monthly_linear_m|floatformat:'-2' }} m</td><td>−{{ tier.discount_percent|floatformat:'-2' }} %</td></tr>{% endfor %}</tbody></table>{% endif %}
+</section>
+<section aria-labelledby="terms-files"><h2 id="terms-files">Fichiers et pose</h2><p>Le client fournit des fichiers dont il détient les droits. La tenue après la pose dépend du textile, des réglages de la presse, de la pose et de l’entretien : suivez les consignes fournies et réalisez un essai sur votre support avant de lancer une série.</p></section>
+<section aria-labelledby="terms-cgv"><h2 id="terms-cgv">Conditions générales de vente</h2><p class="dtf-legal__notice" role="note">Les conditions générales de vente complètes sont en cours de rédaction : délais, paiement, réclamations, responsabilité et droit applicable.</p></section>
+{% endblock %}
