@@ -19,7 +19,10 @@ from apps.portal.views_common import (
 from apps.portal.views_staff import StaffOrderContextMixin
 from apps.uploads.models import OrderUploadDriveSync, OrderUploadReview
 from apps.uploads.services.assets import AssetService
-from apps.uploads.services.production_specs import OrderUploadProductionSpecService
+from apps.uploads.services.production_specs import (
+    OrderUploadProductionSpecService,
+    listed_visuals,
+)
 from apps.uploads.services.reviews import (
     OrderUploadReviewService,
     OrderUploadReviewTargetNotFound,
@@ -40,7 +43,9 @@ def _inspection_context(request, *, order, form_error: str = "", error_upload_id
     has_upload_view_permission = request.user.has_perm("uploads.view_orderupload")
     review_counter = Counter()
     automatic_attention_count = 0
+    visual_line_count = 0
     for upload in uploads:
+        visual_line_count += len(listed_visuals(upload))
         upload.production_specs = production_spec_service.serialize(order_upload=upload)
         drive_sync = getattr(upload, "drive_sync", None)
         upload.drive_hd_url = (
@@ -62,6 +67,7 @@ def _inspection_context(request, *, order, form_error: str = "", error_upload_id
     return {
         "order": order,
         "uploads": uploads,
+        "visual_line_count": visual_line_count,
         "automatic_attention_count": automatic_attention_count,
         "pending_review_count": review_counter[OrderUploadReview.Status.PENDING],
         "approved_review_count": review_counter[OrderUploadReview.Status.APPROVED],

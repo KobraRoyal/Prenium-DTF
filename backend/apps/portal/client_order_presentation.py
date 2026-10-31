@@ -299,7 +299,7 @@ def client_order_status_banner(
     if paid:
         return ClientOrderStatusBanner(
             tone="success",
-            message="Paiement confirmé. Le justificatif est dans Règlement.",
+            message="Paiement confirmé. Le justificatif est dans Facturation.",
             show_pay_cta=False,
         )
     if cancelled:

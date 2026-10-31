@@ -331,6 +331,14 @@ class OrderUpload(BaseModel):
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(10000)],
     )
+    external_visual_specs = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "Ancien regroupement. Chaque visuel d’un lien est maintenant un fichier, "
+            "avec sa propre décision Atelier."
+        ),
+    )
     original_filename = models.CharField(max_length=255)
     mime_type = models.CharField(max_length=255, blank=True)
     size_bytes = models.PositiveBigIntegerField()

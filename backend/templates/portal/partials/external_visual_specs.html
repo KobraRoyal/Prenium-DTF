@@ -1,0 +1,18 @@
+{% if upload.external_visual_specs %}
+<ul class="b2b-external-visual-specs">
+  {% for spec in upload.external_visual_specs %}
+  <li>
+    <span class="break-words font-medium">{% if spec.file_name %}{{ spec.file_name }}{% else %}Visuel {{ forloop.counter }}{% endif %}</span>
+    <span>Qté {{ spec.quantity }}</span>
+    {% if spec.support_color_hex == "#multicolor" %}
+    <span class="b2b-support-color-badge is-rainbow">Multicolore</span>
+    {% else %}
+    <span class="ui-support-color" title="Couleur du support {{ spec.support_color_hex }}">
+      <span class="ui-support-color__swatch" style="--support-color: {{ spec.support_color_hex }}" aria-hidden="true"></span>
+      <code class="ui-support-color__value">{{ spec.support_color_hex|upper }}</code>
+    </span>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

@@ -28,8 +28,10 @@ def app_source(relative_path: str) -> str:
 
 class PortalUiCoherenceTests(SimpleTestCase):
     def test_staff_inspection_separates_automatic_analysis_from_atelier_decision(self):
-        source = template_source("portal/staff/panels/inspection.html") + template_source(
-            "portal/staff/components/upload_correction_form.html"
+        source = (
+            template_source("portal/staff/panels/inspection.html")
+            + template_source("portal/staff/partials/inspection_review.html")
+            + template_source("portal/staff/components/upload_correction_form.html")
         )
 
         self.assertIn("Analyse automatique", source)
@@ -616,7 +618,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("atelier-operator-steps", operator_workflow)
         self.assertIn("staff-atelier-operation-upload-review", operator_workflow)
         correction_form = template_source("portal/staff/components/upload_correction_form.html")
-        inspection_panel = template_source("portal/staff/panels/inspection.html")
+        inspection_panel = template_source("portal/staff/panels/inspection.html") + template_source(
+            "portal/staff/partials/inspection_review.html"
+        )
         self.assertIn("upload_correction_form.html", operator_workflow)
         self.assertIn("upload_correction_form.html", inspection_panel)
         self.assertIn('name="reason_code"', correction_form)
@@ -1676,8 +1680,10 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Sprint 4", project)
 
     def test_staff_inspection_uses_compact_summary_without_nested_metric_cards(self) -> None:
-        source = template_source("portal/staff/panels/inspection.html") + template_source(
-            "portal/staff/components/upload_correction_form.html"
+        source = (
+            template_source("portal/staff/panels/inspection.html")
+            + template_source("portal/staff/partials/inspection_review.html")
+            + template_source("portal/staff/components/upload_correction_form.html")
         )
         portal_entry = static_source("css/entries/portal-staff.css")
         inspection_css = static_source("css/components/inspection-workbench.css")
@@ -2422,6 +2428,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertNotIn("Créer et analyser", start_form)
         self.assertIn("data-batch-auto-submit", start_form)
         self.assertIn("analyse démarre automatiquement", start_form)
+        template_row = start_form.split("data-external-visual-template", 1)[1]
+        self.assertIn("inputs_disabled=0", template_row)
+        self.assertIn(" only %}", template_row)
         self.assertIn("order_project_batch_dropzone.html", start_form)
         self.assertIn('enctype="multipart/form-data"', start_form)
         dropzone = template_source("portal/client/partials/order_project_batch_dropzone.html")

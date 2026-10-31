@@ -144,7 +144,11 @@ def test_both_panels_show_one_read_only_breakdown(scope, priced_order, staff):
         assert "Impression DTF" in html
         assert "laize" in html.lower()
         assert "Port HT" in html
+        assert "TVA · 20 %" in html
+        assert "Total TTC" in html
         assert 'name="dtf_group_linear_m"' in html
+        assert 'name="dtf_group_unit_price"' in html
+        assert 'name="shipping_amount"' in html
         return
     for label in (
         "Préparation des fichiers",
@@ -184,8 +188,44 @@ def test_zero_shipping_and_vat_are_explicit(priced_order):
     html = render_to_string(
         "components/portal/order_billing_breakdown.html", order_billing_breakdown(priced_order)
     )
-    assert "TVA · 0 %" in html
-    assert html.count("<dd>0,00 EUR</dd>") == 2
+    assert "TVA · 20 %" in html
+    assert "TVA · 0 %" not in html
+    assert "12,88 EUR" in html
+    assert "77,26 EUR" in html
+    assert "Encours enregistré HT" not in html
+    assert "n’est pas ajoutée au relevé" not in html
+    assert "<dd>0,00 EUR</dd>" in html
+
+
+def test_deferred_without_stored_vat_still_shows_twenty_percent_and_keeps_editors(scope, priced_order):
+    customer, _user, client, _staff, admin = scope
+    priced_order.tax_rate = Decimal("0")
+    priced_order.tax_amount = Decimal("0")
+    priced_order.total_amount = Decimal("72.38")
+    priced_order.save(update_fields=["tax_rate", "tax_amount", "total_amount"])
+    staff = admin.get(reverse("portal:staff-order-panel-billing", args=[priced_order.public_id]))
+    staff_html = staff.content.decode()
+    assert staff.status_code == 200
+    assert "TVA · 20 %" in staff_html
+    assert "Total TTC" in staff_html
+    assert "Encours enregistré HT" in staff_html
+    assert 'name="dtf_group_linear_m"' in staff_html
+    assert 'name="dtf_group_unit_price"' in staff_html
+    assert 'name="shipping_amount"' in staff_html
+    assert "taxRate: 0.2000" in staff_html
+    page = client.get(
+        reverse(
+            "portal:client-order-panel-billing",
+            args=[customer.public_id, priced_order.public_id],
+        ),
+        HTTP_HX_REQUEST="true",
+    )
+    html = page.content.decode()
+    assert page.status_code == 200
+    assert "TVA · 20 %" in html
+    assert "Total TTC" in html
+    assert "86,86" in html
+    assert "14,48" in html
 
 
 def test_pending_detail_does_not_show_stale_prices(priced_order):

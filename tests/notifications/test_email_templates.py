@@ -126,6 +126,48 @@ def test_order_identity_tags_render_business_number_and_client_reference():
 
 
 @pytest.mark.django_db
+def test_order_priced_client_template_exposes_ht_shipping_vat_and_ttc():
+    from decimal import Decimal
+
+    tags = {tag.key: tag for tag in EMAIL_TAGS}
+    assert tags["order.subtotal_amount"].label == "Sous-total HT"
+    assert tags["order.shipping_amount"].label == "Frais de port HT"
+    assert tags["order.tax_percent"].example == "20"
+    assert tags["order.tax_amount"].label == "Montant TVA"
+    assert tags["order.total_ttc"].label == "Total TTC"
+    assert sample_context()["order.tax_percent"] == "20"
+
+    _, order = create_order()
+    order.subtotal_amount = Decimal("100.00")
+    order.shipping_amount = Decimal("8.00")
+    order.tax_rate = Decimal("0")
+    order.tax_amount = Decimal("0")
+    order.total_amount = Decimal("108.00")
+    order.save()
+
+    context = context_for_order(order)
+    assert context["order.subtotal_amount"] == "100,00"
+    assert context["order.shipping_amount"] == "8,00"
+    assert context["order.total_ht"] == "108,00"
+    assert context["order.tax_percent"] == "20"
+    assert context["order.tax_amount"] == "21,60"
+    assert context["order.total_ttc"] == "129,60"
+    assert context["order.total_amount"] == "108,00"
+
+    definition = next(
+        item
+        for item in EMAIL_TEMPLATE_DEFINITIONS
+        if item.event == EmailTemplate.Event.ORDER_PRICED
+        and item.audience == EmailTemplate.Audience.CLIENT
+    )
+    rendered = render_template_text(definition.default_body, context)
+    assert "Sous-total HT : 100,00 EUR" in rendered
+    assert "Frais de port HT : 8,00 EUR" in rendered
+    assert "TVA 20 % : 21,60 EUR" in rendered
+    assert "Total TTC : 129,60 EUR" in rendered
+
+
+@pytest.mark.django_db
 def test_order_files_tag_lists_all_order_uploads_in_display_order():
     _, order = create_order()
     for sort_order, filename in ((2, "second.pdf"), (1, "first.png")):

@@ -63,6 +63,10 @@
     <div class="alert alert--warning" role="status"><p>Imprimez d’abord l’OF depuis le tableau de bord avant de valider les fichiers.</p></div>
     {% endif %}
 
+    {% if uploads.0.is_external %}
+    {% include "portal/staff/operations/_external_file_count.html" with upload=uploads.0 external_visual_count_value=uploads|external_preparation_count %}
+    {% endif %}
+
     <ul class="atelier-operator-uploads">
       {% for upload in uploads %}
       {% with review=upload.atelier_review inspection=upload.inspection upload_id=upload.public_id|stringformat:"s" %}
@@ -76,7 +80,7 @@
           <strong>{{ upload.original_filename }}</strong>
           <span class="muted">{{ upload.production_specs.dimensions_label }}</span>
           {% if upload.is_external %}
-{% if has_upload_view_permission %}{% include "portal/partials/external_upload_link.html" %}{% endif %}
+{% if has_upload_view_permission %}{% include "portal/partials/external_upload_link.html" with link_only=1 %}{% endif %}
 {% else %}
           {% if upload.drive_hd_url %}
           <a
@@ -98,9 +102,6 @@
             aria-label="Télécharger le fichier source {{ upload.original_filename }}"
           >Télécharger la source</a>
           {% endif %}
-          {% endif %}
-          {% if upload.is_external %}
-          {% include "portal/staff/operations/_external_file_count.html" %}
           {% endif %}
           {% if review and review.status == 'approved' %}
           <span class="badge is-success">Approuvé</span>

@@ -20,8 +20,8 @@
     {% endif %}
     <div><dt>Sous-total HT</dt><dd>{{ order.subtotal_amount|floatformat:2 }} {{ order.currency }}</dd></div>
     <div><dt>Frais de port HT{% if order.shipping_method_name %}<small>{{ order.shipping_method_name }}</small>{% endif %}</dt><dd>{{ order.shipping_amount|floatformat:2 }} {{ order.currency }}</dd></div>
-    <div><dt>TVA · {{ vat_percent|floatformat:"-2" }} %</dt><dd>{{ order.tax_amount|floatformat:2 }} {{ order.currency }}</dd></div>
-    <div class="order-billing-breakdown__total"><dt>Total TTC</dt><dd>{{ order.total_amount|floatformat:2 }} {{ order.currency }}</dd></div>
+    <div><dt>TVA · {{ vat_percent|floatformat:"-2" }} %</dt><dd>{{ tax_amount|floatformat:2 }} {{ order.currency }}</dd></div>
+    <div class="order-billing-breakdown__total"><dt>Total TTC</dt><dd>{{ total_ttc|floatformat:2 }} {{ order.currency }}</dd></div>
   </dl>
   {% else %}
   <p class="muted">Le détail sera disponible après le calcul du prix.</p>

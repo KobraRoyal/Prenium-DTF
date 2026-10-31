@@ -13,11 +13,12 @@ from apps.orders.references import (
     order_uuid_short,
     project_client_reference,
 )
+from apps.uploads.services.production_specs import listed_visuals
 
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20260923-kpi-label-v1"
+PORTAL_CSS_ASSET_V = "20261031-external-visuals-v2"
 
 STATUS_LABELS = {
     "draft": "Brouillon",
@@ -226,11 +227,25 @@ def project_client_ref(project):
     return project_client_reference(project)
 
 
+@register.filter
+def upload_visual_lines(upload):
+    return listed_visuals(upload)
+
+
+@register.filter
+def external_preparation_count(uploads):
+    total = 0
+    for upload in uploads:
+        if getattr(upload, "is_external", False):
+            total += int(getattr(upload, "external_visual_count", 1) or 1)
+    return total
+
+
 CLIENT_ORDER_PANEL_LABELS = {
     "uploads": "Visuels",
     "production": "Avancement",
     "shipping": "Expédition",
-    "billing": "Règlement",
+    "billing": "Facturation",
 }
 
 

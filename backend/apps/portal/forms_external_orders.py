@@ -4,8 +4,9 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from apps.customers.models import Customer
-from apps.orders.services.external_orders import ExternalOrderService
+from apps.orders.services.external_orders import MAX_EXTERNAL_LINK_VISUALS, ExternalOrderService
 from apps.shipping.services.methods import ShippingMethodService
+from apps.uploads.services.uploads import STAFF_UPLOAD_QUANTITY_MAX, OrderUploadService
 
 
 class ExternalOrderForm(forms.Form):
@@ -45,16 +46,117 @@ class ProjectExternalOrderForm(ExternalOrderForm):
             data = data.copy()
             data["customer_note"] = data.get("customer_comment", "")
         super().__init__(data, *args, **kwargs)
+        self.visual_rows = self._posted_visual_rows()
 
     def clean(self):
         cleaned = super().clean()
-        requested_date = cleaned.pop("requested_date", None)
+        requested_date = cleaned.get("requested_date")
+        raw_note = str(cleaned.get("customer_note") or "")
+        cleaned["project_comment"] = raw_note.strip()
         if requested_date:
-            note = cleaned.get("customer_note", "")
             cleaned["customer_note"] = (
-                f"Date souhaitée : {requested_date:%d/%m/%Y}\n{note}"
+                f"Date souhaitée : {requested_date:%d/%m/%Y}\n{raw_note}"
             ).strip()
+        cleaned["visuals"] = self._validated_visuals()
         return cleaned
+
+    def _posted_visual_rows(self) -> list[dict[str, object]]:
+        rows: list[dict[str, object]] = []
+        if not self.is_bound:
+            return rows
+        for index in range(MAX_EXTERNAL_LINK_VISUALS):
+            prefix = f"visuals-{index}-"
+            keys = (
+                f"{prefix}file_name",
+                f"{prefix}quantity",
+                f"{prefix}support_color_hex",
+                f"{prefix}support_color_multicolor",
+            )
+            if not any(key in self.data for key in keys):
+                continue
+            multicolor = str(self.data.get(f"{prefix}support_color_multicolor") or "").strip()
+            rows.append(
+                {
+                    "index": str(index),
+                    "prefix": prefix,
+                    "file_name": str(self.data.get(f"{prefix}file_name") or ""),
+                    "quantity": str(self.data.get(f"{prefix}quantity") or "1"),
+                    "support_color_hex": ""
+                    if multicolor in {"on", "true", "1"}
+                    else str(self.data.get(f"{prefix}support_color_hex") or ""),
+                    "support_color_multicolor": multicolor in {"on", "true", "1"},
+                    "swatch_id": f"support-hex-visual-{index}",
+                }
+            )
+        show_remove = len(rows) > 1
+        for row in rows:
+            row["show_remove"] = show_remove
+        return rows
+
+    def _validated_visuals(self) -> list[dict[str, object]]:
+        rows = self.visual_rows
+        if not rows:
+            self.add_error(
+                None,
+                "Indiquez le nom du fichier, la couleur du support "
+                "et la quantité d’au moins un visuel.",
+            )
+            return []
+        if len(rows) > MAX_EXTERNAL_LINK_VISUALS:
+            self.add_error(
+                None,
+                f"{MAX_EXTERNAL_LINK_VISUALS} visuels maximum pour un lien de téléchargement.",
+            )
+            return []
+        upload_service = OrderUploadService()
+        visuals: list[dict[str, object]] = []
+        seen_names: set[str] = set()
+        for position, row in enumerate(rows, start=1):
+            try:
+                file_name = ExternalOrderService.normalize_visual_file_name(row["file_name"])
+            except ValidationError as exc:
+                self.add_error(None, f"Visuel {position} : {exc.messages[0]}")
+                continue
+            folded_name = file_name.casefold()
+            if folded_name in seen_names:
+                self.add_error(
+                    None,
+                    f"{file_name} : ce nom de fichier est déjà utilisé sur un autre visuel.",
+                )
+                continue
+            seen_names.add(folded_name)
+            raw_quantity = str(row["quantity"]).strip()
+            try:
+                quantity = int(raw_quantity)
+            except ValueError:
+                self.add_error(None, f"{file_name} : indiquez une quantité entière.")
+                continue
+            if quantity < 1 or quantity > STAFF_UPLOAD_QUANTITY_MAX:
+                self.add_error(
+                    None,
+                    f"{file_name} : la quantité doit être comprise entre 1 et "
+                    f"{STAFF_UPLOAD_QUANTITY_MAX}.",
+                )
+                continue
+            raw_color = (
+                "#multicolor" if row["support_color_multicolor"] else row["support_color_hex"]
+            )
+            try:
+                color = upload_service._normalize_support_color(str(raw_color or ""))
+            except ValidationError:
+                self.add_error(None, f"{file_name} : couleur de support invalide.")
+                continue
+            if not color:
+                self.add_error(None, f"{file_name} : indiquez la couleur du support.")
+                continue
+            visuals.append(
+                {
+                    "file_name": file_name,
+                    "quantity": quantity,
+                    "support_color_hex": color,
+                }
+            )
+        return visuals
 
 
 class StaffExternalOrderForm(ExternalOrderForm):

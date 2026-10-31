@@ -1,4 +1,5 @@
 {% load portal_tags billing_tags l10n %}
+{% order_vat_preview order as vat %}
 <div class="workflow-panel workflow-panel--operator billing-station atelier-billing">
   <header class="workflow-panel__hero operator-panel-hero atelier-billing__hero">
     <div>
@@ -25,17 +26,17 @@
     x-data="staffBillingAdjustment({
       catalogElId: 'staff-billing-shipping-catalog',
       linesElId: 'staff-billing-lines-seed',
-      taxRate: {% localize off %}{{ order.tax_rate|default:'0' }}{% endlocalize %},
+      taxRate: {% localize off %}{{ vat.displayed_rate }}{% endlocalize %},
       currency: '{{ order.currency|escapejs }}',
       shippingCode: '{{ form.shipping_method_code.value|default:order.shipping_method_code|escapejs }}',
       shippingAmount: {% localize off %}{{ form.shipping_amount.value|default_if_none:order.shipping_amount }}{% endlocalize %},
-      initialTotal: {% localize off %}{{ order.total_amount|default:'0' }}{% endlocalize %}
+      initialTotal: {% localize off %}{{ vat.total_ttc }}{% endlocalize %}
     })"
   >
   <section class="billing-total" aria-label="Montant et mode de facturation">
     <div class="billing-total__amount">
-      <span>Total</span>
-      <strong x-text="displayTotal()">{{ order.total_amount }} {{ order.currency }}</strong>
+      <span>Total TTC</span>
+      <strong x-text="displayTotal()">{% if order.pricing_status == "priced" %}{{ vat.total_ttc|floatformat:2 }}{% else %}{{ order.total_amount }}{% endif %} {{ order.currency }}</strong>
       <small>{{ order.pricing_status|human_status }}{% if order.manual_billing_adjusted_at %} · ajusté manuellement{% endif %}</small>
     </div>
     <div class="billing-total__state">
@@ -211,8 +212,11 @@
         </div>
         {% endif %}
         <div><dt>Port HT</dt><dd x-text="displayShipping()"></dd></div>
-        <div><dt>TVA</dt><dd x-text="displayTax()"></dd></div>
-        <div class="billing-edit__total"><dt>Total</dt><dd x-text="displayTotal()"></dd></div>
+        <div><dt>TVA · {{ vat.vat_percent|floatformat:"-2" }} %</dt><dd x-text="displayTax()"></dd></div>
+        {% if vat.vat_preview_only %}
+        <div><dt>Encours enregistré HT</dt><dd x-text="totalsReady ? formatMoney(roundMoney(subtotal + effectiveShipping())) : '—'"></dd></div>
+        {% endif %}
+        <div class="billing-edit__total"><dt>Total TTC</dt><dd x-text="displayTotal()"></dd></div>
       </dl>
 
       <div class="billing-edit__actions">
@@ -228,8 +232,8 @@
   {% else %}
   <section class="billing-total" aria-label="Montant et mode de facturation">
     <div class="billing-total__amount">
-      <span>Total</span>
-      <strong>{{ order.total_amount }} {{ order.currency }}</strong>
+      <span>Total TTC</span>
+      <strong>{% if order.pricing_status == "priced" %}{{ vat.total_ttc|floatformat:2 }}{% else %}{{ order.total_amount }}{% endif %} {{ order.currency }}</strong>
       <small>{{ order.pricing_status|human_status }}{% if order.manual_billing_adjusted_at %} · ajusté manuellement{% endif %}</small>
     </div>
     <div class="billing-total__state">

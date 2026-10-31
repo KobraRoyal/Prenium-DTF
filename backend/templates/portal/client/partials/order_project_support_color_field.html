@@ -13,9 +13,9 @@
   <div class="b2b-support-color__choices">
     <button
       type="button"
-      class="b2b-swatch-btn b2b-swatch-btn--rainbow b2b-support-color-rainbow{% if item and item.support_color_is_multicolor %} is-active{% endif %}"
+      class="b2b-swatch-btn b2b-swatch-btn--rainbow b2b-support-color-rainbow{% if item and item.support_color_is_multicolor or visual_multicolor %} is-active{% endif %}"
       data-support-color-multicolor
-      aria-pressed="{% if item and item.support_color_is_multicolor %}true{% else %}false{% endif %}"
+      aria-pressed="{% if item and item.support_color_is_multicolor or visual_multicolor %}true{% else %}false{% endif %}"
       aria-label="Support multicolore"
       title="Multicolore"
     ></button>
@@ -30,30 +30,38 @@
       {% endif %}
     {% endwith %}
     {% else %}
-    {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id="support-hex-new" initial_color="#ffffff" %}
+      {% if visual_multicolor %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_id|default:"support-hex-new" initial_color="#ffffff" disabled=1 %}
+      {% elif visual_hex %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_id|default:"support-hex-new" initial_color=visual_hex selected=1 %}
+      {% else %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_id|default:"support-hex-new" initial_color="#ffffff" %}
+      {% endif %}
     {% endif %}
     <label class="b2b-support-color-hex">
       <span class="ui-sr-only">Code hexadécimal</span>
       <input
         class="ui-input font-mono uppercase"
         type="text"
-        name="support_color_hex"
+        name="{{ field_name_prefix|default:'' }}support_color_hex"
         data-support-color-hex
         inputmode="text"
         autocapitalize="characters"
         spellcheck="false"
         maxlength="7"
         placeholder="#HEX"
-        value="{% if item and item.support_color_hex and not item.support_color_is_multicolor %}{{ item.support_color_hex|upper }}{% endif %}"
+        value="{% if item and item.support_color_hex and not item.support_color_is_multicolor %}{{ item.support_color_hex|upper }}{% elif visual_hex %}{{ visual_hex|upper }}{% endif %}"
         pattern="#[0-9A-Fa-f]{6}"
-        required aria-required="true"
-        {% if item and item.support_color_is_multicolor %}readonly{% endif %}
+        {% if item and item.support_color_is_multicolor or visual_multicolor %}readonly{% else %}required aria-required="true"{% endif %}
+        {% if inputs_disabled %}disabled{% endif %}
       >
     </label>
   </div>
   <p class="b2b-support-color__status" data-support-color-status aria-live="polite">
-    {% if item and item.support_color_is_multicolor %}
+    {% if item and item.support_color_is_multicolor or visual_multicolor %}
       Multicouleur sélectionné
+    {% elif visual_hex %}
+      Couleur {{ visual_hex|upper }} sélectionnée
     {% elif item and item.support_color_hex and not item.support_color_is_multicolor %}
       Couleur {{ item.support_color_hex|upper }} sélectionnée
     {% else %}
@@ -62,8 +70,9 @@
   </p>
   <input
     type="hidden"
-    name="support_color_multicolor"
-    value="{% if item and item.support_color_is_multicolor %}on{% endif %}"
+    name="{{ field_name_prefix|default:'' }}support_color_multicolor"
+    value="{% if item and item.support_color_is_multicolor or visual_multicolor %}on{% endif %}"
     data-support-color-multicolor-input
+    {% if inputs_disabled %}disabled{% endif %}
   >
 </fieldset>

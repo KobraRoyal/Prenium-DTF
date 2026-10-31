@@ -2700,6 +2700,92 @@
     max-width: 16rem;
   }
 
+  body.product-shell .b2b-external-visuals {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 0.35rem;
+    padding: 0.9rem;
+    border: 1px solid var(--product-line);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--product-panel) 88%, var(--product-bg));
+  }
+
+  body.product-shell .b2b-external-visuals[hidden] {
+    display: none;
+  }
+
+  body.product-shell .b2b-external-visuals__head h3,
+  body.product-shell .b2b-external-visuals__head p,
+  body.product-shell .b2b-external-visual-row__title {
+    margin: 0;
+  }
+
+  body.product-shell .b2b-external-visuals__head h3,
+  body.product-shell .b2b-external-visual-row__title {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  body.product-shell .b2b-external-visuals__head p {
+    margin-top: 0.2rem;
+    color: var(--product-muted);
+    font-size: 0.78rem;
+  }
+
+  body.product-shell .b2b-external-visual-row {
+    display: grid;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--product-line);
+  }
+
+  body.product-shell .b2b-external-visual-row__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  body.product-shell .b2b-external-visual-row__specs {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  body.product-shell .b2b-external-visual-row__quantity {
+    max-width: 8.5rem;
+  }
+
+  @media (min-width: 720px) {
+    body.product-shell .b2b-external-visual-row__specs {
+      grid-template-columns: minmax(0, 1fr) 8.5rem;
+      align-items: end;
+    }
+
+    body.product-shell .b2b-external-visual-row__quantity {
+      max-width: none;
+    }
+  }
+
+  body.product-shell .b2b-external-visual-specs {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0.45rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body.product-shell .b2b-external-visual-specs li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.65rem;
+    font-size: 0.78rem;
+  }
+
+  body.product-shell [data-external-visual-remove][hidden] {
+    display: none;
+  }
+
   body.product-shell .product-date-picker {
     position: relative;
     width: 100%;

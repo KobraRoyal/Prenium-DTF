@@ -217,6 +217,14 @@ terminé. Le service sélectionne uniquement les commandes du client qui sont `s
 2. refuse une période courante/future, une période déjà clôturée, un mois vide ou plusieurs devises ;
 3. vérifie que les lignes correspondent au sous-total et que `sous-total + port = total HT` ;
 4. calcule le total depuis les montants `Order.total_amount`, qui valent HT + port pour l’encours ;
+
+Les panneaux Facturation client et Atelier affichent aussi la TVA à 20 % et le total TTC,
+même quand le taux enregistré est nul. Côté client, ce détail est dans l’onglet Facturation,
+au même rang que Visuels, Avancement et Livraison, pour tout membre du compte.
+Le paiement en ligne reste réservé au propriétaire. La liste client affiche le total TTC.
+Cet affichage ne modifie pas `tax_rate`, `tax_amount`
+ni `total_amount`. L’ajustement Atelier continue de modifier chaque ligne, le port et le
+métrage. Le relevé reste basé sur le HT enregistré.
 5. émet directement le relevé, conserve l’identité et les lignes dans un snapshot immuable,
    puis enregistre l’empreinte SHA-256 du CSV canonique ;
 6. rattache les commandes au relevé et audite `billing.statement_generated`.
@@ -317,6 +325,10 @@ L’encours (`deferred`) n’est pas soumis à cette gate.
   - **encours** (`billing_mode = deferred`) → email **« commande tarifée »** (`schedule_order_priced_email`), avec mention optionnelle du statut d’encours (`blocked` / `warning`) ;
   - **comptant CB** (`billing_mode = immediate`) → email **« paiement carte à effectuer »** (`schedule_order_awaiting_payment_email`), avec lien vers le panneau Facture client (CTA Stripe après tarification).
 - Éditable dans Atelier → Modèles d’e-mails (`order_priced` / `order_awaiting_payment`).
+  Le modèle client `order_priced` expose `order.subtotal_amount`, `order.shipping_amount`,
+  `order.total_ht`, `order.tax_percent`, `order.tax_amount` et `order.total_ttc`.
+  La TVA suit l’aperçu de la fiche facturation : 20 % si le taux enregistré est nul.
+  Le HT du relevé ne change pas.
 - Au premier passage sur un nouveau seuil du mois courant : e-mail client
   `volume_discount_tier_reached`, idempotent par client/mois/seuil et éditable dans le même
   catalogue Atelier.

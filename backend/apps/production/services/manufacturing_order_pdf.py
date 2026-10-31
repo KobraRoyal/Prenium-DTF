@@ -516,6 +516,71 @@ def _build_support_color_cell(*, upload: dict) -> Drawing:
     return drawing
 
 
+def _support_payload(color: str) -> dict:
+    if color == "#multicolor":
+        return {
+            "support_color": "#multicolor",
+            "support_color_label": "Multicolore",
+            "support_color_is_multicolor": True,
+        }
+    if color:
+        return {
+            "support_color": color,
+            "support_color_label": color.upper(),
+            "support_color_is_multicolor": False,
+        }
+    return {
+        "support_color": "",
+        "support_color_label": "Non renseignée",
+        "support_color_is_multicolor": False,
+    }
+
+
+def _external_file_block(filename: str, styles: dict[str, ParagraphStyle]) -> list:
+    return [
+        _paragraph(filename, styles["body"]),
+        Paragraph("Lien client — contrôle manuel", styles["body"]),
+        _build_file_qr_code(filename=filename),
+    ]
+
+
+def _manufacturing_visual_rows(upload: dict, styles: dict[str, ParagraphStyle]) -> list[dict]:
+    specs = [
+        spec for spec in (upload.get("external_visual_specs") or []) if isinstance(spec, dict)
+    ]
+    if upload.get("is_external") and specs:
+        rows = []
+        for index, spec in enumerate(specs, start=1):
+            file_label = str(spec.get("file_name") or "").strip() or f"Visuel {index}"
+            rows.append(
+                {
+                    "is_declared_visual": True,
+                    "quantity": spec.get("quantity") or 1,
+                    "support": _support_payload(str(spec.get("support_color_hex") or "")),
+                    "file_block": _external_file_block(file_label, styles),
+                }
+            )
+        return rows
+    filename = str(upload.get("original_filename") or "")
+    if upload.get("is_external"):
+        file_block = _external_file_block(filename, styles)
+    else:
+        qr_filename = str(upload.get("drive_filename") or filename)
+        file_block = [
+            _paragraph(filename, styles["body"]),
+            Spacer(1, 0.12 * cm),
+            _build_file_qr_code(filename=qr_filename),
+        ]
+    return [
+        {
+            "is_declared_visual": False,
+            "quantity": upload.get("quantity") or 1,
+            "support": upload,
+            "file_block": file_block,
+        }
+    ]
+
+
 def _build_uploads_table(
     *,
     uploads: list[dict],
@@ -539,40 +604,33 @@ def _build_uploads_table(
         *_table_padding_style(),
     ]
 
-    for row_number, upload in enumerate(uploads, start=1):
-        qr_filename = str(upload.get("drive_filename") or upload.get("original_filename") or "")
-        file_block = [
-            _paragraph(upload.get("original_filename"), styles["body"]),
-            Spacer(1, 0.12 * cm),
-            _build_file_qr_code(filename=qr_filename),
-        ]
-        if upload.get("is_external"):
-            file_block = [
-                _paragraph(upload.get("original_filename"), styles["body"]),
-                Paragraph("Visuel externe — contrôle manuel", styles["body"]),
-                Paragraph("Lien client dans l’onglet Fichiers", styles["body"]),
-            ]
-        rows.append(
-            [
-                _build_preview_cell(
-                    preview=previews.get(str(upload.get("public_id") or "")),
-                    styles=styles,
-                ),
-                file_block,
-                _paragraph(upload.get("quantity") or 1, styles["table_center"]),
-                _paragraph(upload.get("dimensions_label") or "—", styles["body"]),
-                _build_support_color_cell(upload=upload),
-            ]
-        )
-        table_styles.extend(
-            [
-                ("BACKGROUND", (0, row_number), (0, row_number), SURFACE),
-                ("ALIGN", (0, row_number), (0, row_number), "CENTER"),
-                ("ALIGN", (2, row_number), (2, row_number), "CENTER"),
-                ("TOPPADDING", (0, row_number), (-1, row_number), 6),
-                ("BOTTOMPADDING", (0, row_number), (-1, row_number), 6),
-            ]
-        )
+    row_number = 0
+    for upload in uploads:
+        for line in _manufacturing_visual_rows(upload, styles):
+            row_number += 1
+            rows.append(
+                [
+                    _build_preview_cell(
+                        preview=previews.get(str(upload.get("public_id") or ""))
+                        if not line.get("is_declared_visual")
+                        else None,
+                        styles=styles,
+                    ),
+                    line["file_block"],
+                    _paragraph(line["quantity"], styles["table_center"]),
+                    _paragraph(upload.get("dimensions_label") or "—", styles["body"]),
+                    _build_support_color_cell(upload=line["support"]),
+                ]
+            )
+            table_styles.extend(
+                [
+                    ("BACKGROUND", (0, row_number), (0, row_number), SURFACE),
+                    ("ALIGN", (0, row_number), (0, row_number), "CENTER"),
+                    ("ALIGN", (2, row_number), (2, row_number), "CENTER"),
+                    ("TOPPADDING", (0, row_number), (-1, row_number), 6),
+                    ("BOTTOMPADDING", (0, row_number), (-1, row_number), 6),
+                ]
+            )
 
     table = Table(
         rows,

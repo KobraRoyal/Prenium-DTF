@@ -70,7 +70,13 @@ EMAIL_TAGS = (
         "Identifiant public complet",
         "7a16d36c-74b2-4a23-914e-a1b2c3d4e5f6",
     ),
-    EmailTag("order.total_amount", "Montant total", "125,50"),
+    EmailTag("order.subtotal_amount", "Sous-total HT", "100,00"),
+    EmailTag("order.shipping_amount", "Frais de port HT", "8,00"),
+    EmailTag("order.total_ht", "Total HT", "108,00"),
+    EmailTag("order.tax_percent", "Taux de TVA", "20"),
+    EmailTag("order.tax_amount", "Montant TVA", "21,60"),
+    EmailTag("order.total_ttc", "Total TTC", "129,60"),
+    EmailTag("order.total_amount", "Montant enregistré", "125,50"),
     EmailTag("order.currency", "Devise", "EUR"),
     EmailTag("order.status", "Statut commande", "Soumise"),
     EmailTag("order.billing_mode", "Mode de facturation", "Facturation différée"),
@@ -479,7 +485,11 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "Bonjour,\n\n"
             "Le montant de votre commande {{ order.reference }} ({{ customer.name }}) "
             "a été calculé après contrôle technique.\n\n"
-            "Total TTC : {{ order.total_amount }} {{ order.currency }}\n"
+            "Sous-total HT : {{ order.subtotal_amount }} {{ order.currency }}\n"
+            "Frais de port HT : {{ order.shipping_amount }} {{ order.currency }}\n"
+            "Total HT : {{ order.total_ht }} {{ order.currency }}\n"
+            "TVA {{ order.tax_percent }} % : {{ order.tax_amount }} {{ order.currency }}\n"
+            "Total TTC : {{ order.total_ttc }} {{ order.currency }}\n"
             "{{ order.credit_status_message }}\n\n"
             "Retrouvez le détail dans votre espace client.\n\n"
             "Cordialement,\nL’équipe {{ site.name }}"
@@ -652,6 +662,13 @@ def _format_amount(amount: Decimal | str) -> str:
     return f"{Decimal(str(amount)):.2f}".replace(".", ",")
 
 
+def _format_percent(amount: Decimal | str) -> str:
+    text = _format_amount(amount)
+    if text.endswith(",00"):
+        return text[:-3]
+    return text
+
+
 def _credit_status_message(order: Order) -> str:
     if order.credit_hold_status == Order.CreditHoldStatus.BLOCKED:
         return (
@@ -712,6 +729,9 @@ def _order_files_list(order: Order) -> str:
 
 
 def context_for_order(order: Order) -> dict[str, str]:
+    from apps.portal.services.billing_breakdown import order_vat_preview
+
+    amounts = order_vat_preview(order)
     return {
         "site.name": "Prenium DTF",
         "customer.name": order.customer.name,
@@ -721,6 +741,12 @@ def context_for_order(order: Order) -> dict[str, str]:
         "order.files": _order_files_list(order),
         "order.reference": order.short_ref,
         "order.public_id": str(order.public_id),
+        "order.subtotal_amount": _format_amount(order.subtotal_amount),
+        "order.shipping_amount": _format_amount(order.shipping_amount),
+        "order.total_ht": _format_amount(amounts["total_ht"]),
+        "order.tax_percent": _format_percent(amounts["vat_percent"]),
+        "order.tax_amount": _format_amount(amounts["tax_amount"]),
+        "order.total_ttc": _format_amount(amounts["total_ttc"]),
         "order.total_amount": _format_amount(order.total_amount),
         "order.currency": order.currency,
         "order.status": order.get_status_display(),

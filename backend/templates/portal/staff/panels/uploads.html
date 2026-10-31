@@ -23,24 +23,27 @@
       </thead>
       <tbody>
         {% for row in upload_rows %}
+        {% for line in row.upload|upload_visual_lines %}
         <tr class="{% if row.upload.inspection and row.upload.inspection.status == 'error' %}ui-row-anomaly{% elif row.upload.inspection and row.upload.inspection.status == 'warning' %}ui-row-warning{% endif %}">
           <td class="max-w-[18rem]">
             <div class="font-medium break-words text-[color:var(--ink)]">
-              {% if row.upload.is_external %}
-{% include "portal/partials/external_upload_link.html" with upload=row.upload %}
-{% elif row.drive_browser_url %}
+              {% if row.drive_browser_url and not row.upload.is_external %}
               <a
                 class="staff-upload-filename-link ui-inline-action"
                 href="{{ row.drive_browser_url }}"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Ouvrir ce fichier dans Google&nbsp;Drive"
-              >{{ row.upload.original_filename }}</a>
+              >{{ line.file_name }}</a>
               {% else %}
-              {{ row.upload.original_filename }}
+              {{ line.file_name }}
               {% endif %}
             </div>
+            {% if row.upload.is_external %}
+            {% include "portal/partials/external_upload_link.html" with upload=row.upload link_only=1 %}
+            {% else %}
             <div class="muted text-xs break-all mt-0.5">{{ row.upload.mime_type }}</div>
+            {% endif %}
           </td>
           <td class="whitespace-nowrap">{% if row.upload.is_external %}Lien externe{% else %}{{ row.upload.size_bytes|filesizeformat }}{% endif %}</td>
           <td>
@@ -61,28 +64,31 @@
           </td>
         </tr>
         {% endfor %}
+        {% endfor %}
       </tbody>
     </table>
   </div>
 
   <div class="grid gap-3 min-[960px]:hidden" aria-label="Fichiers commande (staff)">
     {% for row in upload_rows %}
+    {% for line in row.upload|upload_visual_lines %}
     <article class="ui-mobile-order-card product-mobile-file-card">
       <p class="break-words font-medium text-[color:var(--ink)] m-0">
-        {% if row.upload.is_external %}
-{% include "portal/partials/external_upload_link.html" with upload=row.upload %}
-{% elif row.drive_browser_url %}
+        {% if row.drive_browser_url and not row.upload.is_external %}
         <a
           class="staff-upload-filename-link ui-inline-action"
           href="{{ row.drive_browser_url }}"
           target="_blank"
           rel="noopener noreferrer"
           title="Ouvrir ce fichier dans Google&nbsp;Drive"
-        >{{ row.upload.original_filename }}</a>
+        >{{ line.file_name }}</a>
         {% else %}
-        {{ row.upload.original_filename }}
+        {{ line.file_name }}
         {% endif %}
       </p>
+      {% if row.upload.is_external %}
+      {% include "portal/partials/external_upload_link.html" with upload=row.upload link_only=1 %}
+      {% endif %}
       <p class="muted mt-1 text-xs break-all">{{ row.upload.mime_type }}</p>
       <p class="mt-2 text-sm">Taille : {% if row.upload.is_external %}Lien externe{% else %}{{ row.upload.size_bytes|filesizeformat }}{% endif %}</p>
       <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -104,6 +110,7 @@
         {% endif %}
       </div>
     </article>
+    {% endfor %}
     {% endfor %}
   </div>
   {% else %}

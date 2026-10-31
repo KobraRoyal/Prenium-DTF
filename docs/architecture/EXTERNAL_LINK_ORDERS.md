@@ -11,8 +11,14 @@
   commentaire restent dans les informations transmises.
   Un lien renseigné désactive le dépôt local, y compris après une sélection trop lourde.
   Effacer le lien réactive le dépôt habituel et ses limites. Les erreurs conservent les
-  informations saisies dans la même carte. Le serveur conserve la validation HTTP(S) et
-  l’isolation client avant création ; aucun projet ou asset n’est créé pour le lien.
+  informations saisies dans la même carte. Pour chaque visuel du lien, le client indique
+  le nom du fichier, la couleur du support et la quantité. Ce nom identifie le visuel
+  en production. Plusieurs visuels du même lien se déclarent un par un, avec un nom
+  distinct. Le serveur conserve la validation HTTP(S) et l’isolation client avant création.
+  Aucun asset n’est créé. Un projet B2B déjà converti est créé uniquement pour attribuer
+  le N° métier `CMD-YYYY-NNNNNN`, requis par l’expédition Sendcloud. Il n’apparaît pas
+  dans les préparations en cours. La date souhaitée et le commentaire restent structurés
+  sur ce projet ; la note atelier conserve aussi la date.
 - Atelier : dans « Commandes », « Créer une commande manuelle » permet de sélectionner
   un client actif, son mode de livraison, son lien, le nombre de visuels distincts,
   la couleur du support (comme une commande par fichier) et éventuellement un métrage
@@ -21,7 +27,7 @@
   ou sur la fiche commande (Production), comme une commande classique.
   Avec métrage, le service applique immédiatement le tarif habituel, les frais de
   préparation, les remises, le transport et la TVA existants. Une erreur de tarification
-  annule toute la création. Chaque commande manuelle reçoit un N° métier `CMD-YYYY-NNNNNN`.
+  annule toute la création. Chaque commande par lien, client ou manuelle, reçoit un N° métier `CMD-YYYY-NNNNNN`.
   Si Drive est activé, un dossier commande est créé (arborescence classique) sans
   synchroniser le fichier distant du lien ; l’atelier y dépose les fichiers récupérés.
 - Le compte client conserve son mode de règlement. Les comptes comptant restent sur le
@@ -32,10 +38,16 @@
   calculé et contrôle approuvé. La saisie ultérieure du métrage client utilise les actions
   Atelier existantes.
 
-Un lien représente une ligne de commande (un lot de visuels), avec quantité 1 et métrage
-global toutes copies comprises. La préparation est facturée par visuel distinct :
-`external_visual_count × tarif de préparation`. Le nombre est un entier de 1 à 10 000,
-initialisé à 1 pour les commandes client et historiques. L’Atelier peut le renseigner
+Chaque visuel déclaré par le client est un fichier : nom, quantité, couleur, et la même
+décision Atelier qu’une commande par fichier (approuver ou demander une correction).
+Les frais de préparation comptent un visuel par fichier. L’Atelier peut augmenter ce
+nombre, jamais le descendre sous le nombre de visuels déclarés. Le métrage reste le
+total de la commande, réparti entre les fichiers, sans multiplication par les quantités.
+Deux visuels du même lien ne peuvent pas porter le même nom. Le métrage atelier reste le total de la commande, toutes copies
+comprises : il n’est pas multiplié par les quantités déclarées. La préparation est facturée par visuel distinct :
+`external_visual_count × tarif de préparation`. Le nombre est un entier de 1 à 10 000.
+Une commande client à un seul visuel, comme l’historique, part de 1. Plusieurs visuels
+déclarés initialisent ce nombre au total déclaré. L’Atelier peut le renseigner
 à la création ou le corriger avec le métrage dans la fiche Production et la console Atelier.
 Dans le pilotage, l’étape 1 « Contrôle fichiers » présente le lien et le champ
 « Nombre de fichiers dans le lien », avec un enregistrement indépendant. Le métrage

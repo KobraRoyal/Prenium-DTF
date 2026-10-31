@@ -1,15 +1,45 @@
 """Read-only presentation of the order's persisted pricing snapshot."""
 
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from apps.catalog.models import CatalogService
 from apps.customers.services.volume_discounts import linear_meters_from_sqm
 from apps.orders.models import Order
 
+TWOPLACES = Decimal("0.01")
+DISPLAY_VAT_RATE = Decimal("0.20")
+
+
+def order_vat_preview(order) -> dict[str, Decimal | bool]:
+    """TVA affichée. Si le taux enregistré est nul, montre 20 % sans changer le HT encours."""
+
+    subtotal = Decimal(order.subtotal_amount or 0)
+    shipping = Decimal(order.shipping_amount or 0)
+    total_ht = (subtotal + shipping).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    stored_rate = Decimal(order.tax_rate or 0)
+    if stored_rate > 0:
+        tax_amount = Decimal(order.tax_amount or 0).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        total_ttc = Decimal(order.total_amount or 0).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        rate = stored_rate
+        preview_only = False
+    else:
+        rate = DISPLAY_VAT_RATE
+        tax_amount = (total_ht * rate).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        total_ttc = (total_ht + tax_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        preview_only = True
+    return {
+        "vat_percent": (rate * Decimal("100")).quantize(TWOPLACES, rounding=ROUND_HALF_UP),
+        "displayed_rate": rate.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP),
+        "tax_amount": tax_amount,
+        "total_ttc": total_ttc,
+        "total_ht": total_ht,
+        "vat_preview_only": preview_only,
+    }
+
 
 def order_billing_breakdown(order):
     priced = order.pricing_status == Order.PricingStatus.PRICED
-    result = {"order": order, "priced": priced, "rows": [], "vat_percent": order.tax_rate * 100}
+    result = {"order": order, "priced": priced, "rows": [], **order_vat_preview(order)}
     if not priced:
         return result
 

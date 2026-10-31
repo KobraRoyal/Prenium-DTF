@@ -51,6 +51,30 @@
       <label class="ui-label" for="id-external-url">Votre fichier dépasse 20 Mo ?</label>
       <input class="ui-input w-full" id="id-external-url" name="external_url" type="url" maxlength="2000" placeholder="Collez votre lien de téléchargement (WeTransfer, Drive…)" value="{{ submitted.external_url|default:'' }}" data-order-external-link{% if external_order_form.external_url.errors %} aria-describedby="external-url-error" aria-invalid="true"{% endif %}>
       {% if external_order_form.external_url.errors %}<p class="error-text" id="external-url-error" role="alert">{{ external_order_form.external_url.errors|join:" " }}</p>{% endif %}
+      {% with inputs_disabled=submitted.external_url|yesno:",1" %}
+      <section class="b2b-external-visuals" data-external-visuals {% if not submitted.external_url %}hidden{% endif %} aria-label="Visuels du lien">
+        <div class="b2b-external-visuals__head">
+          <h3>Visuels du lien</h3>
+          <p>Nommez chaque fichier du lien, puis indiquez la couleur du support et la quantité. Ce nom identifie le visuel en production.</p>
+        </div>
+        <div data-external-visual-list>
+          {% if external_order_form.visual_rows %}
+            {% for row in external_order_form.visual_rows %}
+              {% include "portal/client/partials/order_project_external_visual_row.html" with index=row.index prefix=row.prefix file_name=row.file_name quantity=row.quantity support_color_hex=row.support_color_hex support_color_multicolor=row.support_color_multicolor swatch_id=row.swatch_id inputs_disabled=inputs_disabled show_remove=row.show_remove %}
+            {% endfor %}
+          {% else %}
+            {% include "portal/client/partials/order_project_external_visual_row.html" with index="0" prefix="visuals-0-" file_name="" quantity="1" support_color_hex="" support_color_multicolor="" swatch_id="support-hex-visual-0" inputs_disabled=inputs_disabled %}
+          {% endif %}
+        </div>
+        <div class="ui-form-actions">
+          <button type="button" class="ui-btn ui-btn-ghost" data-external-visual-add>Ajouter un visuel</button>
+        </div>
+        <template data-external-visual-template>
+          {# only : le with parent désactive les champs tant que le lien est vide. Le clone doit rester saisissable. #}
+          {% include "portal/client/partials/order_project_external_visual_row.html" with index="__INDEX__" prefix="visuals-__INDEX__-" file_name="" quantity="1" support_color_hex="" support_color_multicolor="" swatch_id="support-hex-visual-__INDEX__" inputs_disabled=0 show_remove=1 only %}
+        </template>
+      </section>
+      {% endwith %}
       <div class="ui-form-actions">
         <button type="submit" name="source" value="external_link" class="ui-btn ui-btn-secondary">Transmettre la commande par lien</button>
       </div>

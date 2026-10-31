@@ -1,3 +1,6 @@
+import base64
+import re
+import zlib
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -24,6 +27,20 @@ from django.utils import timezone
 from tests.orders.test_order_pricing_service import _seed_catalog_dtf_and_file_prep
 
 pytestmark = pytest.mark.django_db
+
+
+def _pdf_text(pdf: bytes) -> str:
+    parts = []
+    for match in re.finditer(rb"stream\r?\n(.*?)endstream", pdf, re.S):
+        data = match.group(1).strip(b"\r\n")
+        if data.endswith(b"~>"):
+            data = base64.a85decode(data, adobe=True)
+        try:
+            data = zlib.decompress(data)
+        except zlib.error:
+            pass
+        parts.append(data.decode("latin-1", errors="ignore"))
+    return "\n".join(parts)
 
 
 @pytest.fixture
@@ -54,6 +71,18 @@ def payload(**extra):
     }
 
 
+def project_link_payload(**extra):
+    data = payload(
+        **{
+            "visuals-0-file_name": "affiche.png",
+            "visuals-0-quantity": "1",
+            "visuals-0-support_color_hex": "#112233",
+        }
+    )
+    data.update(extra)
+    return data
+
+
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
 def test_project_form_has_one_shared_information_card(scope):
     customer, _user, client, _staff, _admin = scope
@@ -67,16 +96,21 @@ def test_project_form_has_one_shared_information_card(scope):
     form = card.split("<form")[1].split("</form>")[0]
     assert 'name="name"' in form
     assert 'name="external_url"' in form
+    assert "Visuels du lien" in form
+    assert 'name="visuals-0-file_name"' in form
+    assert 'name="visuals-0-quantity"' in form
+    assert 'name="visuals-0-support_color_hex"' in form
+    assert "Nom du fichier" in form
 
 
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
-def test_project_form_link_reuses_name_date_and_comment_without_project(scope):
+def test_project_form_link_reuses_name_date_comment_and_cmd_number(scope):
     from apps.b2b_order_projects.models import B2BOrderProject
 
     customer, user, client, _staff, _admin = scope
     response = client.post(
         reverse("portal:client-order-project-create", args=[customer.public_id]),
-        payload(
+        project_link_payload(
             source="external_link",
             customer_comment="Consignes uniques",
             requested_date="2026-10-15",
@@ -85,19 +119,191 @@ def test_project_form_link_reuses_name_date_and_comment_without_project(scope):
     assert response.status_code == 302
     order = Order.objects.get(customer=customer)
     assert order.created_by == user
-    assert order.uploads.get().original_filename == "Affiche grand format"
+    assert order.uploads.get().original_filename == "affiche.png"
     assert order.customer_note == (
         "Affiche grand format\nDate souhaitée : 15/10/2026\nConsignes uniques"
     )
     detail = client.get(response.url)
     assert detail.status_code == 200
+    from apps.b2b_order_projects.services.projects import B2BOrderProjectService
+    from apps.orders.references import order_business_number
     from apps.portal.client_order_presentation import client_order_identity
 
     identity = client_order_identity(order)
     assert identity.label == "Affiche grand format"
-    assert identity.note == "Date souhaitée : 15/10/2026\nConsignes uniques"
-    assert order.uploads.get().is_external
-    assert not B2BOrderProject.objects.exists()
+    assert identity.reference == order_business_number(order)
+    assert identity.note == "Consignes uniques"
+    assert identity.requested_date.isoformat() == "2026-10-15"
+    assert identity.reference in detail.content.decode()
+    assert "Consignes uniques" in detail.content.decode()
+    assert "15/10/2026" in detail.content.decode()
+    upload = order.uploads.get()
+    assert upload.is_external
+    assert upload.quantity == 1
+    assert upload.support_color_hex == "#112233"
+    assert upload.external_visual_count == 1
+    assert upload.external_visual_specs == []
+    project = order.source_b2b_order_project
+    assert project.status == B2BOrderProject.Status.CONVERTED
+    assert project.project_number == order_business_number(order)
+    assert project.project_number.startswith("CMD-")
+    assert project.customer_comment == "Consignes uniques"
+    assert project.requested_date.isoformat() == "2026-10-15"
+    assert not (
+        B2BOrderProjectService()
+        .list_customer_projects_in_progress(customer)
+        .filter(pk=project.pk)
+        .exists()
+    )
+
+
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_integrated_link_stores_color_and_quantity_per_visual(scope):
+    customer, _user, client, _staff, admin = scope
+    response = client.post(
+        reverse("portal:client-order-project-create", args=[customer.public_id]),
+        project_link_payload(
+            source="external_link",
+            **{
+                "visuals-0-file_name": "logo-face.png",
+                "visuals-0-quantity": "3",
+                "visuals-0-support_color_hex": "#112233",
+                "visuals-1-file_name": "logo-dos.png",
+                "visuals-1-quantity": "2",
+                "visuals-1-support_color_hex": "",
+                "visuals-1-support_color_multicolor": "on",
+            },
+        ),
+    )
+    assert response.status_code == 302
+    order = Order.objects.get(customer=customer)
+    face, back = list(order.uploads.order_by("sort_order", "created_at"))
+    assert face.original_filename == "logo-face.png"
+    assert face.quantity == 3
+    assert face.support_color_hex == "#112233"
+    assert face.external_visual_count == 1
+    assert face.external_visual_specs == []
+    assert back.original_filename == "logo-dos.png"
+    assert back.quantity == 2
+    assert back.support_color_hex == "#multicolor"
+    assert back.external_visual_count == 1
+    assert face.external_url == back.external_url
+    from apps.orders.references import order_business_number
+
+    assert order_business_number(order).startswith("CMD-")
+    panel = client.get(
+        reverse("portal:client-order-panel-uploads", args=[customer.public_id, order.public_id])
+    )
+    html = panel.content.decode()
+    assert "logo-face.png" in html
+    assert "logo-dos.png" in html
+    assert ">3<" in html
+    assert ">2<" in html
+    assert "Multicolore" in html
+    assert "Par visuel" not in html
+    assert "Visuel 1" not in html
+    assert html.count("Ouvrir le lien client") == 4
+    files = admin.get(reverse("portal:staff-order-panel-uploads", args=[order.public_id]))
+    files_html = files.content.decode()
+    assert files.status_code == 200
+    assert "logo-face.png" in files_html
+    assert "logo-dos.png" in files_html
+    assert "Par visuel" not in files_html
+    inspection = admin.get(reverse("portal:staff-order-panel-inspection", args=[order.public_id]))
+    inspection_html = inspection.content.decode()
+    assert inspection.status_code == 200
+    assert inspection_html.count('<article class="atelier-inspection__file">') == 2
+    assert "Décision du lien" not in inspection_html
+    assert inspection_html.count("Décision Atelier") == 4
+    assert "2 fichiers à contrôler" in inspection_html
+    assert str(face.public_id) in inspection_html
+    assert str(back.public_id) in inspection_html
+    job = order.production_job
+    job.of_document_issued_at = timezone.now()
+    job.save(update_fields=["of_document_issued_at"])
+    approved = admin.post(
+        reverse(
+            "portal:staff-order-upload-review",
+            args=[order.public_id, face.public_id],
+        ),
+        {"status": "approved"},
+        HTTP_HX_REQUEST="true",
+    )
+    assert approved.status_code == 200
+    assert OrderUploadReview.objects.get(order_upload=face).status == "approved"
+    assert not OrderUploadReview.objects.filter(order_upload=back).exists()
+    correction = admin.post(
+        reverse(
+            "portal:staff-order-upload-review",
+            args=[order.public_id, back.public_id],
+        ),
+        {
+            "status": "changes_requested",
+            "reason_code": "low_resolution",
+            "comment": "Fichier trop léger.",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert correction.status_code == 200
+    assert OrderUploadReview.objects.get(order_upload=face).status == "approved"
+    assert OrderUploadReview.objects.get(order_upload=back).status == "changes_requested"
+    decided = correction.content.decode()
+    assert "logo-face.png" in decided
+    assert "Prêt pour production" in decided
+    assert "logo-dos.png" in decided
+    assert "Correction demandée" in decided
+    pdf = render_manufacturing_order_pdf_bytes(order=order, production_job=order.production_job)
+    pdf_text = _pdf_text(pdf)
+    assert "logo-face.png" in pdf_text
+    assert "logo-dos.png" in pdf_text
+    assert "example.com" not in pdf_text
+    assert "Par visuel" not in pdf_text
+
+
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_integrated_link_requires_support_color(scope):
+    customer, _user, client, _staff, _admin = scope
+    response = client.post(
+        reverse("portal:client-order-project-create", args=[customer.public_id]),
+        project_link_payload(source="external_link", **{"visuals-0-support_color_hex": ""}),
+    )
+    assert response.status_code == 400
+    assert "couleur du support" in response.content.decode()
+    assert not Order.objects.exists()
+
+
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_integrated_link_requires_a_file_name(scope):
+    customer, _user, client, _staff, _admin = scope
+    posted = project_link_payload(source="external_link")
+    posted.pop("visuals-0-file_name")
+    response = client.post(
+        reverse("portal:client-order-project-create", args=[customer.public_id]),
+        posted,
+    )
+    assert response.status_code == 400
+    assert "nom du fichier" in response.content.decode()
+    assert not Order.objects.exists()
+
+
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_integrated_link_rejects_duplicate_file_names(scope):
+    customer, _user, client, _staff, _admin = scope
+    response = client.post(
+        reverse("portal:client-order-project-create", args=[customer.public_id]),
+        project_link_payload(
+            source="external_link",
+            **{
+                "visuals-0-file_name": "logo.png",
+                "visuals-1-file_name": "Logo.PNG",
+                "visuals-1-quantity": "2",
+                "visuals-1-support_color_hex": "#445566",
+            },
+        ),
+    )
+    assert response.status_code == 400
+    assert "déjà utilisé" in response.content.decode()
+    assert not Order.objects.exists()
 
 
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
@@ -106,7 +312,7 @@ def test_integrated_link_errors_keep_shared_information(scope, external_url):
     customer, _user, client, _staff, _admin = scope
     response = client.post(
         reverse("portal:client-order-project-create", args=[customer.public_id]),
-        payload(
+        project_link_payload(
             source="external_link",
             external_url=external_url,
             customer_comment="Consignes uniques",

@@ -92,10 +92,19 @@ Remplace le bloc combiné décrit dans la recette précédente.
 - [x] Composant commun dans les panneaux existants, visible aussi après paiement.
 - [x] Préparation : nombre de fichiers × prix unitaire, montant HT enregistré.
 - [x] Impression : métrage linéaire, surface facturée et prix unitaire enregistré.
-- [x] Remise éventuelle, sous-total HT, port, taux et montant TVA, total TTC.
+- [x] Remise éventuelle, sous-total HT, port, TVA 20 % et total TTC, y compris en encours. Le HT enregistré du relevé ne change pas. L’ajustement Atelier de chaque ligne reste disponible.
 - [x] Aucun recalcul ni modification des tarifs ; cas ancien sans prix brut explicité.
 - [x] Tests quantité, unités catalogue/Atelier, remise, zéro TVA/port, payé et attente.
 - [x] Accès croisé et permissions vérifiés ; revue sécurité indépendante sans point restant.
 - [x] 145 tests ciblés réussis (facturation, commandes par lien, portail UI/architecture).
 - [x] Vérification navigateur client/Atelier, ordinateur et largeur 390 px sans débordement.
 - [x] CSS compilés et collectés, service web rechargé, contrôle Django sans erreur.
+
+## N° de commande et visuels du lien client
+
+- [x] Toute commande client par lien reçoit un N° `CMD-`, comme la création Atelier, pour l’expédition Sendcloud.
+- [x] Le projet coquille est converti : il ne revient pas dans les préparations en cours.
+- [x] Date souhaitée et commentaire restent lisibles sur la fiche.
+- [x] Le client indique, par visuel, le nom du fichier, la couleur du support et la quantité (jusqu’à 20). Le nom identifie le visuel en production.
+- [x] Chaque visuel déclaré est un fichier. L’Atelier l’approuve ou demande une correction, comme une commande par fichier. Le métrage reste le total de la commande.
+- [x] Le dépôt de fichiers et la saisie atelier du nombre de fichiers restent inchangés.

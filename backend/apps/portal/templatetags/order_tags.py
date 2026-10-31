@@ -121,8 +121,6 @@ def order_htmx_tabs(context, variant):
         customer = context["customer"]
         cid = customer.public_id
         oid = order.public_id
-        membership = context.get("customer_membership")
-        is_owner = membership is not None and membership.is_owner
         shipping_label = "Retrait" if is_pickup_order(order) else "Livraison"
         tabs = [
             {
@@ -161,33 +159,22 @@ def order_htmx_tabs(context, variant):
                 ),
                 "group": 1,
             },
+            {
+                "slug": "billing",
+                "label": "Facturation",
+                "url": reverse(
+                    "portal:client-order-panel-billing",
+                    kwargs={
+                        "customer_public_id": cid,
+                        "order_public_id": oid,
+                    },
+                ),
+                "group": 1,
+            },
         ]
-        if is_owner:
-            tabs.append(
-                {
-                    "slug": "billing",
-                    "label": "Règlement",
-                    "url": reverse(
-                        "portal:client-order-panel-billing",
-                        kwargs={
-                            "customer_public_id": cid,
-                            "order_public_id": oid,
-                        },
-                    ),
-                    "group": 1,
-                }
-            )
         tab_groups = [{"label": "", "tabs": tabs}]
         flat_tabs = _finalize_tab_state(tab_groups, panel_id, request)
-        if not is_owner and request is not None and request.GET.get("panel") == "billing":
-            for tab in flat_tabs:
-                tab["active"] = tab.get("slug") == "uploads"
-            if flat_tabs:
-                active_tab = next((tab for tab in flat_tabs if tab["active"]), flat_tabs[0])
-            else:
-                active_tab = None
-        else:
-            active_tab = next((tab for tab in flat_tabs if tab["active"]), None)
+        active_tab = next((tab for tab in flat_tabs if tab["active"]), None)
     else:
         raise ValueError("variant must be 'staff' or 'client'")
 

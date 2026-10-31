@@ -1,9 +1,10 @@
+{% load portal_tags %}
 <div id="staff-order-inspection-panel" class="workflow-panel atelier-inspection">
   <header class="workflow-panel__hero atelier-inspection__hero">
     <div>
       <h3 class="workflow-panel__title">Contrôle fichiers</h3>
       <p class="workflow-panel__meta">
-        {% if pending_review_count %}{{ pending_review_count }} fichier{{ pending_review_count|pluralize }} à contrôler{% if automatic_attention_count %} · {{ automatic_attention_count }} alerte{{ automatic_attention_count|pluralize }} technique{{ automatic_attention_count|pluralize }}{% endif %}
+        {% if pending_review_count %}{{ pending_review_count }} fichier{{ pending_review_count|pluralize }} à contrôler{% if visual_line_count > uploads|length %} · {{ visual_line_count }} visuel{{ visual_line_count|pluralize }}{% endif %}{% if automatic_attention_count %} · {{ automatic_attention_count }} alerte{{ automatic_attention_count|pluralize }} technique{{ automatic_attention_count|pluralize }}{% endif %}
         {% elif changes_requested_count %}{{ changes_requested_count }} correction{{ changes_requested_count|pluralize }} attendue{{ changes_requested_count|pluralize }} du client
         {% elif all_uploads_approved %}{{ approved_review_count }} fichier{{ approved_review_count|pluralize }} prêt{{ approved_review_count|pluralize }} pour production
         {% else %}Aucune décision en attente{% endif %}
@@ -21,6 +22,58 @@
   <div class="atelier-inspection__list">
     {% for upload in uploads %}
     {% with review=upload.atelier_review inspection=upload.inspection upload_id=upload.public_id|stringformat:"s" %}
+    {% if upload.production_specs.external_visual_specs %}
+    {% for line in upload|upload_visual_lines %}
+    <article class="atelier-inspection__file">
+      <div class="atelier-inspection__preview atelier-inspection__preview--external">
+        <span class="badge is-neutral">Lien</span>
+      </div>
+      <div class="atelier-inspection__body">
+        <div class="atelier-inspection__head">
+          <div class="min-w-0">
+            <h4 class="m-0 break-words font-display text-base font-bold">{{ line.file_name }}</h4>
+            <p class="muted m-0 mt-1 text-xs">Lien client · contrôle manuel</p>
+          </div>
+          <div class="atelier-inspection__file-tools">
+            {% if review and review.status == 'approved' %}
+            <span class="badge is-success shrink-0">Prêt pour production</span>
+            {% elif review and review.status == 'changes_requested' %}
+            <span class="badge is-danger shrink-0">Correction demandée</span>
+            {% else %}
+            <span class="badge is-warning shrink-0">À contrôler</span>
+            {% endif %}
+            {% if has_upload_view_permission %}{% include "portal/partials/external_upload_link.html" with link_only=1 %}{% endif %}
+          </div>
+        </div>
+        <dl class="atelier-inspection__specs" aria-label="Consignes pour {{ line.file_name }}">
+          <div>
+            <dt>Taille demandée</dt>
+            <dd>{{ upload.production_specs.dimensions_label }}</dd>
+          </div>
+          <div>
+            <dt>Couleur du support</dt>
+            <dd>{% include "components/tables/upload_support_color.html" with upload=line %}</dd>
+          </div>
+          <div>
+            <dt>Exemplaires</dt>
+            <dd>{{ line.quantity }}</dd>
+          </div>
+        </dl>
+      </div>
+    </article>
+    {% endfor %}
+    <article class="atelier-inspection__file">
+      <div class="atelier-inspection__body" style="grid-column: 1 / -1">
+        <div class="atelier-inspection__head">
+          <div class="min-w-0">
+            <h4 class="m-0 break-words font-display text-base font-bold">Décision du lien</h4>
+            <p class="muted m-0 mt-1 text-xs">Une seule décision couvre tous les visuels de ce lien.</p>
+          </div>
+        </div>
+        {% include "portal/staff/partials/inspection_review.html" %}
+      </div>
+    </article>
+    {% else %}
     <article class="atelier-inspection__file">
       {% if upload.is_external %}
       <div class="atelier-inspection__preview atelier-inspection__preview--external">
@@ -42,7 +95,7 @@
         <div class="atelier-inspection__head">
           <div class="min-w-0">
             <h4 class="m-0 break-words font-display text-base font-bold">{{ upload.original_filename }}</h4>
-            <p class="muted m-0 mt-1 text-xs">{{ upload.mime_type }} · {{ upload.size_bytes|filesizeformat }}</p>
+            <p class="muted m-0 mt-1 text-xs">{% if upload.is_external %}Lien client · contrôle manuel{% else %}{{ upload.mime_type }} · {{ upload.size_bytes|filesizeformat }}{% endif %}</p>
           </div>
           <div class="atelier-inspection__file-tools">
             {% if review and review.status == 'approved' %}
@@ -52,7 +105,7 @@
             {% else %}
             <span class="badge is-warning shrink-0">À contrôler</span>
             {% endif %}
-            {% if upload.is_external %}{% if has_upload_view_permission %}{% include "portal/partials/external_upload_link.html" %}{% endif %}{% else %}<a class="atelier-inspection__open-link ui-inline-action" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>{% endif %}
+            {% if upload.is_external %}{% if has_upload_view_permission %}{% include "portal/partials/external_upload_link.html" with link_only=1 %}{% endif %}{% else %}<a class="atelier-inspection__open-link ui-inline-action" href="{% url 'portal:staff-order-upload-preview' order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">Ouvrir le fichier</a>{% endif %}
           </div>
         </div>
 
@@ -112,78 +165,10 @@
             </dd>
           </div>
         </dl>
-
-        <div class="atelier-inspection__review-grid">
-          <section class="atelier-inspection__review-block atelier-inspection__review-block--automatic" aria-label="Analyse automatique">
-            <div class="atelier-inspection__review-head">
-              <h5 class="atelier-inspection__section-title">Analyse automatique</h5>
-              {% if upload.is_external %}
-              <span class="badge is-neutral">Non applicable</span>
-              {% elif inspection and inspection.status == 'ok' %}
-              <span class="badge is-neutral">Analyse réussie</span>
-              {% elif inspection and inspection.status == 'warning' %}
-              <span class="badge is-warning">Attention technique</span>
-              {% elif inspection %}
-              <span class="badge is-danger">Analyse impossible</span>
-              {% else %}
-              <span class="badge is-neutral">Non analysé</span>
-              {% endif %}
-            </div>
-            {% if upload.is_external %}
-            <p class="atelier-inspection__review-copy">Non applicable — contrôle manuel.</p>
-            {% elif inspection and inspection.status == 'ok' %}
-            <p class="atelier-inspection__review-copy">Métadonnées extraites.</p>
-            {% elif inspection.summary_message %}
-            <p class="atelier-inspection__review-copy">{{ inspection.summary_message }}</p>
-            {% else %}
-            <p class="atelier-inspection__review-copy">Aucun diagnostic technique.</p>
-            {% endif %}
-            {% if inspection.image_width and inspection.image_height %}
-            <p class="atelier-inspection__pixel-size">{{ inspection.image_width }} × {{ inspection.image_height }} px</p>
-            {% endif %}
-          </section>
-
-          <section class="atelier-inspection__review-block atelier-inspection__review-block--decision" aria-label="Décision Atelier">
-            <div class="atelier-inspection__review-head">
-              <h5 class="atelier-inspection__section-title">Décision Atelier</h5>
-              {% if review and review.reviewed_at %}
-              <span class="atelier-inspection__decision-state">Enregistrée</span>
-              {% else %}
-              <span class="atelier-inspection__decision-state is-pending">Action requise</span>
-              {% endif %}
-            </div>
-            {% if review and review.reviewed_at %}
-            <p class="atelier-inspection__decision-result"><strong>{{ review.get_status_display }}</strong></p>
-            <p class="atelier-inspection__decision-meta">{{ review.reviewed_by.email|default:"Compte supprimé" }} · {{ review.reviewed_at|date:"d/m/Y H:i" }}</p>
-            {% if review.reason_code %}<p class="atelier-inspection__decision-reason">{{ review.get_reason_code_display }}</p>{% endif %}
-            {% if review.comment %}<p class="atelier-inspection__decision-comment">{{ review.comment }}</p>{% endif %}
-            {% if review.status == 'changes_requested' %}
-            <p class="atelier-inspection__notification-state{% if review.client_notified_at %} is-sent{% else %} is-waiting{% endif %}">
-              {% if review.client_notified_at %}Client notifié le {{ review.client_notified_at|date:"d/m/Y H:i" }}{% else %}Notification client en attente{% endif %}
-            </p>
-            {% endif %}
-            {% else %}
-            <p class="atelier-inspection__decision-meta">Votre décision autorise la production.</p>
-            {% endif %}
-
-            {% if can_review_uploads and not review or can_review_uploads and review.status != 'approved' %}
-            <div class="atelier-inspection__decision-actions">
-              <form method="post" action="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-post="{% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id %}" hx-target="#staff-order-inspection-panel" hx-swap="outerHTML" hx-indicator="#portal-htmx-indicator">
-                {% csrf_token %}
-                <input type="hidden" name="status" value="approved">
-                <button class="ui-btn ui-btn-primary" type="submit" data-htmx-disable>Approuver pour production</button>
-              </form>
-            </div>
-            {% endif %}
-          </section>
-        </div>
-
-        {% if can_review_uploads %}
-        {% url 'portal:staff-order-upload-review' order_public_id=order.public_id upload_public_id=upload.public_id as review_action_url %}
-        {% include "portal/staff/components/upload_correction_form.html" with review_hx_target="#staff-order-inspection-panel" %}
-        {% endif %}
+        {% include "portal/staff/partials/inspection_review.html" %}
       </div>
     </article>
+    {% endif %}
     {% endwith %}
     {% endfor %}
   </div>

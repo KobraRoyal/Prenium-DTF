@@ -59,6 +59,9 @@ def test_client_creates_submitted_external_order_without_file_or_jobs():
         action="order.external_created", target_public_id=order.public_id
     )
     assert "token" not in str(audit.metadata)
+    from apps.orders.references import order_business_number
+
+    assert order_business_number(order).startswith("CMD-")
 
 
 @pytest.mark.django_db

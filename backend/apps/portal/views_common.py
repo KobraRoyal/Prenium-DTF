@@ -142,13 +142,15 @@ def meterage_context_for_order(request, order: Order, form_error: str = "") -> d
     meterage_automatic = order.meterage_override_linear_m is None and order_meterage_is_resolved(
         order
     )
+    external_uploads = [item for item in order.uploads.all() if item.is_external]
     return {
         "form_error": form_error,
         "order_billable_sqm_preview": order_billable_sqm_preview,
         "resolved_meterage_linear_m": order_linear,
         "meterage_automatic": meterage_automatic,
         "meterage_payment_frozen": order_pricing_is_payment_frozen(order),
-        "external_order_upload": next((u for u in order.uploads.all() if u.is_external), None),
+        "external_order_upload": next((item for item in external_uploads), None),
+        "external_visual_count_value": sum(item.external_visual_count for item in external_uploads),
         "can_set_meterage_override": can_set_meterage_override(request, order),
         "dtf_laize_cm": int(getattr(settings, "DTF_LAIZE_CM", 55)),
     }

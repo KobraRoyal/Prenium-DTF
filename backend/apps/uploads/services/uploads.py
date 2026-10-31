@@ -541,13 +541,27 @@ class OrderUploadService:
         if not self.access_scope_service.can_access_staff_domain(actor, "orders.change_order"):
             raise ValidationError("Permission de modification de commande requise.")
         count = normalize_external_visual_count(value)
-        uploads = list(OrderUpload.objects.select_for_update().filter(order=order))
-        if len(uploads) != 1 or not uploads[0].is_external:
+        uploads = list(
+            OrderUpload.objects.select_for_update()
+            .filter(order=order)
+            .order_by("sort_order", "created_at")
+        )
+        if not uploads or any(not upload.is_external for upload in uploads):
             raise ValidationError("Cette saisie concerne une commande transmise par lien.")
-        upload = uploads[0]
-        previous = upload.external_visual_count
-        upload.external_visual_count = count
-        upload.save(update_fields=["external_visual_count", "updated_at"])
+        if len(uploads) > 1 and count < len(uploads):
+            raise ValidationError(
+                "Le nombre de fichiers ne peut pas être inférieur aux visuels déclarés."
+            )
+        previous = sum(upload.external_visual_count for upload in uploads)
+        if len(uploads) == 1:
+            shares = [count]
+        else:
+            shares = [count - (len(uploads) - 1)] + [1] * (len(uploads) - 1)
+        for upload, share in zip(uploads, shares, strict=True):
+            if upload.external_visual_count == share:
+                continue
+            upload.external_visual_count = share
+            upload.save(update_fields=["external_visual_count", "updated_at"])
         if previous != count:
             record_event(
                 action="order.external_visual_count_updated",

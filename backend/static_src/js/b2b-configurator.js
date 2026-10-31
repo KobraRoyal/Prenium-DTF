@@ -2154,6 +2154,59 @@ function submitBatchUploadWhenReady(input) {
   }
 }
 
+const EXTERNAL_VISUAL_MAX = 20;
+
+function refreshExternalVisualRows(list) {
+  if (!(list instanceof HTMLElement)) return;
+  const rows = [...list.querySelectorAll("[data-external-visual-row]")];
+  rows.forEach((row, position) => {
+    const label = row.querySelector("[data-external-visual-label]");
+    if (label) label.textContent = `Visuel ${position + 1}`;
+    const remove = row.querySelector("[data-external-visual-remove]");
+    if (remove instanceof HTMLButtonElement) remove.hidden = rows.length < 2;
+  });
+  const add = list.closest("[data-external-visuals]")?.querySelector("[data-external-visual-add]");
+  if (add instanceof HTMLButtonElement) add.disabled = rows.length >= EXTERNAL_VISUAL_MAX;
+}
+
+function addExternalVisualRow(button) {
+  const visuals = button.closest("[data-external-visuals]");
+  const list = visuals?.querySelector("[data-external-visual-list]");
+  const template = visuals?.querySelector("[data-external-visual-template]");
+  if (!(list instanceof HTMLElement) || !(template instanceof HTMLTemplateElement)) return;
+  if (list.querySelectorAll("[data-external-visual-row]").length >= EXTERNAL_VISUAL_MAX) return;
+  let nextIndex = 0;
+  list.querySelectorAll("[data-external-visual-row]").forEach((row) => {
+    const current = Number(row.getAttribute("data-external-visual-index"));
+    if (Number.isFinite(current) && current >= nextIndex) nextIndex = current + 1;
+  });
+  const row = template.content.firstElementChild?.cloneNode(true);
+  if (!(row instanceof HTMLElement)) return;
+  const token = "__INDEX__";
+  const value = String(nextIndex);
+  row.querySelectorAll("*").forEach((node) => {
+    if (!(node instanceof Element)) return;
+    [...node.attributes].forEach((attr) => {
+      if (attr.value.includes(token)) node.setAttribute(attr.name, attr.value.replaceAll(token, value));
+    });
+  });
+  [...row.attributes].forEach((attr) => {
+    if (attr.value.includes(token)) row.setAttribute(attr.name, attr.value.replaceAll(token, value));
+  });
+  list.append(row);
+  initSupportColorFields(row);
+  refreshExternalVisualRows(list);
+}
+
+function removeExternalVisualRow(button) {
+  const list = button.closest("[data-external-visual-list]");
+  const row = button.closest("[data-external-visual-row]");
+  if (!(list instanceof HTMLElement) || !(row instanceof HTMLElement)) return;
+  if (list.querySelectorAll("[data-external-visual-row]").length < 2) return;
+  row.remove();
+  refreshExternalVisualRows(list);
+}
+
 function syncOrderExternalLink(input) {
   const form = input.closest("form[data-order-start-form]");
   if (!form) return;
@@ -2163,6 +2216,15 @@ function syncOrderExternalLink(input) {
   });
   const dropzone = form.querySelector("[data-batch-dropzone]");
   dropzone?.setAttribute("aria-disabled", String(useLink));
+  const visuals = form.querySelector("[data-external-visuals]");
+  if (visuals instanceof HTMLElement) {
+    visuals.hidden = !useLink;
+    visuals.querySelectorAll("input").forEach((control) => {
+      if (control instanceof HTMLInputElement) control.disabled = !useLink;
+    });
+    if (useLink) initSupportColorFields(visuals);
+    refreshExternalVisualRows(visuals.querySelector("[data-external-visual-list]"));
+  }
 }
 
 function bindBatchUploadEvents() {
@@ -2177,6 +2239,18 @@ function bindBatchUploadEvents() {
   document.body.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
+      return;
+    }
+    const addVisual = target.closest("[data-external-visual-add]");
+    if (addVisual instanceof HTMLButtonElement) {
+      event.preventDefault();
+      addExternalVisualRow(addVisual);
+      return;
+    }
+    const removeVisual = target.closest("[data-external-visual-remove]");
+    if (removeVisual instanceof HTMLButtonElement) {
+      event.preventDefault();
+      removeExternalVisualRow(removeVisual);
       return;
     }
     const picker = target.closest("[data-batch-picker]");

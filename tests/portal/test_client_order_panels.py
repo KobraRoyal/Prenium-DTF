@@ -42,10 +42,10 @@ def test_member_cannot_access_owner_order_panels():
     assert "Visuels" in html
     assert "Avancement" in html
     assert "Livraison" in html
+    assert "Facturation" in html
+    assert f"/orders/{order.public_id}/panels/billing/" in html
     assert "Votre référence" not in html
     assert "Accueil client" not in html
-    assert "client-order-panel-billing" not in html
-    assert 'panel=billing"' not in html and "?panel=billing" not in html
 
     shipping = client.get(
         reverse(
@@ -53,15 +53,18 @@ def test_member_cannot_access_owner_order_panels():
             kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
         )
     )
+    assert shipping.status_code == 200
+    assert "Expédition" in shipping.content.decode()
     billing = client.get(
         reverse(
             "portal:client-order-panel-billing",
             kwargs={"customer_public_id": customer.public_id, "order_public_id": order.public_id},
-        )
+        ),
+        HTTP_HX_REQUEST="true",
     )
-    assert shipping.status_code == 200
-    assert "Expédition" in shipping.content.decode()
-    assert billing.status_code == 403
+    assert billing.status_code == 200
+    assert 'aria-label="Facturation"' in billing.content.decode()
+    assert "Payer maintenant" not in billing.content.decode()
 
 
 @pytest.mark.django_db
@@ -483,6 +486,69 @@ def test_client_order_views_share_operational_status_and_handover_date():
     assert "Retrait prévu" in detail_html
     assert "15/09/2026" in detail_html
     assert '<span class="badge is-neutral">Soumise</span>' not in detail_html
+
+
+@pytest.mark.django_db
+def test_deferred_client_order_shows_billing_tab_and_list_ttc():
+    user = get_user_model().objects.create_user(email="ttc-list@example.com", password="pass")
+    customer = Customer.objects.create(name="Encours TTC")
+    CustomerMembership.objects.create(
+        customer=customer, user=user, role=CustomerMembership.Role.OWNER
+    )
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        currency="EUR",
+        subtotal_amount="61.26",
+        shipping_amount="8.00",
+        tax_rate="0",
+        tax_amount="0",
+        total_amount="69.26",
+        billing_mode=Order.BillingMode.DEFERRED,
+        pricing_status=Order.PricingStatus.PRICED,
+    )
+
+    client = Client()
+    assert client.login(email=user.email, password="pass")
+    list_html = client.get(
+        reverse("portal:client-order-list", kwargs={"customer_public_id": customer.public_id})
+    ).content.decode()
+    detail_html = client.get(
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+    ).content.decode()
+    panel_response = client.get(
+        reverse(
+            "portal:client-order-panel-billing",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        ),
+        HTTP_HX_REQUEST="true",
+    )
+    assert panel_response.status_code == 200
+    panel_html = panel_response.content.decode()
+
+    assert "Total TTC" in list_html
+    assert "83,11" in list_html
+    assert "69,26" not in list_html
+    assert "Facturation" in detail_html
+    assert f"/orders/{order.public_id}/panels/billing/" in detail_html
+    assert 'data-panel-slug="billing"' in detail_html
+    assert 'id="client-order-billing-title"' not in detail_html
+    assert 'aria-label="Facturation"' in panel_html
+    assert "Total TTC" in panel_html
+    assert "83,11" in panel_html
+    assert "TVA" in panel_html
+    assert "Encours enregistré HT" not in panel_html
+    assert "69,26" not in panel_html
 
 
 @pytest.mark.django_db

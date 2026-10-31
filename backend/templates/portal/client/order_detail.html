@@ -1,9 +1,10 @@
 {% extends "portal/layout.html" %}
-{% load portal_tags order_tags %}
+{% load portal_tags order_tags billing_tags %}
 
 {% block title %}{{ order_client_label|default:order_display_ref|default:"Commande" }} — Prenium DTF{% endblock %}
 
 {% block portal_content %}
+{% order_vat_preview order as vat %}
 <div class="portal-page portal-page--client client-order-detail client-order-detail-page">
   {% include "components/portal/page_head.html" with breadcrumb_template="components/portal/breadcrumbs/client_order_detail.html" head_labelledby="client-order-title" title=order_client_label|default:order_display_ref|default:"Commande" lead_template="components/portal/page_head_leads/client_order_detail.html" actions_template="components/portal/page_head_actions/client_order_detail.html" %}
 
@@ -51,8 +52,8 @@
       </div>
       {% if order.pricing_status == "priced" %}
       <div class="client-order-summary__fact client-order-summary__fact--pricing">
-        <dt>Montant</dt>
-        <dd><strong>{{ order.total_amount }}&nbsp;{{ order.currency }}</strong></dd>
+        <dt>Total TTC</dt>
+        <dd><strong>{{ vat.total_ttc|floatformat:2 }}&nbsp;{{ order.currency }}</strong></dd>
       </div>
       {% else %}
       <div class="client-order-summary__fact client-order-summary__fact--pricing">

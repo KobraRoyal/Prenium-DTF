@@ -1,4 +1,4 @@
-{% load portal_tags %}
+{% load portal_tags billing_tags %}
 {# Tableau desktop + cartes empilées — breakpoint tablette 960px (aligné product-shell). #}
 {# Client : N° commande (CMD-…) + réf. client. Atelier : N° OF + N° commande + réf. client. #}
 <div class="ui-orders-table-desktop ui-table-shell ui-table-shell--comfortable table-wrap hidden min-[960px]:block">
@@ -15,7 +15,7 @@
         <th>Votre réf.</th>
         {% endif %}
         <th>Statut</th>
-        <th>Total</th>
+        <th>{% if variant == "client" %}Total TTC{% else %}Total{% endif %}</th>
         <th>Créée le</th>
         {% if variant == "client" %}
         <th>Remise prévue</th>
@@ -82,8 +82,13 @@
           </div>
           {% else %}
           <div class="ui-order-secondary">
-            <span class="ui-order-secondary__label">Total</span>
+            <span class="ui-order-secondary__label">{% if variant == "client" %}Total TTC{% else %}Total{% endif %}</span>
+            {% if variant == "client" %}
+            {% order_vat_preview order as vat %}
+            <span class="ui-order-secondary__value">{{ vat.total_ttc|floatformat:2 }} {{ order.currency }}</span>
+            {% else %}
             <span class="ui-order-secondary__value">{{ order.total_amount }} {{ order.currency }}</span>
+            {% endif %}
           </div>
           {% endif %}
         </td>
@@ -153,7 +158,12 @@
       {% if order.pricing_status != "priced" %}
       <span class="text-sm">Total : <span class="muted">En attente</span></span>
       {% else %}
+      {% if variant == "client" %}
+      {% order_vat_preview order as vat %}
+      <span class="text-sm">Total TTC : <strong>{{ vat.total_ttc|floatformat:2 }} {{ order.currency }}</strong></span>
+      {% else %}
       <span class="text-sm">Total : <strong>{{ order.total_amount }} {{ order.currency }}</strong></span>
+      {% endif %}
       {% endif %}
     </div>
     <p class="muted mt-2 text-xs">Créée le {{ order.created_at|date:"d/m/Y H:i" }}</p>

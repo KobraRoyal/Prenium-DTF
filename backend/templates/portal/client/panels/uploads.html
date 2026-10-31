@@ -16,27 +16,26 @@
       </thead>
       <tbody>
         {% for upload in uploads %}
+        {% for line in upload|upload_visual_lines %}
         <tr class="{% if upload.inspection and upload.inspection.status == 'error' %}ui-row-anomaly{% elif upload.inspection and upload.inspection.status == 'warning' %}ui-row-warning{% endif %}">
           <td>
             {% if upload.is_external %}
-<span class="badge is-neutral">Lien externe</span>
-{% else %}
-<a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
-              <img src="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
+            <span class="badge is-neutral">Lien</span>
+            {% else %}
+            <a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
+              <img src="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ line.file_name }}" loading="lazy">
             </a>
-{% endif %}
+            {% endif %}
           </td>
           <td>
-            <div class="ui-table-primary-cell">{{ upload.original_filename }}</div>
+            <div class="ui-table-primary-cell">{{ line.file_name }}</div>
           </td>
-          <td>{{ upload.quantity }}</td>
-          <td>
-            {% include "components/tables/upload_support_color.html" with upload=upload %}
-          </td>
+          <td>{{ line.quantity }}</td>
+          <td>{% include "components/tables/upload_support_color.html" with upload=line %}</td>
           <td>
             {% if upload.is_external %}
-<span class="badge is-neutral">Contrôle manuel</span>
-{% elif upload.inspection %}
+            <span class="badge is-neutral">Contrôle manuel</span>
+            {% elif upload.inspection %}
             <span class="badge {{ upload.inspection.status|badge_tone }}">{{ upload.inspection.status|human_status }}</span>
             {% else %}
             <span class="badge is-neutral">En attente</span>
@@ -45,13 +44,14 @@
           <td>
             <div class="ui-table-actions">
               {% if upload.is_external %}
-{% include "portal/partials/external_upload_link.html" with external_link_audience="client" %}
-{% else %}
-<a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
-{% endif %}
+              {% include "portal/partials/external_upload_link.html" with external_link_audience="client" link_only=1 %}
+              {% else %}
+              <a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
+              {% endif %}
             </div>
           </td>
         </tr>
+        {% endfor %}
         {% endfor %}
       </tbody>
     </table>
@@ -59,51 +59,51 @@
 
   <div class="grid gap-3 min-[960px]:hidden" aria-label="Visuels de la commande">
     {% for upload in uploads %}
+    {% for line in upload|upload_visual_lines %}
     <article class="product-mobile-file-card">
       <div class="client-order-upload-mobile-head">
         {% if upload.is_external %}
-<span class="badge is-neutral">Lien externe</span>
-{% else %}
-<a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
-          <img src="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ upload.original_filename }}" loading="lazy">
+        <span class="badge is-neutral">Lien</span>
+        {% else %}
+        <a class="client-order-upload-thumb is-checker" href="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" target="_blank" rel="noopener">
+          <img src="{% url 'portal:client-order-upload-preview' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}" alt="Aperçu de {{ line.file_name }}" loading="lazy">
         </a>
-{% endif %}
+        {% endif %}
         <div>
-          <p class="font-medium text-[color:var(--ink)] break-words m-0">{{ upload.original_filename }}</p>
+          <p class="font-medium text-[color:var(--ink)] break-words m-0">{{ line.file_name }}</p>
         </div>
       </div>
       <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
         <div>
           <dt class="muted text-xs">Qté</dt>
-          <dd>{{ upload.quantity }}</dd>
+          <dd>{{ line.quantity }}</dd>
         </div>
         <div>
           <dt class="muted text-xs">Statut</dt>
           <dd>
             {% if upload.is_external %}
-<span class="badge is-neutral">Contrôle manuel</span>
-{% elif upload.inspection %}
+            <span class="badge is-neutral">Contrôle manuel</span>
+            {% elif upload.inspection %}
             <span class="badge {{ upload.inspection.status|badge_tone }}">{{ upload.inspection.status|human_status }}</span>
             {% else %}
             <span class="badge is-neutral">En attente</span>
             {% endif %}
           </dd>
         </div>
-        {% if upload.support_color_is_multicolor or upload.support_color_hex %}
         <div class="col-span-2">
           <dt class="muted text-xs">Couleur</dt>
-          <dd>{% include "components/tables/upload_support_color.html" with upload=upload %}</dd>
+          <dd>{% include "components/tables/upload_support_color.html" with upload=line %}</dd>
         </div>
-        {% endif %}
       </dl>
       <div class="mt-4 flex flex-wrap gap-2">
         {% if upload.is_external %}
-{% include "portal/partials/external_upload_link.html" with external_link_audience="client" %}
-{% else %}
-<a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
-{% endif %}
+        {% include "portal/partials/external_upload_link.html" with external_link_audience="client" link_only=1 %}
+        {% else %}
+        <a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
+        {% endif %}
       </div>
     </article>
+    {% endfor %}
     {% endfor %}
   </div>
   {% else %}

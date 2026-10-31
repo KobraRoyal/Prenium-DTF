@@ -1,0 +1,41 @@
+<article class="b2b-external-visual-row" data-external-visual-row data-external-visual-index="{{ index }}">
+  <div class="b2b-external-visual-row__head">
+    <h3 class="b2b-external-visual-row__title" data-external-visual-label>Visuel</h3>
+    <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm" data-external-visual-remove {% if not show_remove %}hidden{% endif %}>Retirer ce visuel</button>
+  </div>
+  <div class="ui-field-group b2b-external-visual-row__name">
+    <label class="ui-label" for="external-visual-name-{{ index }}">Nom du fichier</label>
+    <input
+      class="ui-input"
+      id="external-visual-name-{{ index }}"
+      name="{{ prefix }}file_name"
+      type="text"
+      maxlength="120"
+      required
+      autocomplete="off"
+      placeholder="Ex. logo-dos.png"
+      value="{{ file_name|default:'' }}"
+      data-external-visual-name
+      {% if inputs_disabled %}disabled{% endif %}
+    >
+  </div>
+  <div class="b2b-external-visual-row__specs">
+    {% include "portal/client/partials/order_project_support_color_field.html" with field_name_prefix=prefix swatch_id=swatch_id visual_hex=support_color_hex visual_multicolor=support_color_multicolor inputs_disabled=inputs_disabled %}
+    <div class="ui-field-group b2b-external-visual-row__quantity">
+      <label class="ui-label" for="external-visual-qty-{{ index }}">Quantité</label>
+      <input
+        class="ui-input"
+        id="external-visual-qty-{{ index }}"
+        name="{{ prefix }}quantity"
+        type="number"
+        min="1"
+        max="1000"
+        step="1"
+        inputmode="numeric"
+        required
+        value="{{ quantity|default:'1' }}"
+        {% if inputs_disabled %}disabled{% endif %}
+      >
+    </div>
+  </div>
+</article>

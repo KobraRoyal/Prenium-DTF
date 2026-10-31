@@ -280,7 +280,7 @@ class ClientOrderPanelShippingView(ClientOrderContextMixin, View):
         )
 
 
-class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMixin, View):
+class ClientOrderPanelBillingView(ClientOrderContextMixin, View):
     template_name = "portal/client/panels/billing.html"
 
     def get(self, request, customer_public_id, order_public_id):
@@ -312,7 +312,8 @@ class ClientOrderPanelBillingView(ClientOwnerRequiredMixin, ClientOrderContextMi
 
         awaits_payment = order_awaits_client_payment(order)
         show_pay_cta = (
-            awaits_payment
+            self.customer_membership.is_owner
+            and awaits_payment
             and invoice is None
             and can_pay_online(order.customer)
             and (

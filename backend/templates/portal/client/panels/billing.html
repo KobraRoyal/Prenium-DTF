@@ -1,6 +1,7 @@
 {% load portal_tags billing_tags %}
+{% order_vat_preview order as vat %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="billing" %}
-<div class="client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}" aria-label="Règlement">
+<div class="client-order-panel client-order-panel--billing{% if payment and payment.status == 'captured' and invoice %} client-order-panel--billing-success{% endif %}" aria-label="Facturation">
   {% if payment and payment.status == "captured" and invoice %}
   <section class="client-billing-success" aria-labelledby="client-billing-success-title">
     <div class="client-billing-success__intro">
@@ -174,21 +175,17 @@
 
   <section class="client-billing-overview" aria-label="Synthèse">
     <article>
-      <span>Montant</span>
+      <span>Total TTC</span>
       <strong>
         {% if order.pricing_status == "priced" %}
-        {{ order.total_amount }} {{ order.currency }}
+        {{ vat.total_ttc|floatformat:2 }} {{ order.currency }}
         {% else %}
         —
         {% endif %}
       </strong>
-      <small>
-        {% if order.pricing_status == "priced" %}
-          HT {{ order.subtotal_amount }}{% if order.shipping_amount %} · Port {{ order.shipping_amount }}{% endif %}{% if order.tax_amount %} · TVA {{ order.tax_amount }}{% endif %}
-        {% else %}
-          {{ order.pricing_status|human_status }}
-        {% endif %}
-      </small>
+      {% if order.pricing_status != "priced" %}
+      <small>{{ order.pricing_status|human_status }}</small>
+      {% endif %}
     </article>
     <article>
       <span>Paiement</span>
