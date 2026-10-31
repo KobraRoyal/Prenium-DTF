@@ -545,9 +545,7 @@ def _external_file_block(filename: str, styles: dict[str, ParagraphStyle]) -> li
 
 
 def _manufacturing_visual_rows(upload: dict, styles: dict[str, ParagraphStyle]) -> list[dict]:
-    specs = [
-        spec for spec in (upload.get("external_visual_specs") or []) if isinstance(spec, dict)
-    ]
+    specs = [spec for spec in (upload.get("external_visual_specs") or []) if isinstance(spec, dict)]
     if upload.get("is_external") and specs:
         rows = []
         for index, spec in enumerate(specs, start=1):

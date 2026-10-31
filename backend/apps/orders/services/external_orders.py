@@ -223,8 +223,7 @@ class ExternalOrderService:
                 raise ValidationError(f"{file_name} : {exc.messages[0]}") from exc
             if quantity > STAFF_UPLOAD_QUANTITY_MAX:
                 raise ValidationError(
-                    f"{file_name} : la quantité ne peut pas dépasser "
-                    f"{STAFF_UPLOAD_QUANTITY_MAX}."
+                    f"{file_name} : la quantité ne peut pas dépasser {STAFF_UPLOAD_QUANTITY_MAX}."
                 )
             try:
                 color = upload_service._normalize_support_color(
