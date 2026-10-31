@@ -18,7 +18,7 @@ from apps.uploads.services.production_specs import listed_visuals
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20261031-external-visuals-v2"
+PORTAL_CSS_ASSET_V = "20261031-external-visual-qty"
 
 STATUS_LABELS = {
     "draft": "Brouillon",

@@ -20,22 +20,6 @@
     >
   </div>
   <div class="b2b-external-visual-row__specs">
-    {% include "portal/client/partials/order_project_support_color_field.html" with field_name_prefix=prefix swatch_id=swatch_id visual_hex=support_color_hex visual_multicolor=support_color_multicolor inputs_disabled=inputs_disabled %}
-    <div class="ui-field-group b2b-external-visual-row__quantity">
-      <label class="ui-label" for="external-visual-qty-{{ index }}">Quantité</label>
-      <input
-        class="ui-input"
-        id="external-visual-qty-{{ index }}"
-        name="{{ prefix }}quantity"
-        type="number"
-        min="1"
-        max="1000"
-        step="1"
-        inputmode="numeric"
-        required
-        value="{{ quantity|default:'1' }}"
-        {% if inputs_disabled %}disabled{% endif %}
-      >
-    </div>
+    {% include "portal/client/partials/order_project_support_color_field.html" with field_name_prefix=prefix swatch_id=swatch_id visual_hex=support_color_hex visual_multicolor=support_color_multicolor inputs_disabled=inputs_disabled show_visual_quantity=1 %}
   </div>
 </article>

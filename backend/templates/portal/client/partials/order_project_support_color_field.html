@@ -56,6 +56,24 @@
         {% if inputs_disabled %}disabled{% endif %}
       >
     </label>
+    {% if show_visual_quantity %}
+    <div class="ui-field-group b2b-external-visual-row__quantity">
+      <label class="ui-label" for="external-visual-qty-{{ index }}">Quantité</label>
+      <input
+        class="ui-input"
+        id="external-visual-qty-{{ index }}"
+        name="{{ prefix }}quantity"
+        type="number"
+        min="1"
+        max="1000"
+        step="1"
+        inputmode="numeric"
+        required
+        value="{{ quantity|default:'1' }}"
+        {% if inputs_disabled %}disabled{% endif %}
+      >
+    </div>
+    {% endif %}
   </div>
   <p class="b2b-support-color__status" data-support-color-status aria-live="polite">
     {% if item and item.support_color_is_multicolor or visual_multicolor %}

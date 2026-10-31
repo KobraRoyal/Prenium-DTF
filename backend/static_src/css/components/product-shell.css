@@ -2747,22 +2747,34 @@
   }
 
   body.product-shell .b2b-external-visual-row__specs {
+    display: block;
+  }
+
+  body.product-shell .b2b-external-visual-row .b2b-support-color__choices {
     display: grid;
-    gap: 0.85rem;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem 0.75rem;
   }
 
   body.product-shell .b2b-external-visual-row__quantity {
+    grid-column: 1 / -1;
     max-width: 8.5rem;
+    justify-self: start;
+    gap: 0.3rem;
   }
 
   @media (min-width: 720px) {
-    body.product-shell .b2b-external-visual-row__specs {
-      grid-template-columns: minmax(0, 1fr) 8.5rem;
+    body.product-shell .b2b-external-visual-row .b2b-support-color__choices {
+      grid-template-columns: auto auto minmax(0, 1fr) minmax(6.5rem, 8.5rem);
       align-items: end;
     }
 
     body.product-shell .b2b-external-visual-row__quantity {
+      grid-column: 4;
+      grid-row: 1;
       max-width: none;
+      justify-self: stretch;
     }
   }
 
