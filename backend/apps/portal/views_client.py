@@ -24,7 +24,6 @@ from apps.portal.client_order_presentation import (
     prepare_client_order_rows,
 )
 from apps.portal.views_common import (
-    ClientOwnerRequiredMixin,
     ScopedCustomerMixin,
     access_scope_service,
     badge_tone_for_status,

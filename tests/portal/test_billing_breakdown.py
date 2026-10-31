@@ -197,7 +197,9 @@ def test_zero_shipping_and_vat_are_explicit(priced_order):
     assert "<dd>0,00 EUR</dd>" in html
 
 
-def test_deferred_without_stored_vat_still_shows_twenty_percent_and_keeps_editors(scope, priced_order):
+def test_deferred_without_stored_vat_still_shows_twenty_percent_and_keeps_editors(
+    scope, priced_order
+):
     customer, _user, client, _staff, admin = scope
     priced_order.tax_rate = Decimal("0")
     priced_order.tax_amount = Decimal("0")
