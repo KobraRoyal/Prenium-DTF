@@ -1,12 +1,12 @@
 Django>=5.2.16,<5.3
-djangorestframework>=3.17.2,<3.18
+djangorestframework>=3.18.2,<3.19
 celery[redis]>=5.4,<5.5
 psycopg[binary]>=3.2,<3.3
 gunicorn>=23.0,<24.0
 google-api-python-client>=2.177,<3.0
 google-auth>=2.40,<3.0
 reportlab>=4.2,<5
-Pillow>=12.0,<13
+Pillow>=13.0.0,<14
 PyMuPDF>=1.26,<2
 psd-tools>=1.17.3,<2
 pywebpush==2.5.0
