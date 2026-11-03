@@ -11,7 +11,6 @@ from apps.notifications.services.email_templates import EmailTemplateService
 OPTIONAL_CLIENT_EMAIL_EVENTS = tuple(choice.value for choice in UserEmailNotificationMute.Event)
 
 
-
 @dataclass(frozen=True)
 class EmailNotificationChoice:
     event: str
