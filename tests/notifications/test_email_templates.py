@@ -561,6 +561,7 @@ def test_file_correction_email_uses_upload_and_review_tags_for_both_audiences():
     assert client_message.subject == "Action requise — fichier logo.png"
     assert "Résolution insuffisante" in client_message.body
     assert "Merci de fournir une version 300 DPI." in client_message.body
+    assert "panel=uploads" in client_message.body
     assert "logo.png" in internal_message.body
 
 

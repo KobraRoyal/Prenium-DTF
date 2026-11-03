@@ -585,7 +585,8 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "{{ order.reference }}.\n\n"
             "Correction demandée : {{ review.reason }}\n"
             "Précision Atelier : {{ review.comment }}\n\n"
-            "Merci de transmettre une version corrigée depuis votre espace client.\n\n"
+            "Transmettez le fichier corrigé depuis votre commande :\n"
+            "{{ action.url }}\n\n"
             "Cordialement,\nL’équipe {{ site.name }}"
         ),
     ),

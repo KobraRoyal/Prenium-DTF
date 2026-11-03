@@ -563,6 +563,19 @@ def schedule_order_priced_email(*, order_public_id) -> None:
     transaction.on_commit(lambda: send_order_priced_email_task.delay(str(order_public_id)))
 
 
+def _client_order_uploads_url(order: Order) -> str:
+    return _absolute_url(
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": order.customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+        + "?panel=uploads"
+    )
+
+
 def _client_order_billing_url(order: Order) -> str:
     return _absolute_url(
         reverse(
@@ -612,6 +625,7 @@ def send_file_correction_requested_email(*, review) -> bool:
             "upload.filename": upload.original_filename,
             "review.reason": review.get_reason_code_display(),
             "review.comment": review.comment,
+            "action.url": _client_order_uploads_url(upload.order),
         },
     )
     return EmailTemplate.Audience.CLIENT in sent_audiences

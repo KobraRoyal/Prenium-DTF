@@ -1,0 +1,30 @@
+{% if upload.atelier_review and upload.atelier_review.status == "changes_requested" and not upload.is_external %}
+{% if layout == "row" %}<tr><td colspan="6">{% endif %}
+<div class="client-upload-correction">
+  <p class="m-0"><strong>Correction demandée.</strong> {{ upload.atelier_review.get_reason_code_display }}</p>
+  {% if upload.atelier_review.comment %}<p class="ui-field-help m-0">{{ upload.atelier_review.comment }}</p>{% endif %}
+  {% if replace_error and replace_error_upload_id == upload.public_id|stringformat:"s" %}
+  <div class="alert alert--danger" role="alert"><p class="m-0">{{ replace_error }}</p></div>
+  {% endif %}
+  <form
+    class="ui-form-stack"
+    method="post"
+    enctype="multipart/form-data"
+    action="{% url 'portal:client-order-upload-replace' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}"
+    hx-post="{% url 'portal:client-order-upload-replace' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}"
+    hx-encoding="multipart/form-data"
+    hx-target="#client-order-uploads-panel"
+    hx-swap="outerHTML"
+    hx-indicator="#portal-htmx-indicator"
+    data-submit-loading
+  >
+    {% csrf_token %}
+    <div class="ui-field-group">
+      <label class="ui-label" for="replace-file-{{ upload.public_id }}">Fichier corrigé</label>
+      <input class="ui-input product-file-input w-full" id="replace-file-{{ upload.public_id }}" type="file" name="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf" required>
+    </div>
+    <button class="ui-btn ui-btn-primary ui-btn-sm" type="submit" data-htmx-disable>Envoyer le fichier corrigé</button>
+  </form>
+</div>
+{% if layout == "row" %}</td></tr>{% endif %}
+{% endif %}

@@ -11,7 +11,7 @@ from apps.auditlog.services import record_event
 from apps.orders.models import Order
 from apps.orders.services.pricing import OrderPricingService
 from apps.production.models import ProductionJob
-from apps.uploads.models import OrderUpload
+from apps.uploads.models import AssetVersion, OrderUpload, OrderUploadReview
 from apps.uploads.services.drive import OrderUploadDriveSyncService
 from apps.uploads.services.inspections import OrderUploadInspectionService
 from apps.uploads.services.validation import UploadValidationService
@@ -249,6 +249,126 @@ class OrderUploadService:
             )
 
         return self.get_order_upload(order=order, upload_public_id=order_upload.public_id)
+
+    @transaction.atomic
+    def replace_after_correction(
+        self,
+        *,
+        customer,
+        actor,
+        uploaded_file,
+        customer_membership=None,
+        order_public_id,
+        upload_public_id,
+        source: str,
+    ) -> OrderUpload:
+        """Remplace uniquement un visuel déjà refusé par l’atelier.
+
+        La quantité, les dimensions, la couleur et le métrage restent ceux de la
+        commande. Le prix enregistré n’est pas recalculé. La revue repasse
+        « À contrôler ».
+        """
+        order = self.get_customer_order(customer=customer, order_public_id=order_public_id)
+        if order is None:
+            raise ValidationError("Commande introuvable.")
+        if order.status != Order.Status.SUBMITTED:
+            raise ValidationError("Cette commande ne peut plus recevoir de fichier corrigé.")
+
+        self._validate_customer_actor_scope(
+            customer=customer,
+            actor=actor,
+            customer_membership=customer_membership,
+        )
+        validated_upload = self.validation_service.validate_uploaded_file(uploaded_file)
+
+        order_upload = (
+            OrderUpload.objects.select_for_update()
+            .filter(order=order, public_id=upload_public_id)
+            .first()
+        )
+        if order_upload is None:
+            raise ValidationError("Fichier introuvable pour cette commande.")
+        if order_upload.is_external:
+            raise ValidationError("Un lien externe ne se remplace pas par un dépôt de fichier.")
+        linked_version = None
+        if order_upload.asset_version_id:
+            linked_version = AssetVersion.objects.filter(
+                pk=order_upload.asset_version_id,
+                customer_id=order.customer_id,
+            ).first()
+
+        review = (
+            OrderUploadReview.objects.select_for_update().filter(order_upload=order_upload).first()
+        )
+        if review is None or review.status != OrderUploadReview.Status.CHANGES_REQUESTED:
+            raise ValidationError("Ce fichier n’est pas en attente de correction.")
+
+        previous_filename = order_upload.original_filename
+        previous_reason = review.reason_code
+        previous_asset_public_id = str(linked_version.public_id) if linked_version else ""
+        shared_asset_path = ""
+        if linked_version is not None and order_upload.file.name == linked_version.file.name:
+            shared_asset_path = order_upload.file.name
+
+        order_upload.original_filename = validated_upload.original_filename
+        order_upload.mime_type = validated_upload.mime_type
+        order_upload.size_bytes = validated_upload.size_bytes
+        order_upload.asset_version = None
+        order_upload.production_file_sha256 = ""
+        order_upload.file.save(
+            validated_upload.original_filename,
+            validated_upload.uploaded_file,
+            save=False,
+        )
+        if shared_asset_path and order_upload.file.name == shared_asset_path:
+            raise ValidationError("Le fichier corrigé n’a pas pu être enregistré.")
+        order_upload.save()
+
+        review.status = OrderUploadReview.Status.PENDING
+        review.reason_code = ""
+        review.comment = ""
+        review.reviewed_by = None
+        review.reviewed_at = None
+        review.client_notified_at = None
+        review.full_clean()
+        review.save()
+
+        record_event(
+            action="order_upload.correction_resubmitted",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=order_upload,
+            metadata={
+                "order_public_id": str(order.public_id),
+                "customer_public_id": str(order.customer.public_id),
+                "order_upload_public_id": str(order_upload.public_id),
+                "previous_filename": previous_filename,
+                "previous_reason_code": previous_reason,
+                "previous_asset_version_public_id": previous_asset_public_id,
+                "mime_type": order_upload.mime_type,
+                "size_bytes": order_upload.size_bytes,
+                "source": source,
+            },
+        )
+        self.inspection_service.inspect_upload(
+            order_upload=order_upload,
+            actor=actor,
+            source=source,
+        )
+        self.drive_sync_service.force_resync(
+            order_upload=order_upload,
+            actor=actor,
+            source=source,
+            queue=False,
+        )
+        refreshed = self.get_order_upload(order=order, upload_public_id=order_upload.public_id)
+        transaction.on_commit(
+            lambda: self.drive_sync_service.schedule_upload_sync(
+                order_upload=refreshed,
+                actor=actor,
+                source=source,
+            )
+        )
+        return refreshed
 
     def _normalize_quantity(self, quantity: int | None) -> int:
         if quantity is None:

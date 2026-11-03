@@ -332,6 +332,7 @@
 - [x] Notification client/interne reliée aux modèles d’e-mails personnalisables
 - [x] Audit des décisions sans copie du commentaire client
 - [x] Tests service, isolation, permissions, e-mail et UI ajoutés
+- [x] Renvoi client du fichier en correction, sans toucher au prix ni aux autres visuels
 - [x] Recette desktop/mobile et feedback toast accentué validés
 
 ## Micro-lot 11.9 — Landing conversion ultra (2026-07-15)

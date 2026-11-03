@@ -14,6 +14,7 @@ Remplacer le tableau ambigu « Contrôle technique » par une expérience de rev
 - `OrderUploadReviewService` centralise les transitions, le scope commande/fichier, les validations et l’audit.
 - Les routes de revue et d’aperçu utilisent uniquement les UUID publics et revalident l’appartenance du fichier à la commande.
 - La demande de correction déclenche une tâche Celery et le modèle d’e-mail personnalisable `file_correction_requested` pour le client et l’équipe interne.
+- Le client renvoie uniquement le fichier en correction, depuis l’onglet Visuels. Quantité, dimensions, couleur, métrage et prix enregistrés ne bougent pas. La revue repasse « À contrôler ». Un fichier approuvé, un lien externe ou une commande non soumise restent fermés.
 
 ## UX livrée
 
@@ -44,6 +45,7 @@ Remplacer le tableau ambigu « Contrôle technique » par une expérience de rev
 - [x] Aperçu fichier médié par le backend.
 - [x] Notification client/interne personnalisable branchée sur Celery.
 - [x] Tests service, permission, isolation, portail, e-mail et cohérence UI ajoutés.
+- [x] Renvoi client limité au fichier en correction, sans recalcul de prix ni réouverture des autres fichiers.
 - [x] CSS reconstruit et recette navigateur desktop/mobile effectuée, y compris le poste de contrôle responsive.
 - [x] Documentation et checklist sprint mises à jour.
 

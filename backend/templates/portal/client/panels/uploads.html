@@ -1,6 +1,6 @@
 {% load portal_tags %}
 {% include "portal/client/partials/order_panel_breadcrumb_oob.html" with panel_slug="uploads" %}
-<div class="client-order-panel client-order-panel--uploads" aria-label="Visuels">
+<div class="client-order-panel client-order-panel--uploads" id="client-order-uploads-panel" aria-label="Visuels">
   {% if uploads %}
   <div class="hidden min-[960px]:block ui-table-shell table-wrap ui-table-shell--comfortable">
     <table class="ui-data-table ui-data-table--comfortable w-full border-collapse">
@@ -33,7 +33,9 @@
           <td>{{ line.quantity }}</td>
           <td>{% include "components/tables/upload_support_color.html" with upload=line %}</td>
           <td>
-            {% if upload.is_external %}
+            {% if upload.atelier_review and upload.atelier_review.status == "changes_requested" %}
+            <span class="badge is-danger">Correction demandée</span>
+            {% elif upload.is_external %}
             <span class="badge is-neutral">Contrôle manuel</span>
             {% elif upload.inspection %}
             <span class="badge {{ upload.inspection.status|badge_tone }}">{{ upload.inspection.status|human_status }}</span>
@@ -52,6 +54,7 @@
           </td>
         </tr>
         {% endfor %}
+        {% include "portal/client/partials/upload_correction_resubmit_form.html" with layout="row" %}
         {% endfor %}
       </tbody>
     </table>
@@ -81,7 +84,9 @@
         <div>
           <dt class="muted text-xs">Statut</dt>
           <dd>
-            {% if upload.is_external %}
+            {% if upload.atelier_review and upload.atelier_review.status == "changes_requested" %}
+            <span class="badge is-danger">Correction demandée</span>
+            {% elif upload.is_external %}
             <span class="badge is-neutral">Contrôle manuel</span>
             {% elif upload.inspection %}
             <span class="badge {{ upload.inspection.status|badge_tone }}">{{ upload.inspection.status|human_status }}</span>
@@ -102,6 +107,9 @@
         <a class="ui-inline-action ui-inline-action--control" href="{% url 'portal:client-order-upload-download' customer_public_id=customer.public_id order_public_id=order.public_id upload_public_id=upload.public_id %}">Télécharger</a>
         {% endif %}
       </div>
+      {% if forloop.last %}
+      {% include "portal/client/partials/upload_correction_resubmit_form.html" with layout="card" %}
+      {% endif %}
     </article>
     {% endfor %}
     {% endfor %}

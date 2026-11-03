@@ -63,6 +63,7 @@ from .views_client import (
 )
 from .views_client_dashboard import ClientDashboardResultsView
 from .views_client_order_delete import ClientOrderDeleteView
+from .views_client_upload_replace import ClientOrderUploadReplaceView
 from .views_external_orders import (
     ClientExternalOrderCreateView,
     ClientExternalUploadLinkView,
@@ -508,6 +509,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/payments/return/",
         ClientOrderPaymentReturnView.as_view(),
         name="client-order-payment-return",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/replace/",
+        ClientOrderUploadReplaceView.as_view(),
+        name="client-order-upload-replace",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/orders/<uuid:order_public_id>/uploads/<uuid:upload_public_id>/preview/",
