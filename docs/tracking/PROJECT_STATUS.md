@@ -322,6 +322,7 @@
 - [x] Notification d’expédition rendue idempotente par `Shipment.shipped_at`
 - [x] Garde-fou QA des e-mails : analyse fichier sans notification, domaines réservés bloqués avant tout transport SMTP externe et suite globale à 420 tests
 - [x] Documentation Sprint 14/23 et audit frontend mis à jour
+- [x] Chaque utilisateur peut couper les e-mails client optionnels encore actifs, sans couper les messages indispensables ni les autres destinataires
 
 ## Sprint 24 — Validation des fichiers Atelier (2026-07-14)
 

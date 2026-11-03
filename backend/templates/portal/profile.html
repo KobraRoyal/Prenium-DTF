@@ -1,4 +1,5 @@
 {% extends "portal/layout.html" %}
+{% load notification_tags %}
 {% load static %}
 
 {% block title %}Mes informations — Prenium DTF{% endblock %}
@@ -45,6 +46,7 @@
           {% include "portal/partials/profile_identity_display.html" %}
         </div>
       </details>
+      {% profile_email_notifications %}
     </div>
   </section>
   {% else %}
@@ -71,6 +73,8 @@
           {% include "portal/partials/profile_identity_display.html" %}
         </div>
       </details>
+
+      {% profile_email_notifications %}
 
       {% if customer and company_profile %}
       <details id="account-company" class="staff-customer-workspace__section" data-customer-section>

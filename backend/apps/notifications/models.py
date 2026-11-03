@@ -317,3 +317,60 @@ class PushDelivery(BaseModel):
 
     def __str__(self) -> str:
         return f"Livraison {self.public_id} ({self.status})"
+
+
+class UserEmailNotificationMute(BaseModel):
+    """Personal opt-out for one optional client email. Absence means the mail is sent."""
+
+    class Event(models.TextChoices):
+        ORDER_CREATED = (
+            EmailTemplate.Event.ORDER_CREATED,
+            EmailTemplate.Event.ORDER_CREATED.label,
+        )
+        ORDER_PROCESSING = (
+            EmailTemplate.Event.ORDER_PROCESSING,
+            EmailTemplate.Event.ORDER_PROCESSING.label,
+        )
+        ORDER_READY_TO_SHIP = (
+            EmailTemplate.Event.ORDER_READY_TO_SHIP,
+            EmailTemplate.Event.ORDER_READY_TO_SHIP.label,
+        )
+        ORDER_READY_FOR_PICKUP = (
+            EmailTemplate.Event.ORDER_READY_FOR_PICKUP,
+            EmailTemplate.Event.ORDER_READY_FOR_PICKUP.label,
+        )
+        ORDER_SHIPPED = (
+            EmailTemplate.Event.ORDER_SHIPPED,
+            EmailTemplate.Event.ORDER_SHIPPED.label,
+        )
+        ORDER_PRICED = (
+            EmailTemplate.Event.ORDER_PRICED,
+            EmailTemplate.Event.ORDER_PRICED.label,
+        )
+        VOLUME_DISCOUNT_TIER_REACHED = (
+            EmailTemplate.Event.VOLUME_DISCOUNT_TIER_REACHED,
+            EmailTemplate.Event.VOLUME_DISCOUNT_TIER_REACHED.label,
+        )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="email_notification_mutes",
+    )
+    event = models.CharField("Événement", max_length=48, choices=Event.choices)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "event"),
+                name="uniq_user_email_notification_mute",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("event",), name="notif_email_mute_event_idx"),
+        ]
+        verbose_name = "Préférence e-mail"
+        verbose_name_plural = "Préférences e-mail"
+
+    def __str__(self) -> str:
+        return f"{self.user_id} · {self.event}"

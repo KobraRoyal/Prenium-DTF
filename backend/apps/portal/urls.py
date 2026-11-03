@@ -104,6 +104,7 @@ from .views_profile import (
     PortalProfileIdentityView,
     PortalProfileView,
 )
+from .views_profile_notifications import PortalEmailNotificationPreferenceView
 from .views_staff import (
     StaffOrderDeleteView,
     StaffOrderDetailView,
@@ -234,6 +235,11 @@ urlpatterns = [
         name="password-reset-confirm",
     ),
     path("account/profile/", PortalProfileView.as_view(), name="profile"),
+    path(
+        "account/profile/notifications/",
+        PortalEmailNotificationPreferenceView.as_view(),
+        name="profile-email-notifications",
+    ),
     path(
         "account/profile/identity/",
         PortalProfileIdentityView.as_view(),

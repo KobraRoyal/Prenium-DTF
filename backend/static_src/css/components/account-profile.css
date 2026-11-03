@@ -237,6 +237,76 @@ html body.product-shell .account-profile-identity small {
   text-overflow: unset;
 }
 
+body.product-shell .mail-prefs {
+  display: grid;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--product-line);
+}
+
+body.product-shell .mail-prefs li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.75rem;
+  border-bottom: 1px solid var(--product-line);
+}
+
+body.product-shell .mail-prefs > li > label:first-child {
+  min-width: 0;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+body.product-shell .mail-switch {
+  position: relative;
+  flex: none;
+  min-width: 4.75rem;
+  min-height: 2.75rem;
+}
+
+body.product-shell .mail-switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+body.product-shell .mail-switch span {
+  display: grid;
+  place-items: center;
+  min-width: 4.25rem;
+  height: 1.85rem;
+  border: 1px solid var(--product-line);
+  border-radius: 999px;
+  background: var(--product-panel);
+  color: var(--product-muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+body.product-shell .mail-switch span::before {
+  content: "OFF";
+}
+
+body.product-shell .mail-switch input:checked + span {
+  border-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 16%, var(--product-panel));
+  color: var(--product-ink);
+}
+
+body.product-shell .mail-switch input:checked + span::before {
+  content: "ON";
+}
+
+body.product-shell .mail-switch input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 @media (max-width: 47.99rem) {
   body.product-shell .account-profile-layout {
     grid-template-columns: minmax(0, 1fr);

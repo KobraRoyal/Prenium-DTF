@@ -1,0 +1,46 @@
+<details id="account-notifications" class="staff-customer-workspace__section" data-customer-section>
+  <summary class="staff-customer-workspace__summary">
+    <span>
+      <h2>Notifications</h2>
+      <small>{{ request.user.email }}</small>
+    </span>
+  </summary>
+  <div class="staff-customer-workspace__body">
+    {% if notifications_saved %}
+    <p
+      class="ui-sr-only"
+      role="status"
+      x-data
+      x-init="$nextTick(() => window.preniumToast?.('Vos notifications ont été enregistrées.', 'success'))"
+    >Vos notifications ont été enregistrées.</p>
+    {% endif %}
+    <p class="ui-field-help">Chaque interrupteur coupe l’e-mail sur votre adresse de connexion. L’adresse de facturation le reçoit encore. Paiement, correction de fichier, accès au compte et mot de passe partent toujours.</p>
+    {% if choices %}
+    <form class="ui-form-stack" method="post" action="{% url 'portal:profile-email-notifications' %}">
+      {% csrf_token %}
+      <input type="hidden" name="space" value="{{ nav_mode }}">
+      <ul class="mail-prefs">
+        {% for choice in choices %}
+        <li>
+          <label for="email-pref-{{ choice.event }}">{{ choice.label }}</label>
+          <label class="mail-switch">
+            <input
+              id="email-pref-{{ choice.event }}"
+              type="checkbox"
+              role="switch"
+              name="enabled_events"
+              value="{{ choice.event }}"
+              {% if choice.enabled %}checked{% endif %}
+            >
+            <span aria-hidden="true"></span>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+      {% include "components/forms/form_actions.html" with primary_label="Enregistrer" %}
+    </form>
+    {% else %}
+    <p>Aucun message réglable.</p>
+    {% endif %}
+  </div>
+</details>

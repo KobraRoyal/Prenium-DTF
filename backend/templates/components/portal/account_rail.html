@@ -34,6 +34,10 @@
       href="{% if account_section == 'team' %}{{ profile_url }}?space=staff#account-identity{% else %}#account-identity{% endif %}"
       {% if account_section == 'identity' %}aria-current="location"{% endif %}
     >Identité</a>
+    <a
+      class="ui-selection-control"
+      href="{% if account_section == 'team' %}{{ profile_url }}?space=staff#account-notifications{% else %}#account-notifications{% endif %}"
+    >Notifications</a>
     {% can_manage_staff_team as staff_can_manage_team %}
     {% if staff_can_manage_team %}
     <a
@@ -48,6 +52,10 @@
       href="{% if account_section == 'team' %}{{ profile_url }}?space=client#account-identity{% else %}#account-identity{% endif %}"
       {% if account_section == 'identity' %}aria-current="location"{% endif %}
     >Identité</a>
+    <a
+      class="ui-selection-control"
+      href="{% if account_section == 'team' %}{{ profile_url }}?space=client#account-notifications{% else %}#account-notifications{% endif %}"
+    >Notifications</a>
     {% if customer %}
     {% if account_section == "team" %}
     <a class="ui-selection-control" href="{{ profile_url }}?space=client#account-company">Société</a>

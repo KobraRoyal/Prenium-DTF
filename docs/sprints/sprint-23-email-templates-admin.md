@@ -96,3 +96,11 @@ INTERNAL_NOTIFICATION_EMAILS=atelier@example.com,comptabilite@example.com
 ```
 
 Une audience sans destinataire configuré est ignorée et journalisée sans exposer d’adresse dans les logs applicatifs.
+
+## Préférences personnelles — 3 novembre 2026
+
+L’interrupteur Atelier `EmailTemplate.is_active` reste global. Un utilisateur coupe seulement les e-mails client encore actifs qui ne sont pas indispensables : commande créée, en traitement, traitée, prête au retrait, expédiée, tarifée, palier de remise. L’absence de préférence laisse l’envoi inchangé.
+
+Le filtre s’applique à l’adresse du compte qui a coupé le message. L’adresse de facturation et les autres membres continuent de recevoir le même e-mail. La boîte interne `INTERNAL_NOTIFICATION_EMAILS` n’est pas filtrée. Paiement à effectuer, correction de fichier, accès au compte et mot de passe ne se coupent pas.
+
+Le réglage est dans Mes informations, section Notifications, avec un interrupteur ON/OFF par message. « Commande tarifée » n’apparaît que pour un membre d’un compte à encours, y compris un collaborateur, même si le modèle atelier est inactif : c’est ce message que ces comptes reçoivent. Chaque changement est audité sous `notifications.email_preference.updated`, avec la liste des événements coupés et sans corps de message.

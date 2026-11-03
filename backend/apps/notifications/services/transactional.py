@@ -11,6 +11,10 @@ from django.utils import formats, timezone
 from apps.auditlog.services import record_event
 from apps.notifications.models import EmailTemplate, VolumeDiscountTierNotification
 from apps.notifications.services.email_templates import EmailTemplateService
+from apps.notifications.services.preferences import (
+    OPTIONAL_CLIENT_EMAIL_EVENTS,
+    user_email_preference_service,
+)
 from apps.orders.models import Order
 from apps.shipping.services.methods import order_uses_pickup
 
@@ -130,7 +134,7 @@ def _send_event_email(
     )
     for audience, recipients in audiences:
         recipients = _external_safe_recipients(
-            recipients,
+            _respect_personal_mutes(recipients, event=event, audience=audience),
             event=event,
             audience=audience,
         )
@@ -187,6 +191,17 @@ def _prospect_context(profile) -> dict[str, str]:
     }
 
 
+def _respect_personal_mutes(
+    recipients: list[str],
+    *,
+    event: str,
+    audience: str,
+) -> list[str]:
+    if audience != EmailTemplate.Audience.CLIENT or event not in OPTIONAL_CLIENT_EMAIL_EVENTS:
+        return recipients
+    return user_email_preference_service.deliverable_recipients(recipients, event=event)
+
+
 def _send_context_email(
     *,
     event: str,
@@ -197,7 +212,7 @@ def _send_context_email(
     if not getattr(settings, "TRANSACTIONAL_EMAILS_ENABLED", True):
         return False
     recipients = _external_safe_recipients(
-        recipients,
+        _respect_personal_mutes(recipients, event=event, audience=audience),
         event=event,
         audience=audience,
     )
