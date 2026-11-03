@@ -64,6 +64,8 @@ class ProspectStep1Form(forms.Form):
     )
 
     def clean_siren(self) -> str:
+        if self.cleaned_data.get("country") != "FR":
+            return ""
         return re.sub(r"\D", "", self.cleaned_data.get("siren", ""))
 
     def clean_vat_number(self) -> str:

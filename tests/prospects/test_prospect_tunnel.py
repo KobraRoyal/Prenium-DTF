@@ -1,13 +1,16 @@
 from unittest.mock import patch
 
 import pytest
+from apps.auditlog.models import AuditLogEntry
 from apps.customers.models import Customer, CustomerInvitation, CustomerMembership
 from apps.customers.services.invitations import make_invitation_token
+from apps.prospects.forms import ProspectStep1Form
 from apps.prospects.models import ProspectProfile
 from apps.prospects.services.onboarding import (
     ProspectReviewService,
     make_email_verification_token,
 )
+from apps.prospects.session import SESSION_KEY
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.cache import cache
@@ -88,6 +91,70 @@ def test_france_requires_nine_digit_siren_and_foreign_country_requires_tax_id(cl
         step1_payload(country="BE", siren="", vat_number="BE 0123.456.789"),
     )
     assert response.status_code == 302
+
+
+@pytest.mark.parametrize(
+    "country",
+    [country for country, _ in ProspectStep1Form.base_fields["country"].choices if country != "FR"],
+)
+@pytest.mark.parametrize("siren", ["0123456789", "12345678900012"])
+def test_foreign_form_discards_siren_left_in_hidden_field(country, siren):
+    form = ProspectStep1Form(
+        step1_payload(country=country, siren=siren, vat_number=f"{country} 0123.456.789")
+    )
+
+    assert form.is_valid(), form.errors
+    assert form.cleaned_data["siren"] == ""
+    assert form.cleaned_data["vat_number"] == f"{country}0123456789"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("legacy_draft", [False, True])
+def test_belgian_submission_with_retained_siren_reaches_confirmation(client, legacy_draft):
+    payload = step1_payload(
+        country="BE",
+        siren="0123456789",
+        vat_number="BE 0123.456.789",
+        phone="+32470000000",
+        billing_postal_code="1000",
+        billing_city="Bruxelles",
+    )
+    if legacy_draft:
+        # Les sessions ouvertes avant le correctif contiennent encore le SIREN masqué.
+        session = client.session
+        session[SESSION_KEY] = {"step1": {**payload, "vat_number": "BE0123456789"}}
+        session.save()
+    else:
+        assert client.post(reverse("prospects:step1"), payload).status_code == 302
+
+    with patch(
+        "apps.notifications.tasks.send_access_request_verification_email_task.delay"
+    ) as delay:
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            response = client.post(
+                reverse("prospects:step2"),
+                {**step2_payload(), "terms_accepted": "on"},
+                follow=True,
+            )
+
+    assert response.status_code == 200
+    assert response.redirect_chain == [(reverse("prospects:confirmation"), 302)]
+    assert "Consultez votre e-mail" in response.content.decode()
+    profile = ProspectProfile.objects.get(normalized_email=payload["email"])
+    assert profile.country == "BE"
+    assert profile.siren == ""
+    assert profile.vat_number == "BE0123456789"
+    assert profile.billing_postal_code == "1000"
+    assert profile.billing_city == "Bruxelles"
+    assert profile.status == ProspectProfile.Status.PENDING_EMAIL_VERIFICATION
+    assert not User.objects.exists()
+    assert not Customer.objects.exists()
+    assert AuditLogEntry.objects.filter(
+        action="prospect.access_request.submitted",
+        target_public_id=profile.public_id,
+        metadata__country="BE",
+    ).exists()
+    delay.assert_called_once_with(str(profile.public_id))
 
 
 @pytest.mark.django_db

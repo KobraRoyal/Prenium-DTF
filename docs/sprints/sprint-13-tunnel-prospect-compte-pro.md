@@ -120,6 +120,37 @@ docker compose exec -T worker sh -lc \
 - Les vues de recette restent anonymisées : aucune donnée personnelle réelle ne doit être
   utilisée dans une capture d’écran ou un exemple partagé.
 
+### Correctif soumission hors France — 3 novembre 2026
+
+- Signalement : erreur HTTP 500 après soumission d'une demande belge. L'accès à `/login/`
+  et à la première étape répond HTTP 200 lors du diagnostic ; la tentative exacte reste
+  à corréler aux journaux du NAS, inaccessible par SSH depuis la session de diagnostic.
+- Plantage reproduit sur PostgreSQL : après changement de pays, le champ SIREN masqué
+  reste soumis. Une valeur de 10 à 14 chiffres passe la validation hors France, puis
+  dépasse le `varchar(9)` de `ProspectProfile.siren` (`DataError: value too long for type
+  character varying(9)`). Les tests SQLite seuls ne détectent pas cette limite.
+- Le formulaire ignore désormais le SIREN hors France. Le service applique aussi cette
+  règle aux anciens brouillons en session ; le numéro de TVA / identifiant fiscal
+  normalisé reste conservé. Le SIREN français reste obligatoire et limité à neuf chiffres.
+- Le parcours conserve la confirmation par e-mail, l'audit de soumission et l'absence de
+  création de `User` ou de `Customer` avant revue. Aucun changement de schéma requis.
+- Les tests couvrent les 15 choix hors France du formulaire, dont Belgique, Luxembourg,
+  Allemagne, Espagne, Italie, Pays-Bas, Autriche, Portugal, Suisse et Royaume-Uni,
+  ainsi que la confirmation d'une demande belge depuis un formulaire neuf ou un
+  brouillon antérieur au correctif. Pour un pays absent de la liste, le choix « Autre
+  pays » applique la même règle sans SIREN.
+
+Diagnostic sur le NAS, depuis `/volume1/docker/PreniumDTF` :
+
+```bash
+sudo docker-compose logs --since=30m --tail=200 web
+```
+
+Après déploiement, vérifier une demande belge avec une TVA valide et un SIREN résiduel
+de 10 chiffres : confirmation accessible, `siren` vide, TVA conservée et tâche de
+vérification e-mail planifiée. Contrôler aussi qu'une demande française avec un SIREN
+invalide reste à l'étape entreprise avec une erreur de champ.
+
 ## URLs principales
 
 - `/demande-acces/etape-1/` à `/demande-acces/etape-2/`
@@ -169,6 +200,10 @@ Les paramètres SMTP existants restent ceux de l’environnement. Aucun secret n
 - [x] Procédure de rechargement du registre Celery documentée
 - [x] Adresse professionnelle prospect alignée sur `Customer` et recopiée à l’approbation
 - [x] Parcours prospect enrichi avec aide contextuelle et champs d’adresse accessibles
+- [x] SIREN masqué ignoré hors France, y compris dans les anciens brouillons en session
+- [x] Régression soumission belge couverte avec audit et planification e-mail
+- [x] Correctif validé : 62 tests ciblés, dont 43 rejoués sur PostgreSQL, Ruff et revue sécurité indépendante du correctif applicatif
+- [ ] Incident belge du 3 novembre corrélé aux logs NAS et correctif déployé en production
 - [x] Documentation du lot mise à jour
 - [ ] Recette SMTP avec le domaine réel en environnement cible
 - [x] Recette navigateur desktop/mobile de la file Atelier avec compte de démonstration

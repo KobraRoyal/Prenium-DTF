@@ -82,6 +82,7 @@ class ProspectOnboardingService:
         first_name = str(draft.step1.get("first_name") or "").strip()
         last_name = str(draft.step1.get("last_name") or "").strip()
         company = str(draft.step1.get("company") or "").strip()
+        country = str(draft.step1.get("country") or "").upper()
         profile = ProspectProfile.objects.create(
             first_name=first_name,
             last_name=last_name,
@@ -89,12 +90,13 @@ class ProspectOnboardingService:
             normalized_email=email,
             phone=str(draft.step1.get("phone") or "").strip(),
             company=company,
-            country=str(draft.step1.get("country") or "").upper(),
+            country=country,
             billing_address_line1=str(draft.step1.get("billing_address_line1") or "").strip(),
             billing_address_line2=str(draft.step1.get("billing_address_line2") or "").strip(),
             billing_postal_code=str(draft.step1.get("billing_postal_code") or "").strip(),
             billing_city=str(draft.step1.get("billing_city") or "").strip(),
-            siren=str(draft.step1.get("siren") or ""),
+            # Les anciens brouillons peuvent garder la valeur du champ SIREN masqué.
+            siren=str(draft.step1.get("siren") or "") if country == "FR" else "",
             vat_number=str(draft.step1.get("vat_number") or "").upper(),
             activity_type=str(draft.step1.get("activity_type") or ""),
             # Le service n'est plus demandé dans le tunnel ; les anciens brouillons
