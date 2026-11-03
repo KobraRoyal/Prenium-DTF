@@ -52,8 +52,8 @@ Grille de référence (ajustable dans le **catalogue** `CatalogService`, pas par
 ### Visibilité client des conditions
 
 - Dans **Mon compte**, seul le membre client avec le rôle **Propriétaire** voit la section en lecture seule **« Tarifs et remises »**.
-- La section expose les deux montants effectivement résolus par `OrderPricingService` (DTF au m² et préparation par fichier) et indique explicitement, pour chaque ligne, si la valeur est personnalisée ou provient du catalogue par défaut.
-- Les paliers actifs affichés sont ceux réellement résolus par `resolve_active_ladder` : grille client prioritaire, sinon grille globale. Les collaborateurs et administrateurs client ne reçoivent pas ces montants dans le contexte de la page profil.
+- L’impression DTF y est affichée en euros HT **pour 1 mètre linéaire**, sur la laize utile enregistrée dans **Atelier → Réglages de laize** (`GangSheetSiteSettings.roll_width_mm`). Le montant est le prix au m² résolu multiplié par cette laize en mètres. La préparation de fichier reste un forfait en euros par fichier.
+- La grille dégressive reprend les paliers actifs de `resolve_active_ladder` et montre le prix du mètre après remise. Les collaborateurs et administrateurs client ne reçoivent pas ces montants dans le contexte de la page profil.
 
 ### Livraison — UX
 

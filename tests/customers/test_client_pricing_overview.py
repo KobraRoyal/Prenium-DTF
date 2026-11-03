@@ -10,11 +10,19 @@ from apps.customers.models import (
     DefaultCustomerVolumeDiscountTier,
 )
 from apps.customers.services.client_pricing_overview import CustomerPricingOverviewService
+from apps.gang_sheets.models import GangSheetSiteSettings
 from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
 
 User = get_user_model()
+
+
+def _atelier_laize(width_mm: str = "550.00"):
+    GangSheetSiteSettings.objects.update_or_create(
+        singleton=True,
+        defaults={"roll_width_mm": Decimal(width_mm)},
+    )
 
 
 def _owner_scope(*, email: str, customer: Customer):
@@ -29,6 +37,7 @@ def _owner_scope(*, email: str, customer: Customer):
 
 @pytest.mark.django_db
 def test_pricing_overview_uses_catalog_and_default_ladder_when_customer_has_no_overrides():
+    _atelier_laize()
     DefaultCatalogService().ensure_default_services()
     DefaultCustomerVolumeDiscountTier.objects.create(
         minimum_monthly_linear_m="25.0000",
@@ -42,7 +51,10 @@ def test_pricing_overview_uses_catalog_and_default_ladder_when_customer_has_no_o
 
     overview = CustomerPricingOverviewService().present(customer=customer)
 
-    assert overview.dtf_rate.amount == Decimal("25.00")
+    assert overview.laize_label == "55 cm"
+    assert overview.meter_price_eur == Decimal("13.75")
+    assert overview.dtf_rate.amount == Decimal("13.75")
+    assert overview.dtf_rate.unit_label == "€ HT"
     assert overview.dtf_rate.is_personalized is False
     assert overview.dtf_rate.source_label == "Tarif catalogue par défaut"
     assert overview.file_preparation_rate.amount == Decimal("10.00")
@@ -53,10 +65,18 @@ def test_pricing_overview_uses_catalog_and_default_ladder_when_customer_has_no_o
         Decimal("25.0000"),
         Decimal("50.0000"),
     ]
+    assert [tier.meter_price_eur for tier in overview.volume_discount_tiers] == [
+        Decimal("13.06"),
+        Decimal("12.38"),
+    ]
+    assert overview.volume_discount_tiers[0].threshold_label == "25"
+    assert overview.volume_discount_tiers[0].discount_label == "5"
+    assert overview.volume_discount_tiers[1].discount_label == "10"
 
 
 @pytest.mark.django_db
 def test_pricing_overview_uses_customer_rates_and_ladder_when_present():
+    _atelier_laize()
     customer = Customer.objects.create(
         name="Conditions négociées",
         negotiated_file_preparation_fee_eur=Decimal("6.00"),
@@ -71,8 +91,12 @@ def test_pricing_overview_uses_customer_rates_and_ladder_when_present():
 
     overview = CustomerPricingOverviewService().present(customer=customer)
 
-    assert overview.dtf_rate.amount == Decimal("30.00")
+    assert overview.meter_price_eur == Decimal("16.50")
+    assert overview.dtf_rate.amount == Decimal("16.50")
     assert overview.dtf_rate.is_personalized is True
+    assert overview.volume_discount_tiers[0].meter_price_eur == Decimal("15.26")
+    assert overview.volume_discount_tiers[0].threshold_label == "12,5"
+    assert overview.volume_discount_tiers[0].discount_label == "7,5"
     assert overview.file_preparation_rate.amount == Decimal("6.00")
     assert overview.file_preparation_rate.is_personalized is True
     assert overview.uses_personalized_volume_discount is True
@@ -85,6 +109,7 @@ def test_pricing_overview_uses_customer_rates_and_ladder_when_present():
 
 @pytest.mark.django_db
 def test_owner_sees_resolved_pricing_conditions_in_client_profile():
+    _atelier_laize("600.00")
     customer = Customer.objects.create(
         name="Atelier propriétaire",
         negotiated_file_preparation_fee_eur="6.00",
@@ -106,9 +131,13 @@ def test_owner_sees_resolved_pricing_conditions_in_client_profile():
     assert "Tarifs et remises" in html
     assert "Impression DTF" in html
     assert "Préparation de fichier" in html
+    assert "18,00" in html
+    assert "17,10" in html
+    assert "laize atelier 60 cm" in html
+    assert "1 mètre" in html
+    assert "Dès" in html
     assert html.count("Tarif personnalisé") == 2
     assert "Grille personnalisée" in html
-    assert "À partir de" in html
     assert "account-pricing" in html
 
 
@@ -142,4 +171,8 @@ def test_non_owner_does_not_receive_pricing_conditions_in_client_profile():
     assert "Tarifs et remises" not in html
     assert "Tarif personnalisé" not in html
     assert "99.00" not in html
+    assert "99,00" not in html
+    assert "54,45" not in html
     assert "88.00" not in html
+    assert "88,00" not in html
+    assert "laize atelier" not in html

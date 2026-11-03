@@ -18,7 +18,7 @@ from apps.uploads.services.production_specs import listed_visuals
 register = template.Library()
 access_scope_service = AccessScopeService()
 
-PORTAL_CSS_ASSET_V = "20261103-email-switch-v2"
+PORTAL_CSS_ASSET_V = "20261103-pricing-meter-v1"
 
 STATUS_LABELS = {
     "draft": "Brouillon",

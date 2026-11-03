@@ -2,47 +2,52 @@
 <section class="client-pricing-overview" aria-labelledby="client-pricing-overview-title">
   <header class="client-pricing-overview__head">
     <div>
-      <h3 id="client-pricing-overview-title">Grille tarifaire</h3>
-      <p>Prix HT appliqués automatiquement à vos prochaines commandes.</p>
+      <h3 id="client-pricing-overview-title">Impression DTF</h3>
+      <p>Prix HT d’un mètre linéaire, laize atelier {{ customer_pricing_overview.laize_label }}.</p>
     </div>
+    <span class="client-pricing-overview__source{% if customer_pricing_overview.dtf_rate.is_personalized %} is-personalized{% endif %}">{{ customer_pricing_overview.dtf_rate.source_label }}</span>
   </header>
-
-  <dl class="client-pricing-overview__rates">
-    {% for rate in customer_pricing_overview.rates %}
-    <div class="client-pricing-overview__rate">
-      <dt>
-        <strong>{{ rate.label }}</strong>
-        <small>{{ rate.detail }}</small>
-      </dt>
-      <dd>
-        <strong>{% localize on %}{{ rate.amount }}{% endlocalize %}&nbsp;{{ rate.unit_label }}</strong>
-        <span class="client-pricing-overview__source{% if rate.is_personalized %} is-personalized{% endif %}">{{ rate.source_label }}</span>
-      </dd>
-    </div>
-    {% endfor %}
-  </dl>
 
   <section class="client-pricing-overview__discounts" aria-labelledby="client-volume-discount-title">
     <header class="client-pricing-overview__discounts-head">
       <div>
-        <h3 id="client-volume-discount-title">Remise volume mensuelle</h3>
-        <p>Uniquement sur l’impression DTF, hors préparation de fichier et livraison.</p>
+        <h3 id="client-volume-discount-title">Grille dégressive</h3>
+        <p>Le prix du mètre selon le volume du mois. Hors préparation de fichier et livraison.</p>
       </div>
       <span class="client-pricing-overview__source{% if customer_pricing_overview.uses_personalized_volume_discount %} is-personalized{% endif %}">{{ customer_pricing_overview.volume_discount_source_label }}</span>
     </header>
 
-    {% if customer_pricing_overview.volume_discount_tiers %}
-    <ul class="client-pricing-overview__tiers" aria-label="Paliers de remise volume">
+    <ul class="client-pricing-overview__tiers" aria-label="Prix du mètre selon le volume">
+      <li>
+        <span>1 mètre</span>
+        <span>Prix de base</span>
+        <strong>{% localize on %}{{ customer_pricing_overview.meter_price_eur }}{% endlocalize %}&nbsp;€</strong>
+      </li>
       {% for tier in customer_pricing_overview.volume_discount_tiers %}
       <li>
-        <span>À partir de <strong>{% localize on %}{{ tier.minimum_monthly_linear_m }}{% endlocalize %}&nbsp;m</strong> / mois</span>
-        <strong>−{% localize on %}{{ tier.discount_percent }}{% endlocalize %}&nbsp;%</strong>
+        <span>Dès <strong>{{ tier.threshold_label }}</strong>&nbsp;m / mois</span>
+        <span>−{{ tier.discount_label }}&nbsp;%</span>
+        <strong>{% localize on %}{{ tier.meter_price_eur }}{% endlocalize %}&nbsp;€</strong>
       </li>
       {% endfor %}
     </ul>
+    {% if customer_pricing_overview.volume_discount_tiers %}
     <p class="client-pricing-overview__scope">La remise s’applique {{ customer_pricing_overview.volume_discount_application_scope }}.</p>
     {% else %}
     <p class="client-pricing-overview__empty">Aucune remise volume active n’est configurée actuellement.</p>
     {% endif %}
   </section>
+
+  <dl class="client-pricing-overview__rates">
+    <div class="client-pricing-overview__rate">
+      <dt>
+        <strong>{{ customer_pricing_overview.file_preparation_rate.label }}</strong>
+        <small>{{ customer_pricing_overview.file_preparation_rate.detail }}</small>
+      </dt>
+      <dd>
+        <strong>{% localize on %}{{ customer_pricing_overview.file_preparation_rate.amount }}{% endlocalize %}&nbsp;€</strong>
+        <span class="client-pricing-overview__source{% if customer_pricing_overview.file_preparation_rate.is_personalized %} is-personalized{% endif %}">{{ customer_pricing_overview.file_preparation_rate.source_label }}</span>
+      </dd>
+    </div>
+  </dl>
 </section>
