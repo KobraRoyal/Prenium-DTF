@@ -1,8 +1,13 @@
 {% if upload.atelier_review and upload.atelier_review.status == "changes_requested" and not upload.is_external %}
 {% if layout == "row" %}<tr><td colspan="6">{% endif %}
 <div class="client-upload-correction">
-  <p class="m-0"><strong>Correction demandée.</strong> {{ upload.atelier_review.get_reason_code_display }}</p>
-  {% if upload.atelier_review.comment %}<p class="ui-field-help m-0">{{ upload.atelier_review.comment }}</p>{% endif %}
+  <div class="client-upload-correction__notice" role="status">
+    <div class="client-upload-correction__head">
+      <span class="badge is-danger">Correction demandée</span>
+      <strong>{{ upload.atelier_review.get_reason_code_display }}</strong>
+    </div>
+    {% if upload.atelier_review.comment %}<p class="client-upload-correction__comment">{{ upload.atelier_review.comment }}</p>{% endif %}
+  </div>
   {% if replace_error and replace_error_upload_id == upload.public_id|stringformat:"s" %}
   <div class="alert alert--danger" role="alert"><p class="m-0">{{ replace_error }}</p></div>
   {% endif %}
@@ -21,7 +26,11 @@
     {% csrf_token %}
     <div class="ui-field-group">
       <label class="ui-label" for="replace-file-{{ upload.public_id }}">Fichier corrigé</label>
-      <input class="ui-input product-file-input w-full" id="replace-file-{{ upload.public_id }}" type="file" name="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf" required>
+      <div class="client-upload-file">
+        <span class="ui-btn ui-btn-secondary ui-btn-sm" aria-hidden="true">Choisir un fichier</span>
+        <span class="client-upload-file__name" data-file-name>Aucun fichier choisi</span>
+        <input class="client-upload-file__input" id="replace-file-{{ upload.public_id }}" type="file" name="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.psd,.eps,.ai,.pdf" required onchange="var chosen=this.files&&this.files[0];var name=this.parentElement.querySelector('[data-file-name]');name.textContent=chosen?chosen.name:'Aucun fichier choisi';name.classList.toggle('is-set',!!chosen);">
+      </div>
     </div>
     <button class="ui-btn ui-btn-primary ui-btn-sm" type="submit" data-htmx-disable>Envoyer le fichier corrigé</button>
   </form>
