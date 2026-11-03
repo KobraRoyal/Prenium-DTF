@@ -99,6 +99,8 @@ def test_generated_surface_bundles_exist_and_contain_expected_markers() -> None:
             ".portal-page-surface",
             "body.product-shell",
             "--product-bg:var(--bg)",
+            ".mail-prefs",
+            ".mail-switch",
         ],
         "studio.css": [".gang-editor", ".gang-editor__workspace"],
     }
