@@ -5,7 +5,9 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
+from apps.auditlog.services import record_event
 from apps.b2b_order_projects.permissions import customer_requires_gang_sheet_orders
+from apps.notifications.services.transactional import schedule_external_quote_requested_emails
 from apps.orders.services.external_orders import ExternalOrderService
 from apps.portal.forms_external_orders import (
     ExternalOrderForm,
@@ -13,7 +15,32 @@ from apps.portal.forms_external_orders import (
     StaffExternalOrderForm,
 )
 from apps.portal.views_common import ScopedCustomerMixin, StaffDomainPermissionMixin
+from apps.shipping.services.methods import ShippingMethodService
 from apps.uploads.services.external_links import ExternalUploadLinkService
+
+
+def create_client_link_order(request, *, customer, form):
+    """Crée la commande par lien, avec le délai choisi et un devis si demandé."""
+    quote_requested = request.POST.get("source") == "external_link_quote"
+    order = ExternalOrderService().create_client_order(
+        customer=customer,
+        actor=request.user,
+        shipping_method_code=(request.POST.get("shipping_method_code") or "").strip() or None,
+        **form.cleaned_data,
+    )
+    if quote_requested:
+        record_event(
+            action="order.external_quote_requested",
+            actor=request.user,
+            target=order,
+            metadata={
+                "customer_public_id": str(customer.public_id),
+                "order_public_id": str(order.public_id),
+                "shipping_method_code": order.shipping_method_code,
+            },
+        )
+        schedule_external_quote_requested_emails(order_public_id=order.public_id)
+    return order
 
 
 def external_link_response(**kwargs):
@@ -56,9 +83,7 @@ class ClientExternalOrderCreateView(ScopedCustomerMixin, View):
         form = ExternalOrderForm(request.POST)
         if form.is_valid():
             try:
-                order = ExternalOrderService().create_client_order(
-                    customer=self.customer, actor=request.user, **form.cleaned_data
-                )
+                order = create_client_link_order(request, customer=self.customer, form=form)
             except ValidationError as error:
                 form.add_error(None, "; ".join(error.messages))
             else:
@@ -84,6 +109,7 @@ class ClientExternalOrderCreateView(ScopedCustomerMixin, View):
                 "external_order_form": form,
                 "nav_mode": "client",
                 "nav_key": "client-checkout",
+                **ShippingMethodService().checkout_ui_context(customer=self.customer),
             },
             status=status,
         )
@@ -93,9 +119,7 @@ def create_external_order_from_project_form(request, *, customer, context):
     form = ProjectExternalOrderForm(request.POST)
     if form.is_valid():
         try:
-            order = ExternalOrderService().create_client_order(
-                customer=customer, actor=request.user, **form.cleaned_data
-            )
+            order = create_client_link_order(request, customer=customer, form=form)
         except ValidationError as error:
             form.add_error(None, "; ".join(error.messages))
         else:

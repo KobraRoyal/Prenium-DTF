@@ -19,6 +19,7 @@ from apps.uploads.models import OrderUploadDriveSync, OrderUploadInspection, Ord
 from apps.uploads.services.uploads import OrderUploadService
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import Client, override_settings
 from django.urls import reverse
@@ -754,3 +755,59 @@ def test_external_order_requires_meterage_price_and_manual_review_before_product
         reason="",
     )
     assert job.status == "in_progress"
+
+
+@override_settings(
+    B2B_DTF_ORDER_PROJECT_ENABLED=True,
+    INTERNAL_NOTIFICATION_EMAILS=["atelier@example.com"],
+)
+def test_link_order_can_request_a_quote_with_a_processing_mode(
+    scope, django_capture_on_commit_callbacks
+):
+    customer, user, client, _staff, _admin = scope
+    page = client.get(reverse("portal:client-order-project-create", args=[customer.public_id]))
+    html = page.content.decode()
+    assert "Délai de traitement" in html
+    assert "Demander un devis" in html
+    assert "Chronopost 13" in html
+    mail.outbox.clear()
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = client.post(
+            reverse("portal:client-order-project-create", args=[customer.public_id]),
+            project_link_payload(source="external_link_quote", shipping_method_code="express"),
+        )
+
+    assert response.status_code == 302
+    order = Order.objects.get(customer=customer)
+    assert order.status == Order.Status.SUBMITTED
+    assert order.pricing_status == Order.PricingStatus.PENDING
+    assert order.meterage_override_linear_m is None
+    assert order.shipping_method_code == "express"
+    assert order.shipping_method_name == "Express"
+    assert AuditLogEntry.objects.filter(
+        action="order.external_quote_requested",
+        target_public_id=order.public_id,
+    ).exists()
+    subjects = {message.subject for message in mail.outbox}
+    assert "Votre demande de devis — Client lien" in subjects
+    assert "[Atelier] Demande de devis par lien — Client lien" in subjects
+    bodies = "\n".join(message.body for message in mail.outbox)
+    assert "token=private" not in bodies
+    assert "/design" not in bodies
+    assert f"/staff/orders/{order.public_id}/" in bodies
+    assert user.email in {address for message in mail.outbox for address in message.to}
+
+
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_link_order_keeps_the_account_processing_mode_when_none_is_posted(scope):
+    customer, _user, client, _staff, _admin = scope
+    response = client.post(
+        reverse("portal:client-order-project-create", args=[customer.public_id]),
+        project_link_payload(source="external_link"),
+    )
+    assert response.status_code == 302
+    order = Order.objects.get(customer=customer)
+    assert order.shipping_method_code == "standard"
+    assert order.shipping_method_name == "Standard"
+    assert not AuditLogEntry.objects.filter(action="order.external_quote_requested").exists()

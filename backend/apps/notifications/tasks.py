@@ -11,6 +11,7 @@ from apps.notifications.services.transactional import (
     send_access_request_verification_email,
     send_account_activated_email,
     send_customer_invitation_email,
+    send_external_quote_requested_emails,
     send_file_correction_requested_email,
     send_order_awaiting_payment_email,
     send_order_created_email,
@@ -282,6 +283,21 @@ def send_file_correction_requested_email_task(review_public_id: str) -> None:
         return
     if send_file_correction_requested_email(review=review):
         OrderUploadReviewService().mark_client_notified(review_public_id=review.public_id)
+
+
+@shared_task(
+    name="notifications.send_external_quote_requested_emails",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_external_quote_requested_emails_task(order_public_id: str) -> None:
+    from apps.orders.models import Order
+
+    order = Order.objects.filter(public_id=order_public_id).select_related("customer").first()
+    if order is not None:
+        send_external_quote_requested_emails(order=order)
 
 
 @shared_task(

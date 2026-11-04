@@ -699,6 +699,49 @@ def schedule_quote_requested_emails(*, project_public_id) -> None:
     transaction.on_commit(lambda: send_quote_requested_emails_task.delay(str(project_public_id)))
 
 
+def send_external_quote_requested_emails(*, order) -> None:
+    from apps.orders.references import order_business_number
+
+    reference = order_business_number(order) or order.short_ref
+    context = {
+        "site.name": "Prenium DTF",
+        "customer.name": order.customer.name,
+        "order.reference": reference,
+        "shipping.mode": order.shipping_method_name or "Standard",
+    }
+    client_path = reverse(
+        "portal:client-order-detail",
+        kwargs={
+            "customer_public_id": order.customer.public_id,
+            "order_public_id": order.public_id,
+        },
+    )
+    staff_path = reverse(
+        "portal:staff-order-detail",
+        kwargs={"order_public_id": order.public_id},
+    )
+    _send_context_email(
+        event=EmailTemplate.Event.EXTERNAL_QUOTE_REQUESTED,
+        audience=EmailTemplate.Audience.CLIENT,
+        recipients=_recipient_emails_for_customer(order.customer),
+        context={**context, "action.url": _absolute_url(client_path)},
+    )
+    _send_context_email(
+        event=EmailTemplate.Event.EXTERNAL_QUOTE_REQUESTED_INTERNAL,
+        audience=EmailTemplate.Audience.INTERNAL,
+        recipients=_internal_recipient_emails(),
+        context={**context, "action.url": _absolute_url(staff_path)},
+    )
+
+
+def schedule_external_quote_requested_emails(*, order_public_id) -> None:
+    from apps.notifications.tasks import send_external_quote_requested_emails_task
+
+    transaction.on_commit(
+        lambda: send_external_quote_requested_emails_task.delay(str(order_public_id))
+    )
+
+
 def _format_decimal(value, places: int) -> str:
     return f"{value:.{places}f}".replace(".", ",")
 

@@ -71,15 +71,13 @@
         <div class="ui-form-actions">
           <button type="button" class="ui-btn ui-btn-ghost" data-external-visual-add>Ajouter un visuel</button>
         </div>
+        {% include "portal/client/partials/external_link_dispatch.html" %}
         <template data-external-visual-template>
           {# only : le with parent désactive les champs tant que le lien est vide. Le clone doit rester saisissable. #}
           {% include "portal/client/partials/order_project_external_visual_row.html" with index="__INDEX__" prefix="visuals-__INDEX__-" file_name="" quantity="1" support_color_hex="" support_color_multicolor="" swatch_id="support-hex-visual-__INDEX__" inputs_disabled=0 show_remove=1 only %}
         </template>
       </section>
       {% endwith %}
-      <div class="ui-form-actions">
-        <button type="submit" name="source" value="external_link" class="ui-btn ui-btn-secondary">Transmettre la commande par lien</button>
-      </div>
     </div>
     <div class="b2b-order-start-surface__action">
       <span>Dès le dépôt, les fichiers sont envoyés et leur analyse démarre automatiquement.</span>

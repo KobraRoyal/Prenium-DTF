@@ -454,6 +454,10 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
             from apps.b2b_order_projects.services.file_estimate import present_deferred_file_intro
 
             ctx["file_order_estimate"] = present_deferred_file_intro(customer=self.customer)
+        if "shipping_methods" not in ctx:
+            from apps.shipping.services.methods import ShippingMethodService
+
+            ctx.update(ShippingMethodService().checkout_ui_context(customer=self.customer))
         return ctx
 
 

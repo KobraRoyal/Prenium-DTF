@@ -4,6 +4,6 @@
   <form method="post" action="{% url 'portal:client-external-order-create' customer_public_id=customer.public_id %}" class="ui-form-stack" data-submit-loading>
     {% csrf_token %}
     {% include "portal/partials/external_order_fields.html" with form=external_order_form %}
-    <button type="submit" class="ui-btn ui-btn-primary">Transmettre la commande par lien</button>
+    {% include "portal/client/partials/external_link_dispatch.html" %}
   </form>
 </section>

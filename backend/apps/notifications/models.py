@@ -47,6 +47,14 @@ class EmailTemplate(BaseModel):
             "quote_requested_internal",
             "Demande de devis atelier",
         )
+        EXTERNAL_QUOTE_REQUESTED = (
+            "external_quote_requested",
+            "Demande de devis par lien",
+        )
+        EXTERNAL_QUOTE_REQUESTED_INTERNAL = (
+            "external_quote_requested_internal",
+            "Demande de devis par lien atelier",
+        )
 
     class Audience(models.TextChoices):
         CLIENT = "client", "Client"
