@@ -169,9 +169,9 @@ def test_quote_request_emails_the_client_and_the_atelier(django_capture_on_commi
     assert "[Atelier] Demande de devis — Encours fichier" in subjects
     client_mail = next(message for message in mail.outbox if user.email in message.to)
     atelier_mail = next(message for message in mail.outbox if "atelier@example.com" in message.to)
-    assert "transmettre la commande, ou la laisser de côté" in client_mail.body
-    assert "métrage réel se saisit sur la commande" in atelier_mail.body
-    assert f"/staff/order-projects/{project.public_id}/" in atelier_mail.body
+    assert "validez ou supprimez" in client_mail.body
+    assert "indiquer le métrage" in atelier_mail.body
+    assert f"/staff/quotes/{project.public_id}/" in atelier_mail.body
     assert str(customer.public_id) in client_mail.body
 
 
@@ -189,6 +189,22 @@ def test_order_notice_stays_on_unpriced_deferred_file_orders():
     project.converted_order = order
     project.save(update_fields=["converted_order", "updated_at"])
     assert present_order_notice(order)["quote"]["dtf_amount_eur"] == Decimal("10.00")
+
+    client = Client()
+    client.login(email=user.email, password="pass")
+    page = client.get(
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": order.public_id,
+            },
+        )
+    )
+    assert page.status_code == 200
+    body = page.content.decode()
+    assert "Tarif estimatif" not in body
+    assert "Après contrôle atelier" in body
 
     order.pricing_status = Order.PricingStatus.PRICED
     order.save(update_fields=["pricing_status", "updated_at"])

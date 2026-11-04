@@ -5,6 +5,7 @@
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-operations' %}is-active{% endif %}" {% if nav_key == 'staff-operations' %}aria-current="page"{% endif %} href="{% url 'portal:staff-atelier-operations' %}">Pilotage</a>
   {% endif %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-orders' %}is-active{% endif %}" {% if nav_key == 'staff-orders' %}aria-current="page"{% endif %} href="{% url 'portal:staff-order-list' %}">Commandes</a>
+  {% if perms.orders.view_order %}<a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-quotes' %}is-active{% endif %}" {% if nav_key == 'staff-quotes' %}aria-current="page"{% endif %} href="{% url 'portal:staff-quote-request-list' %}">Devis</a>{% endif %}
   {% if perms.customers.view_customer %}
   <a class="ui-btn ui-btn-ghost ui-btn-sm product-nav__link {% if nav_key == 'staff-customers' %}is-active{% endif %}" {% if nav_key == 'staff-customers' %}aria-current="page"{% endif %} href="{% url 'portal:staff-customer-list' %}">Comptes</a>
   {% endif %}

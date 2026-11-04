@@ -66,6 +66,35 @@ def test_under_review_project_cannot_be_deleted():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_delete_confirmation_posts_outside_the_submit_form():
+    _user, customer, client = create_scope("delete-modal@example.com")
+    project = B2BOrderProject.objects.create(
+        customer=customer,
+        project_number="CMD-2026-999987",
+        name="Prête à supprimer",
+        status=B2BOrderProject.Status.READY_TO_SUBMIT,
+    )
+    response = client.get(
+        reverse(
+            "portal:client-order-project-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        )
+    )
+    html = response.content.decode()
+    assert response.status_code == 200
+    submit_form = html.split('class="b2b-project-submit-form"', 1)[1].split("</form>", 1)[0]
+    assert "order-projects/" in submit_form and "/submit/" in submit_form
+    assert "/cancel/" not in submit_form
+    assert "Supprimer définitivement" not in submit_form
+    assert "Supprimer la commande" in html
+    assert "Supprimer définitivement" in html
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
 def test_portal_delete_redirects_to_list_with_toast():
     _user, customer, client = create_scope("portal-delete@example.com")
     project = B2BOrderProject.objects.create(

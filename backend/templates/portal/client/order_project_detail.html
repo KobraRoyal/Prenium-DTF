@@ -56,6 +56,9 @@
   </div>
   {% endif %}
 
+  {% if project.external_url %}
+  {% include "portal/client/partials/link_quote_request.html" %}
+  {% else %}
   <section class="portal-page-surface client-order-project-surface" aria-labelledby="client-order-project-title">
     {% include "portal/client/partials/order_project_facts.html" %}
     <div class="client-order-project-stack">
@@ -64,5 +67,6 @@
     </div>
     {% include "portal/client/partials/order_project_summary.html" %}
   </section>
+  {% endif %}
 </div>
 {% endblock %}

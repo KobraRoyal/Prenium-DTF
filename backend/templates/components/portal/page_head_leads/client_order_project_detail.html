@@ -1,4 +1,8 @@
 <p class="page-head-lead">
+  {% if project.external_url %}
+  <span class="badge {% if project.quote_priced_at %}is-success{% else %}is-warning{% endif %}">{% if project.quote_priced_at %}Devis tarifé{% else %}Devis demandé{% endif %}</span>
+  {% else %}
   <span class="badge{% if project.status == 'ready_to_submit' or project.status == 'converted' or project.status == 'confirmed' %} is-success{% elif project.status == 'action_required' or project.status == 'changes_requested' or project.status == 'blocked' %} is-danger{% elif project.status == 'analyzing' or project.status == 'incomplete' or project.status == 'draft' %} is-warning{% else %} is-neutral{% endif %}">{{ project.get_status_display }}</span>
+  {% endif %}
   <span>N° UUID {{ project.public_id }}</span>
 </p>

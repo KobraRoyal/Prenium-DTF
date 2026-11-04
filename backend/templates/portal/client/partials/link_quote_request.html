@@ -1,0 +1,28 @@
+{% load l10n %}
+<section class="portal-page-surface" aria-label="Commande provisoire">
+  <aside class="b2b-project-quote" aria-label="Prix de la commande">
+    {% if project.quote_priced_at %}
+    <p class="b2b-project-quote__eyebrow">Devis atelier</p>
+    <p class="b2b-project-quote__total"><strong>{% localize on %}{{ project.estimated_total }}{% endlocalize %}&nbsp;EUR HT</strong></p>
+    <p class="b2b-project-quote__lead">Métrage atelier : {% localize on %}{{ project.quote_meterage_linear_m|floatformat:2 }}{% endlocalize %}&nbsp;m. Validez la commande, ou supprimez-la.</p>
+    {% else %}
+    <p class="b2b-project-quote__eyebrow">Devis demandé</p>
+    <p class="b2b-project-quote__lead">L’atelier consulte le lien et indique le métrage. Aucune commande n’est créée avant votre validation.</p>
+    {% endif %}
+  </aside>
+  <ul>
+    {% for item in project.items.all %}
+    <li>{{ item.name }} — quantité {{ item.quantity }}</li>
+    {% endfor %}
+  </ul>
+  <div class="ui-form-actions">
+    {% if project.quote_priced_at %}
+    <form method="post" action="{% url 'portal:client-quote-accept' customer_public_id=customer.public_id project_public_id=project.public_id %}">
+      {% csrf_token %}
+      <button class="ui-btn ui-btn-primary" type="submit">Valider la commande</button>
+    </form>
+    {% endif %}
+    {% include "portal/client/partials/order_project_delete_button.html" with button_class="" label="Supprimer la commande" button_only=1 %}
+  </div>
+  {% include "portal/client/partials/order_project_delete_button.html" with dialog_only=1 %}
+</section>

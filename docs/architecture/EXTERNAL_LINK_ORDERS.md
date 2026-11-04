@@ -5,6 +5,9 @@
 - Client en encours : dans « Nouvelle commande », le champ « Votre fichier dépasse 20 Mo ? »
   est intégré à la carte « Informations de commande ». Le nom et le commentaire sont
   partagés avec le dépôt normal ; la date souhaitée est conservée dans les consignes Atelier.
+  « Demander un devis » enregistre une commande provisoire, sans créer de commande :
+  l’atelier reçoit les quantités et ouvre le lien depuis Devis, saisit le métrage,
+  puis le client valide ou supprime. La commande n’existe qu’à la validation.
   Le bouton « Transmettre la commande par lien » crée une commande soumise, sans fichier,
   avec tarif et métrage en attente. Aucune seconde saisie du nom ou des consignes. Le nom ouvre la note de commande,
   conformément au format existant, afin de rester le titre client et Atelier ; date et

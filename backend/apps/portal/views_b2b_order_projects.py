@@ -385,6 +385,12 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
         if project is not None:
             ctx["project_client_label"] = project_client_reference(project)
             shipping_method_code = extra.get("shipping_method_code")
+            if (
+                not shipping_method_code
+                and project.price_confirmation_required
+                and project.delivery_method
+            ):
+                shipping_method_code = project.delivery_method
             billing_mode = extra.get(
                 "billing_mode",
                 getattr(self.customer, "default_billing_mode", Order.BillingMode.DEFERRED),

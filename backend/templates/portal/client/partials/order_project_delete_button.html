@@ -1,4 +1,5 @@
 {% if project.can_delete %}
+{% if not dialog_only %}
 <button
   type="button"
   class="ui-destructive-action{% if button_class %} {{ button_class }}{% endif %}"
@@ -7,6 +8,8 @@
 >
   {{ label|default:"Supprimer" }}
 </button>
+{% endif %}
+{% if not button_only %}
 <dialog
   class="b2b-confirm-dialog"
   id="delete-project-dialog-{{ project.public_id }}"
@@ -42,4 +45,5 @@
     </div>
   </div>
 </dialog>
+{% endif %}
 {% endif %}

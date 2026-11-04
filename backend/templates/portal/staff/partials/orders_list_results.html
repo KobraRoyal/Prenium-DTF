@@ -20,17 +20,54 @@
           Commandes comptant à chiffrer avant le paiement client.
         {% elif active_queue == "awaiting_payment" %}
           Commandes comptant tarifées en attente de confirmation du paiement.
+        {% elif active_queue == "quotes" %}
+          Demandes en attente de métrage. Le métrage saisi reste sur la commande après validation client.
         {% else %}
           Toutes les commandes Atelier actives.
         {% endif %}
       </p>
     </div>
     {% if page_obj %}
-    <span class="badge is-neutral">{{ page_obj.paginator.count }} commande{{ page_obj.paginator.count|pluralize }}</span>
+    <span class="badge is-neutral">{{ page_obj.paginator.count }} {% if active_queue == "quotes" %}demande{{ page_obj.paginator.count|pluralize }}{% else %}commande{{ page_obj.paginator.count|pluralize }}{% endif %}</span>
     {% endif %}
   </header>
 
-  {% if orders %}
+  {% if active_queue == "quotes" %}
+  {% if quote_requests %}
+  <div class="ui-table-shell ui-table-shell--comfortable table-wrap">
+    <table class="ui-data-table ui-data-table--comfortable">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Demande</th>
+          <th>Visuels</th>
+          <th>Métrage</th>
+          <th><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in quote_requests %}
+        <tr>
+          <td>{{ project.customer.name }}</td>
+          <td>{{ project.name }}</td>
+          <td>
+            {% for item in project.items.all %}
+            {{ item.name }} × {{ item.quantity }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </td>
+          <td>{% if project.quote_meterage_linear_m %}{{ project.quote_meterage_linear_m|floatformat:2 }} m{% else %}À indiquer{% endif %}</td>
+          <td>
+            <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-quote-request-detail' project_public_id=project.public_id %}">Indiquer le métrage</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {% include "components/ui/empty_state.html" with title="Aucune demande de devis" message="Les demandes apparaissent ici tant que le client ne les a pas validées." %}
+  {% endif %}
+  {% elif orders %}
   {% ui_orders_table orders=orders variant="staff" %}
   {% include "components/portal/pagination.html" with pagination_label="Pagination commandes Atelier" pagination_class="staff-pagination" htmx_target="#staff-orders-list-results" %}
   {% elif search_query %}

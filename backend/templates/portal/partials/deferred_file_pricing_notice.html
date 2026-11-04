@@ -1,5 +1,11 @@
 {% load l10n %}
-{% if notice %}
+{% if project and project.quote_priced_at %}
+<aside class="b2b-project-quote mb-4" role="note" aria-label="Prix de la commande">
+  <p class="b2b-project-quote__eyebrow">Devis atelier</p>
+  <p class="b2b-project-quote__total"><strong>{% localize on %}{{ project.estimated_total }}{% endlocalize %}&nbsp;EUR HT</strong></p>
+  <p class="b2b-project-quote__lead">Métrage atelier : {% localize on %}{{ project.quote_meterage_linear_m|floatformat:2 }}{% endlocalize %}&nbsp;m. Validez la commande, ou supprimez-la.</p>
+</aside>
+{% elif notice %}
 <aside class="{% if notice.intro %}alert alert--info{% else %}b2b-project-quote{% endif %} mb-4" role="note" aria-label="Prix de la commande">
   {% if notice.intro %}
   <p>Déposez vos visuels pour voir une estimation. Vous pourrez demander un devis avant d’envoyer la commande. Le prix définitif est calculé après le retour atelier, sur le métrage réel.</p>
@@ -37,7 +43,7 @@
     {% if audience == "staff" %}
     Le client a demandé le tarif réel avant de transmettre.
     {% elif show_request %}
-    Demande envoyée. Vous pouvez encore transmettre la commande.
+    Demande envoyée. L’atelier indique le métrage, puis vous validez ou supprimez.
     {% else %}
     Demande envoyée à l’atelier.
     {% endif %}

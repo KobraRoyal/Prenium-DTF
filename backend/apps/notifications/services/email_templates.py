@@ -127,6 +127,7 @@ EMAIL_TAGS = (
     EmailTag("action.url", "Lien d'action sécurisé", "https://example.test/activation/"),
     EmailTag("quote.total_ht", "Tarif estimatif HT", "25,69"),
     EmailTag("quote.linear_m", "Longueur estimée", "0,56"),
+    EmailTag("quote.visuals", "Visuels et quantités", "- logo.png × 2"),
     EmailTag("shipping.mode", "Mode de traitement", "Standard"),
 )
 ALLOWED_TAG_KEYS = frozenset(tag.key for tag in EMAIL_TAGS)
@@ -624,8 +625,8 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "Votre demande de devis pour {{ customer.name }} est enregistrée.\n\n"
             "Tarif estimatif : {{ quote.total_ht }} EUR HT\n"
             "Longueur estimée : {{ quote.linear_m }} m, d’après vos fichiers.\n\n"
-            "Le tarif réel sera calculé sur le métrage imprimé, après l’envoi de la commande. "
-            "Vous pouvez transmettre la commande, ou la laisser de côté :\n"
+            "L’atelier indique le métrage, puis vous validez ou supprimez "
+            "la commande provisoire :\n"
             "{{ action.url }}\n\n"
             "Cordialement,\nL’équipe {{ site.name }}"
         ),
@@ -642,10 +643,27 @@ EMAIL_TEMPLATE_DEFINITIONS = (
         body=(
             "Une demande de devis est arrivée.\n\n"
             "Client : {{ customer.name }}\n"
-            "Tarif estimatif : {{ quote.total_ht }} EUR HT\n"
-            "Longueur estimée : {{ quote.linear_m }} m\n\n"
-            "Le métrage réel se saisit sur la commande, une fois qu’elle est transmise.\n"
-            "Ouvrir le projet : {{ action.url }}"
+            "{{ quote.visuals }}\n\n"
+            "Ouvrez la demande pour récupérer les visuels et indiquer le métrage.\n"
+            "Aucune commande n’est créée tant que le client n’a pas validé.\n"
+            "{{ action.url }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.QUOTE_PRICED,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Devis tarifé",
+        audience_label="Client",
+        description="Préviens le client que l’atelier a tarifé sa demande de devis.",
+        subject="Votre demande de devis est tarifée — {{ customer.name }}",
+        body=(
+            "Bonjour,\n\n"
+            "Votre demande de devis est tarifée.\n\n"
+            "Métrage atelier : {{ quote.linear_m }} m\n"
+            "Montant : {{ quote.total_ht }} EUR HT\n\n"
+            "Validez ou supprimez la commande provisoire :\n"
+            "{{ action.url }}\n\n"
+            "Cordialement,\nL’équipe {{ site.name }}"
         ),
     ),
     _definition(

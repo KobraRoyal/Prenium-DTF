@@ -92,6 +92,15 @@ class B2BOrderProject(BaseModel):
     status = models.CharField(max_length=40, choices=Status.choices, default=Status.DRAFT)
     requested_date = models.DateField(null=True, blank=True)
     delivery_method = models.CharField(max_length=32, blank=True)
+    external_url = models.URLField(max_length=500, blank=True)
+    quote_meterage_linear_m = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.0001"))],
+    )
+    quote_priced_at = models.DateTimeField(null=True, blank=True)
     shipping_address = models.JSONField(default=dict, blank=True)
     customer_comment = models.TextField(blank=True)
     internal_comment = models.TextField(blank=True)

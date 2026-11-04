@@ -106,6 +106,12 @@ from .views_profile import (
     PortalProfileView,
 )
 from .views_profile_notifications import PortalEmailNotificationPreferenceView
+from .views_quote_requests import (
+    ClientQuoteAcceptView,
+    StaffQuoteRequestDetailView,
+    StaffQuoteRequestLinkView,
+    StaffQuoteRequestListView,
+)
 from .views_staff import (
     StaffOrderDeleteView,
     StaffOrderDetailView,
@@ -361,6 +367,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/quote/",
         ClientOrderProjectQuoteRequestView.as_view(),
         name="client-order-project-quote",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/quote/accept/",
+        ClientQuoteAcceptView.as_view(),
+        name="client-quote-accept",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/submit/",
@@ -769,6 +780,21 @@ urlpatterns = [
         "staff/order-projects/",
         StaffOrderProjectListView.as_view(),
         name="staff-order-project-list",
+    ),
+    path(
+        "staff/quotes/",
+        StaffQuoteRequestListView.as_view(),
+        name="staff-quote-request-list",
+    ),
+    path(
+        "staff/quotes/<uuid:project_public_id>/",
+        StaffQuoteRequestDetailView.as_view(),
+        name="staff-quote-request-detail",
+    ),
+    path(
+        "staff/quotes/<uuid:project_public_id>/link/",
+        StaffQuoteRequestLinkView.as_view(),
+        name="staff-quote-request-link",
     ),
     path(
         "staff/order-projects/<uuid:project_public_id>/",

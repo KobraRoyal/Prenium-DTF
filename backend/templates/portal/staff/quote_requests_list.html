@@ -1,0 +1,44 @@
+{% extends "portal/layout.html" %}
+{% block title %}Demandes de devis — Prenium DTF{% endblock %}
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+{% include "components/portal/page_head.html" with title="Demandes de devis" subtitle="Indiquez le métrage. La commande n’existe qu’après validation du client." %}
+
+<section class="portal-page-surface ui-list-section" aria-label="Demandes de devis">
+  {% if projects %}
+  <div class="ui-table-shell ui-table-shell--comfortable table-wrap">
+    <table class="ui-data-table ui-data-table--comfortable">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Demande</th>
+          <th>Visuels</th>
+          <th>État</th>
+          <th><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in projects %}
+        <tr>
+          <td>{{ project.customer.name }}</td>
+          <td>{{ project.name }}</td>
+          <td>
+            {% for item in project.items.all %}
+            {{ item.name }} × {{ item.quantity }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </td>
+          <td>{% if project.quote_priced_at %}Tarifé{% else %}À tarifer{% endif %}</td>
+          <td>
+            <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-quote-request-detail' project_public_id=project.public_id %}">Ouvrir</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">Aucune demande de devis en attente.</p>
+  {% endif %}
+</section>
+</div>
+{% endblock %}

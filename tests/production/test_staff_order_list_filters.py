@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
-from apps.b2b_order_projects.models import B2BOrderProject
+from apps.b2b_order_projects.models import B2BOrderProject, B2BOrderProjectItem
 from apps.billing.models import Payment
 from apps.customers.models import Customer
 from apps.orders.models import Order
@@ -275,6 +277,7 @@ def test_dashboard_kpi_cards_link_to_staff_orders_filters():
     assert hrefs["À contrôler"] == f"{orders_url}?queue=to_review"
     assert hrefs["Corrections client"] == f"{orders_url}?queue=changes"
     assert hrefs["Fichiers validés"] == f"{orders_url}?queue=approved"
+    assert hrefs["Demandes de devis"] == f"{orders_url}?queue=quotes"
 
 
 @pytest.mark.django_db
@@ -366,3 +369,45 @@ def test_staff_order_list_status_filter_preserves_the_queue_and_search():
     assert queued_order.production_job.manufacturing_order_number not in html
     assert 'name="queue" type="hidden" value=""' in html
     assert '<option value="ready_to_ship" selected>' in html
+
+
+@pytest.mark.django_db
+def test_quote_filter_opens_the_meterage_view_and_hides_validated_orders():
+    customer = Customer.objects.create(name="Devis filtre")
+    project = B2BOrderProject.objects.create(
+        customer=customer,
+        project_number="CMD-2026-880001",
+        name="Logo vitrine",
+        price_confirmation_required=True,
+    )
+    B2BOrderProjectItem.objects.create(
+        customer=customer,
+        project=project,
+        name="logo.png",
+        width_mm=Decimal("10.00"),
+        height_mm=Decimal("10.00"),
+        quantity=2,
+        sort_order=1,
+    )
+    validated = B2BOrderProject.objects.create(
+        customer=customer,
+        project_number="CMD-2026-880002",
+        name="Déjà validée",
+        price_confirmation_required=True,
+        status=B2BOrderProject.Status.CONVERTED,
+    )
+
+    client = create_staff_client(email="staff-quotes@example.com")
+    response = client.get(reverse("portal:staff-order-list"), {"queue": "quotes"})
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Demandes de devis" in html
+    assert "Logo vitrine" in html
+    assert "logo.png × 2" in html
+    assert "Indiquer le métrage" in html
+    assert f"/staff/quotes/{project.public_id}/" in html
+    assert validated.name not in html
+    detail = client.get(reverse("portal:staff-quote-request-detail", args=[project.public_id]))
+    assert detail.status_code == 200
+    assert 'name="meterage_linear_m"' in detail.content.decode()

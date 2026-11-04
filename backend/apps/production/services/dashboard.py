@@ -397,6 +397,7 @@ class AtelierDashboardService:
             "pending_review": queue_counts["to_review"],
             "changes_requested": queue_counts["changes"],
             "files_validated": queue_counts["approved"],
+            "quote_requests": queue_counts.get("quotes", 0),
         }
 
     def _build_kpi_rows(
@@ -434,6 +435,13 @@ class AtelierDashboardService:
                 "hint": "OF émis et tous les fichiers approuvés.",
                 "tone": "" if not metrics["files_validated"] else "is-ready",
                 "card_href": f"{orders_url}?queue=approved",
+            },
+            {
+                "label": "Demandes de devis",
+                "value": metrics.get("quote_requests", 0),
+                "hint": "Indiquer le métrage. Il reste sur la commande validée.",
+                "tone": "is-attention" if metrics.get("quote_requests") else "",
+                "card_href": f"{orders_url}?queue=quotes",
             },
         ]
 

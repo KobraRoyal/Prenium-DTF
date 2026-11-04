@@ -5,9 +5,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 
-from apps.auditlog.services import record_event
 from apps.b2b_order_projects.permissions import customer_requires_gang_sheet_orders
-from apps.notifications.services.transactional import schedule_external_quote_requested_emails
 from apps.orders.services.external_orders import ExternalOrderService
 from apps.portal.forms_external_orders import (
     ExternalOrderForm,
@@ -20,27 +18,45 @@ from apps.uploads.services.external_links import ExternalUploadLinkService
 
 
 def create_client_link_order(request, *, customer, form):
-    """Crée la commande par lien, avec le délai choisi et un devis si demandé."""
-    quote_requested = request.POST.get("source") == "external_link_quote"
+    """Transmet une commande par lien, ou enregistre un devis sans créer de commande."""
+    if request.POST.get("source") == "external_link_quote":
+        from apps.b2b_order_projects.services.quote_requests import create_link_quote
+
+        return create_link_quote(
+            customer=customer,
+            actor=request.user,
+            cleaned_data=form.cleaned_data,
+            shipping_method_code=(request.POST.get("shipping_method_code") or "").strip() or None,
+        )
     order = ExternalOrderService().create_client_order(
         customer=customer,
         actor=request.user,
         shipping_method_code=(request.POST.get("shipping_method_code") or "").strip() or None,
         **form.cleaned_data,
     )
-    if quote_requested:
-        record_event(
-            action="order.external_quote_requested",
-            actor=request.user,
-            target=order,
-            metadata={
-                "customer_public_id": str(customer.public_id),
-                "order_public_id": str(order.public_id),
-                "shipping_method_code": order.shipping_method_code,
+    return order
+
+
+def _redirect_after_link_submit(*, customer, result):
+    if getattr(result, "project_number", ""):
+        return HttpResponseRedirect(
+            reverse(
+                "portal:client-order-project-detail",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "project_public_id": result.public_id,
+                },
+            )
+        )
+    return HttpResponseRedirect(
+        reverse(
+            "portal:client-order-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "order_public_id": result.public_id,
             },
         )
-        schedule_external_quote_requested_emails(order_public_id=order.public_id)
-    return order
+    )
 
 
 def external_link_response(**kwargs):
@@ -87,15 +103,7 @@ class ClientExternalOrderCreateView(ScopedCustomerMixin, View):
             except ValidationError as error:
                 form.add_error(None, "; ".join(error.messages))
             else:
-                return HttpResponseRedirect(
-                    reverse(
-                        "portal:client-order-detail",
-                        kwargs={
-                            "customer_public_id": self.customer.public_id,
-                            "order_public_id": order.public_id,
-                        },
-                    )
-                )
+                return _redirect_after_link_submit(customer=self.customer, result=order)
         return self._render(request, form, status=400)
 
     def _render(self, request, form, status=200):
@@ -123,9 +131,7 @@ def create_external_order_from_project_form(request, *, customer, context):
         except ValidationError as error:
             form.add_error(None, "; ".join(error.messages))
         else:
-            return HttpResponseRedirect(
-                reverse("portal:client-order-detail", args=[customer.public_id, order.public_id])
-            )
+            return _redirect_after_link_submit(customer=customer, result=order)
     return render(
         request,
         "portal/client/order_project_form.html",

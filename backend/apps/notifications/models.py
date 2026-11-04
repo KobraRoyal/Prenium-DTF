@@ -47,6 +47,7 @@ class EmailTemplate(BaseModel):
             "quote_requested_internal",
             "Demande de devis atelier",
         )
+        QUOTE_PRICED = "quote_priced", "Devis tarifé"
         EXTERNAL_QUOTE_REQUESTED = (
             "external_quote_requested",
             "Demande de devis par lien",

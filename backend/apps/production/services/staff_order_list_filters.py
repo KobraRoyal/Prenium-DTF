@@ -23,6 +23,7 @@ class StaffOrderListFilterService:
         ("approved", "Fichiers validés"),
         ("to_price", "À tarifer"),
         ("awaiting_payment", "En attente de paiement"),
+        ("quotes", "Demandes de devis"),
     )
     status_definitions = (
         ("", "Tous statuts"),
@@ -78,7 +79,7 @@ class StaffOrderListFilterService:
     def build_visible_status_tabs(
         self, *, active_queue: str, active_status: str, counts: dict[str, int]
     ) -> list[dict[str, object]]:
-        if active_queue in self.administrative_queues:
+        if active_queue in self.administrative_queues or active_queue == "quotes":
             return []
         return self.build_status_tabs(active_status=active_status, counts=counts)
 
@@ -101,6 +102,9 @@ class StaffOrderListFilterService:
             counts["awaiting_payment"] = administrative.filter(
                 pricing_status=Order.PricingStatus.PRICED
             ).count()
+        from apps.b2b_order_projects.services.quote_requests import open_quote_requests
+
+        counts["quotes"] = open_quote_requests().count()
         return counts
 
     def count_by_status(self, queryset: QuerySet) -> dict[str, int]:
@@ -116,6 +120,50 @@ class StaffOrderListFilterService:
             },
         }
 
+    def filter_quote_requests(self, *, query: str):
+        from apps.b2b_order_projects.services.quote_requests import open_quote_requests
+
+        quotes = open_quote_requests()
+        cleaned = str(query or "").strip()
+        if not cleaned:
+            return quotes
+        return quotes.filter(
+            Q(name__icontains=cleaned)
+            | Q(project_number__icontains=cleaned)
+            | Q(customer__name__icontains=cleaned)
+            | Q(items__name__icontains=cleaned)
+        ).distinct()
+
+    def page_for_queue(
+        self,
+        queryset: QuerySet,
+        *,
+        queue: str,
+        status: str,
+        query: str,
+        can_price: bool,
+        page_number,
+        page_size: int,
+    ):
+        from django.core.paginator import Paginator
+
+        if self.normalize_queue(queue) == "quotes":
+            page = Paginator(self.filter_quote_requests(query=query), page_size).get_page(
+                page_number
+            )
+            return page, [], page.object_list
+        page = Paginator(
+            self.filter_list(
+                queryset,
+                queue=queue,
+                status=status,
+                query=query,
+                can_price=can_price,
+            ),
+            page_size,
+        ).get_page(page_number)
+        return page, page.object_list, []
+
     def filter_list(
         self,
         queryset: QuerySet,
@@ -125,6 +173,8 @@ class StaffOrderListFilterService:
         query: str,
         can_price: bool,
     ) -> QuerySet:
+        if self.normalize_queue(queue) == "quotes":
+            return queryset.none()
         filtered = self.apply_filter(queryset, queue=queue, can_price=can_price)
         if queue not in self.administrative_queues:
             filtered = self.apply_status_filter(filtered, status=status)
@@ -132,6 +182,8 @@ class StaffOrderListFilterService:
 
     def apply_filter(self, queryset: QuerySet, *, queue: str, can_price: bool = False) -> QuerySet:
         normalized = self.normalize_queue(queue)
+        if normalized == "quotes":
+            return queryset.none()
         if normalized in self.administrative_queues:
             if not can_price:
                 raise PermissionDenied

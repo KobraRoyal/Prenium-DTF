@@ -658,6 +658,7 @@ def schedule_file_correction_requested_email(*, review_public_id) -> None:
 
 def send_quote_requested_emails(*, project) -> None:
     from apps.b2b_order_projects.services.file_estimate import present_project_estimate
+    from apps.b2b_order_projects.services.quote_requests import quote_visual_lines
 
     notice = present_project_estimate(project=project, customer=project.customer) or {}
     quote = notice.get("quote") or {}
@@ -667,6 +668,7 @@ def send_quote_requested_emails(*, project) -> None:
         "customer.name": project.customer.name,
         "quote.total_ht": _format_decimal(quote.get("total_eur") or 0, 2) if quote else "",
         "quote.linear_m": _format_decimal(linear, 2) if linear is not None else "",
+        "quote.visuals": quote_visual_lines(project),
     }
     client_path = reverse(
         "portal:client-order-project-detail",
@@ -676,7 +678,7 @@ def send_quote_requested_emails(*, project) -> None:
         },
     )
     staff_path = reverse(
-        "portal:staff-order-project-detail",
+        "portal:staff-quote-request-detail",
         kwargs={"project_public_id": project.public_id},
     )
     _send_context_email(
@@ -697,6 +699,35 @@ def schedule_quote_requested_emails(*, project_public_id) -> None:
     from apps.notifications.tasks import send_quote_requested_emails_task
 
     transaction.on_commit(lambda: send_quote_requested_emails_task.delay(str(project_public_id)))
+
+
+def send_quote_priced_email(*, project) -> None:
+    context = {
+        "site.name": "Prenium DTF",
+        "customer.name": project.customer.name,
+        "quote.total_ht": _format_decimal(project.estimated_total or 0, 2),
+        "quote.linear_m": _format_decimal(project.quote_meterage_linear_m or 0, 2),
+        "quote.visuals": "",
+    }
+    client_path = reverse(
+        "portal:client-order-project-detail",
+        kwargs={
+            "customer_public_id": project.customer.public_id,
+            "project_public_id": project.public_id,
+        },
+    )
+    _send_context_email(
+        event=EmailTemplate.Event.QUOTE_PRICED,
+        audience=EmailTemplate.Audience.CLIENT,
+        recipients=_recipient_emails_for_customer(project.customer),
+        context={**context, "action.url": _absolute_url(client_path)},
+    )
+
+
+def schedule_quote_priced_email(*, project_public_id) -> None:
+    from apps.notifications.tasks import send_quote_priced_email_task
+
+    transaction.on_commit(lambda: send_quote_priced_email_task.delay(str(project_public_id)))
 
 
 def send_external_quote_requested_emails(*, order) -> None:

@@ -97,6 +97,9 @@ def request_file_order_quote(*, project, customer, actor, shipping_method_code: 
     quote = (notice or {}).get("quote")
     project.price_confirmation_required = True
     update_fields = ["price_confirmation_required", "updated_at"]
+    if shipping_method_code:
+        project.delivery_method = str(shipping_method_code).strip()
+        update_fields.append("delivery_method")
     if quote is not None:
         project.estimated_subtotal = quote["subtotal_eur"]
         project.estimated_tax = quote["tax_amount_eur"]

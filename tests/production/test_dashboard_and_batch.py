@@ -242,6 +242,7 @@ def test_atelier_dashboard_separates_unprinted_worklist_from_post_issue_kpis():
         "pending_review": 0,
         "changes_requested": 0,
         "files_validated": 0,
+        "quote_requests": 0,
     }
 
 
@@ -331,6 +332,7 @@ def test_atelier_dashboard_kpis_follow_exclusive_workflow_stages():
         "pending_review": 1,
         "changes_requested": 1,
         "files_validated": 1,
+        "quote_requests": 0,
     }
     assert [row["order"].public_id for row in dashboard["rows"]] == [unprinted_order.public_id]
 

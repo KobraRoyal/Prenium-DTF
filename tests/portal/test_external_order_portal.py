@@ -8,11 +8,13 @@ import pytest
 from apps.accounts.models import StaffMembership
 from apps.accounts.services.staff_roles import sync_staff_access
 from apps.auditlog.models import AuditLogEntry
+from apps.b2b_order_projects.models import B2BOrderProject
 from apps.billing.services.production_payment_gate import production_start_blocked_reason
 from apps.customers.models import Customer, CustomerMembership
 from apps.orders.models import Order
 from apps.orders.services.external_orders import ExternalOrderService
 from apps.orders.services.pricing import OrderPricingService
+from apps.production.models import ProductionJob
 from apps.production.services.manufacturing_order_pdf import render_manufacturing_order_pdf_bytes
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.uploads.models import OrderUploadDriveSync, OrderUploadInspection, OrderUploadReview
@@ -779,24 +781,76 @@ def test_link_order_can_request_a_quote_with_a_processing_mode(
         )
 
     assert response.status_code == 302
-    order = Order.objects.get(customer=customer)
-    assert order.status == Order.Status.SUBMITTED
-    assert order.pricing_status == Order.PricingStatus.PENDING
-    assert order.meterage_override_linear_m is None
-    assert order.shipping_method_code == "express"
-    assert order.shipping_method_name == "Express"
+    assert not Order.objects.filter(customer=customer).exists()
+    assert not ProductionJob.objects.exists()
+    project = B2BOrderProject.objects.get(customer=customer)
+    assert project.price_confirmation_required is True
+    assert project.converted_order_id is None
+    assert project.delivery_method == "express"
+    assert project.external_url
     assert AuditLogEntry.objects.filter(
-        action="order.external_quote_requested",
-        target_public_id=order.public_id,
+        action="b2b_order_project.link_quote_requested",
+        target_public_id=project.public_id,
     ).exists()
     subjects = {message.subject for message in mail.outbox}
     assert "Votre demande de devis — Client lien" in subjects
-    assert "[Atelier] Demande de devis par lien — Client lien" in subjects
+    assert "[Atelier] Demande de devis — Client lien" in subjects
     bodies = "\n".join(message.body for message in mail.outbox)
     assert "token=private" not in bodies
     assert "/design" not in bodies
-    assert f"/staff/orders/{order.public_id}/" in bodies
+    assert "affiche.png × 1" in bodies
+    assert f"/staff/quotes/{project.public_id}/" in bodies
     assert user.email in {address for message in mail.outbox for address in message.to}
+
+    staff_page = _admin.get(reverse("portal:staff-quote-request-detail", args=[project.public_id]))
+    assert staff_page.status_code == 200
+    staff_html = staff_page.content.decode()
+    assert "affiche.png" in staff_html
+    assert "token=private" not in staff_html
+    assert "Ouvrir le lien de téléchargement" in staff_html
+    opened = _admin.get(reverse("portal:staff-quote-request-link", args=[project.public_id]))
+    assert opened.status_code == 302
+    assert "token=private" in opened["Location"]
+    assert opened["Referrer-Policy"] == "no-referrer"
+
+    mail.outbox.clear()
+    _seed_catalog_dtf_and_file_prep()
+    with django_capture_on_commit_callbacks(execute=True):
+        priced = _admin.post(
+            reverse("portal:staff-quote-request-detail", args=[project.public_id]),
+            {"meterage_linear_m": "2,5"},
+        )
+    assert priced.status_code == 302
+    assert not Order.objects.filter(customer=customer).exists()
+    project.refresh_from_db()
+    assert project.quote_meterage_linear_m == Decimal("2.5000")
+    assert project.estimated_total > 0
+    priced_mail = next(message for message in mail.outbox if user.email in message.to)
+    assert priced_mail.subject == "Votre demande de devis est tarifée — Client lien"
+    assert f"/order-projects/{project.public_id}/" in priced_mail.body
+    assert "token=private" not in priced_mail.body
+
+    provisional = client.get(response["Location"])
+    assert provisional.status_code == 200
+    page_html = provisional.content.decode()
+    assert "Valider la commande" in page_html
+    assert "Supprimer la commande" in page_html
+    assert "token=private" not in page_html
+
+    accepted = client.post(
+        reverse(
+            "portal:client-quote-accept",
+            args=[customer.public_id, project.public_id],
+        )
+    )
+    assert accepted.status_code == 302
+    order = Order.objects.get(customer=customer)
+    assert order.shipping_method_code == "express"
+    assert order.meterage_override_linear_m == Decimal("2.5000")
+    assert order.pricing_status == Order.PricingStatus.PRICED
+    project.refresh_from_db()
+    assert project.converted_order_id == order.id
+    assert ProductionJob.objects.filter(order=order).exists()
 
 
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)

@@ -1,0 +1,44 @@
+{% extends "portal/layout.html" %}
+{% load l10n %}
+{% block title %}Devis {{ project.name }} — Prenium DTF{% endblock %}
+{% block portal_content %}
+<div class="portal-page portal-page--staff">
+{% include "components/portal/page_head.html" with title=project.name subtitle=project.customer.name %}
+
+<section class="portal-page-surface" aria-label="Visuels de la demande">
+  <ul class="m-0">
+    {% for item in project.items.all %}
+    <li>
+      {{ item.name }} — quantité {{ item.quantity }}
+      {% if item.asset_id %}
+      <a href="{% url 'portal:staff-order-project-item-asset-download' project_public_id=project.public_id item_public_id=item.public_id %}">Télécharger</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% if project.external_url %}
+  <p class="mt-4">
+    <a class="ui-btn ui-btn-secondary" href="{% url 'portal:staff-quote-request-link' project_public_id=project.public_id %}">Ouvrir le lien de téléchargement</a>
+  </p>
+  {% endif %}
+</section>
+
+<section class="portal-page-surface mt-4" aria-label="Métrage">
+  {% if form_error %}
+  <p class="alert alert--danger" role="alert">{{ form_error }}</p>
+  {% endif %}
+  {% if project.quote_priced_at %}
+  <p>Devis tarifé : <strong>{% localize on %}{{ project.estimated_total }}{% endlocalize %} EUR HT</strong> pour {% localize on %}{{ project.quote_meterage_linear_m|floatformat:2 }}{% endlocalize %} m. Le client peut valider ou supprimer.</p>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <label for="quote-meterage">Métrage linéaire (m)</label>
+    <input id="quote-meterage" class="ui-input" name="meterage_linear_m" inputmode="decimal" required value="{% if project.quote_meterage_linear_m %}{{ project.quote_meterage_linear_m|unlocalize }}{% endif %}">
+    <div class="ui-form-actions">
+      <button class="ui-btn ui-btn-primary" type="submit">Tarifer le devis</button>
+      <a class="ui-btn ui-btn-ghost" href="{% url 'portal:staff-quote-request-list' %}">Retour</a>
+    </div>
+  </form>
+</section>
+</div>
+{% endblock %}

@@ -73,20 +73,18 @@ class StaffOrderListView(StaffDomainPermissionMixin, View):
             base_queryset, can_price=can_price
         )
         status_counts = staff_order_list_filter_service.count_by_status(base_queryset)
-        filtered_queryset = staff_order_list_filter_service.filter_list(
+        page_obj, orders, quote_requests = staff_order_list_filter_service.page_for_queue(
             base_queryset,
             queue=active_queue,
             status=active_production_status,
             query=search_query,
             can_price=can_price,
-        )
-        page_obj = order_service.paginate_orders(
-            filtered_queryset,
             page_number=request.GET.get("page"),
             page_size=settings.STAFF_ORDER_LIST_PAGE_SIZE,
         )
         context = {
-            "orders": page_obj.object_list,
+            "orders": orders,
+            "quote_requests": quote_requests,
             "page_obj": page_obj,
             "active_queue": active_queue,
             "active_queue_label": staff_order_list_filter_service.label_for(active_queue),

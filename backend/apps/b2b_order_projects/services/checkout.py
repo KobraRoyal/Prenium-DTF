@@ -152,6 +152,17 @@ class B2BOrderProjectCheckoutService:
             source=source,
             billing_mode=billing_mode,
         )
+        if locked.quote_meterage_linear_m:
+            from apps.b2b_order_projects.services.quote_requests import (
+                apply_validated_quote_meterage,
+            )
+
+            order = apply_validated_quote_meterage(
+                order=order,
+                project=locked,
+                actor=actor,
+                source=source,
+            )
 
         now = timezone.now()
         locked.converted_order = order

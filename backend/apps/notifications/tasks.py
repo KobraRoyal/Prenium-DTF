@@ -318,6 +318,25 @@ def send_quote_requested_emails_task(project_public_id: str) -> None:
 
 
 @shared_task(
+    name="notifications.send_quote_priced_email",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_quote_priced_email_task(project_public_id: str) -> None:
+    from apps.notifications.services.transactional import send_quote_priced_email
+
+    project = (
+        B2BOrderProject.objects.filter(public_id=project_public_id)
+        .select_related("customer")
+        .first()
+    )
+    if project is not None:
+        send_quote_priced_email(project=project)
+
+
+@shared_task(
     name="notifications.send_volume_discount_tier_reached_email",
     autoretry_for=(Exception,),
     retry_backoff=True,
