@@ -1084,9 +1084,7 @@ class OrderPricingService:
         ):
             return order
         try:
-            return self.ensure_deferred_billing_draft_lines(
-                order=order, actor=actor, source=source
-            )
+            return self.ensure_deferred_billing_draft_lines(order=order, actor=actor, source=source)
         except ValidationError:
             return order
 

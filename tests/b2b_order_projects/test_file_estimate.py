@@ -99,7 +99,7 @@ def test_project_quantity_carries_the_unit_area_for_a_live_estimate():
 
     assert response.status_code == 200
     body = response.content.decode()
-    assert 'data-estimate-quantity' in body
+    assert "data-estimate-quantity" in body
     assert 'data-sqm-each="0.2000"' in body
     assert "Demander un devis" in body
 

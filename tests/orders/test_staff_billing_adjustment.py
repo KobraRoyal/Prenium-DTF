@@ -543,9 +543,7 @@ def test_meterage_after_adjustment_keeps_personalized_tier_on_new_quantity():
         line_adjustments=[
             {
                 "line_public_id": str(
-                    order.items.get(
-                        service_type=CatalogService.ServiceType.DTF_TRANSFER
-                    ).public_id
+                    order.items.get(service_type=CatalogService.ServiceType.DTF_TRANSFER).public_id
                 ),
                 "quantity": "0.5500",
                 "unit_price": "40.00",

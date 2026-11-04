@@ -696,9 +696,7 @@ def send_quote_requested_emails(*, project) -> None:
 def schedule_quote_requested_emails(*, project_public_id) -> None:
     from apps.notifications.tasks import send_quote_requested_emails_task
 
-    transaction.on_commit(
-        lambda: send_quote_requested_emails_task.delay(str(project_public_id))
-    )
+    transaction.on_commit(lambda: send_quote_requested_emails_task.delay(str(project_public_id)))
 
 
 def _format_decimal(value, places: int) -> str:
