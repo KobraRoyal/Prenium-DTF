@@ -1,4 +1,4 @@
-{% load l10n %}
+{% load l10n portal_tags %}
 <dialog
   class="b2b-configurator-dialog gang-studio-pay-dialog"
   data-studio-pay-dialog
@@ -31,7 +31,7 @@
       {% endif %}
 
       <section class="gang-studio-shipping-method" data-studio-shipping-method>
-        <h3 class="gang-studio-pay-dialog__section-title">Mode de livraison</h3>
+        <h3 class="gang-studio-pay-dialog__section-title">Délai de traitement</h3>
         {% include "portal/client/partials/b2b_shipping_choice.html" %}
         <p class="gang-studio-pay-dialog__pickup" data-studio-pickup-note hidden>
           Retrait à l’atelier dès que la planche est prête. Aucun frais d’envoi.
@@ -282,7 +282,7 @@
     <div class="gang-studio-pay-dialog__footer">
       <aside class="gang-studio-order-recap" data-studio-order-recap aria-live="polite">
         <p class="gang-studio-order-recap__shipping">
-          <span data-studio-pay-shipping-label>{{ gang_sheet_quote.shipping_method_name|default:"Livraison" }}</span>
+          <span data-studio-pay-shipping-label>{{ gang_sheet_quote.shipping_method_name|shipping_mode_label|default:"Expédition" }}</span>
           <span data-studio-pay-shipping>
             {% if gang_sheet_quote.shipping_is_pickup or not gang_sheet_quote.shipping_amount_eur %}
             Gratuit

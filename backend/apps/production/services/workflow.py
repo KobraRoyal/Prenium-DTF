@@ -360,7 +360,9 @@ class ProductionWorkflowService:
         }
 
     def _shipping_method_label(self, *, order: Order) -> str:
-        name = str(getattr(order, "shipping_method_name", "") or "").strip()
+        from apps.shipping.services.methods import present_shipping_mode_name
+
+        name = present_shipping_mode_name(getattr(order, "shipping_method_name", ""))
         if name:
             return name
         code = str(getattr(order, "shipping_method_code", "") or "").strip()

@@ -108,7 +108,7 @@ def test_deferred_carrier_includes_shipping_without_vat():
     assert order.shipping_amount == Decimal("8.00")
     assert order.tax_amount == Decimal("0.00")
     assert order.total_amount == Decimal("53.00")
-    assert order.shipping_method_name == "Livraison standard"
+    assert order.shipping_method_name == "Standard"
 
 
 @pytest.mark.django_db

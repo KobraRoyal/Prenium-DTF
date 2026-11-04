@@ -14,7 +14,7 @@ from apps.customers.services.volume_discounts import (
     linear_meters_from_sqm,
     sqm_from_linear_meters,
 )
-from apps.shipping.services.methods import ShippingMethodService
+from apps.shipping.services.methods import ShippingMethodService, shipping_choice_label
 
 TWOPLACES = Decimal("0.01")
 FOURPLACES = Decimal("0.0001")
@@ -22,7 +22,7 @@ FOURPLACES = Decimal("0.0001")
 
 class StaffBillingAdjustmentForm(forms.Form):
     shipping_method_code = forms.ChoiceField(
-        label="Mode de livraison",
+        label="Délai de traitement",
         choices=[],
     )
     shipping_amount = forms.DecimalField(
@@ -49,7 +49,7 @@ class StaffBillingAdjustmentForm(forms.Form):
         methods = shipping.list_active_methods()
         self.shipping_methods = methods
         self.fields["shipping_method_code"].choices = [
-            (method.code, method.name) for method in methods
+            (method.code, shipping_choice_label(method)) for method in methods
         ]
         if not self.is_bound:
             self.fields["shipping_method_code"].initial = order.shipping_method_code or (

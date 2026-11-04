@@ -262,7 +262,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("shipping_house_number", dialog)
         self.assertIn("shipping_contact_name", dialog)
         self.assertIn("shipping_email", dialog)
-        self.assertIn("Mode de livraison", dialog)
+        self.assertIn("Délai de traitement", dialog)
         self.assertIn("gang-studio-checkout__dock", checkout)
         self.assertIn("gang-inspector-price-dock", editor)
         self.assertIn("data-composition-only", editor)

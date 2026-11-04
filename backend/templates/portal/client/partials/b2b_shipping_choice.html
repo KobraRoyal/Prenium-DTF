@@ -3,12 +3,12 @@
 {% if shipping_locked_to_pickup or not show_shipping_choice %}
 <input type="hidden" name="shipping_method_code" value="pickup">
 {% if shipping_locked_to_pickup %}
-<p class="muted text-sm m-0 b2b-shipping-locked">Retrait atelier — aucun frais d’expédition.</p>
+<p class="muted text-sm m-0 b2b-shipping-locked">Retrait atelier — délai de traitement 1–2 jours, aucun frais d’expédition.</p>
 {% endif %}
 {% elif shipping_methods %}
   {% if shipping_choice_widget == "select" %}
   <div class="b2b-shipping-choice b2b-shipping-choice--select">
-    <label class="ui-label" for="id_shipping_method_code">Livraison</label>
+    <label class="ui-label" for="id_shipping_method_code">Délai de traitement</label>
     <select
       class="ui-input"
       id="id_shipping_method_code"
@@ -27,14 +27,14 @@
         value="{{ method.code }}"
         {% if selected_shipping_method_code == method.code %}selected{% endif %}
       >
-        {{ method.name }}{% if method.resolved_price %} — {% localize on %}{{ method.resolved_price }}{% endlocalize %} € HT{% else %} — gratuit{% endif %}
+        {{ method.name }}{% if method.eta_label %} — {{ method.eta_label }}{% endif %}{% if method.resolved_price %} — {% localize on %}{{ method.resolved_price }}{% endlocalize %} € HT{% else %} — gratuit{% endif %}
       </option>
       {% endfor %}
     </select>
   </div>
   {% else %}
   <fieldset class="b2b-shipping-choice">
-    <legend class="b2b-shipping-choice__legend">Livraison</legend>
+    <legend class="b2b-shipping-choice__legend">Délai de traitement</legend>
     <div class="b2b-shipping-choice__options">
       {% for method in shipping_methods %}
       <label class="b2b-shipping-choice__option">
@@ -56,7 +56,9 @@
         >
         <span class="b2b-shipping-choice__name">{{ method.name }}</span>
         <span class="b2b-shipping-choice__price">{% if method.resolved_price %}{% localize on %}{{ method.resolved_price }}{% endlocalize %}&nbsp;€ HT{% else %}Gratuit{% endif %}</span>
-        {% if method.eta_label %}<span class="b2b-shipping-choice__eta">{{ method.eta_label }}</span>{% endif %}
+        {% if method.eta_label %}
+        <span class="b2b-shipping-choice__eta">{% if " · " in method.eta_label %}{{ method.eta_label|cut:" · Chronopost 13" }}<br>Chronopost 13{% else %}{{ method.eta_label }}{% endif %}</span>
+        {% endif %}
       </label>
       {% endfor %}
     </div>

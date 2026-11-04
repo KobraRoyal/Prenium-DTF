@@ -12,6 +12,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from apps.billing.models import Invoice, Payment
 from apps.core.public_refs import short_public_ref
 from apps.orders.models import Order
+from apps.shipping.services.methods import present_shipping_mode_name
 
 
 def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment) -> bytes:
@@ -87,7 +88,7 @@ def render_invoice_pdf_bytes(*, invoice: Invoice, order: Order, payment: Payment
             (
                 f"{getattr(order, 'shipping_amount', 0):.2f} {order.currency}"
                 + (
-                    f" ({order.shipping_method_name})"
+                    f" ({present_shipping_mode_name(order.shipping_method_name)})"
                     if getattr(order, "shipping_method_name", "")
                     else ""
                 )

@@ -220,6 +220,11 @@ def test_client_can_request_a_quote_and_other_customer_cannot():
     assert "Pour le tarif réel, demandez un devis" in body
     assert "métrage imprimé" in body
     assert "Demander un devis" in body
+    assert "Délai de traitement" in body
+    assert "2–3 jours<br>Chronopost 13" in body
+    assert "1–2 jours<br>Chronopost 13" in body
+    assert ">Standard<" in body
+    assert ">Express<" in body
     assert "Confirmer et payer" not in body
 
     quote_url = reverse(

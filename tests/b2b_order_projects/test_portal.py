@@ -562,8 +562,10 @@ def test_ready_project_compares_shipping_options_side_by_side():
     assert 'type="radio"' in html
     assert "b2b-shipping-choice__price" in html
     assert "Retrait atelier" in html
-    assert "Livraison standard" in html
-    assert "Livraison express" in html
+    assert "Délai de traitement" in html
+    assert ">Standard<" in html
+    assert ">Express<" in html
+    assert "Chronopost 13" in html
     assert 'id="id_shipping_method_code"' not in html
     assert "is-selected" not in html
 

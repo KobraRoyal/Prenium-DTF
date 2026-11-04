@@ -57,7 +57,7 @@
     <dl class="shipment-status-card__facts">
       {% if shipment.tracking_number %}<div><dt>Numéro de suivi</dt><dd>{{ shipment.tracking_number }}</dd></div>{% endif %}
       {% if shipment.shipping_option_code %}<div><dt>Service transport</dt><dd>{{ shipment.shipping_option_code }}</dd></div>{% endif %}
-      {% if delivery_eta_label %}<div><dt>Délai estimé</dt><dd>{{ delivery_eta_label }}</dd></div>{% endif %}
+      {% if delivery_eta_label %}<div><dt>Délai de traitement</dt><dd>{{ delivery_eta_label }}</dd></div>{% endif %}
       {% if order.estimated_handover_date %}<div><dt>Date annoncée au client</dt><dd>{{ order.estimated_handover_date|date:"d/m/Y" }}</dd></div>{% endif %}
       {% if shipment.last_api_sync_at %}<div><dt>Synchronisé le</dt><dd>{{ shipment.last_api_sync_at|date:"d/m/Y · H:i" }}</dd></div>{% endif %}
       {% if shipment.sendcloud_status_message %}<div><dt>Statut transporteur</dt><dd>{{ shipment.sendcloud_status_message }}</dd></div>{% endif %}

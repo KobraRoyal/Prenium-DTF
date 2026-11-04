@@ -23,6 +23,47 @@ DELIVERY_ESTIMATE_DAYS_BY_METHOD_CODE = {
     "express": 1,
 }
 
+# Anciens libellés catalogue, remplacés sans écraser un délai ou un nom saisi à la main.
+_LEGACY_ETA_LABELS = {
+    "pickup": frozenset(
+        {
+            "",
+            "Dès disponibilité atelier",
+            "Traitement en 1–2 jours",
+            "Traitement de la commande en 1–2 jours.",
+        }
+    ),
+    "standard": frozenset(
+        {
+            "",
+            "48–72 h après expédition",
+            "Délai de traitement : 2–3 jours",
+            "Traitement de la commande en 2–3 jours. Livraison via Chronopost 13.",
+        }
+    ),
+    "express": frozenset(
+        {
+            "",
+            "24 h après expédition",
+            "Traitement en 1–2 jours",
+            "Traitement de la commande en 1–2 jours. Livraison via Chronopost 13.",
+        }
+    ),
+}
+_LEGACY_METHOD_NAMES = {
+    "standard": frozenset({"Livraison standard"}),
+    "express": frozenset({"Livraison express"}),
+}
+_SHIPPING_MODE_DISPLAY_NAMES = {
+    "livraison standard": "Standard",
+    "standard": "Standard",
+    "livraison express": "Express",
+    "express": "Express",
+    "retrait atelier": "Retrait atelier",
+    "retrait": "Retrait atelier",
+    "pickup": "Retrait atelier",
+}
+
 DEFAULT_METHOD_SEED = (
     {
         "code": "pickup",
@@ -30,28 +71,45 @@ DEFAULT_METHOD_SEED = (
         "description": "Retrait sur place — aucun frais d’expédition.",
         "base_price": Decimal("0.00"),
         "is_pickup": True,
-        "eta_label": "Dès disponibilité atelier",
+        "eta_label": "1–2 jours",
         "display_order": 10,
     },
     {
         "code": "standard",
-        "name": "Livraison standard",
+        "name": "Standard",
         "description": "Expédition transporteur en délai standard.",
         "base_price": Decimal("8.00"),
         "is_pickup": False,
-        "eta_label": "48–72 h après expédition",
+        "eta_label": "2–3 jours · Chronopost 13",
         "display_order": 20,
     },
     {
         "code": "express",
-        "name": "Livraison express",
+        "name": "Express",
         "description": "Expédition prioritaire.",
         "base_price": Decimal("18.00"),
         "is_pickup": False,
-        "eta_label": "24 h après expédition",
+        "eta_label": "1–2 jours · Chronopost 13",
         "display_order": 30,
     },
 )
+
+
+def present_shipping_mode_name(value: str) -> str:
+    """Nom court du mode d’expédition, y compris pour un libellé déjà figé."""
+    cleaned = str(value or "").strip()
+    if not cleaned:
+        return ""
+    return _SHIPPING_MODE_DISPLAY_NAMES.get(cleaned.casefold(), cleaned)
+
+
+def shipping_choice_label(method) -> str:
+    """Libellé d’option : mode, puis délai de traitement."""
+    eta = str(getattr(method, "eta_label", "") or "").strip()
+    name = present_shipping_mode_name(getattr(method, "name", ""))
+    if eta:
+        return f"{name} — {eta}"
+    return name
 
 
 def order_uses_pickup(order) -> bool:
@@ -89,6 +147,23 @@ class ShippingMethodService:
             )
             if was_created:
                 created.append(method)
+                continue
+            update_fields: list[str] = []
+            legacy_eta = _LEGACY_ETA_LABELS.get(payload["code"])
+            if (
+                legacy_eta is not None
+                and method.eta_label in legacy_eta
+                and method.eta_label != payload["eta_label"]
+            ):
+                method.eta_label = payload["eta_label"]
+                update_fields.append("eta_label")
+            legacy_names = _LEGACY_METHOD_NAMES.get(payload["code"])
+            if legacy_names and method.name in legacy_names and method.name != payload["name"]:
+                method.name = payload["name"]
+                update_fields.append("name")
+            if update_fields:
+                update_fields.append("updated_at")
+                method.save(update_fields=update_fields)
         return created
 
     def get_active_by_code(self, code: str | None) -> ShippingMethod | None:
@@ -101,7 +176,7 @@ class ShippingMethodService:
         method = self.get_active_by_code(code)
         if method is None:
             raise ValidationError(
-                "Choisissez un mode de livraison valide (retrait, standard ou express)."
+                "Choisissez un mode d’expédition valide (retrait atelier, standard ou express)."
             )
         return method
 
@@ -168,7 +243,7 @@ class ShippingMethodService:
         amount = method.resolved_price.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         return {
             "shipping_method_code": method.code,
-            "shipping_method_name": method.name,
+            "shipping_method_name": present_shipping_mode_name(method.name),
             "shipping_amount": amount,
             "shipping_is_pickup": bool(method.is_pickup),
             "currency": method.currency or "EUR",
@@ -203,9 +278,10 @@ class ShippingMethodService:
     def estimated_delivery_date(self, *, order, declared_on: date) -> date | None:
         """Return the client promise date for catalog delivery methods.
 
-        The catalog wording remains the operator-facing source of truth: standard
-        is 48–72 h and express 24 h after dispatch. The stored date uses the
-        outer bound of that promise and intentionally leaves custom methods unset.
+        The button labels state the processing time: standard 2–3 days, express
+        and workshop pickup 1–2 days. Standard and express add Chronopost 13
+        delivery. The stored date uses the outer bound of the carrier promise
+        and intentionally leaves custom methods unset.
         """
         days = DELIVERY_ESTIMATE_DAYS_BY_METHOD_CODE.get(
             str(getattr(order, "shipping_method_code", "") or "").strip().lower()

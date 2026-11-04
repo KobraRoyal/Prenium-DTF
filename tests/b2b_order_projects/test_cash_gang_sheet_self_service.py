@@ -917,7 +917,7 @@ def test_studio_editor_exposes_checkout_dialog_and_payment_choice():
     assert 'name="shipping_method_code"' in body
     assert 'name="shipping_house_number"' in body
     assert 'name="shipping_contact_name"' in body
-    assert "Mode de livraison" in body
+    assert "Délai de traitement" in body
     assert 'name="provider"' in body
     assert "PayPal" in body
     assert "Carte bancaire" in body

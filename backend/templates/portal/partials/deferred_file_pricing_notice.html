@@ -93,6 +93,17 @@
         refreshFileEstimate();
       }
     });
+    document.addEventListener("change", function (event) {
+      var input = event.target;
+      if (!input || input.type === "hidden" || !input.matches || !input.matches("[name=shipping_method_code]")) return;
+      document.querySelectorAll("input[type=hidden][name=shipping_method_code]").forEach(function (hidden) {
+        hidden.value = input.value;
+      });
+      var live = document.querySelector("[data-file-estimate-live]");
+      if (!live || !input.dataset.shippingAmount) return;
+      live.dataset.shippingAmount = input.dataset.shippingAmount;
+      refreshFileEstimate();
+    });
   }
 </script>
 {% endif %}

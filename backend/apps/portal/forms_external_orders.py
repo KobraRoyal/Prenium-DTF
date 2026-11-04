@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 
 from apps.customers.models import Customer
 from apps.orders.services.external_orders import MAX_EXTERNAL_LINK_VISUALS, ExternalOrderService
-from apps.shipping.services.methods import ShippingMethodService
+from apps.shipping.services.methods import ShippingMethodService, shipping_choice_label
 from apps.uploads.services.uploads import STAFF_UPLOAD_QUANTITY_MAX, OrderUploadService
 
 
@@ -167,9 +167,9 @@ class StaffExternalOrderForm(ExternalOrderForm):
         empty_label="Choisir un client",
     )
     shipping_method_code = forms.ChoiceField(
-        label="Mode de livraison",
+        label="Délai de traitement",
         choices=[],
-        help_text="Retrait, standard ou express — comme sur une commande classique.",
+        help_text="Retrait atelier, standard ou express.",
     )
     meterage_linear_m = forms.DecimalField(
         label="Métrage total (mètres linéaires)",
@@ -222,7 +222,7 @@ class StaffExternalOrderForm(ExternalOrderForm):
         shipping.ensure_default_methods()
         methods = shipping.list_active_methods()
         self.fields["shipping_method_code"].choices = [
-            (method.code, method.name) for method in methods
+            (method.code, shipping_choice_label(method)) for method in methods
         ]
         if methods and not self.is_bound:
             default_code = next(

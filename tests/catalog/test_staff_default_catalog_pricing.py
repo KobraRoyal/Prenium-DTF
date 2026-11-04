@@ -69,8 +69,8 @@ def test_staff_can_view_and_update_default_catalog_pricing():
     assert "Prix DTF au m² (EUR)" in html
     assert "Forfait préparation fichier (EUR / fichier)" in html
     assert "Transport" in html
-    assert "Livraison standard" in html
-    assert "Livraison express" in html
+    assert "Standard" in html
+    assert "Express" in html
     assert "Retrait atelier" in html
     assert 'value="25.00"' in html
     assert 'value="10.00"' in html

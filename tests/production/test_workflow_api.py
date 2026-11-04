@@ -244,7 +244,8 @@ def test_staff_can_download_manufacturing_order_pdf():
     uuid_short = short_public_ref(order.public_id)
     assert uuid_short in text
     assert str(order.public_id) not in text
-    assert "Livraison standard" in text
+    assert "Livraison standard" not in text
+    assert "Standard" in text
     assert "15/08/2026" in text
     assert "Urgent sample" in text
     assert "Date souhaitée : 2026-08-15" not in text

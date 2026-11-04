@@ -137,6 +137,13 @@ def can_manage_staff_team(context) -> bool:
 
 
 @register.filter
+def shipping_mode_label(value):
+    from apps.shipping.services.methods import present_shipping_mode_name
+
+    return present_shipping_mode_name(value)
+
+
+@register.filter
 def badge_tone(status):
     status = str(status)
     positive = {
