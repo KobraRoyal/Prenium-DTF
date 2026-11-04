@@ -29,7 +29,7 @@ order_pricing_service = OrderPricingService()
 
 
 def badge_tone_for_status(status: str) -> str:
-    positive = {"ok", "synced", "created", "completed", "ready_to_ship", "submitted"}
+    positive = {"ok", "synced", "created", "completed", "ready_to_ship", "shipped", "submitted"}
     warning = {"warning", "pending", "queued", "in_progress"}
     negative = {"error", "failed", "blocked", "draft", "cancelled"}
     if status in positive:
@@ -53,6 +53,7 @@ def status_label(value: str) -> str:
         "queued": "En traitement",
         "in_progress": "En production",
         "ready_to_ship": "Prete a expedier",
+        "shipped": "Expediee",
         "completed": "Terminee",
         "blocked": "Bloquee",
         "created": "Creee",
@@ -124,6 +125,7 @@ def can_set_meterage_override(request, order: Order) -> bool:
 
 def meterage_context_for_order(request, order: Order, form_error: str = "") -> dict:
     """Champs métrage B2B (panneau Production — saisie atelier)."""
+    from apps.b2b_order_projects.services.file_estimate import present_order_notice
     from apps.orders.services.meterage import (
         order_meterage_is_resolved,
         order_pricing_is_payment_frozen,
@@ -153,6 +155,7 @@ def meterage_context_for_order(request, order: Order, form_error: str = "") -> d
         "external_visual_count_value": sum(item.external_visual_count for item in external_uploads),
         "can_set_meterage_override": can_set_meterage_override(request, order),
         "dtf_laize_cm": int(getattr(settings, "DTF_LAIZE_CM", 55)),
+        "deferred_file_notice": present_order_notice(order),
     }
 
 

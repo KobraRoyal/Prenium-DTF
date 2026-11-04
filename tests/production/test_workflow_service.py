@@ -296,6 +296,10 @@ def test_allowed_target_statuses_match_central_workflow_order():
         ProductionJob.Status.BLOCKED,
     ]
     assert service.allowed_target_statuses(current_status=ProductionJob.Status.READY_TO_SHIP) == [
+        ProductionJob.Status.SHIPPED,
+        ProductionJob.Status.COMPLETED,
+    ]
+    assert service.allowed_target_statuses(current_status=ProductionJob.Status.SHIPPED) == [
         ProductionJob.Status.COMPLETED
     ]
     assert service.allowed_target_statuses(current_status=ProductionJob.Status.COMPLETED) == []

@@ -678,6 +678,32 @@ class OrderPricingService:
             return (current_unit_price / factor).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         return current_unit_price.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
+    def _gross_base_after_staff_unit_price(
+        self,
+        *,
+        order: Order,
+        dtf_lines: list[OrderLine],
+        submitted_unit_price: Decimal,
+    ) -> Decimal:
+        """Prix unitaire brut conservé pour la remise de palier.
+
+        Le formulaire affiche le prix net. S’il n’a pas changé, on garde la base
+        déjà enregistrée. S’il change alors qu’une remise est en place, le montant
+        saisi reste le net et la base est reconstituée. Sans remise, le montant
+        saisi est la nouvelle base, et le palier s’applique ensuite.
+        """
+        submitted = submitted_unit_price.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        current_prices = {
+            line.unit_price.quantize(TWOPLACES, rounding=ROUND_HALF_UP) for line in dtf_lines
+        }
+        if len(current_prices) == 1 and submitted == next(iter(current_prices)):
+            return self._base_unit_price_for_repricing(order=order, dtf_lines=dtf_lines)
+        current_discount = order.volume_discount_percent or ZERO_AMOUNT
+        if current_discount > 0 and current_discount < Decimal("100.00"):
+            factor = (Decimal("100.00") - current_discount) / Decimal("100.00")
+            return (submitted / factor).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+        return submitted
+
     def _recalculate_customer_credit_holds(self, *, customer: Customer) -> str:
         open_orders = Order.objects.select_for_update().filter(
             customer=customer,
@@ -770,16 +796,18 @@ class OrderPricingService:
         repriced_count = 0
 
         for monthly_order in monthly_orders:
-            if monthly_order.manual_billing_adjusted_at is not None:
-                # Ajustement Atelier figé : compte dans le volume, prix inchangé.
-                continue
             all_lines = list(monthly_order.items.all())
             dtf_lines = [line for line in all_lines if line.service_type == dtf_type]
+            if not dtf_lines:
+                continue
             uploads = list(monthly_order.uploads.all())
-            if len(dtf_lines) != len(uploads):
-                raise ValidationError(
-                    "Le nombre de lignes DTF ne correspond pas au nombre de fichiers tarifés."
-                )
+            if uploads and len(dtf_lines) != len(uploads):
+                if monthly_order.manual_billing_adjusted_at is None:
+                    raise ValidationError(
+                        "Le nombre de lignes DTF ne correspond pas au nombre de fichiers tarifés."
+                    )
+                uploads = []
+            paired_uploads = uploads or [None] * len(dtf_lines)
             base_unit_price = self._base_unit_price_for_repricing(
                 order=monthly_order,
                 dtf_lines=dtf_lines,
@@ -791,7 +819,7 @@ class OrderPricingService:
             gross_dtf_amount = ZERO_AMOUNT
             discounted_dtf_amount = ZERO_AMOUNT
 
-            for line, upload in zip(dtf_lines, uploads, strict=True):
+            for line, upload in zip(dtf_lines, paired_uploads, strict=True):
                 gross_line_total = (line.quantity * base_unit_price).quantize(
                     TWOPLACES,
                     rounding=ROUND_HALF_UP,
@@ -805,6 +833,8 @@ class OrderPricingService:
                 line.unit_price = effective_unit_price
                 line.line_total = discounted_line_total
                 line.save(update_fields=["unit_price", "line_total", "updated_at"])
+                if upload is None:
+                    continue
                 upload.unit_price_eur = effective_unit_price
                 upload.line_total_eur = discounted_line_total
                 upload.save(update_fields=["unit_price_eur", "line_total_eur", "updated_at"])
@@ -947,6 +977,8 @@ class OrderPricingService:
             )
         if not order.uses_atelier_pricing():
             return
+        if order.manual_billing_adjusted_at is not None:
+            return
         if order.pricing_status not in (
             Order.PricingStatus.PRICED,
             Order.PricingStatus.FAILED,
@@ -1038,6 +1070,241 @@ class OrderPricingService:
             },
         )
 
+    def prepare_deferred_billing_draft_lines(self, *, order: Order, actor, source: str) -> Order:
+        """Prépare les lignes d’ajustement si la commande encours n’en a pas encore."""
+        if not getattr(actor, "is_authenticated", False) or not actor.has_perm(
+            "orders.change_order"
+        ):
+            return order
+        if (
+            order.billing_mode != Order.BillingMode.DEFERRED
+            or order.status != Order.Status.SUBMITTED
+            or order.billing_statement_id is not None
+            or order.items.exists()
+        ):
+            return order
+        try:
+            return self.ensure_deferred_billing_draft_lines(
+                order=order, actor=actor, source=source
+            )
+        except ValidationError:
+            return order
+
+    @transaction.atomic
+    def ensure_deferred_billing_draft_lines(self, *, order: Order, actor, source: str) -> Order:
+        """Lignes indicatives pour l’ajustement Atelier, sans tarifer ni clôturer le métrage."""
+        Customer.objects.select_for_update().get(pk=order.customer_id)
+        order = Order.objects.select_for_update().select_related("customer").get(pk=order.pk)
+        if order.items.exists():
+            return order
+        if not getattr(actor, "is_authenticated", False) or not actor.has_perm(
+            "orders.change_order"
+        ):
+            raise ValidationError("Permission de modification de commande requise.")
+        if order.billing_mode != Order.BillingMode.DEFERRED:
+            raise ValidationError("L’ajustement facturation est réservé aux commandes en encours.")
+        if order.billing_statement_id is not None:
+            raise ValidationError("La facturation est figée : commande déjà sur un récapitulatif.")
+        if order.status != Order.Status.SUBMITTED:
+            raise ValidationError("Seule une commande soumise peut être ajustée.")
+
+        uploads = list(order.uploads.all().order_by("sort_order", "created_at"))
+        if not uploads:
+            raise ValidationError("Aucun fichier à tarifer.")
+        unit_price = self.resolve_unit_price_per_sqm(customer=order.customer)
+        dtf_service = self.get_default_dtf_service()
+        prep_service = self.get_default_file_preparation_service()
+        prep_fee = self.resolve_file_preparation_fee_per_file(customer=order.customer)
+        placeholder = Decimal("0.0100")
+        for position, upload in enumerate(uploads, start=1):
+            meterage = self.compute_meterage_sqm_for_upload(upload=upload) or placeholder
+            if meterage < placeholder:
+                meterage = placeholder
+            line_total = (meterage * unit_price).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+            OrderLine.objects.create(
+                order=order,
+                service=dtf_service,
+                position=position,
+                service_code=dtf_service.code,
+                service_name=dtf_service.name,
+                service_type=dtf_service.service_type,
+                unit=dtf_service.unit,
+                quantity=meterage,
+                unit_price=unit_price,
+                line_total=line_total,
+            )
+        preparation_count = sum(
+            upload.external_visual_count if upload.is_external else 1 for upload in uploads
+        )
+        prep_total = (Decimal(preparation_count) * prep_fee).quantize(
+            TWOPLACES, rounding=ROUND_HALF_UP
+        )
+        OrderLine.objects.create(
+            order=order,
+            service=prep_service,
+            position=len(uploads) + 1,
+            service_code=prep_service.code,
+            service_name=prep_service.name,
+            service_type=prep_service.service_type,
+            unit=prep_service.unit,
+            quantity=Decimal(preparation_count),
+            unit_price=prep_fee,
+            line_total=prep_total,
+        )
+        record_event(
+            action="order.billing_draft_lines_prepared",
+            actor=actor,
+            target=order,
+            metadata={
+                "order_public_id": str(order.public_id),
+                "source": source,
+                "line_count": len(uploads) + 1,
+            },
+        )
+        return order
+
+    def _split_quantity(self, total: Decimal, weights: list[Decimal]) -> list[Decimal]:
+        if not weights:
+            return []
+        weight_sum = sum(weights, Decimal("0"))
+        if weight_sum <= 0:
+            share = (total / Decimal(len(weights))).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+            parts = [share for _ in weights]
+            parts[-1] = (total - sum(parts[:-1], Decimal("0"))).quantize(
+                FOURPLACES, rounding=ROUND_HALF_UP
+            )
+            return parts
+        parts: list[Decimal] = []
+        allocated = Decimal("0")
+        for index, weight in enumerate(weights):
+            if index == len(weights) - 1:
+                parts.append((total - allocated).quantize(FOURPLACES, rounding=ROUND_HALF_UP))
+            else:
+                part = (total * weight / weight_sum).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+                parts.append(part)
+                allocated += part
+        return parts
+
+    def _refresh_meterage_on_adjusted_billing(self, *, order: Order, actor, source: str) -> Order:
+        """Met à jour les quantités DTF et réapplique la remise du palier sur la base ajustée."""
+        uploads = list(order.uploads.all().order_by("sort_order", "created_at"))
+        if not uploads:
+            raise ValidationError("Aucun fichier à tarifer.")
+        per_upload: list[tuple[object, Decimal]] = []
+        for upload in uploads:
+            meterage = self.compute_meterage_sqm_for_upload(upload=upload)
+            if meterage is None:
+                raise ValidationError(
+                    f"Métrage indisponible pour le fichier « {upload.original_filename} » "
+                    "(contrôle technique requis avant tarification)."
+                )
+            per_upload.append((upload, meterage))
+
+        dtf_type = CatalogService.ServiceType.DTF_TRANSFER
+        dtf_lines = list(
+            order.items.filter(service_type=dtf_type).order_by("position", "created_at")
+        )
+        if not dtf_lines:
+            raise ValidationError("Aucune ligne DTF à mettre à jour.")
+        meters = [meterage for _upload, meterage in per_upload]
+        total_sqm = sum(meters, Decimal("0")).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+        if len(dtf_lines) == len(per_upload):
+            quantities = meters
+        elif len(dtf_lines) == 1:
+            quantities = [total_sqm]
+        else:
+            quantities = self._split_quantity(total_sqm, [line.quantity for line in dtf_lines])
+
+        with transaction.atomic():
+            for line, quantity in zip(dtf_lines, quantities, strict=True):
+                line.quantity = quantity
+                line.line_total = (quantity * line.unit_price).quantize(
+                    TWOPLACES, rounding=ROUND_HALF_UP
+                )
+                line.save(update_fields=["quantity", "line_total", "updated_at"])
+            unit_price = dtf_lines[0].unit_price
+            for index, (upload, meterage) in enumerate(per_upload):
+                matched_price = (
+                    dtf_lines[index].unit_price if len(dtf_lines) == len(per_upload) else unit_price
+                )
+                upload.meterage_sqm = meterage
+                upload.unit_price_eur = matched_price
+                upload.line_total_eur = (meterage * matched_price).quantize(
+                    TWOPLACES, rounding=ROUND_HALF_UP
+                )
+                upload.save(
+                    update_fields=["meterage_sqm", "unit_price_eur", "line_total_eur", "updated_at"]
+                )
+
+            preparation_count = sum(
+                upload.external_visual_count if upload.is_external else 1 for upload in uploads
+            )
+            prep_line = (
+                order.items.filter(service_type=CatalogService.ServiceType.FILE_PREPARATION)
+                .order_by("position", "created_at")
+                .first()
+            )
+            if prep_line is not None:
+                prep_line.quantity = Decimal(preparation_count)
+                prep_line.line_total = (prep_line.quantity * prep_line.unit_price).quantize(
+                    TWOPLACES, rounding=ROUND_HALF_UP
+                )
+                prep_line.save(update_fields=["quantity", "line_total", "updated_at"])
+
+            subtotal = sum(
+                (line.line_total for line in order.items.all()), Decimal("0.00")
+            ).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+            totals = self.compose_order_totals(
+                subtotal_ht=subtotal,
+                shipping_ht=order.shipping_amount,
+                billing_mode=order.billing_mode,
+            )
+            credit_hold = self.evaluate_credit_hold(
+                order=order, priced_total=totals["total_amount"]
+            )
+            order.subtotal_amount = totals["subtotal_amount"]
+            order.shipping_amount = totals["shipping_amount"]
+            order.tax_rate = totals["tax_rate"]
+            order.tax_amount = totals["tax_amount"]
+            order.total_amount = totals["total_amount"]
+            order.credit_hold_status = credit_hold
+            order.pricing_status = Order.PricingStatus.PRICED
+            order.save(
+                update_fields=[
+                    "subtotal_amount",
+                    "shipping_amount",
+                    "tax_rate",
+                    "tax_amount",
+                    "total_amount",
+                    "credit_hold_status",
+                    "pricing_status",
+                    "updated_at",
+                ]
+            )
+
+        self.reprice_deferred_month(
+            customer=order.customer,
+            month=timezone.localtime(order.created_at).date(),
+            actor=actor,
+            source=f"{source}.meterage_kept_adjustments",
+        )
+        refreshed = Order.objects.get(pk=order.pk)
+        record_event(
+            action="order.pricing_meterage_kept_adjustments",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=refreshed,
+            metadata={
+                "order_public_id": str(refreshed.public_id),
+                "source": source,
+                "subtotal_after": f"{refreshed.subtotal_amount:.2f}",
+                "total_after": f"{refreshed.total_amount:.2f}",
+            },
+        )
+        from apps.notifications.services.transactional import schedule_order_priced_email
+
+        schedule_order_priced_email(order_public_id=refreshed.public_id)
+        return refreshed
+
     @transaction.atomic
     def compute_and_persist_order_pricing(
         self,
@@ -1076,6 +1343,10 @@ class OrderPricingService:
             )
         if order.status != Order.Status.SUBMITTED:
             raise ValidationError("La commande doit être soumise par le client avant tarification.")
+        if order.manual_billing_adjusted_at is not None and order.items.exists():
+            return self._refresh_meterage_on_adjusted_billing(
+                order=order, actor=actor, source=source
+            )
 
         unit_price = self.resolve_unit_price_per_sqm(customer=order.customer)
         dtf_service = self.get_default_dtf_service()
@@ -1355,8 +1626,7 @@ class OrderPricingService:
             raise ValidationError("La facturation est figée : commande déjà sur un récapitulatif.")
         if order_locked.status != Order.Status.SUBMITTED:
             raise ValidationError("Seule une commande soumise peut être ajustée.")
-        if order_locked.pricing_status != Order.PricingStatus.PRICED:
-            raise ValidationError("Calculez d’abord le tarif avant d’ajuster les montants.")
+        was_priced = order_locked.pricing_status == Order.PricingStatus.PRICED
 
         lines = list(order_locked.items.all().order_by("position", "created_at"))
         if not lines:
@@ -1444,6 +1714,15 @@ class OrderPricingService:
                     ]
                 )
 
+        preserved_base = None
+        if dtf_updates:
+            first_line, _quantity, submitted_price, _line_total = dtf_updates[0]
+            preserved_base = self._gross_base_after_staff_unit_price(
+                order=order_locked,
+                dtf_lines=[first_line],
+                submitted_unit_price=submitted_price,
+            )
+
         for line, quantity, unit_price, line_total in updated_lines:
             line.quantity = quantity
             line.unit_price = unit_price
@@ -1458,11 +1737,15 @@ class OrderPricingService:
         order_locked.tax_amount = totals["tax_amount"]
         order_locked.total_amount = totals["total_amount"]
         order_locked.credit_hold_status = credit_hold
-        order_locked.volume_discount_percent = ZERO_AMOUNT
-        order_locked.volume_discount_amount = ZERO_AMOUNT
-        order_locked.volume_discount_threshold_linear_m = None
-        order_locked.volume_discount_base_unit_price_eur = None
+        if preserved_base is not None:
+            order_locked.volume_discount_base_unit_price_eur = preserved_base
+        else:
+            order_locked.volume_discount_percent = ZERO_AMOUNT
+            order_locked.volume_discount_amount = ZERO_AMOUNT
+            order_locked.volume_discount_threshold_linear_m = None
+            order_locked.volume_discount_base_unit_price_eur = None
         order_locked.manual_billing_adjusted_at = now
+        order_locked.pricing_status = Order.PricingStatus.PRICED
         dtf_total_sqm = sum(
             (
                 quantity
@@ -1485,9 +1768,10 @@ class OrderPricingService:
             "volume_discount_threshold_linear_m",
             "volume_discount_base_unit_price_eur",
             "manual_billing_adjusted_at",
+            "pricing_status",
             "updated_at",
         ]
-        if dtf_total_sqm > 0 and order_locked.uses_atelier_pricing():
+        if was_priced and dtf_total_sqm > 0 and order_locked.uses_atelier_pricing():
             if meterage_override_linear_m is not None:
                 order_locked.meterage_override_linear_m = self._parse_positive_quantity(
                     meterage_override_linear_m,

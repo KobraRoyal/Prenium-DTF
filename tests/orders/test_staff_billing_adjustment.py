@@ -5,13 +5,21 @@ from apps.accounts.models import StaffMembership
 from apps.accounts.services.staff_roles import sync_staff_access
 from apps.auditlog.models import AuditLogEntry
 from apps.catalog.models import CatalogService
-from apps.customers.models import Customer, CustomerMembership
+from apps.customers.models import (
+    Customer,
+    CustomerMembership,
+    CustomerVolumeDiscountTier,
+    DefaultCustomerVolumeDiscountTier,
+)
 from apps.orders.models import Order, OrderLine
 from apps.orders.services.pricing import OrderPricingService
 from apps.shipping.services.methods import ShippingMethodService
+from apps.uploads.models import OrderUpload
+from apps.uploads.services.uploads import OrderUploadService
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import Client
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -287,3 +295,283 @@ def test_multiple_dtf_visuals_are_edited_as_one_meterage_line():
     assert {line.unit_price for line in dtf_lines} == {Decimal("12.00")}
     assert order.subtotal_amount == Decimal("39.70")
     assert order.meterage_override_linear_m == Decimal("4.5000")
+
+
+def _pending_deferred_with_upload():
+    if not CatalogService.objects.filter(code="dtf-meter").exists():
+        _seed_catalog_dtf_and_file_prep()
+    ShippingMethodService().ensure_default_methods()
+    user = get_user_model().objects.create_user(
+        email=f"pending-{timezone.now().timestamp()}@example.com",
+        password="pass",
+    )
+    customer = Customer.objects.create(
+        name="Client encours",
+        default_billing_mode=Customer.DefaultBillingMode.DEFERRED,
+    )
+    CustomerMembership.objects.create(customer=customer, user=user)
+    order = Order.objects.create(
+        customer=customer,
+        created_by=user,
+        status=Order.Status.SUBMITTED,
+        billing_mode=Order.BillingMode.DEFERRED,
+        pricing_status=Order.PricingStatus.PENDING,
+        currency="EUR",
+        shipping_method_code="standard",
+        shipping_method_name="Livraison standard",
+        shipping_amount=Decimal("8.00"),
+    )
+    OrderUpload.objects.create(
+        order=order,
+        uploaded_by=user,
+        file=SimpleUploadedFile("logo.png", b"fake", content_type="image/png"),
+        original_filename="logo.png",
+        mime_type="image/png",
+        size_bytes=4,
+        width_mm=Decimal("1000.00"),
+        height_mm=Decimal("200.00"),
+    )
+    return order
+
+
+@override_settings(DTF_LAIZE_CM=55, DTF_METERAGE_AREA_MODE="laize_fit")
+def test_billing_adjustment_is_available_before_production_meterage():
+    _staff, client = _staff_admin()
+    order = _pending_deferred_with_upload()
+    url = reverse("portal:staff-order-panel-billing", args=[order.public_id])
+    page = client.get(url)
+    assert page.status_code == 200
+    html = page.content.decode()
+    assert 'name="action" value="adjust_billing"' in html
+    assert "Impression DTF" in html
+    assert "retour métrage" in html
+    order.refresh_from_db()
+    assert order.pricing_status == Order.PricingStatus.PENDING
+    assert order.meterage_override_linear_m is None
+    assert order.items.count() == 2
+
+    prep = order.items.get(service_type=CatalogService.ServiceType.FILE_PREPARATION)
+    response = client.post(
+        url,
+        {
+            "action": "adjust_billing",
+            "shipping_method_code": "standard",
+            "shipping_amount": "8.00",
+            "dtf_group_linear_m": "1",
+            "dtf_group_unit_price": "40.00",
+            f"line_{prep.public_id}_quantity": "1",
+            f"line_{prep.public_id}_unit_price": "10.00",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert response.status_code == 200
+    order.refresh_from_db()
+    assert order.pricing_status == Order.PricingStatus.PRICED
+    assert order.manual_billing_adjusted_at is not None
+    assert order.meterage_override_linear_m is None
+    dtf = order.items.get(service_type=CatalogService.ServiceType.DTF_TRANSFER)
+    assert dtf.unit_price == Decimal("40.00")
+    assert dtf.quantity == Decimal("0.5500")
+
+    OrderUploadService().set_staff_order_meterage_linear_override(
+        order=order,
+        actor=_staff,
+        raw_value="2.5",
+    )
+    order.refresh_from_db()
+    dtf.refresh_from_db()
+    assert order.meterage_override_linear_m == Decimal("2.5000")
+    assert order.manual_billing_adjusted_at is not None
+    assert dtf.unit_price == Decimal("40.00")
+    assert dtf.quantity == Decimal("1.3750")
+    prep.refresh_from_db()
+    assert prep.unit_price == Decimal("10.00")
+
+
+@override_settings(DTF_LAIZE_CM=55, DTF_METERAGE_AREA_MODE="laize_fit")
+def test_production_meterage_still_reprices_when_billing_was_not_adjusted():
+    staff, client = _staff_admin()
+    order = _pending_deferred_with_upload()
+    page = client.get(reverse("portal:staff-order-panel-billing", args=[order.public_id]))
+    assert page.status_code == 200
+    order.refresh_from_db()
+    assert order.pricing_status == Order.PricingStatus.PENDING
+    assert order.items.exists()
+
+    OrderUploadService().set_staff_order_meterage_linear_override(
+        order=order,
+        actor=staff,
+        raw_value="2.5",
+    )
+    order.refresh_from_db()
+    assert order.pricing_status == Order.PricingStatus.PRICED
+    assert order.manual_billing_adjusted_at is None
+    dtf = order.items.get(service_type=CatalogService.ServiceType.DTF_TRANSFER)
+    assert dtf.unit_price == Decimal("10.00")
+    assert dtf.quantity == Decimal("1.3750")
+
+
+def _tiers(*, customer, personalized_percent, default_percent="40.00"):
+    DefaultCustomerVolumeDiscountTier.objects.create(
+        minimum_monthly_linear_m=Decimal("1.0000"),
+        discount_percent=Decimal(default_percent),
+    )
+    CustomerVolumeDiscountTier.objects.create(
+        customer=customer,
+        minimum_monthly_linear_m=Decimal("1.0000"),
+        discount_percent=Decimal(personalized_percent),
+    )
+
+
+@override_settings(DTF_LAIZE_CM=100)
+def test_billing_adjustment_applies_personalized_tier_not_default_ladder():
+    staff, _client = _staff_admin()
+    order = _priced_deferred_order()
+    _tiers(customer=order.customer, personalized_percent="10.00")
+    lines = list(order.items.order_by("position"))
+    refreshed = OrderPricingService().apply_staff_billing_adjustments(
+        order=order,
+        actor=staff,
+        source="test",
+        shipping_method_code="pickup",
+        shipping_amount="3.50",
+        line_adjustments=[
+            {
+                "line_public_id": str(lines[0].public_id),
+                "quantity": "2",
+                "unit_price": "20.00",
+            },
+            {
+                "line_public_id": str(lines[1].public_id),
+                "quantity": "2",
+                "unit_price": "12.00",
+            },
+        ],
+    )
+    dtf = refreshed.items.get(service_type=CatalogService.ServiceType.DTF_TRANSFER)
+    prep = refreshed.items.get(service_type=CatalogService.ServiceType.FILE_PREPARATION)
+    assert refreshed.volume_discount_percent == Decimal("10.00")
+    assert refreshed.volume_discount_base_unit_price_eur == Decimal("20.00")
+    assert refreshed.volume_discount_amount == Decimal("4.00")
+    assert dtf.unit_price == Decimal("18.00")
+    assert dtf.line_total == Decimal("36.00")
+    assert prep.unit_price == Decimal("12.00")
+    assert prep.line_total == Decimal("24.00")
+    assert refreshed.subtotal_amount == Decimal("60.00")
+    assert refreshed.total_amount == Decimal("63.50")
+
+    DefaultCustomerVolumeDiscountTier.objects.update(discount_percent=Decimal("50.00"))
+    kept = OrderPricingService().apply_staff_billing_adjustments(
+        order=refreshed,
+        actor=staff,
+        source="test",
+        shipping_method_code="pickup",
+        shipping_amount="5.00",
+        line_adjustments=[
+            {
+                "line_public_id": str(dtf.public_id),
+                "quantity": "2",
+                "unit_price": "18.00",
+            },
+            {
+                "line_public_id": str(prep.public_id),
+                "quantity": "2",
+                "unit_price": "12.00",
+            },
+        ],
+    )
+    dtf.refresh_from_db()
+    assert kept.volume_discount_percent == Decimal("10.00")
+    assert kept.volume_discount_base_unit_price_eur == Decimal("20.00")
+    assert kept.shipping_amount == Decimal("5.00")
+    assert dtf.unit_price == Decimal("18.00")
+    assert kept.volume_discount_amount == Decimal("4.00")
+
+
+@override_settings(DTF_LAIZE_CM=100)
+def test_billing_adjustment_uses_default_ladder_without_personalized_grid():
+    staff, _client = _staff_admin()
+    order = _priced_deferred_order()
+    DefaultCustomerVolumeDiscountTier.objects.create(
+        minimum_monthly_linear_m=Decimal("1.0000"),
+        discount_percent=Decimal("10.00"),
+    )
+    lines = list(order.items.order_by("position"))
+    refreshed = OrderPricingService().apply_staff_billing_adjustments(
+        order=order,
+        actor=staff,
+        source="test",
+        shipping_method_code="standard",
+        shipping_amount="8.00",
+        line_adjustments=[
+            {
+                "line_public_id": str(lines[0].public_id),
+                "quantity": "2",
+                "unit_price": "20.00",
+            },
+            {
+                "line_public_id": str(lines[1].public_id),
+                "quantity": "1",
+                "unit_price": "10.00",
+            },
+        ],
+    )
+    dtf = refreshed.items.get(service_type=CatalogService.ServiceType.DTF_TRANSFER)
+    assert refreshed.volume_discount_percent == Decimal("10.00")
+    assert refreshed.volume_discount_base_unit_price_eur == Decimal("20.00")
+    assert dtf.unit_price == Decimal("18.00")
+    assert refreshed.volume_discount_amount == Decimal("4.00")
+
+
+@override_settings(DTF_LAIZE_CM=55, DTF_METERAGE_AREA_MODE="laize_fit")
+def test_meterage_after_adjustment_keeps_personalized_tier_on_new_quantity():
+    staff, _client = _staff_admin()
+    order = _pending_deferred_with_upload()
+    order = OrderPricingService().prepare_deferred_billing_draft_lines(
+        order=order,
+        actor=staff,
+        source="test",
+    )
+    _tiers(customer=order.customer, personalized_percent="10.00")
+    prep = order.items.get(service_type=CatalogService.ServiceType.FILE_PREPARATION)
+    OrderPricingService().apply_staff_billing_adjustments(
+        order=order,
+        actor=staff,
+        source="test",
+        shipping_method_code="standard",
+        shipping_amount="8.00",
+        line_adjustments=[
+            {
+                "line_public_id": str(
+                    order.items.get(
+                        service_type=CatalogService.ServiceType.DTF_TRANSFER
+                    ).public_id
+                ),
+                "quantity": "0.5500",
+                "unit_price": "40.00",
+            },
+            {
+                "line_public_id": str(prep.public_id),
+                "quantity": "1",
+                "unit_price": "10.00",
+            },
+        ],
+    )
+    order.refresh_from_db()
+    assert order.volume_discount_percent == Decimal("10.00")
+    assert order.volume_discount_base_unit_price_eur == Decimal("40.00")
+
+    OrderUploadService().set_staff_order_meterage_linear_override(
+        order=order,
+        actor=staff,
+        raw_value="2.5",
+    )
+    order.refresh_from_db()
+    dtf = order.items.get(service_type=CatalogService.ServiceType.DTF_TRANSFER)
+    prep.refresh_from_db()
+    assert dtf.quantity == Decimal("1.3750")
+    assert dtf.unit_price == Decimal("36.00")
+    assert order.volume_discount_percent == Decimal("10.00")
+    assert order.volume_discount_base_unit_price_eur == Decimal("40.00")
+    assert order.volume_discount_amount == Decimal("5.50")
+    assert prep.unit_price == Decimal("10.00")

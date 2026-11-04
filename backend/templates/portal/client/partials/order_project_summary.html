@@ -52,6 +52,8 @@
     </aside>
     {% endif %}
 
+    {% include "portal/partials/deferred_file_pricing_notice.html" with notice=file_order_estimate audience="client" show_request=file_order_estimate_request %}
+
     <div class="b2b-project-checkout-actions client-order-project-checkout-actions">
       {% if project.items.all and project.can_edit_items %}
       {% if project.status == "action_required" or project.status == "draft" or project.status == "incomplete" %}

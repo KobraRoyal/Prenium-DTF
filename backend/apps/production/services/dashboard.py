@@ -586,6 +586,8 @@ class AtelierDashboardService:
             return "Tarifer", "production"
         if production_status == ProductionJob.Status.READY_TO_SHIP:
             return "Expédier", "shipping"
+        if production_status == ProductionJob.Status.SHIPPED:
+            return "Suivre la livraison", "shipping"
         if production_status == ProductionJob.Status.COMPLETED:
             return "Consulter", "production"
         if production_status == ProductionJob.Status.IN_PROGRESS:
@@ -617,6 +619,8 @@ class AtelierDashboardService:
             )
         if production_status == ProductionJob.Status.READY_TO_SHIP:
             return "Préparer l’expédition", "La production est terminée et prête à être expédiée."
+        if production_status == ProductionJob.Status.SHIPPED:
+            return "Suivre la livraison", "Le colis est expédié. Il sera terminé à la livraison."
         if production_status == ProductionJob.Status.IN_PROGRESS:
             return "Suivre la production", "La commande est en cours de fabrication."
         if production_status == ProductionJob.Status.COMPLETED:

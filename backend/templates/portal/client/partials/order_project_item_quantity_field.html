@@ -1,4 +1,5 @@
+{% load portal_tags l10n %}
 <div class="ui-field-group">
   <label class="ui-label" for="{% if field_id %}{{ field_prefix|default:"" }}{{ field_id }}{% else %}id-quantity{% endif %}">{{ label|default:"Quantité" }}</label>
-  <input class="ui-input" id="{% if field_id %}{{ field_prefix|default:"" }}{{ field_id }}{% else %}id-quantity{% endif %}" name="quantity" type="number" min="1" max="1000" step="1" value="{{ quantity|default:1 }}" required>
+  <input class="ui-input" id="{% if field_id %}{{ field_prefix|default:"" }}{{ field_id }}{% else %}id-quantity{% endif %}" name="quantity" type="number" min="1" max="1000" step="1" value="{{ quantity|default:1 }}" required{% if item %} data-estimate-quantity data-estimate-item="{{ item.public_id }}" data-sqm-each="{{ item|file_estimate_unit_sqm }}"{% endif %}>
 </div>

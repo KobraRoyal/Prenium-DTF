@@ -207,8 +207,8 @@ def test_sendcloud_webhook_updates_tracking_and_notifies_once():
     from apps.production.models import ProductionJob
 
     job = ProductionJob.objects.get(order=order)
-    assert job.status == ProductionJob.Status.COMPLETED
-    assert job.completed_at is not None
+    assert job.status == ProductionJob.Status.SHIPPED
+    assert job.completed_at is None
 
 
 @pytest.mark.django_db

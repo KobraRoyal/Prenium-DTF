@@ -67,7 +67,7 @@
       <input type="hidden" name="name" value="{{ item.name }}">
       <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}">
       <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}">
-      {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity field_prefix="id-editor-quantity-" field_id=item.public_id %}
+      {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity field_prefix="id-editor-quantity-" field_id=item.public_id item=item %}
       <span class="ui-sr-only htmx-indicator" role="status">Enregistrement…</span>
     </form>
     {% endif %}
@@ -88,7 +88,7 @@
       <input type="hidden" name="width_mm" value="{{ item.width_mm|unlocalize }}" data-configurator-width>
       <input type="hidden" name="height_mm" value="{{ item.height_mm|unlocalize }}" data-configurator-height>
       {% include "portal/client/partials/order_project_rotation_hidden.html" %}
-      <div class="b2b-configurator__dimensions">{% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity field_prefix="id-attach-quantity-" field_id=item.public_id %}</div>
+      <div class="b2b-configurator__dimensions">{% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity field_prefix="id-attach-quantity-" field_id=item.public_id item=item %}</div>
       <p class="b2b-configurator__file-meta"><span data-configurator-pixels>—</span></p>
       <button class="ui-btn ui-btn-primary" type="submit">Ajouter le fichier</button>
     </form>

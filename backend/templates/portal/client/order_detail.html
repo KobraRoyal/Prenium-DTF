@@ -23,6 +23,8 @@
 </div>
 {% endif %}
 
+{% include "portal/partials/deferred_file_pricing_notice.html" with notice=deferred_file_notice audience="client" %}
+
 <section class="portal-page-surface client-order-detail-surface" aria-labelledby="client-order-title">
   <header class="client-order-summary client-order-detail-identity" aria-labelledby="client-order-title">
     <dl class="client-order-summary__facts">

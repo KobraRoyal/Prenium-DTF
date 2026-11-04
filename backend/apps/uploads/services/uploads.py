@@ -30,6 +30,7 @@ def order_production_has_started(order: Order) -> bool:
     return job.status in {
         ProductionJob.Status.IN_PROGRESS,
         ProductionJob.Status.READY_TO_SHIP,
+        ProductionJob.Status.SHIPPED,
         ProductionJob.Status.COMPLETED,
     }
 

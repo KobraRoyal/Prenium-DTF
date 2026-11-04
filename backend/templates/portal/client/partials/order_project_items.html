@@ -106,7 +106,7 @@
           >
             {% csrf_token %}
             <input type="hidden" name="_autosave" value="1">
-            {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Quantité" field_id=item.public_id %}
+            {% include "portal/client/partials/order_project_item_quantity_field.html" with quantity=item.quantity label="Quantité" field_id=item.public_id item=item %}
             {% if not item.is_production_gang_sheet_asset %}
             {% include "portal/client/partials/order_project_support_color_field.html" with item=item swatch_prefix="inline-support-hex-" exact_color_required=item.technical_review.thin_zone.detected %}
             {% endif %}

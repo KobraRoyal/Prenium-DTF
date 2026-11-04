@@ -159,6 +159,7 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
     template_name = "portal/client/order_detail.html"
 
     def get(self, request, customer_public_id, order_public_id):
+        from apps.b2b_order_projects.services.file_estimate import present_order_notice
         from apps.billing.services.production_payment_gate import order_awaits_client_payment
         from apps.portal.client_order_presentation import client_order_status_banner
 
@@ -190,6 +191,7 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
                     awaits_client_payment=awaits_client_payment,
                     query_params=request.GET,
                 ),
+                "deferred_file_notice": present_order_notice(order),
                 "nav_mode": "client",
                 "nav_key": "client-orders",
             },

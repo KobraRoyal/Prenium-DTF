@@ -42,6 +42,11 @@ class EmailTemplate(BaseModel):
             "volume_discount_tier_reached",
             "Palier de remise atteint",
         )
+        QUOTE_REQUESTED = "quote_requested", "Demande de devis"
+        QUOTE_REQUESTED_INTERNAL = (
+            "quote_requested_internal",
+            "Demande de devis atelier",
+        )
 
     class Audience(models.TextChoices):
         CLIENT = "client", "Client"

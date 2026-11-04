@@ -31,6 +31,7 @@ _PRODUCTION_STATUSES = {
     "in_progress": OperationalOrderStatus("in_progress", "En production", "is-warning"),
     "blocked": OperationalOrderStatus("blocked", "Bloquée", "is-danger"),
     "ready_to_ship": OperationalOrderStatus("ready_to_ship", "Prête à expédier", "is-success"),
+    "shipped": OperationalOrderStatus("shipped", "Expédiée", "is-success"),
     "completed": OperationalOrderStatus("completed", "Terminée", "is-success"),
 }
 
@@ -75,8 +76,7 @@ def client_order_handover(order) -> ClientOrderHandover:
             )
     else:
         shipment = _related_or_none(order, "shipment")
-        carrier_status = str(getattr(shipment, "sendcloud_status_code", "") or "").upper()
-        if carrier_status == "DELIVERED":
+        if shipment_is_delivered(shipment):
             return ClientOrderHandover(label="Livraison", value="Livrée")
         if getattr(shipment, "shipped_at", None) is not None:
             return ClientOrderHandover(
@@ -104,6 +104,8 @@ def client_production_status(
         if is_pickup:
             return OperationalOrderStatus("ready_for_pickup", "Prête au retrait", "is-success")
         return OperationalOrderStatus("ready_to_ship", "Prête à expédier", "is-success")
+    if normalized_status == "shipped":
+        return OperationalOrderStatus("shipped", "Expédiée", "is-success")
     if normalized_status == "completed":
         if is_pickup:
             return OperationalOrderStatus("picked_up", "Retirée", "is-success")
@@ -114,11 +116,22 @@ def client_production_status(
     )
 
 
+def shipment_is_delivered(shipment) -> bool:
+    from apps.shipping.services.sendcloud import classify_sendcloud_progress
+
+    return (
+        classify_sendcloud_progress(
+            code=str(getattr(shipment, "sendcloud_status_code", "") or ""),
+            message=str(getattr(shipment, "sendcloud_status_message", "") or ""),
+        )
+        == "delivered"
+    )
+
+
 def client_shipment_status(shipment) -> OperationalOrderStatus:
     """Translate the carrier state into a client-facing delivery step."""
-    carrier_status = str(getattr(shipment, "sendcloud_status_code", "") or "").strip().upper()
-    if carrier_status == "DELIVERED":
-        return OperationalOrderStatus("delivered", "Livrée", "is-success")
+    if shipment_is_delivered(shipment):
+        return OperationalOrderStatus("delivered", "Terminée", "is-success")
     return OperationalOrderStatus("shipped", "Expédiée", "is-success")
 
 
@@ -180,6 +193,8 @@ def operational_order_status(order) -> OperationalOrderStatus:
         return OperationalOrderStatus("awaiting_payment", "Paiement à effectuer", "is-warning")
 
     shipment = _related_or_none(order, "shipment")
+    if shipment is not None and shipment_is_delivered(shipment):
+        return OperationalOrderStatus("completed", "Terminée", "is-success")
     if shipment is not None and getattr(shipment, "shipped_at", None) is not None:
         return OperationalOrderStatus("shipped", "Expédiée", "is-success")
 

@@ -9,7 +9,7 @@ Rapprocher le suivi colis de l’expérience e-commerce : état, multi-colis si 
 - API client **GET** `api/client/.../shipment/` : tracking + statut transporteur **sans** IDs Sendcloud ni `request_snapshot`.
 - Staff : **POST** `api/staff/shipping/orders/<uuid>/sync-tracking/` + bouton HTMX portail.
 - Beat Celery (dev) : toutes les **30 min** (`config/settings/dev.py`).
-- Le premier statut prouvant une prise en charge transporteur renseigne `Shipment.shipped_at` et déclenche une seule notification « Commande expédiée » après commit ; `READY_TO_SEND` et `ANNOUNCED` restent des statuts pré-départ.
+- Le premier statut prouvant une prise en charge transporteur renseigne `Shipment.shipped_at`, passe l’OF de `ready_to_ship` à `shipped` et déclenche une seule notification « Commande expédiée » après commit. La livraison (`Delivered`, id 11) passe l’OF à `completed`. `READY_TO_SEND` et `ANNOUNCED` restent des statuts pré-départ, même si un numéro de suivi est déjà présent.
 - Multi-colis (1 commande → N expéditions) : **hors périmètre** — le modèle reste **OneToOne** `Order` ↔ `Shipment`.
 
 ## Hors périmètre

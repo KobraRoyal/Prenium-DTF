@@ -26,40 +26,103 @@ from apps.production.models import ProductionJob
 from apps.production.services.workflow import ProductionWorkflowService
 from apps.shipping.models import SendcloudWebhookEvent, Shipment
 
+# Avant prise en charge : l'étiquette peut déjà porter un numéro de suivi.
+PRE_SHIPMENT_STATUS_CODES = frozenset(
+    {
+        "ANNOUNCED",
+        "ANNOUNCED_NOT_COLLECTED",
+        "ANNOUNCING",
+        "ANNOUNCEMENT_FAILED",
+        "BEING_ANNOUNCED",
+        "CANCELLED",
+        "CANCELLED_UPSTREAM",
+        "CANCELLATION_REQUEST",
+        "DECLARED",
+        "LABEL_CREATED",
+        "LABELLED",
+        "NO_LABEL",
+        "READY_TO_SEND",
+        "READY_TO_SHIP",
+        "SUBMITTING_CANCELLATION_REQUEST",
+    }
+)
+DELIVERED_STATUS_CODES = frozenset(
+    {
+        "DELIVERED",
+        "DELIVERY_FORCED",
+        "SHIPMENT_COLLECTED_BY_CUSTOMER",
+    }
+)
 CARRIER_HANDOFF_STATUS_CODES = frozenset(
     {
+        "ACCEPTED",
         "AT_CUSTOMS",
         "AT_SORTING_CENTER",
         "AT_SORTING_CENTRE",
-        "ACCEPTED",
+        "ATTEMPTED",
         "AWAITING_CUSTOMER_PICKUP",
         "BEING_SORTED",
         "COLLECTED",
         "COLLECTED_BY_CARRIER",
-        "DELIVERED",
+        "CUSTOMS",
         "DELIVERY_ATTEMPT_FAILED",
         "DELIVERY_DELAYED",
         "DRIVER_EN_ROUTE",
+        "DROPPED",
+        "EN_ROUTE",
+        "EN_ROUTE_TO_SORTING",
         "EN_ROUTE_TO_SORTING_CENTER",
         "EN_ROUTE_TO_SORTING_CENTRE",
-        "EN_ROUTE_TO_SORTING",
+        "IN_DELIVERY",
         "IN_TRANSIT",
         "NOT_SORTED",
+        "OUT_FOR_DELIVERY",
         "PARCEL_EN_ROUTE",
         "PICKED_UP_BY_DRIVER",
+        "PUP",
         "REFUSED_BY_RECIPIENT",
         "RETURNED_TO_SENDER",
-        "SHIPMENT_COLLECTED_BY_CUSTOMER",
         "SHIPMENT_PICKED_UP_BY_DRIVER",
         "SORTED",
         "UNABLE_TO_DELIVER",
     }
 )
+# Identifiants historiques v2, quand le message n'est pas exploitable.
+_NUMERIC_PRE_SHIPMENT_IDS = frozenset({"1", "13", "1000", "1001", "1002", "1999", "2000", "2001"})
+_NUMERIC_DELIVERED_IDS = frozenset({"11", "93"})
+_NUMERIC_SHIPPED_IDS = frozenset(
+    {"3", "4", "5", "6", "7", "8", "12", "22", "92", "62989", "62990", "62991", "62993", "62996"}
+)
 
 
-def is_carrier_handoff_status(status_code: str) -> bool:
-    normalized = re.sub(r"[^A-Z0-9]+", "_", str(status_code).strip().upper()).strip("_")
-    return normalized in CARRIER_HANDOFF_STATUS_CODES
+def _normalize_sendcloud_status_token(value: str) -> str:
+    return re.sub(r"[^A-Z0-9]+", "_", str(value or "").strip().upper()).strip("_")
+
+
+def classify_sendcloud_progress(*, code: str, message: str = "") -> str:
+    """``delivered``, ``shipped`` ou chaîne vide si le colis n'est pas encore pris en charge."""
+    tokens = [
+        token
+        for token in (
+            _normalize_sendcloud_status_token(code),
+            _normalize_sendcloud_status_token(message),
+        )
+        if token
+    ]
+    for token in tokens:
+        if token in DELIVERED_STATUS_CODES or token in _NUMERIC_DELIVERED_IDS:
+            return "delivered"
+    for token in tokens:
+        if token in PRE_SHIPMENT_STATUS_CODES or token in _NUMERIC_PRE_SHIPMENT_IDS:
+            return ""
+    for token in tokens:
+        if token in CARRIER_HANDOFF_STATUS_CODES or token in _NUMERIC_SHIPPED_IDS:
+            return "shipped"
+    return ""
+
+
+def is_carrier_handoff_status(status_code: str, status_message: str = "") -> bool:
+    return classify_sendcloud_progress(code=status_code, message=status_message) != ""
 
 
 class SendcloudConfigurationError(Exception):
@@ -956,7 +1019,10 @@ class ShipmentService:
             elif (
                 shipment.shipped_at is not None
                 and fields["sendcloud_status_code"]
-                and not is_carrier_handoff_status(fields["sendcloud_status_code"])
+                and not is_carrier_handoff_status(
+                    fields["sendcloud_status_code"],
+                    fields["sendcloud_status_message"],
+                )
             ):
                 skipped_regressive = True
             else:
@@ -967,7 +1033,8 @@ class ShipmentService:
                 if fields["tracking_url"]:
                     shipment.tracking_url = fields["tracking_url"]
                 if shipment.shipped_at is None and is_carrier_handoff_status(
-                    fields["sendcloud_status_code"]
+                    fields["sendcloud_status_code"],
+                    fields["sendcloud_status_message"],
                 ):
                     shipment.shipped_at = now
                     became_shipped = True
@@ -1029,31 +1096,68 @@ class ShipmentService:
                 "source": source,
             },
         )
+        progress = classify_sendcloud_progress(
+            code=shipment.sendcloud_status_code,
+            message=shipment.sendcloud_status_message,
+        )
         if became_shipped:
             from apps.notifications.services.transactional import schedule_order_shipped_email
-            from apps.production.models import ProductionJob
 
             schedule_order_shipped_email(order_public_id=order.public_id)
-            try:
-                production_job = order.production_job
-            except ProductionJob.DoesNotExist:
-                production_job = None
-            if (
-                production_job is not None
-                and production_job.status == ProductionJob.Status.READY_TO_SHIP
-            ):
-                try:
-                    self.production_workflow_service.transition_job(
-                        order_public_id=order.public_id,
-                        to_status=ProductionJob.Status.COMPLETED,
-                        actor=actor,
-                        source=source,
-                        reason="Expédition Sendcloud confirmée (remise transporteur).",
-                    )
-                except ValidationError:
-                    # Ne bloque pas le sync suivi si la transition atelier est refusée.
-                    pass
+        if progress == "shipped":
+            self._advance_production_job_from_tracking(
+                order=order,
+                actor=actor,
+                source=source,
+                to_status=ProductionJob.Status.SHIPPED,
+                reason="Suivi Sendcloud : colis pris en charge.",
+            )
+        elif progress == "delivered":
+            self._advance_production_job_from_tracking(
+                order=order,
+                actor=actor,
+                source=source,
+                to_status=ProductionJob.Status.COMPLETED,
+                reason="Suivi Sendcloud : colis livré.",
+            )
         return order, shipment
+
+    def _advance_production_job_from_tracking(
+        self,
+        *,
+        order: Order,
+        actor,
+        source: str,
+        to_status: str,
+        reason: str,
+    ) -> None:
+        try:
+            production_job = order.production_job
+        except ProductionJob.DoesNotExist:
+            return
+        if production_job.status in {to_status, ProductionJob.Status.COMPLETED}:
+            return
+        if (
+            to_status == ProductionJob.Status.SHIPPED
+            and production_job.status != ProductionJob.Status.READY_TO_SHIP
+        ):
+            return
+        if to_status == ProductionJob.Status.COMPLETED and production_job.status not in {
+            ProductionJob.Status.READY_TO_SHIP,
+            ProductionJob.Status.SHIPPED,
+        }:
+            return
+        try:
+            self.production_workflow_service.transition_job(
+                order_public_id=order.public_id,
+                to_status=to_status,
+                actor=actor,
+                source=source,
+                reason=reason,
+            )
+        except ValidationError:
+            # Ne bloque pas le sync suivi si la transition atelier est refusée.
+            return
 
     def _extract_order_refs_from_parcel(self, parcel: dict[str, object]) -> list[str]:
         refs: list[str] = []

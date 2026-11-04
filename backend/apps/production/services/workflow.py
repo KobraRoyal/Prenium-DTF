@@ -52,6 +52,7 @@ class ProductionWorkflowService:
         ProductionJob.Status.IN_PROGRESS: "En production",
         ProductionJob.Status.BLOCKED: "Bloqué",
         ProductionJob.Status.READY_TO_SHIP: "Prêt à expédier",
+        ProductionJob.Status.SHIPPED: "Expédié",
         ProductionJob.Status.COMPLETED: "Terminé",
     }
 
@@ -69,6 +70,10 @@ class ProductionWorkflowService:
             ProductionJob.Status.IN_PROGRESS,
         },
         ProductionJob.Status.READY_TO_SHIP: {
+            ProductionJob.Status.SHIPPED,
+            ProductionJob.Status.COMPLETED,
+        },
+        ProductionJob.Status.SHIPPED: {
             ProductionJob.Status.COMPLETED,
         },
         ProductionJob.Status.COMPLETED: set(),

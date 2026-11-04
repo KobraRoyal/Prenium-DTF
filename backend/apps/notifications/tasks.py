@@ -1,6 +1,7 @@
 from celery import shared_task
 
 from apps.accounts.models import StaffInvitation
+from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import CustomerInvitation
 from apps.notifications.services.transactional import (
     deliver_volume_discount_tier_notification,
@@ -19,6 +20,7 @@ from apps.notifications.services.transactional import (
     send_order_shipped_email,
     send_password_reset_email,
     send_payment_captured_email,
+    send_quote_requested_emails,
     send_staff_account_activated_email,
     send_staff_invitation_email,
 )
@@ -280,6 +282,23 @@ def send_file_correction_requested_email_task(review_public_id: str) -> None:
         return
     if send_file_correction_requested_email(review=review):
         OrderUploadReviewService().mark_client_notified(review_public_id=review.public_id)
+
+
+@shared_task(
+    name="notifications.send_quote_requested_emails",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def send_quote_requested_emails_task(project_public_id: str) -> None:
+    project = (
+        B2BOrderProject.objects.filter(public_id=project_public_id)
+        .select_related("customer")
+        .first()
+    )
+    if project is not None:
+        send_quote_requested_emails(project=project)
 
 
 @shared_task(

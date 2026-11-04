@@ -656,6 +656,51 @@ def schedule_file_correction_requested_email(*, review_public_id) -> None:
     )
 
 
+def send_quote_requested_emails(*, project) -> None:
+    from apps.b2b_order_projects.services.file_estimate import present_project_estimate
+
+    notice = present_project_estimate(project=project, customer=project.customer) or {}
+    quote = notice.get("quote") or {}
+    linear = notice.get("indicative_linear_m")
+    context = {
+        "site.name": "Prenium DTF",
+        "customer.name": project.customer.name,
+        "quote.total_ht": _format_decimal(quote.get("total_eur") or 0, 2) if quote else "",
+        "quote.linear_m": _format_decimal(linear, 2) if linear is not None else "",
+    }
+    client_path = reverse(
+        "portal:client-order-project-detail",
+        kwargs={
+            "customer_public_id": project.customer.public_id,
+            "project_public_id": project.public_id,
+        },
+    )
+    staff_path = reverse(
+        "portal:staff-order-project-detail",
+        kwargs={"project_public_id": project.public_id},
+    )
+    _send_context_email(
+        event=EmailTemplate.Event.QUOTE_REQUESTED,
+        audience=EmailTemplate.Audience.CLIENT,
+        recipients=_recipient_emails_for_customer(project.customer),
+        context={**context, "action.url": _absolute_url(client_path)},
+    )
+    _send_context_email(
+        event=EmailTemplate.Event.QUOTE_REQUESTED_INTERNAL,
+        audience=EmailTemplate.Audience.INTERNAL,
+        recipients=_internal_recipient_emails(),
+        context={**context, "action.url": _absolute_url(staff_path)},
+    )
+
+
+def schedule_quote_requested_emails(*, project_public_id) -> None:
+    from apps.notifications.tasks import send_quote_requested_emails_task
+
+    transaction.on_commit(
+        lambda: send_quote_requested_emails_task.delay(str(project_public_id))
+    )
+
+
 def _format_decimal(value, places: int) -> str:
     return f"{value:.{places}f}".replace(".", ",")
 

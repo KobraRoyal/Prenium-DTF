@@ -125,6 +125,8 @@ EMAIL_TAGS = (
     EmailTag("user.email", "E-mail du compte", "camille@atelier-demo.fr"),
     EmailTag("user.first_name", "Prénom du compte", "Camille"),
     EmailTag("action.url", "Lien d'action sécurisé", "https://example.test/activation/"),
+    EmailTag("quote.total_ht", "Tarif estimatif HT", "25,69"),
+    EmailTag("quote.linear_m", "Longueur estimée", "0,56"),
 )
 ALLOWED_TAG_KEYS = frozenset(tag.key for tag in EMAIL_TAGS)
 
@@ -604,6 +606,45 @@ EMAIL_TEMPLATE_DEFINITIONS = (
             "Fichier : {{ upload.filename }}\n"
             "Motif : {{ review.reason }}\n"
             "Commentaire : {{ review.comment }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.QUOTE_REQUESTED,
+        EmailTemplate.Audience.CLIENT,
+        event_label="Demande de devis",
+        audience_label="Client",
+        description=(
+            "Accusé envoyé au client lorsqu’il demande un devis avant de transmettre "
+            "une commande par fichier."
+        ),
+        subject="Votre demande de devis — {{ customer.name }}",
+        body=(
+            "Bonjour,\n\n"
+            "Votre demande de devis pour {{ customer.name }} est enregistrée.\n\n"
+            "Tarif estimatif : {{ quote.total_ht }} EUR HT\n"
+            "Longueur estimée : {{ quote.linear_m }} m, d’après vos fichiers.\n\n"
+            "Le tarif réel sera calculé sur le métrage imprimé, après l’envoi de la commande. "
+            "Vous pouvez transmettre la commande, ou la laisser de côté :\n"
+            "{{ action.url }}\n\n"
+            "Cordialement,\nL’équipe {{ site.name }}"
+        ),
+    ),
+    _definition(
+        EmailTemplate.Event.QUOTE_REQUESTED_INTERNAL,
+        EmailTemplate.Audience.INTERNAL,
+        event_label="Demande de devis atelier",
+        audience_label="Équipe interne",
+        description=(
+            "Alerte Atelier lorsqu’un client encours demande un devis avant transmission."
+        ),
+        subject="[Atelier] Demande de devis — {{ customer.name }}",
+        body=(
+            "Une demande de devis est arrivée.\n\n"
+            "Client : {{ customer.name }}\n"
+            "Tarif estimatif : {{ quote.total_ht }} EUR HT\n"
+            "Longueur estimée : {{ quote.linear_m }} m\n\n"
+            "Le métrage réel se saisit sur la commande, une fois qu’elle est transmise.\n"
+            "Ouvrir le projet : {{ action.url }}"
         ),
     ),
 )

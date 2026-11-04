@@ -107,6 +107,16 @@ Sur le modèle **`Customer`** :
 
 Les pays sont stockés en **ISO 3166-1 alpha-2** (ex. `FR`).
 
+## Estimation avant transmission (commande par fichier, encours)
+
+Pour une commande **visuels individuels** d’un client en **encours**, le portail explique la règle dès **Nouvelle commande**, puis affiche un **tarif estimatif** à partir des dimensions déclarées, du tarif au m² du compte et du forfait fichier. Cette estimation se met à jour quand le client change une quantité. Le tarif réel suit le métrage imprimé : le client le demande avec **Demander un devis**. La remise volume du relevé, si le client en a une, s’applique ensuite et n’est pas figée dans l’estimation.
+
+Le client peut **demander un devis** avant de transmettre. La demande pose `price_confirmation_required`, enregistre les montants estimés et un événement d’audit `b2b_order_project.quote_requested`. Elle ne transmet pas la commande et ne lance pas `compute_and_persist_order_pricing`. Deux e-mails partent : un accusé au client (`quote_requested`) et une alerte Atelier (`quote_requested_internal`), tous deux modifiables dans les modèles d’e-mail. L’atelier voit le même encart sur le projet. Le métrage réel se saisit ensuite sur la commande transmise ; le client reçoit alors l’e-mail « Commande tarifée ». Il reste libre de transmettre ou non le projet.
+
+Depuis l’atelier, l’onglet Facturation d’une commande encours soumise permet d’ajuster prix unitaire, préparation de fichiers et port avant le métrage de production. L’ouverture prépare des lignes indicatives sans marquer la commande tarifée. L’enregistrement pose `manual_billing_adjusted_at`. Le prix unitaire saisi est la base hors remise. Le recalcul du mois applique ensuite la remise du palier atteint : grille personnalisée du client si elle existe, sinon grille par défaut. Un métrage saisi ensuite met à jour la quantité, conserve cette base et réapplique le même palier. La préparation de fichiers et le port saisis ne sont pas remisés. Sans ajustement manuel, le calcul de production remplace toujours les lignes comme avant.
+
+Les planches (Gang Sheet) et le comptant conservent leur devis payable, sans cet encart.
+
 ## Administration Django
 
 `CustomerAdmin` / `ShippingMethodAdmin` : facturation, livraison, options de port et forfait fichier négocié.

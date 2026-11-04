@@ -13,6 +13,8 @@
 <div class="alert alert--danger mb-4" role="alert">{{ error }}</div>
 {% endfor %}
 
+{% include "portal/partials/deferred_file_pricing_notice.html" with notice=file_order_estimate audience="client" %}
+
 <section class="portal-page-surface b2b-order-start-surface">
   <div class="b2b-order-start-surface__intro">
     <div>

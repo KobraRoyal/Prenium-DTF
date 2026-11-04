@@ -13,6 +13,7 @@ from apps.shipping.services.sendcloud import (
     SendcloudAPIError,
     SendcloudOrderResult,
     ShipmentService,
+    classify_sendcloud_progress,
 )
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -135,10 +136,12 @@ class FakeSendcloudGateway:
         should_fail: bool = False,
         fetch_parcel_error: SendcloudAPIError | None = None,
         parcels_by_order_number: dict | None = None,
+        parcel: dict | None = None,
     ):
         self.should_fail = should_fail
         self.fetch_parcel_error = fetch_parcel_error
         self.parcels_by_order_number = parcels_by_order_number or {}
+        self.parcel = parcel
         self.last_payload = None
 
     def build_order_payload(self, *, order, shipment_request):
@@ -166,6 +169,8 @@ class FakeSendcloudGateway:
     def fetch_parcel(self, *, parcel_id: str):
         if self.fetch_parcel_error is not None:
             raise self.fetch_parcel_error
+        if self.parcel is not None:
+            return self.parcel
         return {
             "id": parcel_id,
             "tracking_number": "TRK-UPDATED",
@@ -304,6 +309,110 @@ def test_sync_tracking_falls_back_when_stored_parcel_id_is_404():
     assert shipment.sendcloud_parcel_id == "parcel-real-999"
     assert shipment.tracking_number == "TRK-FALLBACK"
     assert shipment.sendcloud_status_code == "EN_ROUTE"
+    assert shipment.shipped_at is not None
+    assert ProductionJob.objects.get(order=order).status == ProductionJob.Status.SHIPPED
+
+
+@pytest.mark.django_db
+def test_classify_sendcloud_progress_ignores_label_and_keeps_delivery():
+    assert classify_sendcloud_progress(code="READY_TO_SEND", message="Ready to send") == ""
+    assert classify_sendcloud_progress(code="3", message="En route to sorting center") == "shipped"
+    assert classify_sendcloud_progress(code="11", message="Delivered") == "delivered"
+    assert classify_sendcloud_progress(code="IN_TRANSIT", message="En transit") == "shipped"
+
+
+@pytest.mark.django_db
+def test_numeric_sendcloud_status_ships_then_delivery_completes():
+    actor, customer, _membership = create_customer_scope("sync-id@example.com", "Acme")
+    staff_user = get_user_model().objects.create_user(
+        email="staff-sync-id@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    order = create_order(customer, actor)
+    mark_order_ready_to_ship(order)
+    gateway = FakeSendcloudGateway(
+        parcel={
+            "id": "383707309",
+            "tracking_number": "TRK-ID",
+            "tracking_url": "https://tracking.example.test/TRK-ID",
+            "status": {"id": 3, "message": "En route to sorting center"},
+        }
+    )
+    service = ShipmentService(gateway=gateway)
+    _order, shipment = service.create_shipment(
+        order_public_id=order.public_id,
+        actor=staff_user,
+        source="test",
+        payload=build_shipment_payload(),
+    )
+    shipment.sendcloud_parcel_id = "383707309"
+    shipment.save(update_fields=["sendcloud_parcel_id", "updated_at"])
+
+    service.sync_shipment_tracking_from_sendcloud(
+        order_public_id=order.public_id,
+        actor=staff_user,
+        source="test",
+    )
+    shipment.refresh_from_db()
+    job = ProductionJob.objects.get(order=order)
+    assert shipment.tracking_number == "TRK-ID"
+    assert shipment.shipped_at is not None
+    assert job.status == ProductionJob.Status.SHIPPED
+
+    gateway.parcel = {
+        "id": "383707309",
+        "tracking_number": "TRK-ID",
+        "tracking_url": "https://tracking.example.test/TRK-ID",
+        "status": {"id": 11, "message": "Delivered"},
+    }
+    service.sync_shipment_tracking_from_sendcloud(
+        order_public_id=order.public_id,
+        actor=staff_user,
+        source="test-delivered",
+    )
+    job.refresh_from_db()
+    assert job.status == ProductionJob.Status.COMPLETED
+    assert job.completed_at is not None
+
+
+@pytest.mark.django_db
+def test_label_tracking_does_not_leave_ready_to_ship():
+    actor, customer, _membership = create_customer_scope("sync-label@example.com", "Acme")
+    staff_user = get_user_model().objects.create_user(
+        email="staff-sync-label@example.com",
+        password="pass",
+        is_staff=True,
+    )
+    order = create_order(customer, actor)
+    mark_order_ready_to_ship(order)
+    gateway = FakeSendcloudGateway(
+        parcel={
+            "id": "383707310",
+            "tracking_number": "TRK-LABEL",
+            "tracking_url": "https://tracking.example.test/TRK-LABEL",
+            "status": {"id": 1000, "message": "Ready to send"},
+        }
+    )
+    service = ShipmentService(gateway=gateway)
+    _order, shipment = service.create_shipment(
+        order_public_id=order.public_id,
+        actor=staff_user,
+        source="test",
+        payload=build_shipment_payload(),
+    )
+    shipment.sendcloud_parcel_id = "383707310"
+    shipment.save(update_fields=["sendcloud_parcel_id", "updated_at"])
+
+    service.sync_shipment_tracking_from_sendcloud(
+        order_public_id=order.public_id,
+        actor=staff_user,
+        source="test",
+    )
+    shipment.refresh_from_db()
+    assert shipment.tracking_number == "TRK-LABEL"
+    assert shipment.shipped_at is None
+    assert ProductionJob.objects.get(order=order).status == ProductionJob.Status.READY_TO_SHIP
 
 
 @pytest.mark.django_db

@@ -37,6 +37,7 @@ from .views_b2b_order_projects import (
     ClientOrderProjectItemSemiTransparencyOverlayView,
     ClientOrderProjectItemThinZoneOverlayView,
     ClientOrderProjectListView,
+    ClientOrderProjectQuoteRequestView,
     ClientOrderProjectSubmitView,
     StaffOrderProjectDetailView,
     StaffOrderProjectItemAssetDownloadView,
@@ -355,6 +356,11 @@ urlpatterns = [
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/items/<uuid:item_public_id>/asset/<str:action>/",
         ClientOrderProjectItemAssetView.as_view(),
         name="client-order-project-item-asset",
+    ),
+    path(
+        "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/quote/",
+        ClientOrderProjectQuoteRequestView.as_view(),
+        name="client-order-project-quote",
     ),
     path(
         "client/customers/<uuid:customer_public_id>/order-projects/<uuid:project_public_id>/submit/",

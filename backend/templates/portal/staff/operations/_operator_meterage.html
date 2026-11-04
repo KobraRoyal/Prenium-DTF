@@ -1,4 +1,5 @@
 <section class="staff-meterage-section" aria-labelledby="operator-meterage-heading">
+  {% include "portal/partials/deferred_file_pricing_notice.html" with notice=deferred_file_notice audience="staff" %}
   <h4 id="operator-meterage-heading" class="font-display text-lg">Métrage linéaire</h4>
   <p class="muted text-sm">Saisie globale pour la commande (laize {{ dtf_laize_cm }}&nbsp;cm).</p>
   {% if meterage_form_error %}

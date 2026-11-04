@@ -94,6 +94,7 @@ class ProductionJob(BaseModel):
         QUEUED = "queued", "Queued"
         IN_PROGRESS = "in_progress", "In progress"
         READY_TO_SHIP = "ready_to_ship", "Ready to ship"
+        SHIPPED = "shipped", "Shipped"
         BLOCKED = "blocked", "Blocked"
         COMPLETED = "completed", "Completed"
 

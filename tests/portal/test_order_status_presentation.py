@@ -60,6 +60,19 @@ def make_order(**overrides):
             "Expédiée",
             "is-success",
         ),
+        (
+            make_order(
+                production_job=SimpleNamespace(status="shipped"),
+                shipment=SimpleNamespace(
+                    shipped_at=object(),
+                    sendcloud_status_code="11",
+                    sendcloud_status_message="Delivered",
+                ),
+            ),
+            "completed",
+            "Terminée",
+            "is-success",
+        ),
     ],
 )
 def test_operational_order_status_reflects_the_fulfillment_step(
@@ -170,7 +183,7 @@ def test_operational_order_status_prioritizes_customer_blockers():
                 )
             ),
             "delivered",
-            "Livrée",
+            "Terminée",
         ),
     ],
 )

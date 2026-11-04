@@ -25,11 +25,12 @@ from apps.portal.views_staff import StaffOrderContextMixin
 
 
 def can_staff_adjust_deferred_billing(*, order: Order, actor) -> bool:
+    """Encours soumis, hors relevé. Le métrage de production n’est pas un prérequis."""
     return (
         order.billing_mode == Order.BillingMode.DEFERRED
-        and order.pricing_status == Order.PricingStatus.PRICED
         and order.billing_statement_id is None
         and order.status == Order.Status.SUBMITTED
+        and order.items.exists()
         and actor.has_perm("orders.change_order")
     )
 
@@ -57,6 +58,11 @@ class StaffOrderPanelBillingView(StaffOrderContextMixin, View):
             and invoice is not None
             and invoice.paid_at is None
             and customer.preferred_settlement_method == "wire_transfer"
+        )
+        self.order = OrderPricingService().prepare_deferred_billing_draft_lines(
+            order=self.order,
+            actor=request.user,
+            source="staff_portal.billing_panel",
         )
         can_adjust = can_staff_adjust_deferred_billing(order=self.order, actor=request.user)
         if can_adjust and adjustment_form is None:

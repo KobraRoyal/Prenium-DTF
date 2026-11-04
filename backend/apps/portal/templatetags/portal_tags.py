@@ -42,6 +42,7 @@ STATUS_LABELS = {
     "queued": "En traitement",
     "in_progress": "En production",
     "ready_to_ship": "Prête à expédier",
+    "shipped": "Expédiée",
     "completed": "Terminée",
     "blocked": "Bloquée",
     "resolve": "Lecture OF",
@@ -144,6 +145,7 @@ def badge_tone(status):
         "created",
         "completed",
         "ready_to_ship",
+        "shipped",
         "submitted",
         "priced",
         "clear",
@@ -252,6 +254,20 @@ CLIENT_ORDER_PANEL_LABELS = {
 @register.simple_tag
 def portal_css_asset_v() -> str:
     return PORTAL_CSS_ASSET_V
+
+
+@register.filter
+def file_estimate_unit_sqm(item):
+    """Surface facturable d’un exemplaire, en m², pour l’estimation live."""
+    from django.core.exceptions import ValidationError
+
+    from apps.b2b_order_projects.services.file_estimate import unit_billable_sqm
+
+    try:
+        value = unit_billable_sqm(width_mm=item.width_mm, height_mm=item.height_mm)
+    except (ValidationError, TypeError, ArithmeticError):
+        return ""
+    return format(value, "f")
 
 
 @register.filter

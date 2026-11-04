@@ -34,6 +34,7 @@ class AtelierOperationsService:
         ProductionJob.Status.QUEUED: "Remettre en file",
         ProductionJob.Status.IN_PROGRESS: "Démarrer la production",
         ProductionJob.Status.READY_TO_SHIP: "Déclarer prêt à expédier",
+        ProductionJob.Status.SHIPPED: "Marquer expédiée",
         ProductionJob.Status.BLOCKED: "Bloquer l'OF",
         ProductionJob.Status.COMPLETED: "Terminer l'OF",
     }
@@ -144,10 +145,14 @@ class AtelierOperationsService:
                 shipment = job.order.shipment
             except ObjectDoesNotExist:
                 shipment = None
-        allowed_statuses = self.workflow_service.allowed_target_statuses(
-            current_status=job.status,
-            order=job.order,
-        )
+        allowed_statuses = [
+            status
+            for status in self.workflow_service.allowed_target_statuses(
+                current_status=job.status,
+                order=job.order,
+            )
+            if status != ProductionJob.Status.SHIPPED
+        ]
         start_block_reason = None
         if job.status in {ProductionJob.Status.QUEUED, ProductionJob.Status.BLOCKED}:
             start_block_reason = production_start_blocked_reason(job.order)
@@ -197,6 +202,7 @@ class AtelierOperationsService:
             ProductionJob.Status.BLOCKED: "production",
             ProductionJob.Status.IN_PROGRESS: "production",
             ProductionJob.Status.READY_TO_SHIP: "shipping",
+            ProductionJob.Status.SHIPPED: "shipping",
             ProductionJob.Status.COMPLETED: "billing",
         }
         return mapping.get(status, "production")
@@ -217,6 +223,8 @@ class AtelierOperationsService:
             if job.order.shipping_method_code == "pickup":
                 return "Confirmez le retrait atelier pour clôturer la commande."
             return "Déclarez l’expédition Sendcloud ou terminez l’OF."
+        if job.status == ProductionJob.Status.SHIPPED:
+            return "Colis expédié. Le dossier se termine à la livraison Sendcloud."
         if job.status == ProductionJob.Status.BLOCKED:
             return "Levez le blocage ou vérifiez les prérequis métier."
         if job.status == ProductionJob.Status.COMPLETED:

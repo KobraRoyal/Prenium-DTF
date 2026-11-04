@@ -436,6 +436,24 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
             ctx["cash_checkout_requires_gang_sheet"] = customer_requires_gang_sheet_orders(
                 self.customer
             )
+            from apps.b2b_order_projects.services.file_estimate import (
+                can_request_file_order_quote,
+                present_project_estimate,
+            )
+
+            file_order_estimate = present_project_estimate(
+                project=project,
+                customer=self.customer,
+                shipping_method_code=selected_shipping_code,
+            )
+            ctx["file_order_estimate"] = file_order_estimate
+            ctx["file_order_estimate_request"] = (
+                file_order_estimate is not None and can_request_file_order_quote(project)
+            )
+        else:
+            from apps.b2b_order_projects.services.file_estimate import present_deferred_file_intro
+
+            ctx["file_order_estimate"] = present_deferred_file_intro(customer=self.customer)
         return ctx
 
 
@@ -956,6 +974,31 @@ class ClientOrderProjectItemSemiTransparencyOverlayView(ClientProjectFeatureMixi
         return response
 
 
+class ClientOrderProjectQuoteRequestView(ClientProjectFeatureMixin, View):
+    def post(self, request, customer_public_id, project_public_id):
+        from apps.b2b_order_projects.services.file_estimate import request_file_order_quote
+
+        project = self.get_project_or_404(project_public_id)
+        detail = reverse(
+            "portal:client-order-project-detail",
+            kwargs={
+                "customer_public_id": self.customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        )
+        try:
+            request_file_order_quote(
+                project=project,
+                customer=self.customer,
+                actor=request.user,
+                shipping_method_code=(request.POST.get("shipping_method_code") or "").strip()
+                or None,
+            )
+        except ValidationError:
+            return HttpResponseRedirect(f"{detail}?quote_error=1")
+        return HttpResponseRedirect(detail)
+
+
 class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
     def post(self, request, customer_public_id, project_public_id):
         project = self.get_project_or_404(project_public_id)
@@ -1116,11 +1159,17 @@ class StaffOrderProjectDetailView(StaffOrderProjectListView):
         project = project_service.get_staff_project(project_public_id=project_public_id)
         if project is None:
             raise Http404
+        from apps.b2b_order_projects.services.file_estimate import present_project_estimate
+
         return render(
             request,
             self.template_name,
             {
                 "project": project,
+                "file_order_estimate": present_project_estimate(
+                    project=project,
+                    customer=project.customer,
+                ),
                 "nav_mode": "staff",
                 "nav_key": "staff-order-projects",
                 "status_label": status_label,

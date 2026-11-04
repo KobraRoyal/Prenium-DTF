@@ -29,6 +29,7 @@ class StaffOrderListFilterService:
         (ProductionJob.Status.QUEUED, "En traitement"),
         (ProductionJob.Status.IN_PROGRESS, "En production"),
         (ProductionJob.Status.READY_TO_SHIP, "Prêtes à expédier"),
+        (ProductionJob.Status.SHIPPED, "Expédiées"),
         (ProductionJob.Status.COMPLETED, "Terminées"),
         (ProductionJob.Status.BLOCKED, "Bloquées"),
     )

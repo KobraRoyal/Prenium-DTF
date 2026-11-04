@@ -22,6 +22,7 @@
   <p>Tarification enregistrée.</p>
 </div>
 {% endif %}
+{% include "portal/partials/deferred_file_pricing_notice.html" with notice=deferred_file_notice audience="staff" %}
 
 <section class="portal-page-surface staff-order-detail-surface" aria-labelledby="staff-order-title">
   <header class="staff-order-focus staff-order-detail-identity" aria-labelledby="staff-order-title">

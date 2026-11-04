@@ -131,6 +131,8 @@ def build_operator_steps(
         }
     )
 
+    if job.status == ProductionJob.Status.SHIPPED:
+        steps.append({"key": "shipped", "label": "Expédié", "state": "done"})
     if job.status == ProductionJob.Status.COMPLETED:
         steps.append({"key": "completed", "label": "Terminé", "state": "done"})
 

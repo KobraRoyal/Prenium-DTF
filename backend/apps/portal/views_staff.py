@@ -146,6 +146,8 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
             drive_folder.google_drive_folder_url() if drive_folder is not None else None
         )
         staff_order_focus = atelier_dashboard_service.build_order_focus(order=self.order)
+        from apps.b2b_order_projects.services.file_estimate import present_order_notice
+
         latest_payment = (
             self.order.payments.order_by("-created_at").only("status", "provider").first()
         )
@@ -168,6 +170,7 @@ class StaffOrderDetailView(StaffOrderContextMixin, View):
                 "price_error": request.GET.get("price_error", ""),
                 "delete_error": request.GET.get("delete_error", ""),
                 "priced_ok": request.GET.get("priced") == "1",
+                "deferred_file_notice": present_order_notice(self.order),
                 "nav_mode": "staff",
                 "nav_key": "staff-orders",
                 "badge_tone_for_status": badge_tone_for_status,
