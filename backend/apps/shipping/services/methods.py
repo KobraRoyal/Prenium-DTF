@@ -112,6 +112,15 @@ def shipping_choice_label(method) -> str:
     return name
 
 
+def shipping_processing_delay_label(method) -> str:
+    """Mode d’expédition et délai de traitement, sans le transporteur."""
+    name = present_shipping_mode_name(getattr(method, "name", "") if method else "")
+    eta = str(getattr(method, "eta_label", "") or "").split(" · ")[0].strip()
+    if name and eta:
+        return f"{name} — délai de traitement {eta}"
+    return name or "Expédition"
+
+
 def order_uses_pickup(order) -> bool:
     """Return whether an order snapshot points to a workshop pickup method."""
     code = str(getattr(order, "shipping_method_code", "") or "").strip().lower()

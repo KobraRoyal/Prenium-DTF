@@ -10,7 +10,13 @@ from apps.b2b_order_projects.services.file_estimate import (
     request_file_order_quote,
     unit_billable_sqm,
 )
-from apps.customers.models import Customer, CustomerBillingProfile, CustomerMembership
+from apps.customers.models import (
+    Customer,
+    CustomerBillingProfile,
+    CustomerMembership,
+    CustomerVolumeDiscountTier,
+    DefaultCustomerVolumeDiscountTier,
+)
 from apps.orders.models import Order
 from apps.orders.services.orders import OrderService
 from django.contrib.auth import get_user_model
@@ -112,10 +118,39 @@ def test_deferred_file_estimate_uses_declared_size_and_client_rate():
 
     assert notice["requested"] is False
     assert notice["quote"]["unit_price_eur"] == Decimal("25.00")
+    assert notice["quote"]["billable_sqm"] == Decimal("0.4000")
+    assert notice["quote"]["dtf_gross_amount_eur"] == Decimal("10.00")
     assert notice["quote"]["dtf_amount_eur"] == Decimal("10.00")
+    assert notice["quote"]["volume_discount_percent"] == Decimal("0.00")
     assert notice["quote"]["billing_mode"] == Order.BillingMode.DEFERRED
     assert notice["quote"]["tax_amount_eur"] == Decimal("0.00")
     assert notice["indicative_linear_m"] == Decimal("0.73")
+    assert notice["quote"]["shipping_estimate_label"] == "Standard — délai de traitement 2–3 jours"
+
+
+@pytest.mark.django_db
+def test_estimate_applies_the_personalized_tier_on_the_surface_rate():
+    _user, customer, project = _scope("estimate-tier@example.com")
+    CustomerVolumeDiscountTier.objects.create(
+        customer=customer,
+        minimum_monthly_linear_m=Decimal("0.5000"),
+        discount_percent=Decimal("10.00"),
+    )
+    DefaultCustomerVolumeDiscountTier.objects.create(
+        minimum_monthly_linear_m=Decimal("0.5000"),
+        discount_percent=Decimal("40.00"),
+    )
+
+    notice = present_project_estimate(project=project, customer=customer)
+    quote = notice["quote"]
+
+    assert quote["unit_price_eur"] == Decimal("25.00")
+    assert quote["dtf_gross_amount_eur"] == Decimal("10.00")
+    assert quote["volume_discount_percent"] == Decimal("10.00")
+    assert quote["dtf_amount_eur"] == Decimal("9.00")
+    assert quote["volume_discount_amount_eur"] == Decimal("1.00")
+    assert quote["prep_amount_eur"] == Decimal("0.00")
+    assert quote["total_eur"] == quote["dtf_amount_eur"] + quote["shipping_amount_eur"]
 
 
 @pytest.mark.django_db
@@ -233,6 +268,10 @@ def test_client_can_request_a_quote_and_other_customer_cannot():
     assert page.status_code == 200
     body = page.content.decode()
     assert "Tarif estimatif" in body
+    assert "m² ×" not in body
+    assert "d’après vos fichiers" not in body
+    assert "Standard — délai de traitement 2–3 jours" in body
+    assert "Express — délai de traitement 1–2 jours" in body
     assert "Pour le tarif réel, demandez un devis" in body
     assert "métrage imprimé" in body
     assert "Demander un devis" in body

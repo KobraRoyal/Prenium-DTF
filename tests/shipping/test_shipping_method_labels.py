@@ -19,6 +19,20 @@ def test_default_shipping_buttons_show_processing_time():
     assert names["pickup"] == "Retrait atelier"
 
 
+def test_processing_delay_label_names_the_mode_without_the_carrier():
+    from types import SimpleNamespace
+
+    from apps.shipping.services.methods import shipping_processing_delay_label
+
+    standard = SimpleNamespace(name="Livraison standard", eta_label="2–3 jours · Chronopost 13")
+    pickup = SimpleNamespace(name="Retrait atelier", eta_label="1–2 jours")
+
+    assert shipping_processing_delay_label(standard) == "Standard — délai de traitement 2–3 jours"
+    assert (
+        shipping_processing_delay_label(pickup) == "Retrait atelier — délai de traitement 1–2 jours"
+    )
+
+
 def test_custom_shipping_delay_is_kept():
     method = ShippingMethod.objects.get(code="standard")
     method.eta_label = "Sous 5 jours"

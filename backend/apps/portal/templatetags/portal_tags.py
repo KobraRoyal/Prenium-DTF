@@ -144,6 +144,13 @@ def shipping_mode_label(value):
 
 
 @register.filter
+def shipping_processing_label(method):
+    from apps.shipping.services.methods import shipping_processing_delay_label
+
+    return shipping_processing_delay_label(method)
+
+
+@register.filter
 def badge_tone(status):
     status = str(status)
     positive = {

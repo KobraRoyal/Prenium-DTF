@@ -10,15 +10,27 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db.models import Sum
+from django.utils import timezone
 
 from apps.auditlog.services import record_event
 from apps.b2b_order_projects.models import B2BOrderProject
 from apps.customers.models import Customer
+from apps.customers.services.volume_discounts import (
+    linear_meters_from_sqm,
+    month_bounds,
+    pick_tier_for_volume,
+    resolve_active_ladder,
+)
 from apps.orders.models import Order
 from apps.orders.services.pricing import (
     FOURPLACES,
     OrderPricingService,
     billable_sqm_from_physical_size,
+)
+from apps.shipping.services.methods import (
+    ShippingMethodService,
+    shipping_processing_delay_label,
 )
 
 TWOPLACES = Decimal("0.01")
@@ -43,6 +55,8 @@ def present_project_estimate(*, project, customer, shipping_method_code: str | N
         return None
     items = list(project.items.all().only("width_mm", "height_mm", "quantity"))
     quote = None
+    ladder = []
+    month_volume = Decimal("0.0000")
     if items:
         try:
             quote = OrderPricingService().estimate_reorder_quote(
@@ -60,11 +74,18 @@ def present_project_estimate(*, project, customer, shipping_method_code: str | N
             )
         except ValidationError:
             quote = None
+        ladder = resolve_active_ladder(customer)
+        month_volume = _deferred_priced_linear_m(customer)
+        if quote is not None:
+            quote = _with_reached_tier(quote, month_volume=month_volume, ladder=ladder)
+            quote["shipping_estimate_label"] = _shipping_estimate_label(quote)
     return {
         "quote": quote,
         "requested": bool(project.price_confirmation_required),
         "indicative_linear_m": _indicative_linear_m(quote),
         "laize_m": _laize_m(),
+        "priced_month_linear_m": month_volume,
+        "volume_ladder": _ladder_token(ladder),
         "intro": False,
     }
 
@@ -178,3 +199,74 @@ def _indicative_linear_m(quote) -> Decimal | None:
     if laize_m <= 0:
         return None
     return (Decimal(quote["billable_sqm"]) / laize_m).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+
+
+def _deferred_priced_linear_m(customer) -> Decimal:
+    """Mètres déjà tarifés du mois, même périmètre que le palier rétroactif."""
+    from apps.catalog.models import CatalogService
+    from apps.orders.models import OrderLine
+
+    _month_start, _next_month, starts_at, ends_at = month_bounds(timezone.localdate())
+    eligible = Order.objects.filter(
+        customer=customer,
+        billing_mode=Order.BillingMode.DEFERRED,
+        pricing_status=Order.PricingStatus.PRICED,
+        billing_statement__isnull=True,
+        status=Order.Status.SUBMITTED,
+        created_at__gte=starts_at,
+        created_at__lt=ends_at,
+    )
+    total_sqm = OrderLine.objects.filter(
+        order__in=eligible,
+        service_type=CatalogService.ServiceType.DTF_TRANSFER,
+    ).aggregate(total=Sum("quantity"))["total"] or Decimal("0.00")
+    return linear_meters_from_sqm(total_sqm)
+
+
+def _shipping_estimate_label(quote) -> str:
+    code = str(quote.get("shipping_method_code") or "").strip()
+    method = ShippingMethodService().get_active_by_code(code) if code else None
+    if method is not None:
+        return shipping_processing_delay_label(method)
+    name = str(quote.get("shipping_method_name") or "").strip()
+    return name or "Expédition"
+
+
+def _ladder_token(ladder) -> str:
+    parts = []
+    for tier in ladder:
+        minimum = Decimal(tier.minimum_monthly_linear_m).quantize(FOURPLACES)
+        percent = Decimal(tier.discount_percent).quantize(TWOPLACES)
+        parts.append(f"{minimum}:{percent}")
+    return ",".join(parts)
+
+
+def _with_reached_tier(quote, *, month_volume: Decimal, ladder) -> dict:
+    """Applique le palier atteint au DTF, en laissant le tarif m² brut affiché."""
+    additional = linear_meters_from_sqm(Decimal(quote["billable_sqm"]))
+    quote_volume = (Decimal(month_volume) + additional).quantize(FOURPLACES, rounding=ROUND_HALF_UP)
+    tier = pick_tier_for_volume(ladder=ladder, monthly_volume=quote_volume)
+    priced = dict(quote)
+    priced["monthly_volume_linear_m"] = quote_volume
+    if tier is None or tier.discount_percent <= 0:
+        return priced
+    percent = Decimal(tier.discount_percent).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    gross = Decimal(quote["dtf_gross_amount_eur"])
+    factor = (Decimal("100.00") - percent) / Decimal("100.00")
+    net = (gross * factor).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    prep = Decimal(quote["prep_amount_eur"])
+    subtotal = (net + prep).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    totals = OrderPricingService().compose_order_totals(
+        subtotal_ht=subtotal,
+        shipping_ht=Decimal(quote["shipping_amount_eur"]),
+        billing_mode=Order.BillingMode.DEFERRED,
+    )
+    priced["dtf_amount_eur"] = net
+    priced["volume_discount_percent"] = percent
+    priced["volume_discount_amount_eur"] = (gross - net).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+    priced["volume_discount_threshold_linear_m"] = tier.minimum_monthly_linear_m
+    priced["subtotal_eur"] = totals["subtotal_amount"]
+    priced["tax_amount_eur"] = totals["tax_amount"]
+    priced["total_eur"] = totals["total_amount"]
+    priced["goods_total_eur"] = totals["subtotal_amount"]
+    return priced
