@@ -10,7 +10,7 @@ from apps.orders.models import Order, OrderLine
 from apps.portal.services.billing_breakdown import order_billing_breakdown
 from django.contrib.auth import get_user_model
 from django.template.loader import render_to_string
-from django.test import Client
+from django.test import Client, override_settings
 from django.urls import reverse
 
 from tests.orders.test_order_pricing_service import _seed_catalog_dtf_and_file_prep
@@ -71,14 +71,16 @@ def priced_order(scope):
     return order
 
 
+@override_settings(DTF_LAIZE_CM=55)
 def test_snapshot_preserves_file_count_meterage_prices_and_taxes(priced_order):
     CatalogService.objects.update(base_price=999)
     breakdown = order_billing_breakdown(priced_order)
     dtf, prep = breakdown["rows"]
-    assert (dtf["quantity"], dtf["linear_m"], dtf["unit_price"]) == (
+    assert (dtf["quantity"], dtf["linear_m"], dtf["unit_price"], dtf["meter_price"]) == (
         Decimal("1.375"),
         Decimal("2.5"),
         Decimal("25"),
+        Decimal("13.75"),
     )
     assert (prep["quantity"], prep["unit_price"], prep["amount"]) == (3, 10, 30)
     assert breakdown["vat_percent"] == 20
@@ -122,6 +124,7 @@ def test_catalogue_quantities_remain_linear_meters(priced_order):
     assert "linear_m" not in row
 
 
+@override_settings(DTF_LAIZE_CM=55)
 @pytest.mark.parametrize("staff", [False, True])
 def test_both_panels_show_one_read_only_breakdown(scope, priced_order, staff):
     customer, _user, client, _staff, admin = scope
@@ -153,7 +156,7 @@ def test_both_panels_show_one_read_only_breakdown(scope, priced_order, staff):
     for label in (
         "Préparation des fichiers",
         "3 fichier(s) × 10,00 EUR",
-        "2,5 m linéaires",
+        "2,5 m linéaires × 13,75 EUR",
         "Frais de port HT",
         "TVA · 20 %",
         "Total TTC",

@@ -134,8 +134,9 @@ class StaffBillingAdjustmentForm(forms.Form):
             required=False,
             widget=forms.HiddenInput(),
         )
+        meter_price = (unit_price * self.laize_m).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         self.fields[price_name] = forms.DecimalField(
-            label="Prix unitaire HT",
+            label="Prix du mètre HT",
             min_value=Decimal("0.00"),
             max_digits=10,
             decimal_places=2,
@@ -144,7 +145,7 @@ class StaffBillingAdjustmentForm(forms.Form):
         if not self.is_bound:
             self.fields[linear_name].initial = linear_m
             self.fields[qty_name].initial = total_qty
-            self.fields[price_name].initial = unit_price
+            self.fields[price_name].initial = meter_price
         subtitle = f"{visual_count} visuel{'s' if visual_count > 1 else ''}"
         subtitle = f"{subtitle} · laize {self.laize_cm} cm"
         self.line_rows.append(
@@ -159,7 +160,8 @@ class StaffBillingAdjustmentForm(forms.Form):
                 "unit_price_name": price_name,
                 "linear_placeholder": self._format_qty_placeholder(float(linear_m)),
                 "qty_placeholder": self._format_qty_placeholder(float(total_qty)),
-                "price_placeholder": self._format_money_placeholder(float(unit_price)),
+                "price_placeholder": self._format_money_placeholder(float(meter_price)),
+                "price_hint": f"€ / m, laize {self.laize_cm} cm",
             }
         )
 
@@ -306,7 +308,9 @@ class StaffBillingAdjustmentForm(forms.Form):
         adjustments: list[dict] = []
         if self.group_dtf:
             total_qty = cleaned["dtf_group_quantity"]
-            unit_price = cleaned["dtf_group_unit_price"]
+            unit_price = (cleaned["dtf_group_unit_price"] / self.laize_m).quantize(
+                TWOPLACES, rounding=ROUND_HALF_UP
+            )
             weights = [line.quantity for line in self.dtf_lines]
             quantities = self._distribute_quantity(total=total_qty, weights=weights)
             for line, quantity in zip(self.dtf_lines, quantities, strict=True):

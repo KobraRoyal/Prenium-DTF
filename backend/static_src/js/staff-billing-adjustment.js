@@ -161,11 +161,18 @@ function registerStaffBillingAdjustment() {
     },
 
     lineTotal(index) {
-      const qty = this.effectiveQty(index);
+      const line = this.lines[index];
       const price = this.effectiveUnitPrice(index);
-      if (qty === null || price === null || qty < 0.01 || price < 0) {
+      if (!line || price === null || price < 0) {
         return null;
       }
+      if (line.qtyMode === "linear") {
+        const linear = this.effectiveLinear(index);
+        if (linear === null || linear < 0.01) return null;
+        return this.roundMoney(linear * price);
+      }
+      const qty = this.effectiveQty(index);
+      if (qty === null || qty < 0.01) return null;
       return this.roundMoney(qty * price);
     },
 
@@ -182,9 +189,7 @@ function registerStaffBillingAdjustment() {
     dtfQtyHint(index) {
       const line = this.lines[index];
       if (!line || line.qtyMode !== "linear") return "";
-      const qty = this.effectiveQty(index);
-      if (qty === null) return "Quantité m² selon laize";
-      return `= ${this.formatQty(qty)} m² (laize ${line.laizeCm || 55} cm)`;
+      return `Laize ${line.laizeCm || 55} cm`;
     },
 
     isBlank(value) {

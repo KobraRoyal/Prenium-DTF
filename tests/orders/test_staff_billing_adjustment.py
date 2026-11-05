@@ -190,6 +190,7 @@ def test_reprice_skips_manual_adjusted_order_prices():
     assert order.items.order_by("position").first().unit_price == frozen_price
 
 
+@override_settings(DTF_LAIZE_CM=55)
 def test_billing_panel_shows_adjustment_for_deferred_only():
     staff, client = _staff_admin()
     deferred = _priced_deferred_order()
@@ -205,13 +206,13 @@ def test_billing_panel_shows_adjustment_for_deferred_only():
     assert 'x-text="displayTotal()"' in html
     assert 'x-text="displaySubtotal()"' in html
     assert "data-billing-adjustment" in html
-    assert "laize" in html.lower()
-    assert 'placeholder="15.00"' in html
+    assert "€ / m, laize" in html
+    assert 'placeholder="8.25"' in html
     assert 'placeholder="8.00"' in html
     assert "Valeurs actuelles" in html
 
     prep = deferred.items.get(service_type=CatalogService.ServiceType.FILE_PREPARATION)
-    # 3 m lin. × laize 0,55 m = 1,65 m² → 1,65×11 + 10 = 28,15
+    # 6,05 €/m sur laize 0,55 m = 11 €/m² ; 3 m × 0,55 = 1,65 m² → 1,65×11 + 10 = 28,15
     response = client.post(
         url,
         {
@@ -219,7 +220,7 @@ def test_billing_panel_shows_adjustment_for_deferred_only():
             "shipping_method_code": "express",
             "shipping_amount": "12.00",
             "dtf_group_linear_m": "3",
-            "dtf_group_unit_price": "11.00",
+            "dtf_group_unit_price": "6.05",
             f"line_{prep.public_id}_quantity": "1",
             f"line_{prep.public_id}_unit_price": "10.00",
         },
@@ -243,6 +244,7 @@ def test_billing_panel_shows_adjustment_for_deferred_only():
     assert 'name="action" value="adjust_billing"' not in immediate_page.content.decode()
 
 
+@override_settings(DTF_LAIZE_CM=55)
 def test_multiple_dtf_visuals_are_edited_as_one_meterage_line():
     staff, client = _staff_admin()
     order = _priced_deferred_order()
@@ -269,7 +271,7 @@ def test_multiple_dtf_visuals_are_edited_as_one_meterage_line():
     assert "2 visuels" in html
     assert "laize" in html.lower()
     prep = order.items.get(service_type=CatalogService.ServiceType.FILE_PREPARATION)
-    # 4,5 m lin. × 0,55 = 2,475 m² → 2,475×12 + 10 = 39,70
+    # 6,60 €/m sur laize 0,55 m = 12 €/m² ; 4,5 m × 0,55 = 2,475 m² → 2,475×12 + 10 = 39,70
     response = client.post(
         url,
         {
@@ -277,7 +279,7 @@ def test_multiple_dtf_visuals_are_edited_as_one_meterage_line():
             "shipping_method_code": "standard",
             "shipping_amount": "8.00",
             "dtf_group_linear_m": "4.5",
-            "dtf_group_unit_price": "12.00",
+            "dtf_group_unit_price": "6.60",
             f"line_{prep.public_id}_quantity": "1",
             f"line_{prep.public_id}_unit_price": "10.00",
         },
@@ -358,7 +360,7 @@ def test_billing_adjustment_is_available_before_production_meterage():
             "shipping_method_code": "standard",
             "shipping_amount": "8.00",
             "dtf_group_linear_m": "1",
-            "dtf_group_unit_price": "40.00",
+            "dtf_group_unit_price": "22.00",
             f"line_{prep.public_id}_quantity": "1",
             f"line_{prep.public_id}_unit_price": "10.00",
         },

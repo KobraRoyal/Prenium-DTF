@@ -3,7 +3,7 @@
 from decimal import ROUND_HALF_UP, Decimal
 
 from apps.catalog.models import CatalogService
-from apps.customers.services.volume_discounts import linear_meters_from_sqm
+from apps.customers.services.volume_discounts import dtf_laize_m, linear_meters_from_sqm
 from apps.orders.models import Order
 
 TWOPLACES = Decimal("0.01")
@@ -56,14 +56,16 @@ def order_billing_breakdown(order):
     if atelier:
         quantity = sum((line.quantity for line in dtf_lines), Decimal("0"))
         prices = {line.unit_price for line in dtf_lines}
+        unit_price = (
+            base_price if separate_discount else (prices.pop() if len(prices) == 1 else None)
+        )
         result["rows"].append(
             {
                 "label": "Impression DTF",
                 "quantity": quantity,
                 "unit": "m²",
-                "unit_price": base_price
-                if separate_discount
-                else (prices.pop() if len(prices) == 1 else None),
+                "unit_price": unit_price,
+                "meter_price": _meter_price(unit_price),
                 "amount": sum((line.line_total for line in dtf_lines), Decimal("0"))
                 + (discount if separate_discount else 0),
                 "linear_m": order.meterage_override_linear_m
@@ -90,3 +92,10 @@ def order_billing_breakdown(order):
             }
         )
     return result
+
+
+def _meter_price(unit_price_per_sqm: Decimal | None) -> Decimal | None:
+    """Prix d’un mètre linéaire sur la laize, à partir du prix au m² conservé."""
+    if unit_price_per_sqm is None:
+        return None
+    return (unit_price_per_sqm * dtf_laize_m()).quantize(TWOPLACES, rounding=ROUND_HALF_UP)

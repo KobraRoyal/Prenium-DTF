@@ -178,7 +178,7 @@
             {% endif %}
           </div>
           <div class="ui-field-group billing-edit__cell" role="cell">
-            <label class="ui-sr-only" for="{{ row.unit_price.id_for_label }}">Prix unitaire {{ row.label }}</label>
+            <label class="ui-sr-only" for="{{ row.unit_price.id_for_label }}">{% if row.is_dtf_group %}Prix du mètre {{ row.label }}{% else %}Prix unitaire {{ row.label }}{% endif %}</label>
             <input
               class="ui-input"
               type="number"
@@ -194,7 +194,7 @@
               :aria-invalid="errors.lines[{{ forloop.counter0 }}] ? 'true' : 'false'"
               :class="{ 'ui-input--error': errors.lines[{{ forloop.counter0 }}] }"
             >
-            <span class="billing-edit__qty-hint" aria-hidden="true">&nbsp;</span>
+            {% if row.price_hint %}<small class="billing-edit__qty-hint">{{ row.price_hint }}</small>{% else %}<span class="billing-edit__qty-hint" aria-hidden="true">&nbsp;</span>{% endif %}
             {% if row.unit_price.errors %}<div class="error-text" role="alert">{{ row.unit_price.errors }}</div>{% endif %}
           </div>
           <span class="billing-edit__line-total" role="cell" x-text="formatMoney(lineTotal({{ forloop.counter0 }}))"></span>
