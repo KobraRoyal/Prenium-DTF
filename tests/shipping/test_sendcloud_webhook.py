@@ -252,7 +252,7 @@ def test_sendcloud_webhook_does_not_fallback_to_api_secret():
 
 @pytest.mark.django_db
 @override_settings(SENDCLOUD_WEBHOOK_SECRET="whsec_sendcloud_test")
-def test_sendcloud_webhook_rejects_invalid_payload_with_400():
+def test_sendcloud_webhook_acks_signed_ping_without_parcel():
     payload = b'{"action":"parcel_status_changed","data":{"other":true}}'
     signature = _sendcloud_signature(payload=payload, secret="whsec_sendcloud_test")
     response = APIClient().post(
@@ -262,10 +262,11 @@ def test_sendcloud_webhook_rejects_invalid_payload_with_400():
         HTTP_SENDCLOUD_SIGNATURE=signature,
     )
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    assert response.data["received"] is True
+    assert response.data["queued"] is False
     assert AuditLogEntry.objects.filter(
-        action="shipping.sendcloud_webhook_invalid_payload",
-        status=AuditLogEntry.Status.FAILURE,
+        action="shipping.sendcloud_webhook_ack_without_parcel",
     ).exists()
 
 

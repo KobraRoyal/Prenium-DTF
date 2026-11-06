@@ -193,17 +193,25 @@ class BackendSendcloudWebhookView(APIView):
             )
             raise PermissionDenied("Invalid Sendcloud webhook.") from exc
 
+        event_identity = build_sendcloud_webhook_identity(payload)
         try:
             parcel = extract_parcel_from_webhook_payload(payload)
-            event_identity = build_sendcloud_webhook_identity(payload)
         except SendcloudAPIError as exc:
+            # Le bouton « Test API webhook » Sendcloud signe un ping sans colis.
+            # Un 400 coupe la connexion côté Sendcloud ; on accuse réception après HMAC.
             record_event(
-                action="shipping.sendcloud_webhook_invalid_payload",
-                status=AuditLogEntry.Status.FAILURE,
+                action="shipping.sendcloud_webhook_ack_without_parcel",
                 message=str(exc)[:255],
-                metadata={"path": request.path},
+                metadata={
+                    "path": request.path,
+                    "provider_event_id": event_identity.provider_event_id,
+                    "payload_hash": event_identity.payload_hash,
+                },
             )
-            raise DRFValidationError({"detail": str(exc)}) from exc
+            return Response(
+                {"received": True, "queued": False, "reason": "no_parcel"},
+                status=202,
+            )
 
         try:
             process_sendcloud_parcel_status_webhook_task.delay(
