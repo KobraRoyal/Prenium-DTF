@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from urllib import error, parse, request
@@ -41,6 +42,10 @@ PRE_SHIPMENT_STATUS_CODES = frozenset(
         "LABEL_CREATED",
         "LABELLED",
         "NO_LABEL",
+        "ANNONCE",
+        "ANNONCEE",
+        "PRET_A_ENVOYER",
+        "PRETE_A_ENVOYER",
         "READY_TO_SEND",
         "READY_TO_SHIP",
         "SUBMITTING_CANCELLATION_REQUEST",
@@ -50,6 +55,10 @@ DELIVERED_STATUS_CODES = frozenset(
     {
         "DELIVERED",
         "DELIVERY_FORCED",
+        "DISTRIBUE",
+        "DISTRIBUEE",
+        "LIVRE",
+        "LIVREE",
         "SHIPMENT_COLLECTED_BY_CUSTOMER",
     }
 )
@@ -62,6 +71,7 @@ CARRIER_HANDOFF_STATUS_CODES = frozenset(
         "ATTEMPTED",
         "AWAITING_CUSTOMER_PICKUP",
         "BEING_SORTED",
+        "COLIS_EN_ROUTE",
         "COLLECTED",
         "COLLECTED_BY_CARRIER",
         "CUSTOMS",
@@ -69,8 +79,11 @@ CARRIER_HANDOFF_STATUS_CODES = frozenset(
         "DELIVERY_DELAYED",
         "DRIVER_EN_ROUTE",
         "DROPPED",
+        "EN_COURS_D_ACHEMINEMENT",
+        "EN_COURS_DE_LIVRAISON",
         "EN_ROUTE",
         "EN_ROUTE_TO_SORTING",
+        "EN_TRANSIT",
         "EN_ROUTE_TO_SORTING_CENTER",
         "EN_ROUTE_TO_SORTING_CENTRE",
         "IN_DELIVERY",
@@ -79,6 +92,8 @@ CARRIER_HANDOFF_STATUS_CODES = frozenset(
         "OUT_FOR_DELIVERY",
         "PARCEL_EN_ROUTE",
         "PICKED_UP_BY_DRIVER",
+        "PRIS_EN_CHARGE",
+        "PRISE_EN_CHARGE",
         "PUP",
         "REFUSED_BY_RECIPIENT",
         "RETURNED_TO_SENDER",
@@ -91,24 +106,48 @@ CARRIER_HANDOFF_STATUS_CODES = frozenset(
 _NUMERIC_PRE_SHIPMENT_IDS = frozenset({"1", "13", "1000", "1001", "1002", "1999", "2000", "2001"})
 _NUMERIC_DELIVERED_IDS = frozenset({"11", "93"})
 _NUMERIC_SHIPPED_IDS = frozenset(
-    {"3", "4", "5", "6", "7", "8", "12", "22", "92", "62989", "62990", "62991", "62993", "62996"}
+    {
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "12",
+        "15",
+        "22",
+        "80",
+        "91",
+        "92",
+        "62989",
+        "62990",
+        "62991",
+        "62992",
+        "62993",
+        "62994",
+        "62996",
+    }
 )
 
 
 def _normalize_sendcloud_status_token(value: str) -> str:
-    return re.sub(r"[^A-Z0-9]+", "_", str(value or "").strip().upper()).strip("_")
+    folded = unicodedata.normalize("NFKD", str(value or ""))
+    without_accents = "".join(char for char in folded if not unicodedata.combining(char))
+    return re.sub(r"[^A-Z0-9]+", "_", without_accents.strip().upper()).strip("_")
+
+
+def _sendcloud_status_tokens(*values: str) -> list[str]:
+    tokens: list[str] = []
+    for value in values:
+        token = _normalize_sendcloud_status_token(value)
+        if token:
+            tokens.append(token)
+    return tokens
 
 
 def classify_sendcloud_progress(*, code: str, message: str = "") -> str:
     """``delivered``, ``shipped`` ou chaîne vide si le colis n'est pas encore pris en charge."""
-    tokens = [
-        token
-        for token in (
-            _normalize_sendcloud_status_token(code),
-            _normalize_sendcloud_status_token(message),
-        )
-        if token
-    ]
+    tokens = _sendcloud_status_tokens(code, message)
     for token in tokens:
         if token in DELIVERED_STATUS_CODES or token in _NUMERIC_DELIVERED_IDS:
             return "delivered"
@@ -119,6 +158,86 @@ def classify_sendcloud_progress(*, code: str, message: str = "") -> str:
         if token in CARRIER_HANDOFF_STATUS_CODES or token in _NUMERIC_SHIPPED_IDS:
             return "shipped"
     return ""
+
+
+def _is_explicit_pre_shipment(*, code: str, message: str) -> bool:
+    return any(
+        token in PRE_SHIPMENT_STATUS_CODES or token in _NUMERIC_PRE_SHIPMENT_IDS
+        for token in _sendcloud_status_tokens(code, message)
+    )
+
+
+def _status_pair(status: dict) -> tuple[str, str]:
+    code = str(status.get("code") or status.get("id") or status.get("name") or "").strip()
+    message = str(status.get("message") or status.get("label") or "").strip()
+    return code, message
+
+
+def iter_sendcloud_status_fragments(status) -> list[tuple[str, str]]:
+    """Statut le plus précis, puis ``parent_status`` (jalon anglais stable)."""
+    fragments: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    current = status
+    for _ in range(4):
+        if isinstance(current, dict):
+            pair = _status_pair(current)
+            if pair not in seen and (pair[0] or pair[1]):
+                fragments.append(pair)
+                seen.add(pair)
+            parent = current.get("parent_status")
+            if parent is current:
+                break
+            current = parent
+            continue
+        if current is not None and not fragments:
+            text = str(current).strip()
+            if text:
+                fragments.append((text, ""))
+        break
+    return fragments
+
+
+def _chain_sendcloud_progress(fragments: list[tuple[str, str]]) -> str:
+    for code, message in fragments:
+        progress = classify_sendcloud_progress(code=code, message=message)
+        if progress:
+            return progress
+        if _is_explicit_pre_shipment(code=code, message=message):
+            return ""
+    return ""
+
+
+def _select_tracking_status(fragments: list[tuple[str, str]]) -> tuple[str, str]:
+    if not fragments:
+        return "", ""
+    progress = _chain_sendcloud_progress(fragments)
+    primary_code, primary_message = fragments[0]
+    if classify_sendcloud_progress(code=primary_code, message=primary_message) == progress:
+        return primary_code, primary_message
+    for code, message in fragments[1:]:
+        if classify_sendcloud_progress(code=code, message=message) != progress:
+            continue
+        if (
+            primary_message
+            and classify_sendcloud_progress(code=code, message=primary_message) == progress
+        ):
+            return code, primary_message
+        return code, message or primary_message
+    return primary_code, primary_message
+
+
+def _incoming_tracking_advances_shipment(*, shipment: Shipment, code: str, message: str) -> bool:
+    """Vrai si l'événement fait avancer le colis (prise en charge, ou livraison)."""
+    incoming = classify_sendcloud_progress(code=code, message=message)
+    current = classify_sendcloud_progress(
+        code=shipment.sendcloud_status_code,
+        message=shipment.sendcloud_status_message,
+    )
+    if incoming == "delivered":
+        return current != "delivered"
+    if incoming == "shipped":
+        return shipment.shipped_at is None and current != "delivered"
+    return False
 
 
 def is_carrier_handoff_status(status_code: str, status_message: str = "") -> bool:
@@ -1010,11 +1129,17 @@ class ShipmentService:
                 .select_related("order", "order__customer")
                 .get(pk=shipment.pk)
             )
-            if (
+            is_stale = (
                 event_at is not None
                 and shipment.last_api_sync_at is not None
                 and event_at < shipment.last_api_sync_at
-            ):
+            )
+            advances = _incoming_tracking_advances_shipment(
+                shipment=shipment,
+                code=fields["sendcloud_status_code"],
+                message=fields["sendcloud_status_message"],
+            )
+            if is_stale and not advances:
                 skipped_stale = True
             elif (
                 shipment.shipped_at is not None
@@ -1038,7 +1163,10 @@ class ShipmentService:
                 ):
                     shipment.shipped_at = now
                     became_shipped = True
-                shipment.last_api_sync_at = event_at or now
+                sync_at = event_at or now
+                if shipment.last_api_sync_at is not None and sync_at < shipment.last_api_sync_at:
+                    sync_at = shipment.last_api_sync_at
+                shipment.last_api_sync_at = sync_at
                 shipment.updated_by = actor if getattr(actor, "is_authenticated", False) else None
                 shipment.save(
                     update_fields=[
@@ -1181,16 +1309,15 @@ class ShipmentService:
         return unique
 
     def _extract_tracking_fields_from_parcel(self, parcel: dict[str, object]) -> dict[str, str]:
-        status = parcel.get("status")
-        if isinstance(status, dict):
-            code = str(status.get("code") or status.get("id") or status.get("name") or "").strip()
-            message = str(status.get("message") or status.get("label") or "").strip()
-        elif status is not None:
-            code = str(status).strip()
-            message = ""
-        else:
-            code = ""
-            message = ""
+        fragments = iter_sendcloud_status_fragments(parcel.get("status"))
+        seen = set(fragments)
+        parent = parcel.get("parent_status")
+        if isinstance(parent, dict):
+            for pair in iter_sendcloud_status_fragments(parent):
+                if pair not in seen:
+                    fragments.append(pair)
+                    seen.add(pair)
+        code, message = _select_tracking_status(fragments)
         return {
             "sendcloud_status_code": code[:64],
             "sendcloud_status_message": message[:255],

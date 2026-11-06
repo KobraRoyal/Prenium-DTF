@@ -1,18 +1,14 @@
+{% load l10n %}
 {# Métrage linéaire commande — facturation différée. Panneau Production (slot #staff-order-meterage-slot-production). #}
 {% if order.uses_atelier_pricing %}
-<section class="staff-meterage-section" aria-labelledby="staff-meterage-heading">
-  <h4 id="staff-meterage-heading" class="staff-meterage-section__title">Métrage linéaire (commande)</h4>
+<section class="staff-meterage-section staff-meterage-section--dense" aria-labelledby="staff-meterage-heading">
+  <h4 id="staff-meterage-heading" class="ui-sr-only">Métrage linéaire (commande)</h4>
   <p class="staff-meterage-section__lead muted">
-    Une saisie pour toute la commande (mètres sur la laize {{ dtf_laize_cm }}&nbsp;cm). Laisser vide pour estimer par fichier après contrôle.
+    Laize {{ dtf_laize_cm }}&nbsp;cm. Vide = estimation par fichier.{% if order.pricing_status == "priced" %} Un nouveau métrage recalcule le tarif client.{% endif %}
   </p>
   {% if form_error %}
   <div class="alert alert--danger staff-meterage-section__alert" role="alert">
     <p class="m-0">{{ form_error }}</p>
-  </div>
-  {% endif %}
-  {% if order.pricing_status == "priced" %}
-  <div class="alert alert--info staff-meterage-section__alert text-sm" role="status">
-    <p class="m-0">Un nouveau métrage recalcule automatiquement le tarif affiché au client.</p>
   </div>
   {% endif %}
   {% if can_set_meterage_override %}
@@ -30,17 +26,17 @@
     {% include "components/portal/external_visual_count_field.html" %}
     <div class="staff-meterage-section__row">
       <div class="ui-field-group staff-meterage-field">
-        <label class="ui-label" for="order-meterage-linear">Métrage linéaire (m)</label>
-        <p class="ui-help">Saisissez une valeur globale pour la commande si l'estimation par fichier ne suffit pas.</p>
+        <label class="ui-sr-only" for="order-meterage-linear">Métrage linéaire (m)</label>
         <input
           id="order-meterage-linear"
           name="order_meterage_override_linear_m"
           type="text"
+          lang="en"
           inputmode="decimal"
           autocomplete="off"
           class="ui-input"
-          placeholder="Ex. 2,5 — vide = auto"
-          value="{% if order.meterage_override_linear_m %}{{ order.meterage_override_linear_m }}{% endif %}"
+          placeholder="Ex. 2.5 — vide = auto"
+          value="{% if order.meterage_override_linear_m %}{% localize off %}{{ order.meterage_override_linear_m }}{% endlocalize %}{% endif %}"
         />
       </div>
       <div class="ui-form-actions staff-meterage-actions ui-form-actions--stacked">

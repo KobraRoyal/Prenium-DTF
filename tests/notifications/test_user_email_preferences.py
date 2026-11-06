@@ -8,6 +8,7 @@ from apps.notifications.services.transactional import (
     send_order_awaiting_payment_email,
     send_order_created_email,
     send_order_priced_email,
+    send_order_shipped_email,
 )
 from apps.orders.models import Order
 from django.contrib.auth import get_user_model
@@ -278,4 +279,38 @@ def test_deferred_collaborator_sees_and_can_mute_priced_notice():
 
     recipients = [address for message in mail.outbox for address in message.to]
     assert member.email not in recipients
+    assert "billing@example.com" in recipients
+
+
+@pytest.mark.django_db
+@override_settings(INTERNAL_NOTIFICATION_EMAILS=["atelier@example.com"])
+def test_shipped_email_reaches_the_member_notification_address():
+    creator, order = create_order(email="creator@example.com", billing_email="billing@example.com")
+    notified = get_user_model().objects.create_user(email="notify@example.com", password="pass")
+    CustomerMembership.objects.create(
+        customer=order.customer,
+        user=notified,
+        role=CustomerMembership.Role.OWNER,
+    )
+
+    mail.outbox.clear()
+    send_order_shipped_email(order=order)
+
+    recipients = {address for message in mail.outbox for address in message.to}
+    assert notified.email in recipients
+    assert creator.email in recipients
+    assert "billing@example.com" in recipients
+
+    user_email_preference_service.replace_mutes(
+        user=notified,
+        enabled_events=[
+            event for event in OPTIONAL_EVENTS if event != EmailTemplate.Event.ORDER_SHIPPED
+        ],
+    )
+    mail.outbox.clear()
+    send_order_shipped_email(order=order)
+
+    recipients = {address for message in mail.outbox for address in message.to}
+    assert notified.email not in recipients
+    assert creator.email in recipients
     assert "billing@example.com" in recipients

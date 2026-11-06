@@ -13,6 +13,7 @@ from apps.customers.models import (
 )
 from apps.orders.models import Order, OrderLine
 from apps.orders.services.pricing import OrderPricingService
+from apps.portal.forms_staff_billing_adjustment import OperatorDecimalField
 from apps.shipping.services.methods import ShippingMethodService
 from apps.uploads.models import OrderUpload
 from apps.uploads.services.uploads import OrderUploadService
@@ -26,6 +27,12 @@ from django.utils import timezone
 from tests.orders.test_order_pricing_service import _seed_catalog_dtf_and_file_prep
 
 pytestmark = pytest.mark.django_db
+
+
+def test_billing_amount_accepts_a_dot_or_a_comma():
+    field = OperatorDecimalField(max_digits=10, decimal_places=2)
+    assert field.clean("13.75") == Decimal("13.75")
+    assert field.clean("13,75") == Decimal("13.75")
 
 
 def _staff_admin():
@@ -207,6 +214,8 @@ def test_billing_panel_shows_adjustment_for_deferred_only():
     assert 'x-text="displaySubtotal()"' in html
     assert "data-billing-adjustment" in html
     assert "€ / m, laize" in html
+    assert 'lang="en"' in html
+    assert 'type="number"' not in html
     assert 'placeholder="8.25"' in html
     assert 'placeholder="8.00"' in html
     assert "Valeurs actuelles" in html

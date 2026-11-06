@@ -311,7 +311,7 @@ def test_sendcloud_webhook_skips_stale_event():
                     "id": shipment.sendcloud_parcel_id,
                     "tracking_number": "TRK-STALE",
                     "tracking_url": "https://tracking.example.test/TRK-STALE",
-                    "status": {"code": "DELIVERED", "message": "Livré"},
+                    "status": {"id": 1000, "message": "Ready to send"},
                 },
             },
         }
@@ -486,6 +486,80 @@ def test_staff_can_download_shipment_label():
         action="shipping.shipment_label_downloaded",
         target_public_id=shipment.public_id,
     ).exists()
+
+
+@pytest.mark.django_db
+@override_settings(SENDCLOUD_WEBHOOK_SECRET="whsec_sendcloud_test")
+def test_sendcloud_webhook_applies_carrier_handoff_even_when_timestamp_is_older():
+    order, shipment = _create_created_shipment("-stale-handoff")
+    shipment.last_api_sync_at = timezone.now()
+    shipment.save(update_fields=["last_api_sync_at", "updated_at"])
+    stale_ts_ms = int((timezone.now() - timedelta(hours=2)).timestamp() * 1000)
+    payload = json.dumps(
+        {
+            "action": "parcel_status_changed",
+            "timestamp": stale_ts_ms,
+            "parcel": {
+                "id": shipment.sendcloud_parcel_id,
+                "tracking_number": "TRK-HANDOFF",
+                "tracking_url": "https://tracking.example.test/TRK-HANDOFF",
+                "status": {
+                    "id": 9999,
+                    "message": "Scan coursier",
+                    "parent_status": {"id": 22, "message": "Shipment picked up by driver"},
+                },
+            },
+        }
+    ).encode("utf-8")
+    signature = _sendcloud_signature(payload=payload, secret="whsec_sendcloud_test")
+    client = APIClient()
+
+    with patch(
+        "apps.notifications.services.transactional.schedule_order_shipped_email"
+    ) as shipped_schedule:
+        response = client.post(
+            reverse("shipping:backend-sendcloud-webhook"),
+            data=payload,
+            content_type="application/json",
+            HTTP_SENDCLOUD_SIGNATURE=signature,
+        )
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    shipment.refresh_from_db()
+    assert shipment.shipped_at is not None
+    assert shipment.tracking_number == "TRK-HANDOFF"
+    assert ProductionJob.objects.get(order=order).status == ProductionJob.Status.SHIPPED
+    shipped_schedule.assert_called_once_with(order_public_id=order.public_id)
+
+
+@pytest.mark.django_db
+@override_settings(SENDCLOUD_WEBHOOK_SECRET="whsec_sendcloud_test")
+def test_sendcloud_webhook_french_handoff_message_marks_shipped():
+    order, shipment = _create_created_shipment("-fr")
+    payload = json.dumps(
+        {
+            "id": shipment.sendcloud_parcel_id,
+            "tracking_number": "TRK-FR",
+            "status": {"message": "Pris en charge"},
+            "timestamp": timezone.now().isoformat(),
+        }
+    ).encode("utf-8")
+    signature = _sendcloud_signature(payload=payload, secret="whsec_sendcloud_test")
+    client = APIClient()
+
+    with patch("apps.notifications.services.transactional.schedule_order_shipped_email") as shipped:
+        response = client.post(
+            reverse("shipping:backend-sendcloud-webhook"),
+            data=payload,
+            content_type="application/json",
+            HTTP_SENDCLOUD_SIGNATURE=signature,
+        )
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    shipment.refresh_from_db()
+    assert shipment.shipped_at is not None
+    assert ProductionJob.objects.get(order=order).status == ProductionJob.Status.SHIPPED
+    shipped.assert_called_once_with(order_public_id=order.public_id)
 
 
 @pytest.mark.django_db

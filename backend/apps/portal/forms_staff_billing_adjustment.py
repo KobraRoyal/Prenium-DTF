@@ -20,12 +20,21 @@ TWOPLACES = Decimal("0.01")
 FOURPLACES = Decimal("0.0001")
 
 
+class OperatorDecimalField(forms.DecimalField):
+    """Accepte le point, saisi en gardant Maj, et la virgule."""
+
+    def to_python(self, value):
+        if isinstance(value, str):
+            value = value.strip().replace("\u00a0", "").replace(" ", "").replace(",", ".")
+        return super().to_python(value)
+
+
 class StaffBillingAdjustmentForm(forms.Form):
     shipping_method_code = forms.ChoiceField(
         label="Délai de traitement",
         choices=[],
     )
-    shipping_amount = forms.DecimalField(
+    shipping_amount = OperatorDecimalField(
         label="Frais de port HT",
         min_value=Decimal("0.00"),
         max_digits=10,
@@ -119,14 +128,14 @@ class StaffBillingAdjustmentForm(forms.Form):
         linear_name = "dtf_group_linear_m"
         qty_name = "dtf_group_quantity"
         price_name = "dtf_group_unit_price"
-        self.fields[linear_name] = forms.DecimalField(
+        self.fields[linear_name] = OperatorDecimalField(
             label="Métrage linéaire",
             min_value=Decimal("0.01"),
             max_digits=10,
             decimal_places=4,
             widget=forms.NumberInput(attrs={"step": "0.0001", "min": "0.01"}),
         )
-        self.fields[qty_name] = forms.DecimalField(
+        self.fields[qty_name] = OperatorDecimalField(
             label="Quantité m²",
             min_value=Decimal("0.01"),
             max_digits=10,
@@ -135,7 +144,7 @@ class StaffBillingAdjustmentForm(forms.Form):
             widget=forms.HiddenInput(),
         )
         meter_price = (unit_price * self.laize_m).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
-        self.fields[price_name] = forms.DecimalField(
+        self.fields[price_name] = OperatorDecimalField(
             label="Prix du mètre HT",
             min_value=Decimal("0.00"),
             max_digits=10,
@@ -168,14 +177,14 @@ class StaffBillingAdjustmentForm(forms.Form):
     def _append_line_row(self, line) -> None:
         qty_name = f"line_{line.public_id}_quantity"
         price_name = f"line_{line.public_id}_unit_price"
-        self.fields[qty_name] = forms.DecimalField(
+        self.fields[qty_name] = OperatorDecimalField(
             label="Quantité",
             min_value=Decimal("0.01"),
             max_digits=10,
             decimal_places=4,
             widget=forms.NumberInput(attrs={"step": "0.0001", "min": "0.01"}),
         )
-        self.fields[price_name] = forms.DecimalField(
+        self.fields[price_name] = OperatorDecimalField(
             label="Prix unitaire HT",
             min_value=Decimal("0.00"),
             max_digits=10,

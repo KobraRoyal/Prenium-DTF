@@ -1,3 +1,4 @@
+{% load l10n %}
 <section class="staff-meterage-section" aria-labelledby="operator-meterage-heading">
   {% include "portal/partials/deferred_file_pricing_notice.html" with notice=deferred_file_notice audience="staff" %}
   <h4 id="operator-meterage-heading" class="font-display text-lg">Métrage linéaire</h4>
@@ -24,10 +25,11 @@
         id="operator-order-meterage"
         name="order_meterage_override_linear_m"
         type="text"
+        lang="en"
         inputmode="decimal"
         autocomplete="off"
-        placeholder="Ex. 2,5 — vide = auto"
-        value="{% if order.meterage_override_linear_m %}{{ order.meterage_override_linear_m }}{% endif %}"
+        placeholder="Ex. 2.5 — vide = auto"
+        value="{% if order.meterage_override_linear_m %}{% localize off %}{{ order.meterage_override_linear_m }}{% endlocalize %}{% endif %}"
       >
     </div>
     {% if order_billable_sqm_preview is not None %}

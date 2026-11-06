@@ -316,9 +316,22 @@ def test_sync_tracking_falls_back_when_stored_parcel_id_is_404():
 @pytest.mark.django_db
 def test_classify_sendcloud_progress_ignores_label_and_keeps_delivery():
     assert classify_sendcloud_progress(code="READY_TO_SEND", message="Ready to send") == ""
+    assert classify_sendcloud_progress(code="1000", message="Ready to send") == ""
     assert classify_sendcloud_progress(code="3", message="En route to sorting center") == "shipped"
     assert classify_sendcloud_progress(code="11", message="Delivered") == "delivered"
     assert classify_sendcloud_progress(code="IN_TRANSIT", message="En transit") == "shipped"
+    assert (
+        classify_sendcloud_progress(code="22", message="Shipment picked up by driver") == "shipped"
+    )
+    assert classify_sendcloud_progress(code="", message="En transit") == "shipped"
+    assert classify_sendcloud_progress(code="", message="Pris en charge") == "shipped"
+    assert classify_sendcloud_progress(code="", message="Colis en route") == "shipped"
+    assert classify_sendcloud_progress(code="", message="Livré") == "delivered"
+    assert classify_sendcloud_progress(code="", message="Distribué") == "delivered"
+    assert classify_sendcloud_progress(code="", message="Prêt à envoyer") == ""
+    assert classify_sendcloud_progress(code="", message="Annoncé") == ""
+    for carrier_id in ("15", "80", "91", "62992", "62994"):
+        assert classify_sendcloud_progress(code=carrier_id, message="Statut coursier") == "shipped"
 
 
 @pytest.mark.django_db

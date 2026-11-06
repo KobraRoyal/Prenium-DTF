@@ -6,10 +6,11 @@
     id="reprint-meterage-{{ order.public_id }}"
     name="printed_linear_m"
     type="text"
+    lang="en"
     inputmode="decimal"
     autocomplete="off"
     required
-    placeholder="Ex. 0,40"
+    placeholder="Ex. 0.40"
   >
   <p class="muted text-sm">Uniquement la longueur en erreur{% if resolved_meterage_linear_m %} · maximum {{ resolved_meterage_linear_m }} m{% endif %}.</p>
 </div>

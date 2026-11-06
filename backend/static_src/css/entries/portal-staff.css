@@ -2738,3 +2738,51 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .payment
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack :is(.atelier-production__inline, .atelier-production__machine, .atelier-production__print, .atelier-production__status, .production-meterage .staff-meterage-section) {
+  padding: 0.85rem 1rem !important;
+}
+
+html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .staff-order-detail-stack :is(.atelier-production__print .operator-machine__confirm, .production-meterage .staff-meterage-field, .production-meterage .staff-meterage-actions) {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.atelier-production { gap: 0.85rem; }
+.atelier-production__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.65rem 1rem; min-height: 2.75rem; }
+.atelier-production__bar-copy { display: flex; flex: 1 1 12rem; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.65rem; min-width: 0; }
+.atelier-production__bar-copy :is(h4, p) { margin: 0; }
+.atelier-production__bar-copy h4 { font-size: 0.92rem; text-transform: none; }
+.atelier-production__bar-copy p { color: var(--muted); font-size: 0.78rem; }
+.atelier-production__inline-form,
+.atelier-production__status-form,
+.atelier-production__fold-form { display: grid; gap: 0.65rem; align-items: center; margin: 0.75rem 0 0; }
+.atelier-production__inline-form { grid-template-columns: minmax(0, 1fr) auto; }
+.atelier-production__fold-form { grid-template-columns: minmax(0, 1.4fr) minmax(8rem, 1fr) auto; }
+.atelier-production__status-form { grid-template-columns: minmax(9rem, .8fr) minmax(10rem, 1.2fr) auto; }
+.atelier-production__fold { margin: 0.75rem 0 0; border-top: 1px solid var(--line); }
+.atelier-production__fold > summary { display: list-item; min-height: 2.75rem; padding: 0.65rem 0; color: var(--ink); font-size: 0.78rem; font-weight: 650; }
+.atelier-production__fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.atelier-production__fold-form { margin: 0.65rem 0 0; padding: 0; }
+.atelier-production__fold-form .operator-machine__hint { grid-column: 1 / -1; margin: 0; }
+.atelier-production__print .operator-machine__confirm,
+.atelier-production__print .operator-machine__confirm-form { display: flex !important; flex-wrap: wrap; align-items: center; gap: 0.65rem; margin: 0.75rem 0 0; padding: 0; }
+.atelier-production__print .operator-machine__confirm-form { flex: 1 1 16rem; }
+.atelier-production__print .operator-machine__confirm-form .ui-input { flex: 1 1 12rem; min-width: 0; }
+.production-meterage .staff-meterage-section__lead { margin: 0 0 0.65rem; font-size: 0.78rem; }
+.production-meterage .staff-meterage-section__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.65rem; align-items: center; }
+.production-meterage .staff-meterage-field,
+.production-meterage .staff-meterage-actions { padding: 0 !important; }
+.production-meterage .staff-meterage-preview { grid-column: 1 / -1; margin: 0; }
+
+@media (max-width: 720px) {
+  .atelier-production__inline-form,
+  .atelier-production__fold-form,
+  .atelier-production__status-form,
+  .production-meterage .staff-meterage-section__row { grid-template-columns: minmax(0, 1fr); }
+  .atelier-production__inline-form .ui-btn,
+  .atelier-production__fold-form .ui-btn,
+  .atelier-production__status-form .ui-btn,
+  .production-meterage .staff-meterage-actions .ui-btn,
+  .atelier-production__print .operator-machine__confirm-form .ui-btn { width: 100%; }
+}

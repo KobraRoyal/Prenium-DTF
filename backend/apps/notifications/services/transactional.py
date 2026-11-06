@@ -57,26 +57,32 @@ def _external_safe_recipients(
 
 
 def _recipient_emails_for_order(order: Order) -> list[str]:
+    """Connexion du créateur, facturation, puis adresses de connexion des membres actifs."""
     emails: list[str] = []
+    seen: set[str] = set()
+
+    def add(raw: str) -> None:
+        email = (raw or "").strip()
+        key = email.lower()
+        if email and key not in seen:
+            seen.add(key)
+            emails.append(email)
+
     created_by = getattr(order, "created_by", None)
-    if created_by is not None and getattr(created_by, "email", ""):
-        emails.append(created_by.email.strip())
+    if created_by is not None:
+        add(getattr(created_by, "email", ""))
+    add(getattr(order.customer, "billing_email", "") or "")
 
-    billing = (order.customer.billing_email or "").strip()
-    if billing and billing.lower() not in {e.lower() for e in emails}:
-        emails.append(billing)
+    from apps.customers.models import CustomerMembership
 
-    if not emails:
-        from apps.customers.models import CustomerMembership
-
-        m = (
-            CustomerMembership.objects.filter(customer=order.customer, is_active=True)
-            .select_related("user")
-            .first()
-        )
-        if m is not None and getattr(m.user, "email", ""):
-            emails.append(m.user.email.strip())
-
+    memberships = (
+        CustomerMembership.objects.active()
+        .filter(customer=order.customer)
+        .select_related("user")
+        .order_by("created_at")
+    )
+    for membership in memberships:
+        add(getattr(membership.user, "email", ""))
     return emails
 
 

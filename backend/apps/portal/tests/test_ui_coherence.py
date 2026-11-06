@@ -644,6 +644,9 @@ class PortalUiCoherenceTests(SimpleTestCase):
             operator_workflow.index("_operator_meterage.html"),
             operator_workflow.index("atelier-operator-panel--print"),
         )
+        self.assertIn('lang="en"', operator_meterage)
+        self.assertIn("Ex. 2.5", operator_meterage)
+        self.assertNotIn("Ex. 2,5", operator_meterage)
         self.assertLess(
             operator_workflow.index("atelier-operator-panel--print"),
             operator_workflow.index("atelier-operator-panel--shipping"),
@@ -1744,6 +1747,12 @@ class PortalUiCoherenceTests(SimpleTestCase):
         )
         self.assertIn("workflow-disclosure production-meterage", production)
         self.assertIn("workflow-disclosure production-history", production)
+        self.assertIn("atelier-production__bar", production)
+        self.assertIn("atelier-production__fold", production)
+        self.assertLess(
+            production.index("Sélection machine"),
+            production.index("atelier-production__fold"),
+        )
         self.assertIn("operationScan.focus", operations)
         self.assertNotIn("Utiliser l’OF de cette commande", operations)
         self.assertNotIn("shipping-readiness", shipping)
