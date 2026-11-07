@@ -292,6 +292,14 @@
             {% endif %}
           </span>
         </p>
+        <p class="gang-studio-order-recap__line" data-studio-pay-discount-row{% if not gang_sheet_quote.volume_discount_percent %} hidden{% endif %}>
+          <span data-studio-pay-discount-label>{% if gang_sheet_quote.volume_discount_percent %}Remise volume −{{ gang_sheet_quote.volume_discount_percent }}&nbsp;%{% else %}Remise volume{% endif %}</span>
+          <span data-studio-pay-discount>{% if gang_sheet_quote.volume_discount_amount_eur %}−{% localize on %}{{ gang_sheet_quote.volume_discount_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}</span>
+        </p>
+        <p class="gang-studio-order-recap__line" data-studio-pay-tax-row{% if not gang_sheet_quote.goods_tax_amount_eur and not gang_sheet_quote.tax_amount_eur %} hidden{% endif %}>
+          <span>TVA (20&nbsp;%)</span>
+          <span data-studio-pay-tax>{% if gang_sheet_quote.goods_tax_amount_eur %}{% localize on %}{{ gang_sheet_quote.goods_tax_amount_eur }}{% endlocalize %}&nbsp;€{% elif gang_sheet_quote.tax_amount_eur %}{% localize on %}{{ gang_sheet_quote.tax_amount_eur }}{% endlocalize %}&nbsp;€{% endif %}</span>
+        </p>
         <p class="gang-studio-order-recap__total" id="studio-order-recap-total">
           <strong data-studio-order-recap-total>
             {% if gang_sheet_quote %}

@@ -48,6 +48,10 @@
       {{ request.GET.submit_message|default:"La sauvegarde sécurisée du PDF HD est encore en cours. Patientez quelques secondes puis réessayez le paiement." }}
     {% elif request.GET.submit_error == "validation" %}
       {{ request.GET.submit_message|default:"Impossible de finaliser la commande. Réessayez ou contactez le support." }}
+    {% elif request.GET.submit_error == "delivery_address_required" %}
+      Indiquez l’adresse de livraison avant de confirmer.
+    {% elif request.GET.submit_error == "delivery_recipient_required" %}
+      Indiquez le destinataire, un email de suivi et le n° de voie.
     {% elif request.GET.submit_error == "submitted" %}
       Cette commande est déjà enregistrée. Cliquez sur « Finaliser ma commande » pour la transmettre à l'atelier.
     {% else %}
@@ -67,6 +71,9 @@
     </div>
     {% include "portal/client/partials/order_project_summary.html" %}
   </section>
+  {% if file_checkout_form_action %}
+  {% include "portal/client/partials/order_project_checkout_dialog.html" %}
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}

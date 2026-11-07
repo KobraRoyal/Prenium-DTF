@@ -17,17 +17,20 @@ class StudioPolishUITests(SimpleTestCase):
         entry = source(CSS_DIR / "entries/studio.css")
         editor_import = '@import "../components/gang-sheet-studio.css";'
         text_import = '@import "../components/gang-sheet-text.css";'
+        checkout_import = '@import "../components/gang-checkout-dialog.css";'
         polish_import = '@import "../components/studio-polish.css";'
         billing_import = '@import "../components/client-billing-pay.css";'
 
         self.assertLess(entry.index(editor_import), entry.index(text_import))
-        self.assertLess(entry.index(text_import), entry.index(polish_import))
+        self.assertLess(entry.index(text_import), entry.index(checkout_import))
+        self.assertLess(entry.index(checkout_import), entry.index(polish_import))
         self.assertLess(entry.index(polish_import), entry.index(billing_import))
         self.assertLess(entry.index(billing_import), entry.index("@tailwind base"))
         self.assertIn("max-height: calc(min(44rem, 100dvh - 1.25rem) - 10.5rem) !important", entry)
         self.assertIn("max-height: min(44rem, calc(100dvh - 1.25rem)) !important", entry)
 
-        polish = source(CSS_DIR / "components/studio-polish.css")
+        checkout = source(CSS_DIR / "components/gang-checkout-dialog.css")
+        polish = source(CSS_DIR / "components/studio-polish.css") + checkout
         self.assertNotIn("@layer", polish)
         self.assertIn("--gang-panel: var(--surface)", polish)
         self.assertIn("--gang-panel-subtle: var(--surface-raised)", polish)
@@ -326,7 +329,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("function syncStudioCheckout()", editor_js)
         self.assertIn("const hasEstimate = state.items.length > 0 && quote.surface > 0", editor_js)
         self.assertNotIn('q("[data-metric-price]")', editor_js)
-        self.assertIn("gang-sheet-editor.js?v=20260918-studio-inspector-v16", app_js)
+        self.assertIn("gang-sheet-editor.js?v=20261107-checkout-pickup-vat-v1", app_js)
         self.assertIn("Je commande", checkout)
         self.assertNotIn("Voir ma commande", checkout)
         self.assertNotIn("{% if sheet.order_id %}", checkout)

@@ -108,7 +108,25 @@ def test_deferred_client_validates_and_orders_in_one_shot():
     assert "Enregistrer" not in html
     assert "data-order-project-autosave" in html
     assert not re.search(r'hx-post="[^"]*confirm-all-analyses', html)
+    assert 'data-file-checkout-open' in html
+    assert 'data-file-checkout-dialog' in html
+    assert "Adresse de livraison" in html
+    assert 'name="shipping_contact_name"' in html
+    assert "data-file-checkout-recap" in html
+    assert re.search(r'data-goods-subtotal="[0-9]+(?:\.[0-9]+)?"', html)
+    assert "data-file-checkout-recap-total" in html
+    assert 'name="shipping_phone"' in html
+    assert "required" in html.split('id="id-file-shipping-phone"', 1)[1][:180]
+    assert "data-file-checkout-delivery" in html
+    assert "TVA (20" in html
+    assert re.search(
+        r"data-file-checkout-recap-total>\s*[0-9].*?€\s*(?:TTC|HT)",
+        html,
+        re.S,
+    )
+    assert re.search(r'data-file-checkout-action="[^"]*confirm-all-analyses', html)
     assert re.search(r'action="[^"]*confirm-all-analyses', html)
+    assert "css/checkout-dialog.css" in html
 
     for index, item in enumerate(project.items.order_by("sort_order"), start=1):
         updated = client.post(
@@ -135,7 +153,7 @@ def test_deferred_client_validates_and_orders_in_one_shot():
                 "project_public_id": project.public_id,
             },
         ),
-        {"billing_mode": "deferred"},
+        {"billing_mode": "deferred", "shipping_method_code": "pickup"},
     )
     assert confirmed.status_code == 302
     assert all(
@@ -159,6 +177,78 @@ def test_deferred_client_validates_and_orders_in_one_shot():
     assert "data-checkout-thanks-dialog" in thanks
     assert "data-dialog-auto-open" in thanks
     assert "Commande transmise." not in thanks
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_deferred_checkout_modal_persists_delivery_from_client_form():
+    _user, customer, client = portal_scope()
+    customer.billing_address_line1 = "10 rue Atelier"
+    customer.billing_postal_code = "75011"
+    customer.billing_city = "Paris"
+    customer.billing_country = "FR"
+    customer.phone = "0601020304"
+    customer.billing_email = "billing@example.com"
+    customer.save()
+    create_url = reverse(
+        "portal:client-order-project-create",
+        kwargs={"customer_public_id": customer.public_id},
+    )
+    created = client.post(
+        create_url,
+        {
+            "name": "Livraison modale",
+            "order_mode": "individual_designs",
+            "file": [png_upload("livraison.png")],
+        },
+    )
+    project = B2BOrderProject.objects.get(customer=customer)
+    for item in project.items.select_related("asset__current_version"):
+        AssetAnalysisService().analyze(
+            version_public_id=item.asset.current_version.public_id,
+            source="test",
+        )
+        client.post(
+            reverse(
+                "portal:client-order-project-item-action",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "project_public_id": project.public_id,
+                    "item_public_id": item.public_id,
+                    "action": "update",
+                },
+            ),
+            {"quantity": "1", "support_color_hex": "#112233", "_autosave": "1"},
+            HTTP_HX_REQUEST="true",
+        )
+
+    confirmed = client.post(
+        reverse(
+            "portal:client-order-project-confirm-all-analyses",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        ),
+        {
+            "billing_mode": "deferred",
+            "shipping_method_code": "standard",
+            "delivery_destination": "billing",
+            "shipping_contact_name": "Seed Client A",
+            "shipping_email": "billing@example.com",
+            "shipping_phone": "0601020304",
+            "shipping_company_name": "Portail",
+            "shipping_house_number": "10",
+        },
+    )
+    assert confirmed.status_code == 302
+    project.refresh_from_db()
+    assert project.status == B2BOrderProject.Status.CONVERTED
+    assert project.shipping_address.get("name") == "Seed Client A"
+    assert project.shipping_address.get("house_number") == "10"
+    customer.refresh_from_db()
+    assert customer.shipping_address_line1 == "10 rue Atelier"
+    assert customer.shipping_city == "Paris"
 
 
 @pytest.mark.django_db
@@ -856,7 +946,8 @@ def test_client_portal_project_flow_is_functional():
                 "customer_public_id": customer.public_id,
                 "project_public_id": project.public_id,
             },
-        )
+        ),
+        {"shipping_method_code": "pickup"},
     )
     assert submit.status_code == 302
     project.refresh_from_db()

@@ -57,7 +57,7 @@
       </a>
       <a class="ui-selection-control" href="#customer-pricing">
         <span>Tarification</span>
-        <small>{% if customer.negotiated_file_preparation_fee_eur or billing_profile.price_per_sqm_eur %}Négociée{% else %}Catalogue{% endif %}</small>
+        <small>{% if customer.negotiated_file_preparation_fee_eur is not None or billing_profile.price_per_sqm_eur is not None %}Négociée{% else %}Catalogue{% endif %}</small>
       </a>
       <a class="ui-selection-control" href="#customer-volume">
         <span>Remises volume</span>
@@ -234,7 +234,7 @@
         <h2 id="pricing-form-title">Conditions tarifaires</h2>
         <small>Tarifs négociés et règles d’encours</small>
       </span>
-      <span class="staff-customer-workspace__summary-meta">{% if customer.negotiated_file_preparation_fee_eur or billing_profile.price_per_sqm_eur %}Négociée{% else %}Catalogue{% endif %}</span>
+      <span class="staff-customer-workspace__summary-meta">{% if customer.negotiated_file_preparation_fee_eur is not None or billing_profile.price_per_sqm_eur is not None %}Négociée{% else %}Catalogue{% endif %}</span>
     </summary>
     <div class="staff-customer-workspace__body">
     <form class="ui-form-stack" method="post" action="{% url 'portal:staff-customer-pricing-update' customer_public_id=customer.public_id %}" data-submit-loading>
@@ -267,12 +267,12 @@
         <h2 id="pricing-readonly-title">Conditions tarifaires</h2>
         <small>Tarifs et règles d’encours en lecture seule</small>
       </span>
-      <span class="staff-customer-workspace__summary-meta">{% if customer.negotiated_file_preparation_fee_eur or billing_profile.price_per_sqm_eur %}Négociée{% else %}Catalogue{% endif %}</span>
+      <span class="staff-customer-workspace__summary-meta">{% if customer.negotiated_file_preparation_fee_eur is not None or billing_profile.price_per_sqm_eur is not None %}Négociée{% else %}Catalogue{% endif %}</span>
     </summary>
     <div class="staff-customer-workspace__body">
     <dl class="staff-customer-focus__facts staff-customer-focus__facts--embedded">
-      <div><dt>Forfait fichier</dt><dd>{% if customer.negotiated_file_preparation_fee_eur %}{{ customer.negotiated_file_preparation_fee_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
-      <div><dt>Prix m²</dt><dd>{% if billing_profile and billing_profile.price_per_sqm_eur %}{{ billing_profile.price_per_sqm_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
+      <div><dt>Forfait fichier</dt><dd>{% if customer.negotiated_file_preparation_fee_eur is not None %}{{ customer.negotiated_file_preparation_fee_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
+      <div><dt>Prix m²</dt><dd>{% if billing_profile and billing_profile.price_per_sqm_eur is not None %}{{ billing_profile.price_per_sqm_eur }} €{% else %}<span class="muted">Catalogue</span>{% endif %}</dd></div>
       <div><dt>Cycle</dt><dd>{% if billing_profile %}{{ billing_profile.get_billing_cycle_display }}{% else %}—{% endif %}</dd></div>
       <div><dt>Encours</dt><dd>{% if billing_profile and billing_profile.credit_limit_eur %}{{ billing_profile.credit_limit_eur }} €{% else %}—{% endif %}</dd></div>
     </dl>

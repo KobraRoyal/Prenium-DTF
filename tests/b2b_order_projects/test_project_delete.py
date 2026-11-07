@@ -85,10 +85,13 @@ def test_delete_confirmation_posts_outside_the_submit_form():
     )
     html = response.content.decode()
     assert response.status_code == 200
-    submit_form = html.split('class="b2b-project-submit-form"', 1)[1].split("</form>", 1)[0]
-    assert "order-projects/" in submit_form and "/submit/" in submit_form
-    assert "/cancel/" not in submit_form
-    assert "Supprimer définitivement" not in submit_form
+    submit_block = html.split('class="b2b-project-submit-form"', 1)[1].split(
+        'class="b2b-confirm-dialog"', 1
+    )[0]
+    assert "order-projects/" in submit_block and "/submit/" in submit_block
+    assert "data-file-checkout-open" in submit_block
+    assert "/cancel/" not in submit_block
+    assert "Supprimer définitivement" not in submit_block
     assert "Supprimer la commande" in html
     assert "Supprimer définitivement" in html
 

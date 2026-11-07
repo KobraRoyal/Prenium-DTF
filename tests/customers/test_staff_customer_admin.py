@@ -145,6 +145,68 @@ def test_staff_can_update_pricing_conditions_with_audit():
 
 
 @pytest.mark.django_db
+def test_staff_can_set_negotiated_file_prep_fee_to_zero():
+    staff = _staff_user(
+        email="tarif-zero@example.com",
+        perms=[
+            "access_staff_portal",
+            "view_customer",
+            "manage_customer_pricing",
+        ],
+    )
+    viewer = _staff_user(
+        email="tarif-viewer@example.com",
+        perms=["access_staff_portal", "view_customer"],
+    )
+    customer = Customer.objects.create(
+        name="Client Tarif Zero",
+        negotiated_file_preparation_fee_eur=Decimal("10.00"),
+    )
+    client = APIClient()
+    assert client.login(email=staff.email, password="pass") is True
+
+    response = client.post(
+        reverse(
+            "portal:staff-customer-pricing-update",
+            kwargs={"customer_public_id": customer.public_id},
+        ),
+        {
+            "billing_cycle": "monthly",
+            "negotiated_file_preparation_fee_eur": "0.00",
+        },
+    )
+    assert response.status_code == 302
+    customer.refresh_from_db()
+    assert customer.negotiated_file_preparation_fee_eur == Decimal("0.00")
+
+    detail = client.get(
+        reverse(
+            "portal:staff-customer-detail",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+    )
+    assert detail.status_code == 200
+    body = detail.content.decode()
+    assert 'name="negotiated_file_preparation_fee_eur"' in body
+    assert 'value="0.00"' in body
+    assert "Négociée" in body
+
+    viewer_client = APIClient()
+    assert viewer_client.login(email=viewer.email, password="pass") is True
+    readonly = viewer_client.get(
+        reverse(
+            "portal:staff-customer-detail",
+            kwargs={"customer_public_id": customer.public_id},
+        )
+    )
+    assert readonly.status_code == 200
+    readonly_body = readonly.content.decode()
+    forfait_block = readonly_body.split("Forfait fichier", 1)[1].split("</div>", 1)[0]
+    assert "0.00 €" in forfait_block or "0,00 €" in forfait_block
+    assert "Catalogue" not in forfait_block
+
+
+@pytest.mark.django_db
 def test_staff_can_update_account_and_memberships_are_visible():
     staff = _staff_user(
         email="account@example.com",

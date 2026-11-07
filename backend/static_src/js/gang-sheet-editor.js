@@ -1663,8 +1663,28 @@ if (root) {
     recap.querySelectorAll("[data-studio-pay-shipping]").forEach((node) => {
       node.textContent = pickup || shippingHt <= 0 ? "Gratuit" : formatStudioEur(shippingHt);
     });
+    const discountPercent = studioQuoteNumber(current?.volume_discount_percent);
+    const discountAmount = studioQuoteNumber(current?.volume_discount_amount_eur);
+    recap.querySelectorAll("[data-studio-pay-discount-row]").forEach((row) => {
+      row.hidden = !(discountPercent > 0 && discountAmount > 0);
+    });
+    recap.querySelectorAll("[data-studio-pay-discount-label]").forEach((node) => {
+      node.textContent =
+        discountPercent > 0
+          ? `Remise volume −${Number(discountPercent).toLocaleString("fr-FR")}\u00a0%`
+          : "Remise volume";
+    });
+    recap.querySelectorAll("[data-studio-pay-discount]").forEach((node) => {
+      node.textContent = discountAmount > 0 ? `−${formatStudioEur(discountAmount)}` : "";
+    });
     if (!current) return;
     const totals = studioRecapTotals(current, choice);
+    recap.querySelectorAll("[data-studio-pay-tax-row]").forEach((row) => {
+      row.hidden = !(totals.tax > 0);
+    });
+    recap.querySelectorAll("[data-studio-pay-tax]").forEach((node) => {
+      node.textContent = totals.tax > 0 ? formatStudioEur(totals.tax) : "";
+    });
     recap.querySelectorAll("[data-studio-order-recap-total]").forEach((node) => {
       node.textContent = `${formatStudioEur(totals.amount)} ${totals.tax > 0 ? "TTC" : "HT"}`;
     });
@@ -1818,7 +1838,12 @@ if (root) {
   }
 
   function syncStudioDeliveryRequired(form, { pickup, other }) {
-    const requiredNames = new Set(["shipping_contact_name", "shipping_email", "shipping_house_number"]);
+    const requiredNames = new Set([
+      "shipping_contact_name",
+      "shipping_email",
+      "shipping_phone",
+      "shipping_house_number",
+    ]);
     if (other) {
       requiredNames.add("shipping_address_line1");
       requiredNames.add("shipping_postal_code");
@@ -1876,7 +1901,12 @@ if (root) {
     syncStudioDelivery();
     if (selectedStudioShippingCode() === "pickup") return true;
     const other = studioDeliveryOtherSelected(form);
-    const requiredNames = ["shipping_contact_name", "shipping_email", "shipping_house_number"];
+    const requiredNames = [
+      "shipping_contact_name",
+      "shipping_email",
+      "shipping_phone",
+      "shipping_house_number",
+    ];
     if (other) {
       requiredNames.push("shipping_address_line1", "shipping_postal_code", "shipping_city");
     }
@@ -1890,8 +1920,8 @@ if (root) {
     if (missing || emailInvalid) {
       studioCheckoutToast(
         other
-          ? "Complétez le destinataire et l’adresse Sendcloud."
-          : "Indiquez le destinataire, l’email de suivi et le n° de voie.",
+          ? "Complétez le destinataire, le téléphone et l’adresse Sendcloud."
+          : "Indiquez le destinataire, l’email de suivi, le téléphone et le n° de voie.",
       );
       return false;
     }

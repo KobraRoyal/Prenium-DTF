@@ -5,9 +5,11 @@
 
 {% block surface_styles %}
 {% include "components/portal/surface_styles.html" with portal_surface=nav_mode|default:"client" %}
-{% if request.resolver_match.view_name == "portal:client-gang-sheet-editor" %}
 {% portal_css_asset_v as asset_v %}
+{% if request.resolver_match.view_name == "portal:client-gang-sheet-editor" %}
 <link rel="stylesheet" href="{% static 'css/studio.css' %}?v={{ asset_v }}">
+{% elif request.resolver_match.view_name == "portal:client-order-project-detail" %}
+<link rel="stylesheet" href="{% static 'css/checkout-dialog.css' %}?v={{ asset_v }}">
 {% endif %}
 {% endblock %}
 

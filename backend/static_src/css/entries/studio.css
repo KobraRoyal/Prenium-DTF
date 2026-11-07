@@ -1,6 +1,7 @@
 /* Studio : couche éditeur uniquement, après app.css puis portal.css. */
 @import "../components/gang-sheet-studio.css";
 @import "../components/gang-sheet-text.css";
+@import "../components/gang-checkout-dialog.css";
 @import "../components/studio-polish.css";
 @import "../components/client-billing-pay.css";
 

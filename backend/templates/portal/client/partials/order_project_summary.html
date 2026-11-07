@@ -70,15 +70,7 @@
       {% if project.items.all and project.can_edit_items %}
       {% if project.status == "action_required" or project.status == "draft" or project.status == "incomplete" %}
       {% if customer.default_billing_mode == "deferred" and not project.price_confirmation_required or customer.default_billing_mode == "deferred" and project.quote_priced_at %}
-      <form
-        class="b2b-project-quality-gate"
-        method="post"
-        action="{% url 'portal:client-order-project-confirm-all-analyses' customer_public_id=customer.public_id project_public_id=project.public_id %}"
-        data-submit-loading
-      >
-        {% csrf_token %}
-        <input type="hidden" name="billing_mode" value="deferred">
-        {% include "portal/client/partials/b2b_shipping_choice.html" %}
+      <div class="b2b-project-quality-gate">
         <div class="b2b-project-quality-gate__copy">
           <strong>Validation et commande</strong>
           {% if project.has_unconfirmed_analysis and project.can_confirm_all_analyses %}
@@ -87,8 +79,14 @@
           <p>Terminez les analyses et renseignez la couleur de chaque support pour commander.</p>
           {% endif %}
         </div>
-        <button class="ui-btn ui-btn-primary b2b-project-checkout-cta" type="submit"{% if not project.has_unconfirmed_analysis or not project.can_confirm_all_analyses %} disabled title="Terminez les analyses et choisissez la couleur du support pour chaque visuel avant de commander."{% endif %}>{% if project.has_unconfirmed_analysis %}Je valide et je commande{% else %}Analyse des visuels en cours{% endif %}</button>
-      </form>
+        <button
+          class="ui-btn ui-btn-primary b2b-project-checkout-cta"
+          type="button"
+          data-file-checkout-open
+          data-file-checkout-action="{% url 'portal:client-order-project-confirm-all-analyses' customer_public_id=customer.public_id project_public_id=project.public_id %}"
+          {% if not project.has_unconfirmed_analysis or not project.can_confirm_all_analyses %} disabled title="Terminez les analyses et choisissez la couleur du support pour chaque visuel avant de commander."{% endif %}
+        >{% if project.has_unconfirmed_analysis %}Je valide et je commande{% else %}Analyse des visuels en cours{% endif %}</button>
+      </div>
       {% else %}
       <form
         class="b2b-project-quality-gate"
@@ -119,24 +117,31 @@
           {% include "portal/client/partials/order_project_delete_button.html" with button_class="b2b-project-checkout-delete" label="Supprimer la commande" %}
         </div>
       {% elif project.status == "ready_to_submit" or project.status == "submitted" and not project.converted_order %}
-        <form class="b2b-project-submit-form" method="post" action="{% url 'portal:client-order-project-submit' customer_public_id=customer.public_id project_public_id=project.public_id %}" data-submit-loading>
-          {% csrf_token %}
-          <input type="hidden" name="billing_mode" value="{{ customer.default_billing_mode|default:'deferred' }}">
-          {% include "portal/client/partials/b2b_shipping_choice.html" %}
+        <div class="b2b-project-submit-form">
           <div class="ui-form-actions client-order-project-form-actions">
             {% if gang_sheet_quote and customer.default_billing_mode == "immediate" %}
-            <button class="ui-btn ui-btn-primary ui-btn-wide b2b-project-checkout-cta" type="submit">
+            <button
+              class="ui-btn ui-btn-primary ui-btn-wide b2b-project-checkout-cta"
+              type="button"
+              data-file-checkout-open
+              data-file-checkout-action="{% url 'portal:client-order-project-submit' customer_public_id=customer.public_id project_public_id=project.public_id %}"
+            >
               {% if project.status == "submitted" %}Finaliser et payer {{ gang_sheet_quote.total_eur }} €{% else %}Confirmer et payer {{ gang_sheet_quote.total_eur }} €{% endif %}
             </button>
             {% else %}
-            <button class="ui-btn ui-btn-primary ui-btn-wide b2b-project-checkout-cta" type="submit">{% if project.quote_priced_at %}Valider la commande{% elif project.status == "submitted" %}Finaliser ma commande{% else %}Confirmer et transmettre{% endif %}</button>
+            <button
+              class="ui-btn ui-btn-primary ui-btn-wide b2b-project-checkout-cta"
+              type="button"
+              data-file-checkout-open
+              data-file-checkout-action="{% url 'portal:client-order-project-submit' customer_public_id=customer.public_id project_public_id=project.public_id %}"
+            >{% if project.quote_priced_at %}Valider la commande{% elif project.status == "submitted" %}Finaliser ma commande{% else %}Confirmer et transmettre{% endif %}</button>
             {% endif %}
             {% include "portal/client/partials/order_project_delete_button.html" with button_class="b2b-project-checkout-delete" label="Supprimer la commande" button_only=1 %}
           </div>
           {% if gang_sheet_quote and customer.default_billing_mode == "immediate" %}
           <p class="b2b-project-checkout-hint muted text-sm">La production démarre après règlement.</p>
           {% endif %}
-        </form>
+        </div>
         {% include "portal/client/partials/order_project_delete_button.html" with dialog_only=1 %}
       {% elif project.status == "converted" and project.converted_order %}
         <div class="ui-form-actions client-order-project-form-actions">

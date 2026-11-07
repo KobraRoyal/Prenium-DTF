@@ -2747,6 +2747,7 @@ function bindConfiguratorEvents() {
     }
     if (target instanceof HTMLDialogElement) {
       if (target.hasAttribute("data-studio-pay-dialog")) return;
+      if (target.hasAttribute("data-file-checkout-dialog")) return;
       dismissAutoOpenDialog(target);
       target.close();
     }
@@ -2771,10 +2772,265 @@ function bindConfiguratorEvents() {
   );
 }
 
+function fileCheckoutDialog() {
+  return document.querySelector("[data-file-checkout-dialog]");
+}
+
+function fileCheckoutForm() {
+  return document.querySelector("[data-file-checkout-form]");
+}
+
+function fileCheckoutToast(message) {
+  if (typeof window.preniumToast === "function") {
+    window.preniumToast(message, "danger");
+    return;
+  }
+  window.alert(message);
+}
+
+function selectedFileCheckoutShipping() {
+  const form = fileCheckoutForm();
+  if (!(form instanceof HTMLFormElement)) return null;
+  const input =
+    form.querySelector("input[name='shipping_method_code']:checked") ||
+    form.querySelector("input[name='shipping_method_code'][type='hidden']");
+  if (!(input instanceof HTMLInputElement)) return null;
+  return {
+    input,
+    code: input.value,
+    pickup: input.value === "pickup",
+    option: input.closest(".b2b-shipping-choice__option"),
+  };
+}
+
+function fileDeliveryOtherSelected(form) {
+  const selected =
+    form.querySelector("input[name='delivery_destination']:checked") ||
+    form.querySelector("input[name='delivery_destination'][type='hidden']");
+  return selected instanceof HTMLInputElement && selected.value === "other";
+}
+
+function syncFileCheckoutDelivery() {
+  const form = fileCheckoutForm();
+  const block = form?.querySelector("[data-file-checkout-delivery]");
+  if (!(form instanceof HTMLFormElement) || !(block instanceof HTMLElement)) return;
+  const choice = selectedFileCheckoutShipping();
+  const pickup = Boolean(choice?.pickup);
+  block.hidden = pickup;
+  const note = form.querySelector("[data-file-checkout-pickup-note]");
+  if (note instanceof HTMLElement) note.hidden = !pickup;
+  block.querySelectorAll("input, select").forEach((node) => {
+    if (!(node instanceof HTMLInputElement || node instanceof HTMLSelectElement)) return;
+    node.disabled = pickup;
+  });
+  const otherFields = form.querySelector("[data-file-checkout-delivery-other]");
+  const other = !pickup && fileDeliveryOtherSelected(form);
+  if (otherFields instanceof HTMLElement) otherFields.hidden = !other;
+  const requiredNames = new Set([
+    "shipping_contact_name",
+    "shipping_email",
+    "shipping_phone",
+    "shipping_house_number",
+  ]);
+  if (other) {
+    requiredNames.add("shipping_address_line1");
+    requiredNames.add("shipping_postal_code");
+    requiredNames.add("shipping_city");
+  }
+  form.querySelectorAll("[data-file-checkout-delivery] input, [data-file-checkout-delivery] select").forEach(
+    (node) => {
+      if (!(node instanceof HTMLInputElement || node instanceof HTMLSelectElement)) return;
+      node.required = !pickup && requiredNames.has(node.name);
+    },
+  );
+  paintFileCheckoutRecap(choice);
+}
+
+function formatFileCheckoutEur(amount) {
+  return `${Number(amount).toLocaleString("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}\u00a0€`;
+}
+
+function fileCheckoutMoney(value) {
+  const amount = Number(String(value ?? "0").replace(",", "."));
+  return Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0;
+}
+
+function paintFileCheckoutRecap(choice) {
+  const form = fileCheckoutForm();
+  if (!(form instanceof HTMLFormElement)) return;
+  const current = choice || selectedFileCheckoutShipping();
+  const label =
+    current?.option?.querySelector(".b2b-shipping-choice__name")?.textContent.trim() ||
+    (current?.pickup ? "Retrait atelier" : "Expédition");
+  form.querySelectorAll("[data-file-checkout-shipping-label]").forEach((node) => {
+    node.textContent = label;
+  });
+  const raw = current?.input?.getAttribute("data-shipping-amount") || "0";
+  const shippingHt = fileCheckoutMoney(raw);
+  const shippingSafe = current?.pickup ? 0 : shippingHt > 0 ? shippingHt : 0;
+  const shippingText = shippingSafe <= 0 ? "Gratuit" : formatFileCheckoutEur(shippingSafe);
+  form.querySelectorAll("[data-file-checkout-shipping-amount]").forEach((node) => {
+    node.textContent = shippingText;
+  });
+  const recap = form.querySelector("[data-file-checkout-recap]");
+  if (!(recap instanceof HTMLElement)) return;
+  const goodsHt = fileCheckoutMoney(recap.dataset.goodsSubtotal);
+  const goodsTax = fileCheckoutMoney(recap.dataset.goodsTax);
+  const discountPercent = fileCheckoutMoney(recap.dataset.discountPercent);
+  const discountAmount = fileCheckoutMoney(recap.dataset.discountAmount);
+  const taxRate = goodsHt > 0 && goodsTax > 0 ? goodsTax / goodsHt : 0;
+  const shippingTax = shippingSafe * taxRate;
+  const totalTax = Math.round((goodsTax + shippingTax) * 100) / 100;
+  const total = Math.round((goodsHt + shippingSafe + totalTax) * 100) / 100;
+  const discountRow = form.querySelector("[data-file-checkout-discount-row]");
+  if (discountRow instanceof HTMLElement) {
+    discountRow.hidden = !(discountPercent > 0 && discountAmount > 0);
+  }
+  form.querySelectorAll("[data-file-checkout-discount-label]").forEach((node) => {
+    node.textContent =
+      discountPercent > 0
+        ? `Remise volume −${discountPercent.toLocaleString("fr-FR")}\u00a0%`
+        : "Remise volume";
+  });
+  form.querySelectorAll("[data-file-checkout-discount-amount]").forEach((node) => {
+    node.textContent = discountAmount > 0 ? `−${formatFileCheckoutEur(discountAmount)}` : "";
+  });
+  const taxRow = form.querySelector("[data-file-checkout-tax-row]");
+  if (taxRow instanceof HTMLElement) taxRow.hidden = !(totalTax > 0);
+  form.querySelectorAll("[data-file-checkout-tax-amount]").forEach((node) => {
+    node.textContent = totalTax > 0 ? formatFileCheckoutEur(totalTax) : "";
+  });
+  form.querySelectorAll("[data-file-checkout-recap-total]").forEach((node) => {
+    node.textContent = `${formatFileCheckoutEur(total)} ${totalTax > 0 ? "TTC" : "HT"}`;
+  });
+}
+
+function validateFileCheckoutForm(form) {
+  syncFileCheckoutDelivery();
+  const choice = selectedFileCheckoutShipping();
+  if (choice?.pickup) return true;
+  const other = fileDeliveryOtherSelected(form);
+  const requiredNames = [
+    "shipping_contact_name",
+    "shipping_email",
+    "shipping_phone",
+    "shipping_house_number",
+  ];
+  if (other) {
+    requiredNames.push("shipping_address_line1", "shipping_postal_code", "shipping_city");
+  }
+  const missing = requiredNames.some((name) => {
+    const node = form.querySelector(`[name='${name}']`);
+    return !(node instanceof HTMLInputElement) || !node.value.trim();
+  });
+  const email = form.querySelector("[name='shipping_email']");
+  const emailInvalid =
+    email instanceof HTMLInputElement && email.value.trim() && !email.value.includes("@");
+  if (missing || emailInvalid) {
+    fileCheckoutToast(
+      other
+        ? "Complétez le destinataire, le téléphone et l’adresse Sendcloud."
+        : "Indiquez le destinataire, l’email de suivi, le téléphone et le n° de voie.",
+    );
+    return false;
+  }
+  return true;
+}
+
+function openFileCheckoutDialog(actionUrl) {
+  const dialog = fileCheckoutDialog();
+  const form = fileCheckoutForm();
+  if (!(dialog instanceof HTMLDialogElement) || !(form instanceof HTMLFormElement)) return;
+  if (actionUrl) form.setAttribute("action", actionUrl);
+  syncFileCheckoutDelivery();
+  if (typeof dialog.showModal === "function" && !dialog.open) {
+    dialog.showModal();
+  }
+  const contact = form.querySelector("[name='shipping_contact_name']");
+  const delivery = form.querySelector("[data-file-checkout-delivery]");
+  const focusTarget =
+    delivery && !delivery.hidden && contact instanceof HTMLElement
+      ? contact
+      : form.querySelector("[data-file-checkout-confirm]");
+  if (focusTarget instanceof HTMLElement) focusTarget.focus();
+}
+
+function closeFileCheckoutDialog() {
+  const dialog = fileCheckoutDialog();
+  if (dialog instanceof HTMLDialogElement && dialog.open) dialog.close();
+}
+
+function bindFileCheckoutDialog() {
+  if (bindFileCheckoutDialog.initialized) {
+    const dialog = fileCheckoutDialog();
+    const form = fileCheckoutForm();
+    if (dialog instanceof HTMLDialogElement && form instanceof HTMLFormElement) {
+      wireFileCheckoutForm(dialog, form);
+    }
+    return;
+  }
+  bindFileCheckoutDialog.initialized = true;
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const opener = target.closest("[data-file-checkout-open]");
+    if (opener instanceof HTMLButtonElement && !opener.disabled) {
+      event.preventDefault();
+      openFileCheckoutDialog(opener.dataset.fileCheckoutAction || "");
+      return;
+    }
+    const closer = target.closest("[data-file-checkout-close]");
+    const dialog = fileCheckoutDialog();
+    if (closer && dialog instanceof HTMLDialogElement && dialog.contains(closer)) {
+      event.preventDefault();
+      closeFileCheckoutDialog();
+    }
+  });
+
+  const dialog = fileCheckoutDialog();
+  const form = fileCheckoutForm();
+  if (dialog instanceof HTMLDialogElement && form instanceof HTMLFormElement) {
+    wireFileCheckoutForm(dialog, form);
+  }
+}
+
+function wireFileCheckoutForm(dialog, form) {
+  if (form.dataset.fileCheckoutBound === "true") return;
+  form.dataset.fileCheckoutBound = "true";
+
+  form.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (target.name === "shipping_method_code" || target.name === "delivery_destination") {
+      syncFileCheckoutDelivery();
+    }
+  });
+
+  form.addEventListener("submit", (event) => {
+    if (!validateFileCheckoutForm(form)) {
+      event.preventDefault();
+    }
+  });
+
+  const errorCode = dialog.getAttribute("data-file-checkout-error-code") || "";
+  if (
+    errorCode === "delivery_address_required" ||
+    errorCode === "delivery_recipient_required" ||
+    errorCode === "validation"
+  ) {
+    openFileCheckoutDialog(form.getAttribute("action") || "");
+  }
+}
+
 function mountConfigurator(scope = document) {
   try {
     bindConfiguratorEvents();
     initB2BConfigurators(scope);
+    bindFileCheckoutDialog();
   } catch (error) {
     console.error("[b2b-configurator] mount failed", error);
   }

@@ -447,6 +447,11 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                 can_request_file_order_quote,
                 present_project_estimate,
             )
+            from apps.portal.checkout_delivery import checkout_delivery_context
+            from apps.portal.views_payments import (
+                available_payment_providers,
+                default_online_provider,
+            )
 
             file_order_estimate = present_project_estimate(
                 project=project,
@@ -457,6 +462,51 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
             ctx["file_order_estimate_request"] = (
                 file_order_estimate is not None and can_request_file_order_quote(project)
             )
+            ctx.update(
+                checkout_delivery_context(
+                    customer=self.customer,
+                    shipping_snapshot=project.shipping_address or {},
+                )
+            )
+            ctx["studio_payment_providers"] = available_payment_providers()
+            ctx["studio_online_provider"] = default_online_provider(self.customer)
+            ctx["studio_inline_checkout"] = True
+            error_code = str(self.request.GET.get("submit_error") or "").strip().lower()
+            error_messages = {
+                "delivery_address_required": "Indiquez l’adresse de livraison avant de confirmer.",
+                "delivery_recipient_required": (
+                    "Indiquez le destinataire, un email de suivi et le n° de voie."
+                ),
+                "validation": (
+                    self.request.GET.get("submit_message")
+                    or "Impossible de finaliser la commande. Réessayez."
+                ),
+            }
+            ctx["file_checkout_error"] = error_messages.get(error_code, "")
+            ctx["file_checkout_error_code"] = error_code
+            editable = project_service.transitions.is_editable(project.status)
+            if (
+                getattr(self.customer, "default_billing_mode", "") == "deferred"
+                and editable
+                and (not project.price_confirmation_required or project.quote_priced_at)
+            ):
+                ctx["file_checkout_form_action"] = reverse(
+                    "portal:client-order-project-confirm-all-analyses",
+                    kwargs={
+                        "customer_public_id": self.customer.public_id,
+                        "project_public_id": project.public_id,
+                    },
+                )
+            elif project.status in {"ready_to_submit", "submitted"} and not project.converted_order_id:
+                ctx["file_checkout_form_action"] = reverse(
+                    "portal:client-order-project-submit",
+                    kwargs={
+                        "customer_public_id": self.customer.public_id,
+                        "project_public_id": project.public_id,
+                    },
+                )
+            else:
+                ctx["file_checkout_form_action"] = ""
         else:
             from apps.b2b_order_projects.services.file_estimate import present_deferred_file_intro
 
@@ -849,6 +899,19 @@ class ClientOrderProjectConfirmAllAnalysesView(ClientProjectFeatureMixin, View):
         """Encours : confirmation qualité + transmission en un seul POST."""
         detail = self._project_detail_url(project)
         try:
+            from apps.portal.checkout_delivery import (
+                apply_checkout_delivery_from_request,
+                delivery_error_query,
+                persist_project_delivery_snapshot,
+            )
+
+            customer, delivery_snapshot = apply_checkout_delivery_from_request(
+                request=request,
+                customer=self.customer,
+                source="client_portal.b2b_checkout",
+            )
+            self.customer = customer
+            persist_project_delivery_snapshot(project=project, snapshot=delivery_snapshot)
             order = checkout_service.checkout_project(
                 project=project,
                 actor=request.user,
@@ -860,6 +923,14 @@ class ClientOrderProjectConfirmAllAnalysesView(ClientProjectFeatureMixin, View):
                 ).strip(),
                 shipping_method_code=(request.POST.get("shipping_method_code") or "").strip()
                 or None,
+            )
+        except ValidationError as error:
+            from urllib.parse import quote
+
+            messages_text = "; ".join(getattr(error, "messages", []) or [str(error)])
+            return HttpResponseRedirect(
+                f"{detail}?submit_error={delivery_error_query(error)}"
+                f"&submit_message={quote(messages_text)}"
             )
         except ProjectDomainError as error:
             project.refresh_from_db()
@@ -896,13 +967,6 @@ class ClientOrderProjectConfirmAllAnalysesView(ClientProjectFeatureMixin, View):
                     f"{detail}?submit_error={submit_error}&submit_message={message}"
                 )
             return HttpResponseRedirect(f"{detail}?submit_error={submit_error}")
-        except ValidationError as error:
-            from urllib.parse import quote
-
-            messages_text = "; ".join(getattr(error, "messages", []) or [str(error)])
-            return HttpResponseRedirect(
-                f"{detail}?submit_error=validation&submit_message={quote(messages_text)}"
-            )
         return redirect_after_b2b_checkout(
             request=request,
             customer=self.customer,
@@ -1121,7 +1185,31 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                     },
                 )
             )
+        detail = reverse(
+            "portal:client-order-project-detail",
+            kwargs={
+                "customer_public_id": self.customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        )
         try:
+            from apps.portal.checkout_delivery import (
+                apply_checkout_delivery_from_request,
+                delivery_error_query,
+                persist_project_delivery_snapshot,
+            )
+
+            if project.status in {
+                B2BOrderProject.Status.READY_TO_SUBMIT,
+                B2BOrderProject.Status.SUBMITTED,
+            }:
+                customer, delivery_snapshot = apply_checkout_delivery_from_request(
+                    request=request,
+                    customer=self.customer,
+                    source="client_portal.b2b_checkout",
+                )
+                self.customer = customer
+                persist_project_delivery_snapshot(project=project, snapshot=delivery_snapshot)
             order = checkout_service.checkout_project(
                 project=project,
                 actor=request.user,
@@ -1133,6 +1221,14 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                 ).strip(),
                 shipping_method_code=(request.POST.get("shipping_method_code") or "").strip()
                 or None,
+            )
+        except ValidationError as error:
+            from urllib.parse import quote
+
+            messages_text = "; ".join(getattr(error, "messages", []) or [str(error)])
+            return HttpResponseRedirect(
+                f"{detail}?submit_error={delivery_error_query(error)}"
+                f"&submit_message={quote(messages_text)}"
             )
         except ProjectDomainError as error:
             project.refresh_from_db()
@@ -1149,13 +1245,6 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                         },
                     )
                 )
-            detail = reverse(
-                "portal:client-order-project-detail",
-                kwargs={
-                    "customer_public_id": self.customer.public_id,
-                    "project_public_id": project.public_id,
-                },
-            )
             if error.code == "GANG_SHEET_DRIVE_SYNC_REQUIRED":
                 from urllib.parse import quote
 
@@ -1176,21 +1265,6 @@ class ClientOrderProjectSubmitView(ClientProjectFeatureMixin, View):
                     f"{detail}?submit_error={submit_error}&submit_message={message}"
                 )
             return HttpResponseRedirect(f"{detail}?submit_error={submit_error}")
-        except ValidationError as error:
-            project.refresh_from_db()
-            detail = reverse(
-                "portal:client-order-project-detail",
-                kwargs={
-                    "customer_public_id": self.customer.public_id,
-                    "project_public_id": project.public_id,
-                },
-            )
-            messages = "; ".join(getattr(error, "messages", []) or [str(error)])
-            from urllib.parse import quote
-
-            return HttpResponseRedirect(
-                f"{detail}?submit_error=validation&submit_message={quote(messages)}"
-            )
         return redirect_after_b2b_checkout(
             request=request,
             customer=self.customer,

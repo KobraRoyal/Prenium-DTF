@@ -1,0 +1,5 @@
+/* Modale checkout partagée (commande fichier) — hors bundle portal-client (cap surface). */
+@import "../components/gang-checkout-dialog.css";
+
+@tailwind components;
+@tailwind utilities;

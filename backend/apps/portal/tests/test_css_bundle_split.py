@@ -40,8 +40,12 @@ class CssBundleSplitTests(SimpleTestCase):
         self.assertIn("portal-staff.css", partial)
         self.assertIn("prospect.css", partial)
         self.assertIn("surface_styles.html", layout)
+        self.assertIn("checkout-dialog.css", layout)
+        self.assertIn("client-order-project-detail", layout)
         self.assertIn('portal_surface="prospect"', tunnel)
         self.assertNotIn("portal.css", layout)
+        self.assertTrue((ENTRIES / "checkout-dialog.css").exists())
+        self.assertTrue((STATIC_CSS / "components" / "gang-checkout-dialog.css").exists())
 
     def test_split_bundles_are_smaller_than_monolith_for_client_and_staff(self) -> None:
         monolith = file_size(STATIC_CSS / "portal.css")

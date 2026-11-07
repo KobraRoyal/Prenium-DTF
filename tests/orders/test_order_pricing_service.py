@@ -213,6 +213,49 @@ def test_resolve_file_preparation_fee_uses_negotiated_customer_value():
 
 
 @pytest.mark.django_db
+def test_resolve_file_preparation_fee_keeps_negotiated_zero_over_catalog():
+    """0 € négocié est une dérogation explicite, pas un fallback catalogue."""
+    CatalogService.objects.create(
+        code="file-prep-nonzero",
+        name="Preparation fichier",
+        service_type=CatalogService.ServiceType.FILE_PREPARATION,
+        unit=CatalogService.Unit.FIXED,
+        base_price="10.00",
+        currency="EUR",
+        display_order=1,
+    )
+    customer = Customer.objects.create(
+        name="Zero prep",
+        negotiated_file_preparation_fee_eur=Decimal("0.00"),
+    )
+    fee = OrderPricingService().resolve_file_preparation_fee_per_file(customer=customer)
+    assert fee == Decimal("0.00")
+
+
+@pytest.mark.django_db
+def test_resolve_file_preparation_fee_falls_back_to_zero_catalog():
+    _seed_catalog_dtf_and_file_prep(dtf_price="25.00", prep_price="0.00")
+    from apps.shipping.services.methods import ShippingMethodService
+
+    ShippingMethodService().ensure_default_methods()
+    customer = Customer.objects.create(name="Catalog zero prep")
+    assert OrderPricingService().resolve_file_preparation_fee_per_file(
+        customer=customer
+    ) == Decimal("0.00")
+    quote = OrderPricingService().estimate_gang_sheet_quote(
+        customer=customer,
+        surface_sqm=Decimal("0.1705"),
+        quantity=1,
+        file_count=1,
+        shipping_method_code="pickup",
+        billing_mode="deferred",
+    )
+    assert quote["prep_fee_eur"] == Decimal("0.00")
+    assert quote["prep_amount_eur"] == Decimal("0.00")
+    assert quote["dtf_amount_eur"] == Decimal("4.26")
+
+
+@pytest.mark.django_db
 def test_open_balance_excludes_draft_and_includes_priced_deferred():
     user = get_user_model().objects.create_user(email="u@example.com", password="pass")
     customer = Customer.objects.create(name="B2B")

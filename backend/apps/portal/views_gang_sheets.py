@@ -553,12 +553,7 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
             ),
             "invalid_requested_date": "La date souhaitée est invalide.",
         }
-        from apps.customers.services.company_profile import (
-            COUNTRY_LABELS,
-            CompanyProfileService,
-            format_customer_address,
-            shipping_same_as_billing,
-        )
+        from apps.portal.checkout_delivery import checkout_delivery_context
         from apps.portal.views_payments import (
             available_payment_providers,
             default_online_provider,
@@ -569,10 +564,6 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
         shipping_snapshot = {}
         if sheet.project_id:
             shipping_snapshot = sheet.project.shipping_address or {}
-        delivery_defaults = CompanyProfileService().checkout_delivery_defaults(
-            self.customer,
-            shipping_snapshot,
-        )
         return {
             "studio_checkout_files": placed_files,
             "studio_checkout_item": checkout_item,
@@ -586,20 +577,10 @@ class ClientGangSheetMixin(ClientProjectFeatureMixin):
             "gang_sheet_quote": gang_sheet_quote,
             "studio_payment_providers": payment_providers,
             "studio_online_provider": online_provider,
-            "studio_billing_address": format_customer_address(self.customer, kind="billing"),
-            "studio_shipping_address": format_customer_address(self.customer, kind="shipping"),
-            "studio_shipping_same_as_billing": shipping_same_as_billing(self.customer),
-            "studio_billing_complete": bool(
-                (self.customer.billing_address_line1 or "").strip()
-                and (self.customer.billing_postal_code or "").strip()
-                and (self.customer.billing_city or "").strip()
+            **checkout_delivery_context(
+                customer=self.customer,
+                shipping_snapshot=shipping_snapshot,
             ),
-            "studio_country_choices": list(COUNTRY_LABELS.items()),
-            "studio_shipping_contact_name": delivery_defaults["name"],
-            "studio_shipping_email": delivery_defaults["email"],
-            "studio_shipping_phone": delivery_defaults["phone"],
-            "studio_shipping_company": delivery_defaults["company_name"],
-            "studio_shipping_house_number": delivery_defaults["house_number"],
             "studio_checkout_error": error_messages.get(error_code, ""),
             "studio_checkout_error_code": error_code,
         }

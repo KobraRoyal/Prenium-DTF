@@ -2075,11 +2075,16 @@ class PortalUiCoherenceTests(SimpleTestCase):
         staff_navigation = template_source("components/nav/portal_staff_navigation.html")
 
         summary = template_source("portal/client/partials/order_project_summary.html")
+        file_checkout = template_source(
+            "portal/client/partials/order_project_checkout_dialog.html"
+        )
         settlement = template_source("portal/client/partials/b2b_settlement_choice.html")
         checkout_summary = template_source("portal/client/partials/checkout_summary.html")
 
         self.assertNotIn("b2b_settlement_choice.html", summary)
-        self.assertIn('name="billing_mode"', summary)
+        self.assertNotIn('name="billing_mode"', summary)
+        self.assertIn('name="billing_mode"', file_checkout)
+        self.assertIn("data-file-checkout-open", summary)
         self.assertIn("b2b_settlement_choice.html", checkout_summary)
         self.assertIn('default_billing_mode == "immediate"', settlement)
         self.assertIn('value="deferred"', settlement)

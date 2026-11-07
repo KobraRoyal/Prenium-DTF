@@ -270,12 +270,15 @@ def test_client_can_request_a_quote_and_other_customer_cannot():
     assert "Tarif estimatif" in body
     assert "m² ×" not in body
     assert "d’après vos fichiers" not in body
-    assert "Standard — délai de traitement 2–3 jours" in body
-    assert "Express — délai de traitement 1–2 jours" in body
+    assert "data-file-estimate-shipping" not in body
+    assert "Livraison à choisir à la confirmation" in body
     assert "Pour le tarif réel, demandez un devis" in body
     assert "métrage imprimé" in body
     assert "Demander un devis" in body
+    # Délai / transporteur : uniquement dans la modale de confirmation (comme gang sheet).
     assert "Délai de traitement" in body
+    assert "Standard — délai de traitement 2–3 jours" in body
+    assert "Express — délai de traitement 1–2 jours" in body
     assert "2–3 jours<br>Chronopost 13" in body
     assert "1–2 jours<br>Chronopost 13" in body
     assert ">Standard<" in body

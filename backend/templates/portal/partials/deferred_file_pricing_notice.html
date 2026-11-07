@@ -16,14 +16,14 @@
     data-file-estimate-live
     data-unit-price="{{ notice.quote.unit_price_eur|unlocalize }}"
     data-prep-amount="{{ notice.quote.prep_amount_eur|unlocalize }}"
-    data-shipping-amount="{{ notice.quote.shipping_amount_eur|unlocalize }}"
+    data-tax-rate="{% if notice.quote.goods_tax_amount_eur %}{{ notice.quote.tax_rate|default:'0.20'|unlocalize }}{% else %}0{% endif %}"
     data-laize-m="{{ notice.laize_m|unlocalize }}"
     data-month-volume="{{ notice.priced_month_linear_m|unlocalize }}"
     data-volume-ladder="{{ notice.volume_ladder }}"
     data-currency="{{ notice.quote.currency }}"
   >
     <p class="b2b-project-quote__total">
-      <strong data-file-estimate-total>{% localize on %}{{ notice.quote.total_eur }}{% endlocalize %}&nbsp;{{ notice.quote.currency }} HT</strong>
+      <strong data-file-estimate-total>{% if notice.quote.goods_tax_amount_eur %}{% localize on %}{{ notice.quote.goods_total_eur|default:notice.quote.total_eur }}{% endlocalize %}&nbsp;{{ notice.quote.currency }} TTC{% else %}{% localize on %}{{ notice.quote.subtotal_eur }}{% endlocalize %}&nbsp;{{ notice.quote.currency }} HT{% endif %}</strong>
     </p>
     <div class="b2b-project-quote__rows" role="list">
       <div class="b2b-project-quote__row" role="listitem">
@@ -44,13 +44,16 @@
           <span class="b2b-project-quote__amount" data-file-estimate-prep>{% localize on %}{{ notice.quote.prep_amount_eur }}{% endlocalize %}&nbsp;{{ notice.quote.currency }}</span>
         </span>
       </div>
-      <div class="b2b-project-quote__row" role="listitem">
-        <span class="b2b-project-quote__label" data-file-estimate-shipping-label>{{ notice.quote.shipping_estimate_label|default:"Expédition" }}</span>
+      <div class="b2b-project-quote__row" role="listitem" data-file-estimate-tax-row{% if not notice.quote.goods_tax_amount_eur %} hidden style="display:none"{% endif %}>
+        <span class="b2b-project-quote__label">TVA (20&nbsp;%)</span>
         <span class="b2b-project-quote__value">
-          <span class="b2b-project-quote__amount" data-file-estimate-shipping>{% localize on %}{{ notice.quote.shipping_amount_eur }}{% endlocalize %}&nbsp;{{ notice.quote.currency }}</span>
+          <span class="b2b-project-quote__amount" data-file-estimate-tax>{% if notice.quote.goods_tax_amount_eur %}{% localize on %}{{ notice.quote.goods_tax_amount_eur }}{% endlocalize %}&nbsp;{{ notice.quote.currency }}{% endif %}</span>
         </span>
       </div>
     </div>
+    {% if audience != "staff" %}
+    <p class="b2b-project-quote__next muted text-sm m-0 mt-2">{% if shipping_locked_to_pickup %}Retrait atelier{% else %}Livraison à choisir à la confirmation{% endif %}</p>
+    {% endif %}
   </div>
   <p class="b2b-project-quote__lead">
     {% if audience == "staff" %}
@@ -113,7 +116,7 @@
       if (!live) return;
       var unit = Number(live.dataset.unitPrice);
       var prep = Number(live.dataset.prepAmount || 0);
-      var shipping = Number(live.dataset.shippingAmount || 0);
+      var taxRate = Number(live.dataset.taxRate || 0);
       var laize = Number(live.dataset.laizeM);
       var monthVolume = Number(live.dataset.monthVolume || 0);
       if (!Number.isFinite(unit) || !Number.isFinite(laize) || laize <= 0) return;
@@ -139,15 +142,21 @@
       var percent = tierPercent(monthVolume + linear, live.dataset.volumeLadder);
       var discount = roundMoney(gross * percent / 100);
       var net = roundMoney(gross - discount);
-      var total = roundMoney(net + prep + shipping);
+      var goodsHt = roundMoney(net + prep);
+      var tax = taxRate > 0 ? roundMoney(goodsHt * taxRate) : 0;
+      var total = roundMoney(goodsHt + tax);
       var totalNode = live.querySelector("[data-file-estimate-total]");
       var dtfNode = live.querySelector("[data-file-estimate-dtf]");
       var discountRow = live.querySelector("[data-file-estimate-discount-row]");
       var discountLabel = live.querySelector("[data-file-estimate-discount-label]");
       var discountNode = live.querySelector("[data-file-estimate-discount]");
       var prepNode = live.querySelector("[data-file-estimate-prep]");
-      var shippingNode = live.querySelector("[data-file-estimate-shipping]");
-      if (totalNode) totalNode.textContent = moneyFormat.format(total) + " " + currency + " HT";
+      var taxRow = live.querySelector("[data-file-estimate-tax-row]");
+      var taxNode = live.querySelector("[data-file-estimate-tax]");
+      if (totalNode) {
+        totalNode.textContent =
+          moneyFormat.format(total) + " " + currency + (tax > 0 ? " TTC" : " HT");
+      }
       if (dtfNode) dtfNode.textContent = moneyFormat.format(gross) + " " + currency;
       if (discountRow) {
         discountRow.hidden = percent <= 0;
@@ -156,30 +165,16 @@
       if (discountLabel) discountLabel.textContent = "Remise volume −" + percentFormat.format(percent) + " %";
       if (discountNode) discountNode.textContent = "−" + moneyFormat.format(discount) + " " + currency;
       if (prepNode) prepNode.textContent = moneyFormat.format(prep) + " " + currency;
-      if (shippingNode) shippingNode.textContent = moneyFormat.format(shipping) + " " + currency;
-      var shippingLabel = live.querySelector("[data-file-estimate-shipping-label]");
-      if (shippingLabel && live.dataset.shippingLabel) shippingLabel.textContent = live.dataset.shippingLabel;
+      if (taxRow) {
+        taxRow.hidden = tax <= 0;
+        taxRow.style.display = tax <= 0 ? "none" : "";
+      }
+      if (taxNode) taxNode.textContent = tax > 0 ? moneyFormat.format(tax) + " " + currency : "";
     };
     document.addEventListener("input", function (event) {
       if (event.target && event.target.matches && event.target.matches("[data-estimate-quantity]")) {
         refreshFileEstimate();
       }
-    });
-    document.addEventListener("change", function (event) {
-      var input = event.target;
-      if (!input || input.type === "hidden" || !input.matches || !input.matches("[name=shipping_method_code]")) return;
-      document.querySelectorAll("input[type=hidden][name=shipping_method_code]").forEach(function (hidden) {
-        hidden.value = input.value;
-      });
-      var live = document.querySelector("[data-file-estimate-live]");
-      if (!live || !input.dataset.shippingAmount) return;
-      live.dataset.shippingAmount = input.dataset.shippingAmount;
-      var shippingLabel = input.dataset.shippingLabel;
-      if (!shippingLabel && input.selectedOptions && input.selectedOptions[0]) {
-        shippingLabel = input.selectedOptions[0].dataset.shippingLabel;
-      }
-      if (shippingLabel) live.dataset.shippingLabel = shippingLabel;
-      refreshFileEstimate();
     });
   }
 </script>
