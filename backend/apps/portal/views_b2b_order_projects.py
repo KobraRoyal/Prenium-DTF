@@ -497,7 +497,10 @@ class ClientProjectFeatureMixin(LoginRequiredMixin):
                         "project_public_id": project.public_id,
                     },
                 )
-            elif project.status in {"ready_to_submit", "submitted"} and not project.converted_order_id:
+            elif (
+                project.status in {"ready_to_submit", "submitted"}
+                and not project.converted_order_id
+            ):
                 ctx["file_checkout_form_action"] = reverse(
                     "portal:client-order-project-submit",
                     kwargs={

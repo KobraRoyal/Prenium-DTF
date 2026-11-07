@@ -108,8 +108,8 @@ def test_deferred_client_validates_and_orders_in_one_shot():
     assert "Enregistrer" not in html
     assert "data-order-project-autosave" in html
     assert not re.search(r'hx-post="[^"]*confirm-all-analyses', html)
-    assert 'data-file-checkout-open' in html
-    assert 'data-file-checkout-dialog' in html
+    assert "data-file-checkout-open" in html
+    assert "data-file-checkout-dialog" in html
     assert "Adresse de livraison" in html
     assert 'name="shipping_contact_name"' in html
     assert "data-file-checkout-recap" in html
@@ -194,7 +194,7 @@ def test_deferred_checkout_modal_persists_delivery_from_client_form():
         "portal:client-order-project-create",
         kwargs={"customer_public_id": customer.public_id},
     )
-    created = client.post(
+    client.post(
         create_url,
         {
             "name": "Livraison modale",
