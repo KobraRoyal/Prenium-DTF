@@ -135,17 +135,27 @@ class ClientOrderStatusBannerTests(SimpleTestCase):
         self.assertIn("paiement non finalisé", banner.message.lower())
         self.assertTrue(banner.show_pay_cta)
 
-    def test_checkout_success_without_pending_payment_is_transmitted(self) -> None:
+    def test_checkout_success_without_pending_payment_uses_thanks_dialog(self) -> None:
+        from apps.portal.client_order_presentation import client_order_checkout_thanks_dialog
+
         banner = client_order_status_banner(
             awaits_client_payment=False,
             query_params={"checkout": "success"},
         )
 
-        self.assertIsNotNone(banner)
-        assert banner is not None
-        self.assertEqual(banner.tone, "success")
-        self.assertEqual(banner.message, "Commande transmise.")
-        self.assertFalse(banner.show_pay_cta)
+        self.assertIsNone(banner)
+        self.assertTrue(
+            client_order_checkout_thanks_dialog(
+                awaits_client_payment=False,
+                query_params={"checkout": "success"},
+            )
+        )
+        self.assertFalse(
+            client_order_checkout_thanks_dialog(
+                awaits_client_payment=True,
+                query_params={"checkout": "success"},
+            )
+        )
 
     def test_pending_payment_without_query_flash_shows_waiting_message(self) -> None:
         banner = client_order_status_banner(

@@ -70,4 +70,4 @@ class GangSheetLibraryUITests(SimpleTestCase):
 
         self.assertIn(".gang-sheet-page .gang-sheet-card__preview", client_css)
         self.assertIn("gang-sheet-card__primary--order", client_css)
-        self.assertIn('PORTAL_CSS_ASSET_V = "20261106-production-rhythm-v1"', portal_tags)
+        self.assertIn('PORTAL_CSS_ASSET_V = "20261107-hex-support-tip-v1"', portal_tags)

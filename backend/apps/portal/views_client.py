@@ -160,7 +160,7 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
 
     def get(self, request, customer_public_id, order_public_id):
         from apps.billing.services.production_payment_gate import order_awaits_client_payment
-        from apps.portal.client_order_presentation import client_order_status_banner
+        from apps.portal.client_order_presentation import client_order_detail_flash_context
 
         order = self.get_order_or_404(order_public_id)
         awaits_client_payment = order_awaits_client_payment(order)
@@ -185,11 +185,11 @@ class ClientOrderDetailView(ClientOrderContextMixin, View):
                     and not order.uploads.exclude(external_url="").exists()
                 ),
             )
+            | client_order_detail_flash_context(
+                awaits_client_payment=awaits_client_payment,
+                query_params=request.GET,
+            )
             | {
-                "order_status_banner": client_order_status_banner(
-                    awaits_client_payment=awaits_client_payment,
-                    query_params=request.GET,
-                ),
                 "nav_mode": "client",
                 "nav_key": "client-orders",
             },

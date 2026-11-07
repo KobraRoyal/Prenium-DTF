@@ -2,6 +2,7 @@
 
 | Date | Décision | Motif | Impact |
 |---|---|---|---|
+| 2026-11-07 | Encours (commande par fichiers) : CTA unique « Je valide et je commande » = confirmation qualité + transmission. Comptant CB conserve « Je confirme le contrôle qualité… » puis submit/paiement. Devis en attente : pas d’auto-checkout. Après succès : redirection fiche commande + modale « Merci pour votre commande ! ». | L’étape intermédiaire `ready_to_submit` était redondante pour l’encours ; le bandeau « Commande transmise » était trop sec. | `ConfirmAllAnalysesView` enchaîne `checkout_project` ; `?checkout=success` ouvre `order_checkout_thanks_dialog` (pas de bandeau redondant). |
 | 2026-11-04 | Suivi Sendcloud : prise en charge → OF `shipped` (Expédiée) ; livraison → `completed` (Terminée). L’étiquette `Ready to send` ne change pas le statut. | Un numéro de suivi arrivait avec un id numérique non reconnu et la commande restait « prête à expédier », y compris après livraison. | Client et Atelier lisent le même jalon. Le retrait atelier reste une clôture manuelle. |
 | 2026-09-22 | Menu Atelier : retirer « Gang Sheets » (`/staff/order-projects/`) | File de contrôle pré-commande jamais alimentée (checkout → `converted` direct) | Lien hors nav ; URLs read-only conservées ; contrôle OPS = Commandes |
 | 2026-09-18 | Studio : une planche déjà commandée reste commandable ; pas de CTA « Voir ma commande » | La bibliothèque est un catalogue de compositions, pas un historique | Chaque « Je commande » crée une nouvelle commande et réutilise le PDF HD |

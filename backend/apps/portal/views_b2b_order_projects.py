@@ -25,6 +25,7 @@ from apps.b2b_order_projects.services import (
     ProjectDomainError,
 )
 from apps.billing.services.gateways import PaymentGatewayTransientError
+from apps.customers.models import Customer
 from apps.gang_sheets.models import GangSheet
 from apps.orders.models import Order
 from apps.orders.references import project_client_reference
@@ -835,8 +836,87 @@ class ClientOrderProjectItemActionView(ClientProjectFeatureMixin, View):
 class ClientOrderProjectConfirmAllAnalysesView(ClientProjectFeatureMixin, View):
     template_name = "portal/client/partials/order_project_items_response.html"
 
+    def _project_detail_url(self, project) -> str:
+        return reverse(
+            "portal:client-order-project-detail",
+            kwargs={
+                "customer_public_id": self.customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        )
+
+    def _checkout_after_confirm(self, request, project):
+        """Encours : confirmation qualité + transmission en un seul POST."""
+        detail = self._project_detail_url(project)
+        try:
+            order = checkout_service.checkout_project(
+                project=project,
+                actor=request.user,
+                customer_membership=self.customer_membership,
+                source="client_portal.b2b_checkout",
+                billing_mode=str(
+                    request.POST.get("billing_mode")
+                    or getattr(self.customer, "default_billing_mode", "deferred")
+                ).strip(),
+                shipping_method_code=(request.POST.get("shipping_method_code") or "").strip()
+                or None,
+            )
+        except ProjectDomainError as error:
+            project.refresh_from_db()
+            submit_error = error.code.lower()
+            if error.code == "INVALID_PROJECT_TRANSITION":
+                submit_error = project.status
+            elif error.code == "PROJECT_ALREADY_CONVERTED" and project.converted_order_id:
+                return HttpResponseRedirect(
+                    reverse(
+                        "portal:client-order-detail",
+                        kwargs={
+                            "customer_public_id": self.customer.public_id,
+                            "order_public_id": project.converted_order.public_id,
+                        },
+                    )
+                )
+            if error.code == "GANG_SHEET_DRIVE_SYNC_REQUIRED":
+                from urllib.parse import quote
+
+                from apps.gang_sheets.services.drive import GangSheetDriveSyncService
+
+                drive_service = GangSheetDriveSyncService()
+                for sheet in GangSheet.objects.for_project(project).filter(
+                    status=GangSheet.Status.VALIDATED
+                ):
+                    if sheet.final_file:
+                        drive_service.schedule_sync(
+                            sheet=sheet,
+                            actor=request.user,
+                            source="client_portal.checkout_retry",
+                        )
+                message = quote(error.message or "")
+                return HttpResponseRedirect(
+                    f"{detail}?submit_error={submit_error}&submit_message={message}"
+                )
+            return HttpResponseRedirect(f"{detail}?submit_error={submit_error}")
+        except ValidationError as error:
+            from urllib.parse import quote
+
+            messages_text = "; ".join(getattr(error, "messages", []) or [str(error)])
+            return HttpResponseRedirect(
+                f"{detail}?submit_error=validation&submit_message={quote(messages_text)}"
+            )
+        return redirect_after_b2b_checkout(
+            request=request,
+            customer=self.customer,
+            order=order,
+            source="client_portal.b2b_checkout_pay",
+        )
+
     def post(self, request, customer_public_id, project_public_id):
         project = self.get_project_or_404(project_public_id)
+        is_htmx = request.headers.get("HX-Request") == "true"
+        is_deferred = (
+            getattr(self.customer, "default_billing_mode", Customer.DefaultBillingMode.DEFERRED)
+            == Customer.DefaultBillingMode.DEFERRED
+        )
         try:
             confirmed_items = project_service.confirm_all_item_analyses(
                 project=project,
@@ -848,14 +928,33 @@ class ClientOrderProjectConfirmAllAnalysesView(ClientProjectFeatureMixin, View):
         except ProjectDomainError as error:
             form_error = error.message
             message = form_error
+            if is_deferred and not is_htmx:
+                messages.error(request, message)
+                return HttpResponseRedirect(self._project_detail_url(project))
+            project = self.get_project_or_404(project_public_id)
+            response = render(
+                request,
+                self.template_name,
+                self.context(project=project, form_error=form_error),
+                status=400,
+            )
+            return with_toast(response, message, "error")
+
         project = self.get_project_or_404(project_public_id)
+        # Re-évaluer après confirmation : le flag devis peut être resté inchangé.
+        awaits_quote = bool(project.price_confirmation_required and not project.quote_priced_at)
+        if is_deferred and not awaits_quote:
+            return self._checkout_after_confirm(request, project)
+        if is_deferred and not is_htmx:
+            messages.success(request, message)
+            return HttpResponseRedirect(self._project_detail_url(project))
         response = render(
             request,
             self.template_name,
             self.context(project=project, form_error=form_error),
-            status=400 if form_error else 200,
+            status=200,
         )
-        return with_toast(response, message, "error" if form_error else "success")
+        return with_toast(response, message, "success")
 
 
 class ClientOrderProjectItemAssetView(ClientProjectFeatureMixin, View):

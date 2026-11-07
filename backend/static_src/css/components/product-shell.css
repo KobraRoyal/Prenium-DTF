@@ -5417,6 +5417,10 @@
     background-size: 100% 100%, 10px 10px;
   }
 
+  body.product-shell .b2b-hex-color-control.is-multicolor-paused .b2b-swatch-btn {
+    opacity: 0.72;
+  }
+
   body.product-shell .b2b-hex-color-control__trigger:disabled {
     opacity: 0.45;
     cursor: not-allowed;
@@ -5513,6 +5517,7 @@
   }
 
   body.product-shell .b2b-support-color {
+    position: relative;
     display: grid;
     gap: 0.55rem;
     margin: 0;

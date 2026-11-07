@@ -79,8 +79,9 @@ def test_client_create_with_visual_batch_lists_analyses_without_opening_modal():
 
 @pytest.mark.django_db
 @override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
-def test_client_can_autosave_visual_settings_then_confirm_all_analyses():
+def test_deferred_client_validates_and_orders_in_one_shot():
     _user, customer, client = portal_scope()
+    assert customer.default_billing_mode == "deferred"
     create_url = reverse(
         "portal:client-order-project-create",
         kwargs={"customer_public_id": customer.public_id},
@@ -88,7 +89,7 @@ def test_client_can_autosave_visual_settings_then_confirm_all_analyses():
     created = client.post(
         create_url,
         {
-            "name": "Validation groupée",
+            "name": "Validation groupée encours",
             "order_mode": "individual_designs",
             "file": [png_upload("premier.png"), png_upload("second.png")],
         },
@@ -102,9 +103,12 @@ def test_client_can_autosave_visual_settings_then_confirm_all_analyses():
 
     detail = client.get(created.url)
     html = detail.content.decode()
-    assert "Je confirme le contrôle qualité de tous les visuels" in html
+    assert "Je valide et je commande" in html
+    assert "Je confirme le contrôle qualité de tous les visuels" not in html
     assert "Enregistrer" not in html
     assert "data-order-project-autosave" in html
+    assert not re.search(r'hx-post="[^"]*confirm-all-analyses', html)
+    assert re.search(r'action="[^"]*confirm-all-analyses', html)
 
     for index, item in enumerate(project.items.order_by("sort_order"), start=1):
         updated = client.post(
@@ -131,22 +135,115 @@ def test_client_can_autosave_visual_settings_then_confirm_all_analyses():
                 "project_public_id": project.public_id,
             },
         ),
+        {"billing_mode": "deferred"},
+    )
+    assert confirmed.status_code == 302
+    assert all(
+        item.client_confirmed_asset_version_id == item.asset.current_version_id
+        for item in project.items.select_related("asset__current_version")
+    )
+    project.refresh_from_db()
+    assert project.status == B2BOrderProject.Status.CONVERTED
+    assert project.converted_order_id is not None
+    assert str(project.converted_order.public_id) in confirmed.url
+    assert "checkout=success" in confirmed.url
+    assert AuditLogEntry.objects.filter(
+        action="b2b_order_project.all_item_analyses_confirmed",
+        target_public_id=project.public_id,
+    ).exists()
+
+    detail = client.get(confirmed.url)
+    assert detail.status_code == 200
+    thanks = detail.content.decode()
+    assert "Merci pour votre commande" in thanks
+    assert "data-checkout-thanks-dialog" in thanks
+    assert "data-dialog-auto-open" in thanks
+    assert "Commande transmise." not in thanks
+
+
+@pytest.mark.django_db
+@override_settings(B2B_DTF_ORDER_PROJECT_ENABLED=True)
+def test_immediate_client_keeps_quality_gate_before_submit():
+    from apps.b2b_order_projects.services import B2BOrderProjectService
+    from apps.uploads.services.assets import AssetService
+
+    user, customer, client = portal_scope()
+    # Le parcours UI comptant passe par Gang Sheet ; on prépare un projet analysable
+    # pour vérifier que le portail conserve l’étape qualité HTMX (sans auto-checkout).
+    service = B2BOrderProjectService()
+    project = service.create_project(
+        customer=customer,
+        actor=user,
+        data={"name": "Validation groupée comptant"},
+        source="test",
+    )
+    for index, name in enumerate(("premier", "second"), start=1):
+        item = service.add_item(
+            project=project,
+            actor=user,
+            data={"name": name, "width_mm": 100, "height_mm": 50, "quantity": index},
+            source="test",
+        )
+        version = AssetService().attach_project_item_file(
+            project=project,
+            item_public_id=item.public_id,
+            actor=user,
+            uploaded_file=png_upload(f"{name}.png"),
+            source="test",
+        )
+        AssetAnalysisService().analyze(version_public_id=version.public_id, source="test")
+
+    customer.default_billing_mode = "immediate"
+    customer.save(update_fields=["default_billing_mode"])
+
+    detail = client.get(
+        reverse(
+            "portal:client-order-project-detail",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        )
+    )
+    assert detail.status_code == 200
+    html = detail.content.decode()
+    assert "Je confirme le contrôle qualité de tous les visuels" in html
+    assert "Je valide et je commande" not in html
+    assert re.search(r'hx-post="[^"]*confirm-all-analyses', html)
+
+    for index, item in enumerate(project.items.order_by("sort_order"), start=1):
+        updated = client.post(
+            reverse(
+                "portal:client-order-project-item-action",
+                kwargs={
+                    "customer_public_id": customer.public_id,
+                    "project_public_id": project.public_id,
+                    "item_public_id": item.public_id,
+                    "action": "update",
+                },
+            ),
+            {"quantity": str(index + 1), "support_color_hex": "#AABBCC", "_autosave": "1"},
+            HTTP_HX_REQUEST="true",
+        )
+        assert updated.status_code == 200
+
+    confirmed = client.post(
+        reverse(
+            "portal:client-order-project-confirm-all-analyses",
+            kwargs={
+                "customer_public_id": customer.public_id,
+                "project_public_id": project.public_id,
+            },
+        ),
         HTTP_HX_REQUEST="true",
     )
     assert confirmed.status_code == 200
     assert json.loads(confirmed.headers["X-Prenium-Toast"])["message"] == (
         "2 visuel(s) validé(s) pour la commande."
     )
-    assert all(
-        item.client_confirmed_asset_version_id == item.asset.current_version_id
-        for item in project.items.select_related("asset__current_version")
-    )
     project.refresh_from_db()
     assert project.status == B2BOrderProject.Status.READY_TO_SUBMIT
-    assert AuditLogEntry.objects.filter(
-        action="b2b_order_project.all_item_analyses_confirmed",
-        target_public_id=project.public_id,
-    ).exists()
+    assert project.converted_order_id is None
 
 
 @pytest.mark.django_db
@@ -822,7 +919,7 @@ def test_visual_validation_starts_without_support_color_and_requires_a_choice():
     )
     content = panel.content.decode()
     assert panel.status_code == 200
-    assert "Aucune couleur n’est présélectionnée" in content
+    assert "Choisissez Multicouleur ou une teinte précise" in content
     assert "data-support-color-required" in content
     assert "data-support-color-exact-required" not in content
     assert 'name="support_color_hex"' in content

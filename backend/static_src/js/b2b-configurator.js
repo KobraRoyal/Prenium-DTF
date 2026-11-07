@@ -1424,11 +1424,9 @@ function normalizeHexColor(raw) {
   return `#${cleaned.toLowerCase()}`;
 }
 
-function getHexPopoverMountTarget(control) {
-  const dialog = control.closest("dialog");
-  if (dialog instanceof HTMLElement) {
-    return dialog;
-  }
+function getHexPopoverMountTarget(_control) {
+  // Toujours sur body : un <dialog> (transform / containing block) fausse
+  // position:fixed au 1er clic et place le nuancier hors du déclencheur.
   return document.body;
 }
 
@@ -1501,6 +1499,11 @@ function unmountHexPopover(control, popover) {
   delete popover.dataset.portaled;
 }
 
+function isSupportMulticolorEnabled(fieldset) {
+  const hidden = fieldset.querySelector("[data-support-color-multicolor-input]");
+  return hidden instanceof HTMLInputElement && hidden.value === "on";
+}
+
 function setMulticolorMode(fieldset, enabled) {
   const rainbowButton = fieldset.querySelector("[data-support-color-multicolor]");
   const hexControl = fieldset.querySelector("[data-hex-color-control]");
@@ -1514,10 +1517,13 @@ function setMulticolorMode(fieldset, enabled) {
     hidden.value = enabled ? "on" : "";
   }
   if (hexControl instanceof HTMLElement) {
+    // Le nuancier reste cliquable : un clic quitte Multicouleur et ouvre le picker.
     hexControl.classList.toggle("is-active", false);
+    hexControl.classList.toggle("is-multicolor-paused", enabled);
     const trigger = hexControl.querySelector("[data-hex-color-trigger]");
     if (trigger instanceof HTMLButtonElement) {
-      trigger.disabled = enabled;
+      trigger.disabled = false;
+      trigger.removeAttribute("aria-disabled");
     }
   }
   if (hexInput instanceof HTMLInputElement) {
@@ -1536,6 +1542,14 @@ function setMulticolorMode(fieldset, enabled) {
   updateSupportColorStatus(fieldset);
 }
 
+function exitSupportMulticolorForExactColor(fieldset) {
+  if (!(fieldset instanceof HTMLElement) || !isSupportMulticolorEnabled(fieldset)) {
+    return false;
+  }
+  setMulticolorMode(fieldset, false);
+  return true;
+}
+
 function updateSupportColorStatus(fieldset) {
   const hidden = fieldset.querySelector("[data-support-color-multicolor-input]");
   const hexControl = fieldset.querySelector("[data-hex-color-control]");
@@ -1547,13 +1561,14 @@ function updateSupportColorStatus(fieldset) {
   if (hexControl instanceof HTMLElement) {
     hexControl.classList.toggle("is-active", !isMulticolor && Boolean(normalized));
     hexControl.classList.toggle("is-empty", !normalized);
+    hexControl.classList.toggle("is-multicolor-paused", isMulticolor);
   }
   if (status instanceof HTMLElement) {
     status.textContent = isMulticolor
       ? "Multicouleur sélectionné"
       : normalized
         ? `Couleur ${normalized.toUpperCase()} sélectionnée`
-        : "Aucune couleur n’est présélectionnée";
+        : "Choisissez Multicouleur ou une teinte précise";
   }
 }
 
@@ -1666,12 +1681,16 @@ function closeAllHexColorPopovers() {
   });
 }
 
-function positionHexPopover(trigger, popover, triggerRect = null) {
+function positionHexPopover(trigger, popover) {
   popover.hidden = false;
   popover.style.visibility = "hidden";
-  const rect = triggerRect || trigger.getBoundingClientRect();
-  const width = popover.offsetWidth || 248;
-  const height = popover.offsetHeight || 280;
+  popover.style.position = "fixed";
+  popover.style.zIndex = "10050";
+  // Forcer un reflow pour mesurer après portail + retrait de [hidden].
+  void popover.offsetWidth;
+  const rect = trigger.getBoundingClientRect();
+  const width = Math.max(popover.offsetWidth || 0, 248);
+  const height = Math.max(popover.offsetHeight || 0, 280);
   const gap = 8;
   const margin = 10;
   let top = rect.bottom + gap;
@@ -1679,16 +1698,14 @@ function positionHexPopover(trigger, popover, triggerRect = null) {
     top = rect.top - height - gap;
   }
   top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
+  // Ancrer sous le bouton ; basculer à droite du déclencheur si ça déborde.
   let left = rect.left;
-  // Si le nuancier dépasse à droite, l’aligner sur le bord droit du déclencheur.
   if (left + width > window.innerWidth - margin) {
     left = rect.right - width;
   }
   left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
-  popover.style.position = "fixed";
-  popover.style.top = `${top}px`;
-  popover.style.left = `${left}px`;
-  popover.style.zIndex = "10050";
+  popover.style.top = `${Math.round(top)}px`;
+  popover.style.left = `${Math.round(left)}px`;
   popover.style.visibility = "visible";
 }
 
@@ -1769,13 +1786,17 @@ function initHexColorControl(control) {
         : popoverInput.value;
     const normalized = normalizeHexColor(source) || "#ffffff";
     syncHexColorControlSwatch(control, normalized);
-    const triggerRect = trigger.getBoundingClientRect();
     mountHexPopover(control, popover);
-    positionHexPopover(trigger, popover, triggerRect);
+    positionHexPopover(trigger, popover);
     trigger.setAttribute("aria-expanded", "true");
+    // 2e frame : dimensions finales après paint (évite le décalage 1er clic).
     requestAnimationFrame(() => {
-      popoverInput.focus();
-      popoverInput.select();
+      positionHexPopover(trigger, popover);
+      requestAnimationFrame(() => {
+        positionHexPopover(trigger, popover);
+        popoverInput.focus();
+        popoverInput.select();
+      });
     });
   }
 
@@ -1807,12 +1828,26 @@ function initHexColorControl(control) {
     if (trigger.disabled) {
       return;
     }
+    if (fieldset instanceof HTMLElement) {
+      exitSupportMulticolorForExactColor(fieldset);
+    }
     if (popover.hidden) {
       openPopover();
     } else {
       closePopover();
     }
   });
+
+  if (hexField instanceof HTMLInputElement && fieldset instanceof HTMLElement) {
+    hexField.addEventListener("pointerdown", () => {
+      if (exitSupportMulticolorForExactColor(fieldset)) {
+        hexField.focus();
+      }
+    });
+    hexField.addEventListener("focus", () => {
+      exitSupportMulticolorForExactColor(fieldset);
+    });
+  }
 
   function syncPopoverHexInput() {
     let display = popoverInput.value.trim().toUpperCase();
@@ -1896,6 +1931,10 @@ function bindSupportColorEvents() {
   document.body.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
+      return;
+    }
+    // Info-bulle : survol / focus CSS — le clic sur « i » ne doit pas voler le focus inutilement.
+    if (target.closest("[data-support-color-tip-trigger]")) {
       return;
     }
     const rainbowButton = target.closest("[data-support-color-multicolor]");
@@ -1982,6 +2021,20 @@ function clearOrderProjectValidateQuery() {
   }
 }
 
+function clearCheckoutSuccessQuery() {
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("checkout") !== "success") {
+      return;
+    }
+    url.searchParams.delete("checkout");
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, "", next);
+  } catch (_error) {
+    /* ignore URL API failures */
+  }
+}
+
 function dismissAutoOpenDialog(dialog) {
   if (!(dialog instanceof HTMLDialogElement)) {
     return;
@@ -1990,6 +2043,9 @@ function dismissAutoOpenDialog(dialog) {
   dialog.removeAttribute("data-dialog-auto-open");
   if (dialog.id === "add-visual-dialog" || dialog.hasAttribute("data-add-visual-dialog")) {
     clearOrderProjectValidateQuery();
+  }
+  if (dialog.hasAttribute("data-checkout-thanks-dialog")) {
+    clearCheckoutSuccessQuery();
   }
 }
 

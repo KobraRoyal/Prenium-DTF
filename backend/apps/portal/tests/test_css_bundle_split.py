@@ -7,7 +7,8 @@ STATIC_CSS = Path(settings.BASE_DIR) / "static_src" / "css"
 ENTRIES = STATIC_CSS / "entries"
 TEMPLATES = Path(settings.BASE_DIR) / "templates"
 
-CLIENT_SURFACE_MAX_BYTES = 490_000
+# Tips support-couleur (info + multicouleur) hors @layer dans portal-client.
+CLIENT_SURFACE_MAX_BYTES = 495_000
 STAFF_SURFACE_MAX_BYTES = 560_000
 PROSPECT_SURFACE_MAX_BYTES = 420_000
 

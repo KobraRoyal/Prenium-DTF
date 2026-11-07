@@ -23,6 +23,10 @@
 </div>
 {% endif %}
 
+{% if show_checkout_thanks_dialog %}
+{% include "portal/client/partials/order_checkout_thanks_dialog.html" %}
+{% endif %}
+
 <section class="portal-page-surface client-order-detail-surface" aria-labelledby="client-order-title">
   <header class="client-order-summary client-order-detail-identity" aria-labelledby="client-order-title">
     <dl class="client-order-summary__facts">

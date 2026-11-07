@@ -55,12 +55,41 @@
     {% include "portal/partials/deferred_file_pricing_notice.html" with notice=file_order_estimate audience="client" show_request=file_order_estimate_request %}
 
     {% if project.status != "ready_to_submit" and project.status != "submitted" and project.status != "converted" %}
+      {% if customer.default_billing_mode == "deferred" and project.items.all and project.can_edit_items and project.status == "action_required" or customer.default_billing_mode == "deferred" and project.items.all and project.can_edit_items and project.status == "draft" or customer.default_billing_mode == "deferred" and project.items.all and project.can_edit_items and project.status == "incomplete" %}
+        {% if not project.price_confirmation_required or project.quote_priced_at %}
+        {# Livraison dans le formulaire one-shot encours #}
+        {% else %}
+        {% include "portal/client/partials/b2b_shipping_choice.html" %}
+        {% endif %}
+      {% else %}
       {% include "portal/client/partials/b2b_shipping_choice.html" %}
+      {% endif %}
     {% endif %}
 
     <div class="b2b-project-checkout-actions client-order-project-checkout-actions">
       {% if project.items.all and project.can_edit_items %}
       {% if project.status == "action_required" or project.status == "draft" or project.status == "incomplete" %}
+      {% if customer.default_billing_mode == "deferred" and not project.price_confirmation_required or customer.default_billing_mode == "deferred" and project.quote_priced_at %}
+      <form
+        class="b2b-project-quality-gate"
+        method="post"
+        action="{% url 'portal:client-order-project-confirm-all-analyses' customer_public_id=customer.public_id project_public_id=project.public_id %}"
+        data-submit-loading
+      >
+        {% csrf_token %}
+        <input type="hidden" name="billing_mode" value="deferred">
+        {% include "portal/client/partials/b2b_shipping_choice.html" %}
+        <div class="b2b-project-quality-gate__copy">
+          <strong>Validation et commande</strong>
+          {% if project.has_unconfirmed_analysis and project.can_confirm_all_analyses %}
+          <p>Les quantités et couleurs sont enregistrées. Validez pour transmettre directement la commande à l’atelier.</p>
+          {% else %}
+          <p>Terminez les analyses et renseignez la couleur de chaque support pour commander.</p>
+          {% endif %}
+        </div>
+        <button class="ui-btn ui-btn-primary b2b-project-checkout-cta" type="submit"{% if not project.has_unconfirmed_analysis or not project.can_confirm_all_analyses %} disabled title="Terminez les analyses et choisissez la couleur du support pour chaque visuel avant de commander."{% endif %}>{% if project.has_unconfirmed_analysis %}Je valide et je commande{% else %}Analyse des visuels en cours{% endif %}</button>
+      </form>
+      {% else %}
       <form
         class="b2b-project-quality-gate"
         method="post"
@@ -81,6 +110,7 @@
         </div>
         <button class="ui-btn ui-btn-primary b2b-project-checkout-cta" type="submit"{% if not project.has_unconfirmed_analysis or not project.can_confirm_all_analyses %} disabled title="Terminez les analyses et choisissez la couleur du support pour chaque visuel avant de valider l’ensemble."{% endif %}>{% if project.has_unconfirmed_analysis %}Je confirme le contrôle qualité de tous les visuels{% else %}Analyse des visuels en cours{% endif %}</button>
       </form>
+      {% endif %}
       {% endif %}
       {% endif %}
       {% if project.price_confirmation_required and not project.quote_priced_at and not gang_sheet_quote %}

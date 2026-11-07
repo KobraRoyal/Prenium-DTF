@@ -1,43 +1,73 @@
 {% load l10n %}
 <fieldset class="b2b-support-color{% if exact_color_required %} is-exact-required{% endif %}" data-support-color-field data-support-color-required{% if exact_color_required %} data-support-color-thin-alert{% endif %}>
-  <legend class="product-form-label">
-    Couleur du support <span class="b2b-support-color__badge">Obligatoire</span>
+  <legend class="product-form-label b2b-support-color__legend">
+    Couleur du support
+    <span class="b2b-support-color__badge">Obligatoire</span>
+    <span class="b2b-support-color__tip">
+      <button
+        type="button"
+        class="b2b-support-color__tip-btn"
+        data-support-color-tip-trigger
+        aria-describedby="support-color-tip-{% firstof swatch_id item.public_id 'new' %}"
+        aria-label="Pourquoi renseigner la couleur du support"
+      >
+        <span aria-hidden="true">i</span>
+      </button>
+      <span
+        id="support-color-tip-{% firstof swatch_id item.public_id 'new' %}"
+        class="b2b-support-color__tip-panel"
+        data-support-color-tip-panel
+        role="tooltip"
+      >
+        <strong>Base blanche ajustée</strong>
+        Si traits fins (&lt; 0,5&nbsp;mm) : un contour assorti renforce la tenue au lavage, discret si la couleur est bien choisie.
+      </span>
+    </span>
   </legend>
   {% if exact_color_required %}
   <p class="b2b-support-color__alert">
-    Zones fines détectées : indiquez Multicouleur ou la couleur du textile pour optimiser la base blanche.
+    Zones fines détectées : indiquez Multicouleur ou la teinte exacte du textile pour optimiser la base blanche et le contour.
   </p>
   {% else %}
-  <p class="b2b-support-color__intro">Multicolore ou une teinte précise du textile.</p>
+  <p class="b2b-support-color__intro">Choisissez la teinte du textile — ou Multicouleur si plusieurs supports.</p>
   {% endif %}
-  <div class="b2b-support-color__choices">
-    <button
-      type="button"
-      class="b2b-swatch-btn b2b-swatch-btn--rainbow b2b-support-color-rainbow{% if item and item.support_color_is_multicolor or visual_multicolor %} is-active{% endif %}"
-      data-support-color-multicolor
-      aria-pressed="{% if item and item.support_color_is_multicolor or visual_multicolor %}true{% else %}false{% endif %}"
-      aria-label="Support multicolore"
-      title="Multicolore"
-    ></button>
+  <div class="b2b-support-color__choices" role="group" aria-label="Couleur du support">
     {% if item %}
     {% with support_item_id=item.public_id|stringformat:"s" %}
       {% if item.support_color_is_multicolor %}
-        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_prefix|default:"support-hex-"|add:support_item_id initial_color="#ffffff" disabled=1 %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_prefix|default:"support-hex-"|add:support_item_id initial_color="#ffffff" swatch_label="Choisir la couleur du textile" support_tip=1 %}
       {% elif item.support_color_hex %}
-        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_prefix|default:"support-hex-"|add:support_item_id initial_color=item.support_color_hex selected=1 %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_prefix|default:"support-hex-"|add:support_item_id initial_color=item.support_color_hex selected=1 swatch_label="Choisir la couleur du textile" support_tip=1 %}
       {% else %}
-        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_prefix|default:"support-hex-"|add:support_item_id initial_color="#ffffff" %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_prefix|default:"support-hex-"|add:support_item_id initial_color="#ffffff" swatch_label="Choisir la couleur du textile" support_tip=1 %}
       {% endif %}
     {% endwith %}
     {% else %}
       {% if visual_multicolor %}
-        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_id|default:"support-hex-new" initial_color="#ffffff" disabled=1 %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_id|default:"support-hex-new" initial_color="#ffffff" swatch_label="Choisir la couleur du textile" support_tip=1 %}
       {% elif visual_hex %}
-        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_id|default:"support-hex-new" initial_color=visual_hex selected=1 %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_id|default:"support-hex-new" initial_color=visual_hex selected=1 swatch_label="Choisir la couleur du textile" support_tip=1 %}
       {% else %}
-        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_id|default:"support-hex-new" initial_color="#ffffff" %}
+        {% include "portal/client/partials/b2b_hex_color_swatch.html" with swatch_id=swatch_id|default:"support-hex-new" initial_color="#ffffff" swatch_label="Choisir la couleur du textile" support_tip=1 %}
       {% endif %}
     {% endif %}
+    <span class="b2b-support-color__tip b2b-support-color__tip--swatch">
+      <button
+        type="button"
+        class="b2b-swatch-btn b2b-swatch-btn--rainbow b2b-support-color-rainbow{% if item and item.support_color_is_multicolor or visual_multicolor %} is-active{% endif %}"
+        data-support-color-multicolor
+        aria-pressed="{% if item and item.support_color_is_multicolor or visual_multicolor %}true{% else %}false{% endif %}"
+        aria-label="Support multicolore"
+        aria-describedby="support-multicolor-tip-{% firstof swatch_id item.public_id 'new' %}"
+      ></button>
+      <span
+        id="support-multicolor-tip-{% firstof swatch_id item.public_id 'new' %}"
+        class="b2b-support-color__tip-panel"
+        role="tooltip"
+      >
+        Base blanche ajustée pour couleur foncé.
+      </span>
+    </span>
     <label class="b2b-support-color-hex">
       <span class="ui-sr-only">Code hexadécimal</span>
       <input
@@ -83,7 +113,7 @@
     {% elif item and item.support_color_hex and not item.support_color_is_multicolor %}
       Couleur {{ item.support_color_hex|upper }} sélectionnée
     {% else %}
-      Aucune couleur n’est présélectionnée
+      Choisissez Multicouleur ou une teinte précise
     {% endif %}
   </p>
   <input

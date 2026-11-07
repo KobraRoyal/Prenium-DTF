@@ -314,12 +314,10 @@ def client_order_status_banner(
             message="Commande enregistrée — paiement non finalisé.",
             show_pay_cta=True,
         )
+    # Succès sans paiement en attente : modale de remerciement sur la fiche
+    # (pas de bandeau redondant).
     if checkout_success:
-        return ClientOrderStatusBanner(
-            tone="success",
-            message="Commande transmise.",
-            show_pay_cta=False,
-        )
+        return None
     if awaits_client_payment:
         return ClientOrderStatusBanner(
             tone="warning",
@@ -327,3 +325,30 @@ def client_order_status_banner(
             show_pay_cta=True,
         )
     return None
+
+
+def client_order_checkout_thanks_dialog(
+    *,
+    awaits_client_payment: bool,
+    query_params: Mapping[str, str],
+) -> bool:
+    """True si la fiche doit ouvrir la modale félicitations / remerciements."""
+    return query_params.get("checkout") == "success" and not awaits_client_payment
+
+
+def client_order_detail_flash_context(
+    *,
+    awaits_client_payment: bool,
+    query_params: Mapping[str, str],
+) -> dict[str, object]:
+    """Bandeau + modale de remerciement pour la fiche commande client."""
+    return {
+        "order_status_banner": client_order_status_banner(
+            awaits_client_payment=awaits_client_payment,
+            query_params=query_params,
+        ),
+        "show_checkout_thanks_dialog": client_order_checkout_thanks_dialog(
+            awaits_client_payment=awaits_client_payment,
+            query_params=query_params,
+        ),
+    }

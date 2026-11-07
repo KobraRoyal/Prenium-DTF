@@ -1,0 +1,34 @@
+<dialog
+  class="b2b-confirm-dialog client-order-checkout-thanks"
+  id="order-checkout-thanks-dialog"
+  data-dialog-auto-open
+  data-checkout-thanks-dialog
+  aria-labelledby="order-checkout-thanks-title"
+  aria-describedby="order-checkout-thanks-desc"
+>
+  <div class="b2b-confirm-dialog__shell">
+    <div class="b2b-confirm-dialog__content">
+      <h2 id="order-checkout-thanks-title">Merci pour votre commande&nbsp;!</h2>
+      <p id="order-checkout-thanks-desc" class="b2b-confirm-dialog__lead">
+        Elle est bien transmise à l’atelier. Suivez son avancement sur cette fiche.
+      </p>
+      {% if order_display_ref %}
+      <p class="b2b-confirm-dialog__hint">
+        Référence <strong>{{ order_display_ref }}</strong>
+      </p>
+      {% else %}
+      <p class="b2b-confirm-dialog__hint">Félicitations — nous nous occupons de la suite.</p>
+      {% endif %}
+    </div>
+    <div class="b2b-confirm-dialog__actions">
+      <button
+        type="button"
+        class="ui-btn ui-btn-primary b2b-confirm-dialog__button b2b-confirm-dialog__button--primary"
+        data-dialog-close
+        data-checkout-thanks-continue
+      >
+        Continuer
+      </button>
+    </div>
+  </div>
+</dialog>

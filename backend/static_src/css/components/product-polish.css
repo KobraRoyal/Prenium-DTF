@@ -1745,26 +1745,23 @@ html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__title {
 }
 
 html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__native {
-  position: relative;
-  display: block;
+  display: grid;
+  gap: 0.35rem;
   min-width: 0;
   margin: 0;
 }
 
-html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker-shell {
-  position: absolute;
-  inset: 0;
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker-wrap {
+  position: relative;
+  display: block;
+  min-height: 2.85rem;
   border-radius: var(--radius-sm, 14px);
-  border: 1px solid var(--line);
-  background-image:
-    linear-gradient(45deg, #ddd 25%, transparent 25%),
-    linear-gradient(-45deg, #ddd 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #ddd 75%),
-    linear-gradient(-45deg, transparent 75%, #ddd 75%);
-  background-size: 12px 12px;
-  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
-  background-color: #fff;
-  pointer-events: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 35%, transparent);
+  background: linear-gradient(135deg, #ff0055, #ffaa00, #fff500, #00d084, #0088ff, #aa00ff);
+}
+
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker-shell {
+  display: none;
 }
 
 html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker {
@@ -1774,7 +1771,7 @@ html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker {
   width: 100%;
   height: 2.85rem;
   min-height: 2.85rem;
-  padding: 0;
+  padding: 0.2rem;
   border: 0 !important;
   border-radius: var(--radius-sm, 14px) !important;
   background: transparent !important;
@@ -1789,12 +1786,12 @@ html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker::-w
 
 html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker::-webkit-color-swatch {
   border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--line));
-  border-radius: calc(var(--radius-sm, 14px) - 1px);
+  border-radius: calc(var(--radius-sm, 14px) - 2px);
 }
 
 html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__picker::-moz-color-swatch {
   border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--line));
-  border-radius: calc(var(--radius-sm, 14px) - 1px);
+  border-radius: calc(var(--radius-sm, 14px) - 2px);
 }
 
 html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__presets {
@@ -1822,16 +1819,10 @@ html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__preset:foc
   border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
 }
 
-html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__preset[data-hex-color-preset="#ffffff"] {
-  background-image:
-    linear-gradient(45deg, #e8e4da 25%, transparent 25%),
-    linear-gradient(-45deg, #e8e4da 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #e8e4da 75%),
-    linear-gradient(-45deg, transparent 75%, #e8e4da 75%);
-  background-size: 8px 8px;
-  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
-  background-color: #fff;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent);
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__preset[data-hex-color-preset="#ffffff"],
+html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__preset--white {
+  background: #fff !important;
+  border-color: color-mix(in srgb, var(--ink) 32%, var(--line));
 }
 
 html[data-theme="prenium"] body.product-shell .b2b-hex-color-popover__field {

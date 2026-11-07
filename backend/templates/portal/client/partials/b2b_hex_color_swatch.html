@@ -1,4 +1,5 @@
 {% with resolved_id=swatch_id|default:"hex-color-popover" %}
+{% if support_tip and not preview_mode %}<span class="b2b-support-color__tip b2b-support-color__tip--swatch b2b-support-color__tip--hex">{% endif %}
 <div
   class="b2b-hex-color-control{% if preview_mode %} b2b-hex-color-control--preview{% endif %}{% if selected %} is-active{% elif not preview_mode %} is-empty{% endif %}"
   data-hex-color-control
@@ -7,14 +8,15 @@
 >
   <button
     type="button"
-    class="b2b-swatch-btn b2b-swatch-btn--custom{% if preview_mode %} b2b-swatch-btn--rainbow-ring{% endif %} b2b-hex-color-control__trigger"
+    class="b2b-swatch-btn b2b-swatch-btn--custom{% if preview_mode %} b2b-swatch-btn--rainbow-ring{% else %} b2b-swatch-btn--picker{% endif %} b2b-hex-color-control__trigger"
     data-hex-color-trigger
     style="--swatch-color: {{ initial_color|default:'#ffffff' }};"
     aria-controls="{{ resolved_id }}"
     aria-expanded="false"
     aria-haspopup="dialog"
-    aria-label="{% if preview_mode %}Couleur de fond personnalisée{% else %}Couleur personnalisée (HEX){% endif %}"
-    title="{% if preview_mode %}Couleur de fond{% else %}Couleur personnalisée{% endif %}"
+    {% if support_tip and not preview_mode %}aria-describedby="support-hex-tip-{{ resolved_id }}"{% endif %}
+    aria-label="{% if preview_mode %}Couleur de fond personnalisée{% else %}{{ swatch_label|default:'Choisir une couleur (HEX)' }}{% endif %}"
+    {% if preview_mode or not support_tip %}title="{% if preview_mode %}Couleur de fond{% else %}{{ swatch_title|default:'Choisir une couleur' }}{% endif %}"{% endif %}
     {% if disabled %}disabled{% endif %}
   ></button>
   <div
@@ -28,20 +30,8 @@
     <div class="b2b-hex-color-popover__panel">
       <p class="b2b-hex-color-popover__title">Nuancier</p>
 
-      <label class="b2b-hex-color-popover__native">
-        <span class="ui-sr-only">Sélectionner une couleur</span>
-        <span class="b2b-hex-color-popover__picker-shell" aria-hidden="true"></span>
-        <input
-          type="color"
-          class="b2b-hex-color-popover__picker"
-          data-hex-color-native
-          value="{{ initial_color|default:'#ffffff' }}"
-          title="Ouvrir le sélecteur système"
-        >
-      </label>
-
       <div class="b2b-hex-color-popover__presets" role="group" aria-label="Couleurs fréquentes">
-        <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#ffffff" style="--preset:#ffffff" aria-label="Blanc" title="Blanc" aria-pressed="false"></button>
+        <button type="button" class="b2b-hex-color-popover__preset b2b-hex-color-popover__preset--white" data-hex-color-preset="#ffffff" style="--preset:#ffffff" aria-label="Blanc" title="Blanc" aria-pressed="false"></button>
         <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#111111" style="--preset:#111111" aria-label="Noir" title="Noir" aria-pressed="false"></button>
         <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#1e3a5f" style="--preset:#1e3a5f" aria-label="Marine" title="Marine" aria-pressed="false"></button>
         <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#1565c0" style="--preset:#1565c0" aria-label="Bleu" title="Bleu" aria-pressed="false"></button>
@@ -50,6 +40,21 @@
         <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#f5e6c8" style="--preset:#f5e6c8" aria-label="Beige" title="Beige" aria-pressed="false"></button>
         <button type="button" class="b2b-hex-color-popover__preset" data-hex-color-preset="#6b675c" style="--preset:#6b675c" aria-label="Gris" title="Gris" aria-pressed="false"></button>
       </div>
+
+      <label class="b2b-hex-color-popover__native">
+        <span class="product-form-label b2b-hex-color-popover__picker-label">Couleur libre</span>
+        <span class="b2b-hex-color-popover__picker-wrap">
+          <span class="b2b-hex-color-popover__picker-shell" aria-hidden="true"></span>
+          <input
+            type="color"
+            class="b2b-hex-color-popover__picker"
+            data-hex-color-native
+            value="{{ initial_color|default:'#ffffff' }}"
+            title="Ouvrir le sélecteur de couleur"
+            aria-label="Ouvrir le sélecteur de couleur"
+          >
+        </span>
+      </label>
 
       <label class="b2b-hex-color-popover__field">
         <span class="product-form-label">Code HEX</span>
@@ -71,4 +76,15 @@
     </div>
   </div>
 </div>
+{% if support_tip and not preview_mode %}
+<span
+  id="support-hex-tip-{{ resolved_id }}"
+  class="b2b-support-color__tip-panel"
+  role="tooltip"
+>
+  <strong>Base blanche ajustée</strong>
+  Si traits fins (&lt; 0,5&nbsp;mm) : un contour assorti renforce la tenue au lavage, discret si la couleur est bien choisie.
+</span>
+</span>
+{% endif %}
 {% endwith %}

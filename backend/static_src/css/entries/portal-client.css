@@ -1308,6 +1308,23 @@ html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-con
   color: var(--muted) !important;
 }
 
+/* Tips support (hors @layer). */
+body.product-shell .b2b-support-color__legend{display:inline-flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+body.product-shell .b2b-support-color__tip{position:relative;display:inline-flex;align-items:center}
+body.product-shell .b2b-support-color__tip-btn{display:inline-grid;place-items:center;width:1.25rem;height:1.25rem;margin:0;padding:0;border:1.5px solid color-mix(in srgb,var(--product-blue) 55%,var(--product-line));border-radius:999px;background:color-mix(in srgb,var(--product-blue) 12%,var(--product-panel));color:var(--product-blue);font-size:.72rem;font-weight:800;line-height:1;cursor:help;appearance:none}
+body.product-shell .b2b-support-color__tip:is(:hover,:focus-within) .b2b-support-color__tip-btn{border-color:var(--product-blue);background:color-mix(in srgb,var(--product-blue) 20%,var(--product-panel))}
+body.product-shell .b2b-support-color__tip-panel{position:absolute;top:calc(100% + .45rem);left:50%;z-index:60;width:min(22rem,calc(100vw - 2rem));padding:.75rem .85rem;border:1px solid var(--product-line);border-radius:.75rem;background:var(--product-panel);box-shadow:0 10px 28px color-mix(in srgb,var(--product-ink) 14%,transparent);color:var(--product-ink);font-size:.78rem;font-weight:500;line-height:1.4;transform:translateX(-50%);opacity:0;visibility:hidden;pointer-events:none}
+body.product-shell .b2b-support-color__tip-panel strong{display:block;margin-bottom:.35rem;font-weight:750}
+body.product-shell .b2b-support-color__tip:is(:hover,:focus-within) .b2b-support-color__tip-panel{opacity:1;visibility:visible;pointer-events:auto}
+body.product-shell .b2b-configurator-dialog .b2b-support-color__tip-panel{left:auto;right:0;transform:none}
+body.product-shell .b2b-support-color__choices{overflow:visible}
+body.product-shell .b2b-support-color__tip--swatch{width:2.35rem;height:2.35rem;flex:0 0 2.35rem}
+body.product-shell .b2b-support-color__tip--swatch .b2b-swatch-btn,
+body.product-shell .b2b-support-color__tip--hex .b2b-hex-color-control{width:100%;height:100%}
+body.product-shell .b2b-support-color__tip--swatch .b2b-support-color__tip-panel{top:auto;bottom:calc(100% + .4rem);z-index:80;width:max-content;max-width:min(18rem,calc(100vw - 2rem));padding:.55rem .7rem;font-weight:500;text-align:left}
+body.product-shell .b2b-support-color__tip--swatch .b2b-support-color__tip-panel strong{margin-bottom:.3rem}
+body.product-shell .b2b-configurator-dialog .b2b-support-color__tip--swatch{width:2.75rem;height:2.75rem;flex-basis:2.75rem}
+
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-support-color.is-exact-required .b2b-support-color__choices,
 html[data-theme="prenium"] body.landing-saas.portal-shell.product-shell .b2b-configurator-dialog .b2b-support-color__choices {
   display: grid !important;
