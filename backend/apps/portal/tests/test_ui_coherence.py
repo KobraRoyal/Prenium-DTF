@@ -2075,9 +2075,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         staff_navigation = template_source("components/nav/portal_staff_navigation.html")
 
         summary = template_source("portal/client/partials/order_project_summary.html")
-        file_checkout = template_source(
-            "portal/client/partials/order_project_checkout_dialog.html"
-        )
+        file_checkout = template_source("portal/client/partials/order_project_checkout_dialog.html")
         settlement = template_source("portal/client/partials/b2b_settlement_choice.html")
         checkout_summary = template_source("portal/client/partials/checkout_summary.html")
 
