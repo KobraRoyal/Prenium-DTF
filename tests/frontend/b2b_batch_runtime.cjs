@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
+const { runBrowserScript } = require('./vm_browser_modules.cjs');
 class Element {
   constructor() { this.dataset = {}; this.attributes = {}; this.hidden = false; this.isConnected = true; }
   querySelector() { return null; }
@@ -45,7 +46,10 @@ const ctx = vm.createContext({
   DataTransfer, Event: class { constructor(type) { this.type = type; } }, Node: Element,
   queueMicrotask, console,
 });
-vm.runInContext(fs.readFileSync(path.join(__dirname, '../../backend/static_src/js/b2b-configurator.js'), 'utf8'), ctx);
+runBrowserScript(
+  fs.readFileSync(path.join(__dirname, '../../backend/static_src/js/b2b-configurator.js'), 'utf8'),
+  ctx,
+);
 const root = new Element(), form = new Form(), input = new Input('file');
 const error = new Element(), summary = new Element(), list = new List(), submit = new Button();
 root.closest = () => form;

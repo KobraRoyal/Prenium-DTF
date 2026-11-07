@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { loadCheckoutDeliveryFields, prepareBrowserSource } = require('./vm_browser_modules.cjs');
 
 class ClassList {
   add() {}
@@ -149,6 +150,8 @@ const context = vm.createContext({
   URL,
   Element,
   HTMLElement: Element,
+  HTMLFormElement: Element,
+  HTMLSelectElement: Element,
   HTMLInputElement: Input,
   HTMLButtonElement: Button,
   HTMLAnchorElement: Anchor,
@@ -157,10 +160,10 @@ const context = vm.createContext({
   requestAnimationFrame: window.requestAnimationFrame,
   structuredClone,
 });
-const source = fs.readFileSync(
+const source = prepareBrowserSource(fs.readFileSync(
   path.join(__dirname, '../../backend/static_src/js/gang-sheet-editor.js'),
   'utf8',
-);
+));
 const hookPoint = '  syncSpacingControls();\n  setMobilePanel("canvas");';
 assert.equal(source.split(hookPoint).length, 2, 'editor test hook point must remain unique');
 const instrumentedSource = source.replace(hookPoint, `
@@ -202,6 +205,7 @@ const instrumentedSource = source.replace(hookPoint, `
     textMaxWidthMm,
   });
 ${hookPoint}`);
+loadCheckoutDeliveryFields(context);
 vm.runInContext(instrumentedSource, context);
 const hooks = window.__gangSheetEditorTestHooks;
 
