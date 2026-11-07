@@ -25,6 +25,7 @@
 
     {% include "components/forms/field_group.html" with id="id_company_name" name="name" label="Raison sociale" type="text" autocomplete="organization" value=company_form.name.value|default:"" error=company_form.name.errors.0 required=1 show_label=1 autofocus=1 %}
     {% include "components/forms/field_group.html" with id="id_company_billing_email" name="billing_email" label="E-mail de facturation" type="email" autocomplete="email" value=company_form.billing_email.value|default:"" error=company_form.billing_email.errors.0 show_label=1 %}
+    {% include "components/forms/field_group.html" with id="id_company_phone" name="phone" label="Téléphone" type="tel" autocomplete="tel" inputmode="tel" value=company_form.phone.value|default:"" error=company_form.phone.errors.0 show_label=1 %}
 
     <div class="account-profile-form__grid">
       {% include "components/forms/field_group.html" with id="id_company_siren" name="siren" label="SIREN" type="text" inputmode="numeric" value=company_form.siren.value|default:"" error=company_form.siren.errors.0 show_label=1 %}

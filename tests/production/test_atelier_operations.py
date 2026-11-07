@@ -435,6 +435,7 @@ def test_console_declares_ready_order_in_sendcloud_without_opening_detail(monkey
             "recipient_name": "Atelier Client",
             "recipient_company_name": "Atelier Client",
             "recipient_email": "logistique@example.com",
+            "recipient_phone_number": "+33612345678",
             "recipient_country_code": "FR",
             "recipient_city": "Lille",
             "recipient_postal_code": "59000",

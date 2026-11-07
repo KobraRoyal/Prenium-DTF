@@ -196,6 +196,7 @@ class ProspectReviewService:
         customer = Customer.objects.create(
             name=profile.company,
             billing_email=profile.email,
+            phone=str(profile.phone or "").strip()[:32],
             billing_address_line1=profile.billing_address_line1,
             billing_address_line2=profile.billing_address_line2,
             billing_postal_code=profile.billing_postal_code,

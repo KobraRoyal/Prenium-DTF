@@ -1323,19 +1323,20 @@ class ClientGangSheetCheckoutView(ClientGangSheetMixin, View):
                 (request.POST.get("delivery_destination") or "billing").strip().lower()
             )
             same_as_billing = delivery_destination != "other"
-            delivery_payload = {
-                "shipping_address_line1": request.POST.get("shipping_address_line1", ""),
-                "shipping_address_line2": request.POST.get("shipping_address_line2", ""),
-                "shipping_postal_code": request.POST.get("shipping_postal_code", ""),
-                "shipping_city": request.POST.get("shipping_city", ""),
-                "shipping_country": request.POST.get("shipping_country", ""),
-            }
             recipient_payload = {
                 "name": request.POST.get("shipping_contact_name", ""),
                 "email": request.POST.get("shipping_email", ""),
                 "phone": request.POST.get("shipping_phone", ""),
                 "company_name": request.POST.get("shipping_company_name", ""),
                 "house_number": request.POST.get("shipping_house_number", ""),
+            }
+            delivery_payload = {
+                "shipping_address_line1": request.POST.get("shipping_address_line1", ""),
+                "shipping_address_line2": request.POST.get("shipping_address_line2", ""),
+                "shipping_postal_code": request.POST.get("shipping_postal_code", ""),
+                "shipping_city": request.POST.get("shipping_city", ""),
+                "shipping_country": request.POST.get("shipping_country", ""),
+                "phone": recipient_payload["phone"],
             }
             delivery_snapshot = None
             if shipping_code != "pickup":

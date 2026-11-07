@@ -77,6 +77,7 @@ def build_shipment_payload():
             "city": "Paris",
             "country_code": "FR",
             "email": "jean@example.com",
+            "phone_number": "+33102030405",
         },
         "parcel": {"weight": {"value": "1.250", "unit": "kg"}},
     }

@@ -74,6 +74,13 @@ def submit_request(client: Client, *, email="prospect@example.com") -> ProspectP
 
 
 @pytest.mark.django_db
+def test_step1_requires_phone(client):
+    response = client.post(reverse("prospects:step1"), step1_payload(phone=""))
+    assert response.status_code == 200
+    assert "phone" in response.context["form"].errors
+
+
+@pytest.mark.django_db
 def test_france_requires_nine_digit_siren_and_foreign_country_requires_tax_id(client):
     response = client.post(reverse("prospects:step1"), step1_payload(siren="123"))
     assert response.status_code == 200
@@ -374,6 +381,7 @@ def test_only_reviewer_can_approve_and_approval_keeps_org_inactive(client):
     assert profile.status == ProspectProfile.Status.APPROVED_PENDING_ACTIVATION
     assert profile.customer is not None
     assert profile.customer.is_active is False
+    assert profile.customer.phone == profile.phone
     assert profile.customer.billing_address_line1 == profile.billing_address_line1
     assert profile.customer.billing_address_line2 == profile.billing_address_line2
     assert profile.customer.billing_postal_code == profile.billing_postal_code

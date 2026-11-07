@@ -33,7 +33,12 @@ def build_shipment_form_data(*, order, submitted_data=None) -> dict[str, str]:
         "recipient_name": snapshot.get("name") or customer.name or "",
         "recipient_company_name": snapshot.get("company_name") or customer.name or "",
         "recipient_email": snapshot.get("email") or customer.billing_email or "",
-        "recipient_phone_number": snapshot.get("phone") or snapshot.get("phone_number") or "",
+        "recipient_phone_number": (
+            snapshot.get("phone")
+            or snapshot.get("phone_number")
+            or customer.phone
+            or ""
+        ),
         "recipient_country_code": country[:2],
         "recipient_city": snapshot.get("city") or customer.shipping_city or "",
         "recipient_postal_code": snapshot.get("postal_code") or customer.shipping_postal_code or "",

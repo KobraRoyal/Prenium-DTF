@@ -59,6 +59,11 @@ class Customer(BaseModel):
 
     name = models.CharField(max_length=255)
     billing_email = models.EmailField(blank=True)
+    phone = models.CharField(
+        "Téléphone",
+        max_length=32,
+        blank=True,
+    )
     siren = models.CharField(max_length=9, blank=True)
     vat_number = models.CharField(max_length=32, blank=True)
     is_active = models.BooleanField(default=True)

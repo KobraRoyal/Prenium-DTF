@@ -45,6 +45,7 @@ class CustomerAdmin(AdminAuditMixin, admin.ModelAdmin):
                 "fields": (
                     "name",
                     "billing_email",
+                    "phone",
                     "is_active",
                     "notes",
                 )

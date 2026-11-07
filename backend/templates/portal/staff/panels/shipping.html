@@ -93,7 +93,7 @@
           {% include "components/forms/field_group.html" with id="id_recipient_name" name="recipient_name" label="Nom du contact" value=form_data.recipient_name autocomplete="shipping name" required=1 show_label=1 %}
           {% include "components/forms/field_group.html" with id="id_recipient_company_name" name="recipient_company_name" label="Société" value=form_data.recipient_company_name autocomplete="shipping organization" show_label=1 %}
           {% include "components/forms/field_group.html" with id="id_recipient_email" name="recipient_email" label="Email de suivi" type="email" value=form_data.recipient_email autocomplete="shipping email" required=1 show_label=1 %}
-          {% include "components/forms/field_group.html" with id="id_recipient_phone_number" name="recipient_phone_number" label="Téléphone" type="tel" value=form_data.recipient_phone_number autocomplete="shipping tel" show_label=1 %}
+          {% include "components/forms/field_group.html" with id="id_recipient_phone_number" name="recipient_phone_number" label="Téléphone" type="tel" value=form_data.recipient_phone_number autocomplete="shipping tel" required=1 show_label=1 %}
         </div>
       </fieldset>
 

@@ -784,6 +784,14 @@ class ShipmentService:
                 "source": source,
             },
         )
+        from apps.customers.services.company_profile import CompanyProfileService
+
+        CompanyProfileService().remember_phone(
+            customer=order.customer,
+            phone=shipment_request["recipient"].get("phone_number", ""),
+            actor=actor,
+            source=source,
+        )
         if order.estimated_handover_date is None:
             from apps.shipping.services.methods import ShippingMethodService
 
@@ -1409,6 +1417,7 @@ class ShipmentService:
             "city",
             "country_code",
             "email",
+            "phone_number",
         )
         missing_fields = [field_name for field_name in required_fields if not address[field_name]]
         if missing_fields:

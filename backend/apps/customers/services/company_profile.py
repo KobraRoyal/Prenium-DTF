@@ -12,6 +12,7 @@ from apps.customers.models import Customer
 COMPANY_PROFILE_FIELDS = (
     "name",
     "billing_email",
+    "phone",
     "siren",
     "vat_number",
     "billing_address_line1",
@@ -94,6 +95,7 @@ def shipping_same_as_billing(customer: Customer) -> bool:
 class CompanyProfilePresentation:
     name: str
     billing_email: str
+    phone: str
     siren: str
     vat_number: str
     billing_address: str
@@ -108,12 +110,42 @@ class CompanyProfileService:
         return CompanyProfilePresentation(
             name=(customer.name or "").strip(),
             billing_email=(customer.billing_email or "").strip(),
+            phone=(customer.phone or "").strip(),
             siren=(customer.siren or "").strip(),
             vat_number=(customer.vat_number or "").strip(),
             billing_address=format_customer_address(customer, kind="billing"),
             shipping_address="" if same else shipping_address,
             shipping_same_as_billing=same,
         )
+
+    @transaction.atomic
+    def remember_phone(
+        self,
+        *,
+        customer: Customer,
+        phone: str,
+        actor=None,
+        source: str = "shipping",
+    ) -> Customer:
+        """Conserve le téléphone d’expédition sur le compte client."""
+        normalized = str(phone or "").strip()[:32]
+        if not normalized:
+            return customer
+        locked = Customer.objects.select_for_update().get(pk=customer.pk)
+        if (locked.phone or "").strip() == normalized:
+            return locked
+        locked.phone = normalized
+        locked.save(update_fields=["phone", "updated_at"])
+        record_event(
+            action="customer.phone_remembered",
+            actor=actor if getattr(actor, "is_authenticated", False) else None,
+            target=locked,
+            metadata={
+                "customer_public_id": str(locked.public_id),
+                "source": source,
+            },
+        )
+        return locked
 
     @transaction.atomic
     def update(
@@ -159,6 +191,7 @@ class CompanyProfileService:
     ) -> Customer:
         locked = Customer.objects.select_for_update().get(pk=customer.pk)
         data = payload or {}
+        phone = str(data.get("phone") or data.get("phone_number") or "").strip()[:32]
         if same_as_billing:
             values = {
                 "shipping_address_line1": (locked.billing_address_line1 or "").strip(),
@@ -176,6 +209,8 @@ class CompanyProfileService:
                 "shipping_city": str(data.get("shipping_city") or "").strip(),
                 "shipping_country": country.strip().upper() or "FR",
             }
+        if phone:
+            values["phone"] = phone
         if not (
             values["shipping_address_line1"]
             and values["shipping_postal_code"]
@@ -213,7 +248,9 @@ class CompanyProfileService:
         return {
             "name": str(data.get("name") or customer.name or "").strip(),
             "email": str(data.get("email") or customer.billing_email or "").strip(),
-            "phone": str(data.get("phone") or data.get("phone_number") or "").strip(),
+            "phone": str(
+                data.get("phone") or data.get("phone_number") or customer.phone or ""
+            ).strip(),
             "company_name": str(data.get("company_name") or customer.name or "").strip(),
             "house_number": str(data.get("house_number") or "").strip(),
         }
@@ -228,11 +265,17 @@ class CompanyProfileService:
         defaults = self.checkout_delivery_defaults(customer, data)
         name = str(data.get("name") or defaults["name"]).strip()
         email = str(data.get("email") or defaults["email"]).strip()
+        phone = str(data.get("phone") or defaults["phone"] or "").strip()
         house_number = str(data.get("house_number") or defaults["house_number"]).strip()
         if not (name and email and house_number and "@" in email):
             raise ValidationError(
                 "Indiquez le destinataire, un email de suivi et le n° de voie.",
                 code="delivery_recipient_required",
+            )
+        if not phone:
+            raise ValidationError(
+                "Indiquez un téléphone de livraison.",
+                code="delivery_phone_required",
             )
         return {
             "line1": (customer.shipping_address_line1 or "").strip(),
@@ -242,7 +285,7 @@ class CompanyProfileService:
             "country": (customer.shipping_country or "FR").strip().upper() or "FR",
             "name": name,
             "email": email,
-            "phone": str(data.get("phone") or "").strip(),
+            "phone": phone,
             "company_name": str(data.get("company_name") or customer.name or "").strip(),
             "house_number": house_number,
         }

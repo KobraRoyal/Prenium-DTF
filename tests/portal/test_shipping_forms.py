@@ -45,3 +45,20 @@ def test_shipment_form_prefills_sendcloud_snapshot_from_project():
     assert form["recipient_address_line_1"] == "quai de Loire"
     assert form["recipient_city"] == "Orléans"
     assert form["recipient_postal_code"] == "45000"
+
+
+@pytest.mark.django_db
+def test_shipment_form_prefills_customer_phone_when_snapshot_has_none():
+    user = get_user_model().objects.create_user(email="ship-phone@example.com", password="pass")
+    customer = Customer.objects.create(
+        name="Acme Phone",
+        billing_email="factu-phone@example.com",
+        phone="0699887766",
+        shipping_address_line1="1 rue Test",
+        shipping_postal_code="75001",
+        shipping_city="Paris",
+        shipping_country="FR",
+    )
+    order = Order.objects.create(customer=customer, created_by=user)
+    form = build_shipment_form_data(order=order)
+    assert form["recipient_phone_number"] == "0699887766"

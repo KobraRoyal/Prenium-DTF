@@ -11,7 +11,12 @@ class ProspectStep1Form(forms.Form):
     first_name = forms.CharField(label="Prénom", max_length=150)
     last_name = forms.CharField(label="Nom", max_length=150)
     email = forms.EmailField(label="Email professionnel")
-    phone = forms.CharField(label="Téléphone", max_length=32)
+    phone = forms.CharField(
+        label="Téléphone",
+        max_length=32,
+        required=True,
+        error_messages={"required": "Indiquez un numéro de téléphone."},
+    )
     company = forms.CharField(label="Société", max_length=255)
     country = forms.ChoiceField(
         label="Pays de facturation",

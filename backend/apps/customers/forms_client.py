@@ -30,6 +30,7 @@ class ClientCompanyProfileForm(forms.ModelForm):
         fields = (
             "name",
             "billing_email",
+            "phone",
             "siren",
             "vat_number",
             "billing_address_line1",
@@ -46,6 +47,7 @@ class ClientCompanyProfileForm(forms.ModelForm):
         labels = {
             "name": "Raison sociale",
             "billing_email": "E-mail de facturation",
+            "phone": "Téléphone",
             "siren": "SIREN",
             "vat_number": "N° TVA",
             "billing_address_line1": "Adresse",
@@ -60,6 +62,14 @@ class ClientCompanyProfileForm(forms.ModelForm):
         widgets = {
             "name": forms.TextInput(attrs={"class": "ui-input", "autocomplete": "organization"}),
             "billing_email": forms.EmailInput(attrs={"class": "ui-input", "autocomplete": "email"}),
+            "phone": forms.TextInput(
+                attrs={
+                    "class": "ui-input",
+                    "autocomplete": "tel",
+                    "inputmode": "tel",
+                    "placeholder": "+33 6 12 34 56 78",
+                }
+            ),
             "siren": forms.TextInput(
                 attrs={"class": "ui-input", "inputmode": "numeric", "autocomplete": "off"}
             ),

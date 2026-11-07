@@ -27,6 +27,10 @@
       <dd{% if not company_profile.billing_email %} class="is-empty"{% endif %}>{% if company_profile.billing_email %}{{ company_profile.billing_email }}{% else %}À renseigner{% endif %}</dd>
     </div>
     <div>
+      <dt>Téléphone</dt>
+      <dd{% if not company_profile.phone %} class="is-empty"{% endif %}>{% if company_profile.phone %}{{ company_profile.phone }}{% else %}À renseigner{% endif %}</dd>
+    </div>
+    <div>
       <dt>SIREN</dt>
       <dd{% if not company_profile.siren %} class="is-empty"{% endif %}>{% if company_profile.siren %}{{ company_profile.siren }}{% else %}À renseigner{% endif %}</dd>
     </div>

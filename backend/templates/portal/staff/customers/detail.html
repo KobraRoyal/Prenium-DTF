@@ -26,6 +26,10 @@
         <dd>{% if customer.billing_email %}{{ customer.billing_email }}{% else %}<span class="muted">Non renseigné</span>{% endif %}</dd>
       </div>
       <div>
+        <dt>Téléphone</dt>
+        <dd>{% if customer.phone %}{{ customer.phone }}{% else %}<span class="muted">Non renseigné</span>{% endif %}</dd>
+      </div>
+      <div>
         <dt>Cycle</dt>
         <dd>{% if billing_profile %}{{ billing_profile.get_billing_cycle_display }}{% else %}<span class="muted">Non défini</span>{% endif %}</dd>
       </div>
@@ -91,6 +95,7 @@
         <div class="grid gap-3 md:grid-cols-2">
           {% include "portal/staff/customers/_field.html" with field=account_form.name %}
           {% include "portal/staff/customers/_field.html" with field=account_form.billing_email %}
+          {% include "portal/staff/customers/_field.html" with field=account_form.phone %}
           {% include "portal/staff/customers/_field.html" with field=account_form.siren %}
           {% include "portal/staff/customers/_field.html" with field=account_form.vat_number %}
           <div class="md:col-span-2">

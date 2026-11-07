@@ -120,6 +120,7 @@ def test_admin_can_update_company_profile_via_htmx():
         {
             "name": "Studio Ouest",
             "billing_email": "facturation@ouest.example",
+            "phone": "06 12 34 56 78",
             "siren": "987654321",
             "vat_number": "FR987654321",
             "billing_address_line1": "5 avenue Hugo",
@@ -138,11 +139,13 @@ def test_admin_can_update_company_profile_via_htmx():
     assert response.status_code == 200
     assert "Studio Ouest" in html
     assert "5 avenue Hugo" in html
+    assert "06 12 34 56 78" in html
     assert "Identique à la facturation" in html
     assert "X-Prenium-Toast" in response.headers
     customer.refresh_from_db()
     assert customer.name == "Studio Ouest"
     assert customer.billing_email == "facturation@ouest.example"
+    assert customer.phone == "06 12 34 56 78"
     assert customer.siren == "987654321"
     assert customer.shipping_address_line1 == "5 avenue Hugo"
     assert customer.shipping_city == "Bordeaux"
@@ -251,6 +254,15 @@ def test_build_checkout_delivery_snapshot_requires_sendcloud_recipient():
         CompanyProfileService().build_checkout_delivery_snapshot(
             customer=customer,
             payload={"name": customer.name, "email": customer.billing_email},
+        )
+    with pytest.raises(ValidationError, match="téléphone"):
+        CompanyProfileService().build_checkout_delivery_snapshot(
+            customer=customer,
+            payload={
+                "name": customer.name,
+                "email": customer.billing_email,
+                "house_number": "12",
+            },
         )
 
 

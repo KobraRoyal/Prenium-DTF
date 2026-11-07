@@ -20,6 +20,7 @@ class StaffCustomerAccountForm(forms.ModelForm):
         fields = (
             "name",
             "billing_email",
+            "phone",
             "siren",
             "vat_number",
             "is_active",
@@ -41,6 +42,7 @@ class StaffCustomerAccountForm(forms.ModelForm):
         labels = {
             "name": "Raison sociale",
             "billing_email": "E-mail de facturation",
+            "phone": "Téléphone",
             "siren": "SIREN",
             "vat_number": "N° TVA",
             "is_active": "Compte actif",
@@ -50,6 +52,7 @@ class StaffCustomerAccountForm(forms.ModelForm):
             "notes": "Notes internes",
         }
         help_texts = {
+            "phone": "",
             "default_billing_mode": (
                 "En comptant CB, l’encours n’est plus proposé au client. "
                 "En encours, il peut encore choisir le comptant CB "
@@ -64,6 +67,14 @@ class StaffCustomerAccountForm(forms.ModelForm):
             "notes": forms.Textarea(attrs={"rows": 3, "class": "ui-input"}),
             "name": forms.TextInput(attrs={"class": "ui-input"}),
             "billing_email": forms.EmailInput(attrs={"class": "ui-input"}),
+            "phone": forms.TextInput(
+                attrs={
+                    "class": "ui-input",
+                    "autocomplete": "tel",
+                    "inputmode": "tel",
+                    "placeholder": "+33 6 12 34 56 78",
+                }
+            ),
             "siren": forms.TextInput(attrs={"class": "ui-input"}),
             "vat_number": forms.TextInput(attrs={"class": "ui-input"}),
             "default_billing_mode": forms.RadioSelect,
