@@ -11,10 +11,7 @@ from django.views import View
 def _http_error_preview_allowed(request) -> bool:
     if settings.DEBUG:
         return True
-    module = (
-        getattr(settings, "SETTINGS_MODULE", "")
-        or ""
-    )
+    module = getattr(settings, "SETTINGS_MODULE", "") or ""
     # Dev local met parfois DEBUG=False pour tester les handlers custom.
     if module.endswith(".dev"):
         return True

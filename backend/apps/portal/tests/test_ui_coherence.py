@@ -1562,7 +1562,7 @@ class PortalUiCoherenceTests(SimpleTestCase):
         self.assertIn("checkout_required_mark.html", studio_dialog)
         self.assertIn("checkout_required_mark.html", file_dialog)
         self.assertIn('data-checkout-req-for="{{ field }}"', req_mark)
-        self.assertIn("aria-label=\"obligatoire\"", req_mark)
+        self.assertIn('aria-label="obligatoire"', req_mark)
         self.assertNotIn("Sendcloud", studio_dialog)
         self.assertNotIn("Sendcloud", file_dialog)
         self.assertIn("champs marqués *", studio_dialog)
