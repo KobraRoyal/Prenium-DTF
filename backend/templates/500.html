@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block body_class %}landing-saas portal-shell product-shell product-shell--auth product-shell--error{% endblock %}
+
+{% block title %}Erreur serveur — Prenium DTF{% endblock %}
+
+{% block content %}
+{% include "components/nav/auth_header.html" %}
+
+<main class="app-main app-content landing-saas-main ui-shell-main product-layout" id="main-content">
+  <section class="product-login-shell product-error-shell" aria-labelledby="error-500-heading">
+    <div class="product-auth-card product-login-card product-error-card">
+      <p class="product-error-card__code" aria-hidden="true">500</p>
+      <header class="product-login-card__intro">
+        <h1 id="error-500-heading">Une erreur est survenue</h1>
+        <p>
+          Le service a rencontré un problème temporaire.
+          Réessayez dans un instant, ou reprenez depuis l’accueil.
+        </p>
+      </header>
+      <div class="product-error-card__actions">
+        <a class="ui-btn ui-btn-primary ui-btn-block" href="{% url 'home' %}">Retour à l’accueil</a>
+        <a class="ui-btn ui-btn-secondary ui-btn-block" href="{% url 'portal:login' %}">Connexion</a>
+      </div>
+      <footer class="product-login-footer">
+        {% include "portal/partials/auth_support.html" %}
+      </footer>
+    </div>
+  </section>
+</main>
+{% endblock %}

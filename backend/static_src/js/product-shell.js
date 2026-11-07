@@ -304,10 +304,15 @@ function initSubmitLoadingState() {
         return;
       }
       const submitter = event.submitter || form.querySelector("[type='submit']");
-      if (submitter instanceof HTMLButtonElement) {
-        submitter.classList.add("is-loading");
-        submitter.setAttribute("aria-busy", "true");
-      }
+      // Différer : les autres handlers submit (checkout studio/fichier) peuvent
+      // encore appeler preventDefault dans le même tour d’événements.
+      queueMicrotask(() => {
+        if (event.defaultPrevented) return;
+        if (submitter instanceof HTMLButtonElement) {
+          submitter.classList.add("is-loading");
+          submitter.setAttribute("aria-busy", "true");
+        }
+      });
     });
   });
 }

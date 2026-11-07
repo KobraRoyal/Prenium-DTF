@@ -211,6 +211,40 @@ dialog.gang-studio-pay-dialog .gang-studio-delivery {
   gap: 0.7rem;
 }
 
+dialog.gang-studio-pay-dialog .ui-label__req {
+  margin-inline-start: 0.15em;
+  white-space: nowrap;
+}
+
+dialog.gang-studio-pay-dialog .ui-label__req[hidden] {
+  display: none !important;
+}
+
+dialog.gang-studio-pay-dialog .ui-label__req-mark {
+  color: var(--danger);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: help;
+}
+
+dialog.gang-studio-pay-dialog .ui-field-group.is-invalid .ui-label {
+  color: var(--danger-text, var(--danger));
+}
+
+dialog.gang-studio-pay-dialog .ui-field-group.is-invalid .ui-input,
+dialog.gang-studio-pay-dialog .ui-field-group.is-invalid .ui-input[aria-invalid="true"] {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
+
+dialog.gang-studio-pay-dialog .ui-field-group .ui-error-text {
+  margin: 0.15rem 0 0;
+}
+
+dialog.gang-studio-pay-dialog .ui-field-group .ui-error-text[hidden] {
+  display: none !important;
+}
+
 /* `display: grid` ci-dessus écrase sinon l’attribut HTML hidden (retrait atelier). */
 dialog.gang-studio-pay-dialog .gang-studio-delivery[hidden],
 dialog.gang-studio-pay-dialog .gang-studio-delivery__other[hidden],

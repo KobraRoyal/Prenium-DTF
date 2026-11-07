@@ -41,7 +41,7 @@
       <section class="gang-studio-delivery" data-studio-delivery>
         <h3 class="gang-studio-pay-dialog__section-title">Adresse de livraison</h3>
         {% if studio_billing_complete %}
-        <p class="gang-studio-pay-dialog__hint">Destinataire et adresse utilisés par Sendcloud.</p>
+        <p class="gang-studio-pay-dialog__hint">Destinataire et adresse pour l’expédition. Les champs marqués * sont obligatoires.</p>
         <div class="gang-studio-delivery__options" role="radiogroup" aria-label="Adresse de livraison">
           <label class="gang-studio-delivery__option">
             <input
@@ -72,12 +72,12 @@
         </div>
         {% else %}
         <input type="hidden" name="delivery_destination" value="other">
-        <p class="gang-studio-pay-dialog__hint">L’adresse de facturation du compte n’est pas complète. Indiquez le destinataire Sendcloud.</p>
+        <p class="gang-studio-pay-dialog__hint">Adresse de facturation incomplète. Renseignez les champs marqués * pour l’expédition.</p>
         {% endif %}
         <div class="gang-studio-delivery__contact" data-studio-delivery-contact>
           <div class="gang-studio-delivery__locality">
             <div class="ui-field-group">
-              <label class="ui-label" for="id-studio-shipping-name">Destinataire</label>
+              <label class="ui-label" for="id-studio-shipping-name">Destinataire {% include "portal/client/partials/checkout_required_mark.html" with field="shipping_contact_name" %}</label>
               <input
                 class="ui-input"
                 id="id-studio-shipping-name"
@@ -88,7 +88,7 @@
               >
             </div>
             <div class="ui-field-group">
-              <label class="ui-label" for="id-studio-shipping-email">Email de suivi</label>
+              <label class="ui-label" for="id-studio-shipping-email">Email de suivi {% include "portal/client/partials/checkout_required_mark.html" with field="shipping_email" %}</label>
               <input
                 class="ui-input"
                 id="id-studio-shipping-email"
@@ -101,7 +101,7 @@
           </div>
           <div class="gang-studio-delivery__locality">
             <div class="ui-field-group">
-              <label class="ui-label" for="id-studio-shipping-phone">Téléphone</label>
+              <label class="ui-label" for="id-studio-shipping-phone">Téléphone {% include "portal/client/partials/checkout_required_mark.html" with field="shipping_phone" %}</label>
               <input
                 class="ui-input"
                 id="id-studio-shipping-phone"
@@ -128,7 +128,7 @@
         <div class="gang-studio-delivery__address" data-studio-delivery-address>
           <div class="gang-studio-delivery__street">
             <div class="ui-field-group gang-studio-delivery__house">
-              <label class="ui-label" for="id-studio-shipping-house">N°</label>
+              <label class="ui-label" for="id-studio-shipping-house">N° {% include "portal/client/partials/checkout_required_mark.html" with field="shipping_house_number" %}</label>
               <input
                 class="ui-input"
                 id="id-studio-shipping-house"
@@ -145,7 +145,7 @@
               {% if studio_billing_complete and studio_shipping_same_as_billing %}hidden{% endif %}
             >
               <div class="ui-field-group">
-                <label class="ui-label" for="id-studio-shipping-line1">Voie</label>
+                <label class="ui-label" for="id-studio-shipping-line1">Voie {% include "portal/client/partials/checkout_required_mark.html" with field="shipping_address_line1" %}</label>
                 <input
                   class="ui-input"
                   id="id-studio-shipping-line1"
@@ -168,7 +168,7 @@
               </div>
               <div class="gang-studio-delivery__locality">
                 <div class="ui-field-group">
-                  <label class="ui-label" for="id-studio-shipping-postal">Code postal</label>
+                  <label class="ui-label" for="id-studio-shipping-postal">Code postal {% include "portal/client/partials/checkout_required_mark.html" with field="shipping_postal_code" %}</label>
                   <input
                     class="ui-input"
                     id="id-studio-shipping-postal"
@@ -179,7 +179,7 @@
                   >
                 </div>
                 <div class="ui-field-group">
-                  <label class="ui-label" for="id-studio-shipping-city">Ville</label>
+                  <label class="ui-label" for="id-studio-shipping-city">Ville {% include "portal/client/partials/checkout_required_mark.html" with field="shipping_city" %}</label>
                   <input
                     class="ui-input"
                     id="id-studio-shipping-city"

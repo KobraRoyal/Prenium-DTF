@@ -1,3 +1,11 @@
+import {
+  bindCheckoutDeliveryFieldFeedback,
+  clearCheckoutDeliveryErrors,
+  checkoutDeliveryToastMessage,
+  syncCheckoutDeliveryRequiredMarks,
+  validateCheckoutDeliveryFields,
+} from "./checkout-delivery-fields.js?v=20261107-checkout-required-v1";
+
 const previewObjectUrls = new WeakMap();
 const previewRenderTokens = new WeakMap();
 const previewFitObservers = new WeakMap();
@@ -2826,23 +2834,25 @@ function syncFileCheckoutDelivery() {
   const otherFields = form.querySelector("[data-file-checkout-delivery-other]");
   const other = !pickup && fileDeliveryOtherSelected(form);
   if (otherFields instanceof HTMLElement) otherFields.hidden = !other;
-  const requiredNames = new Set([
-    "shipping_contact_name",
-    "shipping_email",
-    "shipping_phone",
-    "shipping_house_number",
-  ]);
-  if (other) {
-    requiredNames.add("shipping_address_line1");
-    requiredNames.add("shipping_postal_code");
-    requiredNames.add("shipping_city");
-  }
+  const requiredNames = new Set(
+    pickup
+      ? []
+      : [
+          "shipping_contact_name",
+          "shipping_email",
+          "shipping_phone",
+          "shipping_house_number",
+          ...(other ? ["shipping_address_line1", "shipping_postal_code", "shipping_city"] : []),
+        ],
+  );
   form.querySelectorAll("[data-file-checkout-delivery] input, [data-file-checkout-delivery] select").forEach(
     (node) => {
       if (!(node instanceof HTMLInputElement || node instanceof HTMLSelectElement)) return;
-      node.required = !pickup && requiredNames.has(node.name);
+      node.required = requiredNames.has(node.name);
     },
   );
+  syncCheckoutDeliveryRequiredMarks(form, { pickup, other });
+  if (pickup) clearCheckoutDeliveryErrors(form);
   paintFileCheckoutRecap(choice);
 }
 
@@ -2908,33 +2918,25 @@ function paintFileCheckoutRecap(choice) {
   });
 }
 
+function clearFileCheckoutSubmitLoading(form) {
+  form.querySelectorAll("button.is-loading").forEach((button) => {
+    button.classList.remove("is-loading");
+    button.removeAttribute("aria-busy");
+  });
+}
+
 function validateFileCheckoutForm(form) {
   syncFileCheckoutDelivery();
   const choice = selectedFileCheckoutShipping();
-  if (choice?.pickup) return true;
-  const other = fileDeliveryOtherSelected(form);
-  const requiredNames = [
-    "shipping_contact_name",
-    "shipping_email",
-    "shipping_phone",
-    "shipping_house_number",
-  ];
-  if (other) {
-    requiredNames.push("shipping_address_line1", "shipping_postal_code", "shipping_city");
+  if (choice?.pickup) {
+    clearCheckoutDeliveryErrors(form);
+    return true;
   }
-  const missing = requiredNames.some((name) => {
-    const node = form.querySelector(`[name='${name}']`);
-    return !(node instanceof HTMLInputElement) || !node.value.trim();
-  });
-  const email = form.querySelector("[name='shipping_email']");
-  const emailInvalid =
-    email instanceof HTMLInputElement && email.value.trim() && !email.value.includes("@");
-  if (missing || emailInvalid) {
-    fileCheckoutToast(
-      other
-        ? "Complétez le destinataire, le téléphone et l’adresse Sendcloud."
-        : "Indiquez le destinataire, l’email de suivi, le téléphone et le n° de voie.",
-    );
+  const other = fileDeliveryOtherSelected(form);
+  const result = validateCheckoutDeliveryFields(form, { other });
+  if (!result.ok) {
+    clearFileCheckoutSubmitLoading(form);
+    fileCheckoutToast(checkoutDeliveryToastMessage({ other }));
     return false;
   }
   return true;
@@ -3001,6 +3003,7 @@ function bindFileCheckoutDialog() {
 function wireFileCheckoutForm(dialog, form) {
   if (form.dataset.fileCheckoutBound === "true") return;
   form.dataset.fileCheckoutBound = "true";
+  bindCheckoutDeliveryFieldFeedback(form);
 
   form.addEventListener("change", (event) => {
     const target = event.target;

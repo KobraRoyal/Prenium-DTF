@@ -1,3 +1,4 @@
+from apps.core.views_http_errors import Http404PreviewView, Http500PreviewView
 from apps.portal.views_staff_push_notifications import ServiceWorkerView
 from django.conf import settings
 from django.urls import include, path, re_path
@@ -27,7 +28,22 @@ urlpatterns = [
     path("", include(("apps.uploads.urls", "uploads"), namespace="uploads")),
 ]
 
-handler404 = "django.views.defaults.page_not_found"
+# Prévisualisation — même templates que les handlers ; accès restreint dans la vue.
+urlpatterns += [
+    path(
+        "__preview__/http/404/",
+        Http404PreviewView.as_view(),
+        name="http-error-preview-404",
+    ),
+    path(
+        "__preview__/http/500/",
+        Http500PreviewView.as_view(),
+        name="http-error-preview-500",
+    ),
+]
+
+handler404 = "apps.core.views_http_errors.page_not_found"
+handler500 = "apps.core.views_http_errors.server_error"
 
 # Prod NAS: serve static from static_src when the shared volume is empty/out of sync.
 # Prefer nginx alias when available; this is the Django fallback.

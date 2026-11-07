@@ -1530,6 +1530,47 @@ class PortalUiCoherenceTests(SimpleTestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, source.lower())
 
+    def test_submit_loading_waits_for_sibling_prevent_default(self) -> None:
+        runtime = static_source("js/product-shell.js")
+        app = static_source("js/app.js")
+        studio = static_source("js/gang-sheet-editor.js")
+        file_checkout = static_source("js/b2b-configurator.js")
+
+        self.assertIn("queueMicrotask", runtime)
+        self.assertIn("event.defaultPrevented", runtime)
+        self.assertIn("checkout-required-v1", app)
+        self.assertIn("clearStudioSubmitLoading", studio)
+        self.assertIn("clearFileCheckoutSubmitLoading", file_checkout)
+
+    def test_checkout_delivery_fields_shared_between_studio_and_file(self) -> None:
+        shared = static_source("js/checkout-delivery-fields.js")
+        studio = static_source("js/gang-sheet-editor.js")
+        file_checkout = static_source("js/b2b-configurator.js")
+        studio_dialog = template_source(
+            "portal/client/gang_sheets/partials/studio_checkout_dialog.html"
+        )
+        file_dialog = template_source("portal/client/partials/order_project_checkout_dialog.html")
+        req_mark = template_source("portal/client/partials/checkout_required_mark.html")
+        dialog_css = static_source("css/components/gang-checkout-dialog.css")
+
+        self.assertIn("validateCheckoutDeliveryFields", shared)
+        self.assertIn("syncCheckoutDeliveryRequiredMarks", shared)
+        self.assertIn("highlightCheckoutDeliveryErrors", shared)
+        self.assertNotIn("Sendcloud", shared)
+        self.assertIn("checkout-delivery-fields.js", studio)
+        self.assertIn("checkout-delivery-fields.js", file_checkout)
+        self.assertIn("checkout_required_mark.html", studio_dialog)
+        self.assertIn("checkout_required_mark.html", file_dialog)
+        self.assertIn('data-checkout-req-for="{{ field }}"', req_mark)
+        self.assertIn("aria-label=\"obligatoire\"", req_mark)
+        self.assertNotIn("Sendcloud", studio_dialog)
+        self.assertNotIn("Sendcloud", file_dialog)
+        self.assertIn("champs marqués *", studio_dialog)
+        self.assertIn("champs marqués *", file_dialog)
+        self.assertIn(".ui-label__req", dialog_css)
+        self.assertIn(".ui-label__req-mark", dialog_css)
+        self.assertIn(".ui-field-group.is-invalid", dialog_css)
+
     def test_auth_forms_use_inline_required_errors_not_native_tooltips(self) -> None:
         runtime = static_source("js/product-shell.js")
         login_css = static_source("css/components/auth-login.css")

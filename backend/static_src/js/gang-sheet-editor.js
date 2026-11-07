@@ -1,3 +1,11 @@
+import {
+  bindCheckoutDeliveryFieldFeedback,
+  clearCheckoutDeliveryErrors,
+  checkoutDeliveryToastMessage,
+  syncCheckoutDeliveryRequiredMarks,
+  validateCheckoutDeliveryFields,
+} from "./checkout-delivery-fields.js?v=20261107-checkout-required-v1";
+
 const root = document.querySelector("[data-gang-sheet-editor]");
 
 if (root) {
@@ -1838,21 +1846,23 @@ if (root) {
   }
 
   function syncStudioDeliveryRequired(form, { pickup, other }) {
-    const requiredNames = new Set([
-      "shipping_contact_name",
-      "shipping_email",
-      "shipping_phone",
-      "shipping_house_number",
-    ]);
-    if (other) {
-      requiredNames.add("shipping_address_line1");
-      requiredNames.add("shipping_postal_code");
-      requiredNames.add("shipping_city");
-    }
+    const requiredNames = new Set(
+      pickup
+        ? []
+        : [
+            "shipping_contact_name",
+            "shipping_email",
+            "shipping_phone",
+            "shipping_house_number",
+            ...(other ? ["shipping_address_line1", "shipping_postal_code", "shipping_city"] : []),
+          ],
+    );
     form.querySelectorAll("[data-studio-delivery] input, [data-studio-delivery] select").forEach((node) => {
       if (!(node instanceof HTMLInputElement || node instanceof HTMLSelectElement)) return;
-      node.required = !pickup && requiredNames.has(node.name);
+      node.required = requiredNames.has(node.name);
     });
+    syncCheckoutDeliveryRequiredMarks(form, { pickup, other });
+    if (pickup) clearCheckoutDeliveryErrors(form);
   }
 
   function syncStudioDeliveryOther() {
@@ -1888,6 +1898,13 @@ if (root) {
     syncStudioDeliveryOther();
   }
 
+  function clearStudioSubmitLoading(form) {
+    form.querySelectorAll("button.is-loading").forEach((button) => {
+      button.classList.remove("is-loading");
+      button.removeAttribute("aria-busy");
+    });
+  }
+
   function validateStudioPayForm(form, { opening = false } = {}) {
     if (!studioOrderNameReady(form)) {
       studioCheckoutToast("Indiquez le nom de la commande.");
@@ -1899,30 +1916,15 @@ if (root) {
     }
     if (opening) return true;
     syncStudioDelivery();
-    if (selectedStudioShippingCode() === "pickup") return true;
-    const other = studioDeliveryOtherSelected(form);
-    const requiredNames = [
-      "shipping_contact_name",
-      "shipping_email",
-      "shipping_phone",
-      "shipping_house_number",
-    ];
-    if (other) {
-      requiredNames.push("shipping_address_line1", "shipping_postal_code", "shipping_city");
+    if (selectedStudioShippingCode() === "pickup") {
+      clearCheckoutDeliveryErrors(form);
+      return true;
     }
-    const missing = requiredNames.some((name) => {
-      const node = form.querySelector(`[name='${name}']`);
-      return !(node instanceof HTMLInputElement) || !node.value.trim();
-    });
-    const email = form.querySelector("[name='shipping_email']");
-    const emailInvalid =
-      email instanceof HTMLInputElement && email.value.trim() && !email.value.includes("@");
-    if (missing || emailInvalid) {
-      studioCheckoutToast(
-        other
-          ? "Complétez le destinataire, le téléphone et l’adresse Sendcloud."
-          : "Indiquez le destinataire, l’email de suivi, le téléphone et le n° de voie.",
-      );
+    const other = studioDeliveryOtherSelected(form);
+    const result = validateCheckoutDeliveryFields(form, { other });
+    if (!result.ok) {
+      clearStudioSubmitLoading(form);
+      studioCheckoutToast(checkoutDeliveryToastMessage({ other }));
       return false;
     }
     return true;
@@ -1955,6 +1957,7 @@ if (root) {
     const form = q("[data-studio-checkout-form]");
     if (!form || form.dataset.payDialogBound === "true") return;
     form.dataset.payDialogBound = "true";
+    bindCheckoutDeliveryFieldFeedback(form);
     q("[data-studio-checkout-open]")?.addEventListener("click", () => {
       if (!canEdit) return;
       if (!validateStudioPayForm(form, { opening: true })) return;

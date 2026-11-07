@@ -329,7 +329,7 @@ class StudioPolishUITests(SimpleTestCase):
         self.assertIn("function syncStudioCheckout()", editor_js)
         self.assertIn("const hasEstimate = state.items.length > 0 && quote.surface > 0", editor_js)
         self.assertNotIn('q("[data-metric-price]")', editor_js)
-        self.assertIn("gang-sheet-editor.js?v=20261107-checkout-pickup-vat-v1", app_js)
+        self.assertIn("gang-sheet-editor.js?v=20261107-checkout-required-v1", app_js)
         self.assertIn("Je commande", checkout)
         self.assertNotIn("Voir ma commande", checkout)
         self.assertNotIn("{% if sheet.order_id %}", checkout)
